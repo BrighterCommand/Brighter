@@ -27,7 +27,6 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -36,12 +35,12 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// with it but no known version's columns, and otherwise the highest version whose columns are all present; the provisioner
 /// refuses a table it cannot identify.
 /// </summary>
-public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
+public class PostgreSqlBoxDiscriminatorDetectionTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_postgres_outbox_detects_table_missing_headerbag_discriminator_it_should_return_negative_one()
     {
         //Arrange
@@ -63,7 +62,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(-1, detected);
+        await Assert.That(detected).IsEqualTo(-1);
 
         //Act
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
@@ -73,14 +72,14 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             new PostgreSqlPayloadModeValidator(),
             config,
             runner);
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
+        var ex = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("not a Brighter outbox", ex.Message);
-        Assert.Contains("headerbag", ex.Message);
+        await Assert.That(ex.Message).Contains("not a Brighter outbox");
+        await Assert.That(ex.Message).Contains("headerbag");
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_inbox_detects_table_missing_commandbody_discriminator_it_should_return_negative_one()
     {
         //Arrange
@@ -102,7 +101,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(-1, detected);
+        await Assert.That(detected).IsEqualTo(-1);
 
         //Act
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
@@ -112,14 +111,14 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             new PostgreSqlPayloadModeValidator(),
             config,
             runner);
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
+        var ex = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("not a Brighter inbox", ex.Message);
-        Assert.Contains("commandbody", ex.Message);
+        await Assert.That(ex.Message).Contains("not a Brighter inbox");
+        await Assert.That(ex.Message).Contains("commandbody");
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_outbox_detects_headerbag_present_but_no_v1_columns_it_should_return_zero()
     {
         //Arrange
@@ -141,7 +140,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(0, detected);
+        await Assert.That(detected).IsEqualTo(0);
 
         //Act
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
@@ -151,13 +150,13 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             new PostgreSqlPayloadModeValidator(),
             config,
             runner);
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
+        var ex = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("does not match any known schema version", ex.Message);
+        await Assert.That(ex.Message).Contains("does not match any known schema version");
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_outbox_detects_v3_shaped_table_it_should_return_three()
     {
         //Arrange
@@ -191,10 +190,10 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(3, detected);
+        await Assert.That(detected).IsEqualTo(3);
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_inbox_detects_v1_shaped_table_it_should_return_one()
     {
         //Arrange
@@ -223,7 +222,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(1, detected);
+        await Assert.That(detected).IsEqualTo(1);
     }
 
     private async Task ExecuteDdl(string sql)
@@ -241,8 +240,10 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         return tableName;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -97,7 +97,7 @@ namespace Paramore.Test.Helpers.Extensions
         /// </summary>
         /// <param name="displayName">The fully qualified name of the type or member.</param>
         /// <returns>
-        /// A string containing the simple name without the namespace. 
+        /// A string containing the simple name without the namespace.
         /// If <paramref name="displayName"/> is <see langword="null"/> or empty, an empty string is returned.
         /// </returns>
         /// <example>

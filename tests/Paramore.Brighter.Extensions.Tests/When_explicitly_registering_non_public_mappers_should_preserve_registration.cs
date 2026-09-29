@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -28,7 +28,7 @@ using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -41,9 +41,9 @@ public class ExplicitMapperVisibilityTests
         [typeof(NestedMapperScanCommand), NestedScanMessageMappers.PrivateMapperType]
     ];
 
-    [Theory]
-    [MemberData(nameof(NonPublicMappers))]
-    public void When_explicitly_registering_non_public_mappers_should_preserve_registration(
+    [Test]
+    [MethodDataSource(nameof(NonPublicMappers))]
+    public async System.Threading.Tasks.Task When_explicitly_registering_non_public_mappers_should_preserve_registration(
         Type requestType, Type mapperType)
     {
         //Arrange
@@ -60,9 +60,9 @@ public class ExplicitMapperVisibilityTests
         });
 
         //Assert
-        Assert.Equal(mapperType, registry.Mappers[requestType]);
-        Assert.Equal(mapperType, registry.AsyncMappers[requestType]);
+        await Assert.That(registry.Mappers[requestType]).IsEqualTo(mapperType);
+        await Assert.That(registry.AsyncMappers[requestType]).IsEqualTo(mapperType);
         using var provider = services.BuildServiceProvider();
-        Assert.IsType(mapperType, provider.GetRequiredService(mapperType));
+        await Assert.That(provider.GetRequiredService(mapperType).GetType()).IsEqualTo(mapperType);
     }
 }

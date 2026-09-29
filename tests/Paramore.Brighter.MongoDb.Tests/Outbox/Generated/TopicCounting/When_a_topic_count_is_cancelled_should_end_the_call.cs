@@ -32,12 +32,11 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDB.Tests.Outbox.TopicCounting;
 
-[Trait("Category", "MongoDB")]
-[Collection("MongoDbOutbox")]
+[Property("Category", "MongoDB")]
+[NotInParallel("MongoDbOutbox")]
 public class TopicCountCancellationTests : OutstandingCountCancellationOutboxBaseTests<global::MongoDB.Driver.IClientSessionHandle>
 {
     private readonly Paramore.Brighter.MongoDb.Tests.Outbox.MongoDbOutboxProvider _outboxProvider = new();
@@ -50,9 +49,8 @@ public class TopicCountCancellationTests : OutstandingCountCancellationOutboxBas
             new Dictionary<RoutingKey, TimeSpan> { [new RoutingKey($"cancelled-{Uuid.New():N}")] = TimeSpan.FromMinutes(5) },
             new RequestContext(), 100, cancellationToken: cancellationToken);
 
-    [Fact]
+    [Test]
     public async Task When_a_topic_count_is_cancelled_should_end_the_call()
     {
         await AssertCancellationEndsTheCountAsync();
-    }
-}
+    }}

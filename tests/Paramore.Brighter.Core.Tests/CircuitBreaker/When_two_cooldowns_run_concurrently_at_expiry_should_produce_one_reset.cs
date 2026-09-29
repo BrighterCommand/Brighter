@@ -6,7 +6,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker;
 
@@ -14,8 +13,8 @@ public class InMemoryConcurrentExpiryTests
 {
     private const int REPETITIONS = 1000;
 
-    [Fact]
-    public void When_two_cooldowns_run_concurrently_at_expiry_should_produce_one_reset()
+    [Test]
+    public async Task When_two_cooldowns_run_concurrently_at_expiry_should_produce_one_reset()
     {
         using (TestCorrelator.CreateContext())
         {
@@ -51,9 +50,12 @@ public class InMemoryConcurrentExpiryTests
                 .GroupBy(e => e.Properties["Topic"].ToString())
                 .ToDictionary(g => g.Key, g => g.Count());
 
-            Assert.Equal(REPETITIONS, resetsPerTopic.Count);
-            Assert.All(resetsPerTopic.Values, count => Assert.Equal(1, count));
-            Assert.Equal(0, listedAfterExpiry);
+            await Assert.That(resetsPerTopic.Count).IsEqualTo(REPETITIONS);
+            foreach (var count in resetsPerTopic.Values)
+{
+    await Assert.That(count).IsEqualTo(1);
+}
+            await Assert.That(listedAfterExpiry).IsEqualTo(0);
         }
     }
 }

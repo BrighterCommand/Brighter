@@ -3,14 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ScopedFirstResolutionVsDisposeRaceTests
 {
-    [Fact]
-    public void When_a_scope_is_first_published_while_the_owner_is_disposing_it_should_not_leak()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_scope_is_first_published_while_the_owner_is_disposing_it_should_not_leak()
     {
         // Arrange
         var collection = new ServiceCollection();
@@ -47,18 +47,18 @@ public class ScopedFirstResolutionVsDisposeRaceTests
         });
         worker.Start();
 
-        Assert.True(scopeTracker.EnteredCreate.Wait(TimeSpan.FromSeconds(10)), "worker never entered CreateScope");
+        await Assert.That(scopeTracker.EnteredCreate.Wait(TimeSpan.FromSeconds(10))).IsTrue().Because("worker never entered CreateScope");
         factory.Dispose();
         scopeTracker.ReleaseCreate.Set();
 
-        Assert.True(worker.Join(TimeSpan.FromSeconds(10)), "worker deadlocked");
-        Assert.Null(unexpected);
+        await Assert.That(worker.Join(TimeSpan.FromSeconds(10))).IsTrue().Because("worker deadlocked");
+        await Assert.That(unexpected).IsNull();
 
         // Assert — the scope created during the race is disposed exactly as many times as it was created.
         // Before the fix the publish landed after Dispose drained _scope, so nothing ever disposed it and
         // DisposedCount stayed at 0.
-        Assert.Equal(1, scopeTracker.CreatedCount);
-        Assert.Equal(scopeTracker.CreatedCount, scopeTracker.DisposedCount);
+        await Assert.That(scopeTracker.CreatedCount).IsEqualTo(1);
+        await Assert.That(scopeTracker.DisposedCount).IsEqualTo(scopeTracker.CreatedCount);
     }
 
     private sealed class MinimalCommand : Command

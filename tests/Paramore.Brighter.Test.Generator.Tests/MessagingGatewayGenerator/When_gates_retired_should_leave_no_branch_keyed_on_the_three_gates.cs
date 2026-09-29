@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.MessagingGatewayGenerator;
 
@@ -42,8 +42,8 @@ public class WhenGatesRetiredShouldLeaveNoBranchKeyedOnTheThreeGates : IDisposab
                 "Expected to walk up and find 'tests/Paramore.Brighter.Kafka.Tests'.");
     }
 
-    [Fact]
-    public void When_gates_retired_should_leave_no_branch_keyed_on_the_three_gates()
+    [Test]
+    public async System.Threading.Tasks.Task When_gates_retired_should_leave_no_branch_keyed_on_the_three_gates()
     {
         // Arrange — locate the source file to scan
         var generatorSource = Path.Combine(
@@ -51,28 +51,23 @@ public class WhenGatesRetiredShouldLeaveNoBranchKeyedOnTheThreeGates : IDisposab
             "tools", "Paramore.Brighter.Test.Generator",
             "Generators", "MessagingGatewayGenerator.cs");
 
-        Assert.True(File.Exists(generatorSource),
-            $"Source file not found at expected path: {generatorSource}");
+        await Assert.That(File.Exists(generatorSource)).IsTrue().Because($"Source file not found at expected path: {generatorSource}");
 
         // Act
         var sourceText = File.ReadAllText(generatorSource);
 
         // Assert — the three retired gates are absent from the source
-        Assert.False(sourceText.Contains("HasSupportToDelayedMessages"),
-            "HasSupportToDelayedMessages must not appear — its gate branches are retired (ADR 0066 Step C)");
+        await Assert.That(sourceText.Contains("HasSupportToDelayedMessages")).IsFalse().Because("HasSupportToDelayedMessages must not appear — its gate branches are retired (ADR 0066 Step C)");
 
-        Assert.False(sourceText.Contains("HasSupportToDeadLetterQueue"),
-            "HasSupportToDeadLetterQueue must not appear — its gate branch is retired (ADR 0066 Step C)");
+        await Assert.That(sourceText.Contains("HasSupportToDeadLetterQueue")).IsFalse().Because("HasSupportToDeadLetterQueue must not appear — its gate branch is retired (ADR 0066 Step C)");
 
-        Assert.False(sourceText.Contains("HasSupportToRequeue"),
-            "HasSupportToRequeue must not appear — its gate branch is retired (ADR 0066 Step C)");
+        await Assert.That(sourceText.Contains("HasSupportToRequeue")).IsFalse().Because("HasSupportToRequeue must not appear — its gate branch is retired (ADR 0066 Step C)");
 
         // Assert — the LegacyGatedTemplates array that housed the closed list is also gone
-        Assert.False(sourceText.Contains("LegacyGatedTemplates"),
-            "LegacyGatedTemplates array must be deleted along with the branches it guarded (ADR 0066 Step C)");
+        await Assert.That(sourceText.Contains("LegacyGatedTemplates")).IsFalse().Because("LegacyGatedTemplates array must be deleted along with the branches it guarded (ADR 0066 Step C)");
     }
 
-    [Fact]
+    [Test]
     public async Task When_retained_gate_flags_are_false_should_still_skip_retained_gate_templates()
     {
         // Arrange — set all retained capability gates to false. The three retired gates are not set
@@ -104,33 +99,23 @@ public class WhenGatesRetiredShouldLeaveNoBranchKeyedOnTheThreeGates : IDisposab
 
         // Assert — positive control: an ungated template WAS emitted, so the absence assertions
         // below cannot pass vacuously on a generation run that produced nothing
-        Assert.True(
-            File.Exists(Path.Combine(reactorOutput,
-                "When_posting_a_message_via_the_messaging_gateway_should_be_received.cs")),
-            "ungated template must still be generated — otherwise the skip assertions prove nothing");
+        await Assert.That(File.Exists(Path.Combine(reactorOutput,
+                "When_posting_a_message_via_the_messaging_gateway_should_be_received.cs"))).IsTrue().Because("ungated template must still be generated — otherwise the skip assertions prove nothing");
 
         // Assert — confirming_posting template is still skipped when HasSupportToPublishConfirmation is false
-        Assert.False(
-            File.Exists(Path.Combine(reactorOutput,
-                "When_confirming_posting_a_message_should_receive_publish_confirmation.cs")),
-            "confirming_posting template must remain gated by HasSupportToPublishConfirmation");
+        await Assert.That(File.Exists(Path.Combine(reactorOutput,
+                "When_confirming_posting_a_message_should_receive_publish_confirmation.cs"))).IsFalse().Because("confirming_posting template must remain gated by HasSupportToPublishConfirmation");
 
         // Assert — no_broker_created template is still skipped when HasSupportToValidateBrokerExistence is false
-        Assert.False(
-            File.Exists(Path.Combine(reactorOutput,
-                "When_posting_a_message_but_no_broker_created_should_throw_exception.cs")),
-            "no_broker_created template must remain gated by HasSupportToValidateBrokerExistence");
+        await Assert.That(File.Exists(Path.Combine(reactorOutput,
+                "When_posting_a_message_but_no_broker_created_should_throw_exception.cs"))).IsFalse().Because("no_broker_created template must remain gated by HasSupportToValidateBrokerExistence");
 
         // Assert — assume_channel and validate_channel templates are still skipped when HasSupportToValidateInfrastructure is false
-        Assert.False(
-            File.Exists(Path.Combine(reactorOutput,
-                "When_infrastructure_missing_and_assume_channel_should_throw_exception.cs")),
-            "assume_channel template must remain gated by HasSupportToValidateInfrastructure");
+        await Assert.That(File.Exists(Path.Combine(reactorOutput,
+                "When_infrastructure_missing_and_assume_channel_should_throw_exception.cs"))).IsFalse().Because("assume_channel template must remain gated by HasSupportToValidateInfrastructure");
 
-        Assert.False(
-            File.Exists(Path.Combine(reactorOutput,
-                "When_infrastructure_missing_and_validate_channel_should_throw_exception.cs")),
-            "validate_channel template must remain gated by HasSupportToValidateInfrastructure");
+        await Assert.That(File.Exists(Path.Combine(reactorOutput,
+                "When_infrastructure_missing_and_validate_channel_should_throw_exception.cs"))).IsFalse().Because("validate_channel template must remain gated by HasSupportToValidateInfrastructure");
     }
 
     /// <summary>
@@ -140,7 +125,7 @@ public class WhenGatesRetiredShouldLeaveNoBranchKeyedOnTheThreeGates : IDisposab
     /// OnMissingChannel.Validate but completes silently against a topic that does not exist, so the
     /// coarse flag was suppressing a validate_channel test that passes.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_assume_detection_is_unsupported_should_skip_assume_channel_but_still_emit_validate_channel()
     {
         // Arrange — only the narrow gate is false; HasSupportToValidateInfrastructure keeps its
@@ -168,17 +153,13 @@ public class WhenGatesRetiredShouldLeaveNoBranchKeyedOnTheThreeGates : IDisposab
         await generator.GenerateAsync(configuration);
 
         // Assert — assume_channel is skipped
-        Assert.False(
-            File.Exists(Path.Combine(reactorOutput,
-                "When_infrastructure_missing_and_assume_channel_should_throw_exception.cs")),
-            "assume_channel must be skipped when the transport cannot detect missing infrastructure " +
+        await Assert.That(File.Exists(Path.Combine(reactorOutput,
+                "When_infrastructure_missing_and_assume_channel_should_throw_exception.cs"))).IsFalse().Because("assume_channel must be skipped when the transport cannot detect missing infrastructure " +
             "under OnMissingChannel.Assume");
 
         // Assert — validate_channel is NOT skipped: that is the whole point of the narrower gate
-        Assert.True(
-            File.Exists(Path.Combine(reactorOutput,
-                "When_infrastructure_missing_and_validate_channel_should_throw_exception.cs")),
-            "validate_channel must still be generated — the narrow gate must not suppress the " +
+        await Assert.That(File.Exists(Path.Combine(reactorOutput,
+                "When_infrastructure_missing_and_validate_channel_should_throw_exception.cs"))).IsTrue().Because("validate_channel must still be generated — the narrow gate must not suppress the " +
             "explicit-validate test the way HasSupportToValidateInfrastructure does");
     }
 
@@ -189,7 +170,7 @@ public class WhenGatesRetiredShouldLeaveNoBranchKeyedOnTheThreeGates : IDisposab
     /// (When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay) does — would be
     /// silently gated off. This plants such a template and proves it is emitted.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_a_canonical_template_name_contains_legacy_substrings_should_still_be_generated()
     {
         // Arrange — plant a canonical template whose name contains both "requeuing" and "with_delay"
@@ -226,10 +207,8 @@ public class WhenGatesRetiredShouldLeaveNoBranchKeyedOnTheThreeGates : IDisposab
             await generator.GenerateAsync(configuration);
 
             // Assert — nothing gated it: substring matching must never determine gate applicability
-            Assert.True(
-                File.Exists(Path.Combine(reactorOutput,
-                    "When_requeuing_a_canonical_message_with_delay_should_confirm_redelivery.cs")),
-                "Canonical template containing 'requeuing' and 'with_delay' must not be gated — " +
+            await Assert.That(File.Exists(Path.Combine(reactorOutput,
+                    "When_requeuing_a_canonical_message_with_delay_should_confirm_redelivery.cs"))).IsTrue().Because("Canonical template containing 'requeuing' and 'with_delay' must not be gated — " +
                 "substring matching must never determine gate applicability");
         }
         finally

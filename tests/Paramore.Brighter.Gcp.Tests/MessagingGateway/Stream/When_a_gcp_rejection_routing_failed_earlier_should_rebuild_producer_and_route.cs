@@ -28,8 +28,7 @@ using System.Diagnostics;
 using System.Threading;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
 /// <summary>
@@ -40,14 +39,14 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// before the channel is disposed, so Dispose cannot hang (see this spec's GCP Stream
 /// ack-before-dispose gotcha).
 /// </summary>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
 public class GcpStreamOrderingConsumerRejectRebuildsProducerAfterFailedRoutingTests
 {
     private const int WindowSeconds = 10;
 
-    [Fact]
-    public void When_a_gcp_rejection_routing_failed_earlier_should_rebuild_producer_and_route()
+    [Test]
+    public async Task When_a_gcp_rejection_routing_failed_earlier_should_rebuild_producer_and_route()
     {
         var provider = new GcpStreamOrderingMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -101,13 +100,13 @@ public class GcpStreamOrderingConsumerRejectRebuildsProducerAfterFailedRoutingTe
             producer.Send(message);
 
             var received = channel.Receive(TimeSpan.FromSeconds(20));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act 1 — the first Reject fails: the DLQ topic does not exist yet (Assume). This Nacks
             // the original rather than accepting it.
             var firstResult = channel.Reject(received,
                 new MessageRejectionReason(RejectionReason.DeliveryError, "first attempt - destination absent"));
-            Assert.True(firstResult);
+            await Assert.That(firstResult).IsTrue();
 
             // Now create the destination topic and a reading subscription for it.
             var dlqProvisioning = new GcpPubSubSubscription<MyCommand>(
@@ -130,8 +129,8 @@ public class GcpStreamOrderingConsumerRejectRebuildsProducerAfterFailedRoutingTe
                 Thread.Sleep(250);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-            Assert.Equal(received.Id, redelivered.Id);
+            await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(redelivered.Id).IsEqualTo(received.Id);
 
             // Act 2 — the redelivered message's Reject must succeed now that the destination
             // exists: this proves the router rebuilt a fresh, unpaused producer since the first
@@ -139,7 +138,7 @@ public class GcpStreamOrderingConsumerRejectRebuildsProducerAfterFailedRoutingTe
             // message — mandatory: an un-acked Stream receive hangs Dispose.
             var secondResult = channel.Reject(redelivered,
                 new MessageRejectionReason(RejectionReason.DeliveryError, "second attempt - destination now exists"));
-            Assert.True(secondResult);
+            await Assert.That(secondResult).IsTrue();
 
             // Assert — the destination received the routed copy, stamped with rejection metadata.
             Message dlqMessage = new Message();
@@ -152,25 +151,23 @@ public class GcpStreamOrderingConsumerRejectRebuildsProducerAfterFailedRoutingTe
                 Thread.Sleep(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var bag = dlqMessage.Header.Bag;
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic));
-            Assert.Equal(routingKey.Value, bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString());
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason));
-            Assert.Equal(RejectionReason.DeliveryError.ToString(), bag[RejectionMetadataKeyNames.RejectionReason]?.ToString());
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp));
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString()).IsEqualTo(routingKey.Value);
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType)).IsTrue();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionReason]?.ToString()).IsEqualTo(RejectionReason.DeliveryError.ToString());
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsTrue();
             var ts = bag[RejectionMetadataKeyNames.RejectionTimestamp]?.ToString() ?? string.Empty;
-            Assert.True(
-                DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _),
-                $"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage));
-            Assert.Equal("second attempt - destination now exists", bag[RejectionMetadataKeyNames.RejectionMessage]?.ToString());
+            await Assert.That(DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _)).IsTrue().Because($"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionMessage]?.ToString()).IsEqualTo("second attempt - destination now exists");
 
             // Assert — the original is now settled: no further redelivery.
             var finalRead = channel.Receive(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, finalRead.Header.MessageType);
+            await Assert.That(finalRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {

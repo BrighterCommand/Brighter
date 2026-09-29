@@ -7,13 +7,12 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.Outbox.Hosting.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class When_no_circuit_breaker_is_registered_or_none_is_tripped_should_report_healthy_tests
 {
-    [Fact]
+    [Test]
     public async Task When_no_lookup_delegate_is_registered_should_report_healthy()
     {
         //Arrange
@@ -22,14 +21,14 @@ public class When_no_circuit_breaker_is_registered_or_none_is_tripped_should_rep
 
         //Act
         HealthCheckResult result = default;
-        var exception = await Record.ExceptionAsync(async () => result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None));
+        var exception = await TestExceptionRecorder.CaptureAsync(async () => result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None));
 
         //Assert
-        Assert.Null(exception);
-        AssertHealthyWithNoConditions(state, result);
+        await Assert.That(exception).IsNull();
+        await AssertHealthyWithNoConditions(state, result);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_lookup_returns_null_should_report_healthy()
     {
         //Arrange
@@ -38,14 +37,14 @@ public class When_no_circuit_breaker_is_registered_or_none_is_tripped_should_rep
 
         //Act
         HealthCheckResult result = default;
-        var exception = await Record.ExceptionAsync(async () => result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None));
+        var exception = await TestExceptionRecorder.CaptureAsync(async () => result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None));
 
         //Assert
-        Assert.Null(exception);
-        AssertHealthyWithNoConditions(state, result);
+        await Assert.That(exception).IsNull();
+        await AssertHealthyWithNoConditions(state, result);
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_topics_are_tripped_should_report_healthy()
     {
         //Arrange
@@ -55,11 +54,11 @@ public class When_no_circuit_breaker_is_registered_or_none_is_tripped_should_rep
 
         //Act
         HealthCheckResult result = default;
-        var exception = await Record.ExceptionAsync(async () => result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None));
+        var exception = await TestExceptionRecorder.CaptureAsync(async () => result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None));
 
         //Assert
-        Assert.Null(exception);
-        AssertHealthyWithNoConditions(state, result);
+        await Assert.That(exception).IsNull();
+        await AssertHealthyWithNoConditions(state, result);
     }
 
     private static OutboxSweeperState ActiveState()
@@ -71,11 +70,11 @@ public class When_no_circuit_breaker_is_registered_or_none_is_tripped_should_rep
         return state;
     }
 
-    private static void AssertHealthyWithNoConditions(OutboxSweeperState state, HealthCheckResult result)
+    private static async Task AssertHealthyWithNoConditions(OutboxSweeperState state, HealthCheckResult result)
     {
-        Assert.True(state.Read().IsActive);
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Empty(Assert.IsType<string[]>(result.Data[RemedyCheckConvention.ConditionsKey]));
+        await Assert.That(state.Read().IsActive).IsTrue();
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        await Assert.That((await Assert.That(result.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEmpty();
     }
 }

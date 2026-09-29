@@ -27,7 +27,6 @@ using System;
 using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -36,13 +35,14 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// a fresh install creates the inbox there rather than in the connection's database, and a second run is
 /// a no-op (ADR 0057 §3, ADR 0060).
 /// </summary>
-public class MySqlInboxNonDefaultSchemaTests : IAsyncLifetime
+public class MySqlInboxNonDefaultSchemaTests
 {
     private readonly string _baseConnectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_inbox_{Guid.NewGuid():N}";
     private readonly string _nonDefaultDatabase = $"brighter_billing_inbox_{Guid.NewGuid():N}";
     private MySqlInboxProvisioner _provisioner = default!;
 
+    [Before(HookType.Test)]
     public async Task InitializeAsync()
     {
         await EnsureDatabaseExistsAsync(_nonDefaultDatabase);
@@ -60,7 +60,7 @@ public class MySqlInboxNonDefaultSchemaTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mysql_inbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
         //Arrange
@@ -68,21 +68,21 @@ public class MySqlInboxNonDefaultSchemaTests : IAsyncLifetime
         await DropAnyExistingTableAsync(_tableName, "BrighterTests");
 
         //Act
-        var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var firstException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert
-        Assert.Null(firstException);
-        Assert.True(await TableExistsInDatabaseAsync(_tableName, _nonDefaultDatabase));
-        Assert.False(await TableExistsInDatabaseAsync(_tableName, "BrighterTests"));
-        Assert.Equal(1, await GetHistoryRowCountAsync(_nonDefaultDatabase, _tableName));
+        await Assert.That(firstException).IsNull();
+        await Assert.That(await TableExistsInDatabaseAsync(_tableName, _nonDefaultDatabase)).IsTrue();
+        await Assert.That(await TableExistsInDatabaseAsync(_tableName, "BrighterTests")).IsFalse();
+        await Assert.That(await GetHistoryRowCountAsync(_nonDefaultDatabase, _tableName)).IsEqualTo(1);
 
         //Act
-        var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var secondException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert
-        Assert.Null(secondException);
-        Assert.True(await TableExistsInDatabaseAsync(_tableName, _nonDefaultDatabase));
-        Assert.Equal(1, await GetHistoryRowCountAsync(_nonDefaultDatabase, _tableName));
+        await Assert.That(secondException).IsNull();
+        await Assert.That(await TableExistsInDatabaseAsync(_tableName, _nonDefaultDatabase)).IsTrue();
+        await Assert.That(await GetHistoryRowCountAsync(_nonDefaultDatabase, _tableName)).IsEqualTo(1);
     }
 
     private async Task EnsureDatabaseExistsAsync(string databaseName)
@@ -138,6 +138,7 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
         return Convert.ToInt64(await command.ExecuteScalarAsync());
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

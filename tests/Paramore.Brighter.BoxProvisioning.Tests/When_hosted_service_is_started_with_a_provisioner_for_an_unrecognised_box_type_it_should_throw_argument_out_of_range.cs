@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -38,7 +37,7 @@ public class BoxProvisioningHostedServiceUnknownBoxTypeTests
 {
     private const int BoxTypeValueNoEnumMemberWillUse = 999;
 
-    [Fact]
+    [Test]
     public async Task When_hosted_service_is_started_with_a_provisioner_for_an_unrecognised_box_type_it_should_throw_argument_out_of_range()
     {
         //Arrange
@@ -48,11 +47,11 @@ public class BoxProvisioningHostedServiceUnknownBoxTypeTests
         var service = new BoxProvisioningHostedService(new[] { provisioner }, logger);
 
         //Act
-        var ex = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            service.StartAsync(default));
+        var ex = await Assert.That(() =>
+            service.StartAsync(default)).ThrowsExactly<ArgumentOutOfRangeException>();
 
         //Assert
-        Assert.Contains(BoxTypeValueNoEnumMemberWillUse.ToString(), ex.Message, StringComparison.Ordinal);
-        Assert.Contains("OrderingOrdinal", ex.Message, StringComparison.Ordinal);
+        await Assert.That(ex.Message).Contains(BoxTypeValueNoEnumMemberWillUse.ToString());
+        await Assert.That(ex.Message).Contains("OrderingOrdinal");
     }
 }

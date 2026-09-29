@@ -31,7 +31,6 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -39,15 +38,19 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// When pg_advisory_unlock throws during RollbackAsync, the unit of work logs a Warning carrying the exception and does not
 /// throw, so the runner's original migration error is not masked (ADR 0058 §B.3).
 /// </summary>
-public class PostgreSqlProvisioningUnitOfWorkRollbackReleaseThrowsTests : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkRollbackReleaseThrowsTests
 {
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_postgres_provisioning_uow_rollback_release_throws_it_should_log_without_throwing()
     {
         // Arrange
@@ -65,16 +68,16 @@ public class PostgreSqlProvisioningUnitOfWorkRollbackReleaseThrowsTests : IAsync
             cancellationToken: CancellationToken.None);
 
         // Act
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.RollbackAsync(CancellationToken.None));
 
         // Assert
-        Assert.Null(thrown);
+        await Assert.That(thrown).IsNull();
 
-        Assert.Equal("test_lock_resource", advisoryLock.ReleasedKey);
+        await Assert.That(advisoryLock.ReleasedKey).IsEqualTo("test_lock_resource");
 
         var warnings = capturingLogger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
-        Assert.Contains("test_lock_resource", warnings[0].Message, StringComparison.Ordinal);
-        Assert.Same(releaseFault, warnings[0].Exception);
+        await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warnings[0].Message).Contains("test_lock_resource");
+        await Assert.That(warnings[0].Exception).IsSameReferenceAs(releaseFault);
     }
 }

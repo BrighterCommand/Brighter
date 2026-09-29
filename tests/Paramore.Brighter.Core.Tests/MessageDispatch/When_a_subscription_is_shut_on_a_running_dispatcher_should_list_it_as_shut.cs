@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -34,13 +34,12 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class DispatcherShutSubscriptionsTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_subscription_is_shut_on_a_running_dispatcher_should_list_it_as_shut()
     {
         // Arrange
@@ -65,8 +64,8 @@ public class DispatcherShutSubscriptionsTests
             var awaitingSnapshot = awaiting.GetLifecycleSnapshot();
 
             // Assert
-            Assert.Equal([orders], runningSnapshot.ShutSubscriptions.ToArray());
-            Assert.Empty(awaitingSnapshot.ShutSubscriptions);
+            await Assert.That(runningSnapshot.ShutSubscriptions.ToArray()).IsEqualTo([orders]);
+            await Assert.That(awaitingSnapshot.ShutSubscriptions).IsEmpty();
         }
         finally
         {

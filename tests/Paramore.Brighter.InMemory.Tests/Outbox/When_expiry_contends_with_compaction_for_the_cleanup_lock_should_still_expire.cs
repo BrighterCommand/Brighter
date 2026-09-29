@@ -28,14 +28,13 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
 {
-    [Trait("Category", "InMemory")]
+    [Property("Category", "InMemory")]
     public class OutboxExpiryLockContentionTests
     {
-        [Fact]
+        [Test]
         public async Task When_expiry_contends_with_compaction_for_the_cleanup_lock_should_still_expire()
         {
             //Arrange
@@ -70,7 +69,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
 
             try
             {
-                Assert.True(outbox.CompactionEntered.Wait(TimeSpan.FromSeconds(5)), "Compaction should have taken the cleanup lock");
+                await Assert.That(outbox.CompactionEntered.Wait(TimeSpan.FromSeconds(5))).IsTrue().Because("Compaction should have taken the cleanup lock");
 
                 //Act - the remaining dispatched messages are now past their time to live, and a read is due an expiry scan
                 timeProvider.Advance(TimeSpan.FromSeconds(2));
@@ -93,7 +92,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             }
 
             //Assert - compaction removes 3 dispatched, expiry removes the other 2; only the undispatched message remains
-            Assert.Equal(1, outbox.EntryCount);
+            await Assert.That(outbox.EntryCount).IsEqualTo(1);
         }
     }
 }

@@ -6,13 +6,12 @@ using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Archiving;
 
 public class TimedOutboxArchiverPrefersAsyncTests
 {
-    [Fact]
+    [Test]
     public async Task When_archiving_with_both_sync_and_async_outbox_should_prefer_async()
     {
         //Arrange — InMemoryOutbox implements both IAmAnOutboxSync and IAmAnOutboxAsync
@@ -46,12 +45,11 @@ public class TimedOutboxArchiverPrefersAsyncTests
         await timedArchiver.StopAsync(cts.Token);
 
         //Assert
-        Assert.True(archiver.HasAsyncOutbox(), "Should have an async outbox");
-        Assert.True(archiver.HasOutbox(), "Should have a sync outbox");
-        Assert.Equal(0, outbox.EntryCount);
-        Assert.Contains(
-            new KeyValuePair<string, Message>(message.Id, message),
+        await Assert.That(archiver.HasAsyncOutbox()).IsTrue().Because("Should have an async outbox");
+        await Assert.That(archiver.HasOutbox()).IsTrue().Because("Should have a sync outbox");
+        await Assert.That(outbox.EntryCount).IsZero();
+        await Assert.That(
             archiveProvider.ArchivedMessages
-        );
+        ).Contains(new KeyValuePair<string, Message>(message.Id, message));
     }
 }

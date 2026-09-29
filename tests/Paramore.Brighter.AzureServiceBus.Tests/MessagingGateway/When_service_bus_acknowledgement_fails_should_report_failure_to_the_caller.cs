@@ -31,21 +31,20 @@ using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class ServiceBusAcknowledgementFailureTests
 {
-    [Theory]
-    [InlineData(false, false, ServiceBusFailureReason.MessageLockLost)]
-    [InlineData(false, true, ServiceBusFailureReason.MessageLockLost)]
-    [InlineData(true, false, ServiceBusFailureReason.MessageLockLost)]
-    [InlineData(true, true, ServiceBusFailureReason.MessageLockLost)]
-    [InlineData(false, false, ServiceBusFailureReason.ServiceBusy)]
-    [InlineData(false, true, ServiceBusFailureReason.ServiceBusy)]
-    [InlineData(true, false, ServiceBusFailureReason.ServiceBusy)]
-    [InlineData(true, true, ServiceBusFailureReason.ServiceBusy)]
+    [Test]
+    [Arguments(false, false, ServiceBusFailureReason.MessageLockLost)]
+    [Arguments(false, true, ServiceBusFailureReason.MessageLockLost)]
+    [Arguments(true, false, ServiceBusFailureReason.MessageLockLost)]
+    [Arguments(true, true, ServiceBusFailureReason.MessageLockLost)]
+    [Arguments(false, false, ServiceBusFailureReason.ServiceBusy)]
+    [Arguments(false, true, ServiceBusFailureReason.ServiceBusy)]
+    [Arguments(true, false, ServiceBusFailureReason.ServiceBusy)]
+    [Arguments(true, true, ServiceBusFailureReason.ServiceBusy)]
     public async Task When_service_bus_acknowledgement_fails_should_report_failure_to_the_caller(
         bool useAsync, bool aggregateException, ServiceBusFailureReason reason)
     {
@@ -78,10 +77,10 @@ public class ServiceBusAcknowledgementFailureTests
         var received = useAsync
             ? await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1))
             : consumer.Receive(TimeSpan.FromMilliseconds(1));
-        var message = Assert.Single(received);
+        var message = await Assert.That(received).HasSingleItem();
 
         //Act
-        var error = await Record.ExceptionAsync(async () =>
+        var error = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             if (useAsync)
                 await consumer.AcknowledgeAsync(message);
@@ -90,7 +89,7 @@ public class ServiceBusAcknowledgementFailureTests
         });
 
         //Assert
-        Assert.NotNull(error);
-        Assert.Same(failure, error.GetBaseException());
+        await Assert.That(error).IsNotNull();
+        await Assert.That(error.GetBaseException()).IsSameReferenceAs(failure);
     }
 }

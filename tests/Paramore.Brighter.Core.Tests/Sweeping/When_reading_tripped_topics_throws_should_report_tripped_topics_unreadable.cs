@@ -9,13 +9,12 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.Outbox.Hosting.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class When_reading_tripped_topics_throws_should_report_tripped_topics_unreadable_tests
 {
-    [Fact]
+    [Test]
     public async Task When_reading_tripped_topics_throws_should_report_tripped_topics_unreadable()
     {
         //Arrange
@@ -25,15 +24,15 @@ public class When_reading_tripped_topics_throws_should_report_tripped_topics_unr
 
         //Act
         HealthCheckResult result = default;
-        var exception = await Record.ExceptionAsync(async () => result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None));
+        var exception = await TestExceptionRecorder.CaptureAsync(async () => result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None));
 
         //Assert
-        Assert.Null(exception);
-        AssertUnreadable(state, result);
-        AssertLoggedAtError(marker);
+        await Assert.That(exception).IsNull();
+        await AssertUnreadable(state, result);
+        await AssertLoggedAtError(marker);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_lookup_delegate_throws_should_report_tripped_topics_unreadable()
     {
         //Arrange
@@ -43,12 +42,12 @@ public class When_reading_tripped_topics_throws_should_report_tripped_topics_unr
 
         //Act
         HealthCheckResult result = default;
-        var exception = await Record.ExceptionAsync(async () => result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None));
+        var exception = await TestExceptionRecorder.CaptureAsync(async () => result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None));
 
         //Assert
-        Assert.Null(exception);
-        AssertUnreadable(state, result);
-        AssertLoggedAtError(marker);
+        await Assert.That(exception).IsNull();
+        await AssertUnreadable(state, result);
+        await AssertLoggedAtError(marker);
     }
 
     private static OutboxSweeperState ActiveStateWithThreeFailedSweeps()
@@ -63,23 +62,23 @@ public class When_reading_tripped_topics_throws_should_report_tripped_topics_unr
         return state;
     }
 
-    private static void AssertUnreadable(OutboxSweeperState state, HealthCheckResult result)
+    private static async Task AssertUnreadable(OutboxSweeperState state, HealthCheckResult result)
     {
-        Assert.True(state.Read().IsActive);
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        Assert.NotEqual(HealthStatus.Unhealthy, result.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Equal(new[] { "consecutive_failed_sweeps", "tripped_topics_unreadable" }, Assert.IsType<string[]>(result.Data[RemedyCheckConvention.ConditionsKey]));
-        var unreadable = Assert.IsAssignableFrom<IDictionary<string, object>>(result.Data["tripped_topics_unreadable"]);
-        Assert.Equal("System.InvalidOperationException", unreadable["exception_type"]);
-        Assert.Contains("could not be read", result.Description);
+        await Assert.That(state.Read().IsActive).IsTrue();
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(result.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        await Assert.That((await Assert.That(result.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "consecutive_failed_sweeps", "tripped_topics_unreadable" });
+        var unreadable = ((IDictionary<string, object>)(((IDictionary<string, object>)(await Assert.That(result.Data["tripped_topics_unreadable"]).IsAssignableTo<IDictionary<string, object>>()))));
+        await Assert.That(unreadable["exception_type"]).IsEqualTo("System.InvalidOperationException");
+        await Assert.That(result.Description).Contains("could not be read");
     }
 
-    private static void AssertLoggedAtError(string marker)
+    private static async Task AssertLoggedAtError(string marker)
     {
         var logged = CapturingLogSink.Instance.Find(typeof(OutboxSweeperInvestigateHealthCheck).FullName!, marker);
-        var single = Assert.Single(logged);
-        Assert.Equal(Serilog.Events.LogEventLevel.Error, single.Level);
-        Assert.IsType<InvalidOperationException>(single.Exception);
+        var single = await Assert.That(logged).HasSingleItem();
+        await Assert.That(single.Level).IsEqualTo(Serilog.Events.LogEventLevel.Error);
+        await Assert.That(single.Exception).IsTypeOf<InvalidOperationException>();
     }
 }

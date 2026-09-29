@@ -28,15 +28,14 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusLockRenewalLifetimeTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_cancellation_callbacks_request_disposal_should_not_hold_lifecycle_gates(bool settleFirst)
     {
         // Arrange
@@ -57,7 +56,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
                 CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             callbackEnteredDisposal = entry.Wait(TimeSpan.FromSeconds(3));
         };
-        var message = Assert.Single(await consumer.ReceiveAsync());
+        var message = await Assert.That(await consumer.ReceiveAsync()).HasSingleItem();
         await receiver.RenewalStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Act
@@ -72,20 +71,19 @@ public class AzureServiceBusLockRenewalLifetimeTests
             {
                 receiver.AllowCompletion.TrySetResult(true);
             }
-            var exception = await Assert.ThrowsAsync<ServiceBusException>(
-                () => settlement.WaitAsync(TimeSpan.FromSeconds(5)));
-            Assert.Equal(ServiceBusFailureReason.MessageLockLost, exception.Reason);
+            var exception = await Assert.That(() => settlement.WaitAsync(TimeSpan.FromSeconds(5))).ThrowsExactly<ServiceBusException>();
+            await Assert.That(exception.Reason).IsEqualTo(ServiceBusFailureReason.MessageLockLost);
         }
         else await consumer.DisposeAsync();
         await nestedDisposal.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Assert
-        Assert.True(callbackEnteredDisposal, "Cancellation callbacks must be able to enter disposal from another thread.");
-        Assert.Equal(0, receiver.RenewalsInFlight);
-        Assert.True(receiver.IsClosed);
+        await Assert.That(callbackEnteredDisposal).IsTrue().Because("Cancellation callbacks must be able to enter disposal from another thread.");
+        await Assert.That(receiver.RenewalsInFlight).IsEqualTo(0);
+        await Assert.That(receiver.IsClosed).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_receive_overlaps_last_session_settlement_should_start_a_fresh_renewal()
     {
         // Arrange
@@ -97,7 +95,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
             bufferSize: 1, makeChannels: OnMissingChannel.Assume,
             subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { RequireSession = true });
         await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
-        var first = Assert.Single(await consumer.ReceiveAsync());
+        var first = await Assert.That(await consumer.ReceiveAsync()).HasSingleItem();
         receiver.BlockReceive = true;
         receiver.BlockCompletion = true;
         var pendingReceive = consumer.ReceiveAsync();
@@ -110,7 +108,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
             await receiver.CompletionStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
             var renewalsBeforeReceive = session.RenewalCount;
             receiver.AllowReceive.TrySetResult(true);
-            var second = Assert.Single(await pendingReceive);
+            var second = await Assert.That(await pendingReceive).HasSingleItem();
             receiver.AllowCompletion.TrySetResult(true);
             await settlement;
             var elapsed = Stopwatch.StartNew();
@@ -119,8 +117,8 @@ public class AzureServiceBusLockRenewalLifetimeTests
             await consumer.AcknowledgeAsync(second);
 
             // Assert
-            Assert.True(session.RenewalCount > renewalsBeforeReceive, "The new batch must not reuse the stopped session renewal.");
-            Assert.Equal(2, receiver.CompletedCount);
+            await Assert.That(session.RenewalCount > renewalsBeforeReceive).IsTrue().Because("The new batch must not reuse the stopped session renewal.");
+            await Assert.That(receiver.CompletedCount).IsEqualTo(2);
         }
         finally
         {
@@ -129,15 +127,15 @@ public class AzureServiceBusLockRenewalLifetimeTests
         }
     }
 
-    [Theory]
-    [InlineData("complete", false)]
-    [InlineData("complete", true)]
-    [InlineData("abandon", false)]
-    [InlineData("abandon", true)]
-    [InlineData("reject", false)]
-    [InlineData("reject", true)]
-    [InlineData("dispose", false)]
-    [InlineData("dispose", true)]
+    [Test]
+    [Arguments("complete", false)]
+    [Arguments("complete", true)]
+    [Arguments("abandon", false)]
+    [Arguments("abandon", true)]
+    [Arguments("reject", false)]
+    [Arguments("reject", true)]
+    [Arguments("dispose", false)]
+    [Arguments("dispose", true)]
     public async Task When_settling_a_message_should_stop_lock_renewal(string operation, bool useAsync)
     {
         // Arrange
@@ -147,7 +145,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"), makeChannels: OnMissingChannel.Assume);
         using var consumer = new AzureServiceBusConsumerFactory(client).Create(subscription);
         var asyncConsumer = (IAmAMessageConsumerAsync)consumer;
-        var message = Assert.Single(await asyncConsumer.ReceiveAsync());
+        var message = await Assert.That(await asyncConsumer.ReceiveAsync()).HasSingleItem();
         await receiver.RenewalStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Act
@@ -173,17 +171,17 @@ public class AzureServiceBusLockRenewalLifetimeTests
         }
 
         // Assert
-        Assert.Equal(0, receiver.RenewalsInFlight);
-        Assert.Equal(operation == "complete" ? 1 : 0, receiver.CompletedCount);
-        Assert.Equal(operation == "abandon" ? 1 : 0, receiver.AbandonedCount);
-        Assert.Equal(operation == "reject" ? 1 : 0, receiver.DeadLetteredCount);
-        Assert.Equal(operation == "dispose", receiver.IsClosed);
+        await Assert.That(receiver.RenewalsInFlight).IsEqualTo(0);
+        await Assert.That(receiver.CompletedCount).IsEqualTo(operation == "complete" ? 1 : 0);
+        await Assert.That(receiver.AbandonedCount).IsEqualTo(operation == "abandon" ? 1 : 0);
+        await Assert.That(receiver.DeadLetteredCount).IsEqualTo(operation == "reject" ? 1 : 0);
+        await Assert.That(receiver.IsClosed).IsEqualTo(operation == "dispose");
         var attempts = receiver.RenewalAttemptCount;
         await Task.Delay(TimeSpan.FromMilliseconds(1200));
-        Assert.Equal(attempts, receiver.RenewalAttemptCount);
+        await Assert.That(receiver.RenewalAttemptCount).IsEqualTo(attempts);
     }
 
-    [Fact]
+    [Test]
     public async Task When_replacing_a_failed_receiver_should_stop_its_renewals()
     {
         // Arrange
@@ -198,17 +196,17 @@ public class AzureServiceBusLockRenewalLifetimeTests
         firstReceiver.ReceiveException = new InvalidOperationException("The connection failed.");
 
         // Act
-        await Assert.ThrowsAsync<ChannelFailureException>(() => consumer.ReceiveAsync());
-        var message = Assert.Single(await consumer.ReceiveAsync());
+        await Assert.That(() => consumer.ReceiveAsync()).ThrowsExactly<ChannelFailureException>();
+        var message = await Assert.That(await consumer.ReceiveAsync()).HasSingleItem();
         await consumer.AcknowledgeAsync(message);
 
         // Assert
-        Assert.True(firstReceiver.IsClosed);
-        Assert.Equal(0, firstReceiver.RenewalsInFlight);
-        Assert.Equal(1, replacement.CompletedCount);
+        await Assert.That(firstReceiver.IsClosed).IsTrue();
+        await Assert.That(firstReceiver.RenewalsInFlight).IsEqualTo(0);
+        await Assert.That(replacement.CompletedCount).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_renewal_budget_expires_should_cancel_an_in_flight_renewal()
     {
         // Arrange
@@ -228,14 +226,14 @@ public class AzureServiceBusLockRenewalLifetimeTests
         await Task.Delay(TimeSpan.FromSeconds(1));
 
         // Assert
-        Assert.Equal(1, receiver.RenewalAttemptCount);
-        Assert.Equal(0, receiver.RenewalsInFlight);
-        Assert.False(receiver.IsClosed);
+        await Assert.That(receiver.RenewalAttemptCount).IsEqualTo(1);
+        await Assert.That(receiver.RenewalsInFlight).IsEqualTo(0);
+        await Assert.That(receiver.IsClosed).IsFalse();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_purging_should_stop_renewing_messages_removed_from_the_buffer(bool useAsync)
     {
         // Arrange
@@ -254,11 +252,11 @@ public class AzureServiceBusLockRenewalLifetimeTests
         else consumer.Purge();
 
         // Assert
-        Assert.True(receiver.IsClosed);
-        Assert.Equal(0, receiver.RenewalsInFlight);
+        await Assert.That(receiver.IsClosed).IsTrue();
+        await Assert.That(receiver.RenewalsInFlight).IsEqualTo(0);
     }
 
-    [Fact]
+    [Test]
     public async Task When_disposal_overlaps_settlement_should_wait_for_renewal_to_finish()
     {
         // Arrange
@@ -272,7 +270,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"), makeChannels: OnMissingChannel.Assume);
         await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
-        var message = Assert.Single(await consumer.ReceiveAsync());
+        var message = await Assert.That(await consumer.ReceiveAsync()).HasSingleItem();
         await receiver.RenewalStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Act
@@ -288,9 +286,8 @@ public class AzureServiceBusLockRenewalLifetimeTests
             receiver.AllowRenewalToFinish.TrySetResult(true);
             await disposal.WaitAsync(TimeSpan.FromSeconds(5));
             receiver.AllowCompletion.TrySetResult(true);
-            var exception = await Assert.ThrowsAsync<ServiceBusException>(
-                () => settlement.WaitAsync(TimeSpan.FromSeconds(5)));
-            Assert.Equal(ServiceBusFailureReason.MessageLockLost, exception.Reason);
+            var exception = await Assert.That(() => settlement.WaitAsync(TimeSpan.FromSeconds(5))).ThrowsExactly<ServiceBusException>();
+            await Assert.That(exception.Reason).IsEqualTo(ServiceBusFailureReason.MessageLockLost);
         }
         finally
         {
@@ -299,17 +296,17 @@ public class AzureServiceBusLockRenewalLifetimeTests
         }
 
         // Assert
-        Assert.False(closedBeforeRenewalFinished);
-        Assert.False(disposalFinishedEarly);
-        Assert.Equal(0, receiver.RenewalsInFlight);
-        Assert.True(receiver.IsClosed);
+        await Assert.That(closedBeforeRenewalFinished).IsFalse();
+        await Assert.That(disposalFinishedEarly).IsFalse();
+        await Assert.That(receiver.RenewalsInFlight).IsEqualTo(0);
+        await Assert.That(receiver.IsClosed).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_abandoning_or_rejecting_a_session_message_should_preserve_the_remaining_batch(
         bool reject, bool useAsync)
     {
@@ -324,7 +321,7 @@ public class AzureServiceBusLockRenewalLifetimeTests
         using var consumer = new AzureServiceBusConsumerFactory(client).Create(subscription);
         var asyncConsumer = (IAmAMessageConsumerAsync)consumer;
         var messages = await asyncConsumer.ReceiveAsync();
-        Assert.Equal(2, messages.Length);
+        await Assert.That(messages.Length).IsEqualTo(2);
 
         // Act
         if (useAsync)
@@ -341,10 +338,10 @@ public class AzureServiceBusLockRenewalLifetimeTests
         await asyncConsumer.AcknowledgeAsync(messages[1]);
 
         // Assert
-        Assert.False(closedBeforeLastMessage);
-        Assert.Equal(1, receiver.CompletedCount);
-        Assert.Equal(reject ? 0 : 1, receiver.AbandonedCount);
-        Assert.Equal(reject ? 1 : 0, receiver.DeadLetteredCount);
-        Assert.True(receiver.IsClosed);
+        await Assert.That(closedBeforeLastMessage).IsFalse();
+        await Assert.That(receiver.CompletedCount).IsEqualTo(1);
+        await Assert.That(receiver.AbandonedCount).IsEqualTo(reject ? 0 : 1);
+        await Assert.That(receiver.DeadLetteredCount).IsEqualTo(reject ? 1 : 0);
+        await Assert.That(receiver.IsClosed).IsTrue();
     }
 }

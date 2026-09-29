@@ -5,13 +5,12 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class SweeperCompletedSweepMetricsTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_sweep_completes_should_record_a_completed_sweep_and_its_duration()
     {
         //Arrange
@@ -32,12 +31,12 @@ public class SweeperCompletedSweepMetricsTests
         sweeper.Dispose();
 
         //Assert
-        Assert.True(recorded, "The sweeper recorded no sweep");
+        await Assert.That(recorded).IsTrue().Because("The sweeper recorded no sweep");
         var sweep = measurements.Of(RecordedSweeperMeasurements.Sweeps).First();
-        Assert.Equal(1, sweep.Value);
-        Assert.Equal("completed", sweep.Outcome);
+        await Assert.That(sweep.Value).IsEqualTo(1);
+        await Assert.That(sweep.Outcome).IsEqualTo("completed");
         var duration = measurements.Of(RecordedSweeperMeasurements.SweepDuration).First();
-        Assert.Equal("completed", duration.Outcome);
-        Assert.True(duration.Value >= 0);
+        await Assert.That(duration.Outcome).IsEqualTo("completed");
+        await Assert.That(duration.Value >= 0).IsTrue();
     }
 }

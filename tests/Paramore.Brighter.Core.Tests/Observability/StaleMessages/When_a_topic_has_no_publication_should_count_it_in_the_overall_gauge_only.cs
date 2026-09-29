@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class TopicWithoutAPublicationTests
     private const string DESTINATION = "messaging.destination.name";
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_a_topic_has_no_publication_should_count_it_in_the_overall_gauge_only()
     {
         //Arrange
@@ -73,41 +72,41 @@ public class TopicWithoutAPublicationTests
 
         //Act
         await monitor.StartAsync(default);
-        AdvanceThroughDueTimes(readings, 6);
-        WaitUntilTheMonitorWaits(readings);
+        await AdvanceThroughDueTimes(readings, 6);
+        await WaitUntilTheMonitorWaits(readings);
         _clock.Advance(TimeSpan.FromSeconds(30));
         var at120630 = metrics.Observe();
 
         //Assert
-        Assert.Equal(2, Assert.Single(at120630, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES).Value);
-        var topic = Assert.Single(at120630, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES);
-        Assert.Equal("orders=1", $"{topic.Attributes[DESTINATION]}={topic.Value}");
-        Assert.DoesNotContain(at120630, m => m.Attributes.TryGetValue(DESTINATION, out var destination) && Equals(destination, "audit"));
+        await Assert.That((await Assert.That(System.Linq.Enumerable.Where(at120630, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).HasSingleItem()).Value).IsEqualTo(2);
+        var topic = await Assert.That(System.Linq.Enumerable.Where(at120630, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES)).HasSingleItem();
+        await Assert.That($"{topic.Attributes[DESTINATION]}={topic.Value}").IsEqualTo("orders=1");
+        await Assert.That(System.Linq.Enumerable.Any(at120630, m => m.Attributes.TryGetValue(DESTINATION, out var destination) && Equals(destination, "audit"))).IsFalse();
     }
 
     private static Message Event(string topic) =>
         new(new MessageHeader(Id.Random(), new RoutingKey(topic), MessageType.MT_EVENT), new MessageBody("{}"));
 
-    private void AdvanceThroughDueTimes(OutboxStaleMessageReadings readings, int dueTimes)
+    private async System.Threading.Tasks.Task AdvanceThroughDueTimes(OutboxStaleMessageReadings readings, int dueTimes)
     {
         for (var i = 0; i < dueTimes; i++)
         {
             var completed = readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed);
-            WaitUntilTheMonitorWaits(readings);
+            await WaitUntilTheMonitorWaits(readings);
             _clock.Advance(TimeSpan.FromMinutes(1));
-            WaitForCompletions(readings, completed + 1);
+            await WaitForCompletions(readings, completed + 1);
         }
     }
 
-    private void WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
+    private async Task WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
     {
         var completed = readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed);
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5))).IsTrue();
     }
 
-    private static void WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>
-        Assert.True(SpinWait.SpinUntil(
+    private static async Task WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed) >= completions
                   && readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed) >= completions,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 }

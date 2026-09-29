@@ -4,13 +4,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class SweeperThrowingMeterTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_sweeper_meter_throws_should_still_sweep_the_outbox()
     {
         //Arrange
@@ -30,6 +29,6 @@ public class SweeperThrowingMeterTests
         sweeper.Dispose();
 
         //Assert
-        Assert.True(swept, "A throwing meter stopped the sweeper from dispatching the outstanding message");
+        await Assert.That(swept).IsTrue().Because("A throwing meter stopped the sweeper from dispatching the outstanding message");
     }
 }

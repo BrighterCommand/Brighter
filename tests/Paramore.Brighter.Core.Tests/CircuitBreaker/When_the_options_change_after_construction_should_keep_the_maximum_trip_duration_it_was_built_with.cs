@@ -1,14 +1,13 @@
 using System;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker;
 
 public class InMemoryBreakerOptionsChangedAfterConstructionTests
 {
-    [Fact]
-    public void When_the_options_change_after_construction_should_keep_the_maximum_trip_duration_it_was_built_with()
+    [Test]
+    public async Task When_the_options_change_after_construction_should_keep_the_maximum_trip_duration_it_was_built_with()
     {
         // Arrange
         var orders = new RoutingKey("orders");
@@ -22,14 +21,14 @@ public class InMemoryBreakerOptionsChangedAfterConstructionTests
 
         // Assert
         clock.Advance(TimeSpan.FromMinutes(4) + TimeSpan.FromSeconds(59));
-        Assert.Contains(orders, breaker.TrippedTopics);
+        await Assert.That(breaker.TrippedTopics).Contains(orders);
 
         clock.Advance(TimeSpan.FromSeconds(1));
-        Assert.DoesNotContain(orders, breaker.TrippedTopics);
+        await Assert.That(breaker.TrippedTopics).DoesNotContain(orders);
     }
 
-    [Fact]
-    public void When_the_cooldown_count_changes_after_construction_should_apply_it_to_the_next_trip()
+    [Test]
+    public async Task When_the_cooldown_count_changes_after_construction_should_apply_it_to_the_next_trip()
     {
         // Arrange
         var payments = new RoutingKey("payments");
@@ -42,6 +41,6 @@ public class InMemoryBreakerOptionsChangedAfterConstructionTests
         breaker.CoolDown();
 
         // Assert
-        Assert.DoesNotContain(payments, breaker.TrippedTopics);
+        await Assert.That(breaker.TrippedTopics).DoesNotContain(payments);
     }
 }

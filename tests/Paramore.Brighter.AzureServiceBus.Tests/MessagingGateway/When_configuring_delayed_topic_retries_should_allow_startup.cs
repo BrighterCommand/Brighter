@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -29,25 +29,24 @@ using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "AzureServiceBus")]
-[Collection("AzureServiceBus")]
+[Property("Category", "AzureServiceBus")]
+[NotInParallel("AzureServiceBus")]
 public class AzureServiceBusDelayedRetryConfigurationTests
 {
     private static readonly InMemoryServiceBusLogProvider s_logs = new();
 
     static AzureServiceBusDelayedRetryConfigurationTests() => ApplicationLogging.LoggerFactory.AddProvider(s_logs);
 
-    [Theory]
-    [InlineData(OnMissingChannel.Create, false)]
-    [InlineData(OnMissingChannel.Create, true)]
-    [InlineData(OnMissingChannel.Validate, false)]
-    [InlineData(OnMissingChannel.Validate, true)]
-    [InlineData(OnMissingChannel.Assume, false)]
-    [InlineData(OnMissingChannel.Assume, true)]
+    [Test]
+    [Arguments(OnMissingChannel.Create, false)]
+    [Arguments(OnMissingChannel.Create, true)]
+    [Arguments(OnMissingChannel.Validate, false)]
+    [Arguments(OnMissingChannel.Validate, true)]
+    [Arguments(OnMissingChannel.Assume, false)]
+    [Arguments(OnMissingChannel.Assume, true)]
     public async Task When_configuring_delayed_topic_retries_should_allow_startup(
         OnMissingChannel makeChannels, bool synchronous)
     {
@@ -61,7 +60,8 @@ public class AzureServiceBusDelayedRetryConfigurationTests
             requeueCount: 3, requeueDelay: TimeSpan.FromSeconds(2), makeChannels: makeChannels);
 
         // Act
-        var exception = Record.Exception(() =>
+        Exception? exception = null;
+        try
         {
             if (synchronous)
             {
@@ -72,16 +72,17 @@ public class AzureServiceBusDelayedRetryConfigurationTests
                 var consumer = factory.CreateAsync(subscription);
                 ((IDisposable)consumer).Dispose();
             }
-        });
+        }
+        catch (Exception e) { exception = e; }
 
         // Assert
-        Assert.Null(exception);
-        Assert.False((await administration.TopicExistsAsync(topicName)).Value);
+        await Assert.That(exception).IsNull();
+        await Assert.That((await administration.TopicExistsAsync(topicName)).Value).IsFalse();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_requesting_a_delayed_topic_retry_should_abandon_and_warn_without_broadcasting(bool synchronous)
     {
         // Arrange
@@ -114,45 +115,45 @@ public class AzureServiceBusDelayedRetryConfigurationTests
             var received = synchronous
                 ? syncChannel!.Receive(TimeSpan.FromSeconds(10))
                 : await asyncChannel!.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.Equal(original.MessageId, received.Id.Value);
+            await Assert.That(received.Id.Value).IsEqualTo(original.MessageId);
             var receivedB = await otherB.ReceiveMessageAsync(TimeSpan.FromSeconds(10));
             var receivedC = await otherC.ReceiveMessageAsync(TimeSpan.FromSeconds(10));
-            Assert.NotNull(receivedB);
-            Assert.NotNull(receivedC);
+            await Assert.That(receivedB).IsNotNull();
+            await Assert.That(receivedC).IsNotNull();
             await otherB.CompleteMessageAsync(receivedB);
             await otherC.CompleteMessageAsync(receivedC);
 
             // Act
             received.Header.UpdateHandledCount();
-            Assert.True(synchronous
+            await Assert.That(synchronous
                 ? syncChannel!.Requeue(received, TimeSpan.FromMinutes(5))
-                : await asyncChannel!.RequeueAsync(received, TimeSpan.FromMinutes(5)));
+                : await asyncChannel!.RequeueAsync(received, TimeSpan.FromMinutes(5))).IsTrue();
             var redelivered = synchronous
                 ? syncChannel!.Receive(TimeSpan.FromSeconds(5))
                 : await asyncChannel!.ReceiveAsync(TimeSpan.FromSeconds(5));
 
             // Assert
-            Assert.Equal(original.MessageId, redelivered.Id.Value);
-            Assert.Equal(original.Body.ToString(), redelivered.Body.Value);
-            Assert.Equal(1, redelivered.Header.HandledCount);
-            Assert.Contains(s_logs.Entries, entry => entry.Level == LogLevel.Warning
-                && entry.Message.Contains("ForwardTo") && entry.Message.Contains(original.MessageId));
+            await Assert.That(redelivered.Id.Value).IsEqualTo(original.MessageId);
+            await Assert.That(redelivered.Body.Value).IsEqualTo(original.Body.ToString());
+            await Assert.That(redelivered.Header.HandledCount).IsEqualTo(1);
+            await Assert.That(System.Linq.Enumerable.Any(s_logs.Entries, entry => entry.Level == LogLevel.Warning
+                && entry.Message.Contains("ForwardTo") && entry.Message.Contains(original.MessageId))).IsTrue();
             redelivered.Header.UpdateHandledCount();
-            Assert.True(synchronous
+            await Assert.That(synchronous
                 ? syncChannel!.Requeue(redelivered, TimeSpan.FromMinutes(5))
-                : await asyncChannel!.RequeueAsync(redelivered, TimeSpan.FromMinutes(5)));
+                : await asyncChannel!.RequeueAsync(redelivered, TimeSpan.FromMinutes(5))).IsTrue();
             redelivered = synchronous
                 ? syncChannel!.Receive(TimeSpan.FromSeconds(5))
                 : await asyncChannel!.ReceiveAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(2, redelivered.Header.HandledCount);
-            Assert.Single(s_logs.Entries, entry => entry.Level == LogLevel.Warning
-                && entry.Message.Contains("ForwardTo") && entry.Message.Contains(original.MessageId));
+            await Assert.That(redelivered.Header.HandledCount).IsEqualTo(2);
+            await Assert.That(System.Linq.Enumerable.Where(s_logs.Entries, entry => entry.Level == LogLevel.Warning
+                && entry.Message.Contains("ForwardTo") && entry.Message.Contains(original.MessageId))).HasSingleItem();
             if (synchronous)
                 syncChannel!.Acknowledge(redelivered);
             else
                 await asyncChannel!.AcknowledgeAsync(redelivered);
-            Assert.Null(await otherB.ReceiveMessageAsync(TimeSpan.FromSeconds(3)));
-            Assert.Null(await otherC.ReceiveMessageAsync(TimeSpan.FromSeconds(3)));
+            await Assert.That(await otherB.ReceiveMessageAsync(TimeSpan.FromSeconds(3))).IsNull();
+            await Assert.That(await otherC.ReceiveMessageAsync(TimeSpan.FromSeconds(3))).IsNull();
         }
         finally
         {

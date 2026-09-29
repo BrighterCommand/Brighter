@@ -3,14 +3,14 @@ using FakeItEasy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Paramore.Brighter.Sqlite.EntityFrameworkCore;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class SqliteEntityFrameworkTransactionProviderRollbackTests
 {
-    [Fact]
-    public void When_sqlite_ef_rollback_fails_should_propagate_exception()
+    [Test]
+    public async System.Threading.Tasks.Task When_sqlite_ef_rollback_fails_should_propagate_exception()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -22,6 +22,6 @@ public class SqliteEntityFrameworkTransactionProviderRollbackTests
         var provider = new SqliteEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => provider.Rollback());
+        await Assert.That(() => provider.Rollback()).ThrowsExactly<InvalidOperationException>();
     }
 }

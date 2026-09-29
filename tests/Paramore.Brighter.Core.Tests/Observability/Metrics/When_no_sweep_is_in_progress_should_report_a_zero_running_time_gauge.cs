@@ -31,13 +31,12 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class NoSweepInProgressZeroRunningTimeGaugeTests
 {
-    [Fact]
+    [Test]
     public async Task When_no_sweep_is_in_progress_should_report_a_zero_running_time_gauge_before_the_first_sweep()
     {
         //Arrange
@@ -60,10 +59,10 @@ public class NoSweepInProgressZeroRunningTimeGaugeTests
         await Task.Run(recorded.Observe).WaitAsync(TimeSpan.FromSeconds(1));
 
         //Assert
-        Assert.Equal([0.0], recorded.Values);
+        await Assert.That(recorded.Values).IsEqualTo([0.0]);
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_sweep_is_in_progress_should_report_a_zero_running_time_gauge_after_a_completed_sweep()
     {
         //Arrange
@@ -73,10 +72,10 @@ public class NoSweepInProgressZeroRunningTimeGaugeTests
         var values = await ObserveHalfAnIntervalAfterTheFirstSweepEnds(outbox.ScopeFactory, new InMemoryLock(), SweepOutcome.Completed);
 
         //Assert
-        Assert.Equal([0.0], values);
+        await Assert.That(values).IsEqualTo([0.0]);
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_sweep_is_in_progress_should_report_a_zero_running_time_gauge_after_a_failed_sweep()
     {
         //Arrange
@@ -89,10 +88,10 @@ public class NoSweepInProgressZeroRunningTimeGaugeTests
             provider.GetRequiredService<IServiceScopeFactory>(), new InMemoryLock(), SweepOutcome.Failed);
 
         //Assert
-        Assert.Equal([0.0], values);
+        await Assert.That(values).IsEqualTo([0.0]);
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_sweep_is_in_progress_should_report_a_zero_running_time_gauge_after_a_lock_unavailable_sweep()
     {
         //Arrange
@@ -102,10 +101,10 @@ public class NoSweepInProgressZeroRunningTimeGaugeTests
         var values = await ObserveHalfAnIntervalAfterTheFirstSweepEnds(outbox.ScopeFactory, new HeldDistributedLock(), SweepOutcome.LockUnavailable);
 
         //Assert
-        Assert.Equal([0.0], values);
+        await Assert.That(values).IsEqualTo([0.0]);
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_sweep_is_in_progress_should_report_a_zero_running_time_gauge_after_a_blocked_sweep_is_released()
     {
         //Arrange
@@ -139,9 +138,9 @@ public class NoSweepInProgressZeroRunningTimeGaugeTests
             await Task.Run(recorded.Observe).WaitAsync(TimeSpan.FromSeconds(1));
 
             //Assert
-            Assert.True(reachedMediator, "The sweep did not reach the mediator");
-            Assert.False(state.Read().IsSweepInProgress);
-            Assert.Equal([0.0], recorded.Values);
+            await Assert.That(reachedMediator).IsTrue().Because("The sweep did not reach the mediator");
+            await Assert.That(state.Read().IsSweepInProgress).IsFalse();
+            await Assert.That(recorded.Values).IsEqualTo([0.0]);
         }
         finally
         {

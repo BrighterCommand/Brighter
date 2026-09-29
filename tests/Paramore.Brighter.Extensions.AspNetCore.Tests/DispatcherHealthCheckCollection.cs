@@ -21,14 +21,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
 /// <summary>
 /// Runs tests that start a real <c>Dispatcher</c> alone, after the parallel collections have finished, so their bounded waits are not starved of CPU.
 /// </summary>
-[CollectionDefinition(NAME, DisableParallelization = true)]
+[System.Obsolete]
 public sealed class DispatcherHealthCheckCollection
 {
     /// <summary>The collection for tests that run a real dispatcher over in-memory channels.</summary>

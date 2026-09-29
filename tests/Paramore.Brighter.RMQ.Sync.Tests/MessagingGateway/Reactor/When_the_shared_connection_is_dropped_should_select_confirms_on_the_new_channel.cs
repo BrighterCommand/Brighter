@@ -2,12 +2,11 @@ using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using RabbitMQ.Client;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[NotInParallel("RMQ")]
 public class RmqSharedConnectionDroppedConfirmTests : IDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
@@ -29,8 +28,8 @@ public class RmqSharedConnectionDroppedConfirmTests : IDisposable
             .Create(TimeSpan.FromMilliseconds(1000));
     }
 
-    [Fact]
-    public void When_the_shared_connection_is_dropped_should_select_confirms_on_the_new_channel()
+    [Test]
+    public async Task When_the_shared_connection_is_dropped_should_select_confirms_on_the_new_channel()
     {
         //Arrange — after a send, another gateway drops the pooled connection this producer's channel is on
         _messageProducer.Send(NewMessage());
@@ -39,15 +38,16 @@ public class RmqSharedConnectionDroppedConfirmTests : IDisposable
             .RemoveConnection(new ConnectionFactory { Uri = _rmqConnection.AmpqUri!.Uri });
 
         //Act — the next send finds its channel closed, with no IOException, and opens a new one
-        var error = Record.Exception(() => _messageProducer.Send(NewMessage()));
+        Exception? error = null;
+        try { _messageProducer.Send(NewMessage()); } catch (Exception e) { error = e; }
 
         //Assert — the send succeeds and the new channel is set up once
-        Assert.Null(error);
+        await Assert.That(error).IsNull();
 
         var newChannel = _messageProducer.Channels[1];
-        Assert.Equal(1, newChannel.ConfirmSelectCount);
-        Assert.Equal(1, newChannel.AckSubscriberCount);
-        Assert.Equal(1, newChannel.NackSubscriberCount);
+        await Assert.That(newChannel.ConfirmSelectCount).IsEqualTo(1);
+        await Assert.That(newChannel.AckSubscriberCount).IsEqualTo(1);
+        await Assert.That(newChannel.NackSubscriberCount).IsEqualTo(1);
     }
 
     private Message NewMessage() => new(

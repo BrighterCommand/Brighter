@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
@@ -13,7 +12,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 /// relative source is the ordinary case rather than an exotic one — and every transport other than
 /// Azure Service Bus round-trips it without complaint.
 /// </summary>
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusRelativeCloudEventsUriTests
 {
     private readonly AzureServiceBusMessageCreator _creator;
@@ -29,8 +28,8 @@ public class AzureServiceBusRelativeCloudEventsUriTests
         _creator = new AzureServiceBusMessageCreator(subscription);
     }
 
-    [Fact]
-    public void When_receiving_a_message_with_relative_cloud_events_uris_should_preserve_them()
+    [Test]
+    public async System.Threading.Tasks.Task When_receiving_a_message_with_relative_cloud_events_uris_should_preserve_them()
     {
         // Arrange — the two relative URIs are the only data that decides this test
         var relativeSource = new Uri(Uuid.NewAsString(), UriKind.Relative);
@@ -59,8 +58,8 @@ public class AzureServiceBusRelativeCloudEventsUriTests
         var message = _creator.MapToBrighterMessage(received);
 
         // Assert
-        Assert.Equal(relativeSource, message.Header.Source);
-        Assert.False(message.Header.Source.IsAbsoluteUri);
-        Assert.Equal(relativeDataSchema, message.Header.DataSchema);
+        await Assert.That(message.Header.Source).IsEqualTo(relativeSource);
+        await Assert.That(message.Header.Source.IsAbsoluteUri).IsFalse();
+        await Assert.That(message.Header.DataSchema).IsEqualTo(relativeDataSchema);
     }
 }

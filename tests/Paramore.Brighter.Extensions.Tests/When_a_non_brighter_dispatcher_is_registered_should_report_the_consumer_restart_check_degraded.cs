@@ -34,7 +34,6 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -43,7 +42,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class ConsumerChecksNonBrighterDispatcherTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_non_brighter_dispatcher_is_registered_should_report_the_consumer_restart_check_degraded()
     {
         //Arrange
@@ -58,10 +57,10 @@ public class ConsumerChecksNonBrighterDispatcherTests
 
         //Assert
         var restart = report.Entries["brighter-consumer-restart"];
-        Assert.Equal(HealthStatus.Degraded, restart.Status);
-        Assert.Empty(restart.Data);
+        await Assert.That(restart.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(restart.Data).IsEmpty();
         var takeOutOfService = report.Entries["brighter-consumer-take-out-of-service"];
-        Assert.Equal(HealthStatus.Healthy, takeOutOfService.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.TakeOutOfService), takeOutOfService.Data[RemedyCheckConvention.RemedyKindKey]);
+        await Assert.That(takeOutOfService.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(takeOutOfService.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.TakeOutOfService));
     }
 }

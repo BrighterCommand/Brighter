@@ -30,7 +30,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -38,16 +37,20 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// The session-scoped pg_advisory_lock outlives the transaction, so CommitAsync both commits and explicitly releases the lock
 /// (ADR 0058 §B.1). A second Commit on the captured transaction throws only if CommitAsync really committed it.
 /// </summary>
-public class PostgreSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkCommitTests
 {
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(releaseResult: true);
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_postgres_provisioning_uow_commit_async_is_called_it_should_commit_then_release_lock()
     {
         // Arrange
@@ -63,7 +66,7 @@ public class PostgreSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
         await uow.CommitAsync(CancellationToken.None);
 
         // Assert
-        Assert.Throws<InvalidOperationException>(() => capturedTx.Commit());
-        Assert.Equal("test_lock_resource", _advisoryLock.ReleasedKey);
+        await Assert.That(() => capturedTx.Commit()).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(_advisoryLock.ReleasedKey).IsEqualTo("test_lock_resource");
     }
 }

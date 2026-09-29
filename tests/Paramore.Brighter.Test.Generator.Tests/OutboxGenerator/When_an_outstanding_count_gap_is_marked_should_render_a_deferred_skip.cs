@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
@@ -31,7 +31,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
@@ -48,7 +47,7 @@ public class OutstandingCountGapGenerationTests : IDisposable
 
     private readonly string _testDirectory = Path.Combine(Path.GetTempPath(), $"OutboxGeneratorTests_{Guid.NewGuid()}");
 
-    [Fact]
+    [Test]
     public async Task When_the_age_column_is_a_gap_should_render_a_deferred_skip_on_the_age_fact()
     {
         // Arrange
@@ -59,12 +58,12 @@ public class OutstandingCountGapGenerationTests : IDisposable
         await Generate(outbox);
 
         // Assert
-        AssertSkipped(AgeTest, "When_counting_outstanding_messages_older_than_the_age_should_count_only_stale_ones", 1234);
-        AssertNotSkipped(CeilingTest);
-        AssertNotSkipped(CancellationTest);
+        await AssertSkipped(AgeTest, "When_counting_outstanding_messages_older_than_the_age_should_count_only_stale_ones", 1234);
+        await AssertNotSkipped(CeilingTest);
+        await AssertNotSkipped(CancellationTest);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_ceiling_column_is_a_gap_should_render_a_deferred_skip_on_both_ceiling_facts()
     {
         // Arrange
@@ -75,13 +74,13 @@ public class OutstandingCountGapGenerationTests : IDisposable
         await Generate(outbox);
 
         // Assert
-        AssertSkipped(CeilingTest, "When_counting_outstanding_messages_with_a_ceiling_of_three_should_return_three", 1235);
-        AssertSkipped(CeilingTest, "When_counting_outstanding_messages_with_a_ceiling_of_five_should_return_five", 1235);
-        AssertNotSkipped(AgeTest);
-        AssertNotSkipped(CancellationTest);
+        await AssertSkipped(CeilingTest, "When_counting_outstanding_messages_with_a_ceiling_of_three_should_return_three", 1235);
+        await AssertSkipped(CeilingTest, "When_counting_outstanding_messages_with_a_ceiling_of_five_should_return_five", 1235);
+        await AssertNotSkipped(AgeTest);
+        await AssertNotSkipped(CancellationTest);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_cancellation_column_is_a_gap_should_render_a_deferred_skip_on_the_cancellation_fact()
     {
         // Arrange
@@ -92,12 +91,12 @@ public class OutstandingCountGapGenerationTests : IDisposable
         await Generate(outbox);
 
         // Assert
-        AssertSkipped(CancellationTest, "When_an_outstanding_count_is_cancelled_should_end_the_call", 1236);
-        AssertNotSkipped(AgeTest);
-        AssertNotSkipped(CeilingTest);
+        await AssertSkipped(CancellationTest, "When_an_outstanding_count_is_cancelled_should_end_the_call", 1236);
+        await AssertNotSkipped(AgeTest);
+        await AssertNotSkipped(CeilingTest);
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_outstanding_count_gap_is_marked_should_not_render_a_skip()
     {
         // Arrange
@@ -107,12 +106,12 @@ public class OutstandingCountGapGenerationTests : IDisposable
         await Generate(outbox);
 
         // Assert
-        AssertNotSkipped(AgeTest);
-        AssertNotSkipped(CeilingTest);
-        AssertNotSkipped(CancellationTest);
+        await AssertNotSkipped(AgeTest);
+        await AssertNotSkipped(CeilingTest);
+        await AssertNotSkipped(CancellationTest);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_ceiling_column_is_a_gap_should_skip_the_observation_facts_too()
     {
         // Arrange
@@ -124,21 +123,21 @@ public class OutstandingCountGapGenerationTests : IDisposable
         await Generate(outbox);
 
         // Assert
-        AssertSkipped(CeilingTest, "When_counting_outstanding_messages_with_a_ceiling_of_one_should_report_the_count", 1235);
-        AssertSkipped(CeilingTest, "When_counting_outstanding_messages_with_a_ceiling_of_two_should_report_the_count", 1235);
+        await AssertSkipped(CeilingTest, "When_counting_outstanding_messages_with_a_ceiling_of_one_should_report_the_count", 1235);
+        await AssertSkipped(CeilingTest, "When_counting_outstanding_messages_with_a_ceiling_of_two_should_report_the_count", 1235);
     }
 
-    private void AssertSkipped(string testFile, string method, int issue)
+    private async Task AssertSkipped(string testFile, string method, int issue)
     {
         var source = File.ReadAllText(Path.Combine(SuiteDirectory(), testFile));
-        var pattern = $"\\[Fact\\(Skip = \"Deferred: #{issue} [^\"]+\"\\)\\]\\s+public async Task {method}\\(";
-        Assert.Matches(new Regex(pattern), source);
+        var pattern = $"\\[Test\\]\\s+\\[Skip\\(\"Deferred: #{issue} [^\"]+\"\\)\\]\\s+public async Task {method}\\(";
+        await Assert.That(source).Matches(new Regex(pattern));
     }
 
-    private void AssertNotSkipped(string testFile)
+    private async Task AssertNotSkipped(string testFile)
     {
         var source = File.ReadAllText(Path.Combine(SuiteDirectory(), testFile));
-        Assert.DoesNotContain("Skip =", source);
+        await Assert.That(source).DoesNotContain("[Skip(");
     }
 
     private static OutboxConfiguration Outbox() => new()

@@ -1,16 +1,13 @@
-﻿using System.Linq;
+using System.Linq;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway;
-
 public class CombinedProducerRegistryTests
 {
-    [Fact]
-    public void When_constructing_a_combined_producer_registry()
+    [Test]
+    public async Task When_constructing_a_combined_producer_registry()
     {
         var bus = new InternalBus();
-
         var firstProducers = new[]
         {
             new Publication
@@ -25,17 +22,14 @@ public class CombinedProducerRegistryTests
                 Topic = new RoutingKey("SecondTopic")
             }
         };
-
         var firstProducerFactory = new InMemoryMessageProducerFactory(bus, firstProducers, InstrumentationOptions.All);
         var secondProducerFactory = new InMemoryMessageProducerFactory(bus, secondProducers, InstrumentationOptions.All);
-
         var combinedRegistryFactory = new CombinedProducerRegistryFactory(firstProducerFactory, secondProducerFactory);
-        var producerRegistry = combinedRegistryFactory.Create();
-
+        var producerRegistry = await combinedRegistryFactory.CreateAsync();
         // Producer registry should contain producers for both topics
         var producers = producerRegistry.Producers.ToList();
-        Assert.Equal(2, producers.Count);
-        Assert.Equal(1, producers.Count(x => x.Publication.Topic == "FirstTopic"));
-        Assert.Equal(1, producers.Count(x => x.Publication.Topic == "SecondTopic"));
+        await Assert.That(producers.Count).IsEqualTo(2);
+        await Assert.That(producers.Count(x => x.Publication.Topic == "FirstTopic")).IsEqualTo(1);
+        await Assert.That(producers.Count(x => x.Publication.Topic == "SecondTopic")).IsEqualTo(1);
     }
 }

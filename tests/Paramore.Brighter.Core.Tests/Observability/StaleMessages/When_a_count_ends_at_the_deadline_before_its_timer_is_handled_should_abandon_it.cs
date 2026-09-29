@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class CountEndingAtTheDeadlineBeforeItsTimerTests
     private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(10);
     private readonly TimestampShiftingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_a_count_ends_at_the_deadline_before_its_timer_is_handled_should_abandon_it()
     {
         //Arrange
@@ -73,28 +72,28 @@ public class CountEndingAtTheDeadlineBeforeItsTimerTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5)));
-        Assert.True(SpinWait.SpinUntil(() => _clock.ReadAfterChange.IsCompleted, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5))).IsTrue();
+        await Assert.That(SpinWait.SpinUntil(() => _clock.ReadAfterChange.IsCompleted, TimeSpan.FromSeconds(5))).IsTrue();
 
         //Act
         _clock.ShiftTimestamps(s_timeout);
         outbox.Release(7);
 
         //Assert
-        Assert.True(SpinWait.SpinUntil(
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Abandoned) >= 1,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
         await monitor.StopAsync(default);
-        Assert.Equal(1, readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Abandoned));
-        Assert.Equal(0, readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed));
-        Assert.Equal(0, readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Failed));
+        await Assert.That(readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Abandoned)).IsEqualTo(1);
+        await Assert.That(readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed)).IsEqualTo(0);
+        await Assert.That(readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Failed)).IsEqualTo(0);
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
         new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

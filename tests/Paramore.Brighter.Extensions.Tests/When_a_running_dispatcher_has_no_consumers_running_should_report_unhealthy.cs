@@ -33,16 +33,15 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ConsumerRestartNoConsumersTests
 {
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_a_running_dispatcher_has_no_consumers_running_should_report_unhealthy()
     {
         //Arrange
@@ -58,13 +57,13 @@ public class ConsumerRestartNoConsumersTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        Assert.Equal(HealthStatus.Unhealthy, result.Status);
-        Assert.Contains("orders has 0 of 2 expected consumers", result.Description);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), result.Data["remedy_kind"]);
-        Assert.Equal(new[] { "missing_consumers" }, Assert.IsAssignableFrom<IEnumerable<string>>(result.Data["conditions"]));
-        var condition = Assert.IsAssignableFrom<IDictionary<string, object>>(result.Data["missing_consumers"]);
-        Assert.Equal(0, condition["running_total"]);
-        Assert.Equal(2, condition["expected_total"]);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Unhealthy);
+        await Assert.That(result.Description).Contains("orders has 0 of 2 expected consumers");
+        await Assert.That(result.Data["remedy_kind"]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That((((IEnumerable<string>)(((IEnumerable<string>)(await Assert.That(result.Data["conditions"]).IsAssignableTo<IEnumerable<string>>())))))).IsEqualTo(new[] { "missing_consumers" });
+        var condition = ((IDictionary<string, object>)(((IDictionary<string, object>)(await Assert.That(result.Data["missing_consumers"]).IsAssignableTo<IDictionary<string, object>>()))));
+        await Assert.That(condition["running_total"]).IsEqualTo(0);
+        await Assert.That(condition["expected_total"]).IsEqualTo(2);
     }
 
     private static async Task ConsumersRunning(MultiSubscriptionReceiveHealthTestHost host, int expected)

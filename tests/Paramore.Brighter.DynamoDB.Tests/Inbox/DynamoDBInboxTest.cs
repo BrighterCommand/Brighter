@@ -1,8 +1,9 @@
-﻿using Paramore.Brighter.Base.Test.Inbox;
+using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.DynamoDB;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Inbox;
 
+[TUnit.Core.InheritsTests]
 public class DynamoDBInboxTest : InboxTests
 {
     private DynamoDbInbox? _inbox;

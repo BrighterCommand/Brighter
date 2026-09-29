@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -20,29 +21,56 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+
+
 #endregion
 
+
+
 using Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration.TestDoubles;
-using Xunit;
+
+
+
+
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration;
 
+
+
 public class ChannelFactoryDeclarationNotAFactoryTests
+
 {
-    [Fact]
-    public void When_a_subscription_declares_a_type_that_is_not_a_channel_factory_should_report_a_reason()
+
+    [Test]
+
+    public async System.Threading.Tasks.Task When_a_subscription_declares_a_type_that_is_not_a_channel_factory_should_report_a_reason()
+
     {
+
         // Arrange
+
         // Evident Data: both arguments are written literally, matching what a real reading path hands Check
+
         var subscriptionType = typeof(NonFactoryDeclaringSubscription);
+
         var declaredFactoryType = typeof(NotAChannelFactory);
 
+
+
         // Act
+
         var reason = Paramore.Brighter.SubscriptionChannelFactoryDeclaration.Check(subscriptionType, declaredFactoryType);
 
+
+
         // Assert
-        Assert.NotNull(reason);
-        Assert.Contains(subscriptionType.FullName!, reason);
-        Assert.Contains(declaredFactoryType.FullName!, reason);
+
+        await Assert.That(reason).IsNotNull();
+
+        await Assert.That(reason).Contains(subscriptionType.FullName!);
+
+        await Assert.That(reason).Contains(declaredFactoryType.FullName!);
+
     }
+
 }

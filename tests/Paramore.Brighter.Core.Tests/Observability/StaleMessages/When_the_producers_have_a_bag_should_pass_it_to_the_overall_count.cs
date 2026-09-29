@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,7 +35,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class OverallCountProducersBagTests
 {
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_the_producers_have_a_bag_should_pass_it_to_the_overall_count()
     {
         //Arrange
@@ -76,16 +75,16 @@ public class OverallCountProducersBagTests
 
         //Assert
         var calls = outbox.CountCalls.ToArray();
-        Assert.Equal(3, calls.Length);
-        Assert.All(calls, call =>
-        {
-            Assert.False(call.Synchronous);
-            Assert.Equal(TimeSpan.FromMinutes(5), call.DispatchedSince);
-            Assert.Equal(100, call.MaxCount);
-            Assert.Equal(new Dictionary<string, object> { ["Topic"] = "orders" }, call.Args);
-            Assert.Null(call.RequestContext);
-            Assert.True(call.CancellationToken.CanBeCanceled);
-        });
+        await Assert.That(calls.Length).IsEqualTo(3);
+        foreach (var call in calls)
+{
+    await Assert.That(call.Synchronous).IsFalse();
+    await Assert.That(call.DispatchedSince).IsEqualTo(TimeSpan.FromMinutes(5));
+    await Assert.That(call.MaxCount).IsEqualTo(100);
+    await Assert.That(call.Args).IsEqualTo(new Dictionary<string, object> { ["Topic"] = "orders" });
+    await Assert.That(call.RequestContext).IsNull();
+    await Assert.That(call.CancellationToken.CanBeCanceled).IsTrue();
+}
     }
 
     private static void WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>

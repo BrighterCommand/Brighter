@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -23,23 +23,22 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.Outbox.Sqlite;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
 public class OutboxLargestOutstandingCountTimeoutTests
 {
-    [Fact]
-    public void When_the_outbox_configuration_has_the_largest_allowed_outstanding_count_timeout_should_be_accepted()
+    [Test]
+    public async Task When_the_outbox_configuration_has_the_largest_allowed_outstanding_count_timeout_should_be_accepted()
     {
         //Arrange
         var configuration = new StubRelationalDatabaseConfiguration(TimeSpan.FromSeconds(int.MaxValue / 1000));
         var connectionProvider = new SqliteConnectionProvider(configuration);
 
         //Act
-        var exception = Record.Exception(() => new SqliteOutbox(configuration, connectionProvider));
+        var exception = TestExceptionRecorder.Capture(() => new SqliteOutbox(configuration, connectionProvider));
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

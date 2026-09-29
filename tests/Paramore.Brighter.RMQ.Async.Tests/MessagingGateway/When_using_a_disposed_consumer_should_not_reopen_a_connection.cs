@@ -29,31 +29,30 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
+[NotInParallel]
 public class RmqDisposedConsumerTests
 {
-    [Theory]
-    [InlineData("nack", false, false)]
-    [InlineData("nack", false, true)]
-    [InlineData("nack", true, false)]
-    [InlineData("nack", true, true)]
-    [InlineData("purge", false, false)]
-    [InlineData("purge", false, true)]
-    [InlineData("purge", true, false)]
-    [InlineData("purge", true, true)]
-    [InlineData("receive", false, false)]
-    [InlineData("receive", false, true)]
-    [InlineData("receive", true, false)]
-    [InlineData("receive", true, true)]
-    [InlineData("requeue", false, false)]
-    [InlineData("requeue", false, true)]
-    [InlineData("requeue", true, false)]
-    [InlineData("requeue", true, true)]
+    [Test]
+    [Arguments("nack", false, false)]
+    [Arguments("nack", false, true)]
+    [Arguments("nack", true, false)]
+    [Arguments("nack", true, true)]
+    [Arguments("purge", false, false)]
+    [Arguments("purge", false, true)]
+    [Arguments("purge", true, false)]
+    [Arguments("purge", true, true)]
+    [Arguments("receive", false, false)]
+    [Arguments("receive", false, true)]
+    [Arguments("receive", true, false)]
+    [Arguments("receive", true, true)]
+    [Arguments("requeue", false, false)]
+    [Arguments("requeue", false, true)]
+    [Arguments("requeue", true, false)]
+    [Arguments("requeue", true, true)]
     public async Task When_using_a_disposed_consumer_should_not_reopen_a_connection(
         string operation, bool connectBeforeDisposing, bool useAsync)
     {
@@ -77,7 +76,7 @@ public class RmqDisposedConsumerTests
         try
         {
             // Act
-            var error = await Record.ExceptionAsync(async () =>
+            var error = await TestExceptionRecorder.CaptureAsync(async () =>
             {
                 if (useAsync)
                 {
@@ -100,7 +99,7 @@ public class RmqDisposedConsumerTests
             });
 
             // Assert
-            Assert.IsType<ObjectDisposedException>(error);
+            await Assert.That(error).IsTypeOf<ObjectDisposedException>();
         }
         finally
         {

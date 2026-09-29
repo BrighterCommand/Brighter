@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -38,7 +38,6 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -50,7 +49,7 @@ public class BlockedCountsPostingTests : IDisposable
     private readonly List<StaleMessageMetricsFixture> _fixtures = [];
     private StaleMessageTopicCountingOutbox? _blocked;
 
-    [Fact]
+    [Test]
     public async Task When_both_counts_are_blocked_should_not_delay_posting()
     {
         //Arrange
@@ -60,14 +59,14 @@ public class BlockedCountsPostingTests : IDisposable
         var enabled = await PostBesideTheCounts(withTheFeature: true);
 
         //Assert
-        Assert.True(enabled.CountsBlocked);
-        Assert.Null(disabled.Posting);
-        Assert.Null(enabled.Posting);
-        Assert.True(disabled.AllMarked);
-        Assert.True(enabled.AllMarked);
-        Assert.Equal(_ids.Length, enabled.Adds.Length);
-        Assert.Equal(disabled.Adds, enabled.Adds);
-        Assert.Equivalent(disabled.Marks, enabled.Marks, strict: true);
+        await Assert.That(enabled.CountsBlocked).IsTrue();
+        await Assert.That(disabled.Posting).IsNull();
+        await Assert.That(enabled.Posting).IsNull();
+        await Assert.That(disabled.AllMarked).IsTrue();
+        await Assert.That(enabled.AllMarked).IsTrue();
+        await Assert.That(enabled.Adds.Length).IsEqualTo(_ids.Length);
+        await Assert.That(enabled.Adds).IsEqualTo(disabled.Adds);
+        await Assert.That(enabled.Marks).IsEquivalentTo(disabled.Marks);
     }
 
     private async Task<PostingRun> PostBesideTheCounts(bool withTheFeature)
@@ -108,7 +107,7 @@ public class BlockedCountsPostingTests : IDisposable
         if (monitor is not null)
         {
             await monitor.StartAsync(default);
-            Assert.True(SpinWait.SpinUntil(() => clock.TimersCreated >= 1, TimeSpan.FromSeconds(5)));
+            await Assert.That(SpinWait.SpinUntil(() => clock.TimersCreated >= 1, TimeSpan.FromSeconds(5))).IsTrue();
         }
 
         clock.Advance(TimeSpan.FromMinutes(1));
@@ -118,7 +117,7 @@ public class BlockedCountsPostingTests : IDisposable
                 TimeSpan.FromSeconds(5));
 
         var commandProcessor = CommandProcessorFor(outbox, producerRegistry);
-        var posting = await Record.ExceptionAsync(() => Task.Run(async () =>
+        var posting = await TestExceptionRecorder.CaptureAsync(() => Task.Run(async () =>
         {
             foreach (var id in _ids.Take(100))
                 commandProcessor.Post(new MyCommand { Id = id });

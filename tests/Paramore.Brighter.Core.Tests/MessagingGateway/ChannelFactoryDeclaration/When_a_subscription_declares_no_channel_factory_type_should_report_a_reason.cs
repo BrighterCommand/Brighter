@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -20,29 +21,56 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+
+
 #endregion
 
+
+
 using Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration.TestDoubles;
-using Xunit;
+
+
+
+
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration;
 
+
+
 public class ChannelFactoryDeclarationNullTests
+
 {
-    [Fact]
-    public void When_a_subscription_declares_no_channel_factory_type_should_report_a_reason()
+
+    [Test]
+
+    public async System.Threading.Tasks.Task When_a_subscription_declares_no_channel_factory_type_should_report_a_reason()
+
     {
+
         // Arrange
+
         // Evident Data: declaredFactoryType is literally null — the reading path's own value when
+
         // ChannelFactoryType returns null; the subscription type itself is not under test here
+
         var subscriptionType = typeof(DefaultChannelFactoryDeclaringSubscription);
 
+
+
         // Act
+
         var reason = Paramore.Brighter.SubscriptionChannelFactoryDeclaration.Check(subscriptionType, null);
 
+
+
         // Assert
-        Assert.NotNull(reason);
-        Assert.Contains("returned null", reason);
-        Assert.DoesNotContain("does not implement", reason);
+
+        await Assert.That(reason).IsNotNull();
+
+        await Assert.That(reason).Contains("returned null");
+
+        await Assert.That(reason).DoesNotContain("does not implement");
+
     }
+
 }

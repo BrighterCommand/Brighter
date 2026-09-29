@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia <irakli.gabisonia94@gmail.com>
 
@@ -31,18 +31,17 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(LoggerCaptureCollection.NAME)]
+[NotInParallel(LoggerCaptureCollection.NAME)]
 public class ConsumerReceiveFailureHealthCheckTests
 {
-    [Theory]
-    [InlineData(MessagePumpType.Reactor, false)]
-    [InlineData(MessagePumpType.Proactor, false)]
-    [InlineData(MessagePumpType.Reactor, true)]
-    [InlineData(MessagePumpType.Proactor, true)]
+    [Test]
+    [Arguments(MessagePumpType.Reactor, false)]
+    [Arguments(MessagePumpType.Proactor, false)]
+    [Arguments(MessagePumpType.Reactor, true)]
+    [Arguments(MessagePumpType.Proactor, true)]
     public async Task When_a_running_consumer_repeatedly_fails_to_receive_should_report_degraded(
         MessagePumpType messagePumpType, bool brokenCircuit)
     {
@@ -56,18 +55,18 @@ public class ConsumerReceiveFailureHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         // Assert
-        var consumer = Assert.Single(host.Dispatcher.Consumers);
-        Assert.Equal(ConsumerState.Open, consumer.State);
-        Assert.NotNull(consumer.Job);
-        Assert.False(consumer.Job!.IsCompleted);
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        Assert.Contains("receive-health", result.Description);
-        Assert.Contains("5 consecutive channel failures", result.Description);
+        var consumer = await Assert.That(host.Dispatcher.Consumers).HasSingleItem();
+        await Assert.That(consumer.State).IsEqualTo(ConsumerState.Open);
+        await Assert.That(consumer.Job).IsNotNull();
+        await Assert.That(consumer.Job!.IsCompleted).IsFalse();
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(result.Description).Contains("receive-health");
+        await Assert.That(result.Description).Contains("5 consecutive channel failures");
     }
 
-    [Theory]
-    [InlineData(MessagePumpType.Reactor)]
-    [InlineData(MessagePumpType.Proactor)]
+    [Test]
+    [Arguments(MessagePumpType.Reactor)]
+    [Arguments(MessagePumpType.Proactor)]
     public async Task When_a_failed_channel_recovers_to_an_empty_queue_should_report_healthy(
         MessagePumpType messagePumpType)
     {
@@ -76,7 +75,7 @@ public class ConsumerReceiveFailureHealthCheckTests
         var healthCheck = host.HealthCheck;
         host.Dispatcher.Receive();
         await host.Transport.FailuresObserved.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.Equal(HealthStatus.Degraded, (await healthCheck.CheckHealthAsync(new HealthCheckContext())).Status);
+        await Assert.That((await healthCheck.CheckHealthAsync(new HealthCheckContext())).Status).IsEqualTo(HealthStatus.Degraded);
 
         // Act
         host.Transport.Recover();
@@ -84,21 +83,21 @@ public class ConsumerReceiveFailureHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         // Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        var consumer = Assert.Single(host.Dispatcher.Consumers);
-        var failures = Assert.IsAssignableFrom<IHaveAChannelFailureCount>(consumer.Performer);
-        Assert.Equal(0, failures.ConsecutiveChannelFailures);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Healthy);
+        var consumer = await Assert.That(host.Dispatcher.Consumers).HasSingleItem();
+        var failures = ((IHaveAChannelFailureCount)(((IHaveAChannelFailureCount)(await Assert.That(consumer.Performer).IsAssignableTo<IHaveAChannelFailureCount>()))));
+        await Assert.That(failures.ConsecutiveChannelFailures).IsEqualTo(0);
     }
 
-    [Theory]
-    [InlineData(MessagePumpType.Reactor, 1, HealthStatus.Healthy)]
-    [InlineData(MessagePumpType.Proactor, 1, HealthStatus.Healthy)]
-    [InlineData(MessagePumpType.Reactor, 2, HealthStatus.Healthy)]
-    [InlineData(MessagePumpType.Proactor, 2, HealthStatus.Healthy)]
-    [InlineData(MessagePumpType.Reactor, 3, HealthStatus.Degraded)]
-    [InlineData(MessagePumpType.Proactor, 3, HealthStatus.Degraded)]
-    [InlineData(MessagePumpType.Reactor, 5, HealthStatus.Degraded)]
-    [InlineData(MessagePumpType.Proactor, 5, HealthStatus.Degraded)]
+    [Test]
+    [Arguments(MessagePumpType.Reactor, 1, HealthStatus.Healthy)]
+    [Arguments(MessagePumpType.Proactor, 1, HealthStatus.Healthy)]
+    [Arguments(MessagePumpType.Reactor, 2, HealthStatus.Healthy)]
+    [Arguments(MessagePumpType.Proactor, 2, HealthStatus.Healthy)]
+    [Arguments(MessagePumpType.Reactor, 3, HealthStatus.Degraded)]
+    [Arguments(MessagePumpType.Proactor, 3, HealthStatus.Degraded)]
+    [Arguments(MessagePumpType.Reactor, 5, HealthStatus.Degraded)]
+    [Arguments(MessagePumpType.Proactor, 5, HealthStatus.Degraded)]
     public async Task When_a_failure_burst_is_below_the_configured_threshold_should_report_healthy(
         MessagePumpType messagePumpType, int failures, HealthStatus expectedDefaultStatus)
     {
@@ -116,30 +115,30 @@ public class ConsumerReceiveFailureHealthCheckTests
         var strictResult = await strictHealthCheck.CheckHealthAsync(new HealthCheckContext());
 
         // Assert
-        Assert.Equal(expectedDefaultStatus, defaultResult.Status);
-        Assert.Equal(HealthStatus.Healthy, tolerantResult.Status);
-        Assert.Equal(HealthStatus.Degraded, strictResult.Status);
+        await Assert.That(defaultResult.Status).IsEqualTo(expectedDefaultStatus);
+        await Assert.That(tolerantResult.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(strictResult.Status).IsEqualTo(HealthStatus.Degraded);
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
+    [Test]
+    [Arguments(0)]
+    [Arguments(-1)]
     public async Task When_a_channel_failure_threshold_is_not_positive_should_reject_configuration(int threshold)
     {
         // Arrange
         await using var host = new ReceiveHealthTestHost(MessagePumpType.Reactor);
 
         // Act
-        var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new BrighterServiceActivatorHealthCheck(host.Dispatcher, threshold));
+        var exception = (await Assert.That(() =>
+            new BrighterServiceActivatorHealthCheck(host.Dispatcher, threshold)).ThrowsExactly<ArgumentOutOfRangeException>());
 
         // Assert
-        Assert.Equal("channelFailureThreshold", exception.ParamName);
+        await Assert.That(exception.ParamName).IsEqualTo("channelFailureThreshold");
     }
 
-    [Theory]
-    [InlineData(MessagePumpType.Reactor)]
-    [InlineData(MessagePumpType.Proactor)]
+    [Test]
+    [Arguments(MessagePumpType.Reactor)]
+    [Arguments(MessagePumpType.Proactor)]
     public async Task When_all_expected_consumers_have_stopped_should_report_unhealthy(MessagePumpType messagePumpType)
     {
         // Arrange
@@ -147,7 +146,7 @@ public class ConsumerReceiveFailureHealthCheckTests
         var healthCheck = host.HealthCheck;
         host.Dispatcher.Receive();
         await host.Transport.FailuresObserved.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.Equal(HealthStatus.Degraded, (await healthCheck.CheckHealthAsync(new HealthCheckContext())).Status);
+        await Assert.That((await healthCheck.CheckHealthAsync(new HealthCheckContext())).Status).IsEqualTo(HealthStatus.Degraded);
 
         // Act
         var shutdown = host.Dispatcher.End();
@@ -156,14 +155,14 @@ public class ConsumerReceiveFailureHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         // Assert
-        Assert.Equal(HealthStatus.Unhealthy, result.Status);
-        Assert.Empty(host.Dispatcher.Consumers);
-        Assert.Contains("receive-health has 0 of 1 expected consumers", result.Description);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Unhealthy);
+        await Assert.That(host.Dispatcher.Consumers).IsEmpty();
+        await Assert.That(result.Description).Contains("receive-health has 0 of 1 expected consumers");
     }
 
-    [Theory]
-    [InlineData(MessagePumpType.Reactor)]
-    [InlineData(MessagePumpType.Proactor)]
+    [Test]
+    [Arguments(MessagePumpType.Reactor)]
+    [Arguments(MessagePumpType.Proactor)]
     public async Task When_a_health_check_is_activated_without_registration_should_report_degraded(
         MessagePumpType messagePumpType)
     {
@@ -177,6 +176,6 @@ public class ConsumerReceiveFailureHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         // Assert
-        Assert.Equal(HealthStatus.Degraded, result.Status);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
     }
 }

@@ -31,16 +31,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class When_an_active_sweeper_has_topics_tripped_should_report_the_tripped_topics_gauge
 {
     private const string TrippedTopics = "paramore.brighter.outbox_sweeper.tripped_topics";
 
-    [Fact]
-    public void When_two_topics_are_tripped_should_record_two()
+    [Test]
+    public async Task When_two_topics_are_tripped_should_record_two()
     {
         //Arrange
         var state = ActiveState();
@@ -52,13 +51,13 @@ public class When_an_active_sweeper_has_topics_tripped_should_report_the_tripped
         var observed = Observe(state, () => breaker);
 
         //Assert
-        Assert.Equal([2L], observed.Values);
-        Assert.Equal("{topic}", observed.Unit);
-        Assert.Equal(0, observed.TagCount);
+        await Assert.That(observed.Values).IsEqualTo([2L]);
+        await Assert.That(observed.Unit).IsEqualTo("{topic}");
+        await Assert.That(observed.TagCount).IsEqualTo(0);
     }
 
-    [Fact]
-    public void When_an_active_sweeper_has_no_topics_tripped_should_report_a_zero_tripped_topics_gauge()
+    [Test]
+    public async Task When_an_active_sweeper_has_no_topics_tripped_should_report_a_zero_tripped_topics_gauge()
     {
         //Arrange
         var state = ActiveState();
@@ -68,11 +67,11 @@ public class When_an_active_sweeper_has_topics_tripped_should_report_the_tripped
         var observed = Observe(state, () => breaker);
 
         //Assert
-        Assert.Equal([0L], observed.Values);
+        await Assert.That(observed.Values).IsEqualTo([0L]);
     }
 
-    [Fact]
-    public void When_an_active_sweeper_has_no_circuit_breaker_should_report_a_zero_tripped_topics_gauge()
+    [Test]
+    public async Task When_an_active_sweeper_has_no_circuit_breaker_should_report_a_zero_tripped_topics_gauge()
     {
         //Arrange
         var state = ActiveState();
@@ -81,11 +80,11 @@ public class When_an_active_sweeper_has_topics_tripped_should_report_the_tripped
         var observed = Observe(state, () => null);
 
         //Assert
-        Assert.Equal([0L], observed.Values);
+        await Assert.That(observed.Values).IsEqualTo([0L]);
     }
 
-    [Fact]
-    public void When_the_meter_has_no_state_should_report_a_zero_tripped_topics_gauge_even_if_topics_are_tripped()
+    [Test]
+    public async Task When_the_meter_has_no_state_should_report_a_zero_tripped_topics_gauge_even_if_topics_are_tripped()
     {
         //Arrange
         var breaker = new InMemoryOutboxCircuitBreaker();
@@ -95,7 +94,7 @@ public class When_an_active_sweeper_has_topics_tripped_should_report_the_tripped
         var observed = Observe(null, () => breaker);
 
         //Assert
-        Assert.Equal([0L], observed.Values);
+        await Assert.That(observed.Values).IsEqualTo([0L]);
     }
 
     private static OutboxSweeperState ActiveState()

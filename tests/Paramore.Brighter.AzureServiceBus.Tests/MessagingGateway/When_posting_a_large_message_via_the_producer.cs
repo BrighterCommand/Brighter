@@ -1,30 +1,33 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 {
-    [Trait("Category", "ASB")]
-    [Trait("Fragile", "CI")]
-    public class LargeAsbMessageProducerTests : IDisposable
+    [Category("ASB")]
+    [Property("Fragile", "CI")]
+    public class LargeAsbMessageProducerTests
     {
-        private readonly IAmAChannelSync _topicChannel;
-        private readonly IAmAChannelSync _queueChannel;
-        private readonly IAmAProducerRegistry _producerRegistry;
+        private IAmAChannelSync _topicChannel;
+        private IAmAChannelSync _queueChannel;
+        private IAmAProducerRegistry _producerRegistry;
         private ASBTestCommand _command;
         private readonly string _correlationId;
         private readonly ContentType _contentType;
         private readonly string _topicName;
         private readonly string _queueName;
         private readonly IAdministrationClientWrapper _administrationClient;
+        private readonly IServiceBusClientProvider _clientProvider;
+        private readonly AzureServiceBusSubscription<ASBTestCommand> _subscription;
+        private readonly AzureServiceBusSubscription<ASBTestCommand> _queueSubscription;
 
         public LargeAsbMessageProducerTests()
         {
@@ -39,7 +42,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             _topicName = $"Producer-Send-Tests-{Guid.NewGuid()}";
             var routingKey = new RoutingKey(_topicName);
 
-            AzureServiceBusSubscription<ASBTestCommand> subscription = new(
+            _subscription = new AzureServiceBusSubscription<ASBTestCommand>(
                 subscriptionName: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey
@@ -49,11 +52,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             _queueName = $"Producer-queue-Send-Tests-{Guid.NewGuid()}";
             var queueRoutingKey = new RoutingKey(_queueName);
 
-            AzureServiceBusSubscription<ASBTestCommand> queueSubscription = new(
+            _queueSubscription = new AzureServiceBusSubscription<ASBTestCommand>(
                 subscriptionName: new SubscriptionName(queueChannelName),
                 channelName: new ChannelName(queueChannelName),
                 routingKey: queueRoutingKey,
-                subscriptionConfiguration : new AzureServiceBusSubscriptionConfiguration()
+                subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration()
                 {
                     UseServiceBusQueue = true
                 }
@@ -68,8 +71,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             var channelFactory =
                 new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider));
-            _topicChannel = channelFactory.CreateSyncChannel(subscription);
-            _queueChannel = channelFactory.CreateSyncChannel(queueSubscription);
+            _topicChannel = channelFactory.CreateSyncChannel(_subscription);
+            _queueChannel = channelFactory.CreateSyncChannel(_queueSubscription);
 
             _producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 clientProvider,
@@ -81,9 +84,31 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 .Create();
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
+        [Before(HookType.Test)]
+        public async Task Setup()
+        {
+            await _administrationClient.CreateQueueAsync(_queueName, TimeSpan.FromMinutes(5), 3000);
+            await _administrationClient.CreateTopicAsync(_topicName, TimeSpan.FromMinutes(5), 3000);
+            await _administrationClient.CreateSubscriptionAsync(_topicName, _subscription.ChannelName.Value, new AzureServiceBusSubscriptionConfiguration());
+
+            var channelFactory =
+                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(_clientProvider));
+            _topicChannel = channelFactory.CreateSyncChannel(_subscription);
+            _queueChannel = channelFactory.CreateSyncChannel(_queueSubscription);
+
+            _producerRegistry = await new AzureServiceBusProducerRegistryFactory(
+                    _clientProvider,
+                    [
+                        new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) },
+                        new AzureServiceBusPublication { Topic = new RoutingKey(_queueName), UseServiceBusQueue = true}
+                    ]
+                )
+                .CreateAsync();
+        }
+
+        [Test]
+        [Arguments(true)]
+        [Arguments(false)]
         public async Task When_posting_a_large_message_via_the_bulk_producer(bool testQueues)
         {
             //arrange
@@ -106,35 +131,36 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             //clear the queue
             channel.Acknowledge(message);
 
-            Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
-            Assert.Equal(_command.Id, message.Id);
-            Assert.False(message.Redelivered);
-            Assert.Equal(_command.Id, message.Header.MessageId);
-            Assert.Contains(testQueues ? _queueName : _topicName, message.Header.Topic.Value);
-            Assert.Equal(_correlationId, message.Header.CorrelationId);
-            Assert.Equal(_contentType, message.Header.ContentType);
-            Assert.Equal(0, message.Header.HandledCount);
+            await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+            await Assert.That(message.Id).IsEqualTo(_command.Id);
+            await Assert.That(message.Redelivered).IsFalse();
+            await Assert.That(message.Header.MessageId).IsEqualTo(_command.Id);
+            await Assert.That(message.Header.Topic.Value).Contains(testQueues ? _queueName : _topicName);
+            await Assert.That(message.Header.CorrelationId).IsEqualTo(_correlationId);
+            await Assert.That(message.Header.ContentType).IsEqualTo(_contentType);
+            await Assert.That(message.Header.HandledCount).IsEqualTo(0);
             //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
-            Assert.True(message.Header.TimeStamp > RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
-            Assert.Equal(TimeSpan.Zero, message.Header.Delayed);
+            await Assert.That(message.Header.TimeStamp > RoundToSeconds(DateTime.UtcNow.AddMinutes(-1))).IsTrue();
+            await Assert.That(message.Header.Delayed).IsEqualTo(TimeSpan.Zero);
             //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
-            Assert.Equal(commandMessage.Body.Value, message.Body.Value);
-            Assert.Contains(testHeader, message.Header.Bag.Keys);
-            Assert.Equal(testHeaderValue, message.Header.Bag[testHeader]);
+            await Assert.That(message.Body.Value).IsEqualTo(commandMessage.Body.Value);
+            await Assert.That(message.Header.Bag.Keys).Contains(testHeader);
+            await Assert.That(message.Header.Bag[testHeader]).IsEqualTo(testHeaderValue);
         }
 
         private Message GenerateMessage(string topicName) => new Message(
-            new MessageHeader(_command.Id, new RoutingKey( topicName), MessageType.MT_COMMAND, correlationId:_correlationId,
+            new MessageHeader(_command.Id, new RoutingKey(topicName), MessageType.MT_COMMAND, correlationId: _correlationId,
                 contentType: _contentType
             ),
             new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
         );
 
 
-        public void Dispose()
+        [After(HookType.Test)]
+        public async Task Cleanup()
         {
-            _administrationClient.DeleteTopicAsync(_topicName).GetAwaiter().GetResult();
-            _administrationClient.DeleteQueueAsync(_queueName).GetAwaiter().GetResult();
+            await _administrationClient.DeleteTopicAsync(_topicName);
+            await _administrationClient.DeleteQueueAsync(_queueName);
         }
 
         private DateTime RoundToSeconds(DateTime dateTime)

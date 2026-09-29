@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class StoppingWithACountBlockingItsThreadTests
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private readonly TimerCountingTimeProvider _clock = new(s_start);
 
-    [Fact]
+    [Test]
     public async Task When_stopping_with_a_count_blocking_its_thread_should_return_within_the_timeout()
     {
         //Arrange
@@ -70,20 +69,20 @@ public class StoppingWithACountBlockingItsThreadTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5)));
-        Assert.True(AdvanceReturns(TimeSpan.FromSeconds(10)));
-        Assert.True(SpinWait.SpinUntil(
+        await Assert.That(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5))).IsTrue();
+        await Assert.That(AdvanceReturns(TimeSpan.FromSeconds(10))).IsTrue();
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Abandoned) == 1,
-            TimeSpan.FromSeconds(5)));
-        WaitUntilTheMonitorWaits(2);
-        Assert.True(AdvanceReturns(TimeSpan.FromSeconds(50)));
-        Assert.True(SpinWait.SpinUntil(
+            TimeSpan.FromSeconds(5))).IsTrue();
+        await WaitUntilTheMonitorWaits(2);
+        await Assert.That(AdvanceReturns(TimeSpan.FromSeconds(50))).IsTrue();
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Skipped) == 1,
-            TimeSpan.FromSeconds(5)));
-        WaitUntilTheMonitorWaits(3);
-        Assert.True(AdvanceReturns(TimeSpan.FromSeconds(30)));
+            TimeSpan.FromSeconds(5))).IsTrue();
+        await WaitUntilTheMonitorWaits(3);
+        await Assert.That(AdvanceReturns(TimeSpan.FromSeconds(30))).IsTrue();
 
         bool waitsForTheTimeout;
         bool timeoutReturned;
@@ -103,10 +102,10 @@ public class StoppingWithACountBlockingItsThreadTests
         }
 
         //Assert
-        Assert.True(waitsForTheTimeout);
-        Assert.True(timeoutReturned);
-        Assert.True(stopped);
-        Assert.Equal([s_start.AddMinutes(1)], outbox.CountCalls.Select(call => call.CalledAt));
+        await Assert.That(waitsForTheTimeout).IsTrue();
+        await Assert.That(timeoutReturned).IsTrue();
+        await Assert.That(stopped).IsTrue();
+        await Assert.That(outbox.CountCalls.Select(call => call.CalledAt)).IsEqualTo([s_start.AddMinutes(1)]);
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
@@ -118,6 +117,6 @@ public class StoppingWithACountBlockingItsThreadTests
         return SpinWait.SpinUntil(() => advance.IsCompleted, TimeSpan.FromSeconds(5));
     }
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

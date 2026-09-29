@@ -1,14 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class SharedScopedDependencyPerPipelineTests
 {
-    [Fact]
-    public void When_mapping_a_message_the_mapper_and_its_transform_should_share_one_scoped_dependency()
+    [Test]
+    public async System.Threading.Tasks.Task When_mapping_a_message_the_mapper_and_its_transform_should_share_one_scoped_dependency()
     {
         //arrange — an FR-22.2-conformant lifetime triple: all three Scoped. IMarker is registered
         //AddScoped and injected into both the mapper and its [UnwrapWith] transform
@@ -40,20 +40,20 @@ public class SharedScopedDependencyPerPipelineTests
         var pipelineForMessageN = pipelineBuilder.BuildUnwrapPipeline<MarkerCommand>();
 
         //assert — the mapper's IMarker and the transform's IMarker are reference-equal for message N
-        Assert.Same(log.MapperMarkers[0], log.TransformMarkers[0]);
+        await Assert.That(log.TransformMarkers[0]).IsSameReferenceAs(log.MapperMarkers[0]);
 
         //act — disposing the pipeline closes its DI scope
         pipelineForMessageN.Dispose();
 
         //assert — message N's IMarker was disposed at the end of its pipeline
-        Assert.True(log.MapperMarkers[0].IsDisposed);
+        await Assert.That(log.MapperMarkers[0].IsDisposed).IsTrue();
 
         //act — map message N+1: a second, independent pipeline
         var pipelineForMessageNPlus1 = pipelineBuilder.BuildUnwrapPipeline<MarkerCommand>();
         pipelineForMessageNPlus1.Dispose();
 
         //assert — message N+1's mapper and transform shared a second IMarker, distinct from message N's
-        Assert.Same(log.MapperMarkers[1], log.TransformMarkers[1]);
-        Assert.NotSame(log.MapperMarkers[0], log.MapperMarkers[1]);
+        await Assert.That(log.TransformMarkers[1]).IsSameReferenceAs(log.MapperMarkers[1]);
+        await Assert.That(log.MapperMarkers[1]).IsNotSameReferenceAs(log.MapperMarkers[0]);
     }
 }

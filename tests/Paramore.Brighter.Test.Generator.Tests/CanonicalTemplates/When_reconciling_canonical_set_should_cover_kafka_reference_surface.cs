@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -81,8 +81,8 @@ public class KafkaReferenceSurfaceReconciliationTests
         _proactorDir = Path.Combine(gatewayTemplatesRoot, "Proactor");
     }
 
-    [Fact]
-    public void When_reconciling_canonical_set_should_cover_kafka_reference_surface()
+    [Test]
+    public async System.Threading.Tasks.Task When_reconciling_canonical_set_should_cover_kafka_reference_surface()
     {
         // Arrange — template directories are resolved in the constructor
 
@@ -93,16 +93,14 @@ public class KafkaReferenceSurfaceReconciliationTests
             var reactorTemplate = Path.Combine(_reactorDir, $"{templateName}.cs.liquid");
             var proactorTemplate = Path.Combine(_proactorDir, $"{templateName}.cs.liquid");
 
-            Assert.True(File.Exists(reactorTemplate),
-                $"Reactor canonical template absent for Kafka reference surface: {templateName}");
+            await Assert.That(File.Exists(reactorTemplate)).IsTrue().Because($"Reactor canonical template absent for Kafka reference surface: {templateName}");
 
-            Assert.True(File.Exists(proactorTemplate),
-                $"Proactor canonical template absent for Kafka reference surface: {templateName}");
+            await Assert.That(File.Exists(proactorTemplate)).IsTrue().Because($"Proactor canonical template absent for Kafka reference surface: {templateName}");
         }
     }
 
-    [Fact]
-    public void When_reconciling_canonical_set_no_canonical_template_body_should_reference_scheduler_or_mechanism()
+    [Test]
+    public async System.Threading.Tasks.Task When_reconciling_canonical_set_no_canonical_template_body_should_reference_scheduler_or_mechanism()
     {
         // Arrange — enumerate all canonical template files (both variants)
         var canonicalFiles =
@@ -124,13 +122,13 @@ public class KafkaReferenceSurfaceReconciliationTests
 
             foreach (var term in MECHANISM_TERMS)
             {
-                Assert.DoesNotContain(term, content, System.StringComparison.OrdinalIgnoreCase);
+                await Assert.That(content).DoesNotContain(term);
             }
         }
     }
 
-    [Fact]
-    public void When_reconciling_canonical_set_no_scheduler_delegation_template_should_exist_as_canonical()
+    [Test]
+    public async System.Threading.Tasks.Task When_reconciling_canonical_set_no_scheduler_delegation_template_should_exist_as_canonical()
     {
         // Arrange — canonical template directories are resolved in the constructor
 
@@ -151,7 +149,7 @@ public class KafkaReferenceSurfaceReconciliationTests
                     .Contains("should_use_scheduler", System.StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-        Assert.Empty(reactorSchedulerTemplates);
-        Assert.Empty(proactorSchedulerTemplates);
+        await Assert.That(reactorSchedulerTemplates).IsEmpty();
+        await Assert.That(proactorSchedulerTemplates).IsEmpty();
     }
 }

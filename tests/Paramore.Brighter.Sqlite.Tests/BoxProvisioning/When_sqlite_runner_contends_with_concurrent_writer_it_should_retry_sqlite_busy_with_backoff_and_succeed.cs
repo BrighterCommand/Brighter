@@ -30,7 +30,6 @@ using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -38,7 +37,7 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// The runner retries SQLITE_BUSY with backoff while another connection holds the writer slot, and
 /// succeeds once it is released.
 /// </summary>
-public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
+public class SqliteRunnerSqliteBusyContentionTests
 {
     // Long enough that a runner which does not retry SQLITE_BUSY fails before the writer releases.
     private static readonly TimeSpan WriterHold = TimeSpan.FromMilliseconds(600);
@@ -60,7 +59,7 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
         _runner = new SqliteBoxMigrationRunner(new SingleV1Catalog(), _config);
     }
 
-    [Fact]
+    [Test]
     public async Task When_runner_contends_with_concurrent_writer_it_should_retry_sqlite_busy_with_backoff_and_succeed()
     {
         //Arrange
@@ -90,19 +89,15 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
             BoxType.Outbox,
             freshState);
 
-        var thrown = await Record.ExceptionAsync(async () => await migrateTask);
+        var thrown = await TestExceptionRecorder.CaptureAsync(async () => await migrateTask);
         stopwatch.Stop();
         await releaseWriter;
 
         //Assert
-        Assert.Null(thrown);
-        Assert.Equal(1, await GetHistoryRowCountAsync(_tableName, version: 1));
+        await Assert.That(thrown).IsNull();
+        await Assert.That(await GetHistoryRowCountAsync(_tableName, version: 1)).IsEqualTo(1);
         var minimumExpectedWait = WriterHold - SchedulerJitterSlack;
-        Assert.True(
-            stopwatch.Elapsed >= minimumExpectedWait,
-            $"Runner returned in {stopwatch.Elapsed.TotalMilliseconds:F0}ms but writer held the " +
-            $"lock for ~{WriterHold.TotalMilliseconds:F0}ms — expected the runner to wait at " +
-            $"least {minimumExpectedWait.TotalMilliseconds:F0}ms while retrying SQLITE_BUSY.");
+        await Assert.That(stopwatch.Elapsed >= minimumExpectedWait).IsTrue();
     }
 
     private sealed class SingleV1Catalog : IAmABoxMigrationCatalog
@@ -154,8 +149,10 @@ WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @Version";
         return Convert.ToInt64(await command.ExecuteScalarAsync());
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public Task DisposeAsync()
     {
         SqliteConnection.ClearAllPools();

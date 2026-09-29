@@ -69,10 +69,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         protected RmqMessageGateway(RmqMessagingGatewayConnection connection)
         {
             Connection = connection ?? throw new ArgumentNullException(nameof(connection));
-            
+
             if (Connection.AmpqUri is null)
                 throw new InvalidOperationException("RMQMessagingGateway: Connection must have an AMPQ URI");
-            
+
             if (Connection.Exchange is null)
                 throw new InvalidOperationException("RMQMessagingGateway: Connection must have an Exchange");
 
@@ -117,7 +117,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         protected void EnsureBroker(ChannelName? queueName = null, OnMissingChannel makeExchange = OnMissingChannel.Create)
         {
             queueName ??= new ChannelName("Producer Channel");
-            
+
             ConnectWithCircuitBreaker(queueName, makeExchange);
         }
 
@@ -173,7 +173,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         }
 
         private void HandleUnBlocked(object? sender, EventArgs args)
-        { 
+        {
             Log.SubscriptionUnblocked(s_logger, Connection.AmpqUri!.GetSanitizedUri());
         }
 
@@ -182,7 +182,18 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             if (Connection.Name is null)
                 throw new InvalidOperationException("RMQMessagingGateway: Connection must have a name");
 
-            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnection(_connectionFactory);
+            lock (_connectionLock)
+            {
+                try
+                {
+                    Channel?.Dispose();
+                }
+                finally
+                {
+                    Channel = null;
+                    ReleaseConnection();
+                }
+            }
         }
 
         ~RmqMessageGateway()
@@ -245,4 +256,3 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         }
     }
 }
-

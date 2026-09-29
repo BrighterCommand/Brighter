@@ -27,15 +27,14 @@ using System.Threading.Tasks;
 using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusLegacySessionReceiverTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_receiving_a_legacy_session_wrapper_should_keep_it_open_until_settlement(bool useAsync)
     {
         // Arrange
@@ -60,13 +59,13 @@ public class AzureServiceBusLegacySessionReceiverTests
             new FakeAdministrationClient(), new FakeServiceBusReceiverProvider(receiver));
 
         // Act
-        var message = Assert.Single(useAsync ? await consumer.ReceiveAsync() : consumer.Receive());
+        var message = await Assert.That(useAsync ? await consumer.ReceiveAsync() : consumer.Receive()).HasSingleItem();
         var closedBeforeSettlement = receiver.IsClosedOrClosing;
         if (useAsync) await consumer.AcknowledgeAsync(message);
         else consumer.Acknowledge(message);
 
         // Assert
-        Assert.False(closedBeforeSettlement);
-        Assert.True(receiver.IsClosedOrClosing);
+        await Assert.That(closedBeforeSettlement).IsFalse();
+        await Assert.That(receiver.IsClosedOrClosing).IsTrue();
     }
 }

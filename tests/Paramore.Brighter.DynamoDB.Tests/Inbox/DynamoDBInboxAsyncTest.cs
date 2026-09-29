@@ -1,9 +1,10 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.DynamoDB;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Inbox;
 
+[TUnit.Core.InheritsTests]
 public class DynamoDBInboxAsyncTest : InboxAsyncTest
 {
     private DynamoDbInbox? _inbox;

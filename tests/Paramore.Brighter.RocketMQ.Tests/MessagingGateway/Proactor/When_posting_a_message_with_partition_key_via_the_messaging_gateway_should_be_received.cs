@@ -25,13 +25,12 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Xunit;
+
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RocketMQ")]
+[Property("Category", "RocketMQ")]
 public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeReceivedAsync
-    : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -53,17 +52,19 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
         _messageAssertion = new RocketMqMessageAssertion();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
     public async Task When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received_async()
     {
         // Arrange
@@ -93,7 +94,7 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
         var received = await _channel.ReceiveAsync(null);
 
         // Assert
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
-        _messageAssertion.Assert(message, received);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await _messageAssertion.AssertAsync(message, received);
     }
 }

@@ -23,8 +23,7 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway;
 
 /// <summary>
@@ -35,7 +34,7 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway;
 /// These assertions are made on the constructed <see cref="SqsSubscription"/> without touching
 /// the broker.
 /// </summary>
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class ConformanceProviderNativeRedriveLimitTests
 {
     public static IEnumerable<object[]> DlqBackedSubscriptions()
@@ -84,16 +83,16 @@ public class ConformanceProviderNativeRedriveLimitTests
         ];
     }
 
-    [Theory]
-    [MemberData(nameof(DlqBackedSubscriptions))]
-    public void When_reading_conformance_providers_should_hold_budget_below_native_limit(
+    [Test]
+    [MethodDataSource(nameof(DlqBackedSubscriptions))]
+    public async Task When_reading_conformance_providers_should_hold_budget_below_native_limit(
         SqsSubscription subscription)
     {
         // Assert — the pump budget (requeueCount) is strictly below the native redrive limit
         // so the pump always exhausts the budget before SQS moves the message to the DLQ.
-        Assert.Equal(3, subscription.RequeueCount);
+        await Assert.That(subscription.RequeueCount).IsEqualTo(3);
 
-        var counting = Assert.IsAssignableFrom<IAmADeliveryCountingSubscription>(subscription);
-        Assert.Equal(5, counting.NativeRedriveLimit);
+        var counting = ((IAmADeliveryCountingSubscription)(((IAmADeliveryCountingSubscription)(await Assert.That(subscription).IsAssignableTo<IAmADeliveryCountingSubscription>()))));
+        await Assert.That(counting.NativeRedriveLimit).IsEqualTo(5);
     }
 }

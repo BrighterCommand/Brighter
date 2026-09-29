@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia
@@ -29,20 +29,19 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
-[Trait("Category", "GcpPubSubStream")]
-[Trait("Category", "GcpPubSubPurge")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[Property("Category", "GcpPubSubPurge")]
+[NotInParallel("Stream")]
 public class GcpStreamPurgeSaturatedAsyncTests
 {
-    [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    [InlineData(5)]
-    [InlineData(-5)]
+    [Test]
+    [Arguments(0)]
+    [Arguments(2)]
+    [Arguments(5)]
+    [Arguments(-5)]
     public async Task When_purging_a_saturated_stream_should_clear_the_backlog_and_deliver_new_messages_async(int clientLagMinutes)
     {
         //Arrange
@@ -73,7 +72,7 @@ public class GcpStreamPurgeSaturatedAsyncTests
             var heldMessage = builder.SetTopic(routingKey).SetMessageId(Id.Random()).Build();
             await producer.SendAsync(heldMessage);
             var heldDelivery = await channel.ReceiveAsync(TimeSpan.FromSeconds(20));
-            Assert.Equal(heldMessage.Id, heldDelivery.Id);
+            await Assert.That(heldDelivery.Id).IsEqualTo(heldMessage.Id);
 
             for (var i = 0; i < 20; i++)
             {
@@ -86,13 +85,13 @@ public class GcpStreamPurgeSaturatedAsyncTests
             var afterPurge = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
 
             //Assert
-            Assert.True(afterPurge.IsEmpty);
+            await Assert.That(afterPurge.IsEmpty).IsTrue();
 
             var newMessage = builder.SetTopic(routingKey).SetMessageId(Id.Random()).Build();
             await producer.SendAsync(newMessage);
             var afterPublish = await GcpPurgeTestReceiver.ReceiveAsync(channel);
 
-            Assert.Equal(newMessage.Id, afterPublish.Id);
+            await Assert.That(afterPublish.Id).IsEqualTo(newMessage.Id);
             await channel.AcknowledgeAsync(afterPublish);
         }
         finally

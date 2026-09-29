@@ -29,7 +29,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Polly.Registry;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -40,8 +40,8 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class UseBoxProvisioningIdempotencyTests
 {
-    [Fact]
-    public void When_called_twice_on_the_same_builder_it_should_throw_configuration_exception()
+    [Test]
+    public async Task When_called_twice_on_the_same_builder_it_should_throw_configuration_exception()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -49,66 +49,82 @@ public class UseBoxProvisioningIdempotencyTests
         builder.UseBoxProvisioning(_ => { });
 
         //Act
-        var thrown = Record.Exception(() => builder.UseBoxProvisioning(_ => { }));
+        Exception? thrown = null;
+        try
+        {
+            builder.UseBoxProvisioning(_ => { });
+        }
+        catch (Exception e)
+        {
+            thrown = e;
+        }
 
         //Assert
-        Assert.IsType<ConfigurationException>(thrown);
+        await Assert.That(thrown).IsTypeOf<ConfigurationException>();
     }
 
-    [Fact]
-    public void When_called_once_on_a_fresh_builder_it_should_not_throw()
+    [Test]
+    public async Task When_called_once_on_a_fresh_builder_it_should_not_throw()
     {
         //Arrange
         var services = new ServiceCollection();
         var builder = new StubBrighterBuilder(services);
 
         //Act
-        var thrown = Record.Exception(() => builder.UseBoxProvisioning(_ => { }));
+        Exception? thrown = null;
+        try
+        {
+            builder.UseBoxProvisioning(_ => { });
+        }
+        catch (Exception e)
+        {
+            thrown = e;
+        }
 
         //Assert
-        Assert.Null(thrown);
+        await Assert.That(thrown).IsNull();
     }
 
     /// <summary>
     /// A <c>configure</c> delegate that throws must not leave the call marked as made.
     /// </summary>
-    [Fact]
-    public void When_first_call_configure_throws_then_retry_with_succeeding_configure_it_should_not_throw()
+    [Test]
+    public async Task When_first_call_configure_throws_then_retry_with_succeeding_configure_it_should_not_throw()
     {
         //Arrange
         var services = new ServiceCollection();
         var builder = new StubBrighterBuilder(services);
 
-        var firstThrown = Record.Exception(() => builder.UseBoxProvisioning(_ => throw new InvalidOperationException("configure-side failure")));
-        Assert.IsType<InvalidOperationException>(firstThrown);
+        var firstThrown = TestExceptionRecorder.Capture(() => builder.UseBoxProvisioning(_ => throw new InvalidOperationException("configure-side failure")));
+        await Assert.That(firstThrown).IsTypeOf<InvalidOperationException>();
 
         //Act
-        var retryThrown = Record.Exception(() => builder.UseBoxProvisioning(_ => { }));
+        var retryThrown = TestExceptionRecorder.Capture(() => builder.UseBoxProvisioning(_ => { }));
 
         //Assert
-        Assert.Null(retryThrown);
+        await Assert.That(retryThrown).IsNull();
     }
 
     /// <summary>
     /// A registration queued through <see cref="BoxProvisioningOptions.Add"/> that throws must
     /// not leave the call marked as made.
     /// </summary>
-    [Fact]
-    public void When_first_call_registration_throws_then_retry_with_succeeding_configure_it_should_not_throw()
+    [Test]
+    public async Task When_first_call_registration_throws_then_retry_with_succeeding_configure_it_should_not_throw()
     {
         //Arrange
         var services = new ServiceCollection();
         var builder = new StubBrighterBuilder(services);
 
-        var firstThrown = Record.Exception(() => builder.UseBoxProvisioning(o =>
+        var firstThrown = TestExceptionRecorder.Capture(() => builder.UseBoxProvisioning(o =>
             o.Add(_ => throw new InvalidOperationException("registration-side failure"))));
-        Assert.IsType<InvalidOperationException>(firstThrown);
+        await Assert.That(firstThrown).IsTypeOf<InvalidOperationException>();
 
         //Act
-        var retryThrown = Record.Exception(() => builder.UseBoxProvisioning(_ => { }));
+        var retryThrown = TestExceptionRecorder.Capture(() => builder.UseBoxProvisioning(_ => { }));
 
         //Assert
-        Assert.Null(retryThrown);
+        await Assert.That(retryThrown).IsNull();
     }
 
     private sealed class StubBrighterBuilder : IBrighterBuilder

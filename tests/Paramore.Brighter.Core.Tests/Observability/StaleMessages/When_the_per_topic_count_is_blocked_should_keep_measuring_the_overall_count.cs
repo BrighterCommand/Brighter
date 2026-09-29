@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -45,7 +44,7 @@ public class BlockedPerTopicCountTests
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private readonly TimerCountingTimeProvider _clock = new(s_start);
 
-    [Fact]
+    [Test]
     public async Task When_the_per_topic_count_is_blocked_should_keep_measuring_the_overall_count()
     {
         //Arrange
@@ -74,7 +73,7 @@ public class BlockedPerTopicCountTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromSeconds(59));
 
         var blockedAt = s_start.AddMinutes(1);
@@ -143,15 +142,21 @@ public class BlockedPerTopicCountTests
         }
 
         //Assert
-        Assert.Null(heldAt);
-        Assert.Equal(4, overallByDueTime.Count);
-        Assert.All(overallByDueTime, values => Assert.Equal([1], values));
-        Assert.Equal(deadline, cancelledAt);
-        Assert.Empty(topicsBeforeTheNextTopicCall);
-        Assert.Equal([blockedAt, nextTopicCallAt], outbox.TopicCountCalls.Select(call => call.CalledAt));
-        Assert.Equal(2, whileBlocked.Count);
-        Assert.All(whileBlocked, totals => Assert.Equal(0, totals.PerTopicCompleted));
-        Assert.True(whileBlocked[1].OverallCompleted > whileBlocked[0].OverallCompleted);
+        await Assert.That(heldAt).IsNull();
+        await Assert.That(overallByDueTime.Count).IsEqualTo(4);
+        foreach (var values in overallByDueTime)
+{
+    await Assert.That(values).IsEqualTo([1]);
+}
+        await Assert.That(cancelledAt).IsEqualTo(deadline);
+        await Assert.That(topicsBeforeTheNextTopicCall).IsEmpty();
+        await Assert.That(outbox.TopicCountCalls.Select(call => call.CalledAt)).IsEqualTo([blockedAt, nextTopicCallAt]);
+        await Assert.That(whileBlocked.Count).IsEqualTo(2);
+        foreach (var totals in whileBlocked)
+{
+    await Assert.That(totals.PerTopicCompleted).IsEqualTo(0);
+}
+        await Assert.That(whileBlocked[1].OverallCompleted > whileBlocked[0].OverallCompleted).IsTrue();
     }
 
     private static long Completed(IEnumerable<StaleMeasurement> measurements, string count) =>
@@ -173,6 +178,6 @@ public class BlockedPerTopicCountTests
         return SpinWait.SpinUntil(() => advance.IsCompleted, TimeSpan.FromSeconds(5));
     }
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

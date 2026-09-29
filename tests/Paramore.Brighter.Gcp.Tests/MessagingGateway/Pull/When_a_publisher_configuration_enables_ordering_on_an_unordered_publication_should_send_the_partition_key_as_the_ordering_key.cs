@@ -31,8 +31,7 @@ using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
 /// <summary>
@@ -40,12 +39,12 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// producer must then still send the partition key as the Pub/Sub ordering key, so that the ordering the configuration
 /// asked for is kept.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpOrderingEnabledByConfigurationTests
 {
-    [Fact]
-    public void When_a_publisher_configuration_enables_ordering_on_an_unordered_publication_should_send_the_partition_key_as_the_ordering_key()
+    [Test]
+    public async Task When_a_publisher_configuration_enables_ordering_on_an_unordered_publication_should_send_the_partition_key_as_the_ordering_key()
     {
         var provider = new GcpPullMessageGatewayProvider();
         var routingKey = provider.GetOrCreateRoutingKey();
@@ -93,8 +92,8 @@ public class GcpOrderingEnabledByConfigurationTests
             var received = PullOne(connection, channelName);
 
             // Assert
-            Assert.NotNull(received);
-            Assert.Equal(partitionKey.Value, received.Message.OrderingKey);
+            await Assert.That(received).IsNotNull();
+            await Assert.That(received.Message.OrderingKey).IsEqualTo(partitionKey.Value);
         }
         finally
         {

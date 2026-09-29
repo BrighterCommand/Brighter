@@ -33,16 +33,15 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ConsumerTakeOutOfServiceDescriptionTests
 {
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_several_consumers_fail_persistently_should_join_the_descriptions_with_a_semicolon_and_space()
     {
         //Arrange
@@ -55,11 +54,14 @@ public class ConsumerTakeOutOfServiceDescriptionTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        Assert.Equal(HealthStatus.Degraded, result.Status);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
         var phrases = result.Description!.Split("; ");
-        Assert.Equal(2, phrases.Length);
-        Assert.All(phrases, phrase => Assert.EndsWith("has 3 consecutive channel failures", phrase));
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.TakeOutOfService), result.Data["remedy_kind"]);
+        await Assert.That(phrases.Length).IsEqualTo(2);
+        foreach (var phrase in phrases)
+{
+    await Assert.That(phrase).EndsWith("has 3 consecutive channel failures");
+}
+        await Assert.That(result.Data["remedy_kind"]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.TakeOutOfService));
     }
 
     private static async Task FailuresObserved(MultiSubscriptionReceiveHealthTestHost host)

@@ -29,7 +29,6 @@ using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
@@ -62,8 +61,8 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
             yield return new object[] { binary, useAsync, useBulk, changeCase };
     }
 
-    [Theory]
-    [MemberData(nameof(WriteModes))]
+    [Test]
+    [MethodDataSource(nameof(WriteModes))]
     public async Task When_sqlite_outbox_builder_receives_duplicate_ids_should_store_one_original_message(
         bool binary, bool useAsync, bool useBulk, bool changeCase)
     {
@@ -74,22 +73,22 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
         var duplicate = CreateMessage(changeCase ? "MESSAGE-A" : "message-a", "replacement");
 
         //Act
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             await AddAsync(outbox, original, useAsync, useBulk);
             await AddAsync(outbox, duplicate, useAsync, useBulk);
         });
 
         //Assert
-        Assert.Null(exception);
-        AssertSingleOriginal(outbox, original.Id);
+        await Assert.That(exception).IsNull();
+        await AssertSingleOriginal(outbox, original.Id);
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_sqlite_bulk_add_contains_duplicate_ids_should_preserve_each_distinct_message(
         bool binary, bool useAsync)
     {
@@ -105,7 +104,7 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
         };
 
         //Act
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             if (useAsync)
                 await outbox.AddAsync(batch, _context);
@@ -114,17 +113,17 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
         });
 
         //Assert
-        Assert.Null(exception);
-        Assert.Equal(2L, RowCount());
+        await Assert.That(exception).IsNull();
+        await Assert.That(RowCount()).IsEqualTo(2L);
         var messages = outbox.Get(new[] { new Id("message-a"), new Id("message-b") }, _context).ToArray();
-        Assert.Equal(2, messages.Length);
-        Assert.Equal("original", Assert.Single(messages, message => message.Id == new Id("message-a")).Body.Value);
-        Assert.Equal("new", Assert.Single(messages, message => message.Id == new Id("message-b")).Body.Value);
+        await Assert.That(messages.Length).IsEqualTo(2);
+        await Assert.That((await Assert.That(System.Linq.Enumerable.Where(messages, message => message.Id == new Id("message-a"))).HasSingleItem()).Body.Value).IsEqualTo("original");
+        await Assert.That((await Assert.That(System.Linq.Enumerable.Where(messages, message => message.Id == new Id("message-b"))).HasSingleItem()).Body.Value).IsEqualTo("new");
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_sqlite_outbox_is_provisioned_from_empty_database_should_enforce_message_id_uniqueness(bool binary)
     {
         //Arrange
@@ -139,15 +138,15 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
         await outbox.AddAsync(CreateMessage("MESSAGE-A", "replacement"), _context);
 
         //Assert
-        AssertSingleOriginal(outbox, new Id("message-a"));
-        Assert.Equal(9, await CurrentVersionAsync(configuration));
+        await AssertSingleOriginal(outbox, new Id("message-a"));
+        await Assert.That(await CurrentVersionAsync(configuration)).IsEqualTo(9);
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_upgrading_a_legacy_sqlite_outbox_should_preserve_rows_and_enforce_message_id_uniqueness(
         bool binary, bool hasHistory)
     {
@@ -164,15 +163,15 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
         await outbox.AddAsync(CreateMessage("MESSAGE-A", "replacement"), _context);
 
         //Assert
-        AssertSingleOriginal(outbox, new Id("message-a"));
-        Assert.Equal(9, await CurrentVersionAsync(configuration));
+        await AssertSingleOriginal(outbox, new Id("message-a"));
+        await Assert.That(await CurrentVersionAsync(configuration)).IsEqualTo(9);
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_upgrading_a_sqlite_outbox_with_duplicate_ids_should_preserve_rows_and_allow_retry_after_resolution(
         bool binary, bool hasHistory)
     {
@@ -185,25 +184,24 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
         var provisioner = CreateProvisioner(configuration);
 
         //Act
-        var exception = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());
+        var exception = await TestExceptionRecorder.CaptureAsync(() => provisioner.ProvisionAsync());
 
         //Assert
-        Assert.Equal(19, Assert.IsType<SqliteException>(exception).SqliteErrorCode);
-        Assert.Equal(2L, RowCount());
+        await Assert.That((await Assert.That(exception).IsTypeOf<SqliteException>()).SqliteErrorCode).IsEqualTo(19);
+        await Assert.That(RowCount()).IsEqualTo(2L);
         var messages = outbox.Get(new[] { new Id("message-a") }, _context).ToArray();
-        Assert.Equal(new[] { "conflicting payload", "original" },
-            messages.Select(message => message.Body.Value).OrderBy(body => body).ToArray());
+        await Assert.That(messages.Select(message => message.Body.Value).OrderBy(body => body).ToArray()).IsEqualTo(new[] { "conflicting payload", "original" });
         var detection = new SqliteBoxDetectionHelper();
-        Assert.Equal(hasHistory, await detection.DoesHistoryExistAsync(_connection, TABLE, null, null));
+        await Assert.That(await detection.DoesHistoryExistAsync(_connection, TABLE, null, null)).IsEqualTo(hasHistory);
         if (hasHistory)
-            Assert.Equal(8, await detection.GetMaxVersionAsync(_connection, TABLE, null, null));
+            await Assert.That(await detection.GetMaxVersionAsync(_connection, TABLE, null, null)).IsEqualTo(8);
 
         Execute("DELETE FROM Messages WHERE MessageId COLLATE BINARY = 'MESSAGE-A';");
         await provisioner.ProvisionAsync();
         await provisioner.ProvisionAsync();
         await outbox.AddAsync(CreateMessage("MESSAGE-A", "replacement"), _context);
-        AssertSingleOriginal(outbox, new Id("message-a"));
-        Assert.Equal(9, await CurrentVersionAsync(configuration));
+        await AssertSingleOriginal(outbox, new Id("message-a"));
+        await Assert.That(await CurrentVersionAsync(configuration)).IsEqualTo(9);
     }
 
     private RelationalDatabaseConfiguration CreateConfiguration(bool binary)
@@ -222,8 +220,8 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
         }
     }
 
-    [Theory]
-    [MemberData(nameof(ExistingIndexes))]
+    [Test]
+    [MethodDataSource(nameof(ExistingIndexes))]
     public async Task When_a_legacy_outbox_has_an_existing_index_should_require_full_case_insensitive_message_id_uniqueness(
         string indexDdl, bool protectsMessageId, bool hasHistory)
     {
@@ -242,14 +240,14 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
         await outbox.AddAsync(CreateMessage("MESSAGE-A", "replacement"), _context);
 
         //Assert
-        Assert.Equal(protectsMessageId ? 9 : 8, detectedVersion);
-        Assert.Equal(9, await CurrentVersionAsync(configuration));
-        Assert.Equal(1L, RowCount());
-        Assert.Equal("original", outbox.Get(message.Id, _context).Body.Value);
-        Assert.Empty(outbox.OutstandingMessages(TimeSpan.Zero, _context));
+        await Assert.That(detectedVersion).IsEqualTo(protectsMessageId ? 9 : 8);
+        await Assert.That(await CurrentVersionAsync(configuration)).IsEqualTo(9);
+        await Assert.That(RowCount()).IsEqualTo(1L);
+        await Assert.That(outbox.Get(message.Id, _context).Body.Value).IsEqualTo("original");
+        await Assert.That(outbox.OutstandingMessages(TimeSpan.Zero, _context)).IsEmpty();
         using var command = _connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM pragma_index_list('Messages');";
-        Assert.Equal(protectsMessageId ? 2L : 3L, (long)command.ExecuteScalar()!);
+        await Assert.That((long)command.ExecuteScalar()!).IsEqualTo(protectsMessageId ? 2L : 3L);
     }
 
     private static SqliteOutboxProvisioner CreateProvisioner(RelationalDatabaseConfiguration configuration)
@@ -283,11 +281,11 @@ public class SqliteOutboxMessageIdUniquenessTests : IDisposable
             outbox.Add(message, _context);
     }
 
-    private void AssertSingleOriginal(SqliteOutbox outbox, Id id)
+    private async Task AssertSingleOriginal(SqliteOutbox outbox, Id id)
     {
-        Assert.Equal(1L, RowCount());
-        Assert.Equal("original", Assert.Single(outbox.Get(new[] { id }, _context)).Body.Value);
-        Assert.Equal("original", Assert.Single(outbox.OutstandingMessages(TimeSpan.FromMinutes(1), _context)).Body.Value);
+        await Assert.That(RowCount()).IsEqualTo(1L);
+        await Assert.That((await Assert.That(outbox.Get(new[] { id }, _context)).HasSingleItem()).Body.Value).IsEqualTo("original");
+        await Assert.That((await Assert.That(outbox.OutstandingMessages(TimeSpan.FromMinutes(1), _context)).HasSingleItem()).Body.Value).IsEqualTo("original");
     }
 
     private long RowCount()

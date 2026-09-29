@@ -29,14 +29,13 @@ using System;
 using Azure.Storage.Blobs.Models;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.Storage.Azure;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.Configuration;
 
 public class AzureArchiveLocationConfigurationTests
 {
-    [Fact]
-    public void When_setting_blob_archive_location_as_a_property_should_preserve_defaults_and_allow_replacement()
+    [Test]
+    public async Task When_setting_blob_archive_location_as_a_property_should_preserve_defaults_and_allow_replacement()
     {
         //Arrange
         var options = new AzureBlobArchiveProviderOptions(
@@ -45,18 +44,18 @@ public class AzureArchiveLocationConfigurationTests
         var message = new Message(new MessageHeader(new Id("order-123"), new RoutingKey("orders"), MessageType.MT_EVENT),
             new MessageBody("order placed"));
         var property = typeof(AzureBlobArchiveProviderOptions).GetProperty(nameof(options.StorageLocationFunc));
-        Assert.NotNull(property);
-        var defaultLocation = Assert.IsType<Func<Message, string>>(property.GetValue(options));
-        Assert.Equal("order-123", defaultLocation(message));
+        await Assert.That(property).IsNotNull();
+        var defaultLocation = await Assert.That(property.GetValue(options)).IsTypeOf<Func<Message, string>>();
+        await Assert.That(defaultLocation(message)).IsEqualTo("order-123");
         Func<Message, string> replacement = item => $"custom/{item.Id}";
 
         //Act
         property.SetValue(options, replacement);
 
         //Assert
-        Assert.Same(replacement, options.StorageLocationFunc);
-        Assert.Equal("custom/order-123", options.StorageLocationFunc(message));
+        await Assert.That(options.StorageLocationFunc).IsSameReferenceAs(replacement);
+        await Assert.That(options.StorageLocationFunc(message)).IsEqualTo("custom/order-123");
         options.StorageLocationFunc = item => $"changed/{item.Id}";
-        Assert.Equal("changed/order-123", options.StorageLocationFunc(message));
+        await Assert.That(options.StorageLocationFunc(message)).IsEqualTo("changed/order-123");
     }
 }

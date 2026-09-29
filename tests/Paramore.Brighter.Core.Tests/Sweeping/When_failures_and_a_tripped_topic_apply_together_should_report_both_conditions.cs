@@ -7,13 +7,12 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.Outbox.Hosting.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class When_failures_and_a_tripped_topic_apply_together_should_report_both_conditions_tests
 {
-    [Fact]
+    [Test]
     public async Task When_failures_and_a_tripped_topic_apply_together_should_report_both_conditions()
     {
         //Arrange
@@ -32,21 +31,21 @@ public class When_failures_and_a_tripped_topic_apply_together_should_report_both
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.True(state.Read().IsActive);
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        Assert.Contains("; ", result.Description);
+        await Assert.That(state.Read().IsActive).IsTrue();
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(result.Description).Contains("; ");
         var parts = result.Description!.Split("; ");
-        Assert.Equal(2, parts.Length);
-        Assert.Contains("3", parts[0]);
-        Assert.Contains("orders", parts[1]);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Equal(new[] { "consecutive_failed_sweeps", "tripped_topics" }, Assert.IsType<string[]>(result.Data[RemedyCheckConvention.ConditionsKey]));
-        var failures = Assert.IsAssignableFrom<IDictionary<string, object>>(result.Data["consecutive_failed_sweeps"]);
-        Assert.Equal(3, Assert.IsType<int>(failures["count"]));
-        Assert.Equal(3, Assert.IsType<int>(failures["threshold"]));
-        Assert.Equal(10.0, Assert.IsType<double>(failures["timer_interval_seconds"]));
-        var tripped = Assert.IsAssignableFrom<IDictionary<string, object>>(result.Data["tripped_topics"]);
-        Assert.Equal(1, Assert.IsType<int>(tripped["count"]));
-        Assert.Equal(new[] { "orders" }, Assert.IsType<string[]>(tripped["topics"]));
+        await Assert.That(parts.Length).IsEqualTo(2);
+        await Assert.That(parts[0]).Contains("3");
+        await Assert.That(parts[1]).Contains("orders");
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        await Assert.That((await Assert.That(result.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "consecutive_failed_sweeps", "tripped_topics" });
+        var failures = ((IDictionary<string, object>)(((IDictionary<string, object>)(await Assert.That(result.Data["consecutive_failed_sweeps"]).IsAssignableTo<IDictionary<string, object>>()))));
+        await Assert.That((await Assert.That(failures["count"]).IsTypeOf<int>())).IsEqualTo(3);
+        await Assert.That((await Assert.That(failures["threshold"]).IsTypeOf<int>())).IsEqualTo(3);
+        await Assert.That((await Assert.That(failures["timer_interval_seconds"]).IsTypeOf<double>())).IsEqualTo(10.0);
+        var tripped = ((IDictionary<string, object>)(((IDictionary<string, object>)(await Assert.That(result.Data["tripped_topics"]).IsAssignableTo<IDictionary<string, object>>()))));
+        await Assert.That((await Assert.That(tripped["count"]).IsTypeOf<int>())).IsEqualTo(1);
+        await Assert.That((await Assert.That(tripped["topics"]).IsTypeOf<string[]>())).IsEqualTo(new[] { "orders" });
     }
 }

@@ -32,7 +32,6 @@ using Google.Api.Gax;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
@@ -40,11 +39,11 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// #4517 — the bulk send path must, like the single send, deliver keyed messages through a publication that does not
 /// enable message ordering, and they must arrive with their partition key.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpKeyedBatchOnUnorderedPublicationAsyncTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_batch_of_keyed_messages_is_sent_through_an_unordered_publication_should_receive_them_with_their_partition_key_async()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -98,8 +97,11 @@ public class GcpKeyedBatchOnUnorderedPublicationAsyncTests
             }
 
             // Assert
-            Assert.Equal(sent.Select(m => m.Id).OrderBy(id => id.Value), received.Select(m => m.Id).OrderBy(id => id.Value));
-            Assert.All(received, message => Assert.Equal(partitionKey, message.Header.PartitionKey));
+            await Assert.That(received.Select(m => m.Id).OrderBy(id => id.Value)).IsEqualTo(sent.Select(m => m.Id).OrderBy(id => id.Value));
+            foreach (var message in received)
+{
+    await Assert.That(message.Header.PartitionKey).IsEqualTo(partitionKey);
+}
         }
         finally
         {

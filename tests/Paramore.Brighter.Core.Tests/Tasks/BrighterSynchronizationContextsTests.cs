@@ -1,74 +1,74 @@
-﻿#region Sources
-
+#region Sources
 // This class is based on Stephen Cleary's AyncContext, see <a href="https://github.com/StephenCleary/AsyncEx/blob/db32fd5db0d1051e867b36ae039ea13d2c36eb91/test/AsyncEx.Context.UnitTests/AsyncContextUnitTests.cs#L144-L149
 // Used to test that BrighterSynchronizationHelper which is derived, passes the same tests as AsyncContext
-
 #endregion
-
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Tasks;
-
 public class BrighterSynchronizationContextsTests
 {
-    [Fact]
-    public void AsyncContext_StaysOnSameThread()
+    [Test]
+    public async Task AsyncContext_StaysOnSameThread()
     {
         var testThread = Thread.CurrentThread.ManagedThreadId;
         var contextThread = BrighterAsyncContext.Run(() => Thread.CurrentThread.ManagedThreadId);
-        Assert.Equal(contextThread, testThread);
+        await Assert.That(testThread).IsEqualTo(contextThread);
     }
 
-    [Fact]
-    public void Run_AsyncVoid_BlocksUntilCompletion()
+    [Test]
+    public async Task Run_AsyncVoid_BlocksUntilCompletion()
     {
         bool resumed = false;
+#pragma warning disable TUnit0031 // Intentionally testing async void behavior in BrighterAsyncContext
         BrighterAsyncContext.Run((Action)(async () =>
         {
             await Task.Yield();
             resumed = true;
         }));
-
-        Assert.True(resumed);
+#pragma warning restore TUnit0031
+        await Assert.That(resumed).IsTrue();
     }
 
-    [Fact]
-    public void Run_AsyncVoid_BlocksUntilCompletion_RunsContinuation()
+    [Test]
+    public async Task Run_AsyncVoid_BlocksUntilCompletion_RunsContinuation()
     {
         bool resumed = false;
+#pragma warning disable TUnit0031 // Intentionally testing async void behavior in BrighterAsyncContext
         BrighterAsyncContext.Run((Action)(async () =>
         {
             await Task.Delay(50);
             resumed = true;
         }));
-
-        Assert.True(resumed);
+#pragma warning restore TUnit0031
+        await Assert.That(resumed).IsTrue();
     }
 
-    [Fact]
-    public void Run_FuncThatCallsAsyncVoid_BlocksUntilCompletion()
+    [Test]
+    public async Task Run_FuncThatCallsAsyncVoid_BlocksUntilCompletion()
     {
         bool resumed = false;
         var result = BrighterAsyncContext.Run((Func<int>)(() =>
         {
+#pragma warning disable TUnit0031 // Intentionally testing async void behavior in BrighterAsyncContext
             Action asyncVoid = async () =>
             {
                 await Task.Yield();
                 resumed = true;
             };
+#pragma warning restore TUnit0031
             asyncVoid();
             return 13;
         }));
-        Assert.True(resumed);
-        Assert.Equal(13, result);
+        await Assert.That(resumed).IsTrue();
+        await Assert.That(result).IsEqualTo(13);
     }
 
-    [Fact]
-    public void Run_AsyncTask_BlocksUntilCompletion()
+    [Test]
+    public async Task Run_AsyncTask_BlocksUntilCompletion()
     {
         bool resumed = false;
         BrighterAsyncContext.Run(async () =>
@@ -76,24 +76,23 @@ public class BrighterSynchronizationContextsTests
             await Task.Yield();
             resumed = true;
         });
-        Assert.True(resumed);
+        await Assert.That(resumed).IsTrue();
     }
 
-    [Fact]
-    public void Run_AsyncTask_BlockingCode_Still_Ends()
+    [Test]
+    public async Task Run_AsyncTask_BlockingCode_Still_Ends()
     {
         bool resumed = false;
-        BrighterAsyncContext.Run(() =>
+        BrighterAsyncContext.Run(async () =>
         {
-            Task.Delay(50).GetAwaiter().GetResult();
+            await Task.Delay(50);
             resumed = true;
-            return Task.CompletedTask;
         });
-        Assert.True(resumed);
+        await Assert.That(resumed).IsTrue();
     }
 
-    [Fact]
-    public void Run_AsyncTaskWithResult_BlocksUntilCompletion()
+    [Test]
+    public async Task Run_AsyncTaskWithResult_BlocksUntilCompletion()
     {
         bool resumed = false;
         var result = BrighterAsyncContext.Run(async () =>
@@ -102,27 +101,26 @@ public class BrighterSynchronizationContextsTests
             resumed = true;
             return 17;
         });
-
-        Assert.True(resumed);
-        Assert.Equal(17, result);
+        await Assert.That(resumed).IsTrue();
+        await Assert.That(result).IsEqualTo(17);
     }
 
-    [Fact]
-    public void Run_AsyncTaskWithResult_BlockingCode_Still_Ends()
+    [Test]
+    public async Task Run_AsyncTaskWithResult_BlockingCode_Still_Ends()
     {
         bool resumed = false;
         var result = BrighterAsyncContext.Run(async () =>
         {
-            Task.Delay(50).GetAwaiter().GetResult();
+            await Task.Delay(50);
             resumed = true;
             return 17;
         });
-        Assert.True(resumed);
-        Assert.Equal(17, result);
+        await Assert.That(resumed).IsTrue();
+        await Assert.That(result).IsEqualTo(17);
     }
-    
-    [Fact]
-    public void Run_AsyncTaskWithResultAndConfigurateAwait_BlockingCode_Still_Ends()
+
+    [Test]
+    public async Task Run_AsyncTaskWithResultAndConfigurateAwait_BlockingCode_Still_Ends()
     {
         bool resumed = false;
         var result = BrighterAsyncContext.Run(async () =>
@@ -131,12 +129,12 @@ public class BrighterSynchronizationContextsTests
             resumed = true;
             return 17;
         });
-        Assert.True(resumed);
-        Assert.Equal(17, result);
+        await Assert.That(resumed).IsTrue();
+        await Assert.That(result).IsEqualTo(17);
     }
 
-    [Fact]
-    public void Run_AsyncTaskWithResult_ContainsMultipleAsyncTasks_Still_Ends()
+    [Test]
+    public async Task Run_AsyncTaskWithResult_ContainsMultipleAsyncTasks_Still_Ends()
     {
         bool resumed = false;
         var result = BrighterAsyncContext.Run(async () =>
@@ -145,8 +143,8 @@ public class BrighterSynchronizationContextsTests
             resumed = true;
             return 17;
         });
-        Assert.True(resumed);
-        Assert.Equal(17, result);
+        await Assert.That(resumed).IsTrue();
+        await Assert.That(result).IsEqualTo(17);
     }
 
     static async Task MultiTask()
@@ -155,38 +153,34 @@ public class BrighterSynchronizationContextsTests
         await Task.Yield();
     }
 
-    [Fact]
+    [Test]
     public async Task Run_Delegate_Via_Run_Thread_Runs()
     {
         var runner = new EventRunner();
-        runner.OnMessagePublished += MessagePublishedHandler;
+        var handlerInvoked = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        s_runnerCalled = false;
-        BrighterAsyncContext.Run(async () =>
+        void Handler(bool called, int value) => handlerInvoked.TrySetResult(value);
+        runner.OnMessagePublished += Handler;
+
+        try
         {
-            await runner.PublishAsync(runner.Report);
-        });
+            BrighterAsyncContext.Run(async () =>
+            {
+                await runner.PublishAsync(runner.Report);
+            });
 
-        //let callback run on thread pool
-        await Task.Delay(1000);
-
-        Assert.True(s_runnerCalled);
-
-        runner.OnMessagePublished -= MessagePublishedHandler;
-    }
-
-    private static bool s_runnerCalled = false;
-    
-    static void MessagePublishedHandler(bool called, int value)
-    {
-        Assert.Equal(17, value);
-        s_runnerCalled = true;
+            var observedValue = await handlerInvoked.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await Assert.That(observedValue).IsEqualTo(17);
+        }
+        finally
+        {
+            runner.OnMessagePublished -= Handler;
+        }
     }
 
     internal sealed class EventRunner
     {
         public event Action<bool, int> OnMessagePublished;
-
         public async Task PublishAsync(Action<int> callBack)
         {
             await Task.Yield();
@@ -195,34 +189,30 @@ public class BrighterSynchronizationContextsTests
 
         public void Report(int value)
         {
-             Task.Run(() => OnMessagePublished?.Invoke(true, value));
+            Task.Run(() => OnMessagePublished?.Invoke(true, value));
         }
     }
-    
-    [Fact]
-    public void Current_WithoutAsyncContext_IsNull()
+
+    [Test]
+    public async Task Current_WithoutAsyncContext_IsNull()
     {
-        Assert.Null(BrighterAsyncContext.Current);
+        await Assert.That(BrighterAsyncContext.Current).IsNull();
     }
 
-    [Fact]
-    public void Current_FromBrighterSynchronizationHelper_IsBrighterSynchronizationHelper()
+    [Test]
+    public async Task Current_FromBrighterSynchronizationHelper_IsBrighterSynchronizationHelper()
     {
         BrighterAsyncContext observedHelper = null;
         var helper = new BrighterAsyncContext();
-
-        var task = helper.Factory.StartNew(
-            () => { observedHelper = BrighterAsyncContext.Current; },
-            helper.Factory.CancellationToken,
-            helper.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-            helper.TaskScheduler);
-
+        var task = helper.Factory.StartNew(() =>
+        {
+            observedHelper = BrighterAsyncContext.Current;
+        }, helper.Factory.CancellationToken, helper.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, helper.TaskScheduler);
         helper.Execute(task);
-
-        Assert.Equal(helper, observedHelper);
+        await Assert.That(observedHelper).IsEqualTo(helper);
     }
-    
-    [Fact]
+
+    [Test]
     public async Task Run_AsyncTaskWithResult_ContainsMultipleAsyncTasks_Still_Ends2()
     {
         bool resumed = false;
@@ -232,74 +222,66 @@ public class BrighterSynchronizationContextsTests
             resumed = true;
             return 17;
         }));
-        
         await Task.Delay(100);
-
-        var result =await Task.WhenAll(newTask);
-
-        Assert.True(resumed);
-        Assert.Equal(17, result[0]);
+        var result = await Task.WhenAll(newTask);
+        await Assert.That(resumed).IsTrue();
+        await Assert.That(result[0]).IsEqualTo(17);
     }
 
-    [Fact]                 
-    public void SynchronizationContextCurrent_FromBrighterSynchronizationHelper_IsBrighterSynchronizationHelperSynchronizationContext()
+    [Test]
+    public async Task SynchronizationContextCurrent_FromBrighterSynchronizationHelper_IsBrighterSynchronizationHelperSynchronizationContext()
     {
         System.Threading.SynchronizationContext? observedContext = null;
         var context = new BrighterAsyncContext();
-
-        var task = context.Factory.StartNew(
-            () => { observedContext = System.Threading.SynchronizationContext.Current; },
-            context.Factory.CancellationToken,
-            context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-            context.TaskScheduler);
-
+        var task = context.Factory.StartNew(() =>
+        {
+            observedContext = System.Threading.SynchronizationContext.Current;
+        }, context.Factory.CancellationToken, context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, context.TaskScheduler);
         context.Execute(task);
-
-        Assert.Equal(context.SynchronizationContext, observedContext);
+        await Assert.That(observedContext).IsEqualTo(context.SynchronizationContext);
     }
 
-    [Fact]
-    public void TaskSchedulerCurrent_FromAsyncContext_IsThreadPoolTaskScheduler()
+    [Test]
+    public async Task TaskSchedulerCurrent_FromAsyncContext_IsThreadPoolTaskScheduler()
     {
         TaskScheduler observedScheduler = null;
         var context = new BrighterAsyncContext();
-
-        var task = context.Factory.StartNew(
-            () => { observedScheduler = TaskScheduler.Current; },
-            context.Factory.CancellationToken,
-            context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-            context.TaskScheduler);
-
+        var task = context.Factory.StartNew(() =>
+        {
+            observedScheduler = TaskScheduler.Current;
+        }, context.Factory.CancellationToken, context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, context.TaskScheduler);
         context.Execute(task);
-
-        Assert.Equal(TaskScheduler.Default, observedScheduler);
+        await Assert.That(observedScheduler).IsEqualTo(TaskScheduler.Default);
     }
 
-    [Fact]
-    public void TaskScheduler_MaximumConcurrency_IsOne()
+    [Test]
+    public async Task TaskScheduler_MaximumConcurrency_IsOne()
     {
         var context = new BrighterAsyncContext();
-        Assert.Equal(1, context.TaskScheduler.MaximumConcurrencyLevel);
+        await Assert.That(context.TaskScheduler.MaximumConcurrencyLevel).IsEqualTo(1);
     }
 
-    [Fact]
-    public void Run_PropagatesException()
+    [Test]
+    public async Task Run_PropagatesException()
     {
         bool propogatesException = false;
         try
         {
-            BrighterAsyncContext.Run(() => { throw new NotImplementedException(); });
+            BrighterAsyncContext.Run(() =>
+            {
+                throw new NotImplementedException();
+            });
         }
         catch (Exception e)
         {
             propogatesException = true;
         }
 
-        Assert.True(propogatesException);
+        await Assert.That(propogatesException).IsTrue();
     }
 
-    [Fact]
-    public void Run_Async_PropagatesException()
+    [Test]
+    public async Task Run_Async_PropagatesException()
     {
         bool propogatesException = false;
         try
@@ -315,10 +297,10 @@ public class BrighterSynchronizationContextsTests
             propogatesException = true;
         }
 
-        Assert.True(propogatesException);
+        await Assert.That(propogatesException).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task Run_Async_InThread_PropagatesException()
     {
         bool propogatesException = false;
@@ -332,7 +314,6 @@ public class BrighterSynchronizationContextsTests
                     throw new NotImplementedException();
                 });
             });
-
             await runningThread;
         }
         catch (Exception e)
@@ -340,11 +321,11 @@ public class BrighterSynchronizationContextsTests
             propogatesException = true;
         }
 
-        Assert.True(propogatesException);
+        await Assert.That(propogatesException).IsTrue();
     }
 
-    [Fact]
-    public void SynchronizationContextPost_PropagatesException()
+    [Test]
+    public async Task SynchronizationContextPost_PropagatesException()
     {
         bool propogatesException = false;
         try
@@ -363,31 +344,27 @@ public class BrighterSynchronizationContextsTests
             propogatesException = true;
         }
 
-        Assert.True(propogatesException);
+        await Assert.That(propogatesException).IsTrue();
     }
 
-    [Fact]
-    public void Task_AfterExecute_NeverRuns()
+    [Test]
+    public async Task Task_AfterExecute_NeverRuns()
     {
         int value = 0;
         var context = new BrighterAsyncContext();
-
-        var task = context.Factory.StartNew(
-            () => { value = 1; },
-            context.Factory.CancellationToken,
-            context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-            context.TaskScheduler);
-
+        var task = context.Factory.StartNew(() =>
+        {
+            value = 1;
+        }, context.Factory.CancellationToken, context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, context.TaskScheduler);
         context.Execute(task);
-
-        var taskTwo = context.Factory.StartNew(
-            () => { value = 2; },
-            context.Factory.CancellationToken,
-            context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-            context.TaskScheduler);
-
-        taskTwo.ContinueWith(_ => { throw new Exception("Should not run"); }, TaskScheduler.Default);
-
+        var taskTwo = context.Factory.StartNew(() =>
+        {
+            value = 2;
+        }, context.Factory.CancellationToken, context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, context.TaskScheduler);
+        taskTwo.ContinueWith(_ =>
+        {
+            throw new Exception("Should not run");
+        }, TaskScheduler.Default);
         bool exceptionRan = false;
         try
         {
@@ -397,32 +374,26 @@ public class BrighterSynchronizationContextsTests
         {
             exceptionRan = true;
         }
-        //there should be no pending work
 
-        Assert.Equal(1, value);
-        Assert.False(exceptionRan);
+        //there should be no pending work
+        await Assert.That(value).IsEqualTo(1);
+        await Assert.That(exceptionRan).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task Task_AfterExecute_Runs_On_ThreadPool()
     {
         int value = 0;
         var context = new BrighterAsyncContext();
-
-        var task = context.Factory.StartNew(
-            () => { value = 1; },
-            context.Factory.CancellationToken,
-            context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-            context.TaskScheduler);
-
+        var task = context.Factory.StartNew(() =>
+        {
+            value = 1;
+        }, context.Factory.CancellationToken, context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, context.TaskScheduler);
         context.Execute(task);
-
-        var taskTwo = context.Factory.StartNew(
-            () => { value = 2; },
-            context.Factory.CancellationToken,
-            context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-            TaskScheduler.Default);
-
+        var taskTwo = context.Factory.StartNew(() =>
+        {
+            value = 2;
+        }, context.Factory.CancellationToken, context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
         bool threadPoolExceptionRan = false;
         try
         {
@@ -430,34 +401,32 @@ public class BrighterSynchronizationContextsTests
         }
         catch (Exception e)
         {
-            Assert.Equal("Should run on thread pool", e.Message);
+            await Assert.That(e.Message).IsEqualTo("Should run on thread pool");
             threadPoolExceptionRan = true;
         }
 
-        Assert.True(threadPoolExceptionRan);
+        await Assert.That(threadPoolExceptionRan).IsTrue();
     }
-    
-    [Fact]
-    public void SynchronizationContext_IsEqualToCopyOfItself()
+
+    [Test]
+    public async Task SynchronizationContext_IsEqualToCopyOfItself()
     {
-        var synchronizationContext1 =
-            BrighterAsyncContext.Run(() => System.Threading.SynchronizationContext.Current);
+        var synchronizationContext1 = BrighterAsyncContext.Run(() => System.Threading.SynchronizationContext.Current);
         var synchronizationContext2 = synchronizationContext1.CreateCopy();
-
-        Assert.Equal(synchronizationContext2.GetHashCode(), synchronizationContext1.GetHashCode());
-        Assert.True(synchronizationContext1.Equals(synchronizationContext2));
-        Assert.False(synchronizationContext1.Equals(new System.Threading.SynchronizationContext()));
+        await Assert.That(synchronizationContext1.GetHashCode()).IsEqualTo(synchronizationContext2.GetHashCode());
+        await Assert.That(synchronizationContext1.Equals(synchronizationContext2)).IsTrue();
+        await Assert.That(synchronizationContext1.Equals(new System.Threading.SynchronizationContext())).IsFalse();
     }
 
-    [Fact]
-    public void Id_IsEqualToTaskSchedulerId()
+    [Test]
+    public async Task Id_IsEqualToTaskSchedulerId()
     {
         var context = new BrighterAsyncContext();
-        Assert.Equal(context.TaskScheduler.Id, context.Id);
+        await Assert.That(context.Id).IsEqualTo(context.TaskScheduler.Id);
     }
 
-    [Fact]
-    public void Post_AfterContextDisposed_DoesNotThrow()
+    [Test]
+    public async Task Post_AfterContextDisposed_DoesNotThrow()
     {
         SynchronizationContext? captured = null;
         BrighterAsyncContext.Run(() =>
@@ -465,16 +434,13 @@ public class BrighterSynchronizationContextsTests
             captured = SynchronizationContext.Current;
         });
 
-        // At this point the BrighterAsyncContext's 'using' scope has already disposed the
-        // underlying task queue. A stray callback that captured the SynchronizationContext
-        // during Run must not crash the posting thread.
-        Assert.NotNull(captured);
-        var exception = Record.Exception(() => captured!.Post(_ => { }, null));
-        Assert.Null(exception);
+        await Assert.That(captured).IsNotNull();
+        var exception = Catch.Exception(() => captured!.Post(_ => { }, null));
+        await Assert.That(exception).IsNull();
     }
 
-    [Fact]
-    public void Send_AfterContextDisposed_Throws()
+    [Test]
+    public async Task Send_AfterContextDisposed_Throws()
     {
         SynchronizationContext? captured = null;
         BrighterAsyncContext.Run(() =>
@@ -482,10 +448,8 @@ public class BrighterSynchronizationContextsTests
             captured = SynchronizationContext.Current;
         });
 
-        Assert.NotNull(captured);
+        await Assert.That(captured).IsNotNull();
 
-        // Send from a different thread than the one that ran the pump: must not hang.
-        // Post-shutdown, the pump is gone, so Send cannot deliver - it should throw.
         var thrown = Task.Run(() =>
         {
             try
@@ -499,19 +463,13 @@ public class BrighterSynchronizationContextsTests
             }
         });
 
-        Assert.True(thrown.Wait(TimeSpan.FromSeconds(5)), "Send hung after context disposal");
-        Assert.IsType<ObjectDisposedException>(thrown.Result);
+        await Assert.That(thrown.Wait(TimeSpan.FromSeconds(5))).IsTrue();
+        await Assert.That(thrown.Result).IsTypeOf<ObjectDisposedException>();
     }
 
-    [Fact]
-    public void Send_AfterShutdown_StressIterations_NeverHangsAndOnlyThrowsObjectDisposed()
+    [Test]
+    public async Task Send_AfterShutdown_StressIterations_NeverHangsAndOnlyThrowsObjectDisposed()
     {
-        // Stress the post-shutdown Send path: for many iterations, run and fully dispose
-        // a context, then fire a Send from a ThreadPool thread against the captured
-        // SynchronizationContext. Every Send must either complete normally or throw
-        // ObjectDisposedException within a bounded time - never hang, never surface
-        // a different exception type. A regression that re-introduces the Send-hang
-        // would blow the per-iteration timeout.
         const int iterations = 1000;
         for (var i = 0; i < iterations; i++)
         {
@@ -521,7 +479,7 @@ public class BrighterSynchronizationContextsTests
                 captured = SynchronizationContext.Current;
             });
 
-            Assert.NotNull(captured);
+            await Assert.That(captured).IsNotNull();
 
             var sent = Task.Run(() =>
             {
@@ -536,39 +494,37 @@ public class BrighterSynchronizationContextsTests
                 }
             });
 
-            Assert.True(sent.Wait(TimeSpan.FromSeconds(5)), $"Send hung on iteration {i}");
+            await Assert.That(sent.Wait(TimeSpan.FromSeconds(5))).IsTrue();
             if (sent.Result is not null)
-                Assert.IsType<ObjectDisposedException>(sent.Result);
+                await Assert.That(sent.Result).IsTypeOf<ObjectDisposedException>();
         }
     }
 
-    [Fact]
-    public void Dispose_CalledTwice_DoesNotThrow()
+    [Test]
+    public async Task Dispose_CalledTwice_DoesNotThrow()
     {
         var context = new BrighterAsyncContext();
         context.Dispose();
-        var exception = Record.Exception(() => context.Dispose());
-        Assert.Null(exception);
+        var exception = Catch.Exception(() => context.Dispose());
+        await Assert.That(exception).IsNull();
     }
 
-    [Fact]
-    public void Run_NestedInsideOuterRun_DoesNotDeadlock()
+    [Test]
+    public async Task Run_NestedInsideOuterRun_DoesNotDeadlock()
     {
         var innerThread = 0;
         var outerThread = BrighterAsyncContext.Run(() =>
         {
-            // HideScheduler on the outer factory means a nested Run creates a fresh
-            // context rather than piggy-backing the outer pump; this must not deadlock.
             innerThread = BrighterAsyncContext.Run(() => Thread.CurrentThread.ManagedThreadId);
             return Thread.CurrentThread.ManagedThreadId;
         });
 
-        Assert.NotEqual(0, innerThread);
-        Assert.NotEqual(0, outerThread);
+        await Assert.That(innerThread).IsNotEqualTo(0);
+        await Assert.That(outerThread).IsNotEqualTo(0);
     }
 
-    [Fact]
-    public void Execute_CalledConcurrently_ThrowsInvalidOperationException()
+    [Test]
+    public async Task Execute_CalledConcurrently_ThrowsInvalidOperationException()
     {
         var context = new BrighterAsyncContext();
 
@@ -589,10 +545,11 @@ public class BrighterSynchronizationContextsTests
 
         try
         {
-            Assert.True(firstStarted.Wait(TimeSpan.FromSeconds(5)), "First Execute did not start");
+            await Assert.That(firstStarted.Wait(TimeSpan.FromSeconds(5))).IsTrue();
 
-            var ex = Assert.Throws<InvalidOperationException>(() => context.Execute(blockingTask));
-            Assert.Contains("not re-entrant", ex.Message);
+            var ex = Catch.Exception(() => context.Execute(blockingTask));
+            await Assert.That(ex).IsTypeOf<InvalidOperationException>();
+            await Assert.That(ex!.Message).Contains("not re-entrant");
         }
         finally
         {

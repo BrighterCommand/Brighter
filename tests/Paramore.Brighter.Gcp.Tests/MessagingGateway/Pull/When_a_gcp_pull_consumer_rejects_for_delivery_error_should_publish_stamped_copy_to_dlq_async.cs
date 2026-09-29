@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
@@ -40,19 +39,18 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// (DeliveryError with description; None with no description), and the missing-receipt-handle
 /// defensive path (ADR 0078 "Missing receipt handle (both consumers)").
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpPullConsumerRejectDlqRoutingAsyncTests
 {
     // -------------------------------------------------------------------------
     // GCP / Pull — DeliveryError (async)
     // -------------------------------------------------------------------------
-
     /// <summary>
     /// DeliveryError with a description: the DLQ copy carries all five metadata keys, the source
     /// returns MT_NONE after RejectAsync, and RejectAsync returns true.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_delivery_error_on_pull_should_publish_stamped_copy_to_dlq_and_ack_original()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -80,7 +78,7 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var originalTopic = routingKey.Value;
 
@@ -88,11 +86,11 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Async delivery error test"));
 
             // Assert — RejectAsync returns true
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — source is acked
             var reRead = await channel.ReceiveAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             // Assert — DLQ copy appears within 60s
             Message dlqMessage = new Message();
@@ -105,21 +103,19 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
                 await Task.Delay(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var bag = dlqMessage.Header.Bag;
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic));
-            Assert.Equal(originalTopic, bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString());
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason));
-            Assert.Equal(RejectionReason.DeliveryError.ToString(), bag[RejectionMetadataKeyNames.RejectionReason]?.ToString());
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp));
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString()).IsEqualTo(originalTopic);
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType)).IsTrue();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionReason]?.ToString()).IsEqualTo(RejectionReason.DeliveryError.ToString());
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsTrue();
             var ts = bag[RejectionMetadataKeyNames.RejectionTimestamp]?.ToString() ?? string.Empty;
-            Assert.True(
-                DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _),
-                $"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage));
-            Assert.Equal("Async delivery error test", bag[RejectionMetadataKeyNames.RejectionMessage]?.ToString());
+            await Assert.That(DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _)).IsTrue().Because($"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionMessage]?.ToString()).IsEqualTo("Async delivery error test");
             // DLQ reader parser assigns new ReceiptHandle; absence cannot be verified in round-trip.
         }
         finally
@@ -136,7 +132,7 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
     /// None reason (null): the DLQ copy carries exactly four metadata keys (no rejectionMessage),
     /// rejectionReason == "None", the source is acked, and RejectAsync returns true.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_none_reason_on_pull_should_publish_copy_with_four_metadata_keys_to_dlq()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -164,16 +160,16 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act — null reason
             var result = await channel.RejectAsync(received, reason: null);
 
             // Assert
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             var reRead = await channel.ReceiveAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             Message dlqMessage = new Message();
             var stopwatch = Stopwatch.StartNew();
@@ -185,19 +181,16 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
                 await Task.Delay(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var bag = dlqMessage.Header.Bag;
-            Assert.Equal("None", bag[RejectionMetadataKeyNames.RejectionReason]?.ToString());
-            Assert.False(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage),
-                "None reason must NOT carry rejectionMessage");
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp));
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionReason]?.ToString()).IsEqualTo("None");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsFalse().Because("None reason must NOT carry rejectionMessage");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsTrue();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType)).IsTrue();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsTrue();
             var ts = bag[RejectionMetadataKeyNames.RejectionTimestamp]?.ToString() ?? string.Empty;
-            Assert.True(
-                DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _),
-                $"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
+            await Assert.That(DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _)).IsTrue().Because($"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
             // DLQ reader parser assigns new ReceiptHandle; absence cannot be verified in round-trip.
         }
         finally
@@ -214,7 +207,7 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
     /// Missing receipt handle: the DLQ copy is still published, an Error says the original cannot be
     /// settled, and RejectAsync returns true.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_missing_receipt_handle_on_pull_should_still_publish_to_dlq_and_return_true()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -248,12 +241,11 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
             var result = await channel.RejectAsync(message, new MessageRejectionReason(RejectionReason.DeliveryError, "async missing handle test"));
 
             // Assert
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — an Error naming the message says the original cannot be settled
-            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
-                e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(message.Id.Value));
-            Assert.Contains("cannot be settled", settleError.RenderMessage());
+            var settleError = await Assert.That(System.Linq.Enumerable.Where(TestCorrelator.GetLogEventsFromCurrentContext(), e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(message.Id.Value))).HasSingleItem();
+            await Assert.That(settleError.RenderMessage()).Contains("cannot be settled");
 
             Message dlqMessage = new Message();
             var stopwatch = Stopwatch.StartNew();
@@ -265,7 +257,7 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
                 await Task.Delay(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
             // DLQ reader parser assigns new ReceiptHandle; absence cannot be verified in round-trip.
         }
         finally
@@ -278,7 +270,7 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
     // GCP / PullOrdering — DeliveryError (async)
     // -------------------------------------------------------------------------
 
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_delivery_error_on_pull_ordering_should_publish_stamped_copy_to_dlq()
     {
         var provider = new GcpPullOrderingMessageGatewayProvider();
@@ -306,7 +298,7 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var originalTopic = routingKey.Value;
 
@@ -314,10 +306,10 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Async ordering delivery error"));
 
             // Assert
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             var reRead = await channel.ReceiveAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             Message dlqMessage = new Message();
             var stopwatch = Stopwatch.StartNew();
@@ -329,19 +321,17 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
                 await Task.Delay(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var bag = dlqMessage.Header.Bag;
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic));
-            Assert.Equal(originalTopic, bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString());
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason));
-            Assert.Equal(RejectionReason.DeliveryError.ToString(), bag[RejectionMetadataKeyNames.RejectionReason]?.ToString());
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp));
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString()).IsEqualTo(originalTopic);
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionReason]?.ToString()).IsEqualTo(RejectionReason.DeliveryError.ToString());
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsTrue();
             var ts = bag[RejectionMetadataKeyNames.RejectionTimestamp]?.ToString() ?? string.Empty;
-            Assert.True(
-                DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _),
-                $"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage));
+            await Assert.That(DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _)).IsTrue().Because($"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsTrue();
             // DLQ reader parser assigns new ReceiptHandle; absence cannot be verified in round-trip.
         }
         finally
@@ -354,7 +344,7 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
     // GCP / PullOrdering — None reason (async)
     // -------------------------------------------------------------------------
 
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_none_reason_on_pull_ordering_should_publish_copy_with_four_metadata_keys_to_dlq()
     {
         var provider = new GcpPullOrderingMessageGatewayProvider();
@@ -382,16 +372,16 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act
             var result = await channel.RejectAsync(received, reason: null);
 
             // Assert
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             var reRead = await channel.ReceiveAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             Message dlqMessage = new Message();
             var stopwatch = Stopwatch.StartNew();
@@ -403,18 +393,16 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
                 await Task.Delay(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var bag = dlqMessage.Header.Bag;
-            Assert.Equal("None", bag[RejectionMetadataKeyNames.RejectionReason]?.ToString());
-            Assert.False(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp));
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionReason]?.ToString()).IsEqualTo("None");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsFalse();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsTrue();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType)).IsTrue();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsTrue();
             var ts = bag[RejectionMetadataKeyNames.RejectionTimestamp]?.ToString() ?? string.Empty;
-            Assert.True(
-                DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _),
-                $"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
+            await Assert.That(DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _)).IsTrue().Because($"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
             // DLQ reader parser assigns new ReceiptHandle; absence cannot be verified in round-trip.
         }
         finally
@@ -427,7 +415,7 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
     // GCP / PullOrdering — Missing receipt handle (async)
     // -------------------------------------------------------------------------
 
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_missing_receipt_handle_on_pull_ordering_should_still_publish_to_dlq_and_return_true()
     {
         var provider = new GcpPullOrderingMessageGatewayProvider();
@@ -461,12 +449,11 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
             var result = await channel.RejectAsync(message, new MessageRejectionReason(RejectionReason.DeliveryError, "async ordering missing handle test"));
 
             // Assert
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — an Error naming the message says the original cannot be settled
-            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
-                e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(message.Id.Value));
-            Assert.Contains("cannot be settled", settleError.RenderMessage());
+            var settleError = await Assert.That(System.Linq.Enumerable.Where(TestCorrelator.GetLogEventsFromCurrentContext(), e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(message.Id.Value))).HasSingleItem();
+            await Assert.That(settleError.RenderMessage()).Contains("cannot be settled");
 
             Message dlqMessage = new Message();
             var stopwatch = Stopwatch.StartNew();
@@ -478,7 +465,7 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
                 await Task.Delay(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
             // DLQ reader parser assigns new ReceiptHandle; absence cannot be verified in round-trip.
         }
         finally

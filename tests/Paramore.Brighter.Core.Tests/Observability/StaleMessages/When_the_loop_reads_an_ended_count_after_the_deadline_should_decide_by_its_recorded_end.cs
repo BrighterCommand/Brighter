@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,11 +35,11 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class LateReadCountTests
 {
     private const string DESTINATION = "messaging.destination.name";
@@ -51,7 +51,7 @@ public class LateReadCountTests
         _logs = fixture.Logs;
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_loop_reads_an_ended_count_after_the_deadline_should_decide_by_its_recorded_end()
     {
         //Arrange
@@ -81,35 +81,35 @@ public class LateReadCountTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(
+        await Assert.That(SpinWait.SpinUntil(
             () => outbox.TopicCountCalls.Count == 1 && _logs.EntryHeld.IsCompleted,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 
         //Act
         _clock.Advance(TimeSpan.FromSeconds(5));
         outbox.ReleaseTopicCount(new Dictionary<RoutingKey, int> { { new RoutingKey("orders"), 4 } });
-        Assert.True(SpinWait.SpinUntil(() => outbox.TopicCallEnded.IsCompleted, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => outbox.TopicCallEnded.IsCompleted, TimeSpan.FromSeconds(5))).IsTrue();
         _clock.Advance(TimeSpan.FromSeconds(15));
         _logs.ReleaseHeldEntry();
-        Assert.True(SpinWait.SpinUntil(
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed)
                   + readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Abandoned) >= 1
                   && readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed) >= 1,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
         var measurements = metrics.Observe();
 
         //Assert
-        Assert.Equal(1, readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed));
-        Assert.Equal(0, readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Abandoned));
-        var topic = Assert.Single(measurements, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES);
-        Assert.Equal("orders=4", $"{topic.Attributes[DESTINATION]}={topic.Value}");
+        await Assert.That(readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed)).IsEqualTo(1);
+        await Assert.That(readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Abandoned)).IsEqualTo(0);
+        var topic = await Assert.That(System.Linq.Enumerable.Where(measurements, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES)).HasSingleItem();
+        await Assert.That($"{topic.Attributes[DESTINATION]}={topic.Value}").IsEqualTo("orders=4");
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
         new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

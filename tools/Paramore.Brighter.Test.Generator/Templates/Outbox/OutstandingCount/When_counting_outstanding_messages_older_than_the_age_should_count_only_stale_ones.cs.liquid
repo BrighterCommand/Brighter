@@ -7,12 +7,11 @@
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
 
 namespace {{ Namespace }}.Outbox{{ Prefix }}.OutstandingCount;
 
-{% if Category != null %}[Trait("Category", "{{Category}}")]{% endif %}
-{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
+{% if Category != null %}[Property("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[NotInParallel("{{CollectionName}}")]{% endif %}
 public class WhenCountingOutstandingMessagesOlderThanTheAgeShouldCountOnlyStaleOnes : OutstandingCountOutboxBaseTests<{{ Transaction }}>
 {
     private readonly IAmAnOutstandingCountOutboxProvider _outboxProvider = new {{ OutboxProvider }}();
@@ -37,9 +36,9 @@ public class WhenCountingOutstandingMessagesOlderThanTheAgeShouldCountOnlyStaleO
         await Outbox.AddAsync(aged, new RequestContext());
     }
 
-    [Fact{% if OutstandingCountAgeGap %}(Skip = "Deferred: #{{ OutstandingCountAgeGap }} the age column of the overall count is not yet conformant for this store"){% endif %}]
+    [Test]{% if OutstandingCountAgeGap %}
+    [Skip("Deferred: #{{ OutstandingCountAgeGap }} the age column of the overall count is not yet conformant for this store")]{% endif %}
     public async Task When_counting_outstanding_messages_older_than_the_age_should_count_only_stale_ones()
     {
         await AssertAgeAsync();
-    }
-}
+    }}

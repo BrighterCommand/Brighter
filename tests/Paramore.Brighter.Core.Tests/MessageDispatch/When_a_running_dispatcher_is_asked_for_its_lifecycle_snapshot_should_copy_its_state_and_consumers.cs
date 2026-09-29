@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -33,13 +33,12 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class DispatcherLifecycleSnapshotTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_running_dispatcher_is_asked_for_its_lifecycle_snapshot_should_copy_its_state_and_consumers()
     {
         // Arrange
@@ -70,15 +69,15 @@ public class DispatcherLifecycleSnapshotTests
             dispatcher.SetActivePerformers("beta", 3);
 
             // Assert
-            Assert.Equal(DispatcherState.DS_RUNNING, snapshot.State);
-            Assert.False(snapshot.EndRequested);
-            Assert.Empty(snapshot.ShutSubscriptions);
-            Assert.Equal(0, snapshot.ConsumerOperationsInFlight);
-            Assert.Equal(4, runningConsumers.Length);
-            Assert.Equal(runningConsumers.ToHashSet(), snapshot.Consumers.ToHashSet());
-            Assert.Equal(2, snapshot.ExpectedConsumers.Count);
-            Assert.Equal(3, snapshot.ExpectedConsumers[alpha]);
-            Assert.Equal(1, snapshot.ExpectedConsumers[beta]);
+            await Assert.That(snapshot.State).IsEqualTo(DispatcherState.DS_RUNNING);
+            await Assert.That(snapshot.EndRequested).IsFalse();
+            await Assert.That(snapshot.ShutSubscriptions).IsEmpty();
+            await Assert.That(snapshot.ConsumerOperationsInFlight).IsEqualTo(0);
+            await Assert.That(runningConsumers.Length).IsEqualTo(4);
+            await Assert.That(snapshot.Consumers.ToHashSet()).IsEqualTo(runningConsumers.ToHashSet());
+            await Assert.That(snapshot.ExpectedConsumers.Count).IsEqualTo(2);
+            await Assert.That(snapshot.ExpectedConsumers[alpha]).IsEqualTo(3);
+            await Assert.That(snapshot.ExpectedConsumers[beta]).IsEqualTo(1);
         }
         finally
         {

@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 
@@ -43,8 +42,8 @@ public class When_rmq_async_consumer_factory_creates_consumer_should_pass_schedu
         makeChannels: OnMissingChannel.Assume
     );
 
-    [Fact]
-    public void Should_create_sync_consumer_when_scheduler_provided()
+    [Test]
+    public async Task Should_create_sync_consumer_when_scheduler_provided()
     {
         // Arrange — factory constructed with a scheduler
         var scheduler = new StubMessageScheduler();
@@ -54,12 +53,12 @@ public class When_rmq_async_consumer_factory_creates_consumer_should_pass_schedu
         var consumer = factory.Create(_subscription);
 
         // Assert — consumer is created successfully
-        Assert.NotNull(consumer);
-        Assert.IsType<RmqMessageConsumer>(consumer);
+        await Assert.That(consumer).IsNotNull();
+        await Assert.That(consumer).IsTypeOf<RmqMessageConsumer>();
     }
 
-    [Fact]
-    public void Should_create_async_consumer_when_scheduler_provided()
+    [Test]
+    public async Task Should_create_async_consumer_when_scheduler_provided()
     {
         // Arrange — factory constructed with a scheduler
         var scheduler = new StubMessageScheduler();
@@ -69,12 +68,12 @@ public class When_rmq_async_consumer_factory_creates_consumer_should_pass_schedu
         var consumer = factory.CreateAsync(_subscription);
 
         // Assert — consumer is created successfully
-        Assert.NotNull(consumer);
-        Assert.IsType<RmqMessageConsumer>(consumer);
+        await Assert.That(consumer).IsNotNull();
+        await Assert.That(consumer).IsTypeOf<RmqMessageConsumer>();
     }
 
-    [Fact]
-    public void Should_create_consumer_without_scheduler_for_backward_compat()
+    [Test]
+    public async Task Should_create_consumer_without_scheduler_for_backward_compat()
     {
         // Arrange — factory constructed without a scheduler (backward compat)
         var factory = new RmqMessageConsumerFactory(_connection);
@@ -83,8 +82,8 @@ public class When_rmq_async_consumer_factory_creates_consumer_should_pass_schedu
         var consumer = factory.Create(_subscription);
 
         // Assert — consumer is created successfully without scheduler
-        Assert.NotNull(consumer);
-        Assert.IsType<RmqMessageConsumer>(consumer);
+        await Assert.That(consumer).IsNotNull();
+        await Assert.That(consumer).IsTypeOf<RmqMessageConsumer>();
     }
 
     private class StubMessageScheduler : IAmAMessageScheduler;

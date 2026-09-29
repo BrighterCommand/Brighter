@@ -4,14 +4,14 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class DispatcherDisposalTests
     {
-        [Fact]
-        public void When_disposing_the_dispatcher_it_disposes_the_registry_and_transform_factories()
+        [Test]
+        public async System.Threading.Tasks.Task When_disposing_the_dispatcher_it_disposes_the_registry_and_transform_factories()
         {
             //arrange
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
@@ -43,14 +43,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             dispatcher.Dispose();
 
             //assert — the registry cascade disposes both mapper factories; both transform factories directly
-            Assert.Equal(1, syncMapperFactory.DisposeCount);
-            Assert.Equal(1, asyncMapperFactory.DisposeCount);
-            Assert.Equal(1, syncTransformerFactory.DisposeCount);
-            Assert.Equal(1, asyncTransformerFactory.DisposeCount);
+            await Assert.That(syncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(syncTransformerFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncTransformerFactory.DisposeCount).IsEqualTo(1);
         }
 
-        [Fact]
-        public void When_disposing_the_dispatcher_twice_it_disposes_each_factory_once()
+        [Test]
+        public async System.Threading.Tasks.Task When_disposing_the_dispatcher_twice_it_disposes_each_factory_once()
         {
             //arrange
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
@@ -78,10 +78,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             dispatcher.Dispose();
 
             //assert — every factory disposed exactly once despite the double dispose
-            Assert.Equal(1, syncMapperFactory.DisposeCount);
-            Assert.Equal(1, asyncMapperFactory.DisposeCount);
-            Assert.Equal(1, syncTransformerFactory.DisposeCount);
-            Assert.Equal(1, asyncTransformerFactory.DisposeCount);
+            await Assert.That(syncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(syncTransformerFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncTransformerFactory.DisposeCount).IsEqualTo(1);
         }
 
         private sealed class DisposeCountingMapperFactory : IAmAMessageMapperFactory, IDisposable

@@ -29,21 +29,20 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox;
 
 public class MsSqlMessageIdBulkRetryTests
 {
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, true, false)]
-    [InlineData(true, false, false)]
-    [InlineData(true, true, false)]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, true)]
-    [InlineData(true, true, true)]
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(false, true, false)]
+    [Arguments(true, false, false)]
+    [Arguments(true, true, false)]
+    [Arguments(false, false, true)]
+    [Arguments(false, true, true)]
+    [Arguments(true, false, true)]
+    [Arguments(true, true, true)]
     public async Task When_mssql_bulk_add_contains_duplicate_ids_should_preserve_each_distinct_message(
         bool binary, bool useAsync, bool transactional)
     {
@@ -84,13 +83,13 @@ public class MsSqlMessageIdBulkRetryTests
         }
 
         //Assert
-        Assert.Equal(4, await store.RowCountAsync());
+        await Assert.That(await store.RowCountAsync()).IsEqualTo(4);
         var stored = (await outbox.OutstandingMessagesAsync(TimeSpan.Zero, context)).ToArray();
-        Assert.Equal(4, stored.Length);
+        await Assert.That(stored.Length).IsEqualTo(4);
         foreach (var expected in new[] { existing, first, second, following })
         {
-            var actual = Assert.Single(stored, message => message.Id == expected.Id);
-            Assert.Equal(expected.Body.ToByteArray(), actual.Body.ToByteArray());
+            var actual = await Assert.That(System.Linq.Enumerable.Where(stored, message => message.Id == expected.Id)).HasSingleItem();
+            await Assert.That(actual.Body.ToByteArray()).IsEqualTo(expected.Body.ToByteArray());
         }
     }
 }

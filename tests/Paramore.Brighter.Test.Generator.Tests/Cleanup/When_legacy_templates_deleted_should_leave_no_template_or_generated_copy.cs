@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.Cleanup;
 
@@ -66,8 +66,8 @@ public class WhenLegacyTemplatesDeletedShouldLeaveNoTemplateOrGeneratedCopy
         _testsRoot = Path.Combine(_repoRoot, "tests");
     }
 
-    [Fact]
-    public void When_legacy_templates_deleted_should_not_find_legacy_template_files_under_reactor_or_proactor()
+    [Test]
+    public async System.Threading.Tasks.Task When_legacy_templates_deleted_should_not_find_legacy_template_files_under_reactor_or_proactor()
     {
         // Arrange
         var reactorDir = Path.Combine(_templateRoot, "Reactor");
@@ -87,13 +87,12 @@ public class WhenLegacyTemplatesDeletedShouldLeaveNoTemplateOrGeneratedCopy
         }
 
         // Assert — no legacy template files remain
-        Assert.True(found.Count == 0,
-            $"Legacy template files still present — delete them (ADR 0066 Step C):\n" +
+        await Assert.That(found.Count == 0).IsTrue().Because($"Legacy template files still present — delete them (ADR 0066 Step C):\n" +
             string.Join("\n", found.Select(f => $"  {f}")));
     }
 
-    [Fact]
-    public void When_legacy_templates_deleted_should_not_find_generated_copies_under_any_test_project()
+    [Test]
+    public async System.Threading.Tasks.Task When_legacy_templates_deleted_should_not_find_generated_copies_under_any_test_project()
     {
         // Arrange
         var found = new System.Collections.Generic.List<string>();
@@ -115,14 +114,13 @@ public class WhenLegacyTemplatesDeletedShouldLeaveNoTemplateOrGeneratedCopy
         }
 
         // Assert — no generated copies remain
-        Assert.True(found.Count == 0,
-            $"Generated copies of legacy templates still present — manually delete them " +
+        await Assert.That(found.Count == 0).IsTrue().Because($"Generated copies of legacy templates still present — manually delete them " +
             $"(ADR 0066 Step C; the generator never deletes stale files):\n" +
             string.Join("\n", found.Select(f => $"  {f}")));
     }
 
-    [Fact]
-    public void When_legacy_templates_deleted_every_delayed_requeue_template_should_pass_non_null_timespan()
+    [Test]
+    public async System.Threading.Tasks.Task When_legacy_templates_deleted_every_delayed_requeue_template_should_pass_non_null_timespan()
     {
         // Arrange — collect all remaining .liquid templates under MessagingGateway/
         var violations = new System.Collections.Generic.List<string>();
@@ -163,8 +161,7 @@ public class WhenLegacyTemplatesDeletedShouldLeaveNoTemplateOrGeneratedCopy
         }
 
         // Assert — every delayed-requeue template passes a TimeSpan
-        Assert.True(violations.Count == 0,
-            $"Messaging-gateway template(s) that purport to exercise delayed requeue call " +
+        await Assert.That(violations.Count == 0).IsTrue().Because($"Messaging-gateway template(s) that purport to exercise delayed requeue call " +
             $"Requeue/RequeueAsync without a non-null TimeSpan:\n" +
             string.Join("\n", violations));
     }

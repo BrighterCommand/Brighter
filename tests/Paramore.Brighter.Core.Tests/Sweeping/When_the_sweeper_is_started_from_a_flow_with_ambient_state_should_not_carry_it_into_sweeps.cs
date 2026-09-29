@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -11,7 +10,7 @@ public class TimedOutboxSweeperAmbientStateTests
 {
     private static readonly AsyncLocal<string?> s_ambient = new();
 
-    [Fact]
+    [Test]
     public async Task When_the_sweeper_is_started_from_a_flow_with_ambient_state_should_not_carry_it_into_sweeps()
     {
         //Arrange
@@ -33,7 +32,7 @@ public class TimedOutboxSweeperAmbientStateTests
         sweeper.Dispose();
 
         //Assert
-        Assert.True(swept, "The sweeper did not sweep");
-        Assert.Null(distributedLock.AmbientWhenObtained);
+        await Assert.That(swept).IsTrue().Because("The sweeper did not sweep");
+        await Assert.That(distributedLock.AmbientWhenObtained).IsNull();
     }
 }

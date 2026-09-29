@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia <irakli.gabisonia94@gmail.com>
@@ -27,14 +27,13 @@ THE SOFTWARE. */
 
 using Newtonsoft.Json;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
 public class CustomContentTypePersistedMessageTests
 {
-    [Fact]
-    public void When_reading_a_message_persisted_with_a_custom_content_type_converter_should_preserve_content_type_and_payload()
+    [Test]
+    public async Task When_reading_a_message_persisted_with_a_custom_content_type_converter_should_preserve_content_type_and_payload()
     {
         // Arrange: a persisted document using the application's MIME string converter.
         const string JSON = """
@@ -59,17 +58,17 @@ public class CustomContentTypePersistedMessageTests
         Message? message = JsonConvert.DeserializeObject<Message>(JSON, settings);
 
         // Assert
-        Assert.NotNull(message);
-        Assert.Equal(new Id("order-42"), message.Header.MessageId);
-        Assert.Equal(new RoutingKey("orders"), message.Header.Topic);
-        Assert.Equal("application/json", message.Header.ContentType.MediaType);
-        Assert.Equal("utf-8", message.Header.ContentType.CharSet);
-        Assert.Equal("orders", message.Header.ContentType.Parameters["profile"]);
-        Assert.NotNull(message.Body.ContentType);
-        Assert.Equal("application/json", message.Body.ContentType.MediaType);
-        Assert.Equal("utf-8", message.Body.ContentType.CharSet);
-        Assert.Equal("orders", message.Body.ContentType.Parameters["profile"]);
-        Assert.Equal("hello", message.Body.Value);
-        Assert.Equal("hello"u8.ToArray(), message.Body.Memory.ToArray());
+        await Assert.That(message).IsNotNull();
+        await Assert.That(message.Header.MessageId).IsEqualTo(new Id("order-42"));
+        await Assert.That(message.Header.Topic).IsEqualTo(new RoutingKey("orders"));
+        await Assert.That(message.Header.ContentType.MediaType).IsEqualTo("application/json");
+        await Assert.That(message.Header.ContentType.CharSet).IsEqualTo("utf-8");
+        await Assert.That(message.Header.ContentType.Parameters["profile"]).IsEqualTo("orders");
+        await Assert.That(message.Body.ContentType).IsNotNull();
+        await Assert.That(message.Body.ContentType.MediaType).IsEqualTo("application/json");
+        await Assert.That(message.Body.ContentType.CharSet).IsEqualTo("utf-8");
+        await Assert.That(message.Body.ContentType.Parameters["profile"]).IsEqualTo("orders");
+        await Assert.That(message.Body.Value).IsEqualTo("hello");
+        await Assert.That(message.Body.Memory.ToArray()).IsEqualTo("hello"u8.ToArray());
     }
 }

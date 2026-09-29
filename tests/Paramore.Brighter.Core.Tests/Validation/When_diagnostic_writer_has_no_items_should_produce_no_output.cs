@@ -19,32 +19,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class PipelineDiagnosticWriterNoItemsTests
 {
-    [Fact]
-    public void When_diagnostic_writer_has_no_items_should_produce_no_output()
+    [Test]
+    public async Task When_diagnostic_writer_has_no_items_should_produce_no_output()
     {
         // Arrange — empty registry, no publications, no subscriptions
         var registry = new SubscriberRegistry();
         var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
-        PipelineBuilder<IRequest>.ClearPipelineCache();
-
         var logger = new SpyLogger();
         var writer = new PipelineDiagnosticWriter(logger, pipelineBuilder);
-
         // Act
         writer.Describe();
-
         // Assert — no log entries at any level
-        Assert.Empty(logger.Entries);
+        await Assert.That(logger.Entries).IsEmpty();
     }
 }

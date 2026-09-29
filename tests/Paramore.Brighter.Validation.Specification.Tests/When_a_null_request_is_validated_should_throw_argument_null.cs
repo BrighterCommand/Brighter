@@ -25,20 +25,19 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.Specification.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Validation.Specification.Tests;
 
 public class NullRequestSpecificationTests
 {
-    [Fact]
-    public void When_a_null_request_is_validated_should_throw_argument_null()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_null_request_is_validated_should_throw_argument_null()
     {
         //Arrange
         var emptyProvider = new ServiceCollection().BuildServiceProvider();
         var handler = new SpecificationRequestHandler<PlaceOrder>(emptyProvider);
 
         //Act //Assert
-        Assert.Throws<ArgumentNullException>(() => handler.Handle(null!));
+        await Assert.That(() => handler.Handle(null!)).ThrowsExactly<ArgumentNullException>();
     }
 }

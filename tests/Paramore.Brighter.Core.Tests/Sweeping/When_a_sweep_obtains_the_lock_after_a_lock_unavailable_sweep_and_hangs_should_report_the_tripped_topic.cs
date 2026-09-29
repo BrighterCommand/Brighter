@@ -41,7 +41,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -50,7 +49,7 @@ public class HungLockHolderAfterLockUnavailableSweepTests
     private const string InvestigateCheck = "brighter-outbox-sweeper-investigate";
     private const string TrippedTopicsGauge = "paramore.brighter.outbox_sweeper.tripped_topics";
 
-    [Fact]
+    [Test]
     public async Task When_a_sweep_obtains_the_lock_after_a_lock_unavailable_sweep_and_hangs_should_report_the_tripped_topic()
     {
         //Arrange
@@ -100,17 +99,17 @@ public class HungLockHolderAfterLockUnavailableSweepTests
             }
 
             //Assert
-            Assert.True(lockUnavailable, "The first sweep did not end as lock unavailable");
-            Assert.True(reachedMediator, "The second sweep did not reach the mediator");
-            Assert.All(observations, observation =>
-            {
-                Assert.Equal(HealthStatus.Degraded, observation.Report.Status);
-                Assert.NotEqual(HealthStatus.Unhealthy, observation.Report.Status);
-                Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), observation.Report.Data[RemedyCheckConvention.RemedyKindKey]);
-                Assert.Equal(new[] { "tripped_topics" }, Assert.IsType<string[]>(observation.Report.Data[RemedyCheckConvention.ConditionsKey]));
-                Assert.Contains("orders", observation.Report.Description);
-                Assert.Equal(1L, observation.Gauge);
-            });
+            await Assert.That(lockUnavailable).IsTrue().Because("The first sweep did not end as lock unavailable");
+            await Assert.That(reachedMediator).IsTrue().Because("The second sweep did not reach the mediator");
+            foreach (var observation in observations)
+{
+    await Assert.That(observation.Report.Status).IsEqualTo(HealthStatus.Degraded);
+    await Assert.That(observation.Report.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+    await Assert.That(observation.Report.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+    await Assert.That((await Assert.That(observation.Report.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "tripped_topics" });
+    await Assert.That(observation.Report.Description).Contains("orders");
+    await Assert.That(observation.Gauge).IsEqualTo(1L);
+}
         }
         finally
         {

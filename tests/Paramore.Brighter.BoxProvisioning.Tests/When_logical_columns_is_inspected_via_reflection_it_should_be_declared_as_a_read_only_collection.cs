@@ -22,7 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -32,25 +32,25 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class LogicalColumnsPublicApiTests
 {
-    [Fact]
-    public void When_iamaboxmigration_logical_columns_is_inspected_it_should_be_declared_as_a_read_only_collection()
+    [Test]
+    public async System.Threading.Tasks.Task When_iamaboxmigration_logical_columns_is_inspected_it_should_be_declared_as_a_read_only_collection()
     {
         //Arrange + Act
         var property = typeof(IAmABoxMigration).GetProperty(nameof(IAmABoxMigration.LogicalColumns));
 
         //Assert
-        Assert.NotNull(property);
-        Assert.Equal(typeof(IReadOnlyCollection<string>), property!.PropertyType);
+        await Assert.That(property).IsNotNull();
+        await Assert.That(property!.PropertyType).IsEqualTo(typeof(IReadOnlyCollection<string>));
     }
 
-    [Fact]
-    public void When_boxmigration_record_logical_columns_is_inspected_it_should_be_declared_as_a_read_only_collection()
+    [Test]
+    public async Task When_boxmigration_record_logical_columns_is_inspected_it_should_be_declared_as_a_read_only_collection()
     {
         //Arrange + Act
         var property = typeof(BoxMigration).GetProperty(nameof(BoxMigration.LogicalColumns));
 
         //Assert
-        Assert.NotNull(property);
-        Assert.Equal(typeof(IReadOnlyCollection<string>), property!.PropertyType);
+        await Assert.That(property).IsNotNull();
+        await Assert.That(property!.PropertyType).IsEqualTo(typeof(IReadOnlyCollection<string>));
     }
 }

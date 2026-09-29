@@ -35,7 +35,6 @@ using Paramore.Brighter.Inbox.MongoDb;
 using Paramore.Brighter.Locking.MongoDb;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.MongoDb;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDb.Tests;
 
@@ -72,8 +71,8 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
     public static IEnumerable<object[]> CreationModes()
         => ResolutionModes().Where(row => (OnResolvingACollection)row[1] != OnResolvingACollection.Validate);
 
-    [Theory]
-    [MemberData(nameof(ResolutionModes))]
+    [Test]
+    [MethodDataSource(nameof(ResolutionModes))]
     public async Task When_writing_a_document_with_ttl_should_index_a_bson_date(
         string provider, OnResolvingACollection mode)
     {
@@ -89,21 +88,21 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
 
         //Assert
         using var cursor = await Documents.Indexes.ListAsync();
-        var ttlIndex = Assert.Single(await cursor.ToListAsync(), index => index.Contains("expireAfterSeconds"));
-        var indexedField = Assert.Single(ttlIndex["key"].AsBsonDocument.Elements).Name;
+        var ttlIndex = await Assert.That(System.Linq.Enumerable.Where(await cursor.ToListAsync(), index => index.Contains("expireAfterSeconds"))).HasSingleItem();
+        var indexedField = (await Assert.That(ttlIndex["key"].AsBsonDocument.Elements).HasSingleItem()).Name;
         BsonValue indexedValue = await Documents.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
         foreach (var field in indexedField.Split('.'))
         {
-            indexedValue = Assert.IsType<BsonDocument>(indexedValue)[field];
+            await Assert.That(indexedValue).IsTypeOf<BsonDocument>();
         }
 
-        var timestamp = Assert.IsType<BsonDateTime>(indexedValue);
-        Assert.Equal(new BsonDateTime(expectedTimestamp.UtcDateTime), timestamp);
-        Assert.Equal(3600L, ttlIndex["expireAfterSeconds"].ToInt64());
+        var timestamp = await Assert.That(indexedValue).IsTypeOf<BsonDateTime>();
+        await Assert.That(timestamp).IsEqualTo(new BsonDateTime(expectedTimestamp.UtcDateTime));
+        await Assert.That(ttlIndex["expireAfterSeconds"].ToInt64()).IsEqualTo(3600L);
     }
 
-    [Theory]
-    [MemberData(nameof(ResolutionModes))]
+    [Test]
+    [MethodDataSource(nameof(ResolutionModes))]
     public async Task When_resolving_an_existing_collection_with_ttl_should_ensure_the_index(
         string provider, OnResolvingACollection mode)
     {
@@ -119,11 +118,11 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
 
         //Assert
         await AssertTtlIndexAsync();
-        Assert.Equal(3L, await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
+        await Assert.That(await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(3L);
     }
 
-    [Theory]
-    [MemberData(nameof(CreationModes))]
+    [Test]
+    [MethodDataSource(nameof(CreationModes))]
     public async Task When_resolving_a_missing_collection_with_ttl_should_ensure_the_index(
         string provider, OnResolvingACollection mode)
     {
@@ -137,11 +136,11 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
 
         //Assert
         await AssertTtlIndexAsync();
-        Assert.Equal(2L, await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
+        await Assert.That(await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(2L);
     }
 
-    [Theory]
-    [MemberData(nameof(ResolutionModes))]
+    [Test]
+    [MethodDataSource(nameof(ResolutionModes))]
     public async Task When_ttl_is_not_configured_should_leave_the_collection_without_a_ttl_index(
         string provider, OnResolvingACollection mode)
     {
@@ -155,12 +154,12 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
         //Assert
         using var cursor = await Documents.Indexes.ListAsync();
         var indexes = await cursor.ToListAsync();
-        Assert.DoesNotContain(indexes, index => index.Contains("expireAfterSeconds"));
-        Assert.Equal(1L, await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
+        await Assert.That(System.Linq.Enumerable.Any(indexes, index => index.Contains("expireAfterSeconds"))).IsFalse();
+        await Assert.That(await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(1L);
     }
 
-    [Theory]
-    [MemberData(nameof(Providers))]
+    [Test]
+    [MethodDataSource(nameof(Providers))]
     public async Task When_validating_a_missing_collection_with_ttl_should_fail_without_creating_it(string provider)
     {
         //Arrange
@@ -168,13 +167,13 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
             CreateConfiguration(OnResolvingACollection.Validate, TimeSpan.FromHours(1)));
 
         //Act + Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(write);
+        await Assert.That(write).ThrowsExactly<InvalidOperationException>();
         using var cursor = await _database.ListCollectionNamesAsync();
-        Assert.Empty(await cursor.ToListAsync());
+        await Assert.That(await cursor.ToListAsync()).IsEmpty();
     }
 
-    [Theory]
-    [MemberData(nameof(ResolutionModes))]
+    [Test]
+    [MethodDataSource(nameof(ResolutionModes))]
     public async Task When_ttl_index_creation_fails_should_retry_before_allowing_writes(
         string provider, OnResolvingACollection mode)
     {
@@ -186,23 +185,23 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
         var write = CreateWriter(provider, CreateConfiguration(mode, TimeSpan.FromHours(1)));
 
         //Act + Assert
-        await Assert.ThrowsAsync<MongoCommandException>(write);
-        await Assert.ThrowsAsync<MongoCommandException>(write);
-        Assert.Equal(0L, await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
+        await Assert.That(write).ThrowsExactly<MongoCommandException>();
+        await Assert.That(write).ThrowsExactly<MongoCommandException>();
+        await Assert.That(await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
         using (var cursor = await Documents.Indexes.ListAsync())
         {
-            var index = Assert.Single(await cursor.ToListAsync(), value => value["name"] == INDEX_NAME);
-            Assert.Equal(7200L, index["expireAfterSeconds"].ToInt64());
+            var index = await Assert.That(System.Linq.Enumerable.Where(await cursor.ToListAsync(), value => value["name"] == INDEX_NAME)).HasSingleItem();
+            await Assert.That(index["expireAfterSeconds"].ToInt64()).IsEqualTo(7200L);
         }
 
         await Documents.Indexes.DropOneAsync(INDEX_NAME);
         await write();
         await AssertTtlIndexAsync();
-        Assert.Equal(1L, await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
+        await Assert.That(await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(1L);
     }
 
-    [Theory]
-    [MemberData(nameof(ResolutionModes))]
+    [Test]
+    [MethodDataSource(nameof(ResolutionModes))]
     public async Task When_callers_resolve_the_same_collection_concurrently_should_all_succeed_with_one_ttl_index(
         string provider, OnResolvingACollection mode)
     {
@@ -250,20 +249,20 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
         var writers = Enumerable.Range(0, CALLERS).Select(_ => CreateWriter(provider, configuration)).ToArray();
 
         //Act
-        var exception = await Record.ExceptionAsync(() => Task.WhenAll(writers.Select(write =>
+        var exception = await TestExceptionRecorder.CaptureAsync(() => Task.WhenAll(writers.Select(write =>
             Task.Factory.StartNew(write, CancellationToken.None, TaskCreationOptions.LongRunning,
                 TaskScheduler.Default).Unwrap())));
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
         await AssertTtlIndexAsync();
-        Assert.Equal(CALLERS, arrivals);
-        Assert.Equal(0, timeouts);
-        Assert.Equal((long)CALLERS, await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
+        await Assert.That(arrivals).IsEqualTo(CALLERS);
+        await Assert.That(timeouts).IsEqualTo(0);
+        await Assert.That(await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo((long)CALLERS);
     }
 
-    [Theory]
-    [MemberData(nameof(ResolutionModes))]
+    [Test]
+    [MethodDataSource(nameof(ResolutionModes))]
     public async Task When_index_permission_is_missing_should_fail_before_writing_and_retry_after_permission_is_granted(
         string provider, OnResolvingACollection mode)
     {
@@ -310,13 +309,13 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
                 await Documents.DeleteOneAsync(new BsonDocument("_id", "permission-probe"));
 
                 //Act + Assert
-                var firstFailure = await Assert.ThrowsAsync<MongoCommandException>(write);
-                var secondFailure = await Assert.ThrowsAsync<MongoCommandException>(write);
-                Assert.Equal(13, firstFailure.Code);
-                Assert.Equal(13, secondFailure.Code);
-                Assert.Equal(0L, await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
+                var firstFailure = await Assert.That(write).ThrowsExactly<MongoCommandException>();
+                var secondFailure = await Assert.That(write).ThrowsExactly<MongoCommandException>();
+                await Assert.That(firstFailure.Code).IsEqualTo(13);
+                await Assert.That(secondFailure.Code).IsEqualTo(13);
+                await Assert.That(await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
                 using (var cursor = await Documents.Indexes.ListAsync())
-                    Assert.DoesNotContain(await cursor.ToListAsync(), index => index.Contains("expireAfterSeconds"));
+                    await Assert.That(System.Linq.Enumerable.Any(await cursor.ToListAsync(), index => index.Contains("expireAfterSeconds"))).IsFalse();
 
                 await _database.RunCommandAsync<BsonDocument>(new BsonDocument
                 {
@@ -333,7 +332,7 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
                 });
                 await write();
                 await AssertTtlIndexAsync();
-                Assert.Equal(1L, await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
+                await Assert.That(await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(1L);
             }
             finally
             {
@@ -346,10 +345,10 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
         }
     }
 
-    [Theory]
-    [InlineData(OnResolvingACollection.Assume)]
-    [InlineData(OnResolvingACollection.Validate)]
-    [InlineData(OnResolvingACollection.CreateIfNotExists)]
+    [Test]
+    [Arguments(OnResolvingACollection.Assume)]
+    [Arguments(OnResolvingACollection.Validate)]
+    [Arguments(OnResolvingACollection.CreateIfNotExists)]
     public async Task When_a_timestamp_is_stored_as_a_bson_date_should_index_the_mapped_field(
         OnResolvingACollection mode)
     {
@@ -364,14 +363,14 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
         //Assert
         await AssertTtlIndexAsync();
         using var cursor = await Documents.Indexes.ListAsync();
-        var ttlIndex = Assert.Single(await cursor.ToListAsync(), index => index.Contains("expireAfterSeconds"));
-        Assert.Equal(new BsonDocument("created_at", 1), ttlIndex["key"]);
+        var ttlIndex = await Assert.That(System.Linq.Enumerable.Where(await cursor.ToListAsync(), index => index.Contains("expireAfterSeconds"))).HasSingleItem();
+        await Assert.That(ttlIndex["key"]).IsEqualTo(new BsonDocument("created_at", 1));
         var document = await Documents.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
-        Assert.Equal(new BsonDateTime(timestamp.UtcDateTime), document["created_at"]);
+        await Assert.That(document["created_at"]).IsEqualTo(new BsonDateTime(timestamp.UtcDateTime));
     }
 
-    [Theory]
-    [MemberData(nameof(ResolutionModes))]
+    [Test]
+    [MethodDataSource(nameof(ResolutionModes))]
     public async Task When_the_legacy_ttl_index_is_recreated_should_resume_writes_without_changing_existing_documents(
         string provider, OnResolvingACollection mode)
     {
@@ -387,24 +386,24 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
         var write = CreateWriter(provider, configuration);
 
         //Act + Assert
-        await Assert.ThrowsAsync<MongoCommandException>(write);
-        await Assert.ThrowsAsync<MongoCommandException>(write);
-        Assert.Equal(original, await Documents.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync());
+        await Assert.That(write).ThrowsExactly<MongoCommandException>();
+        await Assert.That(write).ThrowsExactly<MongoCommandException>();
+        await Assert.That(await Documents.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(original);
         using (var cursor = await Documents.Indexes.ListAsync())
         {
-            var index = Assert.Single(await cursor.ToListAsync(), item => item["name"] == INDEX_NAME);
-            Assert.Equal(new BsonDocument("TimeStamp", 1), index["key"]);
-            Assert.Equal(3600L, index["expireAfterSeconds"].ToInt64());
+            var index = await Assert.That(System.Linq.Enumerable.Where(await cursor.ToListAsync(), item => item["name"] == INDEX_NAME)).HasSingleItem();
+            await Assert.That(index["key"]).IsEqualTo(new BsonDocument("TimeStamp", 1));
+            await Assert.That(index["expireAfterSeconds"].ToInt64()).IsEqualTo(3600L);
         }
 
         await Documents.Indexes.DropOneAsync(INDEX_NAME);
         await write();
         await AssertTtlIndexAsync();
-        Assert.Equal(2L, await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
-        Assert.Equal(original, await Documents.Find(new BsonDocument("_id", original["_id"])).SingleAsync());
+        await Assert.That(await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(2L);
+        await Assert.That(await Documents.Find(new BsonDocument("_id", original["_id"])).SingleAsync()).IsEqualTo(original);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_ttl_monitor_runs_should_remove_expired_documents_and_allow_lock_reacquisition()
     {
         //Arrange
@@ -449,13 +448,13 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
         foreach (var entry in configurations)
         {
             var documents = _database.GetCollection<BsonDocument>(entry.Provider);
-            Assert.Equal(0L, await documents.CountDocumentsAsync(new BsonDocument("_id", entry.ExpiredId)));
-            Assert.Equal(1L, await documents.CountDocumentsAsync(new BsonDocument("_id", entry.RetainedId)));
+            await Assert.That(await documents.CountDocumentsAsync(new BsonDocument("_id", entry.ExpiredId))).IsEqualTo(0L);
+            await Assert.That(await documents.CountDocumentsAsync(new BsonDocument("_id", entry.RetainedId))).IsEqualTo(1L);
             if (entry.Provider == "Locking")
             {
                 var locking = new MongoDbLockingProvider(entry.Configuration);
-                Assert.Null(await locking.ObtainLockAsync(entry.RetainedId.AsString, CancellationToken.None));
-                Assert.NotNull(await locking.ObtainLockAsync(entry.ExpiredId.AsString, CancellationToken.None));
+                await Assert.That(await locking.ObtainLockAsync(entry.RetainedId.AsString, CancellationToken.None)).IsNull();
+                await Assert.That(await locking.ObtainLockAsync(entry.ExpiredId.AsString, CancellationToken.None)).IsNotNull();
             }
         }
     }
@@ -504,8 +503,7 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
                 return () => asyncInbox.AddAsync(new MyCommand(), "ttl-context", null);
             case "Locking":
                 var locking = new MongoDbLockingProvider(configuration);
-                return async () => Assert.NotNull(
-                    await locking.ObtainLockAsync(Id.Random().Value, CancellationToken.None));
+                return async () => await Assert.That(await locking.ObtainLockAsync(Id.Random().Value, CancellationToken.None)).IsNotNull();
             default:
                 throw new ArgumentOutOfRangeException(nameof(provider), provider, null);
         }
@@ -519,9 +517,9 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
     {
         using var cursor = await Documents.Indexes.ListAsync();
         var indexes = await cursor.ToListAsync();
-        var ttlIndex = Assert.Single(indexes, index => index.Contains("expireAfterSeconds"));
-        Assert.Equal(INDEX_NAME, ttlIndex["name"].AsString);
-        Assert.Equal(3600L, ttlIndex["expireAfterSeconds"].ToInt64());
+        var ttlIndex = await Assert.That(System.Linq.Enumerable.Where(indexes, index => index.Contains("expireAfterSeconds"))).HasSingleItem();
+        await Assert.That(ttlIndex["name"].AsString).IsEqualTo(INDEX_NAME);
+        await Assert.That(ttlIndex["expireAfterSeconds"].ToInt64()).IsEqualTo(3600L);
     }
 
     public void Dispose() => Const.Client.DropDatabase(_databaseName);

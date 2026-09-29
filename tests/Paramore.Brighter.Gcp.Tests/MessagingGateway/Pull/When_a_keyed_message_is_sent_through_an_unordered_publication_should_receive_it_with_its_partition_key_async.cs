@@ -30,7 +30,6 @@ using Google.Api.Gax;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
@@ -39,11 +38,11 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// delivered, and must arrive with its partition key. The Google client refuses an ordering key unless ordering is
 /// enabled, so the partition key cannot travel only as the ordering key.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpKeyedMessageOnUnorderedPublicationAsyncTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_keyed_message_is_sent_through_an_unordered_publication_should_receive_it_with_its_partition_key_async()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -87,8 +86,8 @@ public class GcpKeyedMessageOnUnorderedPublicationAsyncTests
             await channel.AcknowledgeAsync(received);
 
             // Assert
-            Assert.Equal(sent.Id, received.Id);
-            Assert.Equal(partitionKey, received.Header.PartitionKey);
+            await Assert.That(received.Id).IsEqualTo(sent.Id);
+            await Assert.That(received.Header.PartitionKey).IsEqualTo(partitionKey);
         }
         finally
         {

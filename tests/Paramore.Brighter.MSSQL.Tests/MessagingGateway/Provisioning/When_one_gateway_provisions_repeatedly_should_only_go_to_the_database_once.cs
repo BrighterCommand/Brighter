@@ -27,7 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 /// A gateway instance therefore remembers that it has provisioned. The scope of that memory is the
 /// instance and nothing wider, which is what the second fact here pins: a new start still checks.
 /// </summary>
-[Collection("MsSqlQueueProvisioning")]
+[NotInParallel]
 public class MsSqlQueueProvisioningOnceTests : IDisposable
 {
     private readonly string _queueTable = MsSqlQueueProvisioningCreateTests.UniqueQueueTableName();
@@ -53,8 +53,8 @@ public class MsSqlQueueProvisioningOnceTests : IDisposable
             Configuration.DefaultConnectingString, queueStoreTable: _queueTable);
     }
 
-    [Fact]
-    public void When_one_gateway_provisions_repeatedly_should_only_go_to_the_database_once()
+    [Test]
+    public async System.Threading.Tasks.Task When_one_gateway_provisions_repeatedly_should_only_go_to_the_database_once()
     {
         //Arrange -- twenty publications naming one queue table, which is the shape that made this
         //worth doing. Dropping the table behind the factory's back is the instrument: whatever the
@@ -70,8 +70,8 @@ public class MsSqlQueueProvisioningOnceTests : IDisposable
 
         //Act
         var producers = producerFactory.Create();
-        Assert.Equal(20, producers.Count);
-        Assert.True(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable));
+        await Assert.That(producers.Count).IsEqualTo(20);
+        await Assert.That(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable)).IsTrue();
 
         MsSqlQueueProvisioningCreateTests.DropQueueTable(_queueTable);
         producerFactory.Create();
@@ -79,11 +79,11 @@ public class MsSqlQueueProvisioningOnceTests : IDisposable
         //Assert -- the second Create ran twenty publications and touched the database for none of
         //them. This is the cost of the memory as well as the point of it, and it is the right trade:
         //a table dropped under a running host is not a case provisioning can defend against anyway.
-        Assert.False(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable));
+        await Assert.That(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable)).IsFalse();
     }
 
-    [Fact]
-    public void When_a_new_gateway_provisions_should_go_to_the_database_again()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_new_gateway_provisions_should_go_to_the_database_again()
     {
         //Arrange -- the control, and the one that matters for correctness: the memory is per
         //instance, so a restart, a second host, or any other new factory still provisions. Without
@@ -99,12 +99,12 @@ public class MsSqlQueueProvisioningOnceTests : IDisposable
         new MsSqlMessageProducerFactory(_configuration, new List<Publication> { publication }).Create();
 
         //Assert
-        Assert.True(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable));
+        await Assert.That(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable)).IsTrue();
     }
 
 
-    [Fact]
-    public void When_one_gateway_validates_and_then_creates_should_still_create_the_index()
+    [Test]
+    public async System.Threading.Tasks.Task When_one_gateway_validates_and_then_creates_should_still_create_the_index()
     {
         //Arrange -- the ordering the provisioning memory could plausibly break, and it is reachable:
         //one Dispatcher shares one ChannelFactory across every subscription, and subscriptions may
@@ -117,12 +117,12 @@ public class MsSqlQueueProvisioningOnceTests : IDisposable
 
         //Act
         using (var validated = channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Validate))) { }
-        Assert.False(MsSqlQueueProvisioningCreateTests.TopicIndexExists(_queueTable));
+        await Assert.That(MsSqlQueueProvisioningCreateTests.TopicIndexExists(_queueTable)).IsFalse();
 
         using var created = channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Create));
 
         //Assert
-        Assert.True(MsSqlQueueProvisioningCreateTests.TopicIndexExists(_queueTable));
+        await Assert.That(MsSqlQueueProvisioningCreateTests.TopicIndexExists(_queueTable)).IsTrue();
     }
 
     private static void CreateQueueTableWithoutIndex(string queueTable)

@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,14 +25,13 @@ THE SOFTWARE. */
 
 using System.Linq;
 using Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration;
 
 public class ChannelFactoryDeclarationSweepConstructorFailureTests
 {
-    [Fact]
-    public void When_a_subscription_constructor_cannot_succeed_should_still_report_its_declaration()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_subscription_constructor_cannot_succeed_should_still_report_its_declaration()
     {
         // Arrange
         // Evident Data: the double's own constructor throws ConfigurationException if invoked
@@ -45,6 +45,6 @@ public class ChannelFactoryDeclarationSweepConstructorFailureTests
         // It appears among its assembly's subjects with a null Reason - which it can only do
         // because no constructor ran; a real construction attempt would throw ConfigurationException
         var entry = result.Single(e => e.Subject == subscriptionType);
-        Assert.Null(entry.Reason);
+        await Assert.That(entry.Reason).IsNull();
     }
 }

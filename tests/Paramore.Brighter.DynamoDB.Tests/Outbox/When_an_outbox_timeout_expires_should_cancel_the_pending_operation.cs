@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -32,7 +32,7 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Outbox.DynamoDB;
-using Xunit;
+
 
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox;
 
@@ -65,8 +65,8 @@ public class DynamoDbOutboxTimeoutTests : IDisposable
         }
     }
 
-    [Theory]
-    [MemberData(nameof(TimeoutCases))]
+    [Test]
+    [MethodDataSource(nameof(TimeoutCases))]
     public async Task When_an_outbox_timeout_expires_should_cancel_the_pending_operation(
         string name, bool isAsync, int configuredTimeout, int outboxTimeout)
     {
@@ -82,34 +82,34 @@ public class DynamoDbOutboxTimeoutTests : IDisposable
 
             //Assert
             _timeProvider.Advance(TimeSpan.FromMilliseconds(expectedTimeout - 1));
-            Assert.False(token.IsCancellationRequested);
+            await Assert.That(token.IsCancellationRequested).IsFalse();
             _timeProvider.Advance(TimeSpan.FromMilliseconds(1));
-            Assert.True(token.IsCancellationRequested);
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation.WaitAsync(TimeSpan.FromSeconds(10)));
+            await Assert.That(token.IsCancellationRequested).IsTrue();
+            await Assert.That(() => operation.WaitAsync(TimeSpan.FromSeconds(10))).Throws<OperationCanceledException>();
         }
         finally
         {
             _http.CompleteOperation();
-            await Record.ExceptionAsync(() => operation.WaitAsync(TimeSpan.FromSeconds(10)));
+            await TestExceptionRecorder.CaptureAsync(() => operation.WaitAsync(TimeSpan.FromSeconds(10)));
         }
     }
 
-    [Theory]
-    [InlineData("Delete")]
-    [InlineData("MarkDispatched")]
-    [InlineData("MarkDispatchedBatch")]
-    [InlineData("Outstanding")]
-    [InlineData("OutstandingTopic")]
-    [InlineData("Count")]
+    [Test]
+    [Arguments("Delete")]
+    [Arguments("MarkDispatched")]
+    [Arguments("MarkDispatchedBatch")]
+    [Arguments("Outstanding")]
+    [Arguments("OutstandingTopic")]
+    [Arguments("Count")]
     public async Task When_no_per_call_timeout_is_available_should_use_the_configured_timeout(string name)
     {
         await When_an_outbox_timeout_expires_should_cancel_the_pending_operation(name, true, 100, -1);
     }
 
-    [Theory]
-    [InlineData(100, 0)]
-    [InlineData(0, -1)]
-    [InlineData(-1, -1)]
+    [Test]
+    [Arguments(100, 0)]
+    [Arguments(0, -1)]
+    [Arguments(-1, -1)]
     public async Task When_the_timeout_is_disabled_should_allow_completion(int configuredTimeout, int outboxTimeout)
     {
         //Arrange
@@ -123,23 +123,23 @@ public class DynamoDbOutboxTimeoutTests : IDisposable
             _timeProvider.Advance(TimeSpan.FromDays(1));
 
             //Assert
-            Assert.False(token.IsCancellationRequested);
-            Assert.False(operation.IsCompleted);
+            await Assert.That(token.IsCancellationRequested).IsFalse();
+            await Assert.That(operation.IsCompleted).IsFalse();
             _http.CompleteOperation();
             var message = await operation.WaitAsync(TimeSpan.FromSeconds(10));
-            Assert.True(message.IsEmpty);
+            await Assert.That(message.IsEmpty).IsTrue();
         }
         finally
         {
             _http.CompleteOperation();
-            await Record.ExceptionAsync(() => operation.WaitAsync(TimeSpan.FromSeconds(10)));
+            await TestExceptionRecorder.CaptureAsync(() => operation.WaitAsync(TimeSpan.FromSeconds(10)));
         }
     }
 
-    [Theory]
-    [InlineData(100)]
-    [InlineData(0)]
-    [InlineData(-1)]
+    [Test]
+    [Arguments(100)]
+    [Arguments(0)]
+    [Arguments(-1)]
     public async Task When_the_caller_cancels_should_cancel_even_with_a_disabled_timeout(int timeout)
     {
         //Arrange
@@ -154,16 +154,16 @@ public class DynamoDbOutboxTimeoutTests : IDisposable
             cancellation.Cancel();
 
             //Assert
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation.WaitAsync(TimeSpan.FromSeconds(10)));
+            await Assert.That(() => operation.WaitAsync(TimeSpan.FromSeconds(10))).Throws<OperationCanceledException>();
         }
         finally
         {
             _http.CompleteOperation();
-            await Record.ExceptionAsync(() => operation.WaitAsync(TimeSpan.FromSeconds(10)));
+            await TestExceptionRecorder.CaptureAsync(() => operation.WaitAsync(TimeSpan.FromSeconds(10)));
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_completing_before_the_timeout_should_preserve_the_callers_token()
     {
         //Arrange
@@ -176,11 +176,11 @@ public class DynamoDbOutboxTimeoutTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromMilliseconds(100));
 
         //Assert
-        Assert.False(cancellation.IsCancellationRequested);
+        await Assert.That(cancellation.IsCancellationRequested).IsFalse();
         await outbox.GetAsync(Id.Random(), new RequestContext(), cancellationToken: cancellation.Token);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_caller_has_already_cancelled_should_not_send_a_request()
     {
         //Arrange
@@ -192,25 +192,25 @@ public class DynamoDbOutboxTimeoutTests : IDisposable
         var operation = outbox.AddAsync(new DefaultMessageBuilder().Build(), new RequestContext(), cancellationToken: cancellation.Token);
 
         //Assert
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation);
-        Assert.False(_http.OperationStarted.IsCompleted);
+        await Assert.That(() => operation).Throws<OperationCanceledException>();
+        await Assert.That(_http.OperationStarted.IsCompleted).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_timeout_is_invalid_should_reject_it_before_io()
     {
         //Arrange
         var outbox = new DynamoDbOutbox(_client, new DynamoDbConfiguration(), _timeProvider);
 
         //Act / Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() => new DynamoDbConfiguration(timeout: -2));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => outbox.GetAsync(Id.Random(), new RequestContext(), -2));
-        Assert.False(_http.OperationStarted.IsCompleted);
+        await Assert.That(() => new DynamoDbConfiguration(timeout: -2)).ThrowsExactly<ArgumentOutOfRangeException>();
+        await Assert.That(() => outbox.GetAsync(Id.Random(), new RequestContext(), -2)).ThrowsExactly<ArgumentOutOfRangeException>();
+        await Assert.That(_http.OperationStarted.IsCompleted).IsFalse();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_a_batch_uses_its_timeout_should_not_restart_the_deadline_for_each_message(bool isAsync)
     {
         //Arrange
@@ -233,11 +233,11 @@ public class DynamoDbOutboxTimeoutTests : IDisposable
         });
 
         //Assert
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation.WaitAsync(TimeSpan.FromSeconds(10)));
-        Assert.Equal(1, _http.RequestCount);
+        await Assert.That(() => operation.WaitAsync(TimeSpan.FromSeconds(10))).Throws<OperationCanceledException>();
+        await Assert.That(_http.RequestCount).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_adding_to_a_transaction_should_allow_commit_after_the_add_timeout()
     {
         //Arrange
@@ -250,10 +250,10 @@ public class DynamoDbOutboxTimeoutTests : IDisposable
         _timeProvider.Advance(TimeSpan.FromSeconds(1));
 
         //Assert
-        Assert.Single(transaction.GetTransaction().TransactItems);
-        Assert.Equal(0, _http.RequestCount);
+        await Assert.That(transaction.GetTransaction().TransactItems).HasSingleItem();
+        await Assert.That(_http.RequestCount).IsEqualTo(0);
         await transaction.CommitAsync();
-        Assert.Equal(1, _http.RequestCount);
+        await Assert.That(_http.RequestCount).IsEqualTo(1);
     }
 
     private async Task<CancellationToken> AwaitOperation(Task operation)

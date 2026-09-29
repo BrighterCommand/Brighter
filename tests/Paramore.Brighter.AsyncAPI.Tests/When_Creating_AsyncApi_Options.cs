@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Jonny Olliff-Lee <jonny.ollifflee@gmail.com>
@@ -22,24 +23,23 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
 {
     public class When_Creating_AsyncApi_Options
     {
-        [Fact]
-        public void It_Should_Have_Correct_Defaults()
+        [Test]
+        public async Task It_Should_Have_Correct_Defaults()
         {
             var options = new AsyncApiOptions();
 
-            Assert.Equal("Brighter Application", options.Title);
-            Assert.Equal("1.0.0", options.Version);
-            Assert.Null(options.Description);
-            Assert.Null(options.Servers);
-            Assert.Null(options.AssembliesToScan);
-            Assert.False(options.DisableAssemblyScanning);
-            Assert.Null(options.SupplementalPublications);
+            await Assert.That(options.Title).IsEqualTo("Brighter Application");
+            await Assert.That(options.Version).IsEqualTo("1.0.0");
+            await Assert.That(options.Description).IsNull();
+            await Assert.That(options.Servers).IsNull();
+            await Assert.That(options.AssembliesToScan).IsNull();
+            await Assert.That(options.DisableAssemblyScanning).IsFalse();
+            await Assert.That(options.SupplementalPublications).IsNull();
         }
     }
 }

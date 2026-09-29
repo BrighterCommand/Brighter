@@ -1,18 +1,17 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 {
-    [Trait("Category", "MSSQL")]
+    [Category("MSSQL")]
     public class PurgeTest :  IAsyncDisposable, IDisposable
     {
         private readonly string _queueName = Guid.NewGuid().ToString();
-        private readonly IAmAProducerRegistry _producerRegistry; 
+        private readonly IAmAProducerRegistry _producerRegistry;
         private readonly IAmAMessageConsumerSync _consumer;
         private readonly RoutingKey _routingKey;
 
@@ -22,12 +21,12 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             testHelper.SetupQueueDb();
 
             _routingKey = new RoutingKey(Guid.NewGuid().ToString());
-            
+
             var sub = new Subscription<MyCommand>(
                 new SubscriptionName(_queueName),
                 new ChannelName(_routingKey.Value), _routingKey,
                 messagePumpType: MessagePumpType.Reactor);
-            
+
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration,
                 [new() {Topic = _routingKey}]
@@ -35,18 +34,18 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
         }
 
-        [Fact]
-        public void When_queue_is_Purged()
+        [Test]
+        public async Task When_queue_is_Purged()
         {
             IAmAMessageConsumerSync consumer = _consumer;
                 //Send a sequence of messages to Kafka
                 var msgId = SendMessage();
-                
+
                 //Now read those messages in order
 
                 var firstMessage = ConsumeMessages(consumer);
                 var message = firstMessage.First();
-                Assert.Equal(msgId, message.Id);
+                await Assert.That(message.Id).IsEqualTo(msgId);
 
                 _consumer.Purge();
 
@@ -54,14 +53,14 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
                 var nextMessage = ConsumeMessages(consumer);
                 message = nextMessage.First();
-                
-                Assert.Equal(new Message(), message);
+
+                await Assert.That(message).IsEqualTo(new Message());
         }
 
         private string SendMessage()
         {
             var messageId = Guid.NewGuid().ToString();
-            
+
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_routingKey)).Send(new Message(
                 new MessageHeader(messageId, _routingKey, MessageType.MT_COMMAND),
                 new MessageBody($"test content [{_queueName}]")));

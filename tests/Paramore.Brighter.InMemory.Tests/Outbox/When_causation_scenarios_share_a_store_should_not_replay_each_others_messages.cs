@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia <irakli.gabisonia94@gmail.com>
 
@@ -26,17 +26,16 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox;
 
 public class CausationScenarioIsolationTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_causation_scenarios_share_a_store_should_not_replay_each_others_messages(
         bool isAsync, bool bulk)
     {
@@ -52,11 +51,11 @@ public class CausationScenarioIsolationTests
         };
 
         // Act
-        var exception = await Record.ExceptionAsync(() => ReplayScenario(first, isAsync, bulk));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => ReplayScenario(first, isAsync, bulk));
 
         // Assert
-        Assert.True(interleaved);
-        Assert.Null(exception);
+        await Assert.That(interleaved).IsTrue();
+        await Assert.That(exception).IsNull();
     }
 
     private static Task ReplayScenario(SharedStoreScenario scenario, bool isAsync, bool bulk)

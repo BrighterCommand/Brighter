@@ -5,13 +5,12 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class SweeperLockUnavailableMetricsTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_sweep_lock_is_held_should_record_a_lock_unavailable_sweep()
     {
         //Arrange
@@ -30,7 +29,7 @@ public class SweeperLockUnavailableMetricsTests
         sweeper.Dispose();
 
         //Assert
-        Assert.True(recorded, "The sweeper recorded no sweep");
-        Assert.Equal("lock_unavailable", measurements.Of(RecordedSweeperMeasurements.Sweeps).First().Outcome);
+        await Assert.That(recorded).IsTrue().Because("The sweeper recorded no sweep");
+        await Assert.That(measurements.Of(RecordedSweeperMeasurements.Sweeps).First().Outcome).IsEqualTo("lock_unavailable");
     }
 }

@@ -27,16 +27,15 @@ using System;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class ClaimCheckMapperMetadataTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_a_claim_is_unwrapped_by_a_pump_should_preserve_mapper_metadata(bool useAsync)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_a_claim_is_unwrapped_by_a_pump_should_preserve_mapper_metadata(bool useAsync)
     {
         //Arrange
         using var scenario = new ClaimCheckPumpScenario(useAsync, dataRefOnly: true);
@@ -45,28 +44,28 @@ public class ClaimCheckMapperMetadataTests
         scenario.Run();
 
         //Assert
-        Assert.Equal(scenario.Payload, Assert.Single(scenario.HandledPayloads));
-        var mapped = Assert.IsType<Message>(scenario.MappedMessage);
-        Assert.Equal(scenario.Message.Id, mapped.Id);
-        Assert.Equal(scenario.Channel.RoutingKey, mapped.Header.Topic);
-        Assert.Equal(new Uri("https://example.test/claim-source"), mapped.Header.Source);
-        Assert.Equal(new CloudEventsType("claim.delivery"), mapped.Header.Type);
-        Assert.Equal(new DateTimeOffset(2026, 10, 2, 12, 0, 0, TimeSpan.Zero), mapped.Header.TimeStamp);
-        Assert.Equal(new Id("claim-correlation"), mapped.Header.CorrelationId);
-        Assert.Equal("text/plain", mapped.Header.ContentType.MediaType);
-        Assert.Equal("utf-8", mapped.Header.ContentType.CharSet);
-        Assert.Equal(new RoutingKey("claim-reply"), mapped.Header.ReplyTo);
-        Assert.Equal(3, mapped.Header.HandledCount);
-        Assert.Equal(TimeSpan.FromSeconds(7), mapped.Header.Delayed);
-        Assert.Equal(new PartitionKey("claim-partition"), mapped.Header.PartitionKey);
-        Assert.Equal(new Uri("https://example.test/claim-schema"), mapped.Header.DataSchema);
-        Assert.Equal("claim-subject", mapped.Header.Subject);
-        Assert.Equal(new Id("claim-workflow"), mapped.Header.WorkflowId);
-        Assert.Equal(new Id("claim-job"), mapped.Header.JobId);
-        Assert.Equal("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", mapped.Header.TraceParent?.Value);
-        Assert.Equal("vendor=value", mapped.Header.TraceState?.Value);
-        Assert.Equal("tenant=sample", mapped.Header.Baggage.ToString());
-        Assert.Equal("lock-to-preserve", mapped.Header.Bag["transport-lock"]);
-        Assert.True(mapped.Persist);
+        await Assert.That((await Assert.That(scenario.HandledPayloads).HasSingleItem())).IsEqualTo(scenario.Payload);
+        var mapped = await Assert.That(scenario.MappedMessage).IsTypeOf<Message>();
+        await Assert.That(mapped.Id).IsEqualTo(scenario.Message.Id);
+        await Assert.That(mapped.Header.Topic).IsEqualTo(scenario.Channel.RoutingKey);
+        await Assert.That(mapped.Header.Source).IsEqualTo(new Uri("https://example.test/claim-source"));
+        await Assert.That(mapped.Header.Type).IsEqualTo(new CloudEventsType("claim.delivery"));
+        await Assert.That(mapped.Header.TimeStamp).IsEqualTo(new DateTimeOffset(2026, 10, 2, 12, 0, 0, TimeSpan.Zero));
+        await Assert.That(mapped.Header.CorrelationId).IsEqualTo(new Id("claim-correlation"));
+        await Assert.That(mapped.Header.ContentType.MediaType).IsEqualTo("text/plain");
+        await Assert.That(mapped.Header.ContentType.CharSet).IsEqualTo("utf-8");
+        await Assert.That(mapped.Header.ReplyTo).IsEqualTo(new RoutingKey("claim-reply"));
+        await Assert.That(mapped.Header.HandledCount).IsEqualTo(3);
+        await Assert.That(mapped.Header.Delayed).IsEqualTo(TimeSpan.FromSeconds(7));
+        await Assert.That(mapped.Header.PartitionKey).IsEqualTo(new PartitionKey("claim-partition"));
+        await Assert.That(mapped.Header.DataSchema).IsEqualTo(new Uri("https://example.test/claim-schema"));
+        await Assert.That(mapped.Header.Subject).IsEqualTo("claim-subject");
+        await Assert.That(mapped.Header.WorkflowId).IsEqualTo(new Id("claim-workflow"));
+        await Assert.That(mapped.Header.JobId).IsEqualTo(new Id("claim-job"));
+        await Assert.That(mapped.Header.TraceParent?.Value).IsEqualTo("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
+        await Assert.That(mapped.Header.TraceState?.Value).IsEqualTo("vendor=value");
+        await Assert.That(mapped.Header.Baggage.ToString()).IsEqualTo("tenant=sample");
+        await Assert.That(mapped.Header.Bag["transport-lock"]).IsEqualTo("lock-to-preserve");
+        await Assert.That(mapped.Persist).IsTrue();
     }
 }

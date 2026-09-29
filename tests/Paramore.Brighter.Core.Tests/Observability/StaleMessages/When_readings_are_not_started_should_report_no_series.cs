@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -25,14 +25,13 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleReadingsNotStartedTests
 {
-    [Fact]
-    public void When_readings_are_not_started_should_report_no_series()
+    [Test]
+    public async Task When_readings_are_not_started_should_report_no_series()
     {
         //Arrange
         using var observed = new ObservedStaleMessageInstruments();
@@ -43,6 +42,6 @@ public class StaleReadingsNotStartedTests
         var measurements = observed.Observe();
 
         //Assert
-        Assert.Empty(measurements);
+        await Assert.That(measurements).IsEmpty();
     }
 }

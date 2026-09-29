@@ -27,7 +27,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -37,12 +36,12 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// highest version whose cumulative columns are all present. The provisioner refuses -1 and 0 with a
 /// <see cref="ConfigurationException"/>.
 /// </summary>
-public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
+public class SqliteBoxDiscriminatorDetectionTests
 {
     private readonly string _connectionString = Configuration.ConnectionString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_outbox_detects_table_missing_headerbag_discriminator_it_should_return_negative_one()
     {
         //Arrange
@@ -57,18 +56,18 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         var detected = await DetectVersionAsync(tableName, BoxType.Outbox, migrations);
 
         //Assert
-        Assert.Equal(-1, detected);
+        await Assert.That(detected).IsEqualTo(-1);
 
         //Act
         var provisioner = CreateOutboxProvisioner(config);
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
+        var ex = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("not a Brighter outbox", ex.Message);
-        Assert.Contains("HeaderBag", ex.Message);
+        await Assert.That(ex.Message).Contains("not a Brighter outbox");
+        await Assert.That(ex.Message).Contains("HeaderBag");
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_inbox_detects_table_missing_commandbody_discriminator_it_should_return_negative_one()
     {
         //Arrange
@@ -83,18 +82,18 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         var detected = await DetectVersionAsync(tableName, BoxType.Inbox, migrations);
 
         //Assert
-        Assert.Equal(-1, detected);
+        await Assert.That(detected).IsEqualTo(-1);
 
         //Act
         var provisioner = CreateInboxProvisioner(config);
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
+        var ex = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("not a Brighter inbox", ex.Message);
-        Assert.Contains("CommandBody", ex.Message);
+        await Assert.That(ex.Message).Contains("not a Brighter inbox");
+        await Assert.That(ex.Message).Contains("CommandBody");
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_outbox_detects_headerbag_present_but_no_v1_columns_it_should_return_zero()
     {
         //Arrange
@@ -109,17 +108,17 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         var detected = await DetectVersionAsync(tableName, BoxType.Outbox, migrations);
 
         //Assert
-        Assert.Equal(0, detected);
+        await Assert.That(detected).IsEqualTo(0);
 
         //Act
         var provisioner = CreateOutboxProvisioner(config);
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
+        var ex = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("does not match any known schema version", ex.Message);
+        await Assert.That(ex.Message).Contains("does not match any known schema version");
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_outbox_detects_v3_shaped_table_it_should_return_three()
     {
         //Arrange
@@ -145,10 +144,10 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         var detected = await DetectVersionAsync(tableName, BoxType.Outbox, migrations);
 
         //Assert
-        Assert.Equal(3, detected);
+        await Assert.That(detected).IsEqualTo(3);
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_inbox_detects_v1_shaped_table_it_should_return_one()
     {
         //Arrange
@@ -169,7 +168,7 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         var detected = await DetectVersionAsync(tableName, BoxType.Inbox, migrations);
 
         //Assert
-        Assert.Equal(1, detected);
+        await Assert.That(detected).IsEqualTo(1);
     }
 
     private async Task ExecuteDdl(string sql)
@@ -210,8 +209,10 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         return tableName;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

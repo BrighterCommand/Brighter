@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
 using Neuroglia.AsyncApi.v3;
-using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
 {
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Produce_Identical_Documents_On_Repeated_Calls()
         {
             var subscriptions = new[]
@@ -81,27 +80,25 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var second = await generator.GenerateAsync();
 
             // Same channel count
-            Assert.NotNull(first.Channels);
-            Assert.NotNull(second.Channels);
-            Assert.Equal(first.Channels.Count, second.Channels.Count);
+            await Assert.That(first.Channels).IsNotNull();
+            await Assert.That(second.Channels).IsNotNull();
+            await Assert.That(second.Channels.Count).IsEqualTo(first.Channels.Count);
 
             // Same operation count
-            Assert.NotNull(first.Operations);
-            Assert.NotNull(second.Operations);
-            Assert.Equal(first.Operations.Count, second.Operations.Count);
+            await Assert.That(first.Operations).IsNotNull();
+            await Assert.That(second.Operations).IsNotNull();
+            await Assert.That(second.Operations.Count).IsEqualTo(first.Operations.Count);
 
             // Same operation keys
-            Assert.Equal(
-                first.Operations.Keys.OrderBy(k => k).ToList(),
-                second.Operations.Keys.OrderBy(k => k).ToList());
+            await Assert.That(second.Operations.Keys.OrderBy(k => k).ToList()).IsEqualTo(first.Operations.Keys.OrderBy(k => k).ToList());
 
             // Same message count
-            Assert.NotNull(first.Components?.Messages);
-            Assert.NotNull(second.Components?.Messages);
-            Assert.Equal(first.Components.Messages.Count, second.Components.Messages.Count);
+            await Assert.That(first.Components?.Messages).IsNotNull();
+            await Assert.That(second.Components?.Messages).IsNotNull();
+            await Assert.That(second.Components.Messages.Count).IsEqualTo(first.Components.Messages.Count);
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Not_Produce_Suffixed_Operation_Ids_On_Second_Call()
         {
             var subscriptions = new[]
@@ -119,11 +116,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             await generator.GenerateAsync();
             var second = await generator.GenerateAsync();
 
-            Assert.NotNull(second.Operations);
-            Assert.Single(second.Operations);
-            Assert.True(second.Operations.ContainsKey("receive_events_topic"));
+            await Assert.That(second.Operations).IsNotNull();
+            await Assert.That(second.Operations).HasSingleItem();
+            await Assert.That(second.Operations.ContainsKey("receive_events_topic")).IsTrue();
             // The _2 suffixed key must NOT appear
-            Assert.False(second.Operations.ContainsKey("receive_events_topic_2"));
+            await Assert.That(second.Operations.ContainsKey("receive_events_topic_2")).IsFalse();
         }
 
         public class TestEvent : Event

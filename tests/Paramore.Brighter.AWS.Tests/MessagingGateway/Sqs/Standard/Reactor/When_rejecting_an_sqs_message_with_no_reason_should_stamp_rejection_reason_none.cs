@@ -30,11 +30,10 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Reactor;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class SqsMessageConsumerNullReasonDlqTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
@@ -95,8 +94,8 @@ public class SqsMessageConsumerNullReasonDlqTests : IDisposable, IAsyncDisposabl
         _dlqChannel = _dlqChannelFactory.CreateSyncChannel(dlqSubscription);
     }
 
-    [Fact]
-    public void When_rejecting_an_sqs_message_with_no_reason_should_stamp_rejection_reason_none()
+    [Test]
+    public async Task When_rejecting_an_sqs_message_with_no_reason_should_stamp_rejection_reason_none()
     {
         //Arrange
         _messageProducer.Send(_message);
@@ -109,26 +108,26 @@ public class SqsMessageConsumerNullReasonDlqTests : IDisposable, IAsyncDisposabl
         //Assert - message should appear on DLQ
         var dlqMessage = _dlqChannel.Receive(TimeSpan.FromMilliseconds(5000));
 
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
-        Assert.Equal(_message.Body.Value, dlqMessage.Body.Value);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(dlqMessage.Body.Value).IsEqualTo(_message.Body.Value);
 
         // verify rejectionReason is stamped as "None" (R-28 edge case 1; ADR 0077)
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionReason"));
-        Assert.Equal(RejectionReason.None.ToString(), dlqMessage.Header.Bag["rejectionReason"].ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionReason")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.None.ToString());
 
         // verify rejectionMessage is absent (null reason carries no description)
-        Assert.False(dlqMessage.Header.Bag.ContainsKey("rejectionMessage"));
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionMessage")).IsFalse();
 
         // verify other metadata is present
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("originalTopic"));
-        Assert.Equal(originalTopic, dlqMessage.Header.Bag["originalTopic"].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("originalMessageType"));
-        Assert.Equal(MessageType.MT_COMMAND.ToString(), dlqMessage.Header.Bag["originalMessageType"].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp"));
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalTopic")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["originalTopic"].ToString()).IsEqualTo(originalTopic);
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalMessageType")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["originalMessageType"].ToString()).IsEqualTo(MessageType.MT_COMMAND.ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp")).IsTrue();
 
         //verify original message is deleted from source queue
         var sourceMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-        Assert.Equal(MessageType.MT_NONE, sourceMessage.Header.MessageType);
+        await Assert.That(sourceMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 
     public void Dispose()

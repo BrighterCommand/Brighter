@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -25,8 +25,8 @@ public class TransformPipelinePostConstructionFailureReleaseTests
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, _transformerFactory);
     }
 
-    [Fact]
-    public void When_Building_A_Wrap_Pipeline_Fails_After_Construction_Transforms_Are_Released()
+    [Test]
+    public async System.Threading.Tasks.Task When_Building_A_Wrap_Pipeline_Fails_After_Construction_Transforms_Are_Released()
     {
         //act
         //the wrap pipeline (and its transform) is constructed successfully, then discovering the unwrap
@@ -34,10 +34,10 @@ public class TransformPipelinePostConstructionFailureReleaseTests
         var exception = Catch.Exception(() => _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
 
         //assert
-        Assert.IsType<ConfigurationException>(exception);
-        Assert.Single(_transformerFactory.Created);
+        await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(_transformerFactory.Created).HasSingleItem();
         //the transform owned by the discarded pipeline must be released deterministically, not left to a finalizer
-        Assert.Equal(_transformerFactory.Created, _transformerFactory.Released);
+        await Assert.That(_transformerFactory.Released).IsEquivalentTo(_transformerFactory.Created, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     // a mapper whose MapToMessage is discoverable (so a wrap transform is built) but whose MapToRequest is

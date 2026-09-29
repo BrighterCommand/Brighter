@@ -28,21 +28,20 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusCloudEventsTraceParentPrecedenceTests
 {
     private const string DIAGNOSTIC_ID = "00-a67a6a91e19aaba2a6fb61a533ad84e1-05c07e9784472964-01";
     private const string CLOUD_EVENTS_PARENT = "00-bac90badb7db62c555c51b5ac8d8e3db-224ab0b4864415d6-01";
 
-    [Theory]
-    [InlineData(CLOUD_EVENTS_PARENT, DIAGNOSTIC_ID)]
-    [InlineData("", DIAGNOSTIC_ID)]
-    [InlineData("existing-cloud-parent", DIAGNOSTIC_ID)]
-    [InlineData(CLOUD_EVENTS_PARENT, null)]
+    [Test]
+    [Arguments(CLOUD_EVENTS_PARENT, DIAGNOSTIC_ID)]
+    [Arguments("", DIAGNOSTIC_ID)]
+    [Arguments("existing-cloud-parent", DIAGNOSTIC_ID)]
+    [Arguments(CLOUD_EVENTS_PARENT, null)]
     public async Task When_receiving_a_message_should_prefer_its_cloud_events_traceparent(
         string cloudEventsParent, string? diagnosticId)
     {
@@ -67,8 +66,8 @@ public class AzureServiceBusCloudEventsTraceParentPrecedenceTests
         var messages = await consumer.ReceiveAsync(TimeSpan.FromSeconds(1));
 
         // Assert
-        var received = Assert.Single(messages);
-        Assert.Equal(cloudEventsParent, received.Header.TraceParent?.Value);
-        Assert.Equal(diagnosticId, received.Header.Bag["Diagnostic-Id"]);
+        var received = await Assert.That(messages).HasSingleItem();
+        await Assert.That(received.Header.TraceParent?.Value).IsEqualTo(cloudEventsParent);
+        await Assert.That(received.Header.Bag["Diagnostic-Id"]).IsEqualTo(diagnosticId);
     }
 }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -33,7 +33,6 @@ using Microsoft.Extensions.Hosting;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -41,9 +40,9 @@ public class OneOverallCallPerDueTimeTests
 {
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Theory]
-    [InlineData(10)]
-    [InlineData(1)]
+    [Test]
+    [Arguments(10)]
+    [Arguments(1)]
     public async Task When_time_advances_three_intervals_should_make_one_overall_call_per_due_time(int collectionPeriodSeconds)
     {
         //Arrange
@@ -66,29 +65,30 @@ public class OneOverallCallPerDueTimeTests
 
         //Act
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         for (var second = 1; second <= 210; second++)
         {
             _clock.Advance(TimeSpan.FromSeconds(1));
             if (second % 60 == 0)
-                WaitUntilTheMonitorWaits(second / 60 + 1);
+                await WaitUntilTheMonitorWaits(second / 60 + 1);
             if (second % collectionPeriodSeconds == 0)
                 metrics.Observe();
         }
 
         //Assert
         var calls = outbox.CountCalls.ToArray();
-        Assert.All(calls, call => Assert.False(call.Synchronous));
-        Assert.Equal(
-            new DateTimeOffset?[]
+        foreach (var call in calls)
+{
+    await Assert.That(call.Synchronous).IsFalse();
+}
+        await Assert.That(calls.Select(call => call.CalledAt)).IsEqualTo(new DateTimeOffset?[]
             {
                 new DateTimeOffset(2026, 1, 1, 12, 1, 0, TimeSpan.Zero),
                 new DateTimeOffset(2026, 1, 1, 12, 2, 0, TimeSpan.Zero),
                 new DateTimeOffset(2026, 1, 1, 12, 3, 0, TimeSpan.Zero)
-            },
-            calls.Select(call => call.CalledAt));
+            });
     }
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

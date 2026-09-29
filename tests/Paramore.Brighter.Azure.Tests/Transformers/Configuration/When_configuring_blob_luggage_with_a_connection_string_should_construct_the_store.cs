@@ -26,18 +26,16 @@ THE SOFTWARE. */
 
 using Azure.Identity;
 using Paramore.Brighter.Transformers.Azure;
-using Xunit;
-using Assert = Xunit.Assert;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Azure.Tests.Transformers.Configuration;
 
 public class AzureBlobLuggageConnectionStringTests
 {
-    [Xunit.Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public void When_configuring_blob_luggage_with_a_connection_string_should_construct_the_store(
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(true, false)]
+    [Arguments(false, true)]
+    public async Task When_configuring_blob_luggage_with_a_connection_string_should_construct_the_store(
         bool hasContainerUri, bool hasCredential)
     {
         // Arrange
@@ -50,9 +48,9 @@ public class AzureBlobLuggageConnectionStringTests
         };
 
         // Act
-        var exception = Record.Exception(() => new AzureBlobLuggageStore(options));
+        var exception = TestExceptionRecorder.Capture(() => new AzureBlobLuggageStore(options));
 
         // Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

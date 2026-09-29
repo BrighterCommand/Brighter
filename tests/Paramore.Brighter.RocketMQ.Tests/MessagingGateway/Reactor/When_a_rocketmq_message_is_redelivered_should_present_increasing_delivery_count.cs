@@ -30,7 +30,6 @@ using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
@@ -63,18 +62,18 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 /// record under a different key and not pollute this run's sequence.
 /// </para>
 /// </remarks>
-[Trait("Category", "RocketMQ")]
+[Property("Category", "RocketMQ")]
 // Shares ConformanceDeferredPump's static dispatch/requeue/handled-count state with the generated
 // pump tests, so it runs in their collection: a ResetDispatchCount from a parallel test would wipe
 // this test's recorded state.
-[Collection("RocketMQMessagingGateway")]
+[NotInParallel("RocketMQMessagingGateway")]
 public class RocketMqRedeliveryDeliveryCountReactorTests
 {
     private const string Topic = "rmq_delivery_count_r";
     private static readonly TimeSpan s_invisibilityTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan s_receiveMessageTimeout = TimeSpan.FromSeconds(2);
 
-    [Fact]
+    [Test]
     public async Task When_a_rocketmq_message_is_redelivered_should_present_increasing_delivery_count()
     {
         // Arrange
@@ -138,18 +137,15 @@ public class RocketMqRedeliveryDeliveryCountReactorTests
 
             // Assert — read the HandledCount sequence after pump quit-and-await
             var counts = ConformanceDeferredPump.GetHandledCountLog(key);
-            Assert.True(counts.Count >= 3,
-                $"expected at least 3 deliveries but recorded {counts.Count}");
+            await Assert.That(counts.Count >= 3).IsTrue().Because($"expected at least 3 deliveries but recorded {counts.Count}");
 
             // R-2 / AC-2: the first delivery presents 0
-            Assert.Equal(0, counts[0]);
+            await Assert.That(counts[0]).IsEqualTo(0);
 
             // R-1 / AC-1 / R-3: every subsequent delivery presents a strictly greater count
             for (var i = 1; i < counts.Count; i++)
             {
-                Assert.True(counts[i] > counts[i - 1],
-                    $"R-1: delivery {i + 1} count {counts[i]} must be strictly greater than "
-                    + $"delivery {i} count {counts[i - 1]}");
+                await Assert.That(counts[i] > counts[i - 1]).IsTrue();
             }
         }
         finally

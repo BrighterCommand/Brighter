@@ -6,14 +6,15 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
+    // Tests mutate static PipelineBuilder<MyCommand> caches; serialise to avoid clobbering each other.
+    [NotInParallel(nameof(When_Building_A_Pipeline_Post_Attributes_Are_Cached))]
     public class When_Building_A_Pipeline_Post_Attributes_Are_Cached
     {
-        [Fact]
-        public void When_Building_A_Sync_Pipeline_Post_Attributes_Are_Cached_For_The_Handler()
+        [Test]
+        public async Task When_Building_A_Sync_Pipeline_Post_Attributes_Are_Cached_For_The_Handler()
         {
             PipelineBuilder<MyCommand>.ClearPipelineCache();
 
@@ -31,11 +32,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             pipelineBuilder.Build(new MyCommand(), new RequestContext()).First();
 
-            Assert.Contains(typeof(MyPreAndPostDecoratedHandler), GetPostAttributesCacheKeys());
+            await Assert.That(await GetPostAttributesCacheKeys()).Contains(typeof(MyPreAndPostDecoratedHandler));
         }
 
-        [Fact]
-        public void When_Building_An_Async_Pipeline_Post_Attributes_Are_Cached_For_The_Handler()
+        [Test]
+        public async Task When_Building_An_Async_Pipeline_Post_Attributes_Are_Cached_For_The_Handler()
         {
             PipelineBuilder<MyCommand>.ClearPipelineCache();
 
@@ -53,15 +54,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             pipelineBuilder.BuildAsync(new MyCommand(), new RequestContext(), false).First();
 
-            Assert.Contains(typeof(MyPreAndPostDecoratedHandlerAsync), GetPostAttributesCacheKeys());
+            await Assert.That(await GetPostAttributesCacheKeys()).Contains(typeof(MyPreAndPostDecoratedHandlerAsync));
         }
 
-        private static IEnumerable<Type> GetPostAttributesCacheKeys()
+        private static async Task<IEnumerable<Type>> GetPostAttributesCacheKeys()
         {
             var field = typeof(PipelineBuilder<MyCommand>).GetField(
                 "s_postAttributesMemento",
                 BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(field);
+            await Assert.That(field).IsNotNull();
 
             var cache = (IDictionary)field!.GetValue(null)!;
             return cache.Keys.Cast<Type>();

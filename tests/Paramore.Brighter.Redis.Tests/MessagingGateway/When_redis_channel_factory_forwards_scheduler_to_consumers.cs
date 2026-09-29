@@ -21,7 +21,6 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.MessagingGateway.Redis;
-using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 
@@ -33,8 +32,8 @@ public class When_redis_channel_factory_forwards_scheduler_to_consumers
         MaxPoolSize = 10
     };
 
-    [Fact]
-    public void Should_forward_scheduler_to_consumer_factory()
+    [Test]
+    public async Task Should_forward_scheduler_to_consumer_factory()
     {
         // Arrange
         var consumerFactory = new RedisMessageConsumerFactory(_configuration);
@@ -45,11 +44,11 @@ public class When_redis_channel_factory_forwards_scheduler_to_consumers
         ((IAmAChannelFactoryWithScheduler)channelFactory).Scheduler = scheduler;
 
         // Assert — the consumer factory received the scheduler
-        Assert.Same(scheduler, consumerFactory.Scheduler);
+        await Assert.That(consumerFactory.Scheduler).IsSameReferenceAs(scheduler);
     }
 
-    [Fact]
-    public void Should_read_scheduler_from_consumer_factory()
+    [Test]
+    public async Task Should_read_scheduler_from_consumer_factory()
     {
         // Arrange — consumer factory has a scheduler from construction
         var scheduler = new StubMessageScheduler();
@@ -57,7 +56,7 @@ public class When_redis_channel_factory_forwards_scheduler_to_consumers
         var channelFactory = new ChannelFactory(consumerFactory);
 
         // Assert — channel factory reads from the consumer factory
-        Assert.Same(scheduler, ((IAmAChannelFactoryWithScheduler)channelFactory).Scheduler);
+        await Assert.That(((IAmAChannelFactoryWithScheduler)channelFactory).Scheduler).IsSameReferenceAs(scheduler);
     }
 
     private class StubMessageScheduler : IAmAMessageScheduler;

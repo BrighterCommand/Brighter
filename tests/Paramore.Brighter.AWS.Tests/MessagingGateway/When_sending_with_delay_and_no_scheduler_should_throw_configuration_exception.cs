@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -29,7 +29,6 @@ using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway;
 
@@ -75,32 +74,30 @@ public class SnsMessageProducerMissingSchedulerTests
         new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test.topic"), MessageType.MT_EVENT),
         new MessageBody("test content"));
 
-    [Fact]
-    public void When_sending_with_delay_and_no_scheduler_should_throw_configuration_exception()
+    [Test]
+    public async System.Threading.Tasks.Task When_sending_with_delay_and_no_scheduler_should_throw_configuration_exception()
     {
         var producer = ProducerWith(null);
 
-        var exception = Assert.Throws<ConfigurationException>(
-            () => producer.SendWithDelay(AMessage(), s_delay));
+        var exception = await Assert.That(() => producer.SendWithDelay(AMessage(), s_delay)).ThrowsExactly<ConfigurationException>();
 
-        Assert.Contains("no scheduler is configured", exception.Message);
-        Assert.Contains("MessageSchedulerFactory", exception.Message);
+        await Assert.That(exception.Message).Contains("no scheduler is configured");
+        await Assert.That(exception.Message).Contains("MessageSchedulerFactory");
     }
 
-    [Fact]
+    [Test]
     public async Task When_sending_async_with_delay_and_no_scheduler_should_throw_configuration_exception()
     {
         var producer = ProducerWith(null);
 
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(
-            () => producer.SendWithDelayAsync(AMessage(), s_delay));
+        var exception = await Assert.That(() => producer.SendWithDelayAsync(AMessage(), s_delay)).ThrowsExactly<ConfigurationException>();
 
-        Assert.Contains("no scheduler is configured", exception.Message);
-        Assert.Contains("MessageSchedulerFactory", exception.Message);
+        await Assert.That(exception.Message).Contains("no scheduler is configured");
+        await Assert.That(exception.Message).Contains("MessageSchedulerFactory");
     }
 
-    [Fact]
-    public void When_sending_with_delay_and_only_an_async_scheduler_should_schedule_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_sending_with_delay_and_only_an_async_scheduler_should_schedule_it()
     {
         // The sync path used to cast straight to IAmAMessageSchedulerSync, so an async-only
         // scheduler - what an async host configures - failed with InvalidCastException.
@@ -109,10 +106,10 @@ public class SnsMessageProducerMissingSchedulerTests
 
         producer.SendWithDelay(AMessage(), s_delay);
 
-        Assert.Equal(s_delay, scheduler.ScheduledDelay);
+        await Assert.That(scheduler.ScheduledDelay).IsEqualTo(s_delay);
     }
 
-    [Fact]
+    [Test]
     public async Task When_sending_async_with_delay_and_only_a_sync_scheduler_should_schedule_it()
     {
         var scheduler = new SyncOnlyScheduler();
@@ -120,7 +117,7 @@ public class SnsMessageProducerMissingSchedulerTests
 
         await producer.SendWithDelayAsync(AMessage(), s_delay);
 
-        Assert.Equal(s_delay, scheduler.ScheduledDelay);
+        await Assert.That(scheduler.ScheduledDelay).IsEqualTo(s_delay);
     }
 
     private sealed class SyncOnlyScheduler : IAmAMessageSchedulerSync

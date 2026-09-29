@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
@@ -33,11 +32,11 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// #4508, async (Proactor) path: purging a Pull channel clears the messages already published to its
 /// subscription.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpPullPurgeAsyncTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_gcp_pull_channel_is_purged_should_receive_no_message_published_before_the_purge_async()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -66,7 +65,7 @@ public class GcpPullPurgeAsyncTests
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
 
             // Assert
-            Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {

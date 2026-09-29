@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Outbox.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -12,7 +11,6 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// idempotently, round-trips a message, and keys its history under the folded name <c>order</c>.
 /// </summary>
 public class PostgreSqlReservedKeywordTableNameTests
-    : IAsyncLifetime
 {
     private const string ReservedKeywordTableName = "Order";
     private const string ExpectedPhysicalTableName = "order";
@@ -37,7 +35,7 @@ public class PostgreSqlReservedKeywordTableNameTests
             _runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_outbox_provisioner_runs_with_reserved_keyword_table_name_it_should_create_and_populate_table()
     {
         new PostgresSqlTestHelper().SetupDatabase();
@@ -56,7 +54,7 @@ SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME = @TableName)";
             tableCheck.Parameters.AddWithValue("@TableName", ExpectedPhysicalTableName);
             var tableExists = (bool)(await tableCheck.ExecuteScalarAsync())!;
-            Assert.True(tableExists, "Reserved-keyword table should exist under PG-folded lowercase name");
+            await Assert.That(tableExists).IsTrue().Because("Reserved-keyword table should exist under PG-folded lowercase name");
 
             using var historyCheck = connection.CreateCommand();
             historyCheck.CommandText = @"
@@ -64,7 +62,7 @@ SELECT COUNT(1) FROM ""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public'";
             historyCheck.Parameters.AddWithValue("@BoxTableName", ExpectedPhysicalTableName);
             var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-            Assert.Equal(1, historyCount);
+            await Assert.That(historyCount).IsEqualTo(1);
         }
 
         // Act
@@ -80,7 +78,7 @@ SELECT COUNT(1) FROM ""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public'";
             historyCheck.Parameters.AddWithValue("@BoxTableName", ExpectedPhysicalTableName);
             var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-            Assert.Equal(1, historyCount);
+            await Assert.That(historyCount).IsEqualTo(1);
         }
 
         // Act + Assert
@@ -92,12 +90,14 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public'";
         await outbox.AddAsync(message, new RequestContext());
         var roundTripped = await outbox.GetAsync(message.Id, new RequestContext());
 
-        Assert.Equal(message.Id, roundTripped.Id);
-        Assert.Equal(message.Body.Value, roundTripped.Body.Value);
+        await Assert.That(roundTripped.Id).IsEqualTo(message.Id);
+        await Assert.That(roundTripped.Body.Value).IsEqualTo(message.Body.Value);
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

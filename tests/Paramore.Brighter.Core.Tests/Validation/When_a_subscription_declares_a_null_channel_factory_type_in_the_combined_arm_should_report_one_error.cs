@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class NullDeclaredChannelFactoryTypeCombinedArmValidationTests
 {
-    [Fact]
-    public void When_a_subscription_declares_a_null_channel_factory_type_in_the_combined_arm_should_report_one_error()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_subscription_declares_a_null_channel_factory_type_in_the_combined_arm_should_report_one_error()
     {
         // Arrange — a subscription whose ChannelFactoryType is overridden to null, handed a
         // combined channel factory
@@ -47,16 +47,14 @@ public class NullDeclaredChannelFactoryTypeCombinedArmValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — exactly one Error
-        Assert.False(satisfied);
-        var result = Assert.Single(results);
+        await Assert.That(satisfied).IsFalse();
+        var result = await Assert.That(results).HasSingleItem();
         var message = result.Error!.Message;
-        Assert.Contains("no ChannelFactoryType", message);
-        Assert.EndsWith(
-            "— use a subscription type whose ChannelFactoryType is one of: " +
-            $"{typeof(DeclaredChannelFactory).FullName}, {typeof(NonMatchingChannelFactory).FullName}",
-            message);
+        await Assert.That(message).Contains("no ChannelFactoryType");
+        await Assert.That(message).EndsWith("— use a subscription type whose ChannelFactoryType is one of: " +
+            $"{typeof(DeclaredChannelFactory).FullName}, {typeof(NonMatchingChannelFactory).FullName}");
 
         // Companion assertion — the composite itself cannot route this subscription either
-        Assert.Throws<ConfigurationException>(() => defaultChannelFactory.CreateSyncChannel(subscription));
+        await Assert.That(() => defaultChannelFactory.CreateSyncChannel(subscription)).ThrowsExactly<ConfigurationException>();
     }
 }

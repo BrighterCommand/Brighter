@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,7 +35,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,9 +42,9 @@ public class BoundedCallPerCountTests
 {
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
     public async Task When_five_due_times_complete_should_make_one_bounded_call_per_count_each(bool countsByTopic)
     {
         //Arrange
@@ -81,21 +80,21 @@ public class BoundedCallPerCountTests
 
         //Assert
         var countCalls = outbox.CountCalls.ToArray();
-        Assert.Equal(5, countCalls.Length);
-        Assert.All(countCalls, call =>
-        {
-            Assert.Equal(25, call.MaxCount);
-            Assert.False(call.Synchronous);
-        });
+        await Assert.That(countCalls.Length).IsEqualTo(5);
+        foreach (var call in countCalls)
+{
+    await Assert.That(call.MaxCount).IsEqualTo(25);
+    await Assert.That(call.Synchronous).IsFalse();
+}
         if (outbox is StaleMessageTopicCountingOutbox topicCountingOutbox)
         {
             var topicCountCalls = topicCountingOutbox.TopicCountCalls.ToArray();
-            Assert.Equal(5, topicCountCalls.Length);
-            Assert.All(topicCountCalls, call =>
-            {
-                Assert.Equal(new[] { new RoutingKey("orders"), new RoutingKey("payments") }, call.DispatchedSinceByTopic.Keys.OrderBy(topic => topic.Value));
-                Assert.Equal(25, call.MaxCountPerTopic);
-            });
+            await Assert.That(topicCountCalls.Length).IsEqualTo(5);
+            foreach (var call in topicCountCalls)
+{
+    await Assert.That(call.DispatchedSinceByTopic.Keys.OrderBy(topic => topic.Value)).IsEqualTo(new[] { new RoutingKey("orders"), new RoutingKey("payments") });
+    await Assert.That(call.MaxCountPerTopic).IsEqualTo(25);
+}
         }
     }
 

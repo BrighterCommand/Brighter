@@ -29,19 +29,18 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
+[NotInParallel]
 public class RmqUnusedReplacementConnectionTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_disposing_the_only_gateway_after_reset_should_close_the_unused_replacement(
         bool disposeConsumer, bool disposeAsync)
     {
@@ -63,11 +62,11 @@ public class RmqUnusedReplacementConnectionTests
         var original = await pool.GetConnectionAsync(factory);
         await pool.ResetConnectionAsync(factory);
         var replacement = await pool.GetConnectionAsync(factory);
-        Assert.NotNull(original);
-        Assert.NotNull(replacement);
-        Assert.NotSame(original, replacement);
-        Assert.False(original.IsOpen);
-        Assert.True(replacement.IsOpen);
+        await Assert.That(original).IsNotNull();
+        await Assert.That(replacement).IsNotNull();
+        await Assert.That(replacement).IsNotSameReferenceAs(original);
+        await Assert.That(original.IsOpen).IsFalse();
+        await Assert.That(replacement.IsOpen).IsTrue();
 
         try
         {
@@ -81,7 +80,7 @@ public class RmqUnusedReplacementConnectionTests
             else producer.Dispose();
 
             // Assert
-            Assert.False(replacement.IsOpen);
+            await Assert.That(replacement.IsOpen).IsFalse();
         }
         finally
         {

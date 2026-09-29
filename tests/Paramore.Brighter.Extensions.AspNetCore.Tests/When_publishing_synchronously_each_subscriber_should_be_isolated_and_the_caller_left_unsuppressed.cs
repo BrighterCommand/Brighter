@@ -26,7 +26,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // own flow is not left suppressed, so a Send and a Post issued next both adopt the request scope again.
 public class SynchronousPublishSuppressionTests
 {
-    [Fact]
+    [Test]
     public async Task When_publishing_synchronously_each_subscriber_should_be_isolated_and_the_caller_left_unsuppressed()
     {
         // Arrange - the opted-in host from T6.3, plus this test's own recorder
@@ -58,36 +58,36 @@ public class SynchronousPublishSuppressionTests
 
         // Assert - all three subscribers resolved distinct instances, and none of them is R
         var subscriberInstances = recorder.SubscriberInstances;
-        Assert.Equal(3, subscriberInstances.Count);
+        await Assert.That(subscriberInstances.Count).IsEqualTo(3);
         var one = subscriberInstances[SyncPublishSubscriberOne.Marker];
         var two = subscriberInstances[SyncPublishSubscriberTwo.Marker];
         var three = subscriberInstances[SyncPublishSubscriberThree.Marker];
-        Assert.NotSame(requestScopeInstance, one);
-        Assert.NotSame(requestScopeInstance, two);
-        Assert.NotSame(requestScopeInstance, three);
-        Assert.NotSame(one, two);
-        Assert.NotSame(one, three);
-        Assert.NotSame(two, three);
+        await Assert.That(one).IsNotSameReferenceAs(requestScopeInstance);
+        await Assert.That(two).IsNotSameReferenceAs(requestScopeInstance);
+        await Assert.That(three).IsNotSameReferenceAs(requestScopeInstance);
+        await Assert.That(two).IsNotSameReferenceAs(one);
+        await Assert.That(three).IsNotSameReferenceAs(one);
+        await Assert.That(three).IsNotSameReferenceAs(two);
 
         // Assert - each nesting subscriber's own nested Send resolved an instance that is neither R, nor
         // its own subscriber's, nor the other nesting subscriber's own instance or its nested Send's -
         // identified by each subscriber's own marker, not by which one happened to run first
         var nestedSendInstances = recorder.NestedSendInstances;
-        Assert.Equal(2, nestedSendInstances.Count);
+        await Assert.That(nestedSendInstances.Count).IsEqualTo(2);
         var innerOne = nestedSendInstances[SyncPublishSubscriberOne.Marker];
         var innerTwo = nestedSendInstances[SyncPublishSubscriberTwo.Marker];
-        Assert.NotSame(requestScopeInstance, innerOne);
-        Assert.NotSame(one, innerOne);
-        Assert.NotSame(two, innerOne);
-        Assert.NotSame(innerTwo, innerOne);
-        Assert.NotSame(requestScopeInstance, innerTwo);
-        Assert.NotSame(two, innerTwo);
-        Assert.NotSame(one, innerTwo);
-        Assert.NotSame(innerOne, innerTwo);
+        await Assert.That(innerOne).IsNotSameReferenceAs(requestScopeInstance);
+        await Assert.That(innerOne).IsNotSameReferenceAs(one);
+        await Assert.That(innerOne).IsNotSameReferenceAs(two);
+        await Assert.That(innerOne).IsNotSameReferenceAs(innerTwo);
+        await Assert.That(innerTwo).IsNotSameReferenceAs(requestScopeInstance);
+        await Assert.That(innerTwo).IsNotSameReferenceAs(two);
+        await Assert.That(innerTwo).IsNotSameReferenceAs(one);
+        await Assert.That(innerTwo).IsNotSameReferenceAs(innerOne);
 
         // Assert - once the publish completed, a Send and a Post issued from the controller outside any
         // subscriber both resolved from R's scope - the assertions that would fail on a leak
-        Assert.Same(requestScopeInstance, recorder.OutsideSendInstance);
-        Assert.Same(requestScopeInstance, recorder.OutsidePostInstance);
+        await Assert.That(recorder.OutsideSendInstance).IsSameReferenceAs(requestScopeInstance);
+        await Assert.That(recorder.OutsidePostInstance).IsSameReferenceAs(requestScopeInstance);
     }
 }

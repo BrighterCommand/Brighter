@@ -1,12 +1,10 @@
-﻿using System;
+using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
 public class RmqMessageProducerSendPersistentMessageTests : IDisposable
 {
     private IAmAMessageProducerSync _messageProducer;
@@ -16,7 +14,7 @@ public class RmqMessageProducerSendPersistentMessageTests : IDisposable
     public RmqMessageProducerSendPersistentMessageTests()
     {
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()),
                 MessageType.MT_COMMAND),
             new MessageBody("test content"));
 
@@ -29,7 +27,7 @@ public class RmqMessageProducerSendPersistentMessageTests : IDisposable
 
         _messageProducer = new RmqMessageProducer(rmqConnection);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
-            
+
         _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, isDurable: true);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys( _message.Header.Topic))
@@ -38,8 +36,8 @@ public class RmqMessageProducerSendPersistentMessageTests : IDisposable
             .GetResult();
     }
 
-    [Fact]
-    public void When_posting_a_message_to_persist_via_the_messaging_gateway()
+    [Test]
+    public async Task When_posting_a_message_to_persist_via_the_messaging_gateway()
     {
         // arrange
         _messageProducer.Send(_message);
@@ -48,7 +46,7 @@ public class RmqMessageProducerSendPersistentMessageTests : IDisposable
         var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).First();
 
         // assert
-        Assert.Equal(true, result.Persist);
+        await Assert.That(result.Persist).IsEqualTo(true);
     }
 
     public void Dispose()

@@ -26,7 +26,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -34,14 +33,14 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// The detection helper treats a null schema name as <c>public</c>: each of its queries gives the same answer for null as for
 /// <c>"public"</c>.
 /// </summary>
-public class PostgreSqlDetectionHelperNullSchemaTests : IAsyncLifetime
+public class PostgreSqlDetectionHelperNullSchemaTests
 {
     private const int SeededVersion = 3;
 
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_postgres_detection_helper_receives_null_schema_name_it_should_substitute_public()
     {
         // Arrange
@@ -61,23 +60,23 @@ public class PostgreSqlDetectionHelperNullSchemaTests : IAsyncLifetime
         // Act + Assert
         var existsWithPublic = await helper.DoesTableExistAsync(connection, tableName, "public");
         var existsWithNull = await helper.DoesTableExistAsync(connection, tableName, schemaName: null);
-        Assert.True(existsWithPublic);
-        Assert.True(existsWithNull);
+        await Assert.That(existsWithPublic).IsTrue();
+        await Assert.That(existsWithNull).IsTrue();
 
         var historyWithPublic = await helper.DoesHistoryExistAsync(connection, tableName, "public", historySchema: null);
         var historyWithNull = await helper.DoesHistoryExistAsync(connection, tableName, schemaName: null, historySchema: null);
-        Assert.True(historyWithPublic);
-        Assert.True(historyWithNull);
+        await Assert.That(historyWithPublic).IsTrue();
+        await Assert.That(historyWithNull).IsTrue();
 
         var maxWithPublic = await helper.GetMaxVersionAsync(connection, tableName, "public", historySchema: null);
         var maxWithNull = await helper.GetMaxVersionAsync(connection, tableName, schemaName: null, historySchema: null);
-        Assert.Equal(SeededVersion, maxWithPublic);
-        Assert.Equal(SeededVersion, maxWithNull);
+        await Assert.That(maxWithPublic).IsEqualTo(SeededVersion);
+        await Assert.That(maxWithNull).IsEqualTo(SeededVersion);
 
         var colsWithPublic = await helper.GetTableColumnsAsync(connection, tableName, "public");
         var colsWithNull = await helper.GetTableColumnsAsync(connection, tableName, schemaName: null);
-        Assert.Contains("headerbag", colsWithPublic);
-        Assert.Contains("headerbag", colsWithNull);
+        await Assert.That(colsWithPublic).Contains("headerbag");
+        await Assert.That(colsWithNull).Contains("headerbag");
     }
 
     private async Task ExecuteDdl(string sql)
@@ -123,7 +122,11 @@ VALUES (@MigrationVersion, @SchemaName, @BoxTableName, @Description)";
         return tableName;
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -33,13 +33,12 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class DispatcherShutSubscriptionGetsConsumerTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_shut_subscription_gets_a_consumer_again_should_stop_listing_it_as_shut()
     {
         // Arrange
@@ -61,9 +60,9 @@ public class DispatcherShutSubscriptionGetsConsumerTests
             var scaledUpSnapshot = dispatcher.GetLifecycleSnapshot();
 
             // Assert
-            Assert.Equal([orders], shutSnapshot.ShutSubscriptions.ToArray());
-            Assert.Empty(openedSnapshot.ShutSubscriptions);
-            Assert.Empty(scaledUpSnapshot.ShutSubscriptions);
+            await Assert.That(shutSnapshot.ShutSubscriptions.ToArray()).IsEqualTo([orders]);
+            await Assert.That(openedSnapshot.ShutSubscriptions).IsEmpty();
+            await Assert.That(scaledUpSnapshot.ShutSubscriptions).IsEmpty();
         }
         finally
         {
@@ -71,7 +70,7 @@ public class DispatcherShutSubscriptionGetsConsumerTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_shut_subscription_gets_no_consumer_should_keep_listing_it_as_shut()
     {
         // Arrange
@@ -88,7 +87,7 @@ public class DispatcherShutSubscriptionGetsConsumerTests
             var snapshot = dispatcher.GetLifecycleSnapshot();
 
             // Assert
-            Assert.Equal([orders], snapshot.ShutSubscriptions.ToArray());
+            await Assert.That(snapshot.ShutSubscriptions.ToArray()).IsEqualTo([orders]);
         }
         finally
         {

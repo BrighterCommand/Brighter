@@ -26,14 +26,14 @@ using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Validation;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class AsyncOnlyMapperUnwrapTransformResolvableTests
 {
-    [Fact]
-    public void When_subscription_async_only_mapper_unwrap_transform_unresolvable_should_report_warning()
+    [Test]
+    public async Task When_subscription_async_only_mapper_unwrap_transform_unresolvable_should_report_warning()
     {
         // Arrange — ONLY an async mapper is registered for the request type; it declares an unwrap
         // transform (MyDescribableTransform via the [MyDescribableUnwrapWith] attribute) the probe
@@ -59,11 +59,11 @@ public class AsyncOnlyMapperUnwrapTransformResolvableTests
 
         // Assert — one Warning naming the request type and the GetHandlerType() transformer type
         // (MyDescribableTransform), not the attribute name (MyDescribableUnwrapWith)
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, results[0].Error!.Severity);
-        Assert.Contains(nameof(MyDescribableCommand), results[0].Error!.Message);
-        Assert.Contains(nameof(MyDescribableTransform), results[0].Error!.Message);
-        Assert.DoesNotContain(nameof(MyDescribableUnwrapWith), results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Warning);
+        await Assert.That(results[0].Error!.Message).Contains(nameof(MyDescribableCommand));
+        await Assert.That(results[0].Error!.Message).Contains(nameof(MyDescribableTransform));
+        await Assert.That(results[0].Error!.Message).DoesNotContain(nameof(MyDescribableUnwrapWith));
     }
 }

@@ -1,10 +1,12 @@
-﻿namespace Paramore.Brighter.TickerQ.Tests.TestDoubles;
+using System.Collections.Concurrent;
 
-public class MyEventHandler(IDictionary<string, string> receivedMessages) : RequestHandler<MyEvent>
+namespace Paramore.Brighter.TickerQ.Tests.TestDoubles;
+
+public class MyEventHandler(ConcurrentDictionary<string, string> receivedMessages) : RequestHandler<MyEventSync>
 {
-    public override MyEvent Handle(MyEvent myEvent)
+    public override MyEventSync Handle(MyEventSync myEvent)
     {
-        receivedMessages.Add(nameof(MyEventHandler), myEvent.Id);
+        receivedMessages[myEvent.Id] = nameof(MyEventHandler);
         return base.Handle(myEvent);
     }
 }

@@ -1,13 +1,12 @@
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.SweeperState;
 
 public class SweeperStateActiveLadderTests
 {
-    [Fact]
-    public void When_the_sweeper_state_moves_through_lock_transitions_should_decide_active_by_the_ladder()
+    [Test]
+    public async Task When_the_sweeper_state_moves_through_lock_transitions_should_decide_active_by_the_ladder()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -18,12 +17,12 @@ public class SweeperStateActiveLadderTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.True(snapshot.IsActive);
-        Assert.True(snapshot.HoldsLock);
+        await Assert.That(snapshot.IsActive).IsTrue();
+        await Assert.That(snapshot.HoldsLock).IsTrue();
     }
 
-    [Fact]
-    public void When_a_sweep_is_still_acquiring_the_lock_after_a_completed_sweep_should_not_be_active()
+    [Test]
+    public async Task When_a_sweep_is_still_acquiring_the_lock_after_a_completed_sweep_should_not_be_active()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -36,12 +35,12 @@ public class SweeperStateActiveLadderTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.False(snapshot.IsActive);
-        Assert.False(snapshot.HoldsLock);
+        await Assert.That(snapshot.IsActive).IsFalse();
+        await Assert.That(snapshot.HoldsLock).IsFalse();
     }
 
-    [Fact]
-    public void When_the_last_sweep_obtained_the_lock_and_completed_should_be_active()
+    [Test]
+    public async Task When_the_last_sweep_obtained_the_lock_and_completed_should_be_active()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -53,12 +52,12 @@ public class SweeperStateActiveLadderTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.True(snapshot.IsActive);
-        Assert.False(snapshot.HoldsLock);
+        await Assert.That(snapshot.IsActive).IsTrue();
+        await Assert.That(snapshot.HoldsLock).IsFalse();
     }
 
-    [Fact]
-    public void When_the_last_sweep_obtained_the_lock_and_failed_should_be_active()
+    [Test]
+    public async Task When_the_last_sweep_obtained_the_lock_and_failed_should_be_active()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -70,11 +69,11 @@ public class SweeperStateActiveLadderTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.True(snapshot.IsActive);
+        await Assert.That(snapshot.IsActive).IsTrue();
     }
 
-    [Fact]
-    public void When_a_completed_sweep_is_followed_by_lock_unavailable_should_not_be_active()
+    [Test]
+    public async Task When_a_completed_sweep_is_followed_by_lock_unavailable_should_not_be_active()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -88,11 +87,11 @@ public class SweeperStateActiveLadderTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.False(snapshot.IsActive);
+        await Assert.That(snapshot.IsActive).IsFalse();
     }
 
-    [Fact]
-    public void When_lock_unavailable_is_followed_by_a_sweep_that_obtained_the_lock_and_failed_should_be_active()
+    [Test]
+    public async Task When_lock_unavailable_is_followed_by_a_sweep_that_obtained_the_lock_and_failed_should_be_active()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -106,11 +105,11 @@ public class SweeperStateActiveLadderTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.True(snapshot.IsActive);
+        await Assert.That(snapshot.IsActive).IsTrue();
     }
 
-    [Fact]
-    public void When_a_sweep_fails_before_obtaining_the_lock_should_not_be_active()
+    [Test]
+    public async Task When_a_sweep_fails_before_obtaining_the_lock_should_not_be_active()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -121,11 +120,11 @@ public class SweeperStateActiveLadderTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.False(snapshot.IsActive);
+        await Assert.That(snapshot.IsActive).IsFalse();
     }
 
-    [Fact]
-    public void When_the_lock_is_obtained_with_no_sweep_in_progress_should_ignore_it()
+    [Test]
+    public async Task When_the_lock_is_obtained_with_no_sweep_in_progress_should_ignore_it()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -135,7 +134,7 @@ public class SweeperStateActiveLadderTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.False(snapshot.HoldsLock);
-        Assert.False(snapshot.IsActive);
+        await Assert.That(snapshot.HoldsLock).IsFalse();
+        await Assert.That(snapshot.IsActive).IsFalse();
     }
 }

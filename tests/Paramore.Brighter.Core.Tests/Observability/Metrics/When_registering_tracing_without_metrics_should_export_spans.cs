@@ -31,14 +31,13 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class TracingWithoutMetricsTests
 {
-    [Fact]
-    public void When_registering_tracing_without_metrics_should_export_spans()
+    [Test]
+    public async Task When_registering_tracing_without_metrics_should_export_spans()
     {
         //Arrange
         var spans = new List<Activity>();
@@ -54,11 +53,11 @@ public class TracingWithoutMetricsTests
 
         //Act
         var span = tracer.CreateProducerSpan(publication, message, parentActivity: null);
-        Assert.NotNull(span);
+        await Assert.That(span).IsNotNull();
         tracer.EndSpan(span);
-        Assert.True(tracing.ForceFlush());
+        await Assert.That(tracing.ForceFlush()).IsTrue();
 
         //Assert
-        Assert.Single(spans);
+        await Assert.That(spans).HasSingleItem();
     }
 }

@@ -30,7 +30,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -54,7 +54,7 @@ public class BorrowedScopeAccumulationTests
 {
     private const int FurtherRequestCount = 10_000;
 
-    [Fact]
+    [Test]
     public async Task When_serving_many_requests_borrowed_scope_state_should_not_accumulate()
     {
         // Arrange - one request, captured as a WeakReference so nothing this test owns keeps it alive
@@ -67,10 +67,10 @@ public class BorrowedScopeAccumulationTests
         ForceFullCollection();
 
         // Assert - the first request's mapper is no longer reachable from anything Brighter or ASP.NET held
-        Assert.False(weakReference.IsAlive);
+        await Assert.That(weakReference.IsAlive).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_association_is_made_process_lifetime_it_should_remain_reachable()
     {
         // Arrange - identical harness, but ScopedArtefactCache is Singleton, not Scoped, on this host
@@ -83,10 +83,10 @@ public class BorrowedScopeAccumulationTests
         ForceFullCollection();
 
         // Assert - the association was deliberately made process-lifetime, so the first mapper is still reachable
-        Assert.True(weakReference.IsAlive);
+        await Assert.That(weakReference.IsAlive).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_requests_are_served_at_concurrency_one_the_peak_live_count_should_stay_bounded()
     {
         // Arrange
@@ -98,11 +98,10 @@ public class BorrowedScopeAccumulationTests
         var peakAboveBaseline = await MeasurePeakLiveScopedArtefactCachesAsync(client, concurrency, FurtherRequestCount);
 
         // Assert - a small, bounded multiple of the concurrency level, nowhere near the 10,000 requests served
-        Assert.True(peakAboveBaseline <= concurrency * 8,
-            $"expected the peak live count above baseline to stay within {concurrency * 8}, but it reached {peakAboveBaseline}");
+        await Assert.That(peakAboveBaseline <= concurrency * 8).IsTrue().Because($"expected the peak live count above baseline to stay within {concurrency * 8}, but it reached {peakAboveBaseline}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_requests_are_served_at_concurrency_eight_the_peak_live_count_should_stay_bounded()
     {
         // Arrange
@@ -114,8 +113,7 @@ public class BorrowedScopeAccumulationTests
         var peakAboveBaseline = await MeasurePeakLiveScopedArtefactCachesAsync(client, concurrency, FurtherRequestCount);
 
         // Assert - a small, bounded multiple of the concurrency level, nowhere near the 10,000 requests served
-        Assert.True(peakAboveBaseline <= concurrency * 8,
-            $"expected the peak live count above baseline to stay within {concurrency * 8}, but it reached {peakAboveBaseline}");
+        await Assert.That(peakAboveBaseline <= concurrency * 8).IsTrue().Because($"expected the peak live count above baseline to stay within {concurrency * 8}, but it reached {peakAboveBaseline}");
     }
 
     /// <summary>
@@ -130,7 +128,7 @@ public class BorrowedScopeAccumulationTests
 
         var recorder = factory.Services.GetRequiredService<AccumulationRecorder>();
         var mapper = recorder.LastConstructedMapper;
-        Assert.NotNull(mapper);
+        await Assert.That(mapper).IsNotNull();
 
         return new WeakReference(mapper, trackResurrection: false);
     }

@@ -27,7 +27,6 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.Legacy;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -35,7 +34,7 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// Two MySQL provisioners racing on a legacy table without history write exactly one synthetic bootstrap
 /// row and one applied row per later version, and preserve existing rows.
 /// </summary>
-public class MySqlLegacyTableRaceTests : IAsyncLifetime
+public class MySqlLegacyTableRaceTests
 {
     private const int OutboxSeedVersion = 3;
     private const string OutboxMarkerMessageId = "outbox-marker-must-survive";
@@ -45,7 +44,7 @@ public class MySqlLegacyTableRaceTests : IAsyncLifetime
     private readonly string _outboxTableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly string _inboxTableName = $"test_inbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_two_outbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v3()
     {
         //Arrange
@@ -71,25 +70,25 @@ public class MySqlLegacyTableRaceTests : IAsyncLifetime
 
         //Assert
         var rowsByVersion = await GetHistoryRowsByVersion(_outboxTableName);
-        Assert.Equal(ExpectedMigrationVersions.OutboxLatest - OutboxSeedVersion + 1, rowsByVersion.Count);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(ExpectedMigrationVersions.OutboxLatest - OutboxSeedVersion + 1);
 
-        var syntheticDescription = Assert.Contains(OutboxSeedVersion, rowsByVersion);
-        Assert.StartsWith($"bootstrap: detected at V{OutboxSeedVersion}", syntheticDescription);
+        await Assert.That(rowsByVersion.ContainsKey(OutboxSeedVersion)).IsTrue();
+
+        var syntheticDescription = rowsByVersion[OutboxSeedVersion];
+        await Assert.That(syntheticDescription).StartsWith($"bootstrap: detected at V{OutboxSeedVersion}");
 
         for (var v = OutboxSeedVersion + 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            var appliedDescription = Assert.Contains(v, rowsByVersion);
-            Assert.False(
-                appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal),
-                $"V{v} should be an applied migration row, not a synthetic bootstrap row " +
-                $"(description was: '{appliedDescription}')");
+            await Assert.That(rowsByVersion.ContainsKey(v)).IsTrue();
+            var appliedDescription = rowsByVersion[v];
+            await Assert.That(appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
         }
 
-        Assert.Contains("DataRef", await GetTableColumns(_outboxTableName));
-        Assert.Equal(1, await GetOutboxMarkerRowCount());
+        await Assert.That(await GetTableColumns(_outboxTableName)).Contains("DataRef");
+        await Assert.That(await GetOutboxMarkerRowCount()).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_two_inbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v1()
     {
         //Arrange
@@ -115,19 +114,20 @@ public class MySqlLegacyTableRaceTests : IAsyncLifetime
 
         //Assert
         var rowsByVersion = await GetHistoryRowsByVersion(_inboxTableName);
-        Assert.Equal(ExpectedMigrationVersions.InboxLatest, rowsByVersion.Count);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(ExpectedMigrationVersions.InboxLatest);
 
-        var syntheticDescription = Assert.Contains(1, rowsByVersion);
-        Assert.StartsWith("bootstrap: detected at V1", syntheticDescription);
+        await Assert.That(rowsByVersion.ContainsKey(1)).IsTrue();
 
-        var appliedDescription = Assert.Contains(2, rowsByVersion);
-        Assert.False(
-            appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal),
-            $"V2 should be an applied migration row, not a synthetic bootstrap row " +
-            $"(description was: '{appliedDescription}')");
+        var syntheticDescription = rowsByVersion[1];
+        await Assert.That(syntheticDescription).StartsWith("bootstrap: detected at V1");
 
-        Assert.Contains("ContextKey", await GetTableColumns(_inboxTableName));
-        Assert.True(await InboxMarkerRowExistsWithNullContextKey());
+        await Assert.That(rowsByVersion.ContainsKey(2)).IsTrue();
+
+        var appliedDescription = rowsByVersion[2];
+        await Assert.That(appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
+
+        await Assert.That(await GetTableColumns(_inboxTableName)).Contains("ContextKey");
+        await Assert.That(await InboxMarkerRowExistsWithNullContextKey()).IsTrue();
     }
 
     private async Task SeedOutboxMarkerRow()
@@ -222,7 +222,11 @@ WHERE `CommandId` = @CommandId AND `ContextKey` IS NULL";
         return (long)(await command.ExecuteScalarAsync())! == 1L;
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

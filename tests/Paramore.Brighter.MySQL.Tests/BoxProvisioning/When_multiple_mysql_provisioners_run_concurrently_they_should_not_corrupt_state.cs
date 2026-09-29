@@ -2,11 +2,10 @@ using System;
 using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class ConcurrentProvisionerTests : IAsyncLifetime
+public class ConcurrentProvisionerTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName;
@@ -16,7 +15,7 @@ public class ConcurrentProvisionerTests : IAsyncLifetime
         _tableName = $"test_outbox_{Guid.NewGuid():N}";
     }
 
-    [Fact]
+    [Test]
     public async Task When_multiple_mysql_provisioners_run_concurrently_they_should_not_corrupt_state()
     {
         // Arrange
@@ -46,8 +45,8 @@ public class ConcurrentProvisionerTests : IAsyncLifetime
         using var connection = new MySqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        Assert.True(await TableExistsAsync(connection));
-        Assert.Equal(1, await CountHistoryRowsAtLatestVersionAsync(connection));
+        await Assert.That(await TableExistsAsync(connection)).IsTrue();
+        await Assert.That(await CountHistoryRowsAtLatestVersionAsync(connection)).IsEqualTo(1);
     }
 
     private async Task<bool> TableExistsAsync(MySqlConnection connection)
@@ -71,8 +70,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
         return (long)(await historyCheck.ExecuteScalarAsync())!;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

@@ -24,27 +24,27 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.FluentValidation.Tests
 {
     public class InvalidRequestValidationTests
     {
-        [Fact]
-        public void When_an_invalid_request_is_sent_should_throw_request_validation_exception()
+        [Test]
+        public async Task When_an_invalid_request_is_sent_should_throw_request_validation_exception()
         {
             //Arrange
             var harness = CommandProcessorHarness.With(new GreetingCommandValidator());
             var command = new GreetingCommand { Name = "", Email = "ada@example.com" };
 
             //Act
-            var exception = Assert.Throws<RequestValidationException>(() => harness.CommandProcessor.Send(command));
+            var exception = await Assert.That(() => harness.CommandProcessor.Send(command)).ThrowsExactly<RequestValidationException>();
 
             //Assert
-            Assert.False(harness.Receipt.Handled);
-            var error = Assert.Single(exception.Errors);
-            Assert.Equal(nameof(GreetingCommand.Name), error.PropertyName);
-            Assert.False(string.IsNullOrWhiteSpace(error.ErrorMessage));
+            await Assert.That(harness.Receipt.Handled).IsFalse();
+            var error = await Assert.That(exception.Errors).HasSingleItem();
+            await Assert.That(error.PropertyName).IsEqualTo(nameof(GreetingCommand.Name));
+            await Assert.That(string.IsNullOrWhiteSpace(error.ErrorMessage)).IsFalse();
         }
     }
 }

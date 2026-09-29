@@ -27,14 +27,14 @@ THE SOFTWARE. */
 using System.Threading;
 using Polly;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors;
 
 public class RequestContextCopyResilienceTests
 {
-    [Fact]
-    public void When_copying_request_context_should_omit_execution_state_but_preserve_resilience_pipelines()
+    [Test]
+    public async System.Threading.Tasks.Task When_copying_request_context_should_omit_execution_state_but_preserve_resilience_pipelines()
     {
         //Arrange
         using var pipelines = new ResiliencePipelineRegistry<string>();
@@ -56,16 +56,16 @@ public class RequestContextCopyResilienceTests
             copy.Bag["copy-only"] = "independent-value";
 
             //Assert
-            Assert.NotSame(original, copy);
-            Assert.Null(copy.ResilienceContext);
-            Assert.Same(pipelines, copy.ResiliencePipeline);
-            Assert.NotSame(original.Bag, copy.Bag);
-            Assert.Equal("original-value", copy.Bag["input"]);
-            Assert.DoesNotContain("copy-only", original.Bag.Keys);
-            Assert.Same(supplied, original.ResilienceContext);
-            Assert.Equal("caller-operation", supplied.OperationKey);
-            Assert.Equal("caller-value", supplied.Properties.GetValue(propertyKey, ""));
-            Assert.Equal(cancellation.Token, supplied.CancellationToken);
+            await Assert.That(copy).IsNotSameReferenceAs(original);
+            await Assert.That(copy.ResilienceContext).IsNull();
+            await Assert.That(copy.ResiliencePipeline).IsSameReferenceAs(pipelines);
+            await Assert.That(copy.Bag).IsNotSameReferenceAs(original.Bag);
+            await Assert.That(copy.Bag["input"]).IsEqualTo("original-value");
+            await Assert.That(original.Bag.Keys).DoesNotContain("copy-only");
+            await Assert.That(original.ResilienceContext).IsSameReferenceAs(supplied);
+            await Assert.That(supplied.OperationKey).IsEqualTo("caller-operation");
+            await Assert.That(supplied.Properties.GetValue(propertyKey, "")).IsEqualTo("caller-value");
+            await Assert.That(supplied.CancellationToken).IsEqualTo(cancellation.Token);
         }
         finally
         {

@@ -31,7 +31,6 @@ using Paramore.Brighter;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Extensions;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Confirmation
 {
@@ -85,7 +84,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             new MessageHeader(new Id(Guid.NewGuid().ToString()), topic, MessageType.MT_EVENT),
             new MessageBody("test"));
 
-        [Fact]
+        [Test]
         public async Task When_a_confirming_bulk_producer_confirmation_fails_does_not_dispatch_inline()
         {
             // Arrange: the producer sends successfully but every confirmation nacks. InMemory's send
@@ -107,9 +106,9 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // nothing and tripped nothing.
             var dispatched = _outbox.DispatchedMessages(TimeSpan.Zero, _requestContext).ToList();
             var outstanding = _outbox.OutstandingMessages(TimeSpan.Zero, _requestContext).ToList();
-            Assert.DoesNotContain(dispatched, m => m.Id == message.Id);
-            Assert.Contains(outstanding, m => m.Id == message.Id);
-            Assert.Contains(_topic, _circuitBreaker.TrippedTopics);
+            await Assert.That((dispatched).Any(m => m.Id == message.Id)).IsFalse();
+            await Assert.That((outstanding).Any(m => m.Id == message.Id)).IsTrue();
+            await Assert.That(_circuitBreaker.TrippedTopics).Contains(_topic);
         }
     }
 }

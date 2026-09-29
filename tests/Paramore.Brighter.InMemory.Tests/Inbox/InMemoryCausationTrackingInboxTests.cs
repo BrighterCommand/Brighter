@@ -24,11 +24,12 @@ THE SOFTWARE. */
 
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Base.Test.Inbox;
-using Xunit;
+
 
 namespace Paramore.Brighter.InMemory.Tests.Inbox;
 
-[Trait("Category", "InMemory")]
+[Property("Category", "InMemory")]
+[TUnit.Core.InheritsTests]
 public class InMemoryCausationTrackingInboxTests : CausationTrackingInboxBaseTests
 {
     private readonly InMemoryInbox _inbox = new(new FakeTimeProvider());

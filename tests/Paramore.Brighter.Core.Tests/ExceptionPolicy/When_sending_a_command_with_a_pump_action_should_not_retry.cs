@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -34,13 +35,12 @@ using Paramore.Brighter.Policies.Handlers;
 using Polly;
 using Polly.Registry;
 using Polly.Retry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy;
 
 public class CommandProcessorPumpActionTests
 {
-    [Fact]
+    [Test]
     public async Task When_sending_a_command_with_a_pump_action_should_not_retry()
     {
         //Arrange
@@ -60,10 +60,10 @@ public class CommandProcessorPumpActionTests
         var command = new ResilienceActionCommandAsync(action);
 
         //Act
-        var thrown = await Assert.ThrowsAsync<RejectMessageAction>(() => processor.SendAsync(command));
+        var thrown = await Assert.That(() => processor.SendAsync(command)).ThrowsExactly<RejectMessageAction>();
 
         //Assert
-        Assert.Same(action, thrown);
-        Assert.Equal(1, command.Attempts);
+        await Assert.That(thrown).IsSameReferenceAs(action);
+        await Assert.That(command.Attempts).IsEqualTo(1);
     }
 }

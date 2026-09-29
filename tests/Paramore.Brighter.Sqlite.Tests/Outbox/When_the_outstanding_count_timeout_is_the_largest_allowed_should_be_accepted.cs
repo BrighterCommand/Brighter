@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -22,20 +22,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
 public class LargestOutstandingCountTimeoutTests
 {
-    [Fact]
-    public void When_the_outstanding_count_timeout_is_the_largest_allowed_should_be_accepted()
+    [Test]
+    public async Task When_the_outstanding_count_timeout_is_the_largest_allowed_should_be_accepted()
     {
         //Act
-        var exception = Record.Exception(() => new RelationalDatabaseConfiguration(
+        var exception = TestExceptionRecorder.Capture(() => new RelationalDatabaseConfiguration(
             "Data Source=:memory:", outstandingCountTimeout: TimeSpan.FromSeconds(int.MaxValue / 1000)));
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

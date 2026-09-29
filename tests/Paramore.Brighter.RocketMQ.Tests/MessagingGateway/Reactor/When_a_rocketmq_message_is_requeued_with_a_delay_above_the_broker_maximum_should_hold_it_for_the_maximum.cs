@@ -27,8 +27,7 @@ using System.Diagnostics;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
 /// <summary>
@@ -40,7 +39,7 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 /// The message cannot be awaited: on success it stays hidden for 12 h. A later run picks its own
 /// message out by id, so the one left behind does no harm.
 /// </remarks>
-[Trait("Category", "RocketMQ")]
+[Property("Category", "RocketMQ")]
 public class RocketMqRequeueDelayAboveMaximumTests : IDisposable
 {
     private const string Topic = "rmq_requeue_over_max_r";
@@ -86,8 +85,8 @@ public class RocketMqRequeueDelayAboveMaximumTests : IDisposable
         _producer.Dispose();
     }
 
-    [Fact]
-    public void When_a_rocketmq_message_is_requeued_with_a_delay_above_the_broker_maximum_should_hold_it_for_the_maximum()
+    [Test]
+    public async Task When_a_rocketmq_message_is_requeued_with_a_delay_above_the_broker_maximum_should_hold_it_for_the_maximum()
     {
         // Arrange
         var routingKey = new RoutingKey(Topic);
@@ -97,19 +96,17 @@ public class RocketMqRequeueDelayAboveMaximumTests : IDisposable
         _producer.Send(message);
 
         var received = ReceiveOurs(message.Id, s_receiveCeiling);
-        Assert.NotNull(received);
+        await Assert.That(received).IsNotNull();
 
         // Act
         var requeued = _consumer.Requeue(received!, s_requeueDelay);
         var sinceRequeue = Stopwatch.StartNew();
 
         // Assert - accepted, and still hidden after the lease would have lapsed
-        Assert.True(requeued);
+        await Assert.That(requeued).IsTrue();
 
         var early = ReceiveOurs(message.Id, s_quietWindow);
-        Assert.True(early == null,
-            $"Requeued with a {s_requeueDelay.TotalHours:F0} h delay but redelivered after " +
-            $"{sinceRequeue.Elapsed.TotalSeconds:F1} s; it fell back to the {s_invisibilityTimeout.TotalSeconds:F0} s lease");
+        await Assert.That(early == null).IsTrue();
     }
 
     /// <summary>

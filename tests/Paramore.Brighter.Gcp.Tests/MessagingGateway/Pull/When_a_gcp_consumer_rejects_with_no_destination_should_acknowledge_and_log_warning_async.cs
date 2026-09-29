@@ -27,7 +27,6 @@ using System;
 using System.Threading.Tasks;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
@@ -37,8 +36,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// <c>invalidMessageRoutingKey</c>) acknowledges the original message, returns true, and logs a
 /// source-generated Warning naming the message id and the rejection reason.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpPullConsumerRejectNoDestinationWarningAsyncTests
 {
     /// <summary>
@@ -46,7 +45,7 @@ public class GcpPullConsumerRejectNoDestinationWarningAsyncTests
     /// (a second ReceiveAsync returns MT_NONE), RejectAsync returns true, and one Warning log
     /// event names the message id and contains "Unacceptable".
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_no_destination_on_pull_should_ack_and_log_warning()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -72,7 +71,7 @@ public class GcpPullConsumerRejectNoDestinationWarningAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             using var logContext = TestCorrelator.CreateContext();
 
@@ -80,16 +79,15 @@ public class GcpPullConsumerRejectNoDestinationWarningAsyncTests
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "bad payload"));
 
             // Assert — RejectAsync returns true
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — source is acked: a second ReceiveAsync returns MT_NONE
             var reRead = await channel.ReceiveAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             // Assert — a Warning names the message id and the reason
-            var warning = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
-                e => e.Level == LogEventLevel.Warning && e.RenderMessage().Contains(received.Id.Value));
-            Assert.Contains("Unacceptable", warning.RenderMessage());
+            var warning = await Assert.That(System.Linq.Enumerable.Where(TestCorrelator.GetLogEventsFromCurrentContext(), e => e.Level == LogEventLevel.Warning && e.RenderMessage().Contains(received.Id.Value))).HasSingleItem();
+            await Assert.That(warning.RenderMessage()).Contains("Unacceptable");
         }
         finally
         {

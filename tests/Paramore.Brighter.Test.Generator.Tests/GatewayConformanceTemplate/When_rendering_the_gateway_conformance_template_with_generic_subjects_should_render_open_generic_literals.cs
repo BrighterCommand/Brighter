@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Paramore.Brighter.Test.Generator.Configuration;
 using Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.GatewayConformanceTemplate;
 
@@ -19,7 +19,7 @@ public class WhenRenderingTheGatewayConformanceTemplateWithGenericSubjectsShould
         _outputPath = Path.Combine(_outputDirectory, "output.cs");
     }
 
-    [Fact]
+    [Test]
     public async Task When_rendering_the_gateway_conformance_template_with_generic_subjects_should_render_open_generic_literals()
     {
         // Arrange
@@ -44,11 +44,11 @@ public class WhenRenderingTheGatewayConformanceTemplateWithGenericSubjectsShould
 
         // Assert
         var result = await File.ReadAllTextAsync(_outputPath);
-        Assert.Contains("typeof(Ns.Root)", result);
-        Assert.Contains("typeof(Ns.Foo<>)", result);
-        Assert.Contains("typeof(Ns.Bar<,>)", result);
-        Assert.DoesNotContain("`", result);
-        Assert.Contains("namespace MyApp.Tests.MessagingGateway.Generated.Conformance", result);
+        await Assert.That(result).Contains("typeof(Ns.Root)");
+        await Assert.That(result).Contains("typeof(Ns.Foo<>)");
+        await Assert.That(result).Contains("typeof(Ns.Bar<,>)");
+        await Assert.That(result).DoesNotContain("`");
+        await Assert.That(result).Contains("namespace MyApp.Tests.MessagingGateway.Generated.Conformance");
     }
 
     public void Dispose()

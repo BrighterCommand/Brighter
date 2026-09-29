@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // affinity, not merely the host's default, is what reaches the ask.
 public class ExtensionAffinityArgumentTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_extension_overrides_the_hosts_own_join_ambient_the_extensions_always_new_should_win()
     {
         // Arrange - the host itself sets JoinAmbient, then the extension is called passing AlwaysNew
@@ -54,12 +54,12 @@ public class ExtensionAffinityArgumentTests
         // Assert - the handler resolved a fresh instance, already disposed, and the ask carried AlwaysNew
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.NotSame(recorder.ControllerInstance, recorder.HandlerInstance);
-        Assert.Equal(1, recorder.HandlerInstance!.DisposeCount);
-        Assert.Equal(new[] { ScopeAffinity.AlwaysNew }, ScopeProviderRecorderFor(factory).Decisions);
+        await Assert.That(recorder.HandlerInstance).IsNotSameReferenceAs(recorder.ControllerInstance);
+        await Assert.That(recorder.HandlerInstance!.DisposeCount).IsEqualTo(1);
+        await Assert.That(ScopeProviderRecorderFor(factory).Decisions).IsEquivalentTo(new[] { ScopeAffinity.AlwaysNew }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_extension_defaults_to_join_ambient_over_the_hosts_own_always_new_it_should_adopt()
     {
         // Arrange - the host itself sets AlwaysNew, then the extension is called with no argument (its JoinAmbient default)
@@ -75,11 +75,11 @@ public class ExtensionAffinityArgumentTests
         // Assert - the handler shares the controller's own instance, and the ask carried JoinAmbient
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.Same(recorder.ControllerInstance, recorder.HandlerInstance);
-        Assert.Equal(new[] { ScopeAffinity.JoinAmbient }, ScopeProviderRecorderFor(factory).Decisions);
+        await Assert.That(recorder.HandlerInstance).IsSameReferenceAs(recorder.ControllerInstance);
+        await Assert.That(ScopeProviderRecorderFor(factory).Decisions).IsEquivalentTo(new[] { ScopeAffinity.JoinAmbient }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_always_new_override_is_registered_before_add_brighter_the_outcome_is_unchanged()
     {
         // Arrange - same as the first fact, but the extension call now runs before AddBrighter, not after
@@ -95,12 +95,12 @@ public class ExtensionAffinityArgumentTests
         // Assert - unchanged from the first fact
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.NotSame(recorder.ControllerInstance, recorder.HandlerInstance);
-        Assert.Equal(1, recorder.HandlerInstance!.DisposeCount);
-        Assert.Equal(new[] { ScopeAffinity.AlwaysNew }, ScopeProviderRecorderFor(factory).Decisions);
+        await Assert.That(recorder.HandlerInstance).IsNotSameReferenceAs(recorder.ControllerInstance);
+        await Assert.That(recorder.HandlerInstance!.DisposeCount).IsEqualTo(1);
+        await Assert.That(ScopeProviderRecorderFor(factory).Decisions).IsEquivalentTo(new[] { ScopeAffinity.AlwaysNew }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_join_ambient_default_is_registered_before_add_brighter_the_outcome_is_unchanged()
     {
         // Arrange - same as the second fact, but the extension call now runs before AddBrighter, not after
@@ -116,8 +116,8 @@ public class ExtensionAffinityArgumentTests
         // Assert - unchanged from the second fact
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.Same(recorder.ControllerInstance, recorder.HandlerInstance);
-        Assert.Equal(new[] { ScopeAffinity.JoinAmbient }, ScopeProviderRecorderFor(factory).Decisions);
+        await Assert.That(recorder.HandlerInstance).IsSameReferenceAs(recorder.ControllerInstance);
+        await Assert.That(ScopeProviderRecorderFor(factory).Decisions).IsEquivalentTo(new[] { ScopeAffinity.JoinAmbient }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     private static DelegatingScopeProviderRecorder ScopeProviderRecorderFor(RegistrationOrderWebApplicationFactory factory) =>

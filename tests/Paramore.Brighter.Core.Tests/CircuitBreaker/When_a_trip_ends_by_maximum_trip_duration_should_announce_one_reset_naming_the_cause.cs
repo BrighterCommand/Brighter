@@ -11,16 +11,15 @@ using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Observability;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker;
 
 public class InMemoryResetAnnouncementTests
 {
     private const string RESET_TEMPLATE_PREFIX = "Circuit breaker reset for topic {Topic}";
 
-    [Fact]
-    public void When_a_trip_ends_by_maximum_trip_duration_should_announce_one_reset_naming_the_cause()
+    [Test]
+    public async Task When_a_trip_ends_by_maximum_trip_duration_should_announce_one_reset_naming_the_cause()
     {
         using (TestCorrelator.CreateContext())
         {
@@ -50,24 +49,24 @@ public class InMemoryResetAnnouncementTests
             _ = breaker.TrippedTopics.ToArray();
 
             // Assert
-            Assert.Single(ResetLogs());
-            Assert.Equal(1, ResetSpans(exportedActivities, traceProvider, orders).Count);
-            Assert.Equal(incrementsBeforeReset + 1, meter.AddCircuitBreakerEventCallCount);
-            Assert.Equal(spansBeforeReset + 1, CircuitBreakerSpans(exportedActivities, traceProvider).Count);
+            await Assert.That(ResetLogs()).HasSingleItem();
+            await Assert.That(ResetSpans(exportedActivities, traceProvider, orders).Count).IsEqualTo(1);
+            await Assert.That(meter.AddCircuitBreakerEventCallCount).IsEqualTo(incrementsBeforeReset + 1);
+            await Assert.That(CircuitBreakerSpans(exportedActivities, traceProvider).Count).IsEqualTo(spansBeforeReset + 1);
 
             _ = breaker.TrippedTopics.ToArray();
             _ = breaker.TrippedTopics.ToArray();
             breaker.CoolDown();
 
-            Assert.Single(ResetLogs());
-            Assert.Equal(1, ResetSpans(exportedActivities, traceProvider, orders).Count);
-            Assert.Equal(incrementsBeforeReset + 1, meter.AddCircuitBreakerEventCallCount);
-            Assert.Equal("\"maximum trip duration\"", ResetLogs().Single().Properties["ResetCause"].ToString());
+            await Assert.That(ResetLogs()).HasSingleItem();
+            await Assert.That(ResetSpans(exportedActivities, traceProvider, orders).Count).IsEqualTo(1);
+            await Assert.That(meter.AddCircuitBreakerEventCallCount).IsEqualTo(incrementsBeforeReset + 1);
+            await Assert.That(ResetLogs().Single().Properties["ResetCause"].ToString()).IsEqualTo("\"maximum trip duration\"");
         }
     }
 
-    [Fact]
-    public void When_a_trip_ends_by_cooldown_should_announce_one_reset_naming_the_cause()
+    [Test]
+    public async Task When_a_trip_ends_by_cooldown_should_announce_one_reset_naming_the_cause()
     {
         using (TestCorrelator.CreateContext())
         {
@@ -92,9 +91,9 @@ public class InMemoryResetAnnouncementTests
             breaker.CoolDown();
 
             // Assert
-            Assert.Single(ResetLogs());
-            Assert.Equal(1, ResetSpans(exportedActivities, traceProvider, orders).Count);
-            Assert.Equal("\"cooldown\"", ResetLogs().Single().Properties["ResetCause"].ToString());
+            await Assert.That(ResetLogs()).HasSingleItem();
+            await Assert.That(ResetSpans(exportedActivities, traceProvider, orders).Count).IsEqualTo(1);
+            await Assert.That(ResetLogs().Single().Properties["ResetCause"].ToString()).IsEqualTo("\"cooldown\"");
         }
     }
 

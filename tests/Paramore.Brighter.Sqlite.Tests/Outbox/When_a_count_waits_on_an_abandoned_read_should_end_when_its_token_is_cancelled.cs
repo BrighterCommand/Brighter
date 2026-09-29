@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -25,34 +25,33 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
 public class WaitOnAbandonedReadTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_count_waits_on_an_abandoned_read_should_end_when_its_token_is_cancelled()
     {
         //Arrange
         using var locked = new LockedSqliteOutbox();
         locked.LockFor(TimeSpan.FromSeconds(10));
         using var firstCall = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-        var first = await Record.ExceptionAsync(() => locked.Outbox.GetOutstandingMessageCountAsync(
+        var first = await TestExceptionRecorder.CaptureAsync(() => locked.Outbox.GetOutstandingMessageCountAsync(
             TimeSpan.Zero, new RequestContext(), cancellationToken: firstCall.Token));
 
         //Act
         using var secondCall = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var waited = Stopwatch.StartNew();
-        var second = await Record.ExceptionAsync(() => locked.Outbox.GetOutstandingMessageCountAsync(
+        var second = await TestExceptionRecorder.CaptureAsync(() => locked.Outbox.GetOutstandingMessageCountAsync(
             TimeSpan.Zero, new RequestContext(), cancellationToken: secondCall.Token));
         waited.Stop();
         var cancelledWhenItEnded = secondCall.IsCancellationRequested;
 
         //Assert
-        Assert.IsAssignableFrom<OperationCanceledException>(first);
-        Assert.IsAssignableFrom<OperationCanceledException>(second);
-        Assert.True(cancelledWhenItEnded);
-        Assert.InRange(waited.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(5));
+        await Assert.That(first).IsAssignableTo<OperationCanceledException>();
+        await Assert.That(second).IsAssignableTo<OperationCanceledException>();
+        await Assert.That(cancelledWhenItEnded).IsTrue();
+        await Assert.That(waited.Elapsed >= TimeSpan.Zero && waited.Elapsed <= TimeSpan.FromSeconds(5)).IsTrue();
     }
 }

@@ -33,7 +33,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 /// </summary>
 public class SweeperConditionRoutingTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_sweep_is_hung_should_fail_liveness_and_pass_readiness()
     {
         //Arrange
@@ -58,11 +57,11 @@ public class SweeperConditionRoutingTests
         var ready = await client.GetAsync(BrighterHealthEndpoints.ReadyPath);
 
         //Assert
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, live.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
+        await Assert.That(live.StatusCode).IsEqualTo(HttpStatusCode.ServiceUnavailable);
+        await Assert.That(ready.StatusCode).IsEqualTo(HttpStatusCode.OK);
     }
 
-    [Fact]
+    [Test]
     public async Task When_only_failures_apply_should_pass_liveness_and_readiness()
     {
         //Arrange
@@ -78,11 +77,11 @@ public class SweeperConditionRoutingTests
         var ready = await client.GetAsync(BrighterHealthEndpoints.ReadyPath);
 
         //Assert
-        Assert.Equal(HttpStatusCode.OK, live.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
+        await Assert.That(live.StatusCode).IsEqualTo(HttpStatusCode.OK);
+        await Assert.That(ready.StatusCode).IsEqualTo(HttpStatusCode.OK);
     }
 
-    [Fact]
+    [Test]
     public async Task When_only_a_tripped_topic_applies_on_an_active_sweeper_should_pass_liveness_and_readiness()
     {
         //Arrange
@@ -99,11 +98,11 @@ public class SweeperConditionRoutingTests
         var ready = await client.GetAsync(BrighterHealthEndpoints.ReadyPath);
 
         //Assert
-        Assert.Equal(HttpStatusCode.OK, live.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
+        await Assert.That(live.StatusCode).IsEqualTo(HttpStatusCode.OK);
+        await Assert.That(ready.StatusCode).IsEqualTo(HttpStatusCode.OK);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_endpoints_select_checks_should_keep_the_restart_and_investigate_checks_apart()
     {
         //Arrange
@@ -120,10 +119,10 @@ public class SweeperConditionRoutingTests
         var operatorReport = await service.CheckHealthAsync(registration => registration.Tags.Contains(RemedyCheckConvention.InvestigateTag));
 
         //Assert
-        Assert.Equal(["brighter-outbox-sweeper-restart"], live.Entries.Keys);
-        Assert.Empty(ready.Entries);
-        Assert.Equal(["brighter-outbox-sweeper-investigate"], operatorReport.Entries.Keys);
-        Assert.NotEqual(HealthStatus.Unhealthy, live.Status);
-        Assert.NotEqual(HealthStatus.Unhealthy, operatorReport.Status);
+        await Assert.That(live.Entries.Keys).IsEqualTo(["brighter-outbox-sweeper-restart"]);
+        await Assert.That(ready.Entries).IsEmpty();
+        await Assert.That(operatorReport.Entries.Keys).IsEqualTo(["brighter-outbox-sweeper-investigate"]);
+        await Assert.That(live.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+        await Assert.That(operatorReport.Status).IsNotEqualTo(HealthStatus.Unhealthy);
     }
 }

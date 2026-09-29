@@ -19,43 +19,29 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class SubscriptionNoHandlersPumpMatchValidationTests
 {
-    [Fact]
-    public void When_subscription_has_no_handlers_pump_match_should_pass()
+    [Test]
+    public async Task When_subscription_has_no_handlers_pump_match_should_pass()
     {
         // Arrange — Reactor subscription but no handlers registered for the type
-        var subscription = new Subscription(
-            subscriptionName: new SubscriptionName("test-sub"),
-            channelName: new ChannelName("test-channel"),
-            routingKey: new RoutingKey("test.routing.key"),
-            requestType: typeof(MyDescribableCommand),
-            messagePumpType: MessagePumpType.Reactor
-        );
-
+        var subscription = new Subscription(subscriptionName: new SubscriptionName("test-sub"), channelName: new ChannelName("test-channel"), routingKey: new RoutingKey("test.routing.key"), requestType: typeof(MyDescribableCommand), messagePumpType: MessagePumpType.Reactor);
         var registry = new SubscriberRegistry();
         // No handlers registered for MyDescribableCommand
-
         var spec = ConsumerValidationRules.PumpHandlerMatch(registry);
-
         // Act
         var satisfied = spec.IsSatisfiedBy(subscription);
         var collector = new ValidationResultCollector<Subscription>();
         var results = spec.Accept(collector).ToList();
-
         // Assert — vacuously passes; HandlerRegistered catches the missing handler case
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 }

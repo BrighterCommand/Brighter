@@ -25,11 +25,11 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Xunit;
+
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RocketMQ")]
+[Property("Category", "RocketMQ")]
 public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeReceived : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -57,8 +57,8 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
-    public void When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received()
+    [Test]
+    public async System.Threading.Tasks.Task When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(
@@ -87,7 +87,7 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
         var received = _channel.Receive(null);
 
         // Assert
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
-        _messageAssertion.Assert(message, received);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await _messageAssertion.AssertAsync(message, received);
     }
 }

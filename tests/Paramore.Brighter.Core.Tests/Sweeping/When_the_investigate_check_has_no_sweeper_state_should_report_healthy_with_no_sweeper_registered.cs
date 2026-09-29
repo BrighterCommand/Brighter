@@ -3,13 +3,12 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class InvestigateCheckNoSweeperStateTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_investigate_check_has_no_sweeper_state_should_report_healthy_with_no_sweeper_registered()
     {
         //Arrange
@@ -24,12 +23,12 @@ public class InvestigateCheckNoSweeperStateTests
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Contains("no outbox sweeper is registered", result.Description, System.StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Equal("investigate", result.Data[RemedyCheckConvention.RemedyKindKey]);
-        var conditions = Assert.IsType<string[]>(result.Data[RemedyCheckConvention.ConditionsKey]);
-        Assert.Empty(conditions);
-        Assert.Equal(0, lookups);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(result.Description).Contains("no outbox sweeper is registered");
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo("investigate");
+        var conditions = await Assert.That(result.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>();
+        await Assert.That(conditions).IsEmpty();
+        await Assert.That(lookups).IsEqualTo(0);
     }
 }

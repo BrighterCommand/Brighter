@@ -29,7 +29,6 @@ using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.Legacy;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -37,7 +36,7 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// A migration failing mid-chain rolls back every migration and history row in the batch, leaving the
 /// table and its rows as they were; a retry with the real chain then completes (ADR 0057 §5a).
 /// </summary>
-public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
+public class MsSqlRunnerMidChainFailureRollbackTests
 {
     private const int SeedVersion = 3;
     private const int BrokenVersion = 6;
@@ -51,7 +50,7 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mssql_runner_fails_mid_chain_it_should_roll_back_all_migrations_and_history_rows_atomically()
     {
         //Arrange
@@ -70,17 +69,17 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
         //Act + Assert
-        await Assert.ThrowsAsync<SqlException>(() => brokenRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, staleHint));
+        await Assert.That(() => brokenRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, staleHint)).ThrowsExactly<SqlException>();
 
-        Assert.Empty(GetHistoryRowsByVersion());
+        await Assert.That(GetHistoryRowsByVersion()).IsEmpty();
 
         var columnsAfterFailure = GetTableColumns();
-        Assert.Contains(V3Column, columnsAfterFailure);
-        Assert.DoesNotContain(V4Column, columnsAfterFailure);
-        Assert.DoesNotContain(V5Column, columnsAfterFailure);
+        await Assert.That(columnsAfterFailure).Contains(V3Column);
+        await Assert.That(columnsAfterFailure).DoesNotContain(V4Column);
+        await Assert.That(columnsAfterFailure).DoesNotContain(V5Column);
 
-        Assert.Equal(1, GetMarkerRowCount());
+        await Assert.That(GetMarkerRowCount()).IsEqualTo(1);
 
         //Act + Assert
         var realRunner = new MsSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
@@ -93,24 +92,24 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
         await provisioner.ProvisionAsync();
 
         var rowsByVersion = GetHistoryRowsByVersion();
-        Assert.Equal(ExpectedMigrationVersions.OutboxLatest - SeedVersion + 1, rowsByVersion.Count);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(ExpectedMigrationVersions.OutboxLatest - SeedVersion + 1);
 
-        var syntheticDescription = Assert.Contains(SeedVersion, rowsByVersion);
-        Assert.StartsWith($"bootstrap: detected at V{SeedVersion}", syntheticDescription);
+        await Assert.That(rowsByVersion.ContainsKey(SeedVersion)).IsTrue();
+
+        var syntheticDescription = rowsByVersion[SeedVersion];
+        await Assert.That(syntheticDescription).StartsWith($"bootstrap: detected at V{SeedVersion}");
 
         for (var v = SeedVersion + 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            var appliedDescription = Assert.Contains(v, rowsByVersion);
-            Assert.False(
-                appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal),
-                $"V{v} should be an applied migration row, not a synthetic bootstrap row " +
-                $"(description was: '{appliedDescription}')");
+            await Assert.That(rowsByVersion.ContainsKey(v)).IsTrue();
+            var appliedDescription = rowsByVersion[v];
+            await Assert.That(appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
         }
 
         var columnsAfterRetry = GetTableColumns();
-        Assert.Contains(V7Column, columnsAfterRetry);
-        Assert.Contains(V4Column, columnsAfterRetry);
-        Assert.Equal(1, GetMarkerRowCount());
+        await Assert.That(columnsAfterRetry).Contains(V7Column);
+        await Assert.That(columnsAfterRetry).Contains(V4Column);
+        await Assert.That(GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private void SeedMarkerRow()
@@ -175,7 +174,11 @@ ELSE
         return (int)command.ExecuteScalar()!;
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

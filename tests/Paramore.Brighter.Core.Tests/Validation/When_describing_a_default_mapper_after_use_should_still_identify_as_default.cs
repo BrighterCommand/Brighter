@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,14 +25,13 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.MessageMappers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class MessageMapperRegistryDefaultResolutionTests
 {
-    [Fact]
-    public void When_describing_a_default_mapper_after_use_should_still_identify_as_default()
+    [Test]
+    public async System.Threading.Tasks.Task When_describing_a_default_mapper_after_use_should_still_identify_as_default()
     {
         // Arrange — an open generic default mapper, with no explicit registration for this request type
         var mapperRegistry = BuildRegistryWithDefaultMapper();
@@ -47,13 +47,13 @@ public class MessageMapperRegistryDefaultResolutionTests
             mapperRegistry, typeof(MyDescribableCommand));
 
         // Assert
-        Assert.NotNull(description);
-        Assert.Equal(typeof(JsonMessageMapper<MyDescribableCommand>), description.MapperType);
-        Assert.True(description.IsDefaultMapper);
+        await Assert.That(description).IsNotNull();
+        await Assert.That(description.MapperType).IsEqualTo(typeof(JsonMessageMapper<MyDescribableCommand>));
+        await Assert.That(description.IsDefaultMapper).IsTrue();
     }
 
-    [Fact]
-    public void When_registering_a_mapper_after_a_default_was_resolved_should_not_report_a_conflict()
+    [Test]
+    public async System.Threading.Tasks.Task When_registering_a_mapper_after_a_default_was_resolved_should_not_report_a_conflict()
     {
         // Arrange
         var mapperRegistry = BuildRegistryWithDefaultMapper();
@@ -64,9 +64,7 @@ public class MessageMapperRegistryDefaultResolutionTests
 
         // Assert
         mapperRegistry.Register<MyDescribableCommand, MyDescribableCommandMessageMapper>();
-        Assert.Equal(
-            typeof(MyDescribableCommandMessageMapper),
-            mapperRegistry.ResolveMapperInfo(typeof(MyDescribableCommand)).MapperType);
+        await Assert.That(mapperRegistry.ResolveMapperInfo(typeof(MyDescribableCommand)).MapperType).IsEqualTo(typeof(MyDescribableCommandMessageMapper));
     }
 
     private static MessageMapperRegistry BuildRegistryWithDefaultMapper() =>

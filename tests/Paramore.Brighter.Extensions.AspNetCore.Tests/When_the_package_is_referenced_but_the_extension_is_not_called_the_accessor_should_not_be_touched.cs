@@ -28,7 +28,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // extension that wires it into Brighter's ambient-scope machinery is actually called.
 public class PackageReferencedButExtensionNotCalledTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_package_is_referenced_but_the_extension_is_not_called_the_accessor_should_not_be_touched()
     {
         // Arrange - no web host, no AddBrighterRequestScope call anywhere in this collection
@@ -72,6 +72,6 @@ public class PackageReferencedButExtensionNotCalledTests
 
         // Assert - the accessor was never read: nothing in the package runs unless
         // AddBrighterRequestScope is called
-        Assert.Equal(0, accessor.HttpContextReadCount);
+        await Assert.That(accessor.HttpContextReadCount).IsEqualTo(0);
     }
 }

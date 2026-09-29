@@ -5,12 +5,11 @@
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox.OutstandingCount;
 
-[Trait("Category", "DynamoDB")]
-[Collection("DynamoDBOutbox")]
+[Property("Category", "DynamoDB")]
+[NotInParallel("DynamoDBOutbox")]
 public class WhenAnOutstandingCountIsCancelledShouldEndTheCall : OutstandingCountCancellationOutboxBaseTests<Amazon.DynamoDBv2.Model.TransactWriteItemsRequest>
 {
     private readonly IAmAnOutstandingCountOutboxProvider _outboxProvider = new Paramore.Brighter.DynamoDB.Tests.Outbox.DynamoDBOutboxProvider();
@@ -18,9 +17,8 @@ public class WhenAnOutstandingCountIsCancelledShouldEndTheCall : OutstandingCoun
     protected override Task<OutstandingCountCancellationSetup<Amazon.DynamoDBv2.Model.TransactWriteItemsRequest>> PrepareStoreAsync(TimeSpan holdFor) =>
         _outboxProvider.PrepareCancellationAsync(holdFor);
 
-    [Fact]
+    [Test]
     public async Task When_an_outstanding_count_is_cancelled_should_end_the_call()
     {
         await AssertCancellationEndsTheCountAsync();
-    }
-}
+    }}

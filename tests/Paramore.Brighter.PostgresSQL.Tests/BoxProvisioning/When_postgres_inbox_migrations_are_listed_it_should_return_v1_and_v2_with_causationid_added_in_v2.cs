@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Inbox.Postgres;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -41,8 +41,8 @@ public class PostgreSqlInboxMigrationsTests
     private static readonly string[] s_v2Columns =
         ["commandid", "commandtype", "commandbody", "timestamp", "contextkey", "causationid"];
 
-    [Fact]
-    public void When_postgres_inbox_migrations_are_listed_it_should_return_v1_and_v2_with_causationid_added_in_v2()
+    [Test]
+    public async System.Threading.Tasks.Task When_postgres_inbox_migrations_are_listed_it_should_return_v1_and_v2_with_causationid_added_in_v2()
     {
         //Arrange
         const string tableName = "inbox_test";
@@ -57,37 +57,26 @@ public class PostgreSqlInboxMigrationsTests
         var migrations = new PostgreSqlInboxMigrationCatalog().All(config);
 
         //Assert
-        Assert.Equal(2, migrations.Count);
-        Assert.Equal(1, migrations[0].Version.Value);
-        Assert.Equal(2, migrations[1].Version.Value);
+        await Assert.That(migrations.Count).IsEqualTo(2);
+        await Assert.That(migrations[0].Version.Value).IsEqualTo(1);
+        await Assert.That(migrations[1].Version.Value).IsEqualTo(2);
 
-        Assert.Null(migrations[0].SourceReference);
-        Assert.Equal("#2541", migrations[1].SourceReference);
+        await Assert.That(migrations[0].SourceReference).IsNull();
+        await Assert.That(migrations[1].SourceReference).IsEqualTo("#2541");
 
-        Assert.True(
-            expectedV1.SetEquals(migrations[0].LogicalColumns),
-            $"V1 LogicalColumns mismatch — expected: [{string.Join(", ", expectedV1)}], " +
-            $"got: [{string.Join(", ", migrations[0].LogicalColumns)}]");
+        await Assert.That(expectedV1.SetEquals(migrations[0].LogicalColumns)).IsTrue();
 
-        Assert.True(
-            expectedV2.SetEquals(migrations[1].LogicalColumns),
-            $"V2 LogicalColumns mismatch — expected: [{string.Join(", ", expectedV2)}], " +
-            $"got: [{string.Join(", ", migrations[1].LogicalColumns)}]");
+        await Assert.That(expectedV2.SetEquals(migrations[1].LogicalColumns)).IsTrue();
 
-        Assert.Contains("ADD COLUMN IF NOT EXISTS", migrations[1].UpScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("causationid", migrations[1].UpScript, StringComparison.OrdinalIgnoreCase);
+        await Assert.That((migrations[1].UpScript).Value).Contains("ADD COLUMN IF NOT EXISTS");
+        await Assert.That((migrations[1].UpScript).Value).Contains("causationid");
 
-        Assert.Contains("CommandId", migrations[0].UpScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("ContextKey", migrations[0].UpScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(
-            "PRIMARY KEY (CommandId, ContextKey)",
-            migrations[0].UpScript,
-            StringComparison.OrdinalIgnoreCase);
+        await Assert.That((migrations[0].UpScript).Value).Contains("CommandId");
+        await Assert.That((migrations[0].UpScript).Value).Contains("ContextKey");
+        await Assert.That((migrations[0].UpScript).Value).Contains("PRIMARY KEY (CommandId, ContextKey)");
 
         var expectedFreshInstallDdl =
             PostgreSqlInboxBuilder.GetDDL(tableName, config.BinaryMessagePayload);
-        Assert.Equal(
-            expectedFreshInstallDdl,
-            new PostgreSqlInboxMigrationCatalog().FreshInstallDdl(config));
+        await Assert.That(new PostgreSqlInboxMigrationCatalog().FreshInstallDdl(config)).IsEqualTo(expectedFreshInstallDdl);
     }
 }

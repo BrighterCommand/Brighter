@@ -6,14 +6,14 @@ using System.Text;
 using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transformers.JustSaying;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Transforms.Adaptors.Tests.JustSaying;
 
 public class JustSayingCompressionTransformTest
 {
-    [Fact]
-    public void Unwrap_when_content_encoding_marks_gzip_base64_should_decompress_body()
+    [Test]
+    public async Task Unwrap_when_content_encoding_marks_gzip_base64_should_decompress_body()
     {
         var command = new Payload { Name = new string('x', 4096) };
         var compressed = GzipBase64Encode(command);
@@ -26,12 +26,12 @@ public class JustSayingCompressionTransformTest
         var result = transform.Unwrap(message);
 
         var decoded = JsonSerializer.Deserialize<Payload>(result.Body.Memory.Span, JsonSerialisationOptions.Options);
-        Assert.NotNull(decoded);
-        Assert.Equal(command.Name, decoded!.Name);
+        await Assert.That(decoded).IsNotNull();
+        await Assert.That(decoded!.Name).IsEqualTo(command.Name);
     }
 
-    [Fact]
-    public void Unwrap_when_content_encoding_header_is_absent_should_leave_body_untouched()
+    [Test]
+    public async Task Unwrap_when_content_encoding_header_is_absent_should_leave_body_untouched()
     {
         var json = JsonSerializer.SerializeToUtf8Bytes(new Payload { Name = "plain" }, JsonSerialisationOptions.Options);
         var message = new Message(new MessageHeader(), new MessageBody(json, new ContentType("application/json")));
@@ -39,11 +39,11 @@ public class JustSayingCompressionTransformTest
         using var transform = new JustSayingCompressionTransform();
         var result = transform.Unwrap(message);
 
-        Assert.True(result.Body.Memory.Span.SequenceEqual(json));
+        await Assert.That(result.Body.Memory.Span.SequenceEqual(json)).IsTrue();
     }
 
-    [Fact]
-    public void Unwrap_when_content_encoding_is_some_other_value_should_leave_body_untouched()
+    [Test]
+    public async Task Unwrap_when_content_encoding_is_some_other_value_should_leave_body_untouched()
     {
         var json = JsonSerializer.SerializeToUtf8Bytes(new Payload { Name = "plain" }, JsonSerialisationOptions.Options);
         var header = new MessageHeader();
@@ -53,11 +53,11 @@ public class JustSayingCompressionTransformTest
         using var transform = new JustSayingCompressionTransform();
         var result = transform.Unwrap(message);
 
-        Assert.True(result.Body.Memory.Span.SequenceEqual(json));
+        await Assert.That(result.Body.Memory.Span.SequenceEqual(json)).IsTrue();
     }
 
-    [Fact]
-    public void Wrap_is_a_no_op()
+    [Test]
+    public async Task Wrap_is_a_no_op()
     {
         var json = JsonSerializer.SerializeToUtf8Bytes(new Payload { Name = "plain" }, JsonSerialisationOptions.Options);
         var message = new Message(new MessageHeader(), new MessageBody(json, new ContentType("application/json")));
@@ -65,7 +65,7 @@ public class JustSayingCompressionTransformTest
         using var transform = new JustSayingCompressionTransform();
         var result = transform.Wrap(message, new Publication());
 
-        Assert.True(result.Body.Memory.Span.SequenceEqual(json));
+        await Assert.That(result.Body.Memory.Span.SequenceEqual(json)).IsTrue();
     }
 
     private static string GzipBase64Encode<T>(T value)

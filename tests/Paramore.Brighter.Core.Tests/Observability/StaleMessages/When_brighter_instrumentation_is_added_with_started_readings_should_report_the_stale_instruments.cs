@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -28,8 +28,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleInstrumentationWithStartedReadingsTests
@@ -38,8 +37,8 @@ public class StaleInstrumentationWithStartedReadingsTests
     private const string COUNT = "paramore.brighter.outbox.stale.count";
     private const string OUTCOME = "paramore.brighter.outbox.stale.outcome";
 
-    [Fact]
-    public void When_brighter_instrumentation_is_added_with_started_readings_should_report_the_stale_instruments()
+    [Test]
+    public async Task When_brighter_instrumentation_is_added_with_started_readings_should_report_the_stale_instruments()
     {
         //Arrange
         var readings = new OutboxStaleMessageReadings();
@@ -50,16 +49,17 @@ public class StaleInstrumentationWithStartedReadingsTests
         var measurements = metrics.Observe();
 
         //Assert
-        Assert.Contains(ObservedStaleMessageInstruments.MESSAGES, metrics.PublishedInstruments);
-        Assert.Contains(ObservedStaleMessageInstruments.TOPIC_MESSAGES, metrics.PublishedInstruments);
-        Assert.Contains(ObservedStaleMessageInstruments.MEASUREMENTS, metrics.PublishedInstruments);
+        await Assert.That(metrics.PublishedInstruments).Contains(ObservedStaleMessageInstruments.MESSAGES);
+        await Assert.That(metrics.PublishedInstruments).Contains(ObservedStaleMessageInstruments.TOPIC_MESSAGES);
+        await Assert.That(metrics.PublishedInstruments).Contains(ObservedStaleMessageInstruments.MEASUREMENTS);
         var series = measurements.Where(m => m.Instrument == ObservedStaleMessageInstruments.MEASUREMENTS).ToArray();
-        Assert.Equal(
-            [
+        await Assert.That(series.Select(m => $"{m.Attributes[COUNT]}/{m.Attributes[OUTCOME]}").OrderBy(s => s, StringComparer.Ordinal).ToArray()).IsEqualTo([
                 "overall/abandoned", "overall/completed", "overall/failed", "overall/skipped",
                 "per_topic/abandoned", "per_topic/completed", "per_topic/failed", "per_topic/skipped"
-            ],
-            series.Select(m => $"{m.Attributes[COUNT]}/{m.Attributes[OUTCOME]}").OrderBy(s => s, StringComparer.Ordinal).ToArray());
-        Assert.All(series, m => Assert.Equal(0, m.Value));
+            ]);
+        foreach (var m in series)
+{
+    await Assert.That(m.Value).IsEqualTo(0);
+}
     }
 }

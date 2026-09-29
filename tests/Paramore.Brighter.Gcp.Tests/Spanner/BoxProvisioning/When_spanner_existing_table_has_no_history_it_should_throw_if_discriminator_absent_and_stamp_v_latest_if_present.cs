@@ -28,7 +28,6 @@ using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.BoxProvisioning.Spanner;
 using Paramore.Brighter.Inbox.Spanner;
 using Paramore.Brighter.Outbox.Spanner;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
@@ -36,10 +35,10 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 /// A Spanner outbox that exists without history is stamped at V_latest with the bootstrap description when it
 /// has the <c>HeaderBag</c> discriminator, and rejected as not a Brighter box when it does not (ADR 0057 §6).
 /// </summary>
-[Trait("Category", "Spanner")]
-[Collection("Spanner")]
-[Trait("Category", "Spanner")]
-public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class SpannerOutboxBootstrapDiscriminatorTests
 {
     private const string BootstrapDescription =
         "bootstrap: spanner-assumed-current (no known legacy installations, A-2)";
@@ -64,7 +63,7 @@ public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_stamp_v_latest_with_bootstrap_description_when_headerbag_present()
     {
         // Arrange
@@ -85,11 +84,11 @@ public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
         var (count, description) = await ReadHistoryAsync(
             connection, _tableName, ExpectedMigrationVersions.OutboxLatest);
 
-        Assert.Equal(1, count);
-        Assert.Equal(BootstrapDescription, description);
+        await Assert.That(count).IsEqualTo(1);
+        await Assert.That(description).IsEqualTo(BootstrapDescription);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_throw_configuration_exception_when_headerbag_absent()
     {
         // Arrange
@@ -102,10 +101,9 @@ public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
         }
 
         // Act / Assert
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(
-            () => _provisioner.ProvisionAsync());
+        var exception = await Assert.That(() => _provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
-        Assert.Contains("not a Brighter outbox", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("not a Brighter outbox");
     }
 
     private static async Task<(long Count, string? Description)> ReadHistoryAsync(
@@ -134,7 +132,11 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @Version",
         return (count, description);
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {
@@ -163,10 +165,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @Version",
 /// A Spanner inbox that exists without history is stamped at V_latest with the bootstrap description when it
 /// has the <c>CommandBody</c> discriminator, and rejected as not a Brighter box when it does not (ADR 0057 §6).
 /// </summary>
-[Trait("Category", "Spanner")]
-[Collection("Spanner")]
-[Trait("Category", "Spanner")]
-public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel("Spanner")]
+[Property("Category", "Spanner")]
+public class SpannerInboxBootstrapDiscriminatorTests
 {
     private const string BootstrapDescription =
         "bootstrap: spanner-assumed-current (no known legacy installations, A-2)";
@@ -191,7 +193,7 @@ public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_stamp_v_latest_with_bootstrap_description_when_commandbody_present()
     {
         // Arrange
@@ -212,11 +214,11 @@ public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime
         var (count, description) = await ReadHistoryAsync(
             connection, _tableName, ExpectedMigrationVersions.InboxLatest);
 
-        Assert.Equal(1, count);
-        Assert.Equal(BootstrapDescription, description);
+        await Assert.That(count).IsEqualTo(1);
+        await Assert.That(description).IsEqualTo(BootstrapDescription);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_throw_configuration_exception_when_commandbody_absent()
     {
         // Arrange
@@ -229,10 +231,9 @@ public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime
         }
 
         // Act / Assert
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(
-            () => _provisioner.ProvisionAsync());
+        var exception = await Assert.That(() => _provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
-        Assert.Contains("not a Brighter inbox", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("not a Brighter inbox");
     }
 
     private static async Task<(long Count, string? Description)> ReadHistoryAsync(
@@ -261,7 +262,11 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @Version",
         return (count, description);
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

@@ -31,7 +31,6 @@ using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -40,18 +39,22 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// <c>RELEASE_LOCK</c> on the lock it never took, which would return NULL and log a misleading
 /// Warning (ADR 0058 §B.3).
 /// </summary>
-public class MySqlProvisioningUnitOfWorkBeginAcquireThrowsTests : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkBeginAcquireThrowsTests
 {
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
     private readonly FakeMySqlAdvisoryLock _advisoryLock = new(
         releaseResult: null,
         throwOnAcquire: new TimeoutException("forced lock-acquisition failure for F2 reviewer test"));
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mysql_provisioning_uow_begin_acquire_throws_direct_rollback_should_be_clean_no_op()
     {
         // Arrange
@@ -59,20 +62,20 @@ public class MySqlProvisioningUnitOfWorkBeginAcquireThrowsTests : IAsyncLifetime
         var uow = new MySqlProvisioningUnitOfWork(_connection, _advisoryLock, logger);
 
         // Act
-        var beginThrown = await Record.ExceptionAsync(() => uow.BeginAsync(
+        var beginThrown = await TestExceptionRecorder.CaptureAsync(() => uow.BeginAsync(
             lockResource: "test_lock_resource",
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None));
-        Assert.IsType<TimeoutException>(beginThrown);
+        await Assert.That(beginThrown).IsTypeOf<TimeoutException>();
 
-        var rollbackThrown = await Record.ExceptionAsync(() =>
+        var rollbackThrown = await TestExceptionRecorder.CaptureAsync(() =>
             uow.RollbackAsync(CancellationToken.None));
 
         // Assert
-        Assert.Null(rollbackThrown);
-        Assert.Null(_advisoryLock.ReleasedKey);
+        await Assert.That(rollbackThrown).IsNull();
+        await Assert.That(_advisoryLock.ReleasedKey).IsNull();
 
         var warnings = logger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Empty(warnings);
+        await Assert.That(warnings).IsEmpty();
     }
 }

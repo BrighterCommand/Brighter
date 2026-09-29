@@ -26,33 +26,32 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CloudEvents;
 
 public class CloudEventsStringDataUnwrapTests
 {
-    [Theory]
-    [InlineData("application/json", "hello", true, false)]
-    [InlineData("application/json", "hello", true, true)]
-    [InlineData("application/json", "null", true, false)]
-    [InlineData("application/json", "null", true, true)]
-    [InlineData("application/json", "123", true, false)]
-    [InlineData("application/json", "123", true, true)]
-    [InlineData("application/json", "true", true, false)]
-    [InlineData("application/json", "", true, true)]
-    [InlineData("application/json", "quoted \"hello\"\nbackslash \\ café", true, false)]
-    [InlineData("application/json", "quoted \"hello\"\nbackslash \\ café", true, true)]
-    [InlineData("application/problem+json", "hello", true, false)]
-    [InlineData("APPLICATION/VND.EXAMPLE+JSON; charset=utf-8", "quoted \"hello\"\nnext line", true, true)]
-    [InlineData("text/json; charset=utf-8", "123", true, false)]
-    [InlineData("model/json", "null", true, true)]
-    [InlineData("text/plain", "quoted \"hello\"\nbackslash \\ café", false, false)]
-    [InlineData("text/plain", "quoted \"hello\"\nbackslash \\ café", false, true)]
-    [InlineData("text/plain", "null", false, false)]
-    [InlineData("application/jsonp", "123", false, true)]
-    [InlineData("text/json-seq", "true", false, false)]
-    [InlineData("text/plain; profile=\"application/json\"", "null", false, true)]
+    [Test]
+    [Arguments("application/json", "hello", true, false)]
+    [Arguments("application/json", "hello", true, true)]
+    [Arguments("application/json", "null", true, false)]
+    [Arguments("application/json", "null", true, true)]
+    [Arguments("application/json", "123", true, false)]
+    [Arguments("application/json", "123", true, true)]
+    [Arguments("application/json", "true", true, false)]
+    [Arguments("application/json", "", true, true)]
+    [Arguments("application/json", "quoted \"hello\"\nbackslash \\ café", true, false)]
+    [Arguments("application/json", "quoted \"hello\"\nbackslash \\ café", true, true)]
+    [Arguments("application/problem+json", "hello", true, false)]
+    [Arguments("APPLICATION/VND.EXAMPLE+JSON; charset=utf-8", "quoted \"hello\"\nnext line", true, true)]
+    [Arguments("text/json; charset=utf-8", "123", true, false)]
+    [Arguments("model/json", "null", true, true)]
+    [Arguments("text/plain", "quoted \"hello\"\nbackslash \\ café", false, false)]
+    [Arguments("text/plain", "quoted \"hello\"\nbackslash \\ café", false, true)]
+    [Arguments("text/plain", "null", false, false)]
+    [Arguments("application/jsonp", "123", false, true)]
+    [Arguments("text/json-seq", "true", false, false)]
+    [Arguments("text/plain; profile=\"application/json\"", "null", false, true)]
     public async Task When_unwrapping_string_data_should_preserve_its_declared_representation(
         string contentType, string value, bool expectJson, bool useAsync)
     {
@@ -80,8 +79,8 @@ public class CloudEventsStringDataUnwrapTests
             : transformer.Unwrap(message);
 
         //Assert
-        Assert.Equal(expectedBody, unwrapped.Body.Value);
-        Assert.Equal(new ContentType(contentType), unwrapped.Header.ContentType);
-        Assert.Equal("string-event", unwrapped.Header.MessageId.Value);
+        await Assert.That(unwrapped.Body.Value).IsEqualTo(expectedBody);
+        await Assert.That(unwrapped.Header.ContentType).IsEqualTo(new ContentType(contentType));
+        await Assert.That(unwrapped.Header.MessageId.Value).IsEqualTo("string-event");
     }
 }

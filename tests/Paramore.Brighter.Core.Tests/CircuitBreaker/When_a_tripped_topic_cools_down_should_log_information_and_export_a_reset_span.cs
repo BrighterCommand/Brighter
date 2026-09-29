@@ -8,14 +8,14 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Observability;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker
 {
     public class OutboxCircuitBreakerResetTests
     {
-        [Fact]
-        public void When_a_tripped_topic_cools_down_should_log_information_and_export_a_reset_span()
+        [Test]
+        public async System.Threading.Tasks.Task When_a_tripped_topic_cools_down_should_log_information_and_export_a_reset_span()
         {
             using (TestCorrelator.CreateContext())
             {
@@ -41,20 +41,20 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
                 traceProvider.ForceFlush();
 
                 // Assert: the topic is healthy again
-                Assert.DoesNotContain(topic, circuitBreaker.TrippedTopics);
+                await Assert.That(circuitBreaker.TrippedTopics).DoesNotContain(topic);
 
                 // Assert: Information log for the reset
                 var logEvents = TestCorrelator.GetLogEventsFromCurrentContext();
-                Assert.Contains(logEvents, e =>
+                await Assert.That(System.Linq.Enumerable.Any(logEvents, e =>
                     e.Level == LogEventLevel.Information &&
                     e.MessageTemplate.Text == "Circuit breaker reset for topic {Topic} ({ResetCause}); publish suppression lifted" &&
-                    e.Properties["Topic"].ToString() == "\"cooling.down.topic\"");
+                    e.Properties["Topic"].ToString() == "\"cooling.down.topic\"")).IsTrue();
 
                 // Assert: Reset span exported
                 var resetSpan = exportedActivities.SingleOrDefault(a =>
                     a.DisplayName == $"{topic} {CircuitBreakerSpanOperation.Reset.ToSpanName()}");
-                Assert.NotNull(resetSpan);
-                Assert.Contains(resetSpan!.Tags, t => t.Key == BrighterSemanticConventions.CircuitBreakerTopic && t.Value == topic.Value);
+                await Assert.That(resetSpan).IsNotNull();
+                await Assert.That(System.Linq.Enumerable.Any(resetSpan!.Tags, t => t.Key == BrighterSemanticConventions.CircuitBreakerTopic && t.Value == topic.Value)).IsTrue();
             }
         }
     }

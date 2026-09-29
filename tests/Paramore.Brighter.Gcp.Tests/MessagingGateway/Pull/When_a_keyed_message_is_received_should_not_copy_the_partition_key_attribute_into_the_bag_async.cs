@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
@@ -35,11 +34,11 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// <see cref="MessageHeader.PartitionKey"/>. It must not also land in <see cref="MessageHeader.Bag"/>, where a forwarded
 /// copy would re-publish it as if it were application data.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpPartitionKeyAttributeNotInBagAsyncTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_keyed_message_is_received_should_not_copy_the_partition_key_attribute_into_the_bag_async()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -68,9 +67,8 @@ public class GcpPartitionKeyAttributeNotInBagAsyncTests
             await channel.AcknowledgeAsync(received);
 
             // Assert
-            Assert.Equal(sent.Id, received.Id);
-            Assert.False(received.Header.Bag.ContainsKey(HeaderNames.PartitionKey),
-                "Header.Bag must not admit the partition key attribute");
+            await Assert.That(received.Id).IsEqualTo(sent.Id);
+            await Assert.That(received.Header.Bag.ContainsKey(HeaderNames.PartitionKey)).IsFalse().Because("Header.Bag must not admit the partition key attribute");
         }
         finally
         {

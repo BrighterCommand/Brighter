@@ -7,15 +7,14 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.Outbox.Hosting.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class When_a_sweep_runs_past_the_hang_threshold_should_report_a_hung_sweep_tests
 {
-    [Theory]
-    [InlineData(29)]
-    [InlineData(30)]
+    [Test]
+    [Arguments(29)]
+    [Arguments(30)]
     public async Task When_a_sweep_runs_no_longer_than_the_hang_threshold_should_report_no_sweep_is_hung(int runningSeconds)
     {
         //Arrange
@@ -27,13 +26,13 @@ public class When_a_sweep_runs_past_the_hang_threshold_should_report_a_hung_swee
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Contains("no outbox sweep is hung", result.Description, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Empty(Assert.IsType<string[]>(result.Data[RemedyCheckConvention.ConditionsKey]));
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(result.Description).Contains("no outbox sweep is hung");
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That((await Assert.That(result.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEmpty();
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_sweep_is_in_progress_should_report_no_sweep_is_hung()
     {
         //Arrange
@@ -45,13 +44,13 @@ public class When_a_sweep_runs_past_the_hang_threshold_should_report_a_hung_swee
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Contains("no outbox sweep is hung", result.Description, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Empty(Assert.IsType<string[]>(result.Data[RemedyCheckConvention.ConditionsKey]));
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(result.Description).Contains("no outbox sweep is hung");
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That((await Assert.That(result.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEmpty();
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_sweep_runs_past_the_hang_threshold_should_report_a_hung_sweep()
     {
         //Arrange
@@ -63,20 +62,20 @@ public class When_a_sweep_runs_past_the_hang_threshold_should_report_a_hung_swee
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        Assert.Contains("31s", result.Description);
-        Assert.Contains("30s", result.Description);
-        Assert.Contains("10s", result.Description);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), result.Data[RemedyCheckConvention.RemedyKindKey]);
-        var conditions = Assert.IsType<string[]>(result.Data[RemedyCheckConvention.ConditionsKey]);
-        Assert.Equal(new[] { "hung_sweep" }, conditions);
-        var hung = Assert.IsAssignableFrom<IDictionary<string, object>>(result.Data["hung_sweep"]);
-        Assert.Equal(31.0, Assert.IsType<double>(hung["running_time_seconds"]));
-        Assert.Equal(30.0, Assert.IsType<double>(hung["hang_threshold_seconds"]));
-        Assert.Equal(10.0, Assert.IsType<double>(hung["timer_interval_seconds"]));
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(result.Description).Contains("31s");
+        await Assert.That(result.Description).Contains("30s");
+        await Assert.That(result.Description).Contains("10s");
+        await Assert.That(result.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        var conditions = await Assert.That(result.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>();
+        await Assert.That(conditions).IsEqualTo(new[] { "hung_sweep" });
+        var hung = ((IDictionary<string, object>)(((IDictionary<string, object>)(await Assert.That(result.Data["hung_sweep"]).IsAssignableTo<IDictionary<string, object>>()))));
+        await Assert.That((await Assert.That(hung["running_time_seconds"]).IsTypeOf<double>())).IsEqualTo(31.0);
+        await Assert.That((await Assert.That(hung["hang_threshold_seconds"]).IsTypeOf<double>())).IsEqualTo(30.0);
+        await Assert.That((await Assert.That(hung["timer_interval_seconds"]).IsTypeOf<double>())).IsEqualTo(10.0);
     }
 
-    [Fact]
+    [Test]
     public async Task When_options_are_null_should_use_the_default_timer_interval_for_the_threshold()
     {
         //Arrange
@@ -90,13 +89,13 @@ public class When_a_sweep_runs_past_the_hang_threshold_should_report_a_hung_swee
         var degraded = await pastThreshold.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.Equal(HealthStatus.Healthy, healthy.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), healthy.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Equal(HealthStatus.Degraded, degraded.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), degraded.Data[RemedyCheckConvention.RemedyKindKey]);
-        var hung = Assert.IsAssignableFrom<IDictionary<string, object>>(degraded.Data["hung_sweep"]);
-        Assert.Equal(defaultInterval.TotalSeconds, Assert.IsType<double>(hung["timer_interval_seconds"]));
-        Assert.Equal(threshold.TotalSeconds, Assert.IsType<double>(hung["hang_threshold_seconds"]));
+        await Assert.That(healthy.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(healthy.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That(degraded.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(degraded.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        var hung = ((IDictionary<string, object>)(((IDictionary<string, object>)(await Assert.That(degraded.Data["hung_sweep"]).IsAssignableTo<IDictionary<string, object>>()))));
+        await Assert.That((await Assert.That(hung["timer_interval_seconds"]).IsTypeOf<double>())).IsEqualTo(defaultInterval.TotalSeconds);
+        await Assert.That((await Assert.That(hung["hang_threshold_seconds"]).IsTypeOf<double>())).IsEqualTo(threshold.TotalSeconds);
     }
 
     private static OutboxSweeperState RunningSweep(TimeSpan runningTime)

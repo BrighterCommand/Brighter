@@ -27,7 +27,6 @@ using System;
 using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -39,7 +38,7 @@ public class MySqlAdvisoryLockTimeoutValidationTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
 
-    [Fact]
+    [Test]
     public async Task When_lock_timeout_is_negative_acquire_should_throw()
     {
         //Arrange
@@ -51,12 +50,12 @@ public class MySqlAdvisoryLockTimeoutValidationTests
         var advisoryLock = new MySqlAdvisoryLock();
 
         //Act + Assert
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+        await Assert.That(() =>
             advisoryLock.AcquireAsync(
-                connection, "any_resource", negativeTimeout, default));
+                connection, "any_resource", negativeTimeout, default)).ThrowsExactly<ArgumentOutOfRangeException>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_lock_timeout_exceeds_int_max_seconds_acquire_should_throw()
     {
         //Arrange
@@ -68,12 +67,12 @@ public class MySqlAdvisoryLockTimeoutValidationTests
         var advisoryLock = new MySqlAdvisoryLock();
 
         //Act + Assert
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+        await Assert.That(() =>
             advisoryLock.AcquireAsync(
-                connection, "any_resource", overflowingTimeout, default));
+                connection, "any_resource", overflowingTimeout, default)).ThrowsExactly<ArgumentOutOfRangeException>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_lock_timeout_is_at_int_max_seconds_acquire_should_succeed()
     {
         //Arrange
@@ -86,12 +85,12 @@ public class MySqlAdvisoryLockTimeoutValidationTests
         var advisoryLock = new MySqlAdvisoryLock();
 
         //Act
-        var ex = await Record.ExceptionAsync(() =>
+        var ex = await TestExceptionRecorder.CaptureAsync(() =>
             advisoryLock.AcquireAsync(
                 connection, lockResource, boundaryTimeout, default));
 
         //Assert
-        Assert.IsNotType<ArgumentOutOfRangeException>(ex);
-        Assert.Null(ex);
+        await Assert.That(ex).IsNotTypeOf<ArgumentOutOfRangeException>();
+        await Assert.That(ex).IsNull();
     }
 }

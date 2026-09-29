@@ -26,18 +26,17 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ connection pool")]
+[Property("Category", "RMQ")]
+[NotInParallel]
 public class RmqClosedPooledConnectionReplacementTests
 {
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void When_a_closed_pooled_connection_is_requested_should_return_a_usable_replacement(bool automaticRecoveryEnabled)
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
+    public async Task When_a_closed_pooled_connection_is_requested_should_return_a_usable_replacement(bool automaticRecoveryEnabled)
     {
         //Arrange
         var factory = new ConnectionFactory
@@ -49,21 +48,21 @@ public class RmqClosedPooledConnectionReplacementTests
 
         try
         {
-            var original = Assert.IsAssignableFrom<IConnection>(pool.GetConnection(factory));
-            Assert.Same(original, pool.GetConnection(factory));
+            var original = ((IConnection)(((IConnection)(await Assert.That(pool.GetConnection(factory)).IsAssignableTo<IConnection>()))));
+            await Assert.That(pool.GetConnection(factory)).IsSameReferenceAs(original);
             original.Close();
 
             //Act
-            var replacement = Assert.IsAssignableFrom<IConnection>(pool.GetConnection(factory));
+            var replacement = ((IConnection)(((IConnection)(await Assert.That(pool.GetConnection(factory)).IsAssignableTo<IConnection>()))));
 
             //Assert
-            Assert.NotSame(original, replacement);
+            await Assert.That(replacement).IsNotSameReferenceAs(original);
             original.Dispose();
-            Assert.True(replacement.IsOpen);
-            Assert.Same(replacement, pool.GetConnection(factory));
+            await Assert.That(replacement.IsOpen).IsTrue();
+            await Assert.That(pool.GetConnection(factory)).IsSameReferenceAs(replacement);
             using var channel = replacement.CreateModel();
             var queue = channel.QueueDeclare();
-            Assert.False(string.IsNullOrEmpty(queue.QueueName));
+            await Assert.That(string.IsNullOrEmpty(queue.QueueName)).IsFalse();
         }
         finally
         {

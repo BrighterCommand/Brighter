@@ -28,8 +28,7 @@ using System.Diagnostics;
 using System.Threading;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
 /// <summary>
@@ -39,20 +38,19 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// (DeliveryError with description; None with no description), and the missing-receipt-handle
 /// defensive path (ADR 0078 "Missing receipt handle (both consumers)").
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpPullConsumerRejectDlqRoutingTests
 {
     // -------------------------------------------------------------------------
     // GCP / Pull — DeliveryError
     // -------------------------------------------------------------------------
-
     /// <summary>
     /// DeliveryError with a description: the DLQ copy carries all five metadata keys, the source
     /// returns MT_NONE after Reject, and Reject returns true.
     /// </summary>
-    [Fact]
-    public void When_rejecting_with_delivery_error_on_pull_should_publish_stamped_copy_to_dlq_and_ack_original()
+    [Test]
+    public async Task When_rejecting_with_delivery_error_on_pull_should_publish_stamped_copy_to_dlq_and_ack_original()
     {
         var provider = new GcpPullMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -79,7 +77,7 @@ public class GcpPullConsumerRejectDlqRoutingTests
             producer.Send(message);
 
             var received = channel.Receive(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var originalTopic = routingKey.Value;
 
@@ -87,11 +85,11 @@ public class GcpPullConsumerRejectDlqRoutingTests
             var result = channel.Reject(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
 
             // Assert — Reject returns true
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — source is acked: a second Receive returns MT_NONE
             var reRead = channel.Receive(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             // Assert — DLQ copy appears within 60s
             Message dlqMessage = new Message();
@@ -104,33 +102,26 @@ public class GcpPullConsumerRejectDlqRoutingTests
                 Thread.Sleep(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Assert — five metadata keys present
             var bag = dlqMessage.Header.Bag;
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic),
-                "DLQ copy must carry originalTopic");
-            Assert.Equal(originalTopic, bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString());
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsTrue().Because("DLQ copy must carry originalTopic");
+            await Assert.That(bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString()).IsEqualTo(originalTopic);
 
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType),
-                "DLQ copy must carry originalMessageType");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType)).IsTrue().Because("DLQ copy must carry originalMessageType");
 
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason),
-                "DLQ copy must carry rejectionReason");
-            Assert.Equal(RejectionReason.DeliveryError.ToString(), bag[RejectionMetadataKeyNames.RejectionReason]?.ToString());
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason)).IsTrue().Because("DLQ copy must carry rejectionReason");
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionReason]?.ToString()).IsEqualTo(RejectionReason.DeliveryError.ToString());
 
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp),
-                "DLQ copy must carry rejectionTimestamp");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsTrue().Because("DLQ copy must carry rejectionTimestamp");
             // Timestamp must be ISO 8601 round-trip
             var ts = bag[RejectionMetadataKeyNames.RejectionTimestamp]?.ToString() ?? string.Empty;
-            Assert.True(
-                DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _),
-                $"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
+            await Assert.That(DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _)).IsTrue().Because($"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
 
             // DeliveryError with non-empty description → rejectionMessage present
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage),
-                "DLQ copy must carry rejectionMessage for DeliveryError with description");
-            Assert.Equal("Test delivery error", bag[RejectionMetadataKeyNames.RejectionMessage]?.ToString());
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsTrue().Because("DLQ copy must carry rejectionMessage for DeliveryError with description");
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionMessage]?.ToString()).IsEqualTo("Test delivery error");
 
             // The source's ReceiptHandle was removed before publishing (ADR 0078 "Bag.Remove(ReceiptHandle)").
             // When the DLQ copy is read back via GetMessageFromDeadLetterQueue the parser assigns a
@@ -150,8 +141,8 @@ public class GcpPullConsumerRejectDlqRoutingTests
     /// None reason (null): the DLQ copy carries exactly four metadata keys (no rejectionMessage),
     /// rejectionReason == "None", the source returns MT_NONE, and Reject returns true.
     /// </summary>
-    [Fact]
-    public void When_rejecting_with_none_reason_on_pull_should_publish_copy_with_four_metadata_keys_to_dlq()
+    [Test]
+    public async Task When_rejecting_with_none_reason_on_pull_should_publish_copy_with_four_metadata_keys_to_dlq()
     {
         var provider = new GcpPullMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -178,17 +169,17 @@ public class GcpPullConsumerRejectDlqRoutingTests
             producer.Send(message);
 
             var received = channel.Receive(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act — null reason maps to "None"
             var result = channel.Reject(received, reason: null);
 
             // Assert — Reject returns true
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — source is acked
             var reRead = channel.Receive(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             // Assert — DLQ copy appears within 60s
             Message dlqMessage = new Message();
@@ -201,24 +192,21 @@ public class GcpPullConsumerRejectDlqRoutingTests
                 Thread.Sleep(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Assert — rejectionReason == "None"
             var bag = dlqMessage.Header.Bag;
-            Assert.Equal("None", bag[RejectionMetadataKeyNames.RejectionReason]?.ToString());
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionReason]?.ToString()).IsEqualTo("None");
 
             // Assert — exactly four keys (no rejectionMessage)
-            Assert.False(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage),
-                "DLQ copy for None reason must NOT carry rejectionMessage");
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp));
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsFalse().Because("DLQ copy for None reason must NOT carry rejectionMessage");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsTrue();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType)).IsTrue();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsTrue();
 
             // Timestamp must be ISO 8601 round-trip
             var ts = bag[RejectionMetadataKeyNames.RejectionTimestamp]?.ToString() ?? string.Empty;
-            Assert.True(
-                DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _),
-                $"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
+            await Assert.That(DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _)).IsTrue().Because($"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
 
             // The source's ReceiptHandle was removed before publishing. The DLQ reader's parser
             // assigns a NEW ReceiptHandle for the DLQ subscription, so its absence cannot be
@@ -238,8 +226,8 @@ public class GcpPullConsumerRejectDlqRoutingTests
     /// Missing receipt handle (ADR 0078): the router still publishes a stamped copy to the DLQ,
     /// and Reject returns true even though the original cannot be settled, which is logged as an Error.
     /// </summary>
-    [Fact]
-    public void When_rejecting_with_missing_receipt_handle_on_pull_should_still_publish_to_dlq_and_return_true()
+    [Test]
+    public async Task When_rejecting_with_missing_receipt_handle_on_pull_should_still_publish_to_dlq_and_return_true()
     {
         var provider = new GcpPullMessageGatewayProvider();
 
@@ -274,12 +262,11 @@ public class GcpPullConsumerRejectDlqRoutingTests
             var result = channel.Reject(message, new MessageRejectionReason(RejectionReason.DeliveryError, "missing handle test"));
 
             // Assert — Reject returns true
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — an Error naming the message says the original cannot be settled
-            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
-                e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(message.Id.Value));
-            Assert.Contains("cannot be settled", settleError.RenderMessage());
+            var settleError = await Assert.That(System.Linq.Enumerable.Where(TestCorrelator.GetLogEventsFromCurrentContext(), e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(message.Id.Value))).HasSingleItem();
+            await Assert.That(settleError.RenderMessage()).Contains("cannot be settled");
 
             // Assert — DLQ copy still published within 60s
             Message dlqMessage = new Message();
@@ -292,7 +279,7 @@ public class GcpPullConsumerRejectDlqRoutingTests
                 Thread.Sleep(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
             // The DLQ reader's parser assigns a new ReceiptHandle, so its absence cannot be verified.
         }
         finally
@@ -309,8 +296,8 @@ public class GcpPullConsumerRejectDlqRoutingTests
     /// DeliveryError with description on an ordering-enabled subscription: the DLQ copy carries
     /// all five metadata keys, the source returns MT_NONE, and Reject returns true.
     /// </summary>
-    [Fact]
-    public void When_rejecting_with_delivery_error_on_pull_ordering_should_publish_stamped_copy_to_dlq_and_ack_original()
+    [Test]
+    public async Task When_rejecting_with_delivery_error_on_pull_ordering_should_publish_stamped_copy_to_dlq_and_ack_original()
     {
         var provider = new GcpPullOrderingMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -337,7 +324,7 @@ public class GcpPullConsumerRejectDlqRoutingTests
             producer.Send(message);
 
             var received = channel.Receive(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var originalTopic = routingKey.Value;
 
@@ -345,11 +332,11 @@ public class GcpPullConsumerRejectDlqRoutingTests
             var result = channel.Reject(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Ordering test error"));
 
             // Assert — Reject returns true
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — source is acked
             var reRead = channel.Receive(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             // Assert — DLQ copy appears within 60s
             Message dlqMessage = new Message();
@@ -362,21 +349,19 @@ public class GcpPullConsumerRejectDlqRoutingTests
                 Thread.Sleep(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var bag = dlqMessage.Header.Bag;
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic));
-            Assert.Equal(originalTopic, bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString());
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason));
-            Assert.Equal(RejectionReason.DeliveryError.ToString(), bag[RejectionMetadataKeyNames.RejectionReason]?.ToString());
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp));
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString()).IsEqualTo(originalTopic);
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType)).IsTrue();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionReason]?.ToString()).IsEqualTo(RejectionReason.DeliveryError.ToString());
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsTrue();
             var ts = bag[RejectionMetadataKeyNames.RejectionTimestamp]?.ToString() ?? string.Empty;
-            Assert.True(
-                DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _),
-                $"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage));
-            Assert.Equal("Ordering test error", bag[RejectionMetadataKeyNames.RejectionMessage]?.ToString());
+            await Assert.That(DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _)).IsTrue().Because($"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionMessage]?.ToString()).IsEqualTo("Ordering test error");
             // The DLQ reader's parser assigns a new ReceiptHandle, so its absence cannot be verified.
         }
         finally
@@ -393,8 +378,8 @@ public class GcpPullConsumerRejectDlqRoutingTests
     /// None reason (null) on an ordering-enabled subscription: the DLQ copy carries exactly four
     /// metadata keys, rejectionReason == "None", the source is acked, and Reject returns true.
     /// </summary>
-    [Fact]
-    public void When_rejecting_with_none_reason_on_pull_ordering_should_publish_copy_with_four_metadata_keys_to_dlq()
+    [Test]
+    public async Task When_rejecting_with_none_reason_on_pull_ordering_should_publish_copy_with_four_metadata_keys_to_dlq()
     {
         var provider = new GcpPullOrderingMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -421,16 +406,16 @@ public class GcpPullConsumerRejectDlqRoutingTests
             producer.Send(message);
 
             var received = channel.Receive(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act
             var result = channel.Reject(received, reason: null);
 
             // Assert
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             var reRead = channel.Receive(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             Message dlqMessage = new Message();
             var stopwatch = Stopwatch.StartNew();
@@ -442,19 +427,16 @@ public class GcpPullConsumerRejectDlqRoutingTests
                 Thread.Sleep(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var bag = dlqMessage.Header.Bag;
-            Assert.Equal("None", bag[RejectionMetadataKeyNames.RejectionReason]?.ToString());
-            Assert.False(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage),
-                "None reason must NOT carry rejectionMessage");
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp));
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionReason]?.ToString()).IsEqualTo("None");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsFalse().Because("None reason must NOT carry rejectionMessage");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsTrue();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType)).IsTrue();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsTrue();
             var ts = bag[RejectionMetadataKeyNames.RejectionTimestamp]?.ToString() ?? string.Empty;
-            Assert.True(
-                DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _),
-                $"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
+            await Assert.That(DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _)).IsTrue().Because($"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
             // The DLQ reader's parser assigns a new ReceiptHandle, so its absence cannot be verified.
         }
         finally
@@ -471,8 +453,8 @@ public class GcpPullConsumerRejectDlqRoutingTests
     /// Missing receipt handle on an ordering-enabled subscription: the DLQ copy is still published
     /// and Reject returns true.
     /// </summary>
-    [Fact]
-    public void When_rejecting_with_missing_receipt_handle_on_pull_ordering_should_still_publish_to_dlq_and_return_true()
+    [Test]
+    public async Task When_rejecting_with_missing_receipt_handle_on_pull_ordering_should_still_publish_to_dlq_and_return_true()
     {
         var provider = new GcpPullOrderingMessageGatewayProvider();
 
@@ -505,12 +487,11 @@ public class GcpPullConsumerRejectDlqRoutingTests
             var result = channel.Reject(message, new MessageRejectionReason(RejectionReason.DeliveryError, "ordering missing handle test"));
 
             // Assert
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — an Error naming the message says the original cannot be settled
-            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
-                e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(message.Id.Value));
-            Assert.Contains("cannot be settled", settleError.RenderMessage());
+            var settleError = await Assert.That(System.Linq.Enumerable.Where(TestCorrelator.GetLogEventsFromCurrentContext(), e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(message.Id.Value))).HasSingleItem();
+            await Assert.That(settleError.RenderMessage()).Contains("cannot be settled");
 
             Message dlqMessage = new Message();
             var stopwatch = Stopwatch.StartNew();
@@ -522,7 +503,7 @@ public class GcpPullConsumerRejectDlqRoutingTests
                 Thread.Sleep(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
             // The DLQ reader's parser assigns a new ReceiptHandle, so its absence cannot be verified.
         }
         finally

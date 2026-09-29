@@ -34,8 +34,7 @@ using Microsoft.Extensions.Options;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
 /// <summary>
@@ -50,8 +49,8 @@ public class RemedyConventionReflectionTests
         RemedyCheckConvention.InvestigateTag
     };
 
-    [Fact]
-    public void When_reflecting_over_brighter_assemblies_every_health_check_should_follow_the_remedy_convention()
+    [Test]
+    public async Task When_reflecting_over_brighter_assemblies_every_health_check_should_follow_the_remedy_convention()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -67,20 +66,18 @@ public class RemedyConventionReflectionTests
         var publicHealthChecks = PublicHealthCheckTypesInBrighterAssemblies().Except(exempt).ToArray();
 
         //Assert
-        Assert.Equal(
-            publicHealthChecks.Select(type => type.FullName).OrderBy(name => name, StringComparer.Ordinal),
-            registeredTypes.Select(type => type.FullName).OrderBy(name => name, StringComparer.Ordinal));
-        Assert.All(registrations, registration =>
-        {
-            var tag = Assert.Single(registration.Tags);
-            Assert.Contains(tag, s_remedyTags);
-        });
+        await Assert.That(registeredTypes.Select(type => type.FullName).OrderBy(name => name, StringComparer.Ordinal)).IsEqualTo(publicHealthChecks.Select(type => type.FullName).OrderBy(name => name, StringComparer.Ordinal));
+        foreach (var registration in registrations)
+{
+    var tag = (await Assert.That(registration.Tags).HasSingleItem());
+    await Assert.That(s_remedyTags).Contains(tag);
+}
     }
 
     private static Type[] PublicHealthCheckTypesInBrighterAssemblies()
     {
         return Directory.GetFiles(AppContext.BaseDirectory, "Paramore.Brighter*.dll")
-            .Select(Assembly.LoadFrom)
+            .Select(System.Reflection.Assembly.LoadFrom)
             .SelectMany(assembly => assembly.GetExportedTypes())
             .Where(type => type.IsClass && !type.IsAbstract && typeof(IHealthCheck).IsAssignableFrom(type))
             .Distinct()

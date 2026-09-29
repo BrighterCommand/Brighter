@@ -30,7 +30,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -39,22 +38,26 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// never-acquired lock (ADR 0058 §B.3). <c>await using</c> would substitute an exception thrown by DisposeAsync, so asserting
 /// the original type pins both halves.
 /// </summary>
-public class PostgreSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkBeginThrowsTests
 {
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(
         releaseResult: true,
         throwOnAcquire: new TimeoutException("forced lock-acquisition failure for spec 0028 §B.3 test"));
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_postgres_provisioning_uow_begin_throws_it_should_dispose_without_throwing()
     {
         // Act
-        var thrown = await Record.ExceptionAsync(async () =>
+        var thrown = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             await using var uow = new PostgreSqlProvisioningUnitOfWork(
                 _connection, _advisoryLock, NullLogger.Instance);
@@ -65,7 +68,7 @@ public class PostgreSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
         });
 
         // Assert
-        Assert.IsType<TimeoutException>(thrown);
-        Assert.Null(_advisoryLock.ReleasedKey);
+        await Assert.That(thrown).IsTypeOf<TimeoutException>();
+        await Assert.That(_advisoryLock.ReleasedKey).IsNull();
     }
 }

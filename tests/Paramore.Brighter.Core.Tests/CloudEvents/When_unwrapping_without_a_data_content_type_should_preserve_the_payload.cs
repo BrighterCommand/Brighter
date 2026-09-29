@@ -28,7 +28,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CloudEvents;
 
@@ -79,8 +78,8 @@ public class CloudEventsOptionalDataContentTypeTests
         }
     }
 
-    [Theory]
-    [MemberData(nameof(Payloads))]
+    [Test]
+    [MethodDataSource(nameof(Payloads))]
     public async Task When_unwrapping_without_a_data_content_type_should_preserve_the_payload(
         bool explicitNull, bool useAsync, string payloadMember, string expectedContentType, byte[] expectedBody)
     {
@@ -106,16 +105,16 @@ public class CloudEventsOptionalDataContentTypeTests
             : transformer.Unwrap(message);
 
         //Assert
-        Assert.NotSame(message, result);
-        Assert.Equal(expectedBody, result.Body.Memory.ToArray());
-        Assert.Equal(expectedContentType, result.Header.ContentType.MediaType);
-        Assert.Equal(expectedContentType, result.Body.ContentType.MediaType);
-        Assert.Equal(new Id("event-1"), result.Id);
-        Assert.Equal("1.0", result.Header.SpecVersion);
-        Assert.Equal(new Uri("/example", UriKind.Relative), result.Header.Source);
-        Assert.Equal(new CloudEventsType("example.created"), result.Header.Type);
-        Assert.Equal(message.Header.Topic, result.Header.Topic);
-        Assert.Equal(message.Header.CorrelationId, result.Header.CorrelationId);
-        Assert.Equal("preserved", result.Header.Bag["transport-metadata"]);
+        await Assert.That(result).IsNotSameReferenceAs(message);
+        await Assert.That(result.Body.Memory.ToArray()).IsEqualTo(expectedBody);
+        await Assert.That(result.Header.ContentType.MediaType).IsEqualTo(expectedContentType);
+        await Assert.That(result.Body.ContentType.MediaType).IsEqualTo(expectedContentType);
+        await Assert.That(result.Id).IsEqualTo(new Id("event-1"));
+        await Assert.That(result.Header.SpecVersion).IsEqualTo("1.0");
+        await Assert.That(result.Header.Source).IsEqualTo(new Uri("/example", UriKind.Relative));
+        await Assert.That(result.Header.Type).IsEqualTo(new CloudEventsType("example.created"));
+        await Assert.That(result.Header.Topic).IsEqualTo(message.Header.Topic);
+        await Assert.That(result.Header.CorrelationId).IsEqualTo(message.Header.CorrelationId);
+        await Assert.That(result.Header.Bag["transport-metadata"]).IsEqualTo("preserved");
     }
 }

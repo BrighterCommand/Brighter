@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -27,7 +27,7 @@ using System.IO;
 using System.Linq;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.GeneratorPlan;
 
@@ -55,7 +55,7 @@ public class GenerationPlanCoverageTests
     private static TestConfiguration OneGateway() => new()
     {
         Namespace = "Sample.Tests",
-        DestinationFolder = "/sample",
+        DestinationFolder = Path.Combine(Path.GetTempPath(), "BrighterGeneratorPlan"),
         MessagingGateways = new() { ["Sample"] = new MessagingGatewayConfiguration() },
     };
 
@@ -67,30 +67,30 @@ public class GenerationPlanCoverageTests
             .Distinct()
             .ToArray();
 
-    [Fact]
-    public void When_planning_a_gateway_should_cover_every_suite_it_generates()
+    [Test]
+    public async System.Threading.Tasks.Task When_planning_a_gateway_should_cover_every_suite_it_generates()
     {
         // Arrange
         var configuration = OneGateway();
-        var gatewayRoot = Path.Combine("/sample", "MessagingGateway", "Sample", "Generated");
+        var gatewayRoot = Path.Combine(configuration.DestinationFolder, "MessagingGateway", "Sample", "Generated");
 
         // Act
         var folders = PlannedFolders(configuration);
 
         // Assert — all three, named individually, so a missing one says which
-        Assert.Contains(Path.Combine(gatewayRoot, "Reactor"), folders);
-        Assert.Contains(Path.Combine(gatewayRoot, "Proactor"), folders);
-        Assert.Contains(gatewayRoot, folders);
+        await Assert.That(folders).Contains(Path.Combine(gatewayRoot, "Reactor"));
+        await Assert.That(folders).Contains(Path.Combine(gatewayRoot, "Proactor"));
+        await Assert.That(folders).Contains(gatewayRoot);
     }
 
-    [Fact]
-    public void When_planning_a_gateway_should_plan_the_shared_suites_own_templates()
+    [Test]
+    public async System.Threading.Tasks.Task When_planning_a_gateway_should_plan_the_shared_suites_own_templates()
     {
         // Arrange — the Shared suite's destination folder is a prefix of the other two, so a plan
         // holding only Reactor and Proactor would still put files "under" it. Naming a template
         // only the Shared suite renders is what makes the previous assertion mean the suite ran.
         var configuration = OneGateway();
-        var sharedFolder = Path.Combine("/sample", "MessagingGateway", "Sample", "Generated");
+        var sharedFolder = Path.Combine(configuration.DestinationFolder, "MessagingGateway", "Sample", "Generated");
 
         // Act
         var planned = new Generators.MessagingGatewayGenerator(
@@ -101,7 +101,7 @@ public class GenerationPlanCoverageTests
             .ToArray();
 
         // Assert — non-vacuously: an empty plan would satisfy a subset check trivially
-        Assert.NotEmpty(planned);
-        Assert.Contains("RejectionMetadataKeys.cs", planned);
+        await Assert.That(planned).IsNotEmpty();
+        await Assert.That(planned).Contains("RejectionMetadataKeys.cs");
     }
 }

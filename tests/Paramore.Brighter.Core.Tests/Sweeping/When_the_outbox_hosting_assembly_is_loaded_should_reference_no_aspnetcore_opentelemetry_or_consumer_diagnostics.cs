@@ -1,13 +1,12 @@
 using System.Linq;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class OutboxHostingAssemblyReferencesTests
 {
-    [Fact]
-    public void When_the_outbox_hosting_assembly_is_loaded_should_reference_no_aspnetcore_opentelemetry_or_consumer_diagnostics()
+    [Test]
+    public async Task When_the_outbox_hosting_assembly_is_loaded_should_reference_no_aspnetcore_opentelemetry_or_consumer_diagnostics()
     {
         //Arrange
         var hostingAssembly = typeof(TimedOutboxSweeper).Assembly;
@@ -18,8 +17,8 @@ public class OutboxHostingAssemblyReferencesTests
             .ToList();
 
         //Assert
-        Assert.DoesNotContain(referencedNames, name => name.StartsWith("Microsoft.AspNetCore"));
-        Assert.DoesNotContain(referencedNames, name => name.StartsWith("OpenTelemetry"));
-        Assert.DoesNotContain(referencedNames, name => name == "Paramore.Brighter.ServiceActivator.Extensions.Diagnostics");
+        await Assert.That(System.Linq.Enumerable.Any(referencedNames, name => name.StartsWith("Microsoft.AspNetCore"))).IsFalse();
+        await Assert.That(System.Linq.Enumerable.Any(referencedNames, name => name.StartsWith("OpenTelemetry"))).IsFalse();
+        await Assert.That(System.Linq.Enumerable.Any(referencedNames, name => name == "Paramore.Brighter.ServiceActivator.Extensions.Diagnostics")).IsFalse();
     }
 }

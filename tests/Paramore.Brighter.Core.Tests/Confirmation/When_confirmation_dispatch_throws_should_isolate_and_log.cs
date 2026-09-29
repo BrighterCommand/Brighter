@@ -32,7 +32,6 @@ using Paramore.Brighter.Extensions;
 using Polly.Registry;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Confirmation
 {
@@ -76,7 +75,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new MessageBody("test"));
         }
 
-        [Fact]
+        [Test]
         public async Task When_confirmation_dispatch_throws_should_isolate_and_log()
         {
             using var context = TestCorrelator.CreateContext();
@@ -93,7 +92,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 .Where(e => e.Level == LogEventLevel.Warning)
                 .Where(e => e.RenderMessage().Contains("Sweeper", StringComparison.OrdinalIgnoreCase))
                 .ToList();
-            Assert.Single(dispatchErrors);
+            await Assert.That(dispatchErrors).HasSingleItem();
         }
     }
 }

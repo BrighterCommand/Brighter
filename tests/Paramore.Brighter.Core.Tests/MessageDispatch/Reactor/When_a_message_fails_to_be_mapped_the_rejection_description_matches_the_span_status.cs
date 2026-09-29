@@ -8,7 +8,7 @@ using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 {
@@ -74,8 +74,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             _channel.Stop(_routingKey);
         }
 
-        [Fact]
-        public void When_A_Message_Fails_To_Be_Mapped_The_Rejection_Description_Matches_The_Span_Status()
+        [Test]
+        public async Task When_A_Message_Fails_To_Be_Mapped_The_Rejection_Description_Matches_The_Span_Status()
         {
             // Act
             _messagePump.Run();
@@ -83,21 +83,21 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 
             // Assert — mechanism (A): rejected message carries the rejection reason in its header bag
             var rejectedMessage = _bus.Stream(_invalidMessageKey).First();
-            Assert.True(rejectedMessage.Header.Bag.TryGetValue(Message.RejectionReasonHeaderName, out var bagValue));
-            var bagString = Assert.IsType<string>(bagValue);
-            Assert.NotEmpty(bagString);
-            Assert.Contains(_messageId, bagString);
+            await Assert.That(rejectedMessage.Header.Bag.TryGetValue(Message.RejectionReasonHeaderName, out var bagValue)).IsTrue();
+            var bagString = await Assert.That(bagValue).IsTypeOf<string>();
+            await Assert.That(bagString).IsNotEmpty();
+            await Assert.That(bagString).Contains(_messageId);
 
             // Assert — mechanism (B): process span StatusDescription contains the message Id
             var processActivity = _exportedActivities.FirstOrDefault(a =>
                 a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Process.ToSpanName()}");
-            Assert.NotNull(processActivity);
-            Assert.Equal(ActivityStatusCode.Error, processActivity!.Status);
-            Assert.NotNull(processActivity.StatusDescription);
-            Assert.Contains(_messageId, processActivity.StatusDescription);
+            await Assert.That(processActivity).IsNotNull();
+            await Assert.That(processActivity!.Status).IsEqualTo(ActivityStatusCode.Error);
+            await Assert.That(processActivity.StatusDescription).IsNotNull();
+            await Assert.That(processActivity.StatusDescription).Contains(_messageId);
 
             // The bag value embeds the span StatusDescription (both derive from the same shared description local — C-5)
-            Assert.Contains(processActivity.StatusDescription!, bagString);
+            await Assert.That(bagString).Contains(processActivity.StatusDescription!);
         }
     }
 }

@@ -19,9 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Policies.Attributes;
@@ -29,53 +27,24 @@ using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Reject.Attributes;
 using Paramore.Brighter.Reject.Handlers;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class CorrectlyConfiguredHandlerValidationTests
 {
-    [Fact]
-    public void When_handler_correctly_configured_should_report_no_findings()
+    [Test]
+    public async Task When_handler_correctly_configured_should_report_no_findings()
     {
         // Arrange — public handler, backstop outermost (step 0), resilience inner (step 1), all sync
-        var description = new HandlerPipelineDescription(
-            requestType: typeof(MyCommand),
-            handlerType: typeof(MyCommandHandler),
-            isAsync: false,
-            beforeSteps:
-            [
-                new PipelineStepDescription(
-                    typeof(RejectMessageOnErrorAttribute),
-                    typeof(RejectMessageOnErrorHandler<>),
-                    Step: 0,
-                    HandlerTiming.Before),
-                new PipelineStepDescription(
-                    typeof(UseResiliencePipelineAttribute),
-                    typeof(ResilienceExceptionPolicyHandler<>),
-                    Step: 1,
-                    HandlerTiming.Before)
-            ],
-            afterSteps: []);
-
+        var description = new HandlerPipelineDescription(requestType: typeof(MyCommand), handlerType: typeof(MyCommandHandler), isAsync: false, beforeSteps: [new PipelineStepDescription(typeof(RejectMessageOnErrorAttribute), typeof(RejectMessageOnErrorHandler<>), Step: 0, HandlerTiming.Before), new PipelineStepDescription(typeof(UseResiliencePipelineAttribute), typeof(ResilienceExceptionPolicyHandler<>), Step: 1, HandlerTiming.Before)], afterSteps: []);
         var visibility = HandlerPipelineValidationRules.HandlerTypeVisibility();
         var ordering = HandlerPipelineValidationRules.BackstopAttributeOrdering();
         var consistency = HandlerPipelineValidationRules.AttributeAsyncConsistency();
-
         // Act
-        var allSatisfied = visibility.IsSatisfiedBy(description)
-            && ordering.IsSatisfiedBy(description)
-            && consistency.IsSatisfiedBy(description);
-
+        var allSatisfied = visibility.IsSatisfiedBy(description) && ordering.IsSatisfiedBy(description) && consistency.IsSatisfiedBy(description);
         var collector = new ValidationResultCollector<HandlerPipelineDescription>();
-        var allFailures = visibility.Accept(collector)
-            .Concat(ordering.Accept(collector))
-            .Concat(consistency.Accept(collector))
-            .Where(r => !r.Success)
-            .ToList();
-
+        var allFailures = visibility.Accept(collector).Concat(ordering.Accept(collector)).Concat(consistency.Accept(collector)).Where(r => !r.Success).ToList();
         // Assert
-        Assert.True(allSatisfied);
-        Assert.Empty(allFailures);
+        await Assert.That(allSatisfied).IsTrue();
+        await Assert.That(allFailures).IsEmpty();
     }
 }

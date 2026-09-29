@@ -41,7 +41,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
@@ -49,7 +48,7 @@ public class ExistingSweeperInstrumentsUnchangedTests
 {
     private sealed record Published(string Name, string? Unit, string Kind, HashSet<string> TagKeys);
 
-    [Fact]
+    [Test]
     public async Task When_a_sweep_completes_with_instrumentation_should_keep_the_existing_instruments_unchanged()
     {
         //Arrange
@@ -88,25 +87,25 @@ public class ExistingSweeperInstrumentsUnchangedTests
             var options = new OutboxCircuitBreakerOptions();
 
             //Assert
-            Assert.True(swept, "No sweep completed");
-            Assert.True(recorded, "The existing sweeper instruments did not record a measurement");
+            await Assert.That(swept).IsTrue().Because("No sweep completed");
+            await Assert.That(recorded).IsTrue().Because("The existing sweeper instruments did not record a measurement");
 
             var tickLag = instruments["paramore.brighter.outbox_sweeper.tick.lag"];
-            Assert.Equal("Histogram`1", tickLag.Kind);
-            Assert.Equal("s", tickLag.Unit);
-            Assert.Empty(tickLag.TagKeys);
+            await Assert.That(tickLag.Kind).IsEqualTo("Histogram`1");
+            await Assert.That(tickLag.Unit).IsEqualTo("s");
+            await Assert.That(tickLag.TagKeys).IsEmpty();
 
             var duration = instruments["paramore.brighter.outbox_sweeper.sweep.duration"];
-            Assert.Equal("Histogram`1", duration.Kind);
-            Assert.Equal("s", duration.Unit);
-            Assert.Equal(["paramore.brighter.outbox_sweeper.outcome"], duration.TagKeys);
+            await Assert.That(duration.Kind).IsEqualTo("Histogram`1");
+            await Assert.That(duration.Unit).IsEqualTo("s");
+            await Assert.That(duration.TagKeys).IsEqualTo(["paramore.brighter.outbox_sweeper.outcome"]);
 
             var sweeps = instruments["paramore.brighter.outbox_sweeper.sweeps"];
-            Assert.Equal("Counter`1", sweeps.Kind);
-            Assert.Equal("{sweep}", sweeps.Unit);
-            Assert.Equal(["paramore.brighter.outbox_sweeper.outcome"], sweeps.TagKeys);
+            await Assert.That(sweeps.Kind).IsEqualTo("Counter`1");
+            await Assert.That(sweeps.Unit).IsEqualTo("{sweep}");
+            await Assert.That(sweeps.TagKeys).IsEqualTo(["paramore.brighter.outbox_sweeper.outcome"]);
 
-            Assert.Equal(10, options.CooldownCount);
+            await Assert.That(options.CooldownCount).IsEqualTo(10);
         }
         finally
         {

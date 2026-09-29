@@ -35,7 +35,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -43,7 +42,7 @@ public class ThrowingLockFailureThresholdTests
 {
     private const string InvestigateCheck = "brighter-outbox-sweeper-investigate";
 
-    [Fact]
+    [Test]
     public async Task When_obtaining_the_lock_throws_on_three_sweeps_should_report_consecutive_failures()
     {
         //Arrange
@@ -71,13 +70,13 @@ public class ThrowingLockFailureThresholdTests
             var report = (await healthChecks.CheckHealthAsync(CancellationToken.None)).Entries[InvestigateCheck];
 
             //Assert
-            Assert.True(firstFailed && secondFailed && thirdFailed, "The sweeps did not all fail");
-            Assert.Equal(3, failedCount);
-            Assert.Equal(HealthStatus.Degraded, report.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, report.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), report.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "consecutive_failed_sweeps" }, Assert.IsType<string[]>(report.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("3", report.Description);
+            await Assert.That(firstFailed && secondFailed && thirdFailed).IsTrue().Because("The sweeps did not all fail");
+            await Assert.That(failedCount).IsEqualTo(3);
+            await Assert.That(report.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(report.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(report.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(report.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "consecutive_failed_sweeps" });
+            await Assert.That(report.Description).Contains("3");
         }
         finally
         {

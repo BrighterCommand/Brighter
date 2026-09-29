@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -28,19 +29,18 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusCloudEventsSubjectPrecedenceTests
 {
-    [Theory]
-    [InlineData("cloud-subject", "native-subject", "cloud-subject")]
-    [InlineData("cloud-subject", null, "cloud-subject")]
-    [InlineData("cloud-subject", "", "cloud-subject")]
-    [InlineData("", "native-subject", "")]
-    [InlineData(null, "native-subject", "")]
+    [Test]
+    [Arguments("cloud-subject", "native-subject", "cloud-subject")]
+    [Arguments("cloud-subject", null, "cloud-subject")]
+    [Arguments("cloud-subject", "", "cloud-subject")]
+    [Arguments("", "native-subject", "")]
+    [Arguments(null, "native-subject", "")]
     public async Task When_receiving_a_message_should_prefer_its_cloud_events_subject(
         string? cloudSubject, string? nativeSubject, string expectedSubject)
     {
@@ -61,8 +61,8 @@ public class AzureServiceBusCloudEventsSubjectPrecedenceTests
         var messages = await consumer.ReceiveAsync(TimeSpan.FromSeconds(1));
 
         // Assert
-        var received = Assert.Single(messages);
-        Assert.Equal(expectedSubject, received.Header.Subject);
-        Assert.Equal(cloudSubject, received.Header.Bag["cloudEvents:subject"]);
+        var received = await Assert.That(messages).HasSingleItem();
+        await Assert.That(received.Header.Subject).IsEqualTo(expectedSubject);
+        await Assert.That(received.Header.Bag["cloudEvents:subject"]).IsEqualTo(cloudSubject);
     }
 }

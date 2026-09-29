@@ -6,13 +6,12 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class SweeperStateBlockedInOutboxTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_sweep_is_blocked_in_the_outbox_should_record_that_it_holds_the_lock()
     {
         //Arrange
@@ -40,11 +39,11 @@ public class SweeperStateBlockedInOutboxTests
             blocked = state.Read();
 
             //Assert
-            Assert.True(reachedMediator, "The sweep did not reach the mediator");
-            Assert.True(blocked.IsSweepInProgress);
-            Assert.Equal(TimeSpan.FromSeconds(25), blocked.RunningTime);
-            Assert.True(blocked.HoldsLock);
-            Assert.True(blocked.IsActive);
+            await Assert.That(reachedMediator).IsTrue().Because("The sweep did not reach the mediator");
+            await Assert.That(blocked.IsSweepInProgress).IsTrue();
+            await Assert.That(blocked.RunningTime).IsEqualTo(TimeSpan.FromSeconds(25));
+            await Assert.That(blocked.HoldsLock).IsTrue();
+            await Assert.That(blocked.IsActive).IsTrue();
         }
         finally
         {

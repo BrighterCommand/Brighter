@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -24,7 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
-using Xunit;
+
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 
@@ -42,48 +42,48 @@ public class RmqSyncChannelFactorySubscriptionTests
         }));
     }
 
-    [Theory]
-    [InlineData(false, OnMissingChannel.Create)]
-    [InlineData(true, OnMissingChannel.Create)]
-    [InlineData(false, OnMissingChannel.Validate)]
-    [InlineData(true, OnMissingChannel.Validate)]
-    [InlineData(false, OnMissingChannel.Assume)]
-    [InlineData(true, OnMissingChannel.Assume)]
-    public void When_subscription_does_not_match_should_reject_sync_channel(bool generic, OnMissingChannel makeChannels)
+    [Test]
+    [Arguments(false, OnMissingChannel.Create)]
+    [Arguments(true, OnMissingChannel.Create)]
+    [Arguments(false, OnMissingChannel.Validate)]
+    [Arguments(true, OnMissingChannel.Validate)]
+    [Arguments(false, OnMissingChannel.Assume)]
+    [Arguments(true, OnMissingChannel.Assume)]
+    public async System.Threading.Tasks.Task When_subscription_does_not_match_should_reject_sync_channel(bool generic, OnMissingChannel makeChannels)
     {
         // Arrange
         var subscription = CreateBaseSubscription(generic, MessagePumpType.Reactor, makeChannels);
 
         // Act
-        var exception = Assert.Throws<ConfigurationException>(() => _factory.CreateSyncChannel(subscription));
+        var exception = await Assert.That(() => _factory.CreateSyncChannel(subscription)).ThrowsExactly<ConfigurationException>();
 
         // Assert
-        Assert.Contains(nameof(RmqSubscription), exception.Message);
+        await Assert.That(exception.Message).Contains(nameof(RmqSubscription));
     }
 
-    [Theory]
-    [InlineData(false, OnMissingChannel.Create)]
-    [InlineData(true, OnMissingChannel.Create)]
-    [InlineData(false, OnMissingChannel.Validate)]
-    [InlineData(true, OnMissingChannel.Validate)]
-    [InlineData(false, OnMissingChannel.Assume)]
-    [InlineData(true, OnMissingChannel.Assume)]
+    [Test]
+    [Arguments(false, OnMissingChannel.Create)]
+    [Arguments(true, OnMissingChannel.Create)]
+    [Arguments(false, OnMissingChannel.Validate)]
+    [Arguments(true, OnMissingChannel.Validate)]
+    [Arguments(false, OnMissingChannel.Assume)]
+    [Arguments(true, OnMissingChannel.Assume)]
     public async Task When_subscription_does_not_match_should_reject_channel_asynchronously(bool generic, OnMissingChannel makeChannels)
     {
         // Arrange
         var subscription = CreateBaseSubscription(generic, MessagePumpType.Proactor, makeChannels);
 
         // Act
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => _factory.CreateAsyncChannelAsync(subscription));
+        var exception = await Assert.That(() => _factory.CreateAsyncChannelAsync(subscription)).ThrowsExactly<ConfigurationException>();
 
         // Assert
-        Assert.Contains(nameof(RmqSubscription), exception.Message);
+        await Assert.That(exception.Message).Contains(nameof(RmqSubscription));
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_subscription_matches_should_create_sync_channel(bool generic)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async System.Threading.Tasks.Task When_subscription_matches_should_create_sync_channel(bool generic)
     {
         // Arrange
         var subscription = CreateMatchingSubscription(generic, MessagePumpType.Reactor);
@@ -92,8 +92,8 @@ public class RmqSyncChannelFactorySubscriptionTests
         using var channel = _factory.CreateSyncChannel(subscription);
 
         // Assert
-        Assert.Equal(subscription.ChannelName, channel.Name);
-        Assert.Equal(subscription.RoutingKey, channel.RoutingKey);
+        await Assert.That(channel.Name).IsEqualTo(subscription.ChannelName);
+        await Assert.That(channel.RoutingKey).IsEqualTo(subscription.RoutingKey);
     }
 
     private static Subscription CreateBaseSubscription(bool generic, MessagePumpType messagePumpType, OnMissingChannel makeChannels)

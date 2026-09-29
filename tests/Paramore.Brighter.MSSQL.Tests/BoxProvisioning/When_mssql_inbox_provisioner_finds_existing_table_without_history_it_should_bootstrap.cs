@@ -4,11 +4,10 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.Inbox.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlInboxProvisionerBootstrapTests : IAsyncLifetime
+public class MsSqlInboxProvisionerBootstrapTests
 {
     private readonly string _connectionString;
     private readonly string _tableName;
@@ -35,7 +34,7 @@ public class MsSqlInboxProvisionerBootstrapTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_inbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
     {
         //Arrange
@@ -47,8 +46,8 @@ public class MsSqlInboxProvisionerBootstrapTests : IAsyncLifetime
         await _provisioner.ProvisionAsync();
 
         //Assert
-        Assert.Equal(1, GetHistoryRowCountAtInboxLatest());
-        Assert.Equal(1, GetInboxTableCountInDbo());
+        await Assert.That(GetHistoryRowCountAtInboxLatest()).IsEqualTo(1);
+        await Assert.That(GetInboxTableCountInDbo()).IsEqualTo(1);
     }
 
     private void CreatePreMigrationInboxTable() =>
@@ -80,8 +79,10 @@ WHERE t.name = @TableName AND s.name = 'dbo'";
         return (int)tableCheck.ExecuteScalar()!;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

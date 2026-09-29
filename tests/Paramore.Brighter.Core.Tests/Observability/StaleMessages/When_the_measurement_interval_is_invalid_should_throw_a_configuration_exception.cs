@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -29,21 +29,19 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorInvalidMeasurementIntervalTests
 {
-    public static TheoryData<TimeSpan> InvalidMeasurementIntervals => new()
+    public static List<TimeSpan> InvalidMeasurementIntervals => new()
     {
-        TimeSpan.Zero,
-        TimeSpan.FromDays(50)
+        TimeSpan.Zero,        TimeSpan.FromDays(50)
     };
 
-    [Theory]
-    [MemberData(nameof(InvalidMeasurementIntervals))]
-    public void When_the_measurement_interval_is_invalid_should_throw_a_configuration_exception(TimeSpan measurementInterval)
+    [Test]
+    [MethodDataSource(nameof(InvalidMeasurementIntervals))]
+    public async Task When_the_measurement_interval_is_invalid_should_throw_a_configuration_exception(TimeSpan measurementInterval)
     {
         //Arrange
         var services = new ServiceCollection();
@@ -54,14 +52,14 @@ public class StaleMessageMonitorInvalidMeasurementIntervalTests
         var registrationsBefore = services.ToList();
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() =>
+        var exception = (await Assert.That(() =>
             builder.UseOutboxStaleMessageMonitor(
                 TimeSpan.FromMinutes(5),
-                options => options.MeasurementInterval = measurementInterval));
+                options => options.MeasurementInterval = measurementInterval)).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.StartsWith($"{nameof(TimedOutboxStaleMessageMonitorOptions.MeasurementInterval)} must", exception.Message);
-        Assert.Contains(measurementInterval.ToString(), exception.Message);
-        Assert.Equal(registrationsBefore, services);
+        await Assert.That(exception.Message).StartsWith($"{nameof(TimedOutboxStaleMessageMonitorOptions.MeasurementInterval)} must");
+        await Assert.That(exception.Message).Contains(measurementInterval.ToString());
+        await Assert.That(services).IsEqualTo(registrationsBefore);
     }
 }

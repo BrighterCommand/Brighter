@@ -36,7 +36,6 @@ using Paramore.Brighter.MessagingGateway.GcpPubSub;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
 using DeadLetterPolicy = Paramore.Brighter.MessagingGateway.GcpPubSub.DeadLetterPolicy;
-using Xunit;
 using StreamOrderingCommand = Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering.ConformanceDeferredCommand;
 using StreamOrderingPump = Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering.ConformanceDeferredPump;
 
@@ -52,13 +51,13 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// <c>ModifyAckDeadline</c>, which also frees the flow-control slot so a failed routing never stalls
 /// the subscription (ADR 0078).
 /// </remarks>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
 public class GcpStreamRejectionRoutingReleaseUntilNativeCapTests
 {
     private static readonly string? ServiceAccount = GcpEmulatorIamMember.Value;
 
-    [Fact]
+    [Test]
     public async Task When_gcp_rejection_routing_keeps_failing_should_release_until_native_dead_letter_policy_forwards_the_message_without_rejection_metadata()
     {
         // Arrange
@@ -182,35 +181,32 @@ public class GcpStreamRejectionRoutingReleaseUntilNativeCapTests
 
             if (!arrived)
             {
-                Assert.True(finalCount > 5,
-                    $"no arrival within 60s: A-6 refutation requires the invocation count to be "
-                    + $"past M=5, but was {finalCount} (a count at or below M is an ordinary failure)");
+                await Assert.That(finalCount > 5).IsTrue();
             }
 
             if (arrived)
             {
-                ConformanceDeferredPump.AssertIsTheMessageSent(message, policyMessage);
+                await ConformanceDeferredPump.AssertIsTheMessageSent(message, policyMessage);
 
-                Assert.False(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason));
-                Assert.False(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage));
-                Assert.False(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp));
-                Assert.False(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic));
-                Assert.False(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType));
+                await Assert.That(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason)).IsFalse();
+                await Assert.That(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsFalse();
+                await Assert.That(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsFalse();
+                await Assert.That(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsFalse();
+                await Assert.That(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType)).IsFalse();
             }
 
             var errors = TestCorrelator.GetLogEventsFromCurrentContext()
                 .Where(e => e.Level == LogEventLevel.Error)
                 .ToList();
-            Assert.Contains(errors, e => e.RenderMessage().Contains(message.Id.Value)
-                                          && e.RenderMessage().Contains("DeliveryError"));
+            await Assert.That(System.Linq.Enumerable.Any(errors, e => e.RenderMessage().Contains(message.Id.Value)
+                                          && e.RenderMessage().Contains("DeliveryError"))).IsTrue();
 
-            Assert.False(provider.TopicExists(deadLetterRoutingKey));
+            await Assert.That(provider.TopicExists(deadLetterRoutingKey)).IsFalse();
 
             if (arrived)
             {
-                Assert.True(finalCount > 3,
-                    $"expected final dispatch count > 3 but was {finalCount}");
-                Assert.Equal(snapshotCount, finalCount);
+                await Assert.That(finalCount > 3).IsTrue().Because($"expected final dispatch count > 3 but was {finalCount}");
+                await Assert.That(finalCount).IsEqualTo(snapshotCount);
             }
         }
         finally
@@ -233,13 +229,13 @@ public class GcpStreamRejectionRoutingReleaseUntilNativeCapTests
 /// unordered Stream provider), so this class checks the broker directly via its own reader
 /// connection.
 /// </remarks>
-[Trait("Category", "GcpPubSubStreamOrdering")]
-[Collection("StreamOrdering")]
+[Property("Category", "GcpPubSubStreamOrdering")]
+[NotInParallel("StreamOrdering")]
 public class GcpStreamOrderingRejectionRoutingReleaseUntilNativeCapTests
 {
     private static readonly string? ServiceAccount = GcpEmulatorIamMember.Value;
 
-    [Fact]
+    [Test]
     public async Task When_gcp_stream_ordering_rejection_routing_keeps_failing_should_release_until_native_dead_letter_policy_forwards_the_message_without_rejection_metadata()
     {
         // Arrange
@@ -359,35 +355,32 @@ public class GcpStreamOrderingRejectionRoutingReleaseUntilNativeCapTests
 
             if (!arrived)
             {
-                Assert.True(finalCount > 5,
-                    $"no arrival within 60s: A-6 refutation requires the invocation count to be "
-                    + $"past M=5, but was {finalCount} (a count at or below M is an ordinary failure)");
+                await Assert.That(finalCount > 5).IsTrue();
             }
 
             if (arrived)
             {
-                StreamOrderingPump.AssertIsTheMessageSent(message, policyMessage);
+                await StreamOrderingPump.AssertIsTheMessageSent(message, policyMessage);
 
-                Assert.False(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason));
-                Assert.False(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage));
-                Assert.False(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp));
-                Assert.False(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic));
-                Assert.False(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType));
+                await Assert.That(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason)).IsFalse();
+                await Assert.That(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsFalse();
+                await Assert.That(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsFalse();
+                await Assert.That(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsFalse();
+                await Assert.That(policyMessage.Header.Bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType)).IsFalse();
             }
 
             var errors = TestCorrelator.GetLogEventsFromCurrentContext()
                 .Where(e => e.Level == LogEventLevel.Error)
                 .ToList();
-            Assert.Contains(errors, e => e.RenderMessage().Contains(message.Id.Value)
-                                          && e.RenderMessage().Contains("DeliveryError"));
+            await Assert.That(System.Linq.Enumerable.Any(errors, e => e.RenderMessage().Contains(message.Id.Value)
+                                          && e.RenderMessage().Contains("DeliveryError"))).IsTrue();
 
-            Assert.False(TopicExistsOnBroker(readerConnection, deadLetterRoutingKey));
+            await Assert.That(TopicExistsOnBroker(readerConnection, deadLetterRoutingKey)).IsFalse();
 
             if (arrived)
             {
-                Assert.True(finalCount > 3,
-                    $"expected final dispatch count > 3 but was {finalCount}");
-                Assert.Equal(snapshotCount, finalCount);
+                await Assert.That(finalCount > 3).IsTrue().Because($"expected final dispatch count > 3 but was {finalCount}");
+                await Assert.That(finalCount).IsEqualTo(snapshotCount);
             }
         }
         finally

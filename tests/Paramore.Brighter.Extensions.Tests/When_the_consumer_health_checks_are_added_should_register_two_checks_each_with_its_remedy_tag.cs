@@ -32,8 +32,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Extensions.Tests;
 
 /// <summary>
@@ -41,8 +40,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class ConsumerHealthChecksRegistrationTests
 {
-    [Fact]
-    public void When_the_consumer_health_checks_are_added_should_register_two_checks_each_with_its_remedy_tag()
+    [Test]
+    public async Task When_the_consumer_health_checks_are_added_should_register_two_checks_each_with_its_remedy_tag()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -54,17 +53,17 @@ public class ConsumerHealthChecksRegistrationTests
         var registrations = provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations;
 
         //Assert
-        var takeOutOfService = Assert.Single(registrations, registration => registration.Name == "brighter-consumer-take-out-of-service");
-        Assert.Equal(new[] { "brighter-take-out-of-service" }, takeOutOfService.Tags.ToArray());
-        Assert.Equal(HealthStatus.Degraded, takeOutOfService.FailureStatus);
-        var restart = Assert.Single(registrations, registration => registration.Name == "brighter-consumer-restart");
-        Assert.Equal(new[] { "brighter-restart" }, restart.Tags.ToArray());
-        Assert.Equal(HealthStatus.Degraded, restart.FailureStatus);
-        Assert.Equal(2, registrations.Count);
+        var takeOutOfService = await Assert.That(System.Linq.Enumerable.Where(registrations, registration => registration.Name == "brighter-consumer-take-out-of-service")).HasSingleItem();
+        await Assert.That(takeOutOfService.Tags.ToArray()).IsEqualTo(new[] { "brighter-take-out-of-service" });
+        await Assert.That(takeOutOfService.FailureStatus).IsEqualTo(HealthStatus.Degraded);
+        var restart = await Assert.That(System.Linq.Enumerable.Where(registrations, registration => registration.Name == "brighter-consumer-restart")).HasSingleItem();
+        await Assert.That(restart.Tags.ToArray()).IsEqualTo(new[] { "brighter-restart" });
+        await Assert.That(restart.FailureStatus).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(registrations.Count).IsEqualTo(2);
     }
 
-    [Fact]
-    public void When_the_consumer_health_checks_are_not_added_should_register_neither_check()
+    [Test]
+    public async Task When_the_consumer_health_checks_are_not_added_should_register_neither_check()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -76,7 +75,7 @@ public class ConsumerHealthChecksRegistrationTests
         var registrations = provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations;
 
         //Assert
-        Assert.DoesNotContain(registrations, registration => registration.Name == "brighter-consumer-take-out-of-service");
-        Assert.DoesNotContain(registrations, registration => registration.Name == "brighter-consumer-restart");
+        await Assert.That(System.Linq.Enumerable.Any(registrations, registration => registration.Name == "brighter-consumer-take-out-of-service")).IsFalse();
+        await Assert.That(System.Linq.Enumerable.Any(registrations, registration => registration.Name == "brighter-consumer-restart")).IsFalse();
     }
 }

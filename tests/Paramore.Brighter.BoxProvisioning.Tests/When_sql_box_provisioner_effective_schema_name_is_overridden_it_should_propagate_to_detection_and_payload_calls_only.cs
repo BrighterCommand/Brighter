@@ -28,7 +28,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
+using TUnit.Assertions.Enums;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class SqlBoxProvisionerEffectiveSchemaNameTests
 {
-    [Fact]
+    [Test]
     public async Task When_effective_schema_name_is_default_it_should_pass_configured_schema_to_detection_and_validator_and_runner()
     {
         //Arrange
@@ -56,15 +56,15 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         await ProvisionOnBootstrapThenHistoryBranchAsync(provisioner, detection);
 
         //Assert
-        Assert.Equal(new string?[] { "dbo", "dbo" }, detection.DoesTableExistSchemas);
-        Assert.Equal(new string?[] { "dbo", "dbo" }, detection.DoesHistoryExistSchemas);
-        Assert.Equal(new string?[] { "dbo" }, detection.DetectCurrentVersionSchemas);
-        Assert.Equal(new string?[] { "dbo" }, detection.GetMaxVersionSchemas);
-        Assert.Equal(new string?[] { "dbo", "dbo" }, payloadValidator.ValidateSchemas);
-        Assert.Equal(new string?[] { "dbo", "dbo" }, migrationRunner.MigrateSchemas);
+        await Assert.That(detection.DoesTableExistSchemas).IsEquivalentTo(new string?[] { "dbo", "dbo" }, CollectionOrdering.Matching);
+        await Assert.That(detection.DoesHistoryExistSchemas).IsEquivalentTo(new string?[] { "dbo", "dbo" }, CollectionOrdering.Matching);
+        await Assert.That(detection.DetectCurrentVersionSchemas).IsEquivalentTo(new string?[] { "dbo" }, CollectionOrdering.Matching);
+        await Assert.That(detection.GetMaxVersionSchemas).IsEquivalentTo(new string?[] { "dbo" }, CollectionOrdering.Matching);
+        await Assert.That(payloadValidator.ValidateSchemas).IsEquivalentTo(new string?[] { "dbo", "dbo" }, CollectionOrdering.Matching);
+        await Assert.That(migrationRunner.MigrateSchemas).IsEquivalentTo(new string?[] { "dbo", "dbo" }, CollectionOrdering.Matching);
     }
 
-    [Fact]
+    [Test]
     public async Task When_effective_schema_name_is_overridden_to_null_it_should_pass_null_to_detection_and_validator_but_configured_schema_to_runner()
     {
         //Arrange
@@ -80,12 +80,12 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         await ProvisionOnBootstrapThenHistoryBranchAsync(provisioner, detection);
 
         //Assert
-        Assert.Equal(new string?[] { null, null }, detection.DoesTableExistSchemas);
-        Assert.Equal(new string?[] { null, null }, detection.DoesHistoryExistSchemas);
-        Assert.Equal(new string?[] { null }, detection.DetectCurrentVersionSchemas);
-        Assert.Equal(new string?[] { null }, detection.GetMaxVersionSchemas);
-        Assert.Equal(new string?[] { null, null }, payloadValidator.ValidateSchemas);
-        Assert.Equal(new string?[] { "dbo", "dbo" }, migrationRunner.MigrateSchemas);
+        await Assert.That(detection.DoesTableExistSchemas).IsEquivalentTo(new string?[] { null, null }, CollectionOrdering.Matching);
+        await Assert.That(detection.DoesHistoryExistSchemas).IsEquivalentTo(new string?[] { null, null }, CollectionOrdering.Matching);
+        await Assert.That(detection.DetectCurrentVersionSchemas).IsEquivalentTo(new string?[] { null }, CollectionOrdering.Matching);
+        await Assert.That(detection.GetMaxVersionSchemas).IsEquivalentTo(new string?[] { null }, CollectionOrdering.Matching);
+        await Assert.That(payloadValidator.ValidateSchemas).IsEquivalentTo(new string?[] { null, null }, CollectionOrdering.Matching);
+        await Assert.That(migrationRunner.MigrateSchemas).IsEquivalentTo(new string?[] { "dbo", "dbo" }, CollectionOrdering.Matching);
     }
 
     private static async Task ProvisionOnBootstrapThenHistoryBranchAsync(

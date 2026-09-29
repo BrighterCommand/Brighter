@@ -29,7 +29,6 @@ using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -39,40 +38,40 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// call error (-999) — so an operator can tell them apart (ADR 0057 §5b). When the acquire succeeds,
 /// the migration completes.
 /// </summary>
-public class MsSqlAdvisoryLockAcquireExceptionPropagationTests : IAsyncLifetime
+public class MsSqlAdvisoryLockAcquireExceptionPropagationTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_acquire_throws_timeout_exception_it_should_propagate_timeout_exception()
     {
         await AssertRunnerPropagatesAcquireException(
             new TimeoutException("forced -1 timeout for spec 0027 Item N test"));
     }
 
-    [Fact]
+    [Test]
     public async Task When_acquire_throws_operation_canceled_exception_it_should_propagate_operation_canceled_exception()
     {
         await AssertRunnerPropagatesAcquireException(
             new OperationCanceledException("forced -2 cancellation for spec 0027 Item N test"));
     }
 
-    [Fact]
+    [Test]
     public async Task When_acquire_throws_migration_lock_deadlock_exception_it_should_propagate_migration_lock_deadlock_exception()
     {
         await AssertRunnerPropagatesAcquireException(
             new MigrationLockDeadlockException("forced -3 deadlock for spec 0027 Item N test"));
     }
 
-    [Fact]
+    [Test]
     public async Task When_acquire_throws_argument_exception_it_should_propagate_argument_exception()
     {
         await AssertRunnerPropagatesAcquireException(
             new ArgumentException("forced -999 parameter validation for spec 0027 Item N test"));
     }
 
-    [Fact]
+    [Test]
     public async Task When_acquire_succeeds_it_should_complete_migration()
     {
         //Arrange
@@ -92,8 +91,8 @@ public class MsSqlAdvisoryLockAcquireExceptionPropagationTests : IAsyncLifetime
             _tableName, schemaName: null, BoxType.Outbox, freshHint);
 
         //Assert
-        Assert.Equal(1, await GetBoxTableCount());
-        Assert.Equal($"BrighterMigration_dbo.{_tableName}", fakeLock.AcquiredResource);
+        await Assert.That(await GetBoxTableCount()).IsEqualTo(1);
+        await Assert.That(fakeLock.AcquiredResource).IsEqualTo($"BrighterMigration_dbo.{_tableName}");
     }
 
     private async Task AssertRunnerPropagatesAcquireException(Exception toThrow)
@@ -109,14 +108,14 @@ public class MsSqlAdvisoryLockAcquireExceptionPropagationTests : IAsyncLifetime
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert
-        var thrown = await Assert.ThrowsAsync(toThrow.GetType(), () =>
-            runner.MigrateAsync(
-                _tableName, schemaName: null, BoxType.Outbox, freshHint));
-        Assert.Same(toThrow, thrown);
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => runner.MigrateAsync(_tableName, schemaName: null, BoxType.Outbox, freshHint));
+        await Assert.That(thrown).IsNotNull();
+        await Assert.That(thrown.GetType()).IsEqualTo(toThrow.GetType());
+        await Assert.That(thrown).IsSameReferenceAs(toThrow);
 
-        Assert.Equal($"BrighterMigration_dbo.{_tableName}", fakeLock.AcquiredResource);
+        await Assert.That(fakeLock.AcquiredResource).IsEqualTo($"BrighterMigration_dbo.{_tableName}");
 
-        Assert.Equal(0, await GetBoxTableCount());
+        await Assert.That(await GetBoxTableCount()).IsEqualTo(0);
     }
 
     private async Task<int> GetBoxTableCount()
@@ -131,7 +130,11 @@ WHERE name = @TableName AND schema_id = SCHEMA_ID('dbo')";
         return Convert.ToInt32(await command.ExecuteScalarAsync());
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

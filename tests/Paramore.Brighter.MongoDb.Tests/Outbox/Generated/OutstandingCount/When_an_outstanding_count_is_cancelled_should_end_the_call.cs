@@ -5,12 +5,11 @@
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDB.Tests.Outbox.OutstandingCount;
 
-[Trait("Category", "MongoDB")]
-[Collection("MongoDbOutbox")]
+[Property("Category", "MongoDB")]
+[NotInParallel("MongoDbOutbox")]
 public class WhenAnOutstandingCountIsCancelledShouldEndTheCall : OutstandingCountCancellationOutboxBaseTests<global::MongoDB.Driver.IClientSessionHandle>
 {
     private readonly IAmAnOutstandingCountOutboxProvider _outboxProvider = new Paramore.Brighter.MongoDb.Tests.Outbox.MongoDbOutboxProvider();
@@ -18,9 +17,8 @@ public class WhenAnOutstandingCountIsCancelledShouldEndTheCall : OutstandingCoun
     protected override Task<OutstandingCountCancellationSetup<global::MongoDB.Driver.IClientSessionHandle>> PrepareStoreAsync(TimeSpan holdFor) =>
         _outboxProvider.PrepareCancellationAsync(holdFor);
 
-    [Fact]
+    [Test]
     public async Task When_an_outstanding_count_is_cancelled_should_end_the_call()
     {
         await AssertCancellationEndsTheCountAsync();
-    }
-}
+    }}

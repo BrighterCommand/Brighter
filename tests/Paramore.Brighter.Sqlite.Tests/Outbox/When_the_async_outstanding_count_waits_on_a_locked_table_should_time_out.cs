@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -25,13 +25,12 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
 public class AsyncOutstandingCountTimeoutTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_async_outstanding_count_waits_on_a_locked_table_should_time_out()
     {
         //Arrange
@@ -40,11 +39,11 @@ public class AsyncOutstandingCountTimeoutTests
         var stopwatch = Stopwatch.StartNew();
 
         //Act
-        var exception = await Record.ExceptionAsync(() => locked.Outbox.GetOutstandingMessageCountAsync(TimeSpan.Zero, new RequestContext()));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => locked.Outbox.GetOutstandingMessageCountAsync(TimeSpan.Zero, new RequestContext()));
         stopwatch.Stop();
 
         //Assert
-        Assert.IsType<SqliteException>(exception);
-        Assert.InRange(stopwatch.Elapsed, TimeSpan.FromSeconds(14), TimeSpan.FromSeconds(18));
+        await Assert.That(exception).IsTypeOf<SqliteException>();
+        await Assert.That(stopwatch.Elapsed >= TimeSpan.FromSeconds(14) && stopwatch.Elapsed <= TimeSpan.FromSeconds(18)).IsTrue();
     }
 }

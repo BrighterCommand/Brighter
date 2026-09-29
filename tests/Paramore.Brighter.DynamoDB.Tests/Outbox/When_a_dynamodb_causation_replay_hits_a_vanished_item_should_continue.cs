@@ -31,7 +31,7 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Outbox.DynamoDB;
-using Xunit;
+
 
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox;
 
@@ -43,13 +43,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox;
 /// (like <c>MarkDispatchedAsync</c>) so the remaining messages in the causation are still re-dispatched,
 /// rather than let the exception unwind the pagination loop and silently skip them.
 /// </summary>
-[Trait("Category", "DynamoDB")]
+[Property("Category", "DynamoDB")]
 public sealed class DynamoDbCausationReplayVanishedItemTests : IDisposable
 {
     private const string CausationA = "causation-A";
     private readonly List<string> _tablesToDrop = [];
 
-    [Fact]
+    [Test]
     public async Task When_a_dynamodb_causation_replay_hits_a_vanished_item_should_continue()
     {
         // Arrange — two dispatched messages share causation A; both sit in the (eventually-consistent)
@@ -72,14 +72,14 @@ public sealed class DynamoDbCausationReplayVanishedItemTests : IDisposable
         var replayOutbox = OutboxFor(racingClient, tableName);
 
         // Act — replay; one item vanishes mid-loop and its conditional update fails
-        var exception = await Xunit.Record.ExceptionAsync(() => replayOutbox.ReplayCausationAsync(CausationA, context));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => replayOutbox.ReplayCausationAsync(CausationA, context));
 
         // Assert — the loop did not unwind: no exception, and the surviving message was re-dispatched
-        Assert.Null(exception);
-        Assert.NotNull(racingClient.DeletedMessageId);
+        await Assert.That(exception).IsNull();
+        await Assert.That(racingClient.DeletedMessageId).IsNotNull();
         var survivorId = racingClient.DeletedMessageId == firstWithA.Id.Value ? secondWithA.Id : firstWithA.Id;
         var outstanding = (await seedOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context)).Select(m => m.Id).ToArray();
-        Assert.Contains(survivorId, outstanding);
+        await Assert.That(outstanding).Contains(survivorId);
     }
 
     /// <summary>

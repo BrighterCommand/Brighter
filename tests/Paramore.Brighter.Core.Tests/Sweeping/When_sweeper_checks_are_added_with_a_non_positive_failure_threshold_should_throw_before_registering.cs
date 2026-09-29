@@ -28,16 +28,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class NonPositiveFailureThresholdTests
 {
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void When_sweeper_checks_are_added_with_a_non_positive_failure_threshold_should_throw_before_registering(int failureThreshold)
+    [Test]
+    [Arguments(0)]
+    [Arguments(-1)]
+    public async Task When_sweeper_checks_are_added_with_a_non_positive_failure_threshold_should_throw_before_registering(int failureThreshold)
     {
         //Arrange
         var services = new ServiceCollection();
@@ -45,11 +44,12 @@ public class NonPositiveFailureThresholdTests
         var builder = services.AddHealthChecks();
 
         //Act
-        var exception = Record.Exception(() => builder.AddBrighterOutboxSweeperHealthChecks(failureThreshold: failureThreshold));
+        Exception? exception = null;
+        try { builder.AddBrighterOutboxSweeperHealthChecks(failureThreshold: failureThreshold); } catch (Exception e) { exception = e; }
 
         //Assert
-        Assert.IsType<ArgumentOutOfRangeException>(exception);
+        await Assert.That(exception).IsTypeOf<ArgumentOutOfRangeException>();
         using var provider = services.BuildServiceProvider();
-        Assert.Empty(provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations);
+        await Assert.That(provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations).IsEmpty();
     }
 }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -31,7 +31,6 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -39,20 +38,22 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// <c>RollbackAsync</c> on a transaction that has already completed — the state a thrown
 /// <c>CommitAsync</c> can leave — logs a Warning and returns instead of throwing (ADR 0058 §B.3).
 /// </summary>
-public class MsSqlProvisioningUnitOfWorkRollbackAfterCommitThrewTests : IAsyncLifetime
+public class MsSqlProvisioningUnitOfWorkRollbackAfterCommitThrewTests
 {
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
     private readonly FakeMsSqlAdvisoryLock _advisoryLock = new(throwOnAcquire: null);
 
-    public async Task InitializeAsync()
+    [Before(HookType.Test)]public async Task InitializeAsync()
     {
         await Configuration.EnsureDatabaseExistsAsync(_connection.ConnectionString);
         await _connection.OpenAsync();
     }
 
+    [After(HookType.Test)]
+
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mssql_provisioning_uow_rollback_async_is_called_after_commit_threw_it_should_not_throw()
     {
         // Arrange
@@ -65,11 +66,11 @@ public class MsSqlProvisioningUnitOfWorkRollbackAfterCommitThrewTests : IAsyncLi
         CompleteAsIfCommitHadFailed(uow.Transaction!);
 
         // Act
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.RollbackAsync(CancellationToken.None));
 
         // Assert
-        Assert.Null(thrown);
-        Assert.Contains(capturingLogger.Entries, e => e.Level == LogLevel.Warning);
+        await Assert.That(thrown).IsNull();
+        await Assert.That(System.Linq.Enumerable.Any(capturingLogger.Entries, e => e.Level == LogLevel.Warning)).IsTrue();
     }
 
     private static void CompleteAsIfCommitHadFailed(SqlTransaction transaction) => transaction.Commit();

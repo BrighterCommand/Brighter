@@ -27,8 +27,7 @@ using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Validation;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 /// <summary>
@@ -38,8 +37,8 @@ namespace Paramore.Brighter.Core.Tests.Validation;
 /// </summary>
 public class SubscriptionUnenforceableDeliveryCountValidationTests
 {
-    [Fact]
-    public void When_subscription_cannot_advance_delivery_count_should_report_one_warning_naming_budget_and_reason()
+    [Test]
+    public async Task When_subscription_cannot_advance_delivery_count_should_report_one_warning_naming_budget_and_reason()
     {
         // Arrange — requeueCount: 3, unenforceability reason "no DeadLetterPolicy"
         var subscription = new UnenforceableDeliveryCountingSubscriptionDouble(
@@ -58,15 +57,15 @@ public class SubscriptionUnenforceableDeliveryCountValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — exactly one Warning naming the subscription, 3, and "no DeadLetterPolicy"
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, results[0].Error!.Severity);
-        Assert.Contains("3", results[0].Error!.Message);
-        Assert.Contains("no DeadLetterPolicy", results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Warning);
+        await Assert.That(results[0].Error!.Message).Contains("3");
+        await Assert.That(results[0].Error!.Message).Contains("no DeadLetterPolicy");
     }
 
-    [Fact]
-    public void When_subscription_unenforceability_reason_is_null_should_not_report_warning()
+    [Test]
+    public async Task When_subscription_unenforceability_reason_is_null_should_not_report_warning()
     {
         // Arrange — null reason means the budget is enforceable; rule does not fire
         var subscription = new UnenforceableDeliveryCountingSubscriptionDouble(
@@ -83,11 +82,11 @@ public class SubscriptionUnenforceableDeliveryCountValidationTests
         var satisfied = spec.IsSatisfiedBy(subscription);
 
         // Assert — null reason; rule does not fire
-        Assert.True(satisfied);
+        await Assert.That(satisfied).IsTrue();
     }
 
-    [Fact]
-    public void When_subscription_budget_is_minus_one_with_unenforceable_reason_should_not_report_warning()
+    [Test]
+    public async Task When_subscription_budget_is_minus_one_with_unenforceable_reason_should_not_report_warning()
     {
         // Arrange — requeueCount: -1 disables the budget (R-6); R-11 checks R != -1
         var subscription = new UnenforceableDeliveryCountingSubscriptionDouble(
@@ -104,6 +103,6 @@ public class SubscriptionUnenforceableDeliveryCountValidationTests
         var satisfied = spec.IsSatisfiedBy(subscription);
 
         // Assert — R == -1 means no budget; R-11 does not fire
-        Assert.True(satisfied);
+        await Assert.That(satisfied).IsTrue();
     }
 }

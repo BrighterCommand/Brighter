@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -22,7 +22,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 /// ids observed within the NFR-2 bound, never over their arrival positions.
 ///
 /// These facts deliberately leave the SINGLE-message nack arm alone. With one message in flight
-/// there is no ordering question, so `_messageAssertion.Assert(message, redelivered)` is a correct
+/// there is no ordering question, so `await _messageAssertion.AssertAsync(message, redelivered)` is a correct
 /// positional assertion and is asserted here to survive — a fix that strips identity assertions
 /// wholesale would break the very thing FR-16 exists to prove.
 /// </summary>
@@ -44,15 +44,15 @@ public class TwoMessageArmsIdentifyReceivedMessagesByIdTests : IDisposable
     /// The defective pairings: a named sent message asserted against a positionally-received one.
     /// </summary>
     private const string NACKED_PAIRED_POSITIONALLY =
-        "_messageAssertion.Assert(nackedMessage, redelivered)";
+        "_messageAssertion.AssertAsync(nackedMessage, redelivered)";
     private const string FOLLOWING_PAIRED_POSITIONALLY =
-        "_messageAssertion.Assert(followingMessage, receivedFollowing)";
+        "_messageAssertion.AssertAsync(followingMessage, receivedFollowing)";
 
     /// <summary>
     /// The single-message nack arm's positional assertion, which is legitimate and must remain.
     /// </summary>
     private const string SINGLE_MESSAGE_ASSERTION =
-        "_messageAssertion.Assert(message, redelivered)";
+        "await _messageAssertion.AssertAsync(message, redelivered)";
 
     private readonly string _testDirectory;
     private readonly ILogger<Generators.MessagingGatewayGenerator> _logger;
@@ -68,7 +68,7 @@ public class TwoMessageArmsIdentifyReceivedMessagesByIdTests : IDisposable
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_reactor_should_identify_received_messages_by_id()
     {
         // Arrange
@@ -80,15 +80,15 @@ public class TwoMessageArmsIdentifyReceivedMessagesByIdTests : IDisposable
 
         // Assert — the two-message arm identifies what it received by id, not by position
         var content = await File.ReadAllTextAsync(OutputPath("Reactor", NACK_TEMPLATE));
-        Assert.Contains(IDENTIFIES_BY_ID, content);
-        Assert.DoesNotContain(NACKED_PAIRED_POSITIONALLY, content);
-        Assert.DoesNotContain(FOLLOWING_PAIRED_POSITIONALLY, content);
+        await Assert.That(content).Contains(IDENTIFIES_BY_ID);
+        await Assert.That(content).DoesNotContain(NACKED_PAIRED_POSITIONALLY);
+        await Assert.That(content).DoesNotContain(FOLLOWING_PAIRED_POSITIONALLY);
 
         // Assert — and the single-message arm, where order cannot arise, keeps its identity check
-        Assert.Contains(SINGLE_MESSAGE_ASSERTION, content);
+        await Assert.That(content).Contains(SINGLE_MESSAGE_ASSERTION);
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_proactor_should_identify_received_messages_by_id()
     {
         // Arrange
@@ -100,15 +100,15 @@ public class TwoMessageArmsIdentifyReceivedMessagesByIdTests : IDisposable
 
         // Assert — the two-message arm identifies what it received by id, not by position
         var content = await File.ReadAllTextAsync(OutputPath("Proactor", NACK_TEMPLATE));
-        Assert.Contains(IDENTIFIES_BY_ID, content);
-        Assert.DoesNotContain(NACKED_PAIRED_POSITIONALLY, content);
-        Assert.DoesNotContain(FOLLOWING_PAIRED_POSITIONALLY, content);
+        await Assert.That(content).Contains(IDENTIFIES_BY_ID);
+        await Assert.That(content).DoesNotContain(NACKED_PAIRED_POSITIONALLY);
+        await Assert.That(content).DoesNotContain(FOLLOWING_PAIRED_POSITIONALLY);
 
         // Assert — and the single-message arm, where order cannot arise, keeps its identity check
-        Assert.Contains(SINGLE_MESSAGE_ASSERTION, content);
+        await Assert.That(content).Contains(SINGLE_MESSAGE_ASSERTION);
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_no_channels_reject_reactor_should_identify_received_messages_by_id()
     {
         // Arrange
@@ -121,11 +121,11 @@ public class TwoMessageArmsIdentifyReceivedMessagesByIdTests : IDisposable
         // Assert — the rejected message is whichever arrived first, so the message that follows is
         // identified by id rather than assumed to be the one sent second
         var content = await File.ReadAllTextAsync(OutputPath("Reactor", NO_CHANNELS_TEMPLATE));
-        Assert.Contains(IDENTIFIES_BY_ID, content);
-        Assert.DoesNotContain(FOLLOWING_PAIRED_POSITIONALLY, content);
+        await Assert.That(content).Contains(IDENTIFIES_BY_ID);
+        await Assert.That(content).DoesNotContain(FOLLOWING_PAIRED_POSITIONALLY);
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_no_channels_reject_proactor_should_identify_received_messages_by_id()
     {
         // Arrange
@@ -138,8 +138,8 @@ public class TwoMessageArmsIdentifyReceivedMessagesByIdTests : IDisposable
         // Assert — the rejected message is whichever arrived first, so the message that follows is
         // identified by id rather than assumed to be the one sent second
         var content = await File.ReadAllTextAsync(OutputPath("Proactor", NO_CHANNELS_TEMPLATE));
-        Assert.Contains(IDENTIFIES_BY_ID, content);
-        Assert.DoesNotContain(FOLLOWING_PAIRED_POSITIONALLY, content);
+        await Assert.That(content).Contains(IDENTIFIES_BY_ID);
+        await Assert.That(content).DoesNotContain(FOLLOWING_PAIRED_POSITIONALLY);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -21,8 +21,8 @@ public class TransformPipelineBothReleasesThrowTests
     private const string TransformFailure = "transform release failed";
     private const string MapperFailure = "mapper release failed";
 
-    [Fact]
-    public void When_a_sync_pipelines_transform_scope_and_mapper_release_both_throw_both_surface()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_sync_pipelines_transform_scope_and_mapper_release_both_throw_both_surface()
     {
         var pipeline = new WrapPipeline<MinimalCommand>(
             Lease<IAmAMessageMapper<MinimalCommand>>.Untracked(new MinimalMapper()),
@@ -31,12 +31,12 @@ public class TransformPipelineBothReleasesThrowTests
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new ThrowingOnReleaseRegistry());
 
-        var aggregate = Assert.Throws<AggregateException>(() => pipeline.Dispose());
+        var aggregate = await Assert.That(() => pipeline.Dispose()).ThrowsExactly<AggregateException>();
 
-        AssertBothSurface(aggregate);
+        await AssertBothSurface(aggregate);
     }
 
-    [Fact]
+    [Test]
     public async Task When_an_async_pipelines_transform_scope_and_mapper_release_both_throw_both_surface()
     {
         var pipeline = new WrapPipelineAsync<MinimalCommand>(
@@ -46,13 +46,13 @@ public class TransformPipelineBothReleasesThrowTests
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new ThrowingOnReleaseRegistryAsync());
 
-        var aggregate = await Assert.ThrowsAsync<AggregateException>(async () => await pipeline.DisposeAsync());
+        var aggregate = await Assert.That(async () => await pipeline.DisposeAsync()).ThrowsExactly<AggregateException>();
 
-        AssertBothSurface(aggregate);
+        await AssertBothSurface(aggregate);
     }
 
-    [Fact]
-    public void When_an_async_pipelines_synchronous_disposal_transform_scope_and_mapper_release_both_throw_both_surface()
+    [Test]
+    public async System.Threading.Tasks.Task When_an_async_pipelines_synchronous_disposal_transform_scope_and_mapper_release_both_throw_both_surface()
     {
         var pipeline = new WrapPipelineAsync<MinimalCommand>(
             Lease<IAmAMessageMapperAsync<MinimalCommand>>.Untracked(new MinimalMapperAsync()),
@@ -61,18 +61,18 @@ public class TransformPipelineBothReleasesThrowTests
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new ThrowingOnReleaseRegistryAsync());
 
-        var aggregate = Assert.Throws<AggregateException>(() => pipeline.Dispose());
+        var aggregate = await Assert.That(() => pipeline.Dispose()).ThrowsExactly<AggregateException>();
 
-        AssertBothSurface(aggregate);
+        await AssertBothSurface(aggregate);
     }
 
     //both the transform-scope failure and the mapper-release failure must be reachable from the surfaced
     //aggregate; flattening tolerates the transform scope's own drain-aggregate nesting
-    private static void AssertBothSurface(AggregateException aggregate)
+    private static async System.Threading.Tasks.Task AssertBothSurface(AggregateException aggregate)
     {
         var messages = aggregate.Flatten().InnerExceptions.Select(e => e.Message).ToArray();
-        Assert.Contains(TransformFailure, messages);
-        Assert.Contains(MapperFailure, messages);
+        await Assert.That(messages).Contains(TransformFailure);
+        await Assert.That(messages).Contains(MapperFailure);
     }
 
     private sealed class MinimalCommand() : Command(Guid.NewGuid());

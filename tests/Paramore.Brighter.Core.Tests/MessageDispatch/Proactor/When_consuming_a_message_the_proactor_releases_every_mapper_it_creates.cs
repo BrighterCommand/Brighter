@@ -6,7 +6,7 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
@@ -15,6 +15,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
     // `await using var pipelineLifetime = pipeline as IAsyncDisposable;`. That `as` degrades silently to a
     // no-op `await using (null)` if a refactor changes what MakeUnwrapPipeline returns — a slow leak, not a
     // failure — so consuming a message must be shown to release every mapper it creates, deterministically.
+    [NotInParallel(nameof(MyEventHandlerAsyncWithContinuation))]
     public class ProactorConsumeMapperReleaseTests
     {
         private const string ChannelName = "myChannel";
@@ -62,16 +63,16 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             channel.Enqueue(MessageFactory.CreateQuitMessage(_routingKey));
         }
 
-        [Fact]
-        public void When_consuming_a_message_the_proactor_releases_every_mapper_it_creates()
+        [Test]
+        public async System.Threading.Tasks.Task When_consuming_a_message_the_proactor_releases_every_mapper_it_creates()
         {
             //act
             _messagePump.Run();
 
             //assert — no GC is forced: release must be deterministic, driven by TranslateMessage's
             //`await using` disposing the pipeline it built, not by the ~TransformPipelineAsync finalizer
-            Assert.True(_mapperFactory.CreateCount > 0);
-            Assert.Equal(_mapperFactory.CreateCount, _mapperFactory.ReleaseCount);
+            await Assert.That(_mapperFactory.CreateCount > 0).IsTrue();
+            await Assert.That(_mapperFactory.ReleaseCount).IsEqualTo(_mapperFactory.CreateCount);
         }
 
         // Counts mappers handed out against mappers handed back. The async pipeline releases through

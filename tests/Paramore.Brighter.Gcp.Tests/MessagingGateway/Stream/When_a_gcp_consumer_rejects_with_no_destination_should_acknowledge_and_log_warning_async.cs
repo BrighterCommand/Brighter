@@ -27,7 +27,6 @@ using System;
 using System.Threading.Tasks;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
@@ -37,8 +36,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// nor <c>invalidMessageRoutingKey</c>) accepts the original stream handle, returns true, and logs
 /// a source-generated Warning naming the message id and the rejection reason.
 /// </summary>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
 public class GcpStreamConsumerRejectNoDestinationWarningAsyncTests
 {
     /// <summary>
@@ -47,7 +46,7 @@ public class GcpStreamConsumerRejectNoDestinationWarningAsyncTests
     /// settled via Reject before the channel is disposed, so Dispose cannot hang (see this spec's
     /// GCP Stream ack-before-dispose gotcha).
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_no_destination_on_stream_should_accept_and_log_warning()
     {
         var provider = new GcpStreamMessageGatewayProvider();
@@ -73,7 +72,7 @@ public class GcpStreamConsumerRejectNoDestinationWarningAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(20));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             using var logContext = TestCorrelator.CreateContext();
 
@@ -81,12 +80,11 @@ public class GcpStreamConsumerRejectNoDestinationWarningAsyncTests
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "bad payload"));
 
             // Assert — RejectAsync returns true
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — a Warning names the message id and the reason
-            var warning = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
-                e => e.Level == LogEventLevel.Warning && e.RenderMessage().Contains(received.Id.Value));
-            Assert.Contains("Unacceptable", warning.RenderMessage());
+            var warning = await Assert.That(System.Linq.Enumerable.Where(TestCorrelator.GetLogEventsFromCurrentContext(), e => e.Level == LogEventLevel.Warning && e.RenderMessage().Contains(received.Id.Value))).HasSingleItem();
+            await Assert.That(warning.RenderMessage()).Contains("Unacceptable");
         }
         finally
         {

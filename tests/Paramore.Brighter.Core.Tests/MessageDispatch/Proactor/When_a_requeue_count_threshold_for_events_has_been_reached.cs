@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
@@ -7,7 +7,6 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Testing;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.ServiceActivator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
@@ -20,53 +19,37 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         private readonly IAmAMessagePump _messagePump;
         private readonly ChannelAsync _channel;
         private readonly SpyRequeueCommandProcessor _commandProcessor;
-
         public MessagePumpEventRequeueCountThresholdTestsAsync()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new ChannelAsync(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
-           
-            var messageMapperRegistry = new MessageMapperRegistry(
-                null,
-                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
+            var messageMapperRegistry = new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
-             
-            _messagePump = new ServiceActivator.Proactor(_commandProcessor, (message) => typeof(MyEvent), 
-                    messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel) 
-                { Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3 };
-
-            var message1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), 
-                new MessageBody(JsonSerializer.Serialize((MyEvent)new(), JsonSerialisationOptions.Options))
-            );
-            var message2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), 
-                new MessageBody(JsonSerializer.Serialize((MyEvent)new(), JsonSerialisationOptions.Options))
-            );
+            _messagePump = new ServiceActivator.Proactor(_commandProcessor, (message) => typeof(MyEvent), messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel)
+            {
+                Channel = _channel,
+                TimeOut = TimeSpan.FromMilliseconds(5000),
+                RequeueCount = 3
+            };
+            var message1 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize((MyEvent)new(), JsonSerialisationOptions.Options)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize((MyEvent)new(), JsonSerialisationOptions.Options)));
             _bus.Enqueue(message1);
             _bus.Enqueue(message2);
-            
         }
 
-        [Fact]
+        [Test]
         public async Task When_A_Requeue_Count_Threshold_For_Events_Has_Been_Reached()
         {
-            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+            var task = Task.Factory.StartNew(() => _messagePump.Run(), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             await Task.Delay(1000);
-            
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
-
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             _channel.Enqueue(quitMessage);
-
             await Task.WhenAll(task);
-
-            Assert.Equal(CommandType.PublishAsync, _commandProcessor.Commands[0]);
-            Assert.Equal(6, _commandProcessor.PublishCount);
-
-            Assert.Empty(_bus.Stream(_routingKey));
-            
-            //TODO: How do we assert that the channel was closed? Observability?
+            await Assert.That(_commandProcessor.Commands[0]).IsEqualTo(CommandType.PublishAsync);
+            await Assert.That(_commandProcessor.PublishCount).IsEqualTo(6);
+            await Assert.That(_bus.Stream(_routingKey)).IsEmpty();
+        //TODO: How do we assert that the channel was closed? Observability?
         }
     }
 }

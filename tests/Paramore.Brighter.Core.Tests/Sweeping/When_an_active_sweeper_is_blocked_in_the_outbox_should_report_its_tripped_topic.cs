@@ -40,7 +40,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -49,7 +48,7 @@ public class BlockedActiveSweeperTrippedTopicsTests
     private const string InvestigateCheck = "brighter-outbox-sweeper-investigate";
     private const string TrippedTopicsGauge = "paramore.brighter.outbox_sweeper.tripped_topics";
 
-    [Fact]
+    [Test]
     public async Task When_an_active_sweeper_is_blocked_in_the_outbox_should_report_its_tripped_topic()
     {
         //Arrange
@@ -91,13 +90,13 @@ public class BlockedActiveSweeperTrippedTopicsTests
             }).WaitAsync(TimeSpan.FromSeconds(1));
 
             //Assert
-            Assert.True(firstCompleted, "The previous sweep did not complete");
-            Assert.True(reachedMediator, "The current sweep did not reach the mediator");
+            await Assert.That(firstCompleted).IsTrue().Because("The previous sweep did not complete");
+            await Assert.That(reachedMediator).IsTrue().Because("The current sweep did not reach the mediator");
             var result = report.Entries[InvestigateCheck];
-            Assert.Equal(HealthStatus.Degraded, result.Status);
-            Assert.Equal(new[] { "tripped_topics" }, Assert.IsType<string[]>(result.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("orders", result.Description);
-            Assert.Equal(1L, gauge);
+            await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That((await Assert.That(result.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "tripped_topics" });
+            await Assert.That(result.Description).Contains("orders");
+            await Assert.That(gauge).IsEqualTo(1L);
         }
         finally
         {

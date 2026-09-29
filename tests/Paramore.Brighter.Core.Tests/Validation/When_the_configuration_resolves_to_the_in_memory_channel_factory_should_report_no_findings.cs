@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,14 +27,13 @@ using System;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class DefaultInMemoryConfigurationIsSilentValidationTests
 {
-    [Fact]
-    public void When_the_configuration_resolves_to_the_in_memory_channel_factory_should_report_no_findings()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_configuration_resolves_to_the_in_memory_channel_factory_should_report_no_findings()
     {
         // Arrange — a plain subscription, no default channel factory configured at all
         var subscription = new Subscription<FakeChannelFactoryRequest>();
@@ -46,12 +46,12 @@ public class DefaultInMemoryConfigurationIsSilentValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — no findings
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_the_configuration_explicitly_uses_the_in_memory_channel_factory_should_report_no_findings()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_configuration_explicitly_uses_the_in_memory_channel_factory_should_report_no_findings()
     {
         // Arrange — a plain subscription, default channel factory explicitly an InMemoryChannelFactory
         var subscription = new Subscription<FakeChannelFactoryRequest>();
@@ -65,7 +65,7 @@ public class DefaultInMemoryConfigurationIsSilentValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — no findings
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 }

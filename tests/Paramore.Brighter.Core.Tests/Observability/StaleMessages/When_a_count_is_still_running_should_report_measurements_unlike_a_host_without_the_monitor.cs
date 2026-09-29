@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,18 +34,17 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
 public class CountStillRunningMeasurementsTests
 {
     private const string COUNT = "paramore.brighter.outbox.stale.count";
     private const string OUTCOME = "paramore.brighter.outbox.stale.outcome";
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
-    [Fact]
+    [Test]
     public async Task When_a_count_is_still_running_should_report_measurements_unlike_a_host_without_the_monitor()
     {
         //Act
@@ -53,16 +52,18 @@ public class CountStillRunningMeasurementsTests
         var disabled = await CollectWithoutTheMonitorAsync();
 
         //Assert
-        Assert.Equal(2, enabled.Count);
-        Assert.All(enabled, observed =>
-        {
-            Assert.Equal(0, Overall(observed, "completed"));
-            Assert.True(Overall(observed, "abandoned") > 0);
-            Assert.True(Overall(observed, "skipped") > 0);
-        });
-        Assert.Equal(2, disabled.Count);
-        Assert.All(disabled, observed =>
-            Assert.DoesNotContain(observed, m => m.Instrument == ObservedStaleMessageInstruments.MEASUREMENTS));
+        await Assert.That(enabled.Count).IsEqualTo(2);
+        foreach (var observed in enabled)
+{
+    await Assert.That(Overall(observed, "completed")).IsEqualTo(0);
+    await Assert.That(Overall(observed, "abandoned") > 0).IsTrue();
+    await Assert.That(Overall(observed, "skipped") > 0).IsTrue();
+}
+        await Assert.That(disabled.Count).IsEqualTo(2);
+        foreach (var observed in disabled)
+{
+    await Assert.That(System.Linq.Enumerable.Any(observed, m => m.Instrument == ObservedStaleMessageInstruments.MEASUREMENTS)).IsFalse();
+}
     }
 
     private static async Task<IReadOnlyList<IReadOnlyList<StaleMeasurement>>> CollectWithTheMonitorAsync()
@@ -79,24 +80,24 @@ public class CountStillRunningMeasurementsTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(clock, 1);
+        await WaitUntilTheMonitorWaits(clock, 1);
         clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5))).IsTrue();
         var runningToken = outbox.CountCalls.Single().CancellationToken;
         clock.Advance(TimeSpan.FromSeconds(10));
-        Assert.True(SpinWait.SpinUntil(() => runningToken.IsCancellationRequested, TimeSpan.FromSeconds(5)));
-        Assert.True(SpinWait.SpinUntil(
+        await Assert.That(SpinWait.SpinUntil(() => runningToken.IsCancellationRequested, TimeSpan.FromSeconds(5))).IsTrue();
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Abandoned) >= 1,
-            TimeSpan.FromSeconds(5)));
-        WaitUntilTheMonitorWaits(clock, 2);
+            TimeSpan.FromSeconds(5))).IsTrue();
+        await WaitUntilTheMonitorWaits(clock, 2);
 
         var collected = new List<IReadOnlyList<StaleMeasurement>>();
         clock.Advance(TimeSpan.FromSeconds(50));
-        WaitUntilTheMonitorWaits(clock, 3);
+        await WaitUntilTheMonitorWaits(clock, 3);
         clock.Advance(TimeSpan.FromSeconds(20));
         collected.Add(metrics.Observe());
         clock.Advance(TimeSpan.FromSeconds(40));
-        WaitUntilTheMonitorWaits(clock, 4);
+        await WaitUntilTheMonitorWaits(clock, 4);
         clock.Advance(TimeSpan.FromSeconds(20));
         collected.Add(metrics.Observe());
         clock.Advance(TimeSpan.FromSeconds(10));
@@ -156,6 +157,6 @@ public class CountStillRunningMeasurementsTests
     private static InMemoryMessageProducer Producer(string topic) =>
         new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
 
-    private static void WaitUntilTheMonitorWaits(TimerCountingTimeProvider clock, int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private static async Task WaitUntilTheMonitorWaits(TimerCountingTimeProvider clock, int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

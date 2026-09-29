@@ -9,14 +9,13 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class UseOutboxSweeperRegistersSweeperStateTests
 {
-    [Fact]
-    public void When_use_outbox_sweeper_is_called_should_register_one_sweeper_state_resolved_as_the_same_instance()
+    [Test]
+    public async Task When_use_outbox_sweeper_is_called_should_register_one_sweeper_state_resolved_as_the_same_instance()
     {
         //Arrange
         using var lockGate = new GatedDistributedLock();
@@ -28,11 +27,11 @@ public class UseOutboxSweeperRegistersSweeperStateTests
         var second = provider.GetService<OutboxSweeperState>();
 
         //Assert
-        Assert.NotNull(first);
-        Assert.Same(first, second);
+        await Assert.That(first).IsNotNull();
+        await Assert.That(second).IsSameReferenceAs(first);
     }
 
-    [Fact]
+    [Test]
     public async Task When_use_outbox_sweeper_is_called_should_start_a_sweeper_that_writes_to_the_registered_state_on_the_container_clock()
     {
         //Arrange
@@ -53,9 +52,9 @@ public class UseOutboxSweeperRegistersSweeperStateTests
             var blocked = state.Read();
 
             //Assert
-            Assert.True(reachedLock, "The sweep did not reach the lock");
-            Assert.True(blocked.IsSweepInProgress);
-            Assert.Equal(TimeSpan.FromSeconds(7), blocked.RunningTime);
+            await Assert.That(reachedLock).IsTrue().Because("The sweep did not reach the lock");
+            await Assert.That(blocked.IsSweepInProgress).IsTrue();
+            await Assert.That(blocked.RunningTime).IsEqualTo(TimeSpan.FromSeconds(7));
         }
         finally
         {
@@ -64,8 +63,8 @@ public class UseOutboxSweeperRegistersSweeperStateTests
         }
     }
 
-    [Fact]
-    public void When_use_outbox_sweeper_is_called_twice_should_register_one_sweeper_state_and_one_sweeper()
+    [Test]
+    public async Task When_use_outbox_sweeper_is_called_twice_should_register_one_sweeper_state_and_one_sweeper()
     {
         //Arrange
         using var lockGate = new GatedDistributedLock();
@@ -76,7 +75,7 @@ public class UseOutboxSweeperRegistersSweeperStateTests
         using var provider = services.BuildServiceProvider();
 
         //Assert
-        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(OutboxSweeperState));
-        Assert.Single(provider.GetServices<IHostedService>().OfType<TimedOutboxSweeper>());
+        await Assert.That(System.Linq.Enumerable.Where(services, descriptor => descriptor.ServiceType == typeof(OutboxSweeperState))).HasSingleItem();
+        await Assert.That(provider.GetServices<IHostedService>().OfType<TimedOutboxSweeper>()).HasSingleItem();
     }
 }

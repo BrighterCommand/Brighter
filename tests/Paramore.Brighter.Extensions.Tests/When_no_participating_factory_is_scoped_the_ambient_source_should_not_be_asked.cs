@@ -31,7 +31,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // runs pipeline validation first, so this also shows the fallback holds with no validation pass at all.
 public class AmbientQueryParticipationTests
 {
-    [Fact]
+    [Test]
     public async Task When_no_participating_factory_is_scoped_the_ambient_source_should_not_be_asked()
     {
         // Arrange — every lifetime is Transient (BrighterOptions' own default), so no factory involved
@@ -121,11 +121,11 @@ public class AmbientQueryParticipationTests
         // assertion: it must not be checked by looking at whether the handler pipeline holds a scope
         // handle of its own, because a Transient handler pipeline legitimately holds one for its own
         // per-resolution isolation, and that is unrelated to whether it asked for an ambient scope.
-        Assert.Empty(recordingProvider.Asks);
+        await Assert.That(recordingProvider.Asks).IsEmpty();
     }
 
-    [Fact]
-    public void When_a_pipeline_mixes_scoped_and_transient_participants_the_ask_still_carries_AlwaysNew()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_pipeline_mixes_scoped_and_transient_participants_the_ask_still_carries_AlwaysNew()
     {
         // Arrange — the mapper is Scoped but the transformer is Transient, a deliberate mix of lifetimes
         // within the one transform pipeline. Even though the host itself asked to join whatever ambient
@@ -197,11 +197,11 @@ public class AmbientQueryParticipationTests
         // an ambient one, even though the host itself asked to join whatever's available: the mapper is
         // the only Scoped participant, so it's the one that asks, but the Transient transformer alongside
         // it rules out joining an ambient scope for the pipeline as a whole.
-        Assert.Equal(new[] { ScopeAffinity.AlwaysNew }, recordingProvider.Asks);
+        await Assert.That(recordingProvider.Asks).IsEquivalentTo(new[] { ScopeAffinity.AlwaysNew }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 
         // Assert — the ambient scope on offer was ignored: the mapper resolved its own IUnitOfWork,
         // not the one living in the ambient scope.
-        var resolved = Assert.Single(recorder.UnitsOfWork);
-        Assert.NotSame(ambientUnitOfWork, resolved);
+        var resolved = await Assert.That(recorder.UnitsOfWork).HasSingleItem();
+        await Assert.That(resolved).IsNotSameReferenceAs(ambientUnitOfWork);
     }
 }

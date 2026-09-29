@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,7 +35,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,11 +42,11 @@ public class StaleOverallCountStopsAtTheCeilingTests
 {
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Theory]
-    [InlineData(0, 0L)]
-    [InlineData(2, 2L)]
-    [InlineData(3, 3L)]
-    [InlineData(50, 3L)]
+    [Test]
+    [Arguments(0, 0L)]
+    [Arguments(2, 2L)]
+    [Arguments(3, 3L)]
+    [Arguments(50, 3L)]
     public async Task When_stale_messages_exceed_the_ceiling_should_record_the_ceiling(int staleMessages, long expected)
     {
         //Arrange
@@ -79,7 +78,7 @@ public class StaleOverallCountStopsAtTheCeilingTests
         var overall = OverallValues(metrics);
 
         //Assert
-        Assert.Equal(new[] { expected }, overall);
+        await Assert.That(overall).IsEqualTo(new[] { expected });
     }
 
     private static Message OrdersEvent() =>

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -24,85 +24,149 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
 public class MsSqlQueueBuilderInvalidNamesTests
 {
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData(" ")]
-    public void When_building_queue_sql_with_invalid_names_should_reject_them(string? name)
+    [Test]
+    [Arguments(null)]
+    [Arguments("")]
+    [Arguments(" ")]
+    public async System.Threading.Tasks.Task When_building_queue_sql_with_invalid_names_should_reject_them(string? name)
     {
         //Arrange
         string table = name!;
 
         //Act
-        var createError = Record.Exception(() => MsSqlQueueBuilder.GetDDL(table));
-        var indexError = Record.Exception(() => MsSqlQueueBuilder.GetIndexDDL(table));
-        var existsError = Record.Exception(() => MsSqlQueueBuilder.GetExistsQuery(table));
+        Exception? createError = null;
+        try
+        {
+            MsSqlQueueBuilder.GetDDL(table);
+        }
+        catch (Exception e)
+        {
+            createError = e;
+        }
+        Exception? indexError = null;
+        try
+        {
+            MsSqlQueueBuilder.GetIndexDDL(table);
+        }
+        catch (Exception e)
+        {
+            indexError = e;
+        }
+        Exception? existsError = null;
+        try
+        {
+            MsSqlQueueBuilder.GetExistsQuery(table);
+        }
+        catch (Exception e)
+        {
+            existsError = e;
+        }
 
         //Assert
-        Assert.Equal("queueTableName", Assert.IsType<ArgumentException>(createError).ParamName);
-        Assert.Equal("queueTableName", Assert.IsType<ArgumentException>(indexError).ParamName);
-        Assert.Equal("queueTableName", Assert.IsType<ArgumentException>(existsError).ParamName);
+        await Assert.That((await Assert.That(createError).IsTypeOf<ArgumentException>()).ParamName).IsEqualTo("queueTableName");
+        await Assert.That((await Assert.That(indexError).IsTypeOf<ArgumentException>()).ParamName).IsEqualTo("queueTableName");
+        await Assert.That((await Assert.That(existsError).IsTypeOf<ArgumentException>()).ParamName).IsEqualTo("queueTableName");
     }
 
-    [Fact]
-    public void When_the_table_name_exceeds_the_identifier_limit_should_reject_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_table_name_exceeds_the_identifier_limit_should_reject_it()
     {
         //Arrange
         string table = new('q', 129);
 
         //Act
-        var createError = Record.Exception(() => MsSqlQueueBuilder.GetDDL(table));
-        var existsError = Record.Exception(() => MsSqlQueueBuilder.GetExistsQuery(table));
+        Exception? createError = null;
+        try
+        {
+            MsSqlQueueBuilder.GetDDL(table);
+        }
+        catch (Exception e)
+        {
+            createError = e;
+        }
+        Exception? existsError = null;
+        try
+        {
+            MsSqlQueueBuilder.GetExistsQuery(table);
+        }
+        catch (Exception e)
+        {
+            existsError = e;
+        }
 
         //Assert
-        Assert.Equal("queueTableName", Assert.IsType<ArgumentException>(createError).ParamName);
-        Assert.Equal("queueTableName", Assert.IsType<ArgumentException>(existsError).ParamName);
+        await Assert.That((await Assert.That(createError).IsTypeOf<ArgumentException>()).ParamName).IsEqualTo("queueTableName");
+        await Assert.That((await Assert.That(existsError).IsTypeOf<ArgumentException>()).ParamName).IsEqualTo("queueTableName");
     }
 
-    [Fact]
-    public void When_the_derived_index_name_exceeds_the_identifier_limit_should_reject_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_derived_index_name_exceeds_the_identifier_limit_should_reject_it()
     {
         //Arrange
         string table = new('q', 120);
 
         //Act
-        var exception = Record.Exception(() => MsSqlQueueBuilder.GetIndexDDL(table));
+        Exception? exception = null;
+        try
+        {
+            MsSqlQueueBuilder.GetIndexDDL(table);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        Assert.Equal("queueTableName", Assert.IsType<ArgumentException>(exception).ParamName);
+        await Assert.That((await Assert.That(exception).IsTypeOf<ArgumentException>()).ParamName).IsEqualTo("queueTableName");
     }
 
-    [Fact]
-    public void When_the_schema_name_exceeds_the_identifier_limit_should_reject_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_schema_name_exceeds_the_identifier_limit_should_reject_it()
     {
         //Arrange
         string schema = new('s', 129);
 
         //Act
-        var exception = Record.Exception(() => MsSqlQueueBuilder.GetExistsQuery("queue", schema));
+        Exception? exception = null;
+        try
+        {
+            MsSqlQueueBuilder.GetExistsQuery("queue", schema);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        Assert.Equal("schemaName", Assert.IsType<ArgumentException>(exception).ParamName);
+        await Assert.That((await Assert.That(exception).IsTypeOf<ArgumentException>()).ParamName).IsEqualTo("schemaName");
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData(" ")]
-    public void When_the_schema_name_is_blank_should_reject_it(string schema)
+    [Test]
+    [Arguments("")]
+    [Arguments(" ")]
+    public async System.Threading.Tasks.Task When_the_schema_name_is_blank_should_reject_it(string schema)
     {
         //Arrange
         string table = "queue";
 
         //Act
-        var exception = Record.Exception(() => MsSqlQueueBuilder.GetExistsQuery(table, schema));
+        Exception? exception = null;
+        try
+        {
+            MsSqlQueueBuilder.GetExistsQuery(table, schema);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        Assert.Equal("schemaName", Assert.IsType<ArgumentException>(exception).ParamName);
+        await Assert.That((await Assert.That(exception).IsTypeOf<ArgumentException>()).ParamName).IsEqualTo("schemaName");
     }
 }

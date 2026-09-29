@@ -3,12 +3,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[NotInParallel("RMQ")]
 public class RmqConfirmationBatchingTests : IDisposable
 {
     private const int MessageCount = 50;
@@ -31,8 +30,8 @@ public class RmqConfirmationBatchingTests : IDisposable
             .Create(TimeSpan.FromMilliseconds(1000));
     }
 
-    [Fact]
-    public void When_confirming_many_messages_should_raise_confirmations_in_overlapping_batches_off_the_thread_pool()
+    [Test]
+    public async Task When_confirming_many_messages_should_raise_confirmations_in_overlapping_batches_off_the_thread_pool()
     {
         //Arrange
         var inFlight = 0;
@@ -63,9 +62,9 @@ public class RmqConfirmationBatchingTests : IDisposable
         var completed = allConfirmed.Wait(TimeSpan.FromSeconds(30));
 
         //Assert
-        Assert.True(completed, "Not every message was confirmed");
-        Assert.InRange(mostAtOnce, 2, MaxBatchSize); // confirmations overlap, but never more than one batch
-        Assert.False(ranOnPool, "A confirmation handler ran on a thread-pool thread");
+        await Assert.That(completed).IsTrue().Because("Not every message was confirmed");
+        await Assert.That(mostAtOnce >= 2 && mostAtOnce <= MaxBatchSize).IsTrue(); // confirmations overlap, but never more than one batch
+        await Assert.That(ranOnPool).IsFalse().Because("A confirmation handler ran on a thread-pool thread");
     }
 
     private static void InterlockedMax(ref int target, int value)

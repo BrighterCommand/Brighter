@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Base.Test.Locking;
 
+[TUnit.Core.InheritsTests]
 public abstract class RelationalDatabaseDistributedLockingAsyncTest : DistributedLockingAsyncTest
 {
     protected abstract string DefaultConnectingString { get; }
@@ -15,7 +16,7 @@ public abstract class RelationalDatabaseDistributedLockingAsyncTest : Distribute
         {
             connectionString = DefaultConnectingString;
         }
-        
+
         Configuration = new RelationalDatabaseConfiguration(connectionString);
         return base.BeforeEachTestAsync();
     }

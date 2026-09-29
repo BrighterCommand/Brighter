@@ -35,19 +35,18 @@ using OpenTelemetry.Trace;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "AzureServiceBus")]
-[Collection("AzureServiceBus")]
+[Property("Category", "AzureServiceBus")]
+[NotInParallel("AzureServiceBus")]
 public class AzureServiceBusRetryTelemetryTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(true, false)]
+    [Arguments(false, true)]
+    [Arguments(true, true)]
     public async Task When_retry_telemetry_cannot_serialize_headers_should_still_deliver_with_trace_context(
         bool synchronous, bool nonFiniteHeader)
     {
@@ -85,7 +84,7 @@ public class AzureServiceBusRetryTelemetryTests
             await sender.SendMessageAsync(original);
             var message = synchronous ? syncChannel!.Receive(TimeSpan.FromSeconds(10))
                 : await asyncChannel!.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.Equal(original.MessageId, message.Id.Value);
+            await Assert.That(message.Id.Value).IsEqualTo(original.MessageId);
             message.Header.UpdateHandledCount();
             message.Header.Bag[localHeader] = typeof(AzureServiceBusRetryTelemetryTests);
             if (nonFiniteHeader)
@@ -93,28 +92,28 @@ public class AzureServiceBusRetryTelemetryTests
             var previousTraceParent = message.Header.TraceParent;
             using var activity = new Activity("retry telemetry").SetIdFormat(ActivityIdFormat.W3C).Start();
             // Act
-            Assert.True(synchronous ? syncChannel!.Requeue(message, TimeSpan.Zero)
-                : await asyncChannel!.RequeueAsync(message, TimeSpan.Zero));
+            await Assert.That(synchronous ? syncChannel!.Requeue(message, TimeSpan.Zero)
+                : await asyncChannel!.RequeueAsync(message, TimeSpan.Zero)).IsTrue();
             await using var receiver = client.CreateReceiver(queue);
             var retry = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(10));
 
             // Assert
-            Assert.NotNull(retry);
-            Assert.NotEqual(original.MessageId, retry.MessageId);
-            Assert.Equal(original.MessageId, retry.ApplicationProperties[Message.OriginalMessageIdHeaderName]);
-            Assert.Equal(original.Body.ToArray(), retry.Body.ToArray());
-            Assert.False(retry.ApplicationProperties.ContainsKey(localHeader));
-            Assert.Equal(typeof(AzureServiceBusRetryTelemetryTests), message.Header.Bag[localHeader]);
-            Assert.Equal(previousTraceParent, message.Header.TraceParent);
-            Assert.Equal(original.MessageId, message.Id.Value);
-            Assert.Equal(activity.Id, retry.ApplicationProperties["cloudevents:traceparent"]);
+            await Assert.That(retry).IsNotNull();
+            await Assert.That(retry.MessageId).IsNotEqualTo(original.MessageId);
+            await Assert.That(retry.ApplicationProperties[Message.OriginalMessageIdHeaderName]).IsEqualTo(original.MessageId);
+            await Assert.That(retry.Body.ToArray()).IsEqualTo(original.Body.ToArray());
+            await Assert.That(retry.ApplicationProperties.ContainsKey(localHeader)).IsFalse();
+            await Assert.That(message.Header.Bag[localHeader]).IsEqualTo(typeof(AzureServiceBusRetryTelemetryTests));
+            await Assert.That(message.Header.TraceParent).IsEqualTo(previousTraceParent);
+            await Assert.That(message.Id.Value).IsEqualTo(original.MessageId);
+            await Assert.That(retry.ApplicationProperties["cloudevents:traceparent"]).IsEqualTo(activity.Id);
             if (nonFiniteHeader)
-                Assert.True(double.IsNaN(Assert.IsType<double>(retry.ApplicationProperties["measurement"])));
+                await Assert.That(double.IsNaN((await Assert.That(retry.ApplicationProperties["measurement"]).IsTypeOf<double>()))).IsTrue();
             else
-                Assert.Contains(activity.Events, e => e.Tags.Any(t =>
-                    t.Key == BrighterSemanticConventions.MessagingSystem && Equals(t.Value, "azure_service_bus")));
-            Assert.DoesNotContain(activity.Events.SelectMany(e => e.Tags), t =>
-                t.Value?.ToString()?.Contains(localHeader, StringComparison.Ordinal) == true);
+                await Assert.That(System.Linq.Enumerable.Any(activity.Events, e => e.Tags.Any(t =>
+                    t.Key == BrighterSemanticConventions.MessagingSystem && Equals(t.Value, "azure_service_bus")))).IsTrue();
+            await Assert.That(System.Linq.Enumerable.Any(activity.Events.SelectMany(e => e.Tags), t =>
+                t.Value?.ToString()?.Contains(localHeader, StringComparison.Ordinal) == true)).IsFalse();
             await receiver.CompleteMessageAsync(retry);
         }
         finally

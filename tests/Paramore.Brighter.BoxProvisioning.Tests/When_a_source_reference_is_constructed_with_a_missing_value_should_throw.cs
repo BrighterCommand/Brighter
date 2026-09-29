@@ -22,24 +22,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 public class SourceReferenceRequiredValueTests
 {
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    public void When_a_source_reference_is_constructed_with_a_missing_value_should_throw(string? value)
+    [Test]
+    [Arguments(null)]
+    [Arguments("")]
+    public async Task When_a_source_reference_is_constructed_with_a_missing_value_should_throw(string? value)
     {
         //Arrange
         string? missingValue = value;
 
         //Act
-        var exception = Assert.ThrowsAny<ArgumentException>(() => new SourceReference(missingValue!));
+        var exception = await Assert.That(() => new SourceReference(missingValue!)).Throws<ArgumentException>();
 
         //Assert
-        Assert.Equal("value", exception.ParamName);
+        await Assert.That(exception.ParamName).IsEqualTo("value");
     }
 }

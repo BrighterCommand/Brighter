@@ -28,7 +28,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
 using Neuroglia.AsyncApi.v3;
-using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
 {
@@ -48,7 +47,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
                 }));
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Discover_Types_With_PublicationTopic_Attribute()
         {
             var options = new AsyncApiOptions
@@ -61,19 +60,19 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(options, _schemaGenerator, null, null);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Channels);
-            Assert.True(result.Channels.ContainsKey("scannable_topic"));
-            Assert.Equal("scannable.topic", result.Channels["scannable_topic"].Address);
+            await Assert.That(result.Channels).IsNotNull();
+            await Assert.That(result.Channels.ContainsKey("scannable_topic")).IsTrue();
+            await Assert.That(result.Channels["scannable_topic"].Address).IsEqualTo("scannable.topic");
 
-            Assert.NotNull(result.Operations);
-            Assert.True(result.Operations.ContainsKey("send_scannable_topic"));
-            Assert.Equal(V3OperationAction.Send, result.Operations["send_scannable_topic"].Action);
+            await Assert.That(result.Operations).IsNotNull();
+            await Assert.That(result.Operations.ContainsKey("send_scannable_topic")).IsTrue();
+            await Assert.That(result.Operations["send_scannable_topic"].Action).IsEqualTo(V3OperationAction.Send);
 
-            Assert.NotNull(result.Components?.Messages);
-            Assert.True(result.Components.Messages.ContainsKey("ScannableEvent"));
+            await Assert.That(result.Components?.Messages).IsNotNull();
+            await Assert.That(result.Components.Messages.ContainsKey("ScannableEvent")).IsTrue();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Not_Scan_When_Disabled()
         {
             var options = new AsyncApiOptions
@@ -87,10 +86,10 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(options, _schemaGenerator, null, null);
             var result = await generator.GenerateAsync();
 
-            Assert.Empty(result.Operations);
+            await Assert.That(result.Operations).IsEmpty();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Let_DI_Source_Win_Dedup()
         {
             var options = new AsyncApiOptions
@@ -112,13 +111,13 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(options, _schemaGenerator, null, publications);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Operations);
+            await Assert.That(result.Operations).IsNotNull();
             // Should have exactly one send operation for this topic (from publications, not duplicated by scanning)
-            Assert.True(result.Operations.ContainsKey("send_scannable_topic"));
-            Assert.Single(result.Operations);
+            await Assert.That(result.Operations.ContainsKey("send_scannable_topic")).IsTrue();
+            await Assert.That(result.Operations).HasSingleItem();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Collapse_Duplicate_DI_And_Scanned_Publications_To_One_Operation()
         {
             var options = new AsyncApiOptions
@@ -150,9 +149,9 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(options, _schemaGenerator, null, publications);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Operations);
-            Assert.Single(result.Operations);
-            Assert.True(result.Operations.ContainsKey("send_scannable_topic"));
+            await Assert.That(result.Operations).IsNotNull();
+            await Assert.That(result.Operations).HasSingleItem();
+            await Assert.That(result.Operations.ContainsKey("send_scannable_topic")).IsTrue();
         }
 
         [PublicationTopic("scannable.topic")]

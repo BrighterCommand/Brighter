@@ -56,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private readonly InstrumentationOptions _instrumentationOptions;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
 
-        static readonly object s_lock = new();
+        private readonly object _sendLock = new();
         private RmqPublication _publication;
         private readonly ConcurrentDictionary<ulong, PendingConfirmation> _pendingConfirmations = new ConcurrentDictionary<ulong, PendingConfirmation>();
         // The channel in confirm mode with our handlers on it; the gateway replaces a closed channel with a new instance
@@ -163,7 +163,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             try
             {
-                lock (s_lock)
+                lock (_sendLock)
                 {
                     EnsureBroker(makeExchange: _publication.MakeChannels);
                     //NOTE: EnsureBroker will create a channel if one does not exist
@@ -220,7 +220,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         /// <summary>
         /// Sends the specified message
-        /// NOTE: RMQ's client has no async support, so this is not actually async and will block whilst it sends 
+        /// NOTE: RMQ's client has no async support, so this is not actually async and will block whilst it sends
         /// </summary>
         /// <param name="message"></param>
         /// <param name="cancellationToken">Cancel the ongoing operation</param>
@@ -240,7 +240,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        
+
         public ValueTask DisposeAsync()
         {
             // The sync client has no async teardown, so dispose runs synchronously here; returning
@@ -403,7 +403,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             [LoggerMessage(LogLevel.Debug, "RmqMessageProducer: Publishing message to exchange {ExchangeName} on subscription {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and body: {Request}")]
             public static partial void PublishingMessage(ILogger logger, string exchangeName, string url, double delay, string topic, bool persist, string id, string request);
-            
+
             [LoggerMessage(LogLevel.Information, "RmqMessageProducer: Published message to exchange {ExchangeName} on broker {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and message: {Request} at {Time}")]
             public static partial void PublishedMessage(ILogger logger, string exchangeName, string url, TimeSpan? delay, string topic, bool persist, string id, string request, DateTime time);
 
@@ -438,4 +438,3 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// <param name="Context">The publish span context captured at send time, used to link the settle span; null when no <see cref="Activity"/> was active.</param>
     internal readonly record struct PendingConfirmation(Id MessageId, RoutingKey Topic, ActivityContext? Context);
 }
-

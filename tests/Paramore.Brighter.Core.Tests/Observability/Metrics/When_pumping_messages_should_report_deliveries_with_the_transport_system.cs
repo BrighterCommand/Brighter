@@ -35,16 +35,15 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class MessagePumpMetricsTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_pumping_messages_should_report_deliveries_with_the_transport_system(bool useProactor)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_pumping_messages_should_report_deliveries_with_the_transport_system(bool useProactor)
     {
         //Arrange
         using var telemetry = new InMemoryMetricsFromTraces();
@@ -93,23 +92,29 @@ public class MessagePumpMetricsTests
 
         //Act
         pump.Run();
-        Assert.True(telemetry.Flush());
+        await Assert.That(telemetry.Flush()).IsTrue();
 
         //Assert
-        Assert.Single(receivedMessages);
-        Assert.Equal(message.Id, Assert.Single(consumer.AcknowledgedMessages));
+        await Assert.That(receivedMessages).HasSingleItem();
+        await Assert.That((await Assert.That(consumer.AcknowledgedMessages).HasSingleItem())).IsEqualTo(message.Id);
         var pumpSpans = telemetry.Spans.Where(span =>
             span.GetTagItem(BrighterSemanticConventions.MessagingOperationType) is "begin" or "receive" or "process")
             .ToArray();
-        Assert.Equal(6, pumpSpans.Length);
-        Assert.All(pumpSpans, span =>
-            Assert.Equal("servicebus", span.GetTagItem(BrighterSemanticConventions.MessagingSystem)));
-        Assert.Equal(1, telemetry.CounterTotal("messaging.client.consumed.messages"));
-        Assert.Equal(0, telemetry.CounterTotal("messaging.client.sent.messages"));
-        Assert.All(telemetry.TagValues("messaging.client.consumed.messages", "messaging.system"),
-            value => Assert.Equal("servicebus", value));
-        Assert.All(telemetry.TagValues("messaging.client.operation.duration", "messaging.system"),
-            value => Assert.Equal("servicebus", value));
-        Assert.Equal(1, telemetry.HistogramCount("messaging.process.duration"));
+        await Assert.That(pumpSpans.Length).IsEqualTo(6);
+        foreach (var span in pumpSpans)
+{
+    await Assert.That(span.GetTagItem(BrighterSemanticConventions.MessagingSystem)).IsEqualTo("servicebus");
+}
+        await Assert.That(telemetry.CounterTotal("messaging.client.consumed.messages")).IsEqualTo(1);
+        await Assert.That(telemetry.CounterTotal("messaging.client.sent.messages")).IsEqualTo(0);
+        foreach (var value in telemetry.TagValues("messaging.client.consumed.messages", "messaging.system"))
+{
+    await Assert.That(value).IsEqualTo("servicebus");
+}
+        foreach (var value in telemetry.TagValues("messaging.client.operation.duration", "messaging.system"))
+{
+    await Assert.That(value).IsEqualTo("servicebus");
+}
+        await Assert.That(telemetry.HistogramCount("messaging.process.duration")).IsEqualTo(1);
     }
 }

@@ -26,7 +26,6 @@ using System.Threading.Tasks;
 using Google.Api.Gax;
 using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.BoxProvisioning.Spanner;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
@@ -35,10 +34,10 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 /// the loser's <c>AlreadyExists</c> is absorbed, so neither throws and exactly one history row is stamped at
 /// V_latest (ADR 0057 §3, §6).
 /// </summary>
-[Trait("Category", "Spanner")]
-[Collection("Spanner")]
-[Trait("Category", "Spanner")]
-public class SpannerConcurrentFreshInstallTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class SpannerConcurrentFreshInstallTests
 {
     private readonly string _tableName;
     private readonly string _connectionString;
@@ -54,7 +53,7 @@ public class SpannerConcurrentFreshInstallTests : IAsyncLifetime
             outBoxTableName: _tableName);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_not_throw_when_two_concurrent_fresh_installers_race_on_history_insert()
     {
         //Arrange
@@ -73,15 +72,15 @@ public class SpannerConcurrentFreshInstallTests : IAsyncLifetime
         var act = async () => await Task.WhenAll(
             provisionerA.ProvisionAsync(),
             provisionerB.ProvisionAsync());
-        var ex = await Record.ExceptionAsync(act);
+        var ex = await TestExceptionRecorder.CaptureAsync(act);
 
         //Assert
-        Assert.Null(ex);
+        await Assert.That(ex).IsNull();
 
         using var connection = CreateConnection();
         await connection.OpenAsync();
         var historyCount = await ReadHistoryCountAsync(connection, _tableName);
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
     private static async Task<long> ReadHistoryCountAsync(
@@ -98,7 +97,11 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

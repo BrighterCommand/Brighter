@@ -37,7 +37,6 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -45,7 +44,7 @@ public class InvestigateCheckReadsBreakerRegisteredInContainerTests
 {
     private const string InvestigateCheck = "brighter-outbox-sweeper-investigate";
 
-    [Fact]
+    [Test]
     public async Task When_a_shared_singleton_breaker_trips_a_topic_should_be_reported_by_the_investigate_check()
     {
         //Arrange
@@ -71,14 +70,14 @@ public class InvestigateCheckReadsBreakerRegisteredInContainerTests
             var report = await provider.GetRequiredService<HealthCheckService>().CheckHealthAsync(CancellationToken.None);
 
             //Assert
-            Assert.True(reachedMediator, "The sweep did not reach the mediator");
-            Assert.True(activeBeforeCheck);
+            await Assert.That(reachedMediator).IsTrue().Because("The sweep did not reach the mediator");
+            await Assert.That(activeBeforeCheck).IsTrue();
             var investigate = report.Entries[InvestigateCheck];
-            Assert.Equal(HealthStatus.Degraded, investigate.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, investigate.Status);
-            Assert.Contains("payments", investigate.Description);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), investigate.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "tripped_topics" }, Assert.IsType<string[]>(investigate.Data[RemedyCheckConvention.ConditionsKey]));
+            await Assert.That(investigate.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(investigate.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(investigate.Description).Contains("payments");
+            await Assert.That(investigate.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(investigate.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "tripped_topics" });
         }
         finally
         {
@@ -87,7 +86,7 @@ public class InvestigateCheckReadsBreakerRegisteredInContainerTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_breaker_is_registered_should_report_no_tripped_topic_condition_and_not_throw()
     {
         //Arrange
@@ -108,18 +107,18 @@ public class InvestigateCheckReadsBreakerRegisteredInContainerTests
             //Act
             var activeBeforeCheck = provider.GetRequiredService<OutboxSweeperState>().Read().IsActive;
             HealthReport? report = null;
-            var exception = await Record.ExceptionAsync(async () =>
+            var exception = await TestExceptionRecorder.CaptureAsync(async () =>
                 report = await provider.GetRequiredService<HealthCheckService>().CheckHealthAsync(CancellationToken.None));
 
             //Assert
-            Assert.Null(exception);
-            Assert.True(reachedMediator, "The sweep did not reach the mediator");
-            Assert.True(activeBeforeCheck);
+            await Assert.That(exception).IsNull();
+            await Assert.That(reachedMediator).IsTrue().Because("The sweep did not reach the mediator");
+            await Assert.That(activeBeforeCheck).IsTrue();
             var investigate = report!.Entries[InvestigateCheck];
-            Assert.Equal(HealthStatus.Healthy, investigate.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, investigate.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), investigate.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Empty(Assert.IsType<string[]>(investigate.Data[RemedyCheckConvention.ConditionsKey]));
+            await Assert.That(investigate.Status).IsEqualTo(HealthStatus.Healthy);
+            await Assert.That(investigate.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(investigate.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(investigate.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEmpty();
         }
         finally
         {

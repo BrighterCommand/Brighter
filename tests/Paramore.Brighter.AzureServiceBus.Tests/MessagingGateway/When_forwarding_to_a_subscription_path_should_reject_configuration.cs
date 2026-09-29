@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -26,21 +26,20 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusForwardingDestinationValidationTests
 {
-    [Theory]
-    [InlineData("orders/Subscriptions/accounting")]
-    [InlineData("orders/subscriptions/accounting")]
-    [InlineData("orders/$DeadLetterQueue")]
-    [InlineData("sb://namespace/queue")]
-    [InlineData("/queue")]
-    [InlineData("queue/")]
-    [InlineData("queue//child")]
-    [InlineData("queue/ /child")]
+    [Test]
+    [Arguments("orders/Subscriptions/accounting")]
+    [Arguments("orders/subscriptions/accounting")]
+    [Arguments("orders/$DeadLetterQueue")]
+    [Arguments("sb://namespace/queue")]
+    [Arguments("/queue")]
+    [Arguments("queue/")]
+    [Arguments("queue//child")]
+    [Arguments("queue/ /child")]
     public async Task When_forwarding_to_a_subscription_path_should_reject_configuration(string destination)
     {
         // Arrange
@@ -53,26 +52,26 @@ public class AzureServiceBusForwardingDestinationValidationTests
             subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { ForwardTo = destination });
 
         // Act
-        var error = await Record.ExceptionAsync(async () =>
+        var error = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             await using var channel = await factory.CreateAsyncChannelAsync(subscription);
         });
 
         // Assert
-        Assert.IsType<ConfigurationException>(error);
-        Assert.Empty(client.Scheduled);
-        Assert.Empty(client.Senders);
+        await Assert.That(error).IsTypeOf<ConfigurationException>();
+        await Assert.That(client.Scheduled).IsEmpty();
+        await Assert.That(client.Senders).IsEmpty();
     }
 
-    [Theory]
-    [InlineData("orders/Subscriptions/accounting")]
-    [InlineData("orders/subscriptions/accounting")]
-    [InlineData("orders/$DeadLetterQueue")]
-    [InlineData("sb://namespace/queue")]
-    [InlineData("/queue")]
-    [InlineData("queue/")]
-    [InlineData("queue//child")]
-    [InlineData("queue/ /child")]
+    [Test]
+    [Arguments("orders/Subscriptions/accounting")]
+    [Arguments("orders/subscriptions/accounting")]
+    [Arguments("orders/$DeadLetterQueue")]
+    [Arguments("sb://namespace/queue")]
+    [Arguments("/queue")]
+    [Arguments("queue/")]
+    [Arguments("queue//child")]
+    [Arguments("queue/ /child")]
     public async Task When_scheduling_to_a_subscription_path_should_reject_before_creating_a_sender(string destination)
     {
         // Arrange
@@ -82,23 +81,23 @@ public class AzureServiceBusForwardingDestinationValidationTests
             new MessageBody("order"));
 
         // Act
-        var error = await Record.ExceptionAsync(() => scheduler.RequeueAsync(message, new ChannelName(destination), System.TimeSpan.Zero));
+        var error = await TestExceptionRecorder.CaptureAsync(() => scheduler.RequeueAsync(message, new ChannelName(destination), System.TimeSpan.Zero));
 
         // Assert
-        Assert.IsType<System.ArgumentException>(error);
-        Assert.Empty(client.Scheduled);
-        Assert.Empty(client.Senders);
+        await Assert.That(error).IsTypeOf<System.ArgumentException>();
+        await Assert.That(client.Scheduled).IsEmpty();
+        await Assert.That(client.Senders).IsEmpty();
     }
 
-    [Theory]
-    [InlineData("orders/Subscriptions/accounting", false)]
-    [InlineData("orders/Subscriptions/accounting", true)]
-    [InlineData("queue/$DeadLetterQueue", false)]
-    [InlineData("sb://namespace/queue", true)]
-    [InlineData("/queue", false)]
-    [InlineData("queue/", true)]
-    [InlineData("queue//child", false)]
-    [InlineData("queue/ /child", true)]
+    [Test]
+    [Arguments("orders/Subscriptions/accounting", false)]
+    [Arguments("orders/Subscriptions/accounting", true)]
+    [Arguments("queue/$DeadLetterQueue", false)]
+    [Arguments("sb://namespace/queue", true)]
+    [Arguments("/queue", false)]
+    [Arguments("queue/", true)]
+    [Arguments("queue//child", false)]
+    [Arguments("queue/ /child", true)]
     public async Task When_using_an_invalid_queue_routing_key_should_reject_configuration(string destination, bool synchronous)
     {
         // Arrange
@@ -112,7 +111,7 @@ public class AzureServiceBusForwardingDestinationValidationTests
             subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { UseServiceBusQueue = true });
 
         // Act
-        var error = await Record.ExceptionAsync(async () =>
+        var error = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             if (synchronous)
             {
@@ -125,7 +124,7 @@ public class AzureServiceBusForwardingDestinationValidationTests
         });
 
         // Assert
-        Assert.IsType<ConfigurationException>(error);
-        Assert.Empty(client.Senders);
+        await Assert.That(error).IsTypeOf<ConfigurationException>();
+        await Assert.That(client.Senders).IsEmpty();
     }
 }

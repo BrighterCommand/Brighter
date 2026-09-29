@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -13,7 +13,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 /// prepare-model hook, so <see cref="Configuration.MessagingGatewayConfiguration.Skip"/> is never
 /// assigned and stays null - and under Liquid <c>nil != empty</c> is TRUE, so
 /// <c>{% if Skip != empty %}</c> renders. Every canonical fact across every transport comes out as
-/// <c>[Fact(Skip = "")]</c>, which xUnit reports as skipped. The suite would go green having run
+/// <c>[Test][Skip("")]</c>, which xUnit reports as skipped. The suite would go green having run
 /// nothing. That is the failure mode this test exists to prevent, and it is not hypothetical: the
 /// search walks up from <see cref="AppContext.BaseDirectory"/> for
 /// <c>specs/0036-.../conformance-status.md</c>, which misses whenever the generator runs outside
@@ -29,8 +29,8 @@ public class LedgerResolutionFailureTests : IDisposable
         Directory.CreateDirectory(_testDirectory);
     }
 
-    [Fact]
-    public void When_no_ledger_exists_above_the_start_directory_should_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_no_ledger_exists_above_the_start_directory_should_throw()
     {
         // Arrange - a directory with no ledger anywhere above it, which is what the generator sees
         // when it runs outside the repository, or once this spec directory is archived.
@@ -38,14 +38,13 @@ public class LedgerResolutionFailureTests : IDisposable
         Directory.CreateDirectory(directoryWithNoLedger);
 
         // Act / Assert - loud, naming what was looked for so the cause is obvious from the message.
-        var exception = Assert.Throws<InvalidOperationException>(
-            () => ConformanceLedger.LoadFrom(directoryWithNoLedger));
+        var exception = await Assert.That(() => ConformanceLedger.LoadFrom(directoryWithNoLedger)).ThrowsExactly<InvalidOperationException>();
 
-        Assert.Contains("conformance-status.md", exception.Message);
+        await Assert.That(exception.Message).Contains("conformance-status.md");
     }
 
-    [Fact]
-    public void When_a_ledger_exists_above_the_start_directory_should_load_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_ledger_exists_above_the_start_directory_should_load_it()
     {
         // Arrange - the repository's own tree, where the real ledger is findable. Guards against
         // "make it throw" being satisfied by throwing unconditionally.
@@ -55,7 +54,7 @@ public class LedgerResolutionFailureTests : IDisposable
         var ledger = ConformanceLedger.LoadFrom(directoryInsideTheRepository);
 
         // Assert - a usable ledger, not a stub: it resolves a row the conformance matrix carries.
-        Assert.True(ledger.HasRow("Redis / RedisMessagingGateway"));
+        await Assert.That(ledger.HasRow("Redis / RedisMessagingGateway")).IsTrue();
     }
 
     public void Dispose()

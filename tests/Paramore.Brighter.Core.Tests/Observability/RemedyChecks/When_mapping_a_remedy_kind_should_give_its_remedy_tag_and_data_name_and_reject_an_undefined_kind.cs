@@ -25,14 +25,13 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.RemedyChecks;
 
 public class RemedyCheckConventionTests
 {
-    [Fact]
-    public void When_mapping_a_remedy_kind_should_give_its_remedy_tag_and_data_name_and_reject_an_undefined_kind_tags()
+    [Test]
+    public async Task When_mapping_a_remedy_kind_should_give_its_remedy_tag_and_data_name_and_reject_an_undefined_kind_tags()
     {
         //Arrange
         //Act
@@ -41,16 +40,16 @@ public class RemedyCheckConventionTests
         var investigate = RemedyCheckConvention.Tag(RemedyKind.Investigate);
 
         //Assert
-        Assert.Equal("brighter-restart", restart);
-        Assert.Equal(RemedyCheckConvention.RestartTag, restart);
-        Assert.Equal("brighter-take-out-of-service", takeOutOfService);
-        Assert.Equal(RemedyCheckConvention.TakeOutOfServiceTag, takeOutOfService);
-        Assert.Equal("brighter-investigate", investigate);
-        Assert.Equal(RemedyCheckConvention.InvestigateTag, investigate);
+        await Assert.That(restart).IsEqualTo("brighter-restart");
+        await Assert.That(restart).IsEqualTo(RemedyCheckConvention.RestartTag);
+        await Assert.That(takeOutOfService).IsEqualTo("brighter-take-out-of-service");
+        await Assert.That(takeOutOfService).IsEqualTo(RemedyCheckConvention.TakeOutOfServiceTag);
+        await Assert.That(investigate).IsEqualTo("brighter-investigate");
+        await Assert.That(investigate).IsEqualTo(RemedyCheckConvention.InvestigateTag);
     }
 
-    [Fact]
-    public void When_mapping_a_remedy_kind_should_give_its_remedy_tag_and_data_name_and_reject_an_undefined_kind_names_and_keys()
+    [Test]
+    public async Task When_mapping_a_remedy_kind_should_give_its_remedy_tag_and_data_name_and_reject_an_undefined_kind_names_and_keys()
     {
         //Arrange
         //Act
@@ -59,25 +58,25 @@ public class RemedyCheckConventionTests
         var investigate = RemedyCheckConvention.Name(RemedyKind.Investigate);
 
         //Assert
-        Assert.Equal("restart", restart);
-        Assert.Equal("take_out_of_service", takeOutOfService);
-        Assert.Equal("investigate", investigate);
-        Assert.Equal("remedy_kind", RemedyCheckConvention.RemedyKindKey);
-        Assert.Equal("conditions", RemedyCheckConvention.ConditionsKey);
+        await Assert.That(restart).IsEqualTo("restart");
+        await Assert.That(takeOutOfService).IsEqualTo("take_out_of_service");
+        await Assert.That(investigate).IsEqualTo("investigate");
+        await Assert.That(RemedyCheckConvention.RemedyKindKey).IsEqualTo("remedy_kind");
+        await Assert.That(RemedyCheckConvention.ConditionsKey).IsEqualTo("conditions");
     }
 
-    [Fact]
-    public void When_mapping_a_remedy_kind_should_give_its_remedy_tag_and_data_name_and_reject_an_undefined_kind_undefined_kind()
+    [Test]
+    public async Task When_mapping_a_remedy_kind_should_give_its_remedy_tag_and_data_name_and_reject_an_undefined_kind_undefined_kind()
     {
         //Arrange
         var undefined = (RemedyKind)99;
 
         //Act
-        var tag = Record.Exception(() => RemedyCheckConvention.Tag(undefined));
-        var name = Record.Exception(() => RemedyCheckConvention.Name(undefined));
+        var tag = TestExceptionRecorder.Capture(() => RemedyCheckConvention.Tag(undefined));
+        var name = TestExceptionRecorder.Capture(() => RemedyCheckConvention.Name(undefined));
 
         //Assert
-        Assert.IsType<ArgumentOutOfRangeException>(tag);
-        Assert.IsType<ArgumentOutOfRangeException>(name);
+        await Assert.That(tag).IsTypeOf<ArgumentOutOfRangeException>();
+        await Assert.That(name).IsTypeOf<ArgumentOutOfRangeException>();
     }
 }

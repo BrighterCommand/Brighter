@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner;
 
@@ -35,5 +34,5 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner;
 /// Test collections coordinate within one test process. The test project runs target frameworks
 /// sequentially; independent test invocations must also run sequentially or use separate databases.
 /// </remarks>
-[CollectionDefinition("Spanner", DisableParallelization = true)]
+[System.Obsolete]
 public class SpannerTestCollection;

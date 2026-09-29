@@ -29,7 +29,6 @@ using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -37,12 +36,12 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// A runner constructed without a lock timeout waits 30 seconds, not <see cref="TimeSpan.Zero"/> (ADR 0058 §B.5). Only the
 /// detection-helper constructor makes the timeout optional; the fake lock records it, then throws to end the migration.
 /// </summary>
-public class PostgreSqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
+public class PostgreSqlRunnerDefaultLockTimeoutTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_postgres_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds()
     {
         //Arrange
@@ -55,15 +54,17 @@ public class PostgreSqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
-        await Assert.ThrowsAsync<TimeoutException>(() => runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, freshHint));
+        await Assert.That(() => runner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, freshHint)).ThrowsExactly<TimeoutException>();
 
         //Assert
-        Assert.Equal(TimeSpan.FromSeconds(30), fakeLock.AcquiredTimeout);
+        await Assert.That(fakeLock.AcquiredTimeout).IsEqualTo(TimeSpan.FromSeconds(30));
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

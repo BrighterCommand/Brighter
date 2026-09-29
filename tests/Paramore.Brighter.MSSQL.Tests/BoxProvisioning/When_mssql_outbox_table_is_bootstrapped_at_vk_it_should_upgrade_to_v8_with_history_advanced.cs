@@ -27,7 +27,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.Legacy;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -35,7 +34,7 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// Bootstrapping an outbox seeded at V_k with no history stamps a synthetic V_k row, applies
 /// V_{k+1}..V8, and keeps the table's existing rows.
 /// </summary>
-public class MsSqlOutboxVkToV8UpgradeTests : IAsyncLifetime
+public class MsSqlOutboxVkToV8UpgradeTests
 {
     private static readonly string[] s_v8ExpectedColumns =
     [
@@ -48,11 +47,11 @@ public class MsSqlOutboxVkToV8UpgradeTests : IAsyncLifetime
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Theory]
-    [InlineData(1)]
-    [InlineData(3)]
-    [InlineData(5)]
-    [InlineData(7)]
+    [Test]
+    [Arguments(1)]
+    [Arguments(3)]
+    [Arguments(5)]
+    [Arguments(7)]
     public async Task When_mssql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v8_with_history_advanced(int k)
     {
         //Arrange
@@ -76,25 +75,25 @@ public class MsSqlOutboxVkToV8UpgradeTests : IAsyncLifetime
         var actualColumns = GetTableColumns();
         foreach (var expected in s_v8ExpectedColumns)
         {
-            Assert.Contains(expected, actualColumns);
+            await Assert.That(actualColumns).Contains(expected);
         }
 
         var rowsByVersion = GetHistoryRowsByVersion();
-        Assert.Equal(ExpectedMigrationVersions.OutboxLatest - k + 1, rowsByVersion.Count);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(ExpectedMigrationVersions.OutboxLatest - k + 1);
 
-        var syntheticDescription = Assert.Contains(k, rowsByVersion);
-        Assert.StartsWith($"bootstrap: detected at V{k}", syntheticDescription);
+        await Assert.That(rowsByVersion.ContainsKey(k)).IsTrue();
+
+        var syntheticDescription = rowsByVersion[k];
+        await Assert.That(syntheticDescription).StartsWith($"bootstrap: detected at V{k}");
 
         for (var v = k + 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            var appliedDescription = Assert.Contains(v, rowsByVersion);
-            Assert.False(
-                appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal),
-                $"V{v} should be an applied migration row, not a synthetic bootstrap row " +
-                $"(description was: '{appliedDescription}')");
+            await Assert.That(rowsByVersion.ContainsKey(v)).IsTrue();
+            var appliedDescription = rowsByVersion[v];
+            await Assert.That(appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
         }
 
-        Assert.Equal(1, GetMarkerRowCount());
+        await Assert.That(GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private void SeedMarkerRow()
@@ -156,7 +155,11 @@ ORDER BY [MigrationVersion]";
         return (int)command.ExecuteScalar()!;
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

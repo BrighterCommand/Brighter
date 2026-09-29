@@ -27,14 +27,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.RemedyChecks;
 
 public class RemedyCheckConventionEmptyDataTests
 {
-    [Fact]
-    public void When_no_remedy_condition_applies_should_build_remedy_data_with_no_conditions()
+    [Test]
+    public async Task When_no_remedy_condition_applies_should_build_remedy_data_with_no_conditions()
     {
         //Arrange
         //Act
@@ -42,23 +41,23 @@ public class RemedyCheckConventionEmptyDataTests
         data["extra"] = 1;
 
         //Assert
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Empty(Assert.IsAssignableFrom<IEnumerable<string>>(data[RemedyCheckConvention.ConditionsKey]));
-        Assert.Equal(1, data["extra"]);
+        await Assert.That(data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That((((IEnumerable<string>)(((IEnumerable<string>)(await Assert.That(data[RemedyCheckConvention.ConditionsKey]).IsAssignableTo<IEnumerable<string>>())))))).IsEmpty();
+        await Assert.That(data["extra"]).IsEqualTo(1);
     }
 
-    [Fact]
-    public void When_the_remedy_kind_is_undefined_should_reject_it_when_building_remedy_data()
+    [Test]
+    public async Task When_the_remedy_kind_is_undefined_should_reject_it_when_building_remedy_data()
     {
         //Arrange
         var undefined = (RemedyKind)99;
 
         //Act
-        var withoutConditions = Record.Exception(() => RemedyCheckConvention.Data(undefined));
-        var withConditions = Record.Exception(() => RemedyCheckConvention.Data(undefined, Array.Empty<RemedyCondition>()));
+        var withoutConditions = TestExceptionRecorder.Capture(() => RemedyCheckConvention.Data(undefined));
+        var withConditions = TestExceptionRecorder.Capture(() => RemedyCheckConvention.Data(undefined, Array.Empty<RemedyCondition>()));
 
         //Assert
-        Assert.IsType<ArgumentOutOfRangeException>(withoutConditions);
-        Assert.IsType<ArgumentOutOfRangeException>(withConditions);
+        await Assert.That(withoutConditions).IsTypeOf<ArgumentOutOfRangeException>();
+        await Assert.That(withConditions).IsTypeOf<ArgumentOutOfRangeException>();
     }
 }

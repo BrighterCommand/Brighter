@@ -1,12 +1,11 @@
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor;
 
 public class ChannelDoubleDisposalTests
 {
-    [Fact]
-    public void When_a_channel_is_disposed_twice_should_dispose_its_consumer_once()
+    [Test]
+    public async Task When_a_channel_is_disposed_twice_should_dispose_its_consumer_once()
     {
         // Arrange
         var consumer = new SpyDisposeCountingConsumer();
@@ -17,6 +16,6 @@ public class ChannelDoubleDisposalTests
         channel.Dispose();
 
         // Assert
-        Assert.Equal(1, consumer.DisposeCount);
+        await Assert.That(consumer.DisposeCount).IsEqualTo(1);
     }
 }

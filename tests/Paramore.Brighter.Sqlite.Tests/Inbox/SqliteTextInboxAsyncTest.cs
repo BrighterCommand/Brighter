@@ -4,6 +4,7 @@ using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.Sqlite;
 
 namespace Paramore.Brighter.Sqlite.Tests.Inbox;
+[TUnit.Core.InheritsTests]
 
 public class SqliteTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
 {

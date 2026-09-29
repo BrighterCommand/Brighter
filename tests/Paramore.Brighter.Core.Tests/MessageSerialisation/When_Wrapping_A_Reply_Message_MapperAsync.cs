@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -36,7 +35,7 @@ public class AsyncReplyMessageWrapRequestTests
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
     }
 
-    [Fact]
+    [Test]
     public async Task When_Wrapping_A_Reply_Message_Mapper_Async()
     {
         //act
@@ -44,11 +43,11 @@ public class AsyncReplyMessageWrapRequestTests
         var message = await transformPipeline.WrapAsync(_myResponse, new RequestContext(), _publication);
 
         //assert - message topic is the reply address, not the publication topic
-        Assert.Equal(_myResponse.SendersAddress.Topic, message.Header.Topic);
-        Assert.NotEqual(_publication.Topic, message.Header.Topic);
+        await Assert.That(message.Header.Topic).IsEqualTo(_myResponse.SendersAddress.Topic);
+        await Assert.That(message.Header.Topic).IsNotEqualTo(_publication.Topic);
 
         //assert - publication topic stored in bag for producer lookup
-        Assert.True(message.Header.Bag.ContainsKey(Message.ProducerTopicHeaderName));
-        Assert.Equal(_publication.Topic!.Value, message.Header.Bag[Message.ProducerTopicHeaderName]);
+        await Assert.That(message.Header.Bag.ContainsKey(Message.ProducerTopicHeaderName)).IsTrue();
+        await Assert.That(message.Header.Bag[Message.ProducerTopicHeaderName]).IsEqualTo(_publication.Topic!.Value);
     }
 }

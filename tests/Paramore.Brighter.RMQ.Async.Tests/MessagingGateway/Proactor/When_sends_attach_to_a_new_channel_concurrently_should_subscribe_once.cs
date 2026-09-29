@@ -27,11 +27,10 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
+[Property("Category", "RMQ")]
 public class RmqConcurrentAttachAsyncTests : IAsyncDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
@@ -54,7 +53,7 @@ public class RmqConcurrentAttachAsyncTests : IAsyncDisposable
             .GetResult();
     }
 
-    [Fact]
+    [Test]
     public async Task When_sends_attach_to_a_new_channel_concurrently_should_subscribe_once()
     {
         //Arrange
@@ -67,7 +66,7 @@ public class RmqConcurrentAttachAsyncTests : IAsyncDisposable
             Task.Run(() => _messageProducer.SendAsync(second)));
 
         //Assert — the producer listens to the channel once, not once per send
-        Assert.Equal(1, _messageProducer.GatedChannel!.AckSubscriberCount);
+        await Assert.That(_messageProducer.GatedChannel!.AckSubscriberCount).IsEqualTo(1);
     }
 
     private Message NewMessage() => new(

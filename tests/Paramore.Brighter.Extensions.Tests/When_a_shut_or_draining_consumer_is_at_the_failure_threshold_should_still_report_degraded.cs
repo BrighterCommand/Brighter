@@ -33,16 +33,15 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ConsumerTakeOutOfServiceDispatcherStateTests
 {
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_a_shut_consumer_is_at_the_failure_threshold_should_still_report_degraded()
     {
         //Arrange
@@ -56,14 +55,14 @@ public class ConsumerTakeOutOfServiceDispatcherStateTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        var consumer = Assert.Single(host.Dispatcher.Consumers);
-        Assert.Equal(ConsumerState.Shut, consumer.State);
-        Assert.Equal(3, Assert.IsAssignableFrom<IHaveAChannelFailureCount>(consumer.Performer).ConsecutiveChannelFailures);
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        Assert.Equal(new[] { "persistent_channel_failures" }, Assert.IsAssignableFrom<System.Collections.Generic.IEnumerable<string>>(result.Data["conditions"]));
+        var consumer = await Assert.That(host.Dispatcher.Consumers).HasSingleItem();
+        await Assert.That(consumer.State).IsEqualTo(ConsumerState.Shut);
+        await Assert.That((((IHaveAChannelFailureCount)(((IHaveAChannelFailureCount)(await Assert.That(consumer.Performer).IsAssignableTo<IHaveAChannelFailureCount>()))))).ConsecutiveChannelFailures).IsEqualTo(3);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That((((System.Collections.Generic.IEnumerable<string>)(((System.Collections.Generic.IEnumerable<string>)(await Assert.That(result.Data["conditions"]).IsAssignableTo<System.Collections.Generic.IEnumerable<string>>())))))).IsEqualTo(new[] { "persistent_channel_failures" });
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_draining_consumer_is_at_the_failure_threshold_should_still_report_degraded()
     {
         //Arrange
@@ -77,13 +76,13 @@ public class ConsumerTakeOutOfServiceDispatcherStateTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        Assert.False(drain.IsCompleted);
-        Assert.Equal(DispatcherState.DS_RUNNING, Assert.IsType<Dispatcher>(host.Dispatcher).State);
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        Assert.Equal(new[] { "persistent_channel_failures" }, Assert.IsAssignableFrom<System.Collections.Generic.IEnumerable<string>>(result.Data["conditions"]));
+        await Assert.That(drain.IsCompleted).IsFalse();
+        await Assert.That((await Assert.That(host.Dispatcher).IsTypeOf<Dispatcher>()).State).IsEqualTo(DispatcherState.DS_RUNNING);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That((((System.Collections.Generic.IEnumerable<string>)(((System.Collections.Generic.IEnumerable<string>)(await Assert.That(result.Data["conditions"]).IsAssignableTo<System.Collections.Generic.IEnumerable<string>>())))))).IsEqualTo(new[] { "persistent_channel_failures" });
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_dispatcher_is_awaiting_with_no_consumers_should_report_healthy()
     {
         //Arrange
@@ -94,9 +93,9 @@ public class ConsumerTakeOutOfServiceDispatcherStateTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        Assert.Equal(DispatcherState.DS_AWAITING, Assert.IsType<Dispatcher>(host.Dispatcher).State);
-        Assert.Empty(host.Dispatcher.Consumers);
-        Assert.Equal(HealthStatus.Healthy, result.Status);
+        await Assert.That((await Assert.That(host.Dispatcher).IsTypeOf<Dispatcher>()).State).IsEqualTo(DispatcherState.DS_AWAITING);
+        await Assert.That(host.Dispatcher.Consumers).IsEmpty();
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Healthy);
     }
 
     private static async Task ObservedFailures(MultiSubscriptionReceiveHealthTestHost host)

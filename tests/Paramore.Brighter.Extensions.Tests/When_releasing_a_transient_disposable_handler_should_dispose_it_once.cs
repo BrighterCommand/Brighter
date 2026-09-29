@@ -3,14 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class HandlerFactoryReleaseDisposalTests
 {
-    [Fact]
-    public void When_disposing_the_pipeline_scope_a_transient_disposable_handler_should_be_disposed_once()
+    [Test]
+    public async System.Threading.Tasks.Task When_disposing_the_pipeline_scope_a_transient_disposable_handler_should_be_disposed_once()
     {
         //arrange
         var collection = new ServiceCollection();
@@ -30,11 +30,11 @@ public class HandlerFactoryReleaseDisposalTests
         lifetime.Dispose();
 
         //assert
-        Assert.Equal(1, handler.DisposeCount);
+        await Assert.That(handler.DisposeCount).IsEqualTo(1);
     }
 
-    [Fact]
-    public void When_disposing_the_pipeline_scope_a_scoped_disposable_handler_should_be_disposed_once()
+    [Test]
+    public async System.Threading.Tasks.Task When_disposing_the_pipeline_scope_a_scoped_disposable_handler_should_be_disposed_once()
     {
         //arrange
         var collection = new ServiceCollection();
@@ -53,7 +53,7 @@ public class HandlerFactoryReleaseDisposalTests
         lifetime.Dispose();
 
         //assert
-        Assert.Equal(1, handler.DisposeCount);
+        await Assert.That(handler.DisposeCount).IsEqualTo(1);
     }
 
     private sealed class TestCommand : Command

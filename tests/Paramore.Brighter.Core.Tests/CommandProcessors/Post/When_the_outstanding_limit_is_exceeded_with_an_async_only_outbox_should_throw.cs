@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -8,7 +8,6 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Tasks;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 
@@ -18,7 +17,7 @@ public class OutstandingLimitAnyOutboxTests
 {
     private readonly RoutingKey _routingKey = new("MyCommand");
 
-    [Fact]
+    [Test]
     public async Task When_the_outstanding_limit_is_exceeded_with_an_async_only_outbox_should_throw()
     {
         //Arrange
@@ -29,10 +28,10 @@ public class OutstandingLimitAnyOutboxTests
         var reachedLimit = await PostUntilLimitReached(outbox, timeProvider);
 
         //Assert
-        Assert.True(reachedLimit, "OutboxLimitReachedException was never thrown");
+        await Assert.That(reachedLimit).IsTrue().Because("OutboxLimitReachedException was never thrown");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_outstanding_limit_is_exceeded_with_a_sync_and_async_outbox_should_throw()
     {
         //Arrange
@@ -43,13 +42,13 @@ public class OutstandingLimitAnyOutboxTests
         var reachedLimit = await PostUntilLimitReached(outbox, timeProvider);
 
         //Assert
-        Assert.True(reachedLimit);
+        await Assert.That(reachedLimit).IsTrue();
     }
 
     // The pump runs on a single thread with its own SynchronizationContext. If the check that counts outstanding
     // messages blocked that thread while the outbox's count waited to resume on it, the pump would hang. The
     // InMemoryOutbox completes its count synchronously, so only an outbox that really yields can show this.
-    [Fact]
+    [Test]
     public async Task When_the_outstanding_count_yields_inside_the_pump_should_not_deadlock()
     {
         //Arrange
@@ -62,8 +61,8 @@ public class OutstandingLimitAnyOutboxTests
         var finished = await Task.WhenAny(pump, Task.Delay(TimeSpan.FromSeconds(30)));
 
         //Assert
-        Assert.True(ReferenceEquals(finished, pump), "The pump did not finish within 30 seconds: it is deadlocked");
-        Assert.True(await pump, "OutboxLimitReachedException was never thrown");
+        await Assert.That(ReferenceEquals(finished, pump)).IsTrue().Because("The pump did not finish within 30 seconds: it is deadlocked");
+        await Assert.That(await pump).IsTrue().Because("OutboxLimitReachedException was never thrown");
     }
 
     private async Task<bool> PostUntilLimitReached(IAmAnOutbox outbox, FakeTimeProvider timeProvider)

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -32,12 +32,11 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
-[Trait("Category", "MSSQL")]
-[Collection("MSSQLMessagingGateway")]
+[Property("Category", "MSSQL")]
+[NotInParallel("MSSQLMessagingGateway")]
 public class MsSqlSubscriberReadinessTests : IDisposable
 {
     private readonly RelationalDatabaseConfiguration _configuration = new MsSqlTestHelper().QueueConfiguration;
@@ -52,13 +51,13 @@ public class MsSqlSubscriberReadinessTests : IDisposable
             .Create().Single().Value;
     }
 
-    [Theory]
-    [InlineData(false, "Latin1_General_CI_AI", "CAFE")]
-    [InlineData(true, "Latin1_General_CI_AI", "CAFE")]
-    [InlineData(false, "Latin1_General_CI_AI", "café ")]
-    [InlineData(true, "Latin1_General_CI_AI", "café ")]
-    [InlineData(false, "Latin1_General_100_BIN2", "café ")]
-    [InlineData(true, "Latin1_General_100_BIN2", "café ")]
+    [Test]
+    [Arguments(false, "Latin1_General_CI_AI", "CAFE")]
+    [Arguments(true, "Latin1_General_CI_AI", "CAFE")]
+    [Arguments(false, "Latin1_General_CI_AI", "café ")]
+    [Arguments(true, "Latin1_General_CI_AI", "café ")]
+    [Arguments(false, "Latin1_General_100_BIN2", "café ")]
+    [Arguments(true, "Latin1_General_100_BIN2", "café ")]
     public async Task When_a_subscriber_alias_matches_the_logical_topic_in_sql_should_reject_the_entire_send(
         bool async, string collation, string alias)
     {
@@ -69,16 +68,16 @@ public class MsSqlSubscriberReadinessTests : IDisposable
         var message = Message(new RoutingKey("café"));
 
         //Act
-        var error = await Assert.ThrowsAsync<ConfigurationException>(() => Send(producer, message, async));
+        var error = await Assert.That(() => Send(producer, message, async)).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("logical topic", error.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(0, await Scalar($"SELECT COUNT(*) FROM [{_configuration.QueueStoreTable}]"));
+        await Assert.That(error.Message).Contains("logical topic");
+        await Assert.That(await Scalar($"SELECT COUNT(*) FROM [{_configuration.QueueStoreTable}]")).IsEqualTo(0);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_sql_distinguishes_the_topic_from_a_case_variant_should_allow_the_subscriber(bool async)
     {
         //Arrange
@@ -92,12 +91,12 @@ public class MsSqlSubscriberReadinessTests : IDisposable
         await Send(producer, message, async);
 
         //Assert
-        Assert.Equal(message.Id, (await Receive(consumer)).Id);
+        await Assert.That((await Receive(consumer)).Id).IsEqualTo(message.Id);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_plain_queue_names_differ_only_in_spelling_should_keep_topic_scheduling(bool async)
     {
         //Arrange
@@ -120,14 +119,14 @@ public class MsSqlSubscriberReadinessTests : IDisposable
             : consumer.Requeue(message, subscription.RequeueDelay);
 
         //Assert
-        Assert.True(accepted);
-        Assert.Same(message, await delivered.Task.WaitAsync(TimeSpan.FromSeconds(5)));
-        Assert.Equal("café", message.Header.Topic.Value);
+        await Assert.That(accepted).IsTrue();
+        await Assert.That(await delivered.Task.WaitAsync(TimeSpan.FromSeconds(5))).IsSameReferenceAs(message);
+        await Assert.That(message.Header.Topic.Value).IsEqualTo("café");
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_the_callers_publication_is_mutated_should_keep_the_producers_routing_snapshot(bool async)
     {
         //Arrange
@@ -146,16 +145,16 @@ public class MsSqlSubscriberReadinessTests : IDisposable
         await Send(producer, message, async);
 
         //Assert
-        Assert.Equal(message.Id, (await Receive(first)).Id);
-        Assert.Equal(message.Id, (await Receive(second)).Id);
-        Assert.True((await Receive(unexpected)).IsEmpty);
+        await Assert.That((await Receive(first)).Id).IsEqualTo(message.Id);
+        await Assert.That((await Receive(second)).Id).IsEqualTo(message.Id);
+        await Assert.That((await Receive(unexpected)).IsEmpty).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_a_fan_out_transaction_is_open_should_skip_its_copies_and_read_committed_queues(
         bool async, bool commit)
     {
@@ -179,11 +178,11 @@ public class MsSqlSubscriberReadinessTests : IDisposable
             using (new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled))
             {
                 //Assert
-                Assert.Equal(committed.Id, (await Receive(first)).Id);
-                Assert.Equal(committed.Id, (await Receive(second)).Id);
-                Assert.Equal(unrelated.Id, (await Receive(other)).Id);
-                Assert.True((await Receive(first)).IsEmpty);
-                Assert.True((await Receive(second)).IsEmpty);
+                await Assert.That((await Receive(first)).Id).IsEqualTo(committed.Id);
+                await Assert.That((await Receive(second)).Id).IsEqualTo(committed.Id);
+                await Assert.That((await Receive(other)).Id).IsEqualTo(unrelated.Id);
+                await Assert.That((await Receive(first)).IsEmpty).IsTrue();
+                await Assert.That((await Receive(second)).IsEmpty).IsTrue();
             }
             if (commit)
                 transaction.Complete();
@@ -194,21 +193,21 @@ public class MsSqlSubscriberReadinessTests : IDisposable
         var secondCopy = await Receive(second);
         if (commit)
         {
-            Assert.Equal(pending.Id, firstCopy.Id);
-            Assert.Equal(pending.Id, secondCopy.Id);
+            await Assert.That(firstCopy.Id).IsEqualTo(pending.Id);
+            await Assert.That(secondCopy.Id).IsEqualTo(pending.Id);
         }
         else
         {
-            Assert.True(firstCopy.IsEmpty);
-            Assert.True(secondCopy.IsEmpty);
+            await Assert.That(firstCopy.IsEmpty).IsTrue();
+            await Assert.That(secondCopy.IsEmpty).IsTrue();
         }
-        Assert.True((await Receive(first)).IsEmpty);
-        Assert.True((await Receive(second)).IsEmpty);
+        await Assert.That((await Receive(first)).IsEmpty).IsTrue();
+        await Assert.That((await Receive(second)).IsEmpty).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_a_fan_out_send_is_blocked_should_honor_the_publication_timeout(bool async)
     {
         //Arrange
@@ -227,27 +226,27 @@ public class MsSqlSubscriberReadinessTests : IDisposable
         {
             //Act
             sending = Task.Run(() => Send(producer, Message(_topic), async));
-            var error = await Assert.ThrowsAsync<SqlException>(() => sending.WaitAsync(TimeSpan.FromSeconds(5)));
+            var error = await Assert.That(() => sending.WaitAsync(TimeSpan.FromSeconds(5))).ThrowsExactly<SqlException>();
 
             //Assert
-            Assert.Equal(-2, error.Number);
+            await Assert.That(error.Number).IsEqualTo(-2);
         }
         finally
         {
             transaction.Rollback();
             if (sending != null)
-                await Record.ExceptionAsync(() => sending);
+                await TestExceptionRecorder.CaptureAsync(() => sending);
         }
 
         //Assert
-        Assert.Equal(0, await Scalar($"SELECT COUNT(*) FROM [{_configuration.QueueStoreTable}]"));
+        await Assert.That(await Scalar($"SELECT COUNT(*) FROM [{_configuration.QueueStoreTable}]")).IsEqualTo(0);
         await Send(producer, Message(_topic), async);
-        Assert.Equal(2, await Scalar($"SELECT COUNT(*) FROM [{_configuration.QueueStoreTable}]"));
+        await Assert.That(await Scalar($"SELECT COUNT(*) FROM [{_configuration.QueueStoreTable}]")).IsEqualTo(2);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_a_large_purge_is_in_progress_should_allow_other_queues_and_preserve_later_sends(bool async)
     {
         //Arrange
@@ -269,7 +268,7 @@ public class MsSqlSubscriberReadinessTests : IDisposable
         await blocker.OpenAsync();
         using var hold = blocker.CreateCommand();
         hold.CommandText = $"DECLARE @r int; EXEC @r = sys.sp_getapplock @Resource=N'{barrier}', @LockMode='Exclusive', @LockOwner='Session'; SELECT @r;";
-        Assert.True(Convert.ToInt32(await hold.ExecuteScalarAsync()) >= 0);
+        await Assert.That(Convert.ToInt32(await hold.ExecuteScalarAsync()) >= 0).IsTrue();
         await Scalar($"""
             CREATE TRIGGER [purge_{Guid.NewGuid():N}] ON [{gateTable}] AFTER DELETE AS
             BEGIN
@@ -300,8 +299,8 @@ public class MsSqlSubscriberReadinessTests : IDisposable
                 await Task.Delay(20, cancellation.Token);
 
             //Assert
-            Assert.False(purging.IsCompleted);
-            Assert.Equal(seed.Id, (await Receive(second)).Id);
+            await Assert.That(purging.IsCompleted).IsFalse();
+            await Assert.That((await Receive(second)).Id).IsEqualTo(seed.Id);
             await producer.SendAsync(later, cancellation.Token);
         }
         finally
@@ -313,14 +312,14 @@ public class MsSqlSubscriberReadinessTests : IDisposable
         }
 
         //Assert
-        Assert.Equal(later.Id, (await Receive(first)).Id);
-        Assert.True((await Receive(first)).IsEmpty);
-        Assert.True((await Receive(second)).IsEmpty);
+        await Assert.That((await Receive(first)).Id).IsEqualTo(later.Id);
+        await Assert.That((await Receive(first)).IsEmpty).IsTrue();
+        await Assert.That((await Receive(second)).IsEmpty).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_independent_subscriber_mode_is_explicit_should_use_targeted_scheduling(bool async)
     {
         //Arrange
@@ -336,10 +335,10 @@ public class MsSqlSubscriberReadinessTests : IDisposable
         var accepted = async ? await consumer.RequeueAsync(message, delay) : consumer.Requeue(message, delay);
 
         //Assert
-        Assert.True(accepted);
-        Assert.Same(message, scheduler.Message);
-        Assert.Equal("same", scheduler.Destination?.Value);
-        Assert.Equal(delay, scheduler.Delay);
+        await Assert.That(accepted).IsTrue();
+        await Assert.That(scheduler.Message).IsSameReferenceAs(message);
+        await Assert.That(scheduler.Destination?.Value).IsEqualTo("same");
+        await Assert.That(scheduler.Delay).IsEqualTo(delay);
     }
 
     private void SetCollation(string collation)

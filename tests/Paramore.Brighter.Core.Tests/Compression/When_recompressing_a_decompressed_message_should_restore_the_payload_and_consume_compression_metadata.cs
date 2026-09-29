@@ -26,25 +26,24 @@ using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Compression;
 
 public class DecompressedMessageRecompressionTests
 {
-    [Theory]
-    [InlineData(CompressionMethod.GZip, false, false)]
-    [InlineData(CompressionMethod.GZip, true, true)]
-    [InlineData(CompressionMethod.GZip, false, true)]
-    [InlineData(CompressionMethod.GZip, true, false)]
-    [InlineData(CompressionMethod.Zlib, false, false)]
-    [InlineData(CompressionMethod.Zlib, true, true)]
-    [InlineData(CompressionMethod.Zlib, false, true)]
-    [InlineData(CompressionMethod.Zlib, true, false)]
-    [InlineData(CompressionMethod.Brotli, false, false)]
-    [InlineData(CompressionMethod.Brotli, true, true)]
-    [InlineData(CompressionMethod.Brotli, false, true)]
-    [InlineData(CompressionMethod.Brotli, true, false)]
+    [Test]
+    [Arguments(CompressionMethod.GZip, false, false)]
+    [Arguments(CompressionMethod.GZip, true, true)]
+    [Arguments(CompressionMethod.GZip, false, true)]
+    [Arguments(CompressionMethod.GZip, true, false)]
+    [Arguments(CompressionMethod.Zlib, false, false)]
+    [Arguments(CompressionMethod.Zlib, true, true)]
+    [Arguments(CompressionMethod.Zlib, false, true)]
+    [Arguments(CompressionMethod.Zlib, true, false)]
+    [Arguments(CompressionMethod.Brotli, false, false)]
+    [Arguments(CompressionMethod.Brotli, true, true)]
+    [Arguments(CompressionMethod.Brotli, false, true)]
+    [Arguments(CompressionMethod.Brotli, true, false)]
     public async Task When_recompressing_a_decompressed_message_should_restore_the_payload_and_consume_compression_metadata(
         CompressionMethod compressionMethod, bool compressAsync, bool decompressAsync)
     {
@@ -80,15 +79,15 @@ public class DecompressedMessageRecompressionTests
             : transformer.Unwrap(recompressed);
 
         //Assert
-        Assert.Equal(CharacterEncoding.Raw, recompressedBody.CharacterEncoding);
-        Assert.True(recompressedBody.Memory.Length < originalBytes.Length);
-        Assert.Equal(originalContentType.ToString(), savedContentType);
-        Assert.Equal(originalBytes, restored.Body.Memory.ToArray());
-        Assert.Equal(payload, restored.Body.Value);
-        Assert.Equal(originalContentType, restored.Header.ContentType);
-        Assert.Equal(originalContentType, restored.Body.ContentType);
-        Assert.False(restored.Header.Bag.ContainsKey(CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER));
-        Assert.Equal("preserved", restored.Header.Bag["custom-header"]);
-        Assert.Single(restored.Header.Bag);
+        await Assert.That(recompressedBody.CharacterEncoding).IsEqualTo(CharacterEncoding.Raw);
+        await Assert.That(recompressedBody.Memory.Length < originalBytes.Length).IsTrue();
+        await Assert.That(savedContentType).IsEqualTo(originalContentType.ToString());
+        await Assert.That(restored.Body.Memory.ToArray()).IsEqualTo(originalBytes);
+        await Assert.That(restored.Body.Value).IsEqualTo(payload);
+        await Assert.That(restored.Header.ContentType).IsEqualTo(originalContentType);
+        await Assert.That(restored.Body.ContentType).IsEqualTo(originalContentType);
+        await Assert.That(restored.Header.Bag.ContainsKey(CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER)).IsFalse();
+        await Assert.That(restored.Header.Bag["custom-header"]).IsEqualTo("preserved");
+        await Assert.That(restored.Header.Bag).HasSingleItem();
     }
 }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,13 +34,12 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class FirstDueTimeOverallCountTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_first_due_time_passes_should_report_the_overall_count()
     {
         //Arrange
@@ -64,7 +63,7 @@ public class FirstDueTimeOverallCountTests
 
         //Act
         await monitor.StartAsync(default);
-        Assert.True(SpinWait.SpinUntil(() => clock.TimersCreated >= 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => clock.TimersCreated >= 1, TimeSpan.FromSeconds(5))).IsTrue();
         clock.Advance(TimeSpan.FromSeconds(30));
         var beforeFirstDueTime = metrics.Observe();
         clock.Advance(TimeSpan.FromSeconds(30));
@@ -73,12 +72,12 @@ public class FirstDueTimeOverallCountTests
         var afterFirstDueTime = metrics.Observe();
 
         //Assert
-        Assert.DoesNotContain(beforeFirstDueTime, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        var overall = Assert.Single(afterFirstDueTime, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        Assert.Equal(0, overall.Value);
+        await Assert.That(System.Linq.Enumerable.Any(beforeFirstDueTime, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).IsFalse();
+        var overall = await Assert.That(System.Linq.Enumerable.Where(afterFirstDueTime, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).HasSingleItem();
+        await Assert.That(overall.Value).IsEqualTo(0);
         var instrument = metrics.Instruments[overall.Instrument];
-        Assert.Equal("Paramore.Brighter", instrument.Meter.Name);
-        Assert.StartsWith("paramore.brighter.outbox.", instrument.Name);
-        Assert.Equal("{message}", instrument.Unit);
+        await Assert.That(instrument.Meter.Name).IsEqualTo("Paramore.Brighter");
+        await Assert.That(instrument.Name).StartsWith("paramore.brighter.outbox.");
+        await Assert.That(instrument.Unit).IsEqualTo("{message}");
     }
 }

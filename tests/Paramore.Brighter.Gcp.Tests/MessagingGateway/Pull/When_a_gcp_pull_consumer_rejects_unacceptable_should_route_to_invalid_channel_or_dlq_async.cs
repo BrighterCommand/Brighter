@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
@@ -38,19 +37,18 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// original and returning true (RoutingOutcome.NoDestination; its Warning log is added in a
 /// later task and is not asserted here). Covers GCP/Pull and GCP/PullOrdering.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpPullConsumerRejectRoutingAsyncTests
 {
     // -------------------------------------------------------------------------
     // GCP / Pull — Unacceptable routes to .Invalid (async)
     // -------------------------------------------------------------------------
-
     /// <summary>
     /// Unacceptable with both a DLQ and an invalid-message key configured: the copy goes to
     /// .Invalid (not .DLQ), carrying the same rejection metadata as the DLQ copy in 5.5a.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_unacceptable_on_pull_should_route_to_invalid_channel()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -80,7 +78,7 @@ public class GcpPullConsumerRejectRoutingAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var originalTopic = routingKey.Value;
 
@@ -88,11 +86,11 @@ public class GcpPullConsumerRejectRoutingAsyncTests
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Async test unacceptable message"));
 
             // Assert — RejectAsync returns true
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — source is acked
             var reRead = await channel.ReceiveAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             // Assert — Invalid copy appears within 60s
             Message invalidMessage = new Message();
@@ -105,25 +103,23 @@ public class GcpPullConsumerRejectRoutingAsyncTests
                 await Task.Delay(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, invalidMessage.Header.MessageType);
+            await Assert.That(invalidMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var bag = invalidMessage.Header.Bag;
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic));
-            Assert.Equal(originalTopic, bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString());
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason));
-            Assert.Equal(RejectionReason.Unacceptable.ToString(), bag[RejectionMetadataKeyNames.RejectionReason]?.ToString());
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp));
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString()).IsEqualTo(originalTopic);
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType)).IsTrue();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionReason]?.ToString()).IsEqualTo(RejectionReason.Unacceptable.ToString());
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsTrue();
             var ts = bag[RejectionMetadataKeyNames.RejectionTimestamp]?.ToString() ?? string.Empty;
-            Assert.True(
-                DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _),
-                $"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage));
-            Assert.Equal("Async test unacceptable message", bag[RejectionMetadataKeyNames.RejectionMessage]?.ToString());
+            await Assert.That(DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _)).IsTrue().Because($"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionMessage]?.ToString()).IsEqualTo("Async test unacceptable message");
 
             // Assert — nothing was sent to the DLQ instead
             var dlqMessage = await provider.GetMessageFromDeadLetterQueueAsync(subscription);
-            Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {
@@ -138,7 +134,7 @@ public class GcpPullConsumerRejectRoutingAsyncTests
     /// <summary>
     /// Unacceptable with a DLQ key configured but no invalid key: the copy falls back to .DLQ.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_unacceptable_on_pull_and_no_invalid_key_should_fall_back_to_dlq()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -166,16 +162,16 @@ public class GcpPullConsumerRejectRoutingAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Async unacceptable, DLQ fallback"));
 
             // Assert
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             var reRead = await channel.ReceiveAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             Message dlqMessage = new Message();
             var stopwatch = Stopwatch.StartNew();
@@ -187,11 +183,11 @@ public class GcpPullConsumerRejectRoutingAsyncTests
                 await Task.Delay(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var bag = dlqMessage.Header.Bag;
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason));
-            Assert.Equal(RejectionReason.Unacceptable.ToString(), bag[RejectionMetadataKeyNames.RejectionReason]?.ToString());
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionReason]?.ToString()).IsEqualTo(RejectionReason.Unacceptable.ToString());
         }
         finally
         {
@@ -207,7 +203,7 @@ public class GcpPullConsumerRejectRoutingAsyncTests
     /// Unacceptable with neither a DLQ nor an invalid key configured: nothing is published, the
     /// original is still acknowledged, and RejectAsync still returns true.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_unacceptable_on_pull_and_no_destinations_should_ack_without_publishing()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -233,16 +229,16 @@ public class GcpPullConsumerRejectRoutingAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Async unacceptable, no destination"));
 
             // Assert
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             var reRead = await channel.ReceiveAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {
@@ -258,7 +254,7 @@ public class GcpPullConsumerRejectRoutingAsyncTests
     /// Unacceptable on an ordering-enabled subscription with both a DLQ and an invalid-message key
     /// configured: the copy goes to .Invalid (not .DLQ).
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_unacceptable_on_pull_ordering_should_route_to_invalid_channel()
     {
         var provider = new GcpPullOrderingMessageGatewayProvider();
@@ -288,7 +284,7 @@ public class GcpPullConsumerRejectRoutingAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var originalTopic = routingKey.Value;
 
@@ -296,10 +292,10 @@ public class GcpPullConsumerRejectRoutingAsyncTests
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Async ordering test unacceptable"));
 
             // Assert
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             var reRead = await channel.ReceiveAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             Message invalidMessage = new Message();
             var stopwatch = Stopwatch.StartNew();
@@ -311,24 +307,22 @@ public class GcpPullConsumerRejectRoutingAsyncTests
                 await Task.Delay(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, invalidMessage.Header.MessageType);
+            await Assert.That(invalidMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var bag = invalidMessage.Header.Bag;
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic));
-            Assert.Equal(originalTopic, bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString());
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType));
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason));
-            Assert.Equal(RejectionReason.Unacceptable.ToString(), bag[RejectionMetadataKeyNames.RejectionReason]?.ToString());
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp));
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalTopic)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.OriginalTopic]?.ToString()).IsEqualTo(originalTopic);
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.OriginalMessageType)).IsTrue();
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionReason]?.ToString()).IsEqualTo(RejectionReason.Unacceptable.ToString());
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionTimestamp)).IsTrue();
             var ts = bag[RejectionMetadataKeyNames.RejectionTimestamp]?.ToString() ?? string.Empty;
-            Assert.True(
-                DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _),
-                $"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage));
-            Assert.Equal("Async ordering test unacceptable", bag[RejectionMetadataKeyNames.RejectionMessage]?.ToString());
+            await Assert.That(DateTimeOffset.TryParseExact(ts, "o", null, System.Globalization.DateTimeStyles.None, out _)).IsTrue().Because($"rejectionTimestamp must be ISO 8601 'o' format, got: {ts}");
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionMessage)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionMessage]?.ToString()).IsEqualTo("Async ordering test unacceptable");
 
             var dlqMessage = await provider.GetMessageFromDeadLetterQueueAsync(subscription);
-            Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {
@@ -344,7 +338,7 @@ public class GcpPullConsumerRejectRoutingAsyncTests
     /// Unacceptable on an ordering-enabled subscription with a DLQ key but no invalid key: the
     /// copy falls back to .DLQ.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_unacceptable_on_pull_ordering_and_no_invalid_key_should_fall_back_to_dlq()
     {
         var provider = new GcpPullOrderingMessageGatewayProvider();
@@ -372,16 +366,16 @@ public class GcpPullConsumerRejectRoutingAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Async ordering unacceptable, DLQ fallback"));
 
             // Assert
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             var reRead = await channel.ReceiveAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             Message dlqMessage = new Message();
             var stopwatch = Stopwatch.StartNew();
@@ -393,11 +387,11 @@ public class GcpPullConsumerRejectRoutingAsyncTests
                 await Task.Delay(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var bag = dlqMessage.Header.Bag;
-            Assert.True(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason));
-            Assert.Equal(RejectionReason.Unacceptable.ToString(), bag[RejectionMetadataKeyNames.RejectionReason]?.ToString());
+            await Assert.That(bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason)).IsTrue();
+            await Assert.That(bag[RejectionMetadataKeyNames.RejectionReason]?.ToString()).IsEqualTo(RejectionReason.Unacceptable.ToString());
         }
         finally
         {
@@ -414,7 +408,7 @@ public class GcpPullConsumerRejectRoutingAsyncTests
     /// configured: nothing is published, the original is still acknowledged, and RejectAsync
     /// still returns true.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejecting_async_with_unacceptable_on_pull_ordering_and_no_destinations_should_ack_without_publishing()
     {
         var provider = new GcpPullOrderingMessageGatewayProvider();
@@ -440,16 +434,16 @@ public class GcpPullConsumerRejectRoutingAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Async ordering unacceptable, no destination"));
 
             // Assert
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             var reRead = await channel.ReceiveAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(MessageType.MT_NONE, reRead.Header.MessageType);
+            await Assert.That(reRead.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {

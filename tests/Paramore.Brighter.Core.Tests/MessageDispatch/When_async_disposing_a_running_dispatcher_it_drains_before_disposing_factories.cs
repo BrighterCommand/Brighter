@@ -6,7 +6,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
@@ -71,7 +70,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Receive();
         }
 
-        [Fact]
+        [Test]
         public async Task When_async_disposing_a_running_dispatcher_it_drains_the_pumps_before_disposing_factories()
         {
             //give the running pump a moment to come up and start consuming
@@ -80,14 +79,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             await _dispatcher.DisposeAsync();
 
             //the pumps were stopped (End ran) as part of DisposeAsync, not left running under a disposed factory
-            Assert.Equal(DispatcherState.DS_STOPPED, _dispatcher.State);
+            await Assert.That(_dispatcher.State).IsEqualTo(DispatcherState.DS_STOPPED);
 
             //and the owned transformer factory was disposed only after the dispatcher had stopped
-            Assert.Equal(DispatcherState.DS_STOPPED, _transformerFactory.StateAtDispose);
+            await Assert.That(_transformerFactory.StateAtDispose).IsEqualTo(DispatcherState.DS_STOPPED);
 
             //the async path tore the factory down via DisposeAsync, not the blocking Dispose
-            Assert.Equal(1, _transformerFactory.DisposeAsyncCount);
-            Assert.Equal(0, _transformerFactory.DisposeCount);
+            await Assert.That(_transformerFactory.DisposeAsyncCount).IsEqualTo(1);
+            await Assert.That(_transformerFactory.DisposeCount).IsEqualTo(0);
         }
 
         public void Dispose()

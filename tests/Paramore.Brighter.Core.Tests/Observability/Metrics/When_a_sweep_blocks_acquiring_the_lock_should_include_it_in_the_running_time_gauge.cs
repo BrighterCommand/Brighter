@@ -31,13 +31,12 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class SweeperRunningTimeIncludesLockGaugeTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_sweep_blocks_acquiring_the_lock_should_include_it_in_the_running_time_gauge()
     {
         //Arrange
@@ -69,8 +68,8 @@ public class SweeperRunningTimeIncludesLockGaugeTests
             await Task.Run(recorded.Observe).WaitAsync(TimeSpan.FromSeconds(1));
 
             //Assert
-            Assert.True(reachedLock, "The sweep did not reach the lock");
-            Assert.Equal([40.0], recorded.Values);
+            await Assert.That(reachedLock).IsTrue().Because("The sweep did not reach the lock");
+            await Assert.That(recorded.Values).IsEqualTo([40.0]);
         }
         finally
         {

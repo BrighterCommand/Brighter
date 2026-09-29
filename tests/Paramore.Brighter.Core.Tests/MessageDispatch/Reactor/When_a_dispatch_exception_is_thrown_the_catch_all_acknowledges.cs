@@ -9,7 +9,7 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 {
@@ -75,21 +75,21 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             _channel.Stop(_routingKey);
         }
 
-        [Fact]
-        public void When_A_Dispatch_Exception_Is_Thrown_The_Catch_All_Acknowledges()
+        [Test]
+        public async Task When_A_Dispatch_Exception_Is_Thrown_The_Catch_All_Acknowledges()
         {
             // Act
             _messagePump.Run();
             _traceProvider.ForceFlush();
 
             // Assert — mechanism (A): zero messages on the invalid-message topic; dispatch exceptions do NOT reject
-            Assert.Empty(_bus.Stream(_invalidMessageKey));
+            await Assert.That(_bus.Stream(_invalidMessageKey)).IsEmpty();
 
             // Assert — mechanism (B): the process span was exported with Error status and ended (span exported ⇒ EndSpan ran)
             var processActivity = _exportedActivities.FirstOrDefault(a =>
                 a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Process.ToSpanName()}");
-            Assert.NotNull(processActivity);
-            Assert.Equal(ActivityStatusCode.Error, processActivity!.Status);
+            await Assert.That(processActivity).IsNotNull();
+            await Assert.That(processActivity!.Status).IsEqualTo(ActivityStatusCode.Error);
         }
     }
 }

@@ -28,15 +28,14 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusDirectRetryAbandonFailureTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_abandoning_a_direct_retry_fails_should_report_failure_without_completing(bool synchronous)
     {
         // Arrange
@@ -60,16 +59,16 @@ public class AzureServiceBusDirectRetryAbandonFailureTests
         message.Header.UpdateHandledCount();
 
         // Act
-        var error = await Record.ExceptionAsync(async () =>
+        var error = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             if (synchronous) syncChannel!.Requeue(message, TimeSpan.Zero);
             else await asyncChannel!.RequeueAsync(message, TimeSpan.Zero);
         });
 
         // Assert
-        Assert.Same(failure, error);
-        Assert.Equal(1, receiver.AbandonAttempts);
-        Assert.Equal(0, receiver.CompletionAttempts);
-        Assert.Equal("original", message.Id.Value);
+        await Assert.That(error).IsSameReferenceAs(failure);
+        await Assert.That(receiver.AbandonAttempts).IsEqualTo(1);
+        await Assert.That(receiver.CompletionAttempts).IsEqualTo(0);
+        await Assert.That(message.Id.Value).IsEqualTo("original");
     }
 }

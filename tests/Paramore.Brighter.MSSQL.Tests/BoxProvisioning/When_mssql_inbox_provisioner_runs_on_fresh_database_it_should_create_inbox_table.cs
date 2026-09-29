@@ -3,11 +3,10 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlInboxProvisionerFreshDatabaseTests : IAsyncLifetime
+public class MsSqlInboxProvisionerFreshDatabaseTests
 {
     private readonly string _connectionString;
     private readonly string _tableName;
@@ -34,7 +33,7 @@ public class MsSqlInboxProvisionerFreshDatabaseTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table()
     {
         //Arrange
@@ -44,8 +43,8 @@ public class MsSqlInboxProvisionerFreshDatabaseTests : IAsyncLifetime
         await _provisioner.ProvisionAsync();
 
         //Assert
-        Assert.Equal(1, GetInboxTableCountInDbo());
-        Assert.Equal(1, GetHistoryRowCountAtInboxLatest());
+        await Assert.That(GetInboxTableCountInDbo()).IsEqualTo(1);
+        await Assert.That(GetHistoryRowCountAtInboxLatest()).IsEqualTo(1);
     }
 
     private int GetInboxTableCountInDbo()
@@ -74,8 +73,10 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = 'dbo' AND [MigrationVers
         return (int)historyCheck.ExecuteScalar()!;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

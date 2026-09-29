@@ -31,7 +31,6 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
 using Paramore.Brighter.Sqlite.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -39,7 +38,7 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// After a failed commit the transaction may already be finalised; RollbackAsync swallows that failure,
 /// logs a Warning and returns (ADR 0058 §B.3). An out-of-band <c>Commit()</c> gives the finalised state.
 /// </summary>
-public class ProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
+public class ProvisioningUnitOfWorkRollbackTests
 {
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_uow_rollback_{Guid.NewGuid():N}.db");
@@ -53,7 +52,11 @@ public class ProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
         _connection = new SqliteConnection(_connectionString);
     }
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {
@@ -69,7 +72,7 @@ public class ProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_provisioning_uow_rollback_async_is_called_it_should_not_throw()
     {
         // Arrange
@@ -83,10 +86,10 @@ public class ProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
         transaction.Commit();
 
         // Act
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.RollbackAsync(CancellationToken.None));
 
         // Assert
-        Assert.Null(thrown);
-        Assert.Contains(capturingLogger.Entries, e => e.Level == LogLevel.Warning);
+        await Assert.That(thrown).IsNull();
+        await Assert.That(System.Linq.Enumerable.Any(capturingLogger.Entries, e => e.Level == LogLevel.Warning)).IsTrue();
     }
 }

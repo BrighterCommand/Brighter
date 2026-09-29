@@ -27,7 +27,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -37,11 +37,11 @@ namespace Paramore.Brighter.Extensions.Tests;
 // (D17), which is why this discharges FR-13 and not FR-24. IPoisonedDependency is resolved through a
 // real container-Scoped registration, so disposing the handler pipeline's owned scope disposes the
 // container's IServiceScope, which throws from IPoisonedDependency's own Dispose().
-[Collection(LoggerCaptureCollection.NAME)]
+[NotInParallel(LoggerCaptureCollection.NAME)]
 public class SuccessfulSendPipelineScopeDisposalLoggingTests
 {
-    [Fact]
-    public void When_a_successful_send_pipeline_scope_disposal_throws_the_result_should_be_unchanged()
+    [Test]
+    public async Task When_a_successful_send_pipeline_scope_disposal_throws_the_result_should_be_unchanged()
     {
         // Arrange — a handler that completes normally; its Scoped dependency's Dispose() throws when
         // the pipeline's owned scope is released
@@ -65,18 +65,24 @@ public class SuccessfulSendPipelineScopeDisposalLoggingTests
         // Assert — the handler ran to completion, unaffected by the disposal failure, and the failure
         // was logged at Error. Filtered by CategoryName as well as EventId.Name: HandlerLifetimeScope and
         // TransformPipelineDrain both log a "FailedToDisposePipelineScope" event.
-        Assert.Equal(1, recorder.Completions);
-        var disposalFailure = Assert.Single(logs.Entries.Where(IsHandlerScopeDisposalFailure));
-        Assert.Equal(LogLevel.Error, disposalFailure.Level);
+        await Assert.That(recorder.Completions).IsEqualTo(1);
+        var disposalFailure = await Assert.That(logs.Entries.Where(IsHandlerScopeDisposalFailure)).HasSingleItem();
+        await Assert.That(disposalFailure.Level).IsEqualTo(LogLevel.Error);
 
         // Act — a second Send in the same host
         commandProcessor.Send(new PoisonedScopeCompletingHandlerCommand());
 
         // Assert — not latched: the handler completed again and a second, separate Error was logged
-        Assert.Equal(2, recorder.Completions);
+        await Assert.That(recorder.Completions).IsEqualTo(2);
         var disposalFailures = logs.Entries.Where(IsHandlerScopeDisposalFailure).ToList();
-        Assert.Equal(2, disposalFailures.Count);
-        Assert.All(disposalFailures, e => Assert.Equal(LogLevel.Error, e.Level));
+        await Assert.That(disposalFailures.Count).IsEqualTo(2);
+        using (Assert.Multiple())
+        {
+            foreach (var e in disposalFailures)
+            {
+                await Assert.That(e.Level).IsEqualTo(LogLevel.Error);
+            }
+        }
     }
 
     private static bool IsHandlerScopeDisposalFailure(CapturedLogEntry entry) =>

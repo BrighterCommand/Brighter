@@ -29,7 +29,6 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
@@ -48,8 +47,8 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 /// the <c>rejectionReason</c> discriminator is present (AC-24) or the header property is simply
 /// read as today (AC-25) — it is published and read back through this gateway either way.
 /// </remarks>
-[Trait("Category", "RocketMQ")]
-public class RocketMqPublishWithStaleBagHandledCountTestsAsync : IAsyncLifetime
+[Property("Category", "RocketMQ")]
+public class RocketMqPublishWithStaleBagHandledCountTestsAsync
 {
     private const string Topic = "rmq_stale_hc_p";
     private static readonly TimeSpan s_receiveMessageTimeout = TimeSpan.FromSeconds(2);
@@ -59,7 +58,7 @@ public class RocketMqPublishWithStaleBagHandledCountTestsAsync : IAsyncLifetime
     private RocketMqMessageProducer? _producer;
     private IAmAMessageConsumerAsync? _consumer;
 
-    public async Task InitializeAsync()
+    [Before(HookType.Test)]public async Task InitializeAsync()
     {
         _connection = GatewayFactory.CreateConnection();
         var routingKey = new RoutingKey(Topic);
@@ -81,7 +80,7 @@ public class RocketMqPublishWithStaleBagHandledCountTestsAsync : IAsyncLifetime
         _consumer = new RocketMessageConsumerFactory(_connection).CreateAsync(subscription);
     }
 
-    public async Task DisposeAsync()
+    [After(HookType.Test)]public async Task DisposeAsync()
     {
         if (_consumer != null)
             await _consumer.DisposeAsync();
@@ -90,7 +89,7 @@ public class RocketMqPublishWithStaleBagHandledCountTestsAsync : IAsyncLifetime
             await _producer.DisposeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_publishing_a_rocketmq_message_with_stale_bag_handled_count_should_send_header_value_async()
     {
         // Arrange - a message shaped like a routed dead-letter copy: the header has already moved
@@ -103,14 +102,14 @@ public class RocketMqPublishWithStaleBagHandledCountTestsAsync : IAsyncLifetime
         var received = await ReceiveOursAsync(_consumer!, message.Id, s_receiveCeiling);
 
         // Assert - HandledCount first, so a RED run fails on it specifically
-        Assert.NotNull(received);
-        Assert.Equal(3, received!.Header.HandledCount);
+        await Assert.That(received).IsNotNull();
+        await Assert.That(received!.Header.HandledCount).IsEqualTo(3);
 
         // Assert - other header-owned keys behave the same way: the header's value wins, not the
         // stale bag entry
-        Assert.Equal("real-subject", received.Header.Subject);
-        Assert.Equal("2.5", received.Header.SpecVersion);
-        Assert.Equal(new Uri("http://real-source.example"), received.Header.Source);
+        await Assert.That(received.Header.Subject).IsEqualTo("real-subject");
+        await Assert.That(received.Header.SpecVersion).IsEqualTo("2.5");
+        await Assert.That(received.Header.Source).IsEqualTo(new Uri("http://real-source.example"));
 
         await _consumer!.AcknowledgeAsync(received);
     }

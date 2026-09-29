@@ -29,7 +29,6 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
@@ -45,8 +44,8 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 /// id from both the source and DLQ topics, acknowledging anything stale, because a fresh consumer
 /// group can be handed messages earlier runs left on the topic.
 /// </remarks>
-[Trait("Category", "RocketMQ")]
-public class RocketMqRejectWithNoReasonTestsAsync : IAsyncLifetime
+[Property("Category", "RocketMQ")]
+public class RocketMqRejectWithNoReasonTestsAsync
 {
     private const string Topic = "rmq_rej_none_p";
     private const string DlqTopic = "rmq_rej_none_p_DLQ";
@@ -57,7 +56,7 @@ public class RocketMqRejectWithNoReasonTestsAsync : IAsyncLifetime
     private RocketMqMessageProducer? _producer;
     private IAmAMessageConsumerAsync? _consumer;
 
-    public async Task InitializeAsync()
+    [Before(HookType.Test)]public async Task InitializeAsync()
     {
         _connection = GatewayFactory.CreateConnection();
         var routingKey = new RoutingKey(Topic);
@@ -80,7 +79,7 @@ public class RocketMqRejectWithNoReasonTestsAsync : IAsyncLifetime
         _consumer = new RocketMessageConsumerFactory(_connection).CreateAsync(subscription);
     }
 
-    public async Task DisposeAsync()
+    [After(HookType.Test)]public async Task DisposeAsync()
     {
         if (_consumer != null)
             await _consumer.DisposeAsync();
@@ -89,7 +88,7 @@ public class RocketMqRejectWithNoReasonTestsAsync : IAsyncLifetime
             await _producer.DisposeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_rejecting_a_rocketmq_message_with_no_reason_should_stamp_rejection_reason_none_async()
     {
         // Arrange
@@ -97,7 +96,7 @@ public class RocketMqRejectWithNoReasonTestsAsync : IAsyncLifetime
         await _producer!.SendAsync(message);
 
         var received = await ReceiveOursAsync(_consumer!, message.Id, s_receiveCeiling);
-        Assert.NotNull(received);
+        await Assert.That(received).IsNotNull();
         var originalTopic = received!.Header.Topic.Value;
 
         // Act
@@ -108,23 +107,23 @@ public class RocketMqRejectWithNoReasonTestsAsync : IAsyncLifetime
         await using var dlqConsumer = new RocketMessageConsumer(dlqSimpleConsumer, 1, TimeSpan.FromSeconds(30));
 
         var dlqMessage = await ReceiveOursAsync(dlqConsumer, message.Id, s_receiveCeiling);
-        Assert.NotNull(dlqMessage);
+        await Assert.That(dlqMessage).IsNotNull();
         await dlqConsumer.AcknowledgeAsync(dlqMessage!);
 
-        Assert.True(dlqMessage!.Header.Bag.ContainsKey("rejectionReason"));
-        Assert.Equal(RejectionReason.None.ToString(), dlqMessage.Header.Bag["rejectionReason"].ToString());
+        await Assert.That(dlqMessage!.Header.Bag.ContainsKey("rejectionReason")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.None.ToString());
 
         // verify rejectionMessage is absent (null reason carries no description)
-        Assert.False(dlqMessage.Header.Bag.ContainsKey("rejectionMessage"));
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionMessage")).IsFalse();
 
         // verify other metadata is present
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("originalTopic"));
-        Assert.Equal(originalTopic, dlqMessage.Header.Bag["originalTopic"].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("originalMessageType"));
-        Assert.Equal(MessageType.MT_COMMAND.ToString(), dlqMessage.Header.Bag["originalMessageType"].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp"));
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalTopic")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["originalTopic"].ToString()).IsEqualTo(originalTopic);
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalMessageType")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["originalMessageType"].ToString()).IsEqualTo(MessageType.MT_COMMAND.ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp")).IsTrue();
 
-        Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
+        await Assert.That(dlqMessage.Body.Value).IsEqualTo(message.Body.Value);
     }
 
     private static Message CreateMessage(RoutingKey routingKey) =>

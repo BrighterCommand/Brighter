@@ -31,13 +31,12 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ConsumerTakeOutOfServiceNoDispatcherTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_take_out_of_service_check_has_no_dispatcher_should_report_healthy()
     {
         //Arrange
@@ -47,9 +46,9 @@ public class ConsumerTakeOutOfServiceNoDispatcherTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Contains("No dispatcher is registered", result.Description);
-        Assert.Equal("take_out_of_service", result.Data["remedy_kind"]);
-        Assert.Empty(Assert.IsAssignableFrom<IEnumerable<string>>(result.Data["conditions"]));
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(result.Description).Contains("No dispatcher is registered");
+        await Assert.That(result.Data["remedy_kind"]).IsEqualTo("take_out_of_service");
+        await Assert.That((((IEnumerable<string>)(((IEnumerable<string>)(await Assert.That(result.Data["conditions"]).IsAssignableTo<IEnumerable<string>>())))))).IsEmpty();
     }
 }

@@ -35,7 +35,6 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -44,7 +43,7 @@ public class ActiveHungSweepWithTrippedTopicTests
     private const string RestartCheck = "brighter-outbox-sweeper-restart";
     private const string InvestigateCheck = "brighter-outbox-sweeper-investigate";
 
-    [Fact]
+    [Test]
     public async Task When_an_active_sweep_hangs_with_a_topic_tripped_should_degrade_both_checks()
     {
         //Arrange
@@ -76,23 +75,23 @@ public class ActiveHungSweepWithTrippedTopicTests
             var report = await healthChecks.CheckHealthAsync(CancellationToken.None);
 
             //Assert
-            Assert.True(firstCompleted, "The previous sweep did not complete");
-            Assert.True(reachedMediator, "The current sweep did not reach the mediator");
+            await Assert.That(firstCompleted).IsTrue().Because("The previous sweep did not complete");
+            await Assert.That(reachedMediator).IsTrue().Because("The current sweep did not reach the mediator");
 
             var restart = report.Entries[RestartCheck];
-            Assert.Equal(HealthStatus.Degraded, restart.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, restart.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), restart.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "hung_sweep" }, Assert.IsType<string[]>(restart.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("31", restart.Description);
-            Assert.Contains("30", restart.Description);
+            await Assert.That(restart.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(restart.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(restart.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+            await Assert.That((await Assert.That(restart.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "hung_sweep" });
+            await Assert.That(restart.Description).Contains("31");
+            await Assert.That(restart.Description).Contains("30");
 
             var investigate = report.Entries[InvestigateCheck];
-            Assert.Equal(HealthStatus.Degraded, investigate.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, investigate.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), investigate.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "tripped_topics" }, Assert.IsType<string[]>(investigate.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("orders", investigate.Description);
+            await Assert.That(investigate.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(investigate.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(investigate.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(investigate.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "tripped_topics" });
+            await Assert.That(investigate.Description).Contains("orders");
         }
         finally
         {

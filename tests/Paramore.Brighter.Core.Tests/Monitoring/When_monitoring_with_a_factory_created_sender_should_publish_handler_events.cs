@@ -39,16 +39,17 @@ using Paramore.Brighter.Monitoring.Handlers;
 using Paramore.Brighter.Monitoring.Mappers;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.Core.Tests.Monitoring;
 
-[Trait("Category", "Monitoring")]
+[Category("Monitoring")]
 public class MonitorControlBusSenderTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_monitoring_with_a_factory_created_sender_should_publish_handler_events(bool isAsync)
     {
         //Arrange
@@ -62,8 +63,10 @@ public class MonitorControlBusSenderTests
         });
         var sender = new ControlBusSenderFactory().Create<Message, CommittableTransaction>(
             new InMemoryOutbox(TimeProvider.System), producers, new BrighterTracer());
-        using var senderLifetime = Assert.IsAssignableFrom<IDisposable>(sender);
-        var asyncSender = Assert.IsAssignableFrom<IAmAControlBusSenderAsync>(sender);
+        await Assert.That(sender).IsAssignableTo<IDisposable>();
+        using var senderLifetime = (IDisposable)sender;
+        await Assert.That(sender).IsAssignableTo<IAmAControlBusSenderAsync>();
+        var asyncSender = (IAmAControlBusSenderAsync)sender;
 
         var subscribers = new SubscriberRegistry();
         if (isAsync)
@@ -97,16 +100,18 @@ public class MonitorControlBusSenderTests
         var messages = bus.Stream(topic).ToArray();
         var mapper = new MonitorEventMessageMapper();
         var events = messages.Select(mapper.MapToRequest).ToArray();
-        Assert.Equal(new[] { MonitorEventType.EnterHandler, MonitorEventType.ExitHandler },
-            events.Select(e => e.EventType));
-        Assert.All(messages, message => Assert.Equal(topic, message.Header.Topic));
-        Assert.All(events, monitorEvent =>
+        await Assert.That(events.Select(e => e.EventType)).IsEquivalentTo(
+            new[] { MonitorEventType.EnterHandler, MonitorEventType.ExitHandler },
+            TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        foreach (var message in messages)
+            await Assert.That(message.Header.Topic).IsEqualTo(topic);
+        foreach (var monitorEvent in events)
         {
-            Assert.Equal("UnitTests", monitorEvent.InstanceName);
-            Assert.Equal(handlerType.FullName, monitorEvent.HandlerName);
-            Assert.Equal(handlerType.AssemblyQualifiedName, monitorEvent.HandlerFullAssemblyName);
-            Assert.Equal(requestBody, monitorEvent.RequestBody);
-            Assert.Null(monitorEvent.Exception);
-        });
+            await Assert.That(monitorEvent.InstanceName).IsEqualTo("UnitTests");
+            await Assert.That(monitorEvent.HandlerName).IsEqualTo(handlerType.FullName);
+            await Assert.That(monitorEvent.HandlerFullAssemblyName).IsEqualTo(handlerType.AssemblyQualifiedName);
+            await Assert.That(monitorEvent.RequestBody).IsEqualTo(requestBody);
+            await Assert.That(monitorEvent.Exception).IsNull();
+        }
     }
 }

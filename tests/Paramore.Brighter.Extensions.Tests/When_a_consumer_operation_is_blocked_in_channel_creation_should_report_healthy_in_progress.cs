@@ -34,16 +34,15 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ConsumerRestartOperationInProgressTests
 {
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_a_consumer_operation_is_blocked_in_channel_creation_should_report_healthy_in_progress()
     {
         //Arrange
@@ -66,15 +65,15 @@ public class ConsumerRestartOperationInProgressTests
             var completed = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
             //Assert
-            Assert.Equal(HealthStatus.Healthy, inProgress.Status);
-            Assert.Contains("consumer operation is in progress", inProgress.Description);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), inProgress.Data["remedy_kind"]);
-            Assert.Empty(Assert.IsAssignableFrom<IEnumerable<string>>(inProgress.Data["conditions"]));
-            Assert.Equal(1, inProgress.Data["consumer_operations_in_flight"]);
-            Assert.Equal(HealthStatus.Degraded, completed.Status);
-            Assert.Contains("orders has 1 of 2 expected consumers", completed.Description);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), completed.Data["remedy_kind"]);
-            Assert.Equal(0, completed.Data["consumer_operations_in_flight"]);
+            await Assert.That(inProgress.Status).IsEqualTo(HealthStatus.Healthy);
+            await Assert.That(inProgress.Description).Contains("consumer operation is in progress");
+            await Assert.That(inProgress.Data["remedy_kind"]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+            await Assert.That((((IEnumerable<string>)(((IEnumerable<string>)(await Assert.That(inProgress.Data["conditions"]).IsAssignableTo<IEnumerable<string>>())))))).IsEmpty();
+            await Assert.That(inProgress.Data["consumer_operations_in_flight"]).IsEqualTo(1);
+            await Assert.That(completed.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(completed.Description).Contains("orders has 1 of 2 expected consumers");
+            await Assert.That(completed.Data["remedy_kind"]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+            await Assert.That(completed.Data["consumer_operations_in_flight"]).IsEqualTo(0);
         }
         finally
         {
@@ -82,7 +81,7 @@ public class ConsumerRestartOperationInProgressTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_second_consumer_operation_is_blocked_in_channel_creation_should_report_healthy_in_progress()
     {
         //Arrange
@@ -108,10 +107,10 @@ public class ConsumerRestartOperationInProgressTests
             await scaleUp.WaitAsync(s_guard);
 
             //Assert
-            Assert.Equal(HealthStatus.Healthy, inProgress.Status);
-            Assert.Contains("consumer operation is in progress", inProgress.Description);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), inProgress.Data["remedy_kind"]);
-            Assert.Equal(1, inProgress.Data["consumer_operations_in_flight"]);
+            await Assert.That(inProgress.Status).IsEqualTo(HealthStatus.Healthy);
+            await Assert.That(inProgress.Description).Contains("consumer operation is in progress");
+            await Assert.That(inProgress.Data["remedy_kind"]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+            await Assert.That(inProgress.Data["consumer_operations_in_flight"]).IsEqualTo(1);
         }
         finally
         {

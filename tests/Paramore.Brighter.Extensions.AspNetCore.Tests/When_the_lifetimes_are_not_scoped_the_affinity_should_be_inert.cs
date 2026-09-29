@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // instance with the controller - everything else is exactly as if the extension had never been called.
 public class LifetimeAffinityInertOutsideScopedTests
 {
-    [Fact]
+    [Test]
     public async Task When_all_transient_under_join_ambient_the_handler_should_resolve_a_different_instance()
     {
         // Arrange - every Brighter lifetime is Transient, and the extension is told to join the ambient
@@ -51,11 +51,11 @@ public class LifetimeAffinityInertOutsideScopedTests
         // fresh instance regardless of the affinity in force
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.NotSame(recorder.ControllerInstance, recorder.HandlerInstance);
-        Assert.Equal(1, recorder.HandlerInstance!.DisposeCount);
+        await Assert.That(recorder.HandlerInstance).IsNotSameReferenceAs(recorder.ControllerInstance);
+        await Assert.That(recorder.HandlerInstance!.DisposeCount).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_all_transient_under_always_new_the_handler_should_resolve_a_different_instance()
     {
         // Arrange - same all-Transient host, but the extension is told never to join the ambient
@@ -68,11 +68,11 @@ public class LifetimeAffinityInertOutsideScopedTests
         // Assert - unchanged from the join-ambient run: the affinity setting made no difference
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.NotSame(recorder.ControllerInstance, recorder.HandlerInstance);
-        Assert.Equal(1, recorder.HandlerInstance!.DisposeCount);
+        await Assert.That(recorder.HandlerInstance).IsNotSameReferenceAs(recorder.ControllerInstance);
+        await Assert.That(recorder.HandlerInstance!.DisposeCount).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_all_scoped_under_join_ambient_the_handler_should_share_the_controllers_instance()
     {
         // Arrange - every Brighter lifetime is Scoped, and the extension is told to join the ambient -
@@ -86,10 +86,10 @@ public class LifetimeAffinityInertOutsideScopedTests
         // Assert - the handler resolves the controller's own instance from the shared request scope
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.Same(recorder.ControllerInstance, recorder.HandlerInstance);
+        await Assert.That(recorder.HandlerInstance).IsSameReferenceAs(recorder.ControllerInstance);
     }
 
-    [Fact]
+    [Test]
     public async Task When_all_scoped_under_always_new_the_handler_should_resolve_a_different_instance()
     {
         // Arrange - same all-Scoped host, but the extension is told never to join the ambient
@@ -102,11 +102,11 @@ public class LifetimeAffinityInertOutsideScopedTests
         // Assert - without the join-ambient affinity, a Scoped pipeline still gets its own fresh scope
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.NotSame(recorder.ControllerInstance, recorder.HandlerInstance);
-        Assert.Equal(1, recorder.HandlerInstance!.DisposeCount);
+        await Assert.That(recorder.HandlerInstance).IsNotSameReferenceAs(recorder.ControllerInstance);
+        await Assert.That(recorder.HandlerInstance!.DisposeCount).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_all_singleton_under_join_ambient_two_sends_should_resolve_the_same_handler_and_dependency()
     {
         // Arrange - every Brighter lifetime is Singleton, and the extension is told to join the ambient.
@@ -123,12 +123,12 @@ public class LifetimeAffinityInertOutsideScopedTests
         first.EnsureSuccessStatusCode();
         second.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<SingletonOrderRecorder>();
-        Assert.Equal(2, recorder.Entries.Count);
-        Assert.Same(recorder.Entries[0].Handler, recorder.Entries[1].Handler);
-        Assert.Same(recorder.Entries[0].Dependency, recorder.Entries[1].Dependency);
+        await Assert.That(recorder.Entries.Count).IsEqualTo(2);
+        await Assert.That(recorder.Entries[1].Handler).IsSameReferenceAs(recorder.Entries[0].Handler);
+        await Assert.That(recorder.Entries[1].Dependency).IsSameReferenceAs(recorder.Entries[0].Dependency);
     }
 
-    [Fact]
+    [Test]
     public async Task When_all_singleton_under_always_new_two_sends_should_resolve_the_same_handler_and_dependency()
     {
         // Arrange - same all-Singleton host, but the extension is told never to join the ambient
@@ -143,8 +143,8 @@ public class LifetimeAffinityInertOutsideScopedTests
         first.EnsureSuccessStatusCode();
         second.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<SingletonOrderRecorder>();
-        Assert.Equal(2, recorder.Entries.Count);
-        Assert.Same(recorder.Entries[0].Handler, recorder.Entries[1].Handler);
-        Assert.Same(recorder.Entries[0].Dependency, recorder.Entries[1].Dependency);
+        await Assert.That(recorder.Entries.Count).IsEqualTo(2);
+        await Assert.That(recorder.Entries[1].Handler).IsSameReferenceAs(recorder.Entries[0].Handler);
+        await Assert.That(recorder.Entries[1].Dependency).IsSameReferenceAs(recorder.Entries[0].Dependency);
     }
 }

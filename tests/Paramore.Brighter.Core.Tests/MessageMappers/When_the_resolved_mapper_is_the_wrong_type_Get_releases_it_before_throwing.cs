@@ -2,7 +2,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageMappers
 {
@@ -15,9 +14,8 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
         //factory, opened and tracked the scope it was resolved from. That mapper must be released back to
         //the factory before the exception propagates, or it (and its scope) leaks for the life of the host
         //- the exact create-without-a-paired-release shape this change exists to eliminate.
-
-        [Fact]
-        public void When_the_resolved_mapper_is_the_wrong_type_Get_releases_it_before_throwing()
+        [Test]
+        public async System.Threading.Tasks.Task When_the_resolved_mapper_is_the_wrong_type_Get_releases_it_before_throwing()
         {
             //arrange — TargetRequest is registered to a mapper that implements IAmAMessageMapper<OtherRequest>,
             //not IAmAMessageMapper<TargetRequest>
@@ -26,16 +24,24 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
             registry.Register(typeof(TargetRequest), typeof(WrongMapper));
 
             //act — the cast in Get<TargetRequest> fails on the wrong closed type
-            var exception = Record.Exception(() => registry.Get<TargetRequest>());
+            Exception? exception = null;
+            try
+            {
+                registry.Get<TargetRequest>();
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
 
             //assert — it throws, and the mapper it created was released back to the factory rather than leaked
-            Assert.IsType<InvalidCastException>(exception);
-            Assert.Equal(1, factory.CreateCount);
-            Assert.Equal(factory.CreateCount, factory.ReleaseCount);
+            await Assert.That(exception).IsTypeOf<InvalidCastException>();
+            await Assert.That(factory.CreateCount).IsEqualTo(1);
+            await Assert.That(factory.ReleaseCount).IsEqualTo(factory.CreateCount);
         }
 
-        [Fact]
-        public void When_the_resolved_mapper_is_the_wrong_type_GetAsync_releases_it_before_throwing()
+        [Test]
+        public async System.Threading.Tasks.Task When_the_resolved_mapper_is_the_wrong_type_GetAsync_releases_it_before_throwing()
         {
             //arrange — TargetRequest is registered to a mapper that implements IAmAMessageMapperAsync<OtherRequest>,
             //not IAmAMessageMapperAsync<TargetRequest>
@@ -44,12 +50,20 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
             registry.RegisterAsync(typeof(TargetRequest), typeof(WrongMapperAsync));
 
             //act — the cast in GetAsync<TargetRequest> fails on the wrong closed type
-            var exception = Record.Exception(() => registry.GetAsync<TargetRequest>());
+            Exception? exception = null;
+            try
+            {
+                registry.GetAsync<TargetRequest>();
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
 
             //assert — it throws, and the mapper it created was released back to the factory rather than leaked
-            Assert.IsType<InvalidCastException>(exception);
-            Assert.Equal(1, factory.CreateCount);
-            Assert.Equal(factory.CreateCount, factory.ReleaseCount);
+            await Assert.That(exception).IsTypeOf<InvalidCastException>();
+            await Assert.That(factory.CreateCount).IsEqualTo(1);
+            await Assert.That(factory.ReleaseCount).IsEqualTo(factory.CreateCount);
         }
 
         private sealed class TargetRequest : Command

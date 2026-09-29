@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -33,7 +33,6 @@ using Microsoft.Extensions.Hosting;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -42,9 +41,9 @@ public class HostTokenCancelledDuringStopTests
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private readonly TimerCountingTimeProvider _clock = new(s_start);
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
     public async Task When_the_host_token_is_cancelled_during_stop_should_end_the_wait(bool cancelledBeforeTheStop)
     {
         //Arrange
@@ -70,9 +69,9 @@ public class HostTokenCancelledDuringStopTests
         });
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5))).IsTrue();
 
         using var host = new CancellationTokenSource();
         if (cancelledBeforeTheStop)
@@ -97,15 +96,15 @@ public class HostTokenCancelledDuringStopTests
         }
 
         //Assert
-        Assert.True(cancelledBeforeTheStop || waitingWhenCancelled);
-        Assert.True(stopped);
-        Assert.True(stopping.IsCompletedSuccessfully);
-        Assert.Equal(s_start.AddMinutes(1), _clock.GetUtcNow());
+        await Assert.That(cancelledBeforeTheStop || waitingWhenCancelled).IsTrue();
+        await Assert.That(stopped).IsTrue();
+        await Assert.That(stopping.IsCompletedSuccessfully).IsTrue();
+        await Assert.That(_clock.GetUtcNow()).IsEqualTo(s_start.AddMinutes(1));
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
         new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

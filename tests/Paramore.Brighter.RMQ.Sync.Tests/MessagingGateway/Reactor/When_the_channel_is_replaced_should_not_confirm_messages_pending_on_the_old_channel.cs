@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[NotInParallel("RMQ")]
 public class RmqChannelReplacementConfirmationTests : IDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
@@ -29,8 +28,8 @@ public class RmqChannelReplacementConfirmationTests : IDisposable
             .Create(TimeSpan.FromMilliseconds(1000));
     }
 
-    [Fact]
-    public void When_the_channel_is_replaced_should_not_confirm_messages_pending_on_the_old_channel()
+    [Test]
+    public async Task When_the_channel_is_replaced_should_not_confirm_messages_pending_on_the_old_channel()
     {
         //Arrange — two messages await confirmation when the broker closes the channel; no IOException reaches Send
         var confirmations = new List<PublishConfirmationResult>();
@@ -50,7 +49,7 @@ public class RmqChannelReplacementConfirmationTests : IDisposable
         _messageProducer.Channels[1].RaiseAck(deliveryTag: 2, multiple: true);
 
         //Assert — only the messages sent on the new channel are confirmed
-        Assert.Equal(sentOnNewChannel.Select(m => m.Id), confirmations.Select(c => c.MessageId));
+        await Assert.That(confirmations.Select(c => c.MessageId)).IsEqualTo(sentOnNewChannel.Select(m => m.Id));
     }
 
     private Message NewMessage() => new(

@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class SubscriptionDeclaresDefaultChannelFactoryTypeValidationTests
 {
-    [Fact]
-    public void When_a_subscription_declares_the_default_channel_factory_type_should_report_no_findings()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_subscription_declares_the_default_channel_factory_type_should_report_no_findings()
     {
         // Arrange — a subscription that declares the same type as the default channel factory
         var subscription = new DeclaringSubscription(subscriptionName: new SubscriptionName("greeting-sub"));
@@ -46,7 +46,7 @@ public class SubscriptionDeclaresDefaultChannelFactoryTypeValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — no findings
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 }

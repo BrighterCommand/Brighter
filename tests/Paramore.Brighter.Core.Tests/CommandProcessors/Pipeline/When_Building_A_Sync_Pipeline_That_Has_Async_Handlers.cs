@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,14 +21,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
@@ -37,32 +35,25 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
         private Exception _exception;
-
         public PipelineMixedHandlersTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyMixedImplicitHandler>();
-
             var container = new ServiceCollection();
             container.AddTransient<MyMixedImplicitHandler>();
             container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
- 
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory);            
-            PipelineBuilder<MyCommand>.ClearPipelineCache();
- 
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory);
         }
 
-        [Fact]
-        public void When_Building_A_Sync_Pipeline_That_Has_Async_Handlers()
+        [Test]
+        public async Task When_Building_A_Sync_Pipeline_That_Has_Async_Handlers()
         {
             _exception = Catch.Exception(() => _pipeline = _pipelineBuilder.Build(new MyCommand(), new RequestContext()).First());
-
-            Assert.NotNull(_exception);
-            Assert.IsType<ConfigurationException>(_exception);
-            Assert.Contains(typeof(MyLoggingHandlerAsync<>).Name, _exception.Message);
+            await Assert.That(_exception).IsNotNull();
+            await Assert.That(_exception).IsTypeOf<ConfigurationException>();
+            await Assert.That(_exception.Message).Contains(typeof(MyLoggingHandlerAsync<>).Name);
         }
     }
 }

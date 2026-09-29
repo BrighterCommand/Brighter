@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[NotInParallel("RMQ")]
 public class RmqThrowingConfirmationSubscriberTests : IDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
@@ -29,8 +28,8 @@ public class RmqThrowingConfirmationSubscriberTests : IDisposable
             .Create(TimeSpan.FromMilliseconds(1000));
     }
 
-    [Fact]
-    public void When_a_confirmation_subscriber_throws_should_still_confirm_every_message_once()
+    [Test]
+    public async Task When_a_confirmation_subscriber_throws_should_still_confirm_every_message_once()
     {
         //Arrange — the subscriber fails on the first confirmation it is given
         var confirmations = new List<PublishConfirmationResult>();
@@ -53,7 +52,7 @@ public class RmqThrowingConfirmationSubscriberTests : IDisposable
         _messageProducer.Confirms.RaiseAck(deliveryTag: 3, multiple: true);
 
         //Assert — the failure loses no confirmation and repeats none
-        Assert.Equal(sent.Select(m => m.Id), confirmations.Select(c => c.MessageId));
+        await Assert.That(confirmations.Select(c => c.MessageId)).IsEqualTo(sent.Select(m => m.Id));
     }
 
     public void Dispose() => _messageProducer.Dispose();

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia
@@ -28,21 +28,20 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
-[Trait("Category", "GcpPubSubStream")]
-[Trait("Category", "GcpPubSubPurge")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[Property("Category", "GcpPubSubPurge")]
+[NotInParallel("Stream")]
 public class GcpStreamPurgeSaturatedTests
 {
-    [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    [InlineData(5)]
-    [InlineData(-5)]
-    public void When_purging_a_saturated_stream_should_clear_the_backlog_and_deliver_new_messages(int clientLagMinutes)
+    [Test]
+    [Arguments(0)]
+    [Arguments(2)]
+    [Arguments(5)]
+    [Arguments(-5)]
+    public async Task When_purging_a_saturated_stream_should_clear_the_backlog_and_deliver_new_messages(int clientLagMinutes)
     {
         //Arrange
         var provider = new GcpStreamMessageGatewayProvider();
@@ -72,7 +71,7 @@ public class GcpStreamPurgeSaturatedTests
             var heldMessage = builder.SetTopic(routingKey).SetMessageId(Id.Random()).Build();
             producer.Send(heldMessage);
             var heldDelivery = channel.Receive(TimeSpan.FromSeconds(20));
-            Assert.Equal(heldMessage.Id, heldDelivery.Id);
+            await Assert.That(heldDelivery.Id).IsEqualTo(heldMessage.Id);
 
             for (var i = 0; i < 20; i++)
             {
@@ -85,13 +84,13 @@ public class GcpStreamPurgeSaturatedTests
             var afterPurge = channel.Receive(TimeSpan.FromSeconds(10));
 
             //Assert
-            Assert.True(afterPurge.IsEmpty);
+            await Assert.That(afterPurge.IsEmpty).IsTrue();
 
             var newMessage = builder.SetTopic(routingKey).SetMessageId(Id.Random()).Build();
             producer.Send(newMessage);
             var afterPublish = GcpPurgeTestReceiver.Receive(channel);
 
-            Assert.Equal(newMessage.Id, afterPublish.Id);
+            await Assert.That(afterPublish.Id).IsEqualTo(newMessage.Id);
             channel.Acknowledge(afterPublish);
         }
         finally

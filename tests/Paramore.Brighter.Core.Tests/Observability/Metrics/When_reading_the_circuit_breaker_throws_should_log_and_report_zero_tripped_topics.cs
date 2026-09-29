@@ -35,7 +35,6 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
@@ -44,8 +43,8 @@ public class When_reading_the_circuit_breaker_throws_should_log_and_report_zero_
     private const string TrippedTopics = "paramore.brighter.outbox_sweeper.tripped_topics";
     private const string RunningTime = "paramore.brighter.outbox_sweeper.sweep.running_time";
 
-    [Fact]
-    public void When_the_breaker_read_throws_should_log_a_warning_and_report_zero_tripped_topics()
+    [Test]
+    public async Task When_the_breaker_read_throws_should_log_a_warning_and_report_zero_tripped_topics()
     {
         //Arrange
         var marker = $"breaker-read-{Guid.NewGuid():N}";
@@ -56,15 +55,15 @@ public class When_reading_the_circuit_breaker_throws_should_log_and_report_zero_
         var observed = Observe(state, () => new ThrowingOutboxCircuitBreaker(marker), out var recordException);
 
         //Assert
-        Assert.Null(recordException);
-        Assert.Equal([0.0], observed[TrippedTopics]);
-        Assert.Equal([5.0], observed[RunningTime]);
-        var logged = Assert.Single(CapturingLogSink.Instance.Find(typeof(SweeperMeter).FullName!, marker));
-        Assert.Equal(Serilog.Events.LogEventLevel.Warning, logged.Level);
+        await Assert.That(recordException).IsNull();
+        await Assert.That(observed[TrippedTopics]).IsEqualTo([0.0]);
+        await Assert.That(observed[RunningTime]).IsEqualTo([5.0]);
+        var logged = await Assert.That(CapturingLogSink.Instance.Find(typeof(SweeperMeter).FullName!, marker)).HasSingleItem();
+        await Assert.That(logged.Level).IsEqualTo(Serilog.Events.LogEventLevel.Warning);
     }
 
-    [Fact]
-    public void When_the_circuit_breaker_lookup_throws_should_log_and_report_zero_tripped_topics()
+    [Test]
+    public async Task When_the_circuit_breaker_lookup_throws_should_log_and_report_zero_tripped_topics()
     {
         //Arrange
         var marker = $"breaker-lookup-{Guid.NewGuid():N}";
@@ -76,14 +75,14 @@ public class When_reading_the_circuit_breaker_throws_should_log_and_report_zero_
             state, () => throw new InvalidOperationException(marker), out var recordException);
 
         //Assert
-        Assert.Null(recordException);
-        Assert.Equal([0.0], observed[TrippedTopics]);
-        Assert.Equal([5.0], observed[RunningTime]);
-        var logged = Assert.Single(CapturingLogSink.Instance.Find(typeof(SweeperMeter).FullName!, marker));
-        Assert.Equal(Serilog.Events.LogEventLevel.Warning, logged.Level);
+        await Assert.That(recordException).IsNull();
+        await Assert.That(observed[TrippedTopics]).IsEqualTo([0.0]);
+        await Assert.That(observed[RunningTime]).IsEqualTo([5.0]);
+        var logged = await Assert.That(CapturingLogSink.Instance.Find(typeof(SweeperMeter).FullName!, marker)).HasSingleItem();
+        await Assert.That(logged.Level).IsEqualTo(Serilog.Events.LogEventLevel.Warning);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_breaker_read_throws_should_keep_sweeping()
     {
         //Arrange
@@ -106,8 +105,8 @@ public class When_reading_the_circuit_breaker_throws_should_log_and_report_zero_
         try
         {
             var firstSweep = measurements.WaitFor(m => m.Of(BrighterSemanticConventions.OutboxSweeperSweeps).Count >= 1, TimeSpan.FromSeconds(10));
-            Assert.True(firstSweep, "The first sweep did not complete within 10s");
-            recordException = Record.Exception(measurements.RecordObservableInstruments);
+            await Assert.That(firstSweep).IsTrue().Because("The first sweep did not complete within 10s");
+            recordException = TestExceptionRecorder.Capture(measurements.RecordObservableInstruments);
             laterSweepCompleted = measurements.WaitFor(m => m.Of(BrighterSemanticConventions.OutboxSweeperSweeps).Count >= 3, TimeSpan.FromSeconds(10));
         }
         finally
@@ -117,9 +116,9 @@ public class When_reading_the_circuit_breaker_throws_should_log_and_report_zero_
         }
 
         //Assert
-        Assert.Null(recordException);
-        Assert.True(laterSweepCompleted, "The sweeper did not complete a later sweep after the breaker read threw");
-        Assert.NotEmpty(CapturingLogSink.Instance.Find(typeof(SweeperMeter).FullName!, marker));
+        await Assert.That(recordException).IsNull();
+        await Assert.That(laterSweepCompleted).IsTrue().Because("The sweeper did not complete a later sweep after the breaker read threw");
+        await Assert.That(CapturingLogSink.Instance.Find(typeof(SweeperMeter).FullName!, marker)).IsNotEmpty();
     }
 
     private static OutboxSweeperState ActiveStateRunningFor(FakeTimeProvider timeProvider, TimeSpan runningFor)
@@ -155,7 +154,7 @@ public class When_reading_the_circuit_breaker_throws_should_log_and_report_zero_
         listener.SetMeasurementEventCallback<double>((instrument, value, _, _) => values[instrument.Name].Add(value));
         listener.Start();
 
-        recordException = Record.Exception(listener.RecordObservableInstruments);
+        recordException = TestExceptionRecorder.Capture(listener.RecordObservableInstruments);
 
         GC.KeepAlive(meter);
         return values;

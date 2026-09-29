@@ -23,19 +23,18 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs;
 
 /// <summary>
 /// Verifies that <see cref="SqsSubscription"/> implements <see cref="IAmADeliveryCountingSubscription"/>
 /// and exposes the native redrive limit from its <see cref="SqsAttributes.RedrivePolicy"/> (R-10, AC-10, ADR 0077).
 /// </summary>
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class SqsSubscriptionNativeRedriveLimitTests
 {
-    [Fact]
-    public void When_an_sqs_subscription_has_a_redrive_policy_should_expose_native_redrive_limit()
+    [Test]
+    public async Task When_an_sqs_subscription_has_a_redrive_policy_should_expose_native_redrive_limit()
     {
         //Arrange
         var redrivePolicy = new RedrivePolicy(new ChannelName("orders-dlq"), maxReceiveCount: 5);
@@ -50,14 +49,14 @@ public class SqsSubscriptionNativeRedriveLimitTests
         );
 
         //Assert
-        Assert.IsAssignableFrom<IAmADeliveryCountingSubscription>(subscription);
+        await Assert.That(subscription).IsAssignableTo<IAmADeliveryCountingSubscription>();
         var counting = (IAmADeliveryCountingSubscription)subscription;
-        Assert.Equal(5, counting.NativeRedriveLimit);
-        Assert.Null(counting.DeliveryBudgetUnenforceableReason);
+        await Assert.That(counting.NativeRedriveLimit).IsEqualTo(5);
+        await Assert.That(counting.DeliveryBudgetUnenforceableReason).IsNull();
     }
 
-    [Fact]
-    public void When_an_sqs_subscription_has_no_redrive_policy_should_report_null_native_redrive_limit()
+    [Test]
+    public async Task When_an_sqs_subscription_has_no_redrive_policy_should_report_null_native_redrive_limit()
     {
         //Arrange & Act
         var subscription = new SqsSubscription<MyCommand>(
@@ -67,9 +66,9 @@ public class SqsSubscriptionNativeRedriveLimitTests
         );
 
         //Assert
-        Assert.IsAssignableFrom<IAmADeliveryCountingSubscription>(subscription);
+        await Assert.That(subscription).IsAssignableTo<IAmADeliveryCountingSubscription>();
         var counting = (IAmADeliveryCountingSubscription)subscription;
-        Assert.Null(counting.NativeRedriveLimit);
-        Assert.Null(counting.DeliveryBudgetUnenforceableReason);
+        await Assert.That(counting.NativeRedriveLimit).IsNull();
+        await Assert.That(counting.DeliveryBudgetUnenforceableReason).IsNull();
     }
 }

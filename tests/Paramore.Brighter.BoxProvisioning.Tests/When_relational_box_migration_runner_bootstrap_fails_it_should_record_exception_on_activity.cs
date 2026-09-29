@@ -33,7 +33,6 @@ using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// and calling <c>BeginAsync</c> (ADR 0058 §B.3). A failure in any of the three must set the span status
 /// to Error and record the exception, rather than leave an Unset span. One test per call site.
 /// </summary>
-[Collection("BoxProvisioningObservability")]
+[NotInParallel]
 public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposable
 {
     private readonly List<Activity> _exportedActivities = new();
@@ -64,7 +63,7 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
         _tracer.Dispose();
     }
 
-    [Fact]
+    [Test]
     public async Task When_open_connection_async_throws_it_should_record_error_status_and_exception_on_activity()
     {
         //Arrange
@@ -72,23 +71,23 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
         var runner = new ThrowingBootstrapRunner(_tracer, openConnectionThrow: thrown);
 
         //Act
-        var caught = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var caught = await Assert.That(() =>
             runner.MigrateAsync(
                 tableName: "Orders",
                 schemaName: "dbo",
                 boxType: BoxType.Outbox,
-                tableState: new BoxTableState(false, false, 0)));
-        Assert.Same(thrown, caught);
+                tableState: new BoxTableState(false, false, 0))).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(caught).IsSameReferenceAs(thrown);
 
         _tracerProvider.ForceFlush();
 
         //Assert
-        var span = Assert.Single(_exportedActivities);
-        Assert.Equal(ActivityStatusCode.Error, span.Status);
-        Assert.Contains(span.Events, e => e.Name == "exception");
+        var span = await Assert.That(_exportedActivities).HasSingleItem();
+        await Assert.That(span.Status).IsEqualTo(ActivityStatusCode.Error);
+        await Assert.That(System.Linq.Enumerable.Any(span.Events, e => e.Name == "exception")).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_create_unit_of_work_async_throws_it_should_record_error_status_and_exception_on_activity()
     {
         //Arrange
@@ -96,23 +95,23 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
         var runner = new ThrowingBootstrapRunner(_tracer, createUnitOfWorkThrow: thrown);
 
         //Act
-        var caught = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var caught = await Assert.That(() =>
             runner.MigrateAsync(
                 tableName: "Orders",
                 schemaName: "dbo",
                 boxType: BoxType.Outbox,
-                tableState: new BoxTableState(false, false, 0)));
-        Assert.Same(thrown, caught);
+                tableState: new BoxTableState(false, false, 0))).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(caught).IsSameReferenceAs(thrown);
 
         _tracerProvider.ForceFlush();
 
         //Assert
-        var span = Assert.Single(_exportedActivities);
-        Assert.Equal(ActivityStatusCode.Error, span.Status);
-        Assert.Contains(span.Events, e => e.Name == "exception");
+        var span = await Assert.That(_exportedActivities).HasSingleItem();
+        await Assert.That(span.Status).IsEqualTo(ActivityStatusCode.Error);
+        await Assert.That((span.Events).Any(e => e.Name == "exception")).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_begin_async_throws_it_should_record_error_status_and_exception_on_activity()
     {
         //Arrange
@@ -120,20 +119,20 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
         var runner = new ThrowingBootstrapRunner(_tracer, beginAsyncThrow: thrown);
 
         //Act
-        var caught = await Assert.ThrowsAsync<TimeoutException>(() =>
+        var caught = await Assert.That(() =>
             runner.MigrateAsync(
                 tableName: "Orders",
                 schemaName: "dbo",
                 boxType: BoxType.Outbox,
-                tableState: new BoxTableState(false, false, 0)));
-        Assert.Same(thrown, caught);
+                tableState: new BoxTableState(false, false, 0))).ThrowsExactly<TimeoutException>();
+        await Assert.That(caught).IsSameReferenceAs(thrown);
 
         _tracerProvider.ForceFlush();
 
         //Assert
-        var span = Assert.Single(_exportedActivities);
-        Assert.Equal(ActivityStatusCode.Error, span.Status);
-        Assert.Contains(span.Events, e => e.Name == "exception");
+        var span = await Assert.That(_exportedActivities).HasSingleItem();
+        await Assert.That(span.Status).IsEqualTo(ActivityStatusCode.Error);
+        await Assert.That((span.Events).Any(e => e.Name == "exception")).IsTrue();
     }
 
     private sealed class ThrowingBootstrapRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>

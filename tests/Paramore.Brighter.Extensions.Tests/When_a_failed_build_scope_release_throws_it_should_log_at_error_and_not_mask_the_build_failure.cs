@@ -27,15 +27,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(LoggerCaptureCollection.NAME)]
+[NotInParallel(LoggerCaptureCollection.NAME)]
 public class FailedBuildScopeDisposalLoggingTests
 {
-    [Fact]
-    public void When_a_failed_build_scope_release_throws_it_should_log_at_error_and_not_mask_the_build_failure()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_failed_build_scope_release_throws_it_should_log_at_error_and_not_mask_the_build_failure()
     {
         //arrange — an FR-22.2-conformant lifetime triple: all three Scoped. PoisonedScopeMapper resolves
         //IPoisonedDependency successfully (tracked by the pipeline scope for disposal), then building its
@@ -66,17 +66,17 @@ public class FailedBuildScopeDisposalLoggingTests
         using var logs = new InMemoryLogCapture();
 
         //act
-        Assert.Throws<ConfigurationException>(() => pipelineBuilder.BuildWrapPipeline<PoisonedScopeCommand>());
+        await Assert.That(() => pipelineBuilder.BuildWrapPipeline<PoisonedScopeCommand>()).ThrowsExactly<ConfigurationException>();
 
         //assert — the no-pipeline-constructed branch's own Error message fired once, naming the request type
         var disposalFailures = logs.Entries
             .Where(e => e.EventId.Name == "FailedToDisposePipelineScopeAfterFailedBuild")
             .ToList();
-        var disposalFailure = Assert.Single(disposalFailures);
-        Assert.Equal(LogLevel.Error, disposalFailure.Level);
-        Assert.Contains(nameof(PoisonedScopeCommand), disposalFailure.Message);
+        var disposalFailure = await Assert.That(disposalFailures).HasSingleItem();
+        await Assert.That(disposalFailure.Level).IsEqualTo(LogLevel.Error);
+        await Assert.That(disposalFailure.Message).Contains(nameof(PoisonedScopeCommand));
 
         //assert — the outer cleanup guard did not also log a Warning for the same event
-        Assert.DoesNotContain(logs.Entries, e => e.EventId.Name == "FailedToCleanUpAfterFailedBuild");
+        await Assert.That(System.Linq.Enumerable.Any(logs.Entries, e => e.EventId.Name == "FailedToCleanUpAfterFailedBuild")).IsFalse();
     }
 }

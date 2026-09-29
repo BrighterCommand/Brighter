@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -28,19 +28,19 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// If either path regresses, the enclosing <see cref="BrighterAsyncContext.Run(Func{Task})"/> never
 /// returns and the <c>Wait</c> below times out.
 /// </summary>
-[Collection(PumpContextDeadlockCollection.Name)]
+[NotInParallel]
 public class ReleaseAsyncDisposableMapperOnPumpContextTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
-    [Fact]
-    public void When_releasing_an_async_disposable_mapper_via_await_using_it_should_not_deadlock()
+    [Test]
+    public async System.Threading.Tasks.Task When_releasing_an_async_disposable_mapper_via_await_using_it_should_not_deadlock()
     {
         //arrange
         var probe = BuildPipelineFactory(out var builder);
 
         //act — dispose asynchronously (await using), the Proactor path, on the single-threaded pump
-        RunOnPumpThread(() => BrighterAsyncContext.Run(async () =>
+        await RunOnPumpThread(() => BrighterAsyncContext.Run(async () =>
             {
                 await using var pipeline = builder.BuildUnwrapPipeline<MinimalEvent>();
                 await Task.Yield();
@@ -48,18 +48,18 @@ public class ReleaseAsyncDisposableMapperOnPumpContextTests
             "await using disposal deadlocked the single-threaded pump context");
 
         //assert
-        Assert.Equal(1, probe.DisposedCount);
+        await Assert.That(probe.DisposedCount).IsEqualTo(1);
     }
 
-    [Fact]
-    public void When_releasing_an_async_disposable_mapper_via_synchronous_dispose_it_should_not_deadlock()
+    [Test]
+    public async System.Threading.Tasks.Task When_releasing_an_async_disposable_mapper_via_synchronous_dispose_it_should_not_deadlock()
     {
         //arrange
         var probe = BuildPipelineFactory(out var builder);
 
         //act — dispose synchronously (using) on the pump context; suppressing the context in
         //ServiceProviderLifetimeScope must keep this from deadlocking even though a blocking wait is unavoidable here
-        RunOnPumpThread(() => BrighterAsyncContext.Run(async () =>
+        await RunOnPumpThread(() => BrighterAsyncContext.Run(async () =>
             {
                 using (builder.BuildUnwrapPipeline<MinimalEvent>())
                 {
@@ -69,13 +69,13 @@ public class ReleaseAsyncDisposableMapperOnPumpContextTests
             "synchronous disposal deadlocked the single-threaded pump context");
 
         //assert
-        Assert.Equal(1, probe.DisposedCount);
+        await Assert.That(probe.DisposedCount).IsEqualTo(1);
     }
 
     // Hosts the pump on a dedicated thread (not the thread pool) so a genuine deadlock is detected by a
     // Join timeout rather than by pool-thread availability — the whole suite shares the pool, and hosting
     // the blocking pump on it makes the timeout flaky under load.
-    private static void RunOnPumpThread(Action pump, string deadlockMessage)
+    private static async System.Threading.Tasks.Task RunOnPumpThread(Action pump, string deadlockMessage)
     {
         Exception? failure = null;
         var thread = new Thread(() =>
@@ -86,8 +86,8 @@ public class ReleaseAsyncDisposableMapperOnPumpContextTests
 
         thread.Start();
 
-        Assert.True(thread.Join(Timeout), deadlockMessage);
-        Assert.Null(failure);
+        await Assert.That(thread.Join(Timeout)).IsTrue().Because(deadlockMessage);
+        await Assert.That(failure).IsNull();
     }
 
     private static DisposeProbe BuildPipelineFactory(out TransformPipelineBuilderAsync builder)

@@ -32,21 +32,20 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class InboxServiceValidationTests
 {
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, false)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, false)]
-    [InlineData(true, false, true)]
-    [InlineData(true, true, false)]
-    [InlineData(true, true, true)]
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(false, false, true)]
+    [Arguments(false, true, false)]
+    [Arguments(false, true, true)]
+    [Arguments(true, false, false)]
+    [Arguments(true, false, true)]
+    [Arguments(true, true, false)]
+    [Arguments(true, true, true)]
     public async Task When_inboxes_are_registered_directly_should_validate_and_deduplicate(
         bool useOptionsFactory, bool registerBeforeConsumers, bool overrideIncompatibleConfiguration)
     {
@@ -81,17 +80,17 @@ public class InboxServiceValidationTests
         var result = Validate(provider);
 
         // Assert
-        Assert.Equal(1, command.HandleCount);
-        Assert.Equal(1, asyncCommand.HandleCount);
-        Assert.Empty(result.Errors);
+        await Assert.That(command.HandleCount).IsEqualTo(1);
+        await Assert.That(asyncCommand.HandleCount).IsEqualTo(1);
+        await Assert.That(result.Errors).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public void When_an_inbox_registration_is_invalid_should_report_validation_errors(
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
+    public async Task When_an_inbox_registration_is_invalid_should_report_validation_errors(
         bool useAsyncHandler, bool factoryThrows)
     {
         // Arrange
@@ -108,16 +107,16 @@ public class InboxServiceValidationTests
         var result = Validate(provider);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, error =>
+        await Assert.That(result.IsValid).IsFalse();
+        await Assert.That(System.Linq.Enumerable.Any(result.Errors, error =>
             error.Source.Contains(useAsyncHandler ? nameof(ConsumerExplicitInboxAsyncCommandHandler) : nameof(ConsumerExplicitInboxCommandHandler))
-            && error.Message.Contains(useAsyncHandler ? nameof(IAmAnInboxAsync) : nameof(IAmAnInboxSync)));
+            && error.Message.Contains(useAsyncHandler ? nameof(IAmAnInboxAsync) : nameof(IAmAnInboxSync)))).IsTrue();
         if (factoryThrows)
-            Assert.Contains(result.Errors, error => error.Message.Contains("inbox construction failed"));
+            await Assert.That(System.Linq.Enumerable.Any(result.Errors, error => error.Message.Contains("inbox construction failed"))).IsTrue();
     }
 
-    [Fact]
-    public void When_validating_scoped_inboxes_should_dispose_them_and_resolve_fresh_on_each_validation()
+    [Test]
+    public async Task When_validating_scoped_inboxes_should_dispose_them_and_resolve_fresh_on_each_validation()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -144,14 +143,17 @@ public class InboxServiceValidationTests
         var second = Validate(provider);
 
         // Assert
-        Assert.Empty(first.Errors);
-        Assert.Empty(second.Errors);
-        Assert.Equal(2, created.Count);
-        Assert.All(created, inbox => Assert.True(inbox.Disposed));
+        await Assert.That(first.Errors).IsEmpty();
+        await Assert.That(second.Errors).IsEmpty();
+        await Assert.That(created.Count).IsEqualTo(2);
+        foreach (var inbox in created)
+{
+    await Assert.That(inbox.Disposed).IsTrue();
+}
     }
 
-    [Fact]
-    public void When_no_handler_uses_an_inbox_should_not_resolve_inbox_services()
+    [Test]
+    public async Task When_no_handler_uses_an_inbox_should_not_resolve_inbox_services()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -177,8 +179,8 @@ public class InboxServiceValidationTests
         var result = Validate(provider);
 
         // Assert
-        Assert.Empty(result.Errors);
-        Assert.Equal(0, resolutions);
+        await Assert.That(result.Errors).IsEmpty();
+        await Assert.That(resolutions).IsEqualTo(0);
     }
 
     private static PipelineValidationResult Validate(IServiceProvider provider)

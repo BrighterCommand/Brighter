@@ -43,7 +43,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -53,7 +52,7 @@ public class StoppedSweeperFailuresAndTrippedTopicsTests
     private const string InvestigateCheck = "brighter-outbox-sweeper-investigate";
     private const string TrippedTopicsGauge = "paramore.brighter.outbox_sweeper.tripped_topics";
 
-    [Fact]
+    [Test]
     public async Task When_the_sweeper_is_stopped_should_keep_its_failures_and_drop_its_tripped_topics()
     {
         //Arrange
@@ -93,29 +92,29 @@ public class StoppedSweeperFailuresAndTrippedTopicsTests
             var abandonedReport = await afterAbandoned.HealthChecks.CheckHealthAsync(CancellationToken.None);
 
             //Assert
-            Assert.True(firstFailed && secondFailed && thirdFailed, "The failing sweeps did not all end");
-            Assert.Equal(HealthStatus.Degraded, failuresEntry.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, failuresEntry.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), failuresEntry.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "consecutive_failed_sweeps" }, Assert.IsType<string[]>(failuresEntry.Data[RemedyCheckConvention.ConditionsKey]));
+            await Assert.That(firstFailed && secondFailed && thirdFailed).IsTrue().Because("The failing sweeps did not all end");
+            await Assert.That(failuresEntry.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(failuresEntry.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(failuresEntry.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(failuresEntry.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "consecutive_failed_sweeps" });
 
-            Assert.True(completed, "The sweep did not complete");
-            Assert.Equal(HealthStatus.Healthy, completedEntry.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, completedEntry.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), completedEntry.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Empty(Assert.IsType<string[]>(completedEntry.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Equal([0L], afterCompleted.TrippedTopics.Values);
-            Assert.Equal([0.0], afterCompleted.RunningTime.Values);
+            await Assert.That(completed).IsTrue().Because("The sweep did not complete");
+            await Assert.That(completedEntry.Status).IsEqualTo(HealthStatus.Healthy);
+            await Assert.That(completedEntry.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(completedEntry.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(completedEntry.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEmpty();
+            await Assert.That(afterCompleted.TrippedTopics.Values).IsEqualTo([0L]);
+            await Assert.That(afterCompleted.RunningTime.Values).IsEqualTo([0.0]);
 
-            Assert.True(reachedMediator, "The sweep did not reach the mediator");
-            Assert.Equal([0L], afterAbandoned.TrippedTopics.Values);
-            Assert.Equal([56.0], afterAbandoned.RunningTime.Values);
+            await Assert.That(reachedMediator).IsTrue().Because("The sweep did not reach the mediator");
+            await Assert.That(afterAbandoned.TrippedTopics.Values).IsEqualTo([0L]);
+            await Assert.That(afterAbandoned.RunningTime.Values).IsEqualTo([56.0]);
             var restart = abandonedReport.Entries[RestartCheck];
-            Assert.Equal(HealthStatus.Degraded, restart.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, restart.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), restart.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "hung_sweep" }, Assert.IsType<string[]>(restart.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("56", restart.Description);
+            await Assert.That(restart.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(restart.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(restart.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+            await Assert.That((await Assert.That(restart.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "hung_sweep" });
+            await Assert.That(restart.Description).Contains("56");
         }
         finally
         {

@@ -27,8 +27,7 @@ using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessagingGateway;
 
 /// <summary>
@@ -41,8 +40,8 @@ public class DeliveryBudgetDiagnosticsTests
     private const string SubscriptionNameValue = "unenforceable-sub";
     private const string UnenforceableReason = "no DeadLetterPolicy";
 
-    [Fact]
-    public void When_channel_created_for_unenforceable_budget_should_log_warning_once()
+    [Test]
+    public async Task When_channel_created_for_unenforceable_budget_should_log_warning_once()
     {
         //Arrange
         var sub = new UnenforceableDeliveryCountingSubscriptionDouble(
@@ -63,15 +62,15 @@ public class DeliveryBudgetDiagnosticsTests
             .Where(e => e.Level == LogEventLevel.Warning)
             .ToList();
 
-        Assert.Single(warnings);
+        await Assert.That(warnings).HasSingleItem();
         var rendered = warnings[0].RenderMessage();
-        Assert.Contains(SubscriptionNameValue, rendered);
-        Assert.Contains("3", rendered);
-        Assert.Contains(UnenforceableReason, rendered);
+        await Assert.That(rendered).Contains(SubscriptionNameValue);
+        await Assert.That(rendered).Contains("3");
+        await Assert.That(rendered).Contains(UnenforceableReason);
     }
 
-    [Fact]
-    public void When_channel_created_for_enforceable_budget_should_log_nothing()
+    [Test]
+    public async Task When_channel_created_for_enforceable_budget_should_log_nothing()
     {
         //Arrange — null reason means the budget is enforceable; no warning expected
         var sub = new UnenforceableDeliveryCountingSubscriptionDouble(
@@ -89,11 +88,11 @@ public class DeliveryBudgetDiagnosticsTests
 
         //Assert — no log events at any level
         var events = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
-        Assert.Empty(events);
+        await Assert.That(events).IsEmpty();
     }
 
-    [Fact]
-    public void When_channel_created_with_unlimited_budget_and_unenforceable_reason_should_log_nothing()
+    [Test]
+    public async Task When_channel_created_with_unlimited_budget_and_unenforceable_reason_should_log_nothing()
     {
         //Arrange — requeueCount -1 disables the budget (R-6); warning must not fire even with a reason
         var sub = new UnenforceableDeliveryCountingSubscriptionDouble(
@@ -111,11 +110,11 @@ public class DeliveryBudgetDiagnosticsTests
 
         //Assert — no log events at any level
         var events = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
-        Assert.Empty(events);
+        await Assert.That(events).IsEmpty();
     }
 
-    [Fact]
-    public void When_channel_created_for_plain_subscription_should_log_nothing()
+    [Test]
+    public async Task When_channel_created_for_plain_subscription_should_log_nothing()
     {
         //Arrange — a plain Subscription that does not implement IAmADeliveryCountingSubscription
         var sub = new Subscription(
@@ -134,11 +133,11 @@ public class DeliveryBudgetDiagnosticsTests
 
         //Assert — no log events at any level
         var events = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
-        Assert.Empty(events);
+        await Assert.That(events).IsEmpty();
     }
 
-    [Fact]
-    public void When_channel_created_for_zero_requeue_count_should_not_log_r7_text()
+    [Test]
+    public async Task When_channel_created_for_zero_requeue_count_should_not_log_r7_text()
     {
         //Arrange — requeueCount 0 would trip R-7 in pipeline validation, but R-26 gives
         //           channel-creation logging to R-11 only; reason null means enforceable
@@ -157,11 +156,11 @@ public class DeliveryBudgetDiagnosticsTests
 
         //Assert — R-7 is a pipeline-validation concern; no log here
         var events = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
-        Assert.Empty(events);
+        await Assert.That(events).IsEmpty();
     }
 
-    [Fact]
-    public void When_channel_created_for_budget_meeting_native_limit_should_not_log_r10_text()
+    [Test]
+    public async Task When_channel_created_for_budget_meeting_native_limit_should_not_log_r10_text()
     {
         //Arrange — budget >= native limit trips R-10 in pipeline validation, but R-26 gives
         //           channel-creation logging to R-11 only; reason null means enforceable
@@ -180,6 +179,6 @@ public class DeliveryBudgetDiagnosticsTests
 
         //Assert — R-10 is a pipeline-validation concern; no log here
         var events = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
-        Assert.Empty(events);
+        await Assert.That(events).IsEmpty();
     }
 }

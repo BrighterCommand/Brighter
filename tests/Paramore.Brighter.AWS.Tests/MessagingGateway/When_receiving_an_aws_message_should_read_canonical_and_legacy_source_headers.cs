@@ -34,11 +34,10 @@ using System.Threading.Tasks;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class AwsCloudEventSourceReaderTests
 {
     private const string CANONICAL = "https://canonical.example.test/events";
@@ -46,44 +45,47 @@ public class AwsCloudEventSourceReaderTests
     private const string NESTED = "https://nested.example.test/events";
     private const string INVALID = "http://[invalid";
 
-    public static IEnumerable<object?[]> SourceCases()
+    public static IEnumerable<(bool RawDelivery, string? StandaloneSource, string? StandaloneLegacySource,
+        string? NestedSource, string? NestedLegacySource, string ExpectedSource, bool UseAsync)> SourceCases()
     {
         // raw delivery, standalone source/souce, nested source/souce, expected source
-        object?[][] cases =
+        (bool RawDelivery, string? StandaloneSource, string? StandaloneLegacySource,
+            string? NestedSource, string? NestedLegacySource, string ExpectedSource)[] cases =
         [
-            [true, null, null, CANONICAL, null, CANONICAL],
-            [true, null, null, null, LEGACY, LEGACY],
-            [true, null, null, CANONICAL, LEGACY, CANONICAL],
-            [true, null, null, INVALID, LEGACY, LEGACY],
-            [true, null, null, null, null, MessageHeader.DefaultSource],
-            [true, null, null, INVALID, INVALID, MessageHeader.DefaultSource],
-            [true, null, null, "/orders/events", null, "/orders/events"],
-            [true, CANONICAL, LEGACY, null, null, MessageHeader.DefaultSource],
-            [false, CANONICAL, null, null, null, CANONICAL],
-            [false, null, LEGACY, null, null, LEGACY],
-            [false, CANONICAL, LEGACY, null, null, CANONICAL],
-            [false, null, null, CANONICAL, null, CANONICAL],
-            [false, null, null, null, LEGACY, LEGACY],
-            [false, null, null, CANONICAL, LEGACY, CANONICAL],
-            [false, null, null, INVALID, LEGACY, LEGACY],
-            [false, null, LEGACY, NESTED, null, LEGACY],
-            [false, CANONICAL, null, null, NESTED, CANONICAL],
-            [false, INVALID, LEGACY, NESTED, null, LEGACY],
-            [false, INVALID, INVALID, NESTED, null, NESTED],
-            [false, null, null, null, null, MessageHeader.DefaultSource],
-            [false, INVALID, INVALID, INVALID, INVALID, MessageHeader.DefaultSource],
-            [false, "/orders/events", null, null, null, "/orders/events"]
+            (true, null, null, CANONICAL, null, CANONICAL),
+            (true, null, null, null, LEGACY, LEGACY),
+            (true, null, null, CANONICAL, LEGACY, CANONICAL),
+            (true, null, null, INVALID, LEGACY, LEGACY),
+            (true, null, null, null, null, MessageHeader.DefaultSource),
+            (true, null, null, INVALID, INVALID, MessageHeader.DefaultSource),
+            (true, null, null, "/orders/events", null, "/orders/events"),
+            (true, CANONICAL, LEGACY, null, null, MessageHeader.DefaultSource),
+            (false, CANONICAL, null, null, null, CANONICAL),
+            (false, null, LEGACY, null, null, LEGACY),
+            (false, CANONICAL, LEGACY, null, null, CANONICAL),
+            (false, null, null, CANONICAL, null, CANONICAL),
+            (false, null, null, null, LEGACY, LEGACY),
+            (false, null, null, CANONICAL, LEGACY, CANONICAL),
+            (false, null, null, INVALID, LEGACY, LEGACY),
+            (false, null, LEGACY, NESTED, null, LEGACY),
+            (false, CANONICAL, null, null, NESTED, CANONICAL),
+            (false, INVALID, LEGACY, NESTED, null, LEGACY),
+            (false, INVALID, INVALID, NESTED, null, NESTED),
+            (false, null, null, null, null, MessageHeader.DefaultSource),
+            (false, INVALID, INVALID, INVALID, INVALID, MessageHeader.DefaultSource),
+            (false, "/orders/events", null, null, null, "/orders/events")
         ];
 
         foreach (var testCase in cases)
         {
             foreach (var useAsync in new[] { false, true })
-                yield return testCase.Append((object)useAsync).ToArray();
+                yield return (testCase.RawDelivery, testCase.StandaloneSource, testCase.StandaloneLegacySource,
+                    testCase.NestedSource, testCase.NestedLegacySource, testCase.ExpectedSource, useAsync);
         }
     }
 
-    [Theory]
-    [MemberData(nameof(SourceCases))]
+    [Test]
+    [MethodDataSource(nameof(SourceCases))]
     public async Task When_receiving_an_aws_message_should_read_canonical_and_legacy_source_headers(
         bool rawDelivery, string? standaloneSource, string? standaloneLegacySource,
         string? nestedSource, string? nestedLegacySource, string expectedSource, bool useAsync)
@@ -148,13 +150,14 @@ public class AwsCloudEventSourceReaderTests
                 : consumer.Receive(TimeSpan.FromSeconds(10));
 
             //Assert
-            var message = Assert.Single(received);
-            Assert.Equal(id, message.Id);
-            Assert.Equal(body, message.Body.Value);
-            Assert.Equal(new Uri(expectedSource, UriKind.RelativeOrAbsolute), message.Header.Source);
-            Assert.DoesNotContain("source", message.Header.Bag.Keys);
-            Assert.DoesNotContain("souce", message.Header.Bag.Keys);
-            Assert.Equal("preserved", message.Header.Bag["external-note"]);
+            await Assert.That(received).HasSingleItem();
+            var message = received.Single();
+            await Assert.That(message.Id).IsEqualTo(id);
+            await Assert.That(message.Body.Value).IsEqualTo(body);
+            await Assert.That(message.Header.Source).IsEqualTo(new Uri(expectedSource, UriKind.RelativeOrAbsolute));
+            await Assert.That(message.Header.Bag.ContainsKey("source")).IsFalse();
+            await Assert.That(message.Header.Bag.ContainsKey("souce")).IsFalse();
+            await Assert.That(message.Header.Bag["external-note"]).IsEqualTo("preserved");
         }
         finally
         {

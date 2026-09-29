@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[NotInParallel("RMQ")]
 public class RmqChannelResetConfirmationTests : IDisposable
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
@@ -29,8 +28,8 @@ public class RmqChannelResetConfirmationTests : IDisposable
             .Create(TimeSpan.FromMilliseconds(1000));
     }
 
-    [Fact]
-    public void When_the_channel_resets_should_not_confirm_messages_pending_on_the_old_channel()
+    [Test]
+    public async Task When_the_channel_resets_should_not_confirm_messages_pending_on_the_old_channel()
     {
         //Arrange — two messages await confirmation on the old channel when its socket fails
         var confirmations = new List<PublishConfirmationResult>();
@@ -40,7 +39,7 @@ public class RmqChannelResetConfirmationTests : IDisposable
         _messageProducer.Send(NewMessage());
 
         _messageProducer.Confirms.FailNextPublish();
-        Assert.Throws<ChannelFailureException>(() => _messageProducer.Send(NewMessage()));
+        await Assert.That(() => _messageProducer.Send(NewMessage())).ThrowsExactly<ChannelFailureException>();
 
         // the new channel numbers its delivery tags from 1 again
         var sentOnNewChannel = new[] { NewMessage(), NewMessage() };
@@ -51,7 +50,7 @@ public class RmqChannelResetConfirmationTests : IDisposable
         _messageProducer.Confirms.RaiseAck(deliveryTag: 2, multiple: true);
 
         //Assert — only the messages sent on the new channel are confirmed
-        Assert.Equal(sentOnNewChannel.Select(m => m.Id), confirmations.Select(c => c.MessageId));
+        await Assert.That(confirmations.Select(c => c.MessageId)).IsEqualTo(sentOnNewChannel.Select(m => m.Id));
     }
 
     private Message NewMessage() => new(

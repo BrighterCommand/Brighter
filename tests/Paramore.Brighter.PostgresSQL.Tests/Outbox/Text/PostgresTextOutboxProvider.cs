@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
@@ -14,11 +14,11 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Text;
 
 public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync, IAmAnOutstandingCountOutboxProvider
 {
-    private readonly RelationalDatabaseConfiguration _configuration = new(Const.ConnectionString, 
+    private readonly RelationalDatabaseConfiguration _configuration = new(Const.ConnectionString,
         databaseName: "brightertests",
         outBoxTableName: $"Table{Uuid.New():N}",
         binaryMessagePayload: false);
-    
+
     public void CreateStore()
     {
         using var connection = new NpgsqlConnection(_configuration.ConnectionString);
@@ -63,7 +63,7 @@ public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
     {
         return new PostgreSqlOutbox(_configuration);
     }
-    
+
     public async Task CreateStoreAsync()
     {
         await using var connection = new NpgsqlConnection(_configuration.ConnectionString);

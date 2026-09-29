@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
@@ -28,24 +28,21 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// </remarks>
 public class RealTreePollContractTests
 {
-    [Fact]
-    public void When_the_tree_regains_an_internal_poll_loop_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_tree_regains_an_internal_poll_loop_should_fail_audit()
     {
         // Arrange — the real repository, located the way the other tree-walking tests locate it
         var repoRoot = FindRepoRoot(AppContext.BaseDirectory);
-        Assert.True(repoRoot is not null,
-            "Could not locate the repository root; the audit cannot guard a tree it cannot find.");
+        await Assert.That(repoRoot is not null).IsTrue().Because("Could not locate the repository root; the audit cannot guard a tree it cannot find.");
 
         // Act
         var result = DeadLetterPollContractAudit.Audit(repoRoot!);
 
         // Assert — the scan reached the providers, and none of them retries internally
-        Assert.True(result.HelpersScanned > 0,
-            "The audit found no rejection-destination helpers at all. It is passing vacuously, "
+        await Assert.That(result.HelpersScanned > 0).IsTrue().Because("The audit found no rejection-destination helpers at all. It is passing vacuously, "
             + "which is worse than failing: fix the scan before trusting this test.");
 
-        Assert.True(result.Violations.Count == 0,
-            "A rejection-destination helper retries inside itself. That makes the generated test's "
+        await Assert.That(result.Violations.Count == 0).IsTrue().Because("A rejection-destination helper retries inside itself. That makes the generated test's "
             + "bounded loop decorative - the first call overruns its ceiling, so the loop never "
             + "runs a second iteration - and it makes every AC-20 absence check pay the helper's "
             + "full ceiling on every run, because the message it waits for is asserted never to "

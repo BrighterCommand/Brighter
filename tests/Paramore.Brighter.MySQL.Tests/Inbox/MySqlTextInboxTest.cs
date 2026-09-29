@@ -1,17 +1,18 @@
-﻿using MySqlConnector;
+using MySqlConnector;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MySql;
 
 namespace Paramore.Brighter.MySQL.Tests.Inbox;
+[TUnit.Core.InheritsTests]
 
-public class MySqlTextInboxTest : RelationalDatabaseInboxTests 
+public class MySqlTextInboxTest : RelationalDatabaseInboxTests
 {
     protected override string DefaultConnectingString => Const.DefaultConnectingString;
     protected override string TableNamePrefix => Const.TablePrefix;
     protected override bool BinaryMessagePayload => false;
     protected override bool JsonMessagePayload => false;
 
-    protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration) 
+    protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
         => new MySqlInbox(configuration);
 
     protected override void CreateInboxTable(RelationalDatabaseConfiguration configuration)

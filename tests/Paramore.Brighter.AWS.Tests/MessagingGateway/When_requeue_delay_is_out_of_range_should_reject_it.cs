@@ -29,7 +29,6 @@ using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway;
 
@@ -49,8 +48,8 @@ public class SqsRequeueDelayValidationTests
         }
     }
 
-    [Theory]
-    [MemberData(nameof(InvalidDelays))]
+    [Test]
+    [MethodDataSource(nameof(InvalidDelays))]
     public async Task When_requeue_delay_is_out_of_range_should_reject_it(TimeSpan delay, bool useAsync)
     {
         // Arrange
@@ -69,10 +68,10 @@ public class SqsRequeueDelayValidationTests
 
         // Act
         var exception = useAsync
-            ? await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => consumer.RequeueAsync(message, delay))
-            : Assert.Throws<ArgumentOutOfRangeException>(() => consumer.Requeue(message, delay));
+            ? await Assert.That(() => consumer.RequeueAsync(message, delay)).ThrowsExactly<ArgumentOutOfRangeException>()
+            : (await Assert.That(() => consumer.Requeue(message, delay)).ThrowsExactly<ArgumentOutOfRangeException>());
 
         // Assert
-        Assert.Equal("delay", exception.ParamName);
+        await Assert.That(exception.ParamName).IsEqualTo("delay");
     }
 }

@@ -34,16 +34,15 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ConsumerRestartShutSubscriptionTests
 {
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_the_only_subscription_is_shut_should_report_healthy_and_degraded_once_reopened_with_one_missing()
     {
         //Arrange
@@ -64,15 +63,15 @@ public class ConsumerRestartShutSubscriptionTests
         var reopened = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        Assert.Equal(HealthStatus.Healthy, shut.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), shut.Data["remedy_kind"]);
-        Assert.Empty(Assert.IsAssignableFrom<IEnumerable<string>>(shut.Data["conditions"]));
-        Assert.Equal(HealthStatus.Degraded, reopened.Status);
-        Assert.Contains("orders has 1 of 2 expected consumers", reopened.Description);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), reopened.Data["remedy_kind"]);
+        await Assert.That(shut.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(shut.Data["remedy_kind"]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        await Assert.That((((IEnumerable<string>)(((IEnumerable<string>)(await Assert.That(shut.Data["conditions"]).IsAssignableTo<IEnumerable<string>>())))))).IsEmpty();
+        await Assert.That(reopened.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(reopened.Description).Contains("orders has 1 of 2 expected consumers");
+        await Assert.That(reopened.Data["remedy_kind"]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
     }
 
-    [Fact]
+    [Test]
     public async Task When_one_subscription_is_shut_and_another_is_missing_a_consumer_should_leave_the_shut_one_out()
     {
         //Arrange
@@ -90,18 +89,18 @@ public class ConsumerRestartShutSubscriptionTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        Assert.Contains("payments has 1 of 2 expected consumers", result.Description);
-        Assert.DoesNotContain("orders", result.Description);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), result.Data["remedy_kind"]);
-        var condition = Assert.IsAssignableFrom<IDictionary<string, object>>(result.Data["missing_consumers"]);
-        Assert.Equal(1, condition["running_total"]);
-        Assert.Equal(2, condition["expected_total"]);
-        var subscription = Assert.Single(Assert.IsAssignableFrom<IEnumerable<IDictionary<string, object>>>(condition["subscriptions"]));
-        Assert.Equal("payments", subscription["subscription"]);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(result.Description).Contains("payments has 1 of 2 expected consumers");
+        await Assert.That(result.Description).DoesNotContain("orders");
+        await Assert.That(result.Data["remedy_kind"]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        var condition = ((IDictionary<string, object>)(((IDictionary<string, object>)(await Assert.That(result.Data["missing_consumers"]).IsAssignableTo<IDictionary<string, object>>()))));
+        await Assert.That(condition["running_total"]).IsEqualTo(1);
+        await Assert.That(condition["expected_total"]).IsEqualTo(2);
+        var subscription = await Assert.That((((IEnumerable<IDictionary<string, object>>)(((IEnumerable<IDictionary<string, object>>)(await Assert.That(condition["subscriptions"]).IsAssignableTo<IEnumerable<IDictionary<string, object>>>())))))).HasSingleItem();
+        await Assert.That(subscription["subscription"]).IsEqualTo("payments");
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_subscription_is_shut_while_awaiting_and_the_dispatcher_is_then_started_should_still_expect_it()
     {
         //Arrange
@@ -116,12 +115,12 @@ public class ConsumerRestartShutSubscriptionTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        Assert.Equal(HealthStatus.Degraded, result.Status);
-        Assert.Contains("orders has 0 of 2 expected consumers", result.Description);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), result.Data["remedy_kind"]);
-        var condition = Assert.IsAssignableFrom<IDictionary<string, object>>(result.Data["missing_consumers"]);
-        var subscription = Assert.Single(Assert.IsAssignableFrom<IEnumerable<IDictionary<string, object>>>(condition["subscriptions"]));
-        Assert.Equal("orders", subscription["subscription"]);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(result.Description).Contains("orders has 0 of 2 expected consumers");
+        await Assert.That(result.Data["remedy_kind"]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+        var condition = ((IDictionary<string, object>)(((IDictionary<string, object>)(await Assert.That(result.Data["missing_consumers"]).IsAssignableTo<IDictionary<string, object>>()))));
+        var subscription = await Assert.That((((IEnumerable<IDictionary<string, object>>)(((IEnumerable<IDictionary<string, object>>)(await Assert.That(condition["subscriptions"]).IsAssignableTo<IEnumerable<IDictionary<string, object>>>())))))).HasSingleItem();
+        await Assert.That(subscription["subscription"]).IsEqualTo("orders");
     }
 
     private static void RecoverAll(MultiSubscriptionReceiveHealthTestHost host, string subscription)

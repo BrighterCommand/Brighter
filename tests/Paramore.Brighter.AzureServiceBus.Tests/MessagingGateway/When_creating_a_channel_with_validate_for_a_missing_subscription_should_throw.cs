@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +25,13 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusChannelValidationTests
 {
-    [Fact]
-    public void When_creating_a_channel_with_validate_for_a_missing_subscription_should_throw()
+    [Test]
+    public async Task When_creating_a_channel_with_validate_for_a_missing_subscription_should_throw()
     {
         // Arrange
         var administrationClient = new InMemoryServiceBusAdministrationClient();
@@ -48,10 +47,11 @@ public class AzureServiceBusChannelValidationTests
             makeChannels: OnMissingChannel.Validate);
 
         // Act
-        var exception = Record.Exception(() => factory.CreateSyncChannel(subscription));
+        Exception? exception = null;
+        try { factory.CreateSyncChannel(subscription); } catch (Exception e) { exception = e; }
 
         // Assert
-        Assert.IsType<ChannelFailureException>(exception);
-        Assert.Empty(administrationClient.CreatedSubscriptions);
+        await Assert.That(exception).IsTypeOf<ChannelFailureException>();
+        await Assert.That(administrationClient.CreatedSubscriptions).IsEmpty();
     }
 }

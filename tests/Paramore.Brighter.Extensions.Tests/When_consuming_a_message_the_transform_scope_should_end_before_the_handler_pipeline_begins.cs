@@ -5,14 +5,14 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class TransformScopeEndsBeforeHandlerPipelineBeginsTests
 {
-    [Fact]
-    public void When_consuming_a_message_the_transform_scope_should_end_before_the_handler_pipeline_begins()
+    [Test]
+    public async System.Threading.Tasks.Task When_consuming_a_message_the_transform_scope_should_end_before_the_handler_pipeline_begins()
     {
         //arrange — an FR-22.2-conformant lifetime triple: all three Scoped. IMarker is registered
         //AddScoped and injected into both the unwrap transform (MarkerTransform) and the handler
@@ -72,11 +72,11 @@ public class TransformScopeEndsBeforeHandlerPipelineBeginsTests
         messagePump.Run();
 
         //assert — the transform and the handler each resolved their own IMarker from a different scope
-        Assert.Single(log.TransformMarkers);
-        Assert.Single(log.HandlerMarkers);
-        Assert.NotSame(log.TransformMarkers[0], log.HandlerMarkers[0]);
+        await Assert.That(log.TransformMarkers).HasSingleItem();
+        await Assert.That(log.HandlerMarkers).HasSingleItem();
+        await Assert.That(log.HandlerMarkers[0]).IsNotSameReferenceAs(log.TransformMarkers[0]);
 
         //assert — the transform's IMarker was already disposed by the time Handle/HandleAsync was entered
-        Assert.True(log.TransformDisposedAtHandlerEntry[0]);
+        await Assert.That(log.TransformDisposedAtHandlerEntry[0]).IsTrue();
     }
 }

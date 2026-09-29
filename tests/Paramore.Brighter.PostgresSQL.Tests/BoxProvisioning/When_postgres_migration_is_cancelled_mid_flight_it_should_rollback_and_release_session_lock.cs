@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -36,12 +35,12 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// Cancelling a migration after BeginAsync has taken the session-scoped pg_advisory_lock, but before commit, rolls back with
 /// <see cref="CancellationToken.None"/>, so pg_advisory_unlock still runs and a second runner can take the lock (ADR 0058 §B.3).
 /// </summary>
-public class PostgreSqlMigrationCancellationTests : IAsyncLifetime
+public class PostgreSqlMigrationCancellationTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_postgres_migration_is_cancelled_mid_flight_it_should_rollback_and_release_session_lock()
     {
         //Arrange
@@ -57,27 +56,24 @@ public class PostgreSqlMigrationCancellationTests : IAsyncLifetime
         cts.CancelAfter(TimeSpan.FromMilliseconds(250));
 
         //Act
-        var thrown = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancellingRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token));
+        var thrown = await Assert.That(() => cancellingRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token)).Throws<OperationCanceledException>();
 
         //Assert
-        Assert.NotNull(thrown);
+        await Assert.That(thrown).IsNotNull();
 
         var spy = cancellingRunner.LastUnitOfWork;
-        Assert.NotNull(spy);
-        Assert.True(spy!.RollbackInvoked,
-            "RollbackAsync should have been invoked after the mid-flight cancellation per ADR §B.3.");
+        await Assert.That(spy).IsNotNull();
+        await Assert.That(spy!.RollbackInvoked).IsTrue().Because("RollbackAsync should have been invoked after the mid-flight cancellation per ADR §B.3.");
 
-        Assert.False(spy.RollbackToken.IsCancellationRequested,
-            "RollbackAsync should receive CancellationToken.None to ensure pg_advisory_unlock completes.");
-        Assert.Equal(CancellationToken.None, spy.RollbackToken);
+        await Assert.That(spy.RollbackToken.IsCancellationRequested).IsFalse().Because("RollbackAsync should receive CancellationToken.None to ensure pg_advisory_unlock completes.");
+        await Assert.That(spy.RollbackToken).IsEqualTo(CancellationToken.None);
 
         var freshRunner = new PostgreSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
-        Assert.True(await TableExistsAsync(),
-            "Subsequent migration should have created the outbox table after the lock was released.");
+        await Assert.That(await TableExistsAsync()).IsTrue().Because("Subsequent migration should have created the outbox table after the lock was released.");
     }
 
     private async Task<bool> TableExistsAsync()
@@ -92,7 +88,11 @@ WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME = @TableName)";
         return (bool)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

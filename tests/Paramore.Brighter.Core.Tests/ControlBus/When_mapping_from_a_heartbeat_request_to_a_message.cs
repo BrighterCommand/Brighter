@@ -1,5 +1,4 @@
-﻿using System;
-using Xunit;
+using System;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Mappers;
 
@@ -13,29 +12,28 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         private const string TOPIC = "test.topic";
         private readonly string _correlationId = Guid.NewGuid().ToString();
         private readonly Publication _publication;
-
         public HearbeatRequestToMessageMapperTests()
         {
             _mapper = new HeartbeatRequestCommandMessageMapper();
-
             _request = new HeartbeatRequest(new ReplyAddress(TOPIC, _correlationId));
-            
-            _publication = new Publication { Topic = new RoutingKey(TOPIC) };
+            _publication = new Publication
+            {
+                Topic = new RoutingKey(TOPIC)
+            };
         }
 
-        [Fact]
-        public void When_mapping_from_a_heartbeat_request_to_a_message()
+        [Test]
+        public async Task When_mapping_from_a_heartbeat_request_to_a_message()
         {
             _message = _mapper.MapToMessage(_request, _publication);
-
             //Should serialize the message_type to the header
-            Assert.Equal(MessageType.MT_COMMAND, _message.Header.MessageType);
+            await Assert.That(_message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
             //Should serialize the message_id to the message body
-            Assert.Contains($"\"id\":\"{_request.Id}\"", _message.Body.Value);
+            await Assert.That(_message.Body.Value).Contains($"\"id\":\"{_request.Id}\"");
             //Should serialize the topic to the message body
-            Assert.Equal(TOPIC, _message.Header.ReplyTo);
+            await Assert.That(_message.Header.ReplyTo?.Value).IsEqualTo(TOPIC);
             //Should serialize the correlation_id to the message body
-            Assert.Equal(_correlationId, _message.Header.CorrelationId);
+            await Assert.That(_message.Header.CorrelationId.Value).IsEqualTo(_correlationId);
         }
     }
 }

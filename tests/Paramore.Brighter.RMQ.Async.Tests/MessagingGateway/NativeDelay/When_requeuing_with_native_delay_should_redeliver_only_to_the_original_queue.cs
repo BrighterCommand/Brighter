@@ -26,14 +26,13 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.NativeDelay;
 
-[Trait("Category", "RMQNativeDelay")]
-[Trait("Requires", "RabbitMQDelayedPlugin")]
-[Collection("RMQNativeDelay")]
-public class RmqNativeDelayTests : IAsyncLifetime
+[Property("Category", "RMQNativeDelay")]
+[Property("Requires", "RabbitMQDelayedPlugin")]
+[NotInParallel("RMQNativeDelay")]
+public class RmqNativeDelayTests
 {
     private static readonly Uri s_brokerUri = new(
         Environment.GetEnvironmentVariable("RMQ_NATIVE_DELAY_URI") ?? "amqp://guest:guest@localhost:5673/%2f");
@@ -43,18 +42,19 @@ public class RmqNativeDelayTests : IAsyncLifetime
     private readonly RoutingKey _topic = new("native.delay.original");
     private IConnection _broker = null!;
 
+    [Before(HookType.Test)]
     public async Task InitializeAsync()
     {
         _broker = await new ConnectionFactory { Uri = s_brokerUri }.CreateConnectionAsync();
     }
 
-    [Theory]
-    [InlineData(QueueType.Classic, ExchangeType.Direct)]
-    [InlineData(QueueType.Classic, ExchangeType.Topic)]
-    [InlineData(QueueType.Classic, ExchangeType.Fanout)]
-    [InlineData(QueueType.Quorum, ExchangeType.Direct)]
-    [InlineData(QueueType.Quorum, ExchangeType.Topic)]
-    [InlineData(QueueType.Quorum, ExchangeType.Fanout)]
+    [Test]
+    [Arguments(QueueType.Classic, ExchangeType.Direct)]
+    [Arguments(QueueType.Classic, ExchangeType.Topic)]
+    [Arguments(QueueType.Classic, ExchangeType.Fanout)]
+    [Arguments(QueueType.Quorum, ExchangeType.Direct)]
+    [Arguments(QueueType.Quorum, ExchangeType.Topic)]
+    [Arguments(QueueType.Quorum, ExchangeType.Fanout)]
     public async Task When_requeuing_with_native_delay_should_redeliver_only_to_the_original_queue(
         QueueType queueType, string exchangeType)
     {
@@ -70,33 +70,33 @@ public class RmqNativeDelayTests : IAsyncLifetime
 
         var message = new DefaultMessageBuilder().SetTopic(_topic).Build();
         await producer.SendAsync(message);
-        var received = Assert.Single(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5)));
-        Assert.False(received.IsEmpty);
-        var otherReceived = Assert.Single(await otherConsumer.ReceiveAsync(TimeSpan.FromSeconds(5)));
-        Assert.False(otherReceived.IsEmpty);
+        var received = await Assert.That(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(received.IsEmpty).IsFalse();
+        var otherReceived = await Assert.That(await otherConsumer.ReceiveAsync(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(otherReceived.IsEmpty).IsFalse();
         await otherConsumer.AcknowledgeAsync(otherReceived);
         var delay = TimeSpan.FromSeconds(3);
 
         //Act
         var elapsed = Stopwatch.StartNew();
-        Assert.True(await consumer.RequeueAsync(received, delay));
+        await Assert.That(await consumer.RequeueAsync(received, delay)).IsTrue();
 
         //Assert
-        var beforeDelay = Assert.Single(await consumer.ReceiveAsync(TimeSpan.FromSeconds(1)));
-        Assert.True(beforeDelay.IsEmpty);
-        var redelivered = Assert.Single(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5)));
-        Assert.False(redelivered.IsEmpty);
-        Assert.True(elapsed.Elapsed >= delay, $"Redelivered after {elapsed.Elapsed}, before {delay} elapsed.");
-        new RmqMessageAssertion().Assert(message, redelivered);
+        var beforeDelay = await Assert.That(await consumer.ReceiveAsync(TimeSpan.FromSeconds(1))).HasSingleItem();
+        await Assert.That(beforeDelay.IsEmpty).IsTrue();
+        var redelivered = await Assert.That(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(redelivered.IsEmpty).IsFalse();
+        await Assert.That(elapsed.Elapsed >= delay).IsTrue().Because($"Redelivered after {elapsed.Elapsed}, before {delay} elapsed.");
+        await new RmqMessageAssertion().AssertAsync(message, redelivered);
         await consumer.AcknowledgeAsync(redelivered);
 
-        var otherRetry = Assert.Single(await otherConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(500)));
-        Assert.True(otherRetry.IsEmpty);
+        var otherRetry = await Assert.That(await otherConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(500))).HasSingleItem();
+        await Assert.That(otherRetry.IsEmpty).IsTrue();
     }
 
-    [Theory]
-    [InlineData(QueueType.Classic)]
-    [InlineData(QueueType.Quorum)]
+    [Test]
+    [Arguments(QueueType.Classic)]
+    [Arguments(QueueType.Quorum)]
     public async Task When_sending_with_native_delay_should_clear_the_consumed_delay(QueueType queueType)
     {
         //Arrange
@@ -112,25 +112,25 @@ public class RmqNativeDelayTests : IAsyncLifetime
         await producer.SendWithDelayAsync(message, delay);
 
         //Assert
-        var beforeDelay = Assert.Single(await consumer.ReceiveAsync(TimeSpan.FromSeconds(1)));
-        Assert.True(beforeDelay.IsEmpty);
-        var received = Assert.Single(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5)));
-        Assert.False(received.IsEmpty);
-        Assert.True(elapsed.Elapsed >= delay, $"Delivered after {elapsed.Elapsed}, before {delay} elapsed.");
-        Assert.Equal(TimeSpan.Zero, received.Header.Delayed);
-        Assert.True(received.Header.Bag.TryGetValue("x-delay", out var rawDelay));
-        Assert.Equal(-3000L, Convert.ToInt64(rawDelay));
-        new RmqMessageAssertion().Assert(message, received);
+        var beforeDelay = await Assert.That(await consumer.ReceiveAsync(TimeSpan.FromSeconds(1))).HasSingleItem();
+        await Assert.That(beforeDelay.IsEmpty).IsTrue();
+        var received = await Assert.That(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(received.IsEmpty).IsFalse();
+        await Assert.That(elapsed.Elapsed >= delay).IsTrue().Because($"Delivered after {elapsed.Elapsed}, before {delay} elapsed.");
+        await Assert.That(received.Header.Delayed).IsEqualTo(TimeSpan.Zero);
+        await Assert.That(received.Header.Bag.TryGetValue("x-delay", out var rawDelay)).IsTrue();
+        await Assert.That(Convert.ToInt64(rawDelay)).IsEqualTo(-3000L);
+        await new RmqMessageAssertion().AssertAsync(message, received);
         await consumer.AcknowledgeAsync(received);
     }
 
-    [Theory]
-    [InlineData(QueueType.Classic, ExchangeType.Direct)]
-    [InlineData(QueueType.Classic, ExchangeType.Topic)]
-    [InlineData(QueueType.Classic, ExchangeType.Fanout)]
-    [InlineData(QueueType.Quorum, ExchangeType.Direct)]
-    [InlineData(QueueType.Quorum, ExchangeType.Topic)]
-    [InlineData(QueueType.Quorum, ExchangeType.Fanout)]
+    [Test]
+    [Arguments(QueueType.Classic, ExchangeType.Direct)]
+    [Arguments(QueueType.Classic, ExchangeType.Topic)]
+    [Arguments(QueueType.Classic, ExchangeType.Fanout)]
+    [Arguments(QueueType.Quorum, ExchangeType.Direct)]
+    [Arguments(QueueType.Quorum, ExchangeType.Topic)]
+    [Arguments(QueueType.Quorum, ExchangeType.Fanout)]
     public async Task When_reusing_native_exchange_settings_should_allow_producer_and_consumer_to_connect(
         QueueType queueType, string exchangeType)
     {
@@ -142,24 +142,24 @@ public class RmqNativeDelayTests : IAsyncLifetime
         var message = new DefaultMessageBuilder().SetTopic(_topic).Build();
 
         //Act
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             await consumer.PurgeAsync();
             await producer.SendAsync(message);
         });
 
         //Assert
-        Assert.Null(exception);
-        Assert.Equal(exchangeType, connection.Exchange!.Type);
-        var received = Assert.Single(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5)));
-        Assert.False(received.IsEmpty);
-        new RmqMessageAssertion().Assert(message, received);
+        await Assert.That(exception).IsNull();
+        await Assert.That(connection.Exchange!.Type).IsEqualTo(exchangeType);
+        var received = await Assert.That(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(received.IsEmpty).IsFalse();
+        await new RmqMessageAssertion().AssertAsync(message, received);
         await consumer.AcknowledgeAsync(received);
     }
 
-    [Theory]
-    [InlineData(OnMissingChannel.Validate)]
-    [InlineData(OnMissingChannel.Assume)]
+    [Test]
+    [Arguments(OnMissingChannel.Validate)]
+    [Arguments(OnMissingChannel.Assume)]
     public async Task When_using_preprovisioned_retry_topology_should_honor_native_delay(OnMissingChannel makeChannels)
     {
         //Arrange
@@ -172,23 +172,23 @@ public class RmqNativeDelayTests : IAsyncLifetime
         await using var producer = new RmqMessageProducer(CreateConnection(ExchangeType.Direct));
         var message = new DefaultMessageBuilder().SetTopic(_topic).Build();
         await producer.SendAsync(message);
-        var received = Assert.Single(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5)));
-        Assert.False(received.IsEmpty);
+        var received = await Assert.That(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(received.IsEmpty).IsFalse();
 
         //Act
-        Assert.True(await consumer.RequeueAsync(received, TimeSpan.FromSeconds(3)));
+        await Assert.That(await consumer.RequeueAsync(received, TimeSpan.FromSeconds(3))).IsTrue();
 
         //Assert
-        Assert.True(Assert.Single(await consumer.ReceiveAsync(TimeSpan.FromSeconds(1))).IsEmpty);
-        var redelivered = Assert.Single(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5)));
-        Assert.False(redelivered.IsEmpty);
-        new RmqMessageAssertion().Assert(message, redelivered);
+        await Assert.That((await Assert.That(await consumer.ReceiveAsync(TimeSpan.FromSeconds(1))).HasSingleItem()).IsEmpty).IsTrue();
+        var redelivered = await Assert.That(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(redelivered.IsEmpty).IsFalse();
+        await new RmqMessageAssertion().AssertAsync(message, redelivered);
         await consumer.AcknowledgeAsync(redelivered);
     }
 
-    [Theory]
-    [InlineData(OnMissingChannel.Validate)]
-    [InlineData(OnMissingChannel.Assume)]
+    [Test]
+    [Arguments(OnMissingChannel.Validate)]
+    [Arguments(OnMissingChannel.Assume)]
     public async Task When_retry_topology_is_missing_should_not_create_it_without_permission(OnMissingChannel makeChannels)
     {
         //Arrange
@@ -202,18 +202,18 @@ public class RmqNativeDelayTests : IAsyncLifetime
             isDurable: true, makeChannels: makeChannels);
 
         //Act
-        var exception = await Record.ExceptionAsync(async () => await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(100)));
+        var exception = await TestExceptionRecorder.CaptureAsync(async () => await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(100)));
 
         //Assert
         if (makeChannels == OnMissingChannel.Validate)
-            Assert.IsType<ChannelFailureException>(exception);
+            await Assert.That(exception).IsTypeOf<ChannelFailureException>();
         else
-            Assert.Null(exception);
-        await Assert.ThrowsAsync<RabbitMQ.Client.Exceptions.OperationInterruptedException>(async () =>
-            await inspection.ExchangeDeclarePassiveAsync($"{_exchangeName}.requeue"));
+            await Assert.That(exception).IsNull();
+        await Assert.That(async () =>
+            await inspection.ExchangeDeclarePassiveAsync($"{_exchangeName}.requeue")).ThrowsExactly<RabbitMQ.Client.Exceptions.OperationInterruptedException>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_requeuing_with_negative_delay_should_redeliver_immediately()
     {
         //Arrange
@@ -222,16 +222,16 @@ public class RmqNativeDelayTests : IAsyncLifetime
         await consumer.PurgeAsync();
         var message = new DefaultMessageBuilder().SetTopic(_topic).Build();
         await producer.SendAsync(message);
-        var received = Assert.Single(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5)));
-        Assert.False(received.IsEmpty);
+        var received = await Assert.That(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(received.IsEmpty).IsFalse();
 
         //Act
-        Assert.True(await consumer.RequeueAsync(received, TimeSpan.FromSeconds(-1)));
+        await Assert.That(await consumer.RequeueAsync(received, TimeSpan.FromSeconds(-1))).IsTrue();
 
         //Assert
-        var redelivered = Assert.Single(await consumer.ReceiveAsync(TimeSpan.FromSeconds(1)));
-        Assert.False(redelivered.IsEmpty);
-        new RmqMessageAssertion().Assert(message, redelivered);
+        var redelivered = await Assert.That(await consumer.ReceiveAsync(TimeSpan.FromSeconds(1))).HasSingleItem();
+        await Assert.That(redelivered.IsEmpty).IsFalse();
+        await new RmqMessageAssertion().AssertAsync(message, redelivered);
         await consumer.AcknowledgeAsync(redelivered);
     }
 
@@ -248,6 +248,7 @@ public class RmqNativeDelayTests : IAsyncLifetime
         _ => _topic
     };
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         if (_broker == null)

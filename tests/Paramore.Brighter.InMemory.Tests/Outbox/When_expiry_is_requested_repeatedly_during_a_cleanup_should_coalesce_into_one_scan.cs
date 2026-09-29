@@ -28,14 +28,13 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
 {
-    [Trait("Category", "InMemory")]
+    [Property("Category", "InMemory")]
     public class OutboxExpiryCoalescingTests
     {
-        [Fact]
+        [Test]
         public async Task When_expiry_is_requested_repeatedly_during_a_cleanup_should_coalesce_into_one_scan()
         {
             //Arrange
@@ -60,7 +59,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                 //A read is due an expiry scan, which takes the cleanup lock
                 timeProvider.Advance(TimeSpan.FromMilliseconds(100));
                 outbox.Get(id, context);
-                Assert.True(outbox.ExpiryEntered.Wait(TimeSpan.FromSeconds(5)), "Expiry scan should have taken the cleanup lock");
+                await Assert.That(outbox.ExpiryEntered.Wait(TimeSpan.FromSeconds(5))).IsTrue().Because("Expiry scan should have taken the cleanup lock");
 
                 //Act - every read is due another expiry scan while the first is still running
                 for (int i = 0; i < requestsWhileRunning; i++)
@@ -85,7 +84,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             await Task.Delay(500);
 
             //Assert - the running scan, plus one follow-up for all the requests made while it ran
-            Assert.Equal(2, outbox.ExpiryScans);
+            await Assert.That(outbox.ExpiryScans).IsEqualTo(2);
         }
     }
 }

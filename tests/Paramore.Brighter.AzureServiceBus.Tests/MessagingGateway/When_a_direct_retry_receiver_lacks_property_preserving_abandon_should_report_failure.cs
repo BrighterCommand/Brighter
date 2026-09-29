@@ -28,15 +28,14 @@ using System.Threading.Tasks;
 using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusDirectRetryReceiverCapabilityTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_a_direct_retry_receiver_lacks_property_preserving_abandon_should_report_failure(bool synchronous)
     {
         // Arrange
@@ -60,18 +59,18 @@ public class AzureServiceBusDirectRetryReceiverCapabilityTests
             new FakeAdministrationClient(), new FakeServiceBusReceiverProvider(receiver));
         var received = synchronous ? consumer.Receive(TimeSpan.FromSeconds(1))
             : await consumer.ReceiveAsync(TimeSpan.FromSeconds(1));
-        var message = Assert.Single(received);
+        var message = await Assert.That(received).HasSingleItem();
         message.Header.UpdateHandledCount();
 
         // Act
-        var error = await Record.ExceptionAsync(async () =>
+        var error = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             if (synchronous) consumer.Requeue(message, TimeSpan.Zero);
             else await consumer.RequeueAsync(message, TimeSpan.Zero);
         });
 
         // Assert
-        Assert.Contains("IAmAServiceBusRetryReceiver", Assert.IsType<ChannelFailureException>(error).Message);
-        Assert.Equal("original", message.Id.Value);
+        await Assert.That((await Assert.That(error).IsTypeOf<ChannelFailureException>()).Message).Contains("IAmAServiceBusRetryReceiver");
+        await Assert.That(message.Id.Value).IsEqualTo("original");
     }
 }

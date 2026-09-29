@@ -24,13 +24,12 @@ THE SOFTWARE. */
 
 using System.Threading.Tasks;
 using Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Validation.FluentValidation.Tests
 {
     public class ValidRequestValidationAsyncTests
     {
-        [Fact]
+        [Test]
         public async Task When_a_valid_request_is_sent_async_should_run_the_handler()
         {
             //Arrange
@@ -41,8 +40,8 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests
             await harness.CommandProcessor.SendAsync(command);
 
             //Assert
-            Assert.True(harness.Receipt.Handled);
-            Assert.Equal("Grace", harness.Receipt.HandledName);
+            await Assert.That(harness.Receipt.Handled).IsTrue();
+            await Assert.That(harness.Receipt.HandledName).IsEqualTo("Grace");
         }
     }
 }

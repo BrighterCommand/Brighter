@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,7 +35,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class OverallCountWithoutBagTests
 {
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_the_producers_have_no_bag_should_pass_an_empty_dictionary()
     {
         //Arrange
@@ -75,12 +74,12 @@ public class OverallCountWithoutBagTests
 
         //Assert
         var calls = outbox.CountCalls.ToArray();
-        Assert.Equal(3, calls.Length);
-        Assert.All(calls, call =>
-        {
-            Assert.NotNull(call.Args);
-            Assert.Empty(call.Args);
-        });
+        await Assert.That(calls.Length).IsEqualTo(3);
+        foreach (var call in calls)
+{
+    await Assert.That(call.Args).IsNotNull();
+    await Assert.That(call.Args).IsEmpty();
+}
     }
 
     private static void WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>

@@ -38,7 +38,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
@@ -46,7 +45,7 @@ public class When_a_circuit_breaker_is_registered_as_a_shared_singleton_should_r
 {
     private const string TrippedTopics = "paramore.brighter.outbox_sweeper.tripped_topics";
 
-    [Fact]
+    [Test]
     public async Task When_the_mediator_and_gauge_share_a_singleton_breaker_should_record_its_tripped_topic()
     {
         //Arrange
@@ -71,8 +70,8 @@ public class When_a_circuit_breaker_is_registered_as_a_shared_singleton_should_r
             await Task.Run(recorded.Observe).WaitAsync(TimeSpan.FromSeconds(1));
 
             //Assert
-            Assert.True(active, "The sweeper did not complete a sweep that obtained the lock");
-            Assert.Equal([1L], recorded.Values);
+            await Assert.That(active).IsTrue().Because("The sweeper did not complete a sweep that obtained the lock");
+            await Assert.That(recorded.Values).IsEqualTo([1L]);
         }
         finally
         {
@@ -80,7 +79,7 @@ public class When_a_circuit_breaker_is_registered_as_a_shared_singleton_should_r
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_circuit_breaker_is_registered_should_report_zero_tripped_topics_without_throwing()
     {
         //Arrange
@@ -102,8 +101,8 @@ public class When_a_circuit_breaker_is_registered_as_a_shared_singleton_should_r
             await Task.Run(recorded.Observe).WaitAsync(TimeSpan.FromSeconds(1));
 
             //Assert
-            Assert.True(active, "The sweeper did not complete a sweep that obtained the lock");
-            Assert.Equal([0L], recorded.Values);
+            await Assert.That(active).IsTrue().Because("The sweeper did not complete a sweep that obtained the lock");
+            await Assert.That(recorded.Values).IsEqualTo([0L]);
         }
         finally
         {

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
-using Xunit;
+
 
 namespace Paramore.Brighter.RocketMQ.Tests;
 
@@ -51,8 +51,8 @@ namespace Paramore.Brighter.RocketMQ.Tests;
 // cannot select this class. The second value can: rocketmq-ci is commented out in ci.yml, and
 // without a selector for the broker-free tests there is no way to run these in CI without also
 // running the 47 that need a broker. Any future broker-free RocketMQ test should carry it too.
-[Trait("Category", "RocketMQ")]
-[Trait("Category", "RocketMQBrokerFree")]
+[Property("Category", "RocketMQ")]
+[Property("Category", "RocketMQBrokerFree")]
 public class RocketMqEmptyHeaderPropertyTests
 {
     private static RocketMqPublication APublication() => new()
@@ -72,22 +72,30 @@ public class RocketMqEmptyHeaderPropertyTests
             delay: null,
             TimeProvider.System);
 
-    [Fact]
-    public void When_baggage_is_empty_should_not_write_the_property()
+    [Test]
+    public async System.Threading.Tasks.Task When_baggage_is_empty_should_not_write_the_property()
     {
         // Arrange - a header with no baggage set, which is the common case
         var header = AHeader();
-        Assert.Equal(string.Empty, header.Baggage.ToString());
+        await Assert.That(header.Baggage.ToString()).IsEqualTo(string.Empty);
 
         // Act - would throw if the empty value were handed to AddProperty
-        var exception = Record.Exception(() => Publish(header));
+        Exception? exception = null;
+        try
+        {
+            Publish(header);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         // Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
-    [Fact]
-    public void When_baggage_is_set_should_write_the_property()
+    [Test]
+    public async System.Threading.Tasks.Task When_baggage_is_set_should_write_the_property()
     {
         // Arrange - non-vacuity: omitting the property must be the empty case only, not always
         var header = AHeader();
@@ -97,11 +105,11 @@ public class RocketMqEmptyHeaderPropertyTests
         var published = Publish(header);
 
         // Assert
-        Assert.Contains(HeaderNames.Baggage, published.Properties.Keys);
+        await Assert.That(published.Properties.Keys).Contains(HeaderNames.Baggage);
     }
 
-    [Fact]
-    public void When_the_broker_rejects_an_empty_property_value_should_be_the_reason_for_the_guard()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_broker_rejects_an_empty_property_value_should_be_the_reason_for_the_guard()
     {
         // Arrange / Act / Assert - characterises the SDK behaviour the guards exist for, so that a
         // future SDK version quietly accepting empty values shows up here rather than as an
@@ -110,6 +118,6 @@ public class RocketMqEmptyHeaderPropertyTests
             .SetTopic("conformance-probe")
             .SetBody([1]);
 
-        Assert.Throws<ArgumentException>(() => builder.AddProperty("a-key", string.Empty));
+        await Assert.That(() => builder.AddProperty("a-key", string.Empty)).ThrowsExactly<ArgumentException>();
     }
 }

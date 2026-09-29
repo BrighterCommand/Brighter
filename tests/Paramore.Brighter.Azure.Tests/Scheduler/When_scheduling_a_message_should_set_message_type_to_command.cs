@@ -8,7 +8,6 @@ namespace Paramore.Brighter.Azure.Tests.Scheduler;
 // FireAzureScheduler is a Command, so the envelope's wire MessageType must be MT_COMMAND on
 // all four overloads (sync/async x message/request); otherwise the scheduler-topic consumer
 // dispatches it as an event and MessagePump.ValidateMessageType logs a spurious mismatch.
-[FixtureLifeCycle(LifeCycle.InstancePerTestCase)]
 public class AzureServiceBusSchedulerMessageTypeTests
 {
     private const string MessageTypeKey = "MessageType";
@@ -32,7 +31,7 @@ public class AzureServiceBusSchedulerMessageTypeTests
         await _scheduler.ScheduleAsync(message, _fireAt);
 
         // Assert
-        Assert.That(ScheduledMessageType(), Is.EqualTo(MessageType.MT_COMMAND.ToString()));
+        await Assert.That(ScheduledMessageType()).IsEqualTo(MessageType.MT_COMMAND.ToString());
     }
 
     [Test]
@@ -45,11 +44,11 @@ public class AzureServiceBusSchedulerMessageTypeTests
         await _scheduler.ScheduleAsync(request, RequestSchedulerType.Send, _fireAt);
 
         // Assert
-        Assert.That(ScheduledMessageType(), Is.EqualTo(MessageType.MT_COMMAND.ToString()));
+        await Assert.That(ScheduledMessageType()).IsEqualTo(MessageType.MT_COMMAND.ToString());
     }
 
     [Test]
-    public void When_scheduling_a_message_sync_should_set_message_type_to_command()
+    public async Task When_scheduling_a_message_sync_should_set_message_type_to_command()
     {
         // Arrange
         var message = new Message(
@@ -60,11 +59,11 @@ public class AzureServiceBusSchedulerMessageTypeTests
         _scheduler.Schedule(message, _fireAt);
 
         // Assert
-        Assert.That(ScheduledMessageType(), Is.EqualTo(MessageType.MT_COMMAND.ToString()));
+        await Assert.That(ScheduledMessageType()).IsEqualTo(MessageType.MT_COMMAND.ToString());
     }
 
     [Test]
-    public void When_scheduling_a_request_sync_should_set_message_type_to_command()
+    public async Task When_scheduling_a_request_sync_should_set_message_type_to_command()
     {
         // Arrange
         var request = new SuperAwesomeCommand("do the thing");
@@ -73,7 +72,7 @@ public class AzureServiceBusSchedulerMessageTypeTests
         _scheduler.Schedule(request, RequestSchedulerType.Send, _fireAt);
 
         // Assert
-        Assert.That(ScheduledMessageType(), Is.EqualTo(MessageType.MT_COMMAND.ToString()));
+        await Assert.That(ScheduledMessageType()).IsEqualTo(MessageType.MT_COMMAND.ToString());
     }
 
     private object ScheduledMessageType()

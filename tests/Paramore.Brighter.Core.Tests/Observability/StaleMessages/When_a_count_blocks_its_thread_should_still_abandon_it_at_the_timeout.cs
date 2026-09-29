@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class CountBlockingItsThreadTests
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private readonly TimerCountingTimeProvider _clock = new(s_start);
 
-    [Fact]
+    [Test]
     public async Task When_a_count_blocks_its_thread_should_still_abandon_it_at_the_timeout()
     {
         //Arrange
@@ -70,7 +69,7 @@ public class CountBlockingItsThreadTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromSeconds(59));
 
         var dueTime = s_start.AddMinutes(1);
@@ -118,10 +117,10 @@ public class CountBlockingItsThreadTests
         }
 
         //Assert
-        Assert.Null(heldAt);
-        Assert.Equal(deadline, cancelledAt);
-        Assert.DoesNotContain(collected, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        Assert.Equal([dueTime], outbox.CountCalls.Select(call => call.CalledAt));
+        await Assert.That(heldAt).IsNull();
+        await Assert.That(cancelledAt).IsEqualTo(deadline);
+        await Assert.That(System.Linq.Enumerable.Any(collected, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).IsFalse();
+        await Assert.That(outbox.CountCalls.Select(call => call.CalledAt)).IsEqualTo([dueTime]);
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
@@ -136,6 +135,6 @@ public class CountBlockingItsThreadTests
         return SpinWait.SpinUntil(() => advance.IsCompleted, TimeSpan.FromSeconds(5));
     }
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

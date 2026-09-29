@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -26,15 +26,14 @@ using System;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.InMemory.Tests.Outbox;
 
-[Trait("Category", "InMemory")]
+[Property("Category", "InMemory")]
 public class InMemoryOutboxOutstandingCountLimitTests
 {
-    [Fact]
-    public void When_counting_outstanding_messages_should_stop_at_the_max_count()
+    [Test]
+    public async Task When_counting_outstanding_messages_should_stop_at_the_max_count()
     {
         //Arrange
         var timeProvider = new FakeTimeProvider();
@@ -63,7 +62,7 @@ public class InMemoryOutboxOutstandingCountLimitTests
         var count = outbox.GetOutstandingMessageCount(TimeSpan.FromSeconds(5), context, maxCount);
 
         //Assert
-        Assert.Equal(maxCount, count);
+        await Assert.That(count).IsEqualTo(maxCount);
     }
 
     private static Message WithTimeStamp(string id, DateTimeOffset timeStamp) =>

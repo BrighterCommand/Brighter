@@ -4,7 +4,7 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Testing;
 using Paramore.Brighter.ServiceActivator;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 {
@@ -57,17 +57,17 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             _bus.Enqueue(MessageFactory.CreateQuitMessage(_routingKey));
         }
 
-        [Fact]
-        public void When_The_Unacceptable_Message_Limit_Is_Zero_Mapping_Failures_Never_Trip_The_Limit()
+        [Test]
+        public async Task When_The_Unacceptable_Message_Limit_Is_Zero_Mapping_Failures_Never_Trip_The_Limit()
         {
             // Act — pump runs until MT_QUIT; limit=0 never fires UnacceptableMessageLimitReached
             _messagePump.Run();
 
             // Assert — all 100 mapping failures were rejected (mechanism A)
-            Assert.Equal(100, _bus.Stream(_invalidMessageKey).Count());
+            await Assert.That(_bus.Stream(_invalidMessageKey).Count()).IsEqualTo(100);
 
             // Assert — pump did not terminate due to the limit
-            Assert.NotEqual(MessagePumpStatus.MP_LIMIT_EXCEEDED, _messagePump.Status);
+            await Assert.That(_messagePump.Status).IsNotEqualTo(MessagePumpStatus.MP_LIMIT_EXCEEDED);
         }
     }
 }

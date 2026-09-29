@@ -30,7 +30,6 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -38,16 +37,20 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// When the transaction is already finalised, RollbackAsync logs a Warning, still releases the advisory lock, and does not
 /// throw (ADR 0058 §B.3). An out-of-band Commit stands in for a failed CommitAsync: both leave the transaction completed.
 /// </summary>
-public class PostgreSqlProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkRollbackTests
 {
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(releaseResult: true);
 
+    [Before(HookType.Test)]
+
     public async Task InitializeAsync() => await _connection.OpenAsync();
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_postgres_provisioning_uow_rollback_async_is_called_it_should_release_lock_without_throwing()
     {
         // Arrange
@@ -62,11 +65,11 @@ public class PostgreSqlProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
         transaction.Commit();
 
         // Act
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.RollbackAsync(CancellationToken.None));
 
         // Assert
-        Assert.Null(thrown);
-        Assert.Contains(capturingLogger.Entries, e => e.Level == LogLevel.Warning);
-        Assert.Equal("test_lock_resource", _advisoryLock.ReleasedKey);
+        await Assert.That(thrown).IsNull();
+        await Assert.That(System.Linq.Enumerable.Any(capturingLogger.Entries, e => e.Level == LogLevel.Warning)).IsTrue();
+        await Assert.That(_advisoryLock.ReleasedKey).IsEqualTo("test_lock_resource");
     }
 }

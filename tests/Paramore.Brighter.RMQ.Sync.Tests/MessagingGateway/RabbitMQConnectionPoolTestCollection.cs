@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 
@@ -31,7 +30,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 /// Runs connection shutdown and replacement tests without other collections
 /// borrowing the same process-wide pooled connections concurrently.
 /// </summary>
-[CollectionDefinition("RMQ connection pool", DisableParallelization = true)]
+[System.Obsolete]
 public class RabbitMQConnectionPoolTestCollection
 {
 }

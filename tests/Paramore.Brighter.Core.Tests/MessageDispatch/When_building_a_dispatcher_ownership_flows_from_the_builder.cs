@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
@@ -18,8 +18,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     /// </summary>
     public class DispatchBuilderOwnershipTests
     {
-        [Fact]
-        public void When_building_without_declaring_ownership_the_dispatcher_does_not_dispose_the_graph()
+        [Test]
+        public async System.Threading.Tasks.Task When_building_without_declaring_ownership_the_dispatcher_does_not_dispose_the_graph()
         {
             var syncMapperFactory = new DisposeCountingMapperFactory();
             var asyncMapperFactory = new DisposeCountingMapperFactoryAsync();
@@ -32,14 +32,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             dispatcher.Dispose();
 
-            Assert.Equal(0, syncMapperFactory.DisposeCount);
-            Assert.Equal(0, asyncMapperFactory.DisposeCount);
-            Assert.Equal(0, syncTransformerFactory.DisposeCount);
-            Assert.Equal(0, asyncTransformerFactory.DisposeCount);
+            await Assert.That(syncMapperFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(asyncMapperFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(syncTransformerFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(asyncTransformerFactory.DisposeCount).IsEqualTo(0);
         }
 
-        [Fact]
-        public void When_building_and_declaring_ownership_the_dispatcher_disposes_the_graph()
+        [Test]
+        public async System.Threading.Tasks.Task When_building_and_declaring_ownership_the_dispatcher_disposes_the_graph()
         {
             var syncMapperFactory = new DisposeCountingMapperFactory();
             var asyncMapperFactory = new DisposeCountingMapperFactoryAsync();
@@ -52,10 +52,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             dispatcher.Dispose();
 
-            Assert.Equal(1, syncMapperFactory.DisposeCount);
-            Assert.Equal(1, asyncMapperFactory.DisposeCount);
-            Assert.Equal(1, syncTransformerFactory.DisposeCount);
-            Assert.Equal(1, asyncTransformerFactory.DisposeCount);
+            await Assert.That(syncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(syncTransformerFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncTransformerFactory.DisposeCount).IsEqualTo(1);
         }
 
         private static IAmADispatchBuilder BuildDispatcher(

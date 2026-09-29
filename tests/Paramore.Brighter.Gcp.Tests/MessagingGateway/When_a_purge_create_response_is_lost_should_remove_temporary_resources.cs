@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia
@@ -30,20 +30,19 @@ using System.Threading.Tasks;
 using Grpc.Core;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
-[Trait("Category", "GcpPubSub")]
-[Trait("Category", "GcpPubSubPurge")]
-[Trait("Requires", "PubSubEmulator")]
+[Property("Category", "GcpPubSub")]
+[Property("Category", "GcpPubSubPurge")]
+[Property("Requires", "PubSubEmulator")]
 public class GcpPurgeLostResponseTests
 {
-    [Theory]
-    [InlineData(false, "CreateTopic")]
-    [InlineData(true, "CreateTopic")]
-    [InlineData(false, "CreateSubscription")]
-    [InlineData(true, "CreateSubscription")]
+    [Test]
+    [Arguments(false, "CreateTopic")]
+    [Arguments(true, "CreateTopic")]
+    [Arguments(false, "CreateSubscription")]
+    [Arguments(true, "CreateSubscription")]
     public async Task When_a_purge_create_response_is_lost_should_remove_temporary_resources(bool useAsync, string method)
     {
         //Arrange
@@ -59,18 +58,18 @@ public class GcpPurgeLostResponseTests
         };
 
         //Act
-        var failure = await Assert.ThrowsAsync<RpcException>(() => context.PurgeAsync(useAsync));
+        var failure = await Assert.That(() => context.PurgeAsync(useAsync)).ThrowsExactly<RpcException>();
 
         //Assert
-        Assert.Equal(StatusCode.DeadlineExceeded, failure.StatusCode);
-        Assert.Equal(1, injected);
-        Assert.Empty(context.TemporarySubscriptions());
-        Assert.Empty(context.TemporaryTopics());
+        await Assert.That(failure.StatusCode).IsEqualTo(StatusCode.DeadlineExceeded);
+        await Assert.That(injected).IsEqualTo(1);
+        await Assert.That(context.TemporarySubscriptions()).IsEmpty();
+        await Assert.That(context.TemporaryTopics()).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_purge_marker_publication_response_is_lost_should_recover_and_remove_temporary_resources(bool useAsync)
     {
         //Arrange
@@ -89,8 +88,8 @@ public class GcpPurgeLostResponseTests
         await context.PurgeAsync(useAsync);
 
         //Assert
-        Assert.Equal(2, publications);
-        Assert.Empty(context.TemporarySubscriptions());
-        Assert.Empty(context.TemporaryTopics());
+        await Assert.That(publications).IsEqualTo(2);
+        await Assert.That(context.TemporarySubscriptions()).IsEmpty();
+        await Assert.That(context.TemporaryTopics()).IsEmpty();
     }
 }

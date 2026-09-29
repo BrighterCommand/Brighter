@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -50,8 +50,8 @@ public class MySqlOutboxMigrationsTests
     private static readonly string[] s_v7Added = ["DataRef", "SpecVersion"];
     private static readonly string[] s_v8Added = ["CausationId"];
 
-    [Fact]
-    public void When_mysql_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_information_schema_prepared_statement_pattern()
+    [Test]
+    public async System.Threading.Tasks.Task When_mysql_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_information_schema_prepared_statement_pattern()
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -63,49 +63,43 @@ public class MySqlOutboxMigrationsTests
         var migrations = new MySqlOutboxMigrationCatalog().All(config);
 
         //Assert
-        Assert.Equal(ExpectedMigrationVersions.OutboxLatest, migrations.Count);
+        await Assert.That(migrations.Count).IsEqualTo(ExpectedMigrationVersions.OutboxLatest);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version.Value);
+            await Assert.That(migrations[i].Version.Value).IsEqualTo(i + 1);
         }
 
         for (var v = 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
-            Assert.True(
-                expected.SetEquals(migration.LogicalColumns),
-                $"V{v} LogicalColumns mismatch — " +
-                $"expected: [{string.Join(", ", expected.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-                $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+            await Assert.That(expected.SetEquals(migration.LogicalColumns)).IsTrue();
         }
 
         for (var v = 2; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            var script = migrations[v - 1].UpScript;
-            Assert.Contains("information_schema.columns", script, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("PREPARE stmt FROM @q", script, StringComparison.OrdinalIgnoreCase);
+            var script = migrations[v - 1].UpScript.Value;
+            await Assert.That(script).Contains("information_schema.columns");
+            await Assert.That(script).Contains("PREPARE stmt FROM @q");
         }
 
-        Assert.Null(migrations[0].SourceReference);
+        await Assert.That(migrations[0].SourceReference).IsNull();
         for (var v = 2; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            Assert.False(
-                string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference),
-                $"V{v} must have a non-empty SourceReference (archaeology pointer)");
+            await Assert.That(string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference)).IsFalse().Because($"V{v} must have a non-empty SourceReference (archaeology pointer)");
         }
 
-        Assert.Equal("1cdc04b60 / #2560", migrations[3].SourceReference);
+        await Assert.That(migrations[3].SourceReference).IsEqualTo("1cdc04b60 / #2560");
 
         for (var v = 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            Assert.Null(migrations[v - 1].IdempotencyCheckSql);
+            await Assert.That(migrations[v - 1].IdempotencyCheckSql).IsNull();
         }
 
         var v8Script = migrations[7].UpScript;
-        Assert.Contains("CausationId", v8Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CREATE INDEX", v8Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("idx_CausationId", v8Script, StringComparison.OrdinalIgnoreCase);
+        await Assert.That((v8Script).Value).Contains("CausationId");
+        await Assert.That((v8Script).Value).Contains("CREATE INDEX");
+        await Assert.That((v8Script).Value).Contains("idx_CausationId");
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

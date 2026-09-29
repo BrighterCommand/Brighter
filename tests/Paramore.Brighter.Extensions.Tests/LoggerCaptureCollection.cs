@@ -22,12 +22,12 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 // Log capture tests replace the process-wide factory and must not overlap other tests.
-[CollectionDefinition(NAME, DisableParallelization = true)]
+[System.Obsolete]
 public class LoggerCaptureCollection
 {
     public const string NAME = "Brighter logger capture";

@@ -26,22 +26,21 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.Sqlite.Tests.TestHelpers;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Inbox;
 
-[Trait("Category", "Sqlite")]
+[Property("Category", "Sqlite")]
 public class SqliteInboxDuplicateConstraintTests
 {
-    [Theory]
-    [InlineData("PRIMARY KEY", false, false)]
-    [InlineData("PRIMARY KEY", false, true)]
-    [InlineData("PRIMARY KEY", true, false)]
-    [InlineData("PRIMARY KEY", true, true)]
-    [InlineData("UNIQUE", false, false)]
-    [InlineData("UNIQUE", false, true)]
-    [InlineData("UNIQUE", true, false)]
-    [InlineData("UNIQUE", true, true)]
+    [Test]
+    [Arguments("PRIMARY KEY", false, false)]
+    [Arguments("PRIMARY KEY", false, true)]
+    [Arguments("PRIMARY KEY", true, false)]
+    [Arguments("PRIMARY KEY", true, true)]
+    [Arguments("UNIQUE", false, false)]
+    [Arguments("UNIQUE", false, true)]
+    [Arguments("UNIQUE", true, false)]
+    [Arguments("UNIQUE", true, true)]
     public async Task When_sqlite_inbox_receives_a_duplicate_should_keep_one_row(
         string constraint, bool binary, bool useAsync)
     {
@@ -52,7 +51,7 @@ public class SqliteInboxDuplicateConstraintTests
         var context = new RequestContext();
 
         //Act
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             for (var attempt = 0; attempt < 2; attempt++)
             {
@@ -64,8 +63,8 @@ public class SqliteInboxDuplicateConstraintTests
         });
 
         //Assert
-        Assert.Null(exception);
-        Assert.Equal(1L, database.RowCount());
-        Assert.Equal("original", inbox.Get<MyCommand>(command.Id, "test-context", context, -1).Value);
+        await Assert.That(exception).IsNull();
+        await Assert.That(database.RowCount()).IsEqualTo(1L);
+        await Assert.That(inbox.Get<MyCommand>(command.Id, "test-context", context, -1).Value).IsEqualTo("original");
     }
 }

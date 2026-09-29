@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -37,8 +37,8 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // request's own scope, showing the accessor would have registered a read had the AlwaysNew path made one.
 public class ProviderDeclinesAlwaysNewWithoutConsultingAccessorTests
 {
-    [Fact]
-    public void When_the_ask_carries_always_new_the_provider_should_not_consult_the_accessor()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_ask_carries_always_new_the_provider_should_not_consult_the_accessor()
     {
         // Arrange
         var context = new DefaultHttpContext { RequestServices = new ServiceCollection().BuildServiceProvider() };
@@ -49,12 +49,12 @@ public class ProviderDeclinesAlwaysNewWithoutConsultingAccessorTests
         var scope = provider.GetAmbient(ScopeAffinity.AlwaysNew);
 
         // Assert
-        Assert.Null(scope);
-        Assert.Equal(0, accessor.HttpContextReadCount);
+        await Assert.That(scope).IsNull();
+        await Assert.That(accessor.HttpContextReadCount).IsEqualTo(0);
     }
 
-    [Fact]
-    public void When_the_ask_carries_join_ambient_the_provider_should_consult_the_accessor()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_ask_carries_join_ambient_the_provider_should_consult_the_accessor()
     {
         // Arrange
         var requestServices = new ServiceCollection().BuildServiceProvider();
@@ -66,8 +66,8 @@ public class ProviderDeclinesAlwaysNewWithoutConsultingAccessorTests
         var scope = provider.GetAmbient(ScopeAffinity.JoinAmbient);
 
         // Assert
-        var requestScope = Assert.IsType<HttpRequestScope>(scope);
-        Assert.Same(requestServices, requestScope.Services);
-        Assert.True(accessor.HttpContextReadCount > 0);
+        var requestScope = await Assert.That(scope).IsTypeOf<HttpRequestScope>();
+        await Assert.That(requestScope.Services).IsSameReferenceAs(requestServices);
+        await Assert.That(accessor.HttpContextReadCount > 0).IsTrue();
     }
 }

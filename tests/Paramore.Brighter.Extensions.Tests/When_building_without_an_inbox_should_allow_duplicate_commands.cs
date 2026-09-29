@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -24,16 +24,16 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class CommandProcessorBuilderWithoutInboxTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_building_without_an_inbox_should_allow_duplicate_commands(bool useParameterlessOverload)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async System.Threading.Tasks.Task When_building_without_an_inbox_should_allow_duplicate_commands(bool useParameterlessOverload)
     {
         // Arrange
         var registry = new SubscriberRegistry();
@@ -57,6 +57,6 @@ public class CommandProcessorBuilderWithoutInboxTests
         processor.Send(command);
 
         // Assert
-        Assert.Equal(2, command.HandleCount);
+        await Assert.That(command.HandleCount).IsEqualTo(2);
     }
 }

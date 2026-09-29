@@ -29,7 +29,6 @@ using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics.Outbox;
 
@@ -59,7 +58,7 @@ public class When_adding_a_message_to_the_outbox_async_should_count_one_added
             outboxMeter: _meter);
     }
 
-    [Fact]
+    [Test]
     public async Task When_adding_a_message_to_the_outbox_async_should_count_one_added_()
     {
         var ctx = new RequestContext();
@@ -74,15 +73,15 @@ public class When_adding_a_message_to_the_outbox_async_should_count_one_added
 
         await _mediator.AddToOutboxAsync(msg1, ctx);
 
-        Assert.Single(_meter.Added);
-        Assert.Equal(_topic, _meter.Added[0]);
-        Assert.Empty(_meter.Cleared);
-        Assert.Empty(_meter.Durations);
+        await Assert.That(_meter.Added).HasSingleItem();
+        await Assert.That(_meter.Added[0]).IsEqualTo(_topic);
+        await Assert.That(_meter.Cleared).IsEmpty();
+        await Assert.That(_meter.Durations).IsEmpty();
 
         await _mediator.AddToOutboxAsync(msg2, ctx);
 
-        Assert.Equal(2, _meter.Added.Count);
-        Assert.Empty(_meter.Cleared);
-        Assert.Empty(_meter.Durations);
+        await Assert.That(_meter.Added.Count).IsEqualTo(2);
+        await Assert.That(_meter.Cleared).IsEmpty();
+        await Assert.That(_meter.Durations).IsEmpty();
     }
 }

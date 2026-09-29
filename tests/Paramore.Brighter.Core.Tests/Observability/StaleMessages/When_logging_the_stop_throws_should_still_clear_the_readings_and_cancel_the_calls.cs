@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,11 +35,11 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class LoggingTheStopThrowsTests
 {
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
@@ -51,7 +51,7 @@ public class LoggingTheStopThrowsTests
         _logs = fixture.Logs;
     }
 
-    [Fact]
+    [Test]
     public async Task When_logging_the_stop_throws_should_still_clear_the_readings_and_cancel_the_calls()
     {
         //Arrange
@@ -81,17 +81,17 @@ public class LoggingTheStopThrowsTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed) == 1,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
         outbox.BlockUntilCancelled();
-        WaitUntilTheMonitorWaits(2);
+        await WaitUntilTheMonitorWaits(2);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 2, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 2, TimeSpan.FromSeconds(5))).IsTrue();
         var token = outbox.CountCalls.Last().CancellationToken;
-        Assert.True(AdvanceReturns(TimeSpan.FromSeconds(5)));
+        await Assert.That(AdvanceReturns(TimeSpan.FromSeconds(5))).IsTrue();
         var beforeTheStop = metrics.Observe();
 
         //Act
@@ -101,13 +101,13 @@ public class LoggingTheStopThrowsTests
         var afterTheStop = metrics.Observe();
 
         //Assert
-        Assert.Contains(beforeTheStop, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        Assert.True(stopped);
-        Assert.True(cancelled);
-        Assert.DoesNotContain(afterTheStop, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        var error = Assert.Single(_logs.Entries, entry => entry.LogLevel == LogLevel.Error);
-        Assert.Contains("failed to handle the stop", error.Message);
-        Assert.Same(loggerFailed, error.Exception?.GetBaseException());
+        await Assert.That(System.Linq.Enumerable.Any(beforeTheStop, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).IsTrue();
+        await Assert.That(stopped).IsTrue();
+        await Assert.That(cancelled).IsTrue();
+        await Assert.That(System.Linq.Enumerable.Any(afterTheStop, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).IsFalse();
+        var error = await Assert.That(System.Linq.Enumerable.Where(_logs.Entries, entry => entry.LogLevel == LogLevel.Error)).HasSingleItem();
+        await Assert.That(error.Message).Contains("failed to handle the stop");
+        await Assert.That(error.Exception?.GetBaseException()).IsSameReferenceAs(loggerFailed);
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
@@ -119,6 +119,6 @@ public class LoggingTheStopThrowsTests
         return SpinWait.SpinUntil(() => advance.IsCompleted, TimeSpan.FromSeconds(5));
     }
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

@@ -7,12 +7,11 @@
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDB.Tests.Outbox.OutstandingCount;
 
-[Trait("Category", "MongoDB")]
-[Collection("MongoDbOutbox")]
+[Property("Category", "MongoDB")]
+[NotInParallel("MongoDbOutbox")]
 public class WhenCountingOutstandingMessagesOlderThanTheAgeShouldCountOnlyStaleOnes : OutstandingCountOutboxBaseTests<global::MongoDB.Driver.IClientSessionHandle>
 {
     private readonly IAmAnOutstandingCountOutboxProvider _outboxProvider = new Paramore.Brighter.MongoDb.Tests.Outbox.MongoDbOutboxProvider();
@@ -35,9 +34,8 @@ public class WhenCountingOutstandingMessagesOlderThanTheAgeShouldCountOnlyStaleO
         await Outbox.AddAsync(aged, new RequestContext());
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_outstanding_messages_older_than_the_age_should_count_only_stale_ones()
     {
         await AssertAgeAsync();
-    }
-}
+    }}

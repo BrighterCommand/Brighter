@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -28,22 +28,19 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorInvalidStaleAgeTests
 {
-    public static TheoryData<TimeSpan> InvalidStaleAges => new()
+    public static List<TimeSpan> InvalidStaleAges => new()
     {
-        TimeSpan.Zero,
-        TimeSpan.FromSeconds(-1),
-        TimeSpan.MaxValue
+        TimeSpan.Zero,        TimeSpan.FromSeconds(-1),        TimeSpan.MaxValue
     };
 
-    [Theory]
-    [MemberData(nameof(InvalidStaleAges))]
-    public void When_the_stale_age_is_invalid_should_throw_a_configuration_exception(TimeSpan staleMessageAge)
+    [Test]
+    [MethodDataSource(nameof(InvalidStaleAges))]
+    public async Task When_the_stale_age_is_invalid_should_throw_a_configuration_exception(TimeSpan staleMessageAge)
     {
         //Arrange
         var services = new ServiceCollection();
@@ -54,12 +51,12 @@ public class StaleMessageMonitorInvalidStaleAgeTests
         var registrationsBefore = services.ToList();
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() =>
-            builder.UseOutboxStaleMessageMonitor(staleMessageAge));
+        var exception = (await Assert.That(() =>
+            builder.UseOutboxStaleMessageMonitor(staleMessageAge)).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.Contains(nameof(TimedOutboxStaleMessageMonitorOptions.StaleMessageAge), exception.Message);
-        Assert.Contains(staleMessageAge.ToString(), exception.Message);
-        Assert.Equal(registrationsBefore, services);
+        await Assert.That(exception.Message).Contains(nameof(TimedOutboxStaleMessageMonitorOptions.StaleMessageAge));
+        await Assert.That(exception.Message).Contains(staleMessageAge.ToString());
+        await Assert.That(services).IsEqualTo(registrationsBefore);
     }
 }

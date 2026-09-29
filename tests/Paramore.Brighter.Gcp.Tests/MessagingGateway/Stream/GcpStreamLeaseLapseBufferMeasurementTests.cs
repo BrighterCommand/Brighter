@@ -30,9 +30,8 @@ using Google.Api.Gax;
 using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 using DeadLetterPolicy = Paramore.Brighter.MessagingGateway.GcpPubSub.DeadLetterPolicy;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
 /// <summary>
@@ -44,16 +43,17 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// Committed <c>Skip</c>ped; unskip locally against a running emulator to reproduce, then restore the
 /// Skip before committing. It measures the Google client library and the emulator, not Brighter.
 /// </summary>
-[Trait("Category", "GcpPubSubStream")]
+[Property("Category", "GcpPubSubStream")]
 public class GcpStreamLeaseLapseBufferMeasurementTests
 {
     /// <summary>
     /// Stream (no ordering): hold m1, poll for its lease-lapse redelivery. Run with the client's own
     /// <c>AckDeadline</c> left at its default, and set to 10 s to match the subscription.
     /// </summary>
-    [Theory(Skip = "measurement — ADR 0077 stream lease-lapse procedure (6.13); see docs/adr/0077-delivery-count-contract.md")]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Skip("measurement — ADR 0077 stream lease-lapse procedure (6.13); see docs/adr/0077-delivery-count-contract.md")]
+    [Arguments(false)]
+    [Arguments(true)]
     public void Measure_whether_buffer_size_two_admits_a_stream_redelivery_while_the_first_is_held(
         bool clientAckDeadlineTenSeconds)
     {
@@ -84,21 +84,23 @@ public class GcpStreamLeaseLapseBufferMeasurementTests
 /// Task 6.13 (MEASURE) on an ordering-enabled subscription, with and without an ordering key. See
 /// <see cref="GcpStreamLeaseLapseBufferMeasurementTests"/>.
 /// </summary>
-[Trait("Category", "GcpPubSubStreamOrdering")]
+[Property("Category", "GcpPubSubStreamOrdering")]
 public class GcpStreamOrderingLeaseLapseBufferMeasurementTests
 {
     /// <summary>StreamOrdering, message published with an ordering key.</summary>
-    [Theory(Skip = "measurement — ADR 0077 stream lease-lapse procedure (6.13); see docs/adr/0077-delivery-count-contract.md")]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Skip("measurement — ADR 0077 stream lease-lapse procedure (6.13); see docs/adr/0077-delivery-count-contract.md")]
+    [Arguments(false)]
+    [Arguments(true)]
     public void Measure_whether_buffer_size_two_admits_a_keyed_stream_ordering_redelivery_while_the_first_is_held(
         bool clientAckDeadlineTenSeconds)
         => Measure("6.13 StreamOrdering keyed", new PartitionKey("lease-lapse-key"), clientAckDeadlineTenSeconds);
 
     /// <summary>StreamOrdering, message published without an ordering key (the keyless alternative).</summary>
-    [Theory(Skip = "measurement — ADR 0077 stream lease-lapse procedure (6.13); see docs/adr/0077-delivery-count-contract.md")]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Skip("measurement — ADR 0077 stream lease-lapse procedure (6.13); see docs/adr/0077-delivery-count-contract.md")]
+    [Arguments(false)]
+    [Arguments(true)]
     public void Measure_whether_buffer_size_two_admits_a_keyless_stream_ordering_redelivery_while_the_first_is_held(
         bool clientAckDeadlineTenSeconds)
         => Measure("6.13 StreamOrdering keyless", partitionKey: null, clientAckDeadlineTenSeconds);
@@ -181,7 +183,7 @@ file static class LeaseLapseMeasurement
     /// whether m1's redelivery arrives within 45 s. Polling continues to 90 s so a late redelivery is
     /// still recorded. Every received message is acknowledged at the end.
     /// </summary>
-    public static void Run(
+    public static async Task Run(
         string label, IAmAMessageProducerSync producer, IAmAChannelSync channel, RoutingKey routingKey,
         PartitionKey? partitionKey)
     {
@@ -191,7 +193,7 @@ file static class LeaseLapseMeasurement
         producer.Send(message);
 
         var m1 = channel.Receive(TimeSpan.FromSeconds(20));
-        Assert.NotEqual(MessageType.MT_NONE, m1.Header.MessageType);
+        await Assert.That(m1.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
         var held = Stopwatch.StartNew();
         Console.WriteLine($"[{label}] m1 id={m1.Id} count={m1.Header.HandledCount} " +
                           $"orderingKey={(partitionKey is null ? "<none>" : partitionKey.Value)}");

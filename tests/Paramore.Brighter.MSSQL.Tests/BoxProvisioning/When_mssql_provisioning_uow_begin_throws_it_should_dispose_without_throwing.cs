@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -30,7 +30,6 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -39,19 +38,21 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// still succeeds, so the caller sees the acquire's exception rather than one from disposal
 /// (ADR 0058 §B.3). A throwing dispose would replace the <see cref="TimeoutException"/> asserted here.
 /// </summary>
-public class MsSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
+public class MsSqlProvisioningUnitOfWorkBeginThrowsTests
 {
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
 
-    public async Task InitializeAsync()
+    [Before(HookType.Test)]public async Task InitializeAsync()
     {
         await Configuration.EnsureDatabaseExistsAsync(_connection.ConnectionString);
         await _connection.OpenAsync();
     }
 
+    [After(HookType.Test)]
+
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mssql_provisioning_uow_begin_throws_it_should_dispose_without_throwing()
     {
         // Arrange
@@ -59,7 +60,7 @@ public class MsSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
             throwOnAcquire: new TimeoutException("forced lock-acquisition failure for spec 0028 §B.3 test"));
 
         // Act
-        var thrown = await Record.ExceptionAsync(async () =>
+        var thrown = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             await using var uow = new MsSqlProvisioningUnitOfWork(_connection, failingLock, NullLogger.Instance);
             await uow.BeginAsync(
@@ -69,6 +70,6 @@ public class MsSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
         });
 
         // Assert
-        Assert.IsType<TimeoutException>(thrown);
+        await Assert.That(thrown).IsTypeOf<TimeoutException>();
     }
 }

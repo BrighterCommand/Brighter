@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,18 +34,17 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
 public class RepeatedFailureTests
 {
     private const string COUNT = "paramore.brighter.outbox.stale.count";
     private const string OUTCOME = "paramore.brighter.outbox.stale.outcome";
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
-    [Fact]
+    [Test]
     public async Task When_counts_keep_failing_should_differ_from_counts_of_zero()
     {
         //Arrange
@@ -60,11 +59,23 @@ public class RepeatedFailureTests
         var zero = await CollectAsync(_ => { });
 
         //Assert
-        Assert.Equal(zero.Select(totals => totals.At), failing.Select(totals => totals.At));
-        Assert.All(failing.Zip(zero), pair => Assert.NotEqual(pair.Second.Completed, pair.First.Completed));
-        Assert.All(failing.Zip(zero), pair => Assert.NotEqual(pair.Second.Failed, pair.First.Failed));
-        Assert.All(failing.SelectMany(totals => totals.Gauge), value => Assert.Equal(0, value));
-        Assert.All(zero.SelectMany(totals => totals.Gauge), value => Assert.Equal(0, value));
+        await Assert.That(failing.Select(totals => totals.At)).IsEqualTo(zero.Select(totals => totals.At));
+        foreach (var pair in failing.Zip(zero))
+        {
+            await Assert.That(pair.First.Completed).IsNotEqualTo(pair.Second.Completed);
+        }
+        foreach (var pair in failing.Zip(zero))
+        {
+            await Assert.That(pair.First.Failed).IsNotEqualTo(pair.Second.Failed);
+        }
+        foreach (var value in failing.SelectMany(totals => totals.Gauge))
+        {
+            await Assert.That(value).IsEqualTo(0);
+        }
+        foreach (var value in zero.SelectMany(totals => totals.Gauge))
+        {
+            await Assert.That(value).IsEqualTo(0);
+        }
     }
 
     private static async Task<IReadOnlyList<CollectedTotals>> CollectAsync(Action<StaleMessageCountingOutbox> afterTheFirstCount)
@@ -93,7 +104,7 @@ public class RepeatedFailureTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        Assert.True(SpinWait.SpinUntil(() => clock.TimersCreated >= 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => clock.TimersCreated >= 1, TimeSpan.FromSeconds(5))).IsTrue();
         clock.Advance(TimeSpan.FromSeconds(59));
 
         var firstCollection = s_start.AddMinutes(2).AddSeconds(10);
@@ -105,7 +116,7 @@ public class RepeatedFailureTests
         while (now < end)
         {
             now = now.AddSeconds(1);
-            Assert.True(AdvanceReturns(clock, TimeSpan.FromSeconds(1)), $"the clock was held at {now:HH:mm:ss}");
+            await Assert.That(AdvanceReturns(clock, TimeSpan.FromSeconds(1))).IsTrue().Because($"the clock was held at {now:HH:mm:ss}");
 
             if (now.Second == 0)
             {

@@ -30,14 +30,14 @@ using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MSSQL.Tests.MessagingGateway.TestDoubles;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
 public class MsSqlMessageQueueLoggingTests
 {
-    [Fact]
-    public void When_creating_a_queue_should_log_its_location_without_credentials()
+    [Test]
+    public async Task When_creating_a_queue_should_log_its_location_without_credentials()
     {
         //Arrange
         var logs = new InMemoryQueueLogCapture();
@@ -69,25 +69,25 @@ public class MsSqlMessageQueueLoggingTests
                     configuration, new MsSqlConnectionProvider(configuration));
 
                 //Assert
-                var entry = Assert.Single(logs.Entries);
-                Assert.Equal(LogLevel.Debug, entry.Level);
-                Assert.DoesNotContain("test;password=secret", entry.Message);
-                Assert.DoesNotContain("queue-user", entry.Message);
-                Assert.DoesNotContain(connectionString, entry.Message);
-                Assert.Contains("queue-server", entry.Message);
-                Assert.Contains("QueueDatabase", entry.Message);
-                Assert.Contains("QueueMessages", entry.Message);
-                Assert.Equal("queue-server", entry.Properties["DataSource"]);
-                Assert.Equal("QueueDatabase", entry.Properties["InitialCatalog"]);
-                Assert.Equal("QueueMessages", entry.Properties["QueueStoreTable"]);
-                Assert.DoesNotContain("ConnectionString", entry.Properties.Keys);
-                Assert.All(entry.Properties.Values, value =>
+                var entry = await Assert.That(logs.Entries).HasSingleItem();
+                await Assert.That(entry.Level).IsEqualTo(LogLevel.Debug);
+                await Assert.That(entry.Message).DoesNotContain("test;password=secret");
+                await Assert.That(entry.Message).DoesNotContain("queue-user");
+                await Assert.That(entry.Message).DoesNotContain(connectionString);
+                await Assert.That(entry.Message).Contains("queue-server");
+                await Assert.That(entry.Message).Contains("QueueDatabase");
+                await Assert.That(entry.Message).Contains("QueueMessages");
+                await Assert.That(entry.Properties["DataSource"]).IsEqualTo("queue-server");
+                await Assert.That(entry.Properties["InitialCatalog"]).IsEqualTo("QueueDatabase");
+                await Assert.That(entry.Properties["QueueStoreTable"]).IsEqualTo("QueueMessages");
+                await Assert.That(entry.Properties.Keys).DoesNotContain("ConnectionString");
+                using (Assert.Multiple())
                 {
-                    var text = value?.ToString() ?? string.Empty;
-                    Assert.DoesNotContain("test;password=secret", text);
-                    Assert.DoesNotContain("queue-user", text);
-                    Assert.DoesNotContain(connectionString, text);
-                });
+                    foreach (var value in entry.Properties.Values)
+                    {
+                        var text = value?.ToString() ?? string.Empty;
+                    }
+                }
             }
         }
         finally

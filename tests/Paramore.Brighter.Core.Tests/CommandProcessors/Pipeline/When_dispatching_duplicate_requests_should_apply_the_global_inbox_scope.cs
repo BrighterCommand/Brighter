@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -27,18 +28,17 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.Handlers;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline;
 
 public class CommandProcessorGlobalInboxScopeTests
 {
-    [Theory]
-    [InlineData(InboxScope.Commands, true, false)]
-    [InlineData(InboxScope.Events, false, true)]
-    [InlineData(InboxScope.All, true, true)]
-    [InlineData(null, false, false)]
-    public void When_dispatching_duplicate_requests_should_apply_the_global_inbox_scope(
+    [Test]
+    [Arguments(InboxScope.Commands, true, false)]
+    [Arguments(InboxScope.Events, false, true)]
+    [Arguments(InboxScope.All, true, true)]
+    [Arguments(null, false, false)]
+    public async System.Threading.Tasks.Task When_dispatching_duplicate_requests_should_apply_the_global_inbox_scope(
         InboxScope? scope, bool shouldInboxCommands, bool shouldInboxEvents)
     {
         // Arrange
@@ -66,30 +66,44 @@ public class CommandProcessorGlobalInboxScopeTests
         // Act
         processor.Send(command);
         processor.Publish(@event);
-        var commandError = Record.Exception(() => processor.Send(duplicateCommand));
-        var eventError = Record.Exception(() => processor.Publish(duplicateEvent));
+        Exception? commandError = null;
+        try
+        {
+            processor.Send(duplicateCommand);
+        }
+        catch (Exception e)
+        {
+            commandError = e;
+        }
+        Exception? eventError = null;
+        try
+        {
+            processor.Publish(duplicateEvent);
+        }
+        catch (Exception e)
+        {
+            eventError = e;
+        }
 
         // Assert
         if (shouldInboxCommands)
-            Assert.IsType<OnceOnlyException>(commandError);
+            await Assert.That(commandError).IsTypeOf<OnceOnlyException>();
         else
-            Assert.Null(commandError);
+            await Assert.That(commandError).IsNull();
 
         if (shouldInboxEvents)
         {
-            var aggregate = Assert.IsType<AggregateException>(eventError);
-            Assert.IsType<OnceOnlyException>(Assert.Single(aggregate.InnerExceptions));
+            var aggregate = await Assert.That(eventError).IsTypeOf<AggregateException>();
+            await Assert.That((await Assert.That(aggregate.InnerExceptions).HasSingleItem())).IsTypeOf<OnceOnlyException>();
         }
         else
-            Assert.Null(eventError);
+            await Assert.That(eventError).IsNull();
 
-        Assert.Equal(1, command.HandleCount);
-        Assert.Equal(1, @event.HandleCount);
-        Assert.Equal(shouldInboxCommands ? 0 : 1, duplicateCommand.HandleCount);
-        Assert.Equal(shouldInboxEvents ? 0 : 1, duplicateEvent.HandleCount);
-        Assert.Equal(shouldInboxCommands,
-            inbox.Exists<InboxScopeCommand>(command.Id, typeof(InboxScopeCommandHandler).FullName!, null));
-        Assert.Equal(shouldInboxEvents,
-            inbox.Exists<InboxScopeEvent>(@event.Id, typeof(InboxScopeEventHandler).FullName!, null));
+        await Assert.That(command.HandleCount).IsEqualTo(1);
+        await Assert.That(@event.HandleCount).IsEqualTo(1);
+        await Assert.That(duplicateCommand.HandleCount).IsEqualTo(shouldInboxCommands ? 0 : 1);
+        await Assert.That(duplicateEvent.HandleCount).IsEqualTo(shouldInboxEvents ? 0 : 1);
+        await Assert.That(inbox.Exists<InboxScopeCommand>(command.Id, typeof(InboxScopeCommandHandler).FullName!, null)).IsEqualTo(shouldInboxCommands);
+        await Assert.That(inbox.Exists<InboxScopeEvent>(@event.Id, typeof(InboxScopeEventHandler).FullName!, null)).IsEqualTo(shouldInboxEvents);
     }
 }

@@ -31,7 +31,7 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
 {
@@ -96,16 +96,24 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             channel.Enqueue(quitMessage);
         }
 
-        [Fact]
-        public void When_a_message_has_a_malformed_correlation_id_the_pump_continues()
+        [Test]
+        public async Task When_a_message_has_a_malformed_correlation_id_the_pump_continues()
         {
             //Act
-            var exception = Record.Exception(() => _messagePump.Run());
+            Exception? exception = null;
+            try
+            {
+                _messagePump.Run();
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
 
             //Assert - the pump reached its QUIT message and still dispatched the poisoned message
-            Assert.Null(exception);
-            Assert.True(_receivedMessages.ContainsKey(nameof(MyEventHandler)));
-            Assert.Equal(MessagePumpStatus.MP_STOPPED, _messagePump.Status);
+            await Assert.That(exception).IsNull();
+            await Assert.That(_receivedMessages.ContainsKey(nameof(MyEventHandler))).IsTrue();
+            await Assert.That(_messagePump.Status).IsEqualTo(MessagePumpStatus.MP_STOPPED);
         }
     }
 }

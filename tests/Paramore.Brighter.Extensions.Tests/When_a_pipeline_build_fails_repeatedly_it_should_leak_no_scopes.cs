@@ -7,14 +7,14 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class PipelineBuildFailureScopeLeakTests
 {
-    [Fact]
-    public void When_a_pipeline_build_fails_repeatedly_it_should_leak_no_scopes()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_pipeline_build_fails_repeatedly_it_should_leak_no_scopes()
     {
         //arrange — an FR-22.2-conformant lifetime triple: all three Scoped. UnresolvableMapper's
         //constructor depends on IUnregisteredDependency, which is never registered, so every pipeline
@@ -71,14 +71,14 @@ public class PipelineBuildFailureScopeLeakTests
         //act — 1,000 Post attempts, each failing to build the pipeline
         for (var i = 0; i < 1_000; i++)
         {
-            var configurationException = Assert.Throws<ConfigurationException>(() => commandProcessor.Post(new UnresolvableCommand()));
+            var configurationException = await Assert.That(() => commandProcessor.Post(new UnresolvableCommand())).ThrowsExactly<ConfigurationException>();
 
             //assert — the caller still sees the original resolution failure, not just that building failed
-            Assert.IsType<System.InvalidOperationException>(configurationException.InnerException);
+            await Assert.That(configurationException.InnerException).IsTypeOf<System.InvalidOperationException>();
         }
 
         //assert — every Brighter-created pipeline scope was released; none left live (NFR-5)
-        Assert.Equal(1_000, scopeTracker.CreatedCount);
-        Assert.Equal(0, scopeTracker.OutstandingCount);
+        await Assert.That(scopeTracker.CreatedCount).IsEqualTo(1_000);
+        await Assert.That(scopeTracker.OutstandingCount).IsEqualTo(0);
     }
 }

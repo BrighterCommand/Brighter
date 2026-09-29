@@ -39,7 +39,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -47,7 +46,7 @@ public class StopAbandonsBlockedSweepTests
 {
     private const string RestartCheck = "brighter-outbox-sweeper-restart";
 
-    [Fact]
+    [Test]
     public async Task When_stop_abandons_a_blocked_sweep_should_keep_growing_its_running_time()
     {
         //Arrange
@@ -79,15 +78,15 @@ public class StopAbandonsBlockedSweepTests
             var report = await healthChecks.CheckHealthAsync(CancellationToken.None);
 
             //Assert
-            Assert.True(reachedMediator, "The sweep did not reach the mediator");
-            Assert.Equal([56.0], runningTime.Values);
+            await Assert.That(reachedMediator).IsTrue().Because("The sweep did not reach the mediator");
+            await Assert.That(runningTime.Values).IsEqualTo([56.0]);
 
             var restart = report.Entries[RestartCheck];
-            Assert.Equal(HealthStatus.Degraded, restart.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, restart.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), restart.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "hung_sweep" }, Assert.IsType<string[]>(restart.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Contains("56", restart.Description);
+            await Assert.That(restart.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(restart.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(restart.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+            await Assert.That((await Assert.That(restart.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "hung_sweep" });
+            await Assert.That(restart.Description).Contains("56");
         }
         finally
         {

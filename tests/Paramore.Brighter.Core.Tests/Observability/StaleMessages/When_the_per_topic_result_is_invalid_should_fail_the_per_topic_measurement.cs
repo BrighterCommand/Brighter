@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,7 +34,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -45,10 +44,10 @@ public class InvalidPerTopicResultTests
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private readonly TimerCountingTimeProvider _clock = new(s_start);
 
-    [Theory]
-    [InlineData("null")]
-    [InlineData("orders=2")]
-    [InlineData("orders=2, payments=-1")]
+    [Test]
+    [Arguments("null")]
+    [Arguments("orders=2")]
+    [Arguments("orders=2, payments=-1")]
     public async Task When_the_per_topic_result_is_invalid_should_fail_the_per_topic_measurement(string result)
     {
         //Arrange
@@ -77,7 +76,7 @@ public class InvalidPerTopicResultTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromSeconds(59));
 
         var dueTime = s_start.AddMinutes(1);
@@ -112,14 +111,14 @@ public class InvalidPerTopicResultTests
         }
 
         //Assert
-        Assert.Null(heldAt);
-        Assert.Equal(1, Measured(afterTheDueTime, "per_topic", "failed"));
-        Assert.DoesNotContain(fromTheDueTime, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES);
+        await Assert.That(heldAt).IsNull();
+        await Assert.That(Measured(afterTheDueTime, "per_topic", "failed")).IsEqualTo(1);
+        await Assert.That(System.Linq.Enumerable.Any(fromTheDueTime, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES)).IsFalse();
         var overall = fromTheDueTime
             .Where(m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)
             .Select(m => m.Value)
             .Distinct();
-        Assert.Equal([3], overall);
+        await Assert.That(overall).IsEqualTo([3]);
     }
 
     private static IReadOnlyDictionary<RoutingKey, int>? TopicCounts(string result) =>
@@ -145,6 +144,6 @@ public class InvalidPerTopicResultTests
         return SpinWait.SpinUntil(() => advance.IsCompleted, TimeSpan.FromSeconds(5));
     }
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

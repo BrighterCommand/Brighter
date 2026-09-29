@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -27,8 +27,7 @@ using System;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleReadingsStartedWithTopicsTests
@@ -38,8 +37,8 @@ public class StaleReadingsStartedWithTopicsTests
     private const string COUNT = "paramore.brighter.outbox.stale.count";
     private const string OUTCOME = "paramore.brighter.outbox.stale.outcome";
 
-    [Fact]
-    public void When_readings_are_started_with_topics_should_report_eight_zero_counter_series()
+    [Test]
+    public async Task When_readings_are_started_with_topics_should_report_eight_zero_counter_series()
     {
         //Arrange
         using var observed = new ObservedStaleMessageInstruments();
@@ -52,16 +51,23 @@ public class StaleReadingsStartedWithTopicsTests
 
         //Assert
         var series = measurements.Where(m => m.Instrument == ObservedStaleMessageInstruments.MEASUREMENTS).ToArray();
-        Assert.All(series, m => Assert.Equal([IMPLEMENTATION, COUNT, OUTCOME], m.Attributes.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray()));
-        Assert.Equal(
-            [
+        foreach (var m in series)
+{
+    await Assert.That(m.Attributes.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray()).IsEqualTo([IMPLEMENTATION, COUNT, OUTCOME]);
+}
+        await Assert.That(series.Select(m => $"{m.Attributes[COUNT]}/{m.Attributes[OUTCOME]}").OrderBy(s => s, StringComparer.Ordinal).ToArray()).IsEqualTo([
                 "overall/abandoned", "overall/completed", "overall/failed", "overall/skipped",
                 "per_topic/abandoned", "per_topic/completed", "per_topic/failed", "per_topic/skipped"
-            ],
-            series.Select(m => $"{m.Attributes[COUNT]}/{m.Attributes[OUTCOME]}").OrderBy(s => s, StringComparer.Ordinal).ToArray());
-        Assert.All(series, m => Assert.Equal(0, m.Value));
-        Assert.All(series, m => Assert.Equal(OUTBOX_TYPE, m.Attributes[IMPLEMENTATION]));
-        Assert.Equal("{measurement}", observed.Units[ObservedStaleMessageInstruments.MEASUREMENTS]);
-        Assert.DoesNotContain(measurements, m => m.Instrument != ObservedStaleMessageInstruments.MEASUREMENTS);
+            ]);
+        foreach (var m in series)
+{
+    await Assert.That(m.Value).IsEqualTo(0);
+}
+        foreach (var m in series)
+{
+    await Assert.That(m.Attributes[IMPLEMENTATION]).IsEqualTo(OUTBOX_TYPE);
+}
+        await Assert.That(observed.Units[ObservedStaleMessageInstruments.MEASUREMENTS]).IsEqualTo("{measurement}");
+        await Assert.That(System.Linq.Enumerable.Any(measurements, m => m.Instrument != ObservedStaleMessageInstruments.MEASUREMENTS)).IsFalse();
     }
 }

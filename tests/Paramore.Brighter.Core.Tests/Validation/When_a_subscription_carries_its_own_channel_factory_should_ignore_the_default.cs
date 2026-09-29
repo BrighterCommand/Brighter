@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class SubscriptionOwnChannelFactoryTakesPrecedenceValidationTests
 {
-    [Fact]
-    public void When_a_subscription_carries_its_own_channel_factory_should_ignore_the_default()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_subscription_carries_its_own_channel_factory_should_ignore_the_default()
     {
         // Arrange — the default channel factory does not match, but the subscription carries its
         // own channel factory that does; the default must not be consulted at all
@@ -49,7 +49,7 @@ public class SubscriptionOwnChannelFactoryTakesPrecedenceValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — no findings for sub-a
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 }

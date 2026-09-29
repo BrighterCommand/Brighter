@@ -31,7 +31,6 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.MessagingGateway.SqsStandard;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
@@ -46,8 +45,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor;
 /// Covers both message creators via <paramref name="rawMessageDelivery"/>:
 /// <c>true</c> → <c>SqsMessageCreator</c>; <c>false</c> → <c>SqsInlineMessageCreator</c>.
 /// </summary>
-[Trait("Category", "AWS")]
-[Collection("SqsStandard")]
+[Property("Category", "AWS")]
+[NotInParallel("SqsStandard")]
 public class SqsBudgetBelowNativeLimitProactorTests : IDisposable, IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -67,9 +66,9 @@ public class SqsBudgetBelowNativeLimitProactorTests : IDisposable, IAsyncDisposa
     /// budget is exhausted first.  The Brighter DLQ copy carries <c>rejectionReason ==
     /// "DeliveryError"</c> and the native redrive target stays empty (R-8, AC-8).
     /// </summary>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
     public async Task When_sqs_budget_is_below_native_redrive_limit_should_dead_letter_through_brighter_async(
         bool rawMessageDelivery)
     {
@@ -173,19 +172,17 @@ public class SqsBudgetBelowNativeLimitProactorTests : IDisposable, IAsyncDisposa
         // Assert — R-8 / AC-8: Brighter DLQ holds the message with rejectionReason
         var dlqMessage = await dlqChannel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // R-5: rejection reason must be DeliveryError (Brighter fired first, not native redrive)
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionReason"),
-            "Brighter DLQ must carry rejectionReason");
-        Assert.Equal(RejectionReason.DeliveryError.ToString(),
-            dlqMessage.Header.Bag["rejectionReason"].ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionReason")).IsTrue().Because("Brighter DLQ must carry rejectionReason");
+        await Assert.That(dlqMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.DeliveryError.ToString());
 
         // R-8 / AC-8: native redrive target must be empty — Brighter deleted the original at count 3
         // before SQS could reach its own threshold of 5.
         var nativeMessage = await nativeTargetChannel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
-        Assert.Equal(MessageType.MT_NONE, nativeMessage.Header.MessageType);
+        await Assert.That(nativeMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 
     public void Dispose()

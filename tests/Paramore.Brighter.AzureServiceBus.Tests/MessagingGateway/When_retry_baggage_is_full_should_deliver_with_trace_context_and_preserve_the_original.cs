@@ -35,27 +35,26 @@ using OpenTelemetry.Trace;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "AzureServiceBus")]
-[Collection("AzureServiceBus")]
+[Property("Category", "AzureServiceBus")]
+[NotInParallel("AzureServiceBus")]
 public class AzureServiceBusRetryBaggageTests
 {
-    [Theory]
-    [InlineData(false, "key0", false)]
-    [InlineData(true, "key0", false)]
-    [InlineData(false, "extra", false)]
-    [InlineData(true, "extra", false)]
-    [InlineData(false, "tenant.name", false)]
-    [InlineData(true, "tenant.name", false)]
-    [InlineData(false, "key0", true)]
-    [InlineData(true, "key0", true)]
-    [InlineData(false, "extra", true)]
-    [InlineData(true, "extra", true)]
-    [InlineData(false, "tenant.name", true)]
-    [InlineData(true, "tenant.name", true)]
+    [Test]
+    [Arguments(false, "key0", false)]
+    [Arguments(true, "key0", false)]
+    [Arguments(false, "extra", false)]
+    [Arguments(true, "extra", false)]
+    [Arguments(false, "tenant.name", false)]
+    [Arguments(true, "tenant.name", false)]
+    [Arguments(false, "key0", true)]
+    [Arguments(true, "key0", true)]
+    [Arguments(false, "extra", true)]
+    [Arguments(true, "extra", true)]
+    [Arguments(false, "tenant.name", true)]
+    [Arguments(true, "tenant.name", true)]
     public async Task When_retry_baggage_is_full_should_deliver_with_trace_context_and_preserve_the_original(
         bool synchronous, string ambientKey, bool nonFiniteHeader)
     {
@@ -95,9 +94,9 @@ public class AzureServiceBusRetryBaggageTests
             await sender.SendMessageAsync(original);
             var message = synchronous ? syncChannel!.Receive(TimeSpan.FromSeconds(10))
                 : await asyncChannel!.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.Equal(original.MessageId, message.Id.Value);
+            await Assert.That(message.Id.Value).IsEqualTo(original.MessageId);
             message.Header.UpdateHandledCount();
-            Assert.Equal(32, message.Header.Baggage.Count());
+            await Assert.That(message.Header.Baggage.Count()).IsEqualTo(32);
             OpenTelemetry.Baggage.Current = default;
             OpenTelemetry.Baggage.SetBaggage(ambientKey, "updated");
             if (nonFiniteHeader)
@@ -107,31 +106,33 @@ public class AzureServiceBusRetryBaggageTests
             activity.TraceStateString = "vendor=state";
 
             // Act
-            Assert.True(synchronous ? syncChannel!.Requeue(message, TimeSpan.Zero)
-                : await asyncChannel!.RequeueAsync(message, TimeSpan.Zero));
+            await Assert.That(synchronous ? syncChannel!.Requeue(message, TimeSpan.Zero)
+                : await asyncChannel!.RequeueAsync(message, TimeSpan.Zero)).IsTrue();
             await using var receiver = client.CreateReceiver(queue);
             var retry = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(10));
 
             // Assert
-            Assert.NotNull(retry);
-            Assert.NotEqual(original.MessageId, retry.MessageId);
-            Assert.Equal(original.MessageId, retry.ApplicationProperties[Message.OriginalMessageIdHeaderName]);
-            Assert.Equal(original.Body.ToArray(), retry.Body.ToArray());
-            Assert.Equal(originalBaggage.ToString(), message.Header.Baggage.ToString());
+            await Assert.That(retry).IsNotNull();
+            await Assert.That(retry.MessageId).IsNotEqualTo(original.MessageId);
+            await Assert.That(retry.ApplicationProperties[Message.OriginalMessageIdHeaderName]).IsEqualTo(original.MessageId);
+            await Assert.That(retry.Body.ToArray()).IsEqualTo(original.Body.ToArray());
+            await Assert.That(message.Header.Baggage.ToString()).IsEqualTo(originalBaggage.ToString());
             var retryBaggage = Paramore.Brighter.Observability.Baggage.FromString(
-                Assert.IsType<string>(retry.ApplicationProperties["cloudevents:baggage"]));
-            Assert.Equal(32, retryBaggage.Count());
-            Assert.All(retryBaggage, pair => Assert.Equal(
-                ambientKey == "key0" && pair.Key == "key0" ? "updated" : "original", pair.Value));
-            Assert.Equal(previousTraceParent, message.Header.TraceParent);
-            Assert.Equal(original.MessageId, message.Id.Value);
-            Assert.Equal(activity.Id, retry.ApplicationProperties["cloudevents:traceparent"]);
-            Assert.Equal("vendor=state", retry.ApplicationProperties["cloudevents:tracestate"]);
+                (await Assert.That(retry.ApplicationProperties["cloudevents:baggage"]).IsTypeOf<string>()));
+            await Assert.That(retryBaggage.Count()).IsEqualTo(32);
+            foreach (var pair in retryBaggage)
+            {
+                await Assert.That(pair.Value).IsEqualTo(ambientKey == "key0" && pair.Key == "key0" ? "updated" : "original");
+            }
+            await Assert.That(message.Header.TraceParent).IsEqualTo(previousTraceParent);
+            await Assert.That(message.Id.Value).IsEqualTo(original.MessageId);
+            await Assert.That(retry.ApplicationProperties["cloudevents:traceparent"]).IsEqualTo(activity.Id);
+            await Assert.That(retry.ApplicationProperties["cloudevents:tracestate"]).IsEqualTo("vendor=state");
             if (nonFiniteHeader)
-                Assert.True(double.IsNaN(Assert.IsType<double>(retry.ApplicationProperties["measurement"])));
+                await Assert.That(double.IsNaN((await Assert.That(retry.ApplicationProperties["measurement"]).IsTypeOf<double>()))).IsTrue();
             else
-                Assert.Contains(activity.Events, e => e.Tags.Any(t =>
-                    t.Key == BrighterSemanticConventions.MessagingSystem && Equals(t.Value, "azure_service_bus")));
+                await Assert.That(System.Linq.Enumerable.Any(activity.Events, e => e.Tags.Any(t =>
+                    t.Key == BrighterSemanticConventions.MessagingSystem && Equals(t.Value, "azure_service_bus")))).IsTrue();
             await receiver.CompleteMessageAsync(retry);
         }
         finally

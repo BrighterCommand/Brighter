@@ -34,26 +34,26 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transforms.Storage;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class OptionalClaimCheckTracingTests
 {
-    [Theory]
-    [InlineData("type", false, false)]
-    [InlineData("type", true, false)]
-    [InlineData("instance", false, false)]
-    [InlineData("instance", true, false)]
-    [InlineData("factory", false, false)]
-    [InlineData("factory", true, false)]
-    [InlineData("type", false, true)]
-    [InlineData("type", true, true)]
-    [InlineData("instance", false, true)]
-    [InlineData("instance", true, true)]
-    [InlineData("factory", false, true)]
-    [InlineData("factory", true, true)]
-    public void When_registering_a_luggage_store_should_allow_optional_tracing(
+    [Test]
+    [Arguments("type", false, false)]
+    [Arguments("type", true, false)]
+    [Arguments("instance", false, false)]
+    [Arguments("instance", true, false)]
+    [Arguments("factory", false, false)]
+    [Arguments("factory", true, false)]
+    [Arguments("type", false, true)]
+    [Arguments("type", true, true)]
+    [Arguments("instance", false, true)]
+    [Arguments("instance", true, true)]
+    [Arguments("factory", false, true)]
+    [Arguments("factory", true, true)]
+    public async System.Threading.Tasks.Task When_registering_a_luggage_store_should_allow_optional_tracing(
         string registration, bool resolveAsyncFirst, bool registerTracer)
     {
         //Arrange
@@ -73,16 +73,16 @@ public class OptionalClaimCheckTracingTests
 
         //Assert
         var concrete = provider.GetRequiredService<InMemoryStorageProvider>();
-        Assert.Same(concrete, first);
-        Assert.Same(tracer, concrete.Tracer);
-        Assert.Same(concrete, provider.GetRequiredService<IAmAStorageProvider>());
-        Assert.Same(concrete, provider.GetRequiredService<IAmAStorageProviderAsync>());
-        Assert.Same(tracer, concrete.Tracer);
+        await Assert.That(first).IsSameReferenceAs(concrete);
+        await Assert.That(concrete.Tracer).IsSameReferenceAs(tracer);
+        await Assert.That(provider.GetRequiredService<IAmAStorageProvider>()).IsSameReferenceAs(concrete);
+        await Assert.That(provider.GetRequiredService<IAmAStorageProviderAsync>()).IsSameReferenceAs(concrete);
+        await Assert.That(concrete.Tracer).IsSameReferenceAs(tracer);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_posting_a_claim_checked_message_without_tracing_should_store_the_payload(bool postAsync)
     {
         //Arrange
@@ -109,26 +109,26 @@ public class OptionalClaimCheckTracingTests
             processor.Post(request);
 
         //Assert
-        var message = Assert.Single(bus.Stream(topic));
-        Assert.False(string.IsNullOrEmpty(message.Header.DataRef));
-        Assert.Equal($"Claim Check {message.Header.DataRef}", message.Body.Value);
-        Assert.Null(provider.GetService<IAmABrighterTracer>());
+        var message = await Assert.That(bus.Stream(topic)).HasSingleItem();
+        await Assert.That(string.IsNullOrEmpty(message.Header.DataRef)).IsFalse();
+        await Assert.That(message.Body.Value).IsEqualTo($"Claim Check {message.Header.DataRef}");
+        await Assert.That(provider.GetService<IAmABrighterTracer>()).IsNull();
 
         var store = provider.GetRequiredService<InMemoryStorageProvider>();
-        Assert.Null(store.Tracer);
+        await Assert.That(store.Tracer).IsNull();
 
         using var storedPayload = postAsync
             ? await store.RetrieveAsync(message.Header.DataRef!)
             : store.Retrieve(message.Header.DataRef!);
         using var reader = new StreamReader(storedPayload);
 
-        Assert.Equal(request.Text, await reader.ReadToEndAsync());
+        await Assert.That(await reader.ReadToEndAsync()).IsEqualTo(request.Text);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_no_luggage_store_is_configured_without_tracing_should_report_the_missing_store(bool resolveAsync)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async System.Threading.Tasks.Task When_no_luggage_store_is_configured_without_tracing_should_report_the_missing_store(bool resolveAsync)
     {
         //Arrange
         var services = new ServiceCollection();
@@ -136,16 +136,16 @@ public class OptionalClaimCheckTracingTests
         using var provider = services.BuildServiceProvider();
 
         //Act
-        var exception = Assert.Throws<NotImplementedException>(() =>
+        var exception = await Assert.That(() =>
         {
             if (resolveAsync)
                 provider.GetRequiredService<IAmAStorageProviderAsync>();
             else
                 provider.GetRequiredService<IAmAStorageProvider>();
-        });
+        }).ThrowsExactly<NotImplementedException>();
 
         //Assert
-        Assert.Contains("register a real store", exception.Message);
+        await Assert.That(exception.Message).Contains("register a real store");
     }
 
     private static IBrighterBuilder RegisterStore(IBrighterBuilder builder, string registration) =>

@@ -29,7 +29,7 @@ using Paramore.Brighter.BoxProvisioning.Tests.Drift;
 using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.Drift;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -40,10 +40,10 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// </summary>
 public class PostgreSqlOutboxBuilderDriftTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_postgres_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_postgres_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
         bool binaryMessagePayload)
     {
         //Arrange
@@ -67,16 +67,13 @@ public class PostgreSqlOutboxBuilderDriftTests
         migrationColumns.UnionWith(PostgreSqlOutboxHousekeeping.V1);
 
         //Assert
-        Assert.True(
-            builderColumns.SetEquals(migrationColumns),
-            $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-            $"V_latest ∪ housekeeping: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+        await Assert.That(builderColumns.SetEquals(migrationColumns)).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_postgres_outbox_v1_upscript_is_inspected_it_should_carry_the_pre_dispatched_historical_baseline(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_postgres_outbox_v1_upscript_is_inspected_it_should_carry_the_pre_dispatched_historical_baseline(
         bool binaryMessagePayload)
     {
         //Arrange
@@ -91,15 +88,15 @@ public class PostgreSqlOutboxBuilderDriftTests
         var v1 = migrations[0];
 
         //Assert
-        Assert.Equal(1, v1.Version.Value);
-        Assert.DoesNotContain("Dispatched", v1.UpScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("HeaderBag", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(v1.Version.Value).IsEqualTo(1);
+        await Assert.That((v1.UpScript).Value).DoesNotContain("Dispatched");
+        await Assert.That((v1.UpScript).Value).Contains("HeaderBag");
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_postgres_outbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_postgres_outbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
         bool binaryMessagePayload)
     {
         const string tableName = "outbox_test";
@@ -111,21 +108,21 @@ public class PostgreSqlOutboxBuilderDriftTests
         var expected = PostgreSqlOutboxBuilder.GetDDL(tableName, binaryMessagePayload);
         var actual = new PostgreSqlOutboxMigrationCatalog().FreshInstallDdl(config);
 
-        Assert.Equal(expected, actual);
+        await Assert.That(actual).IsEqualTo(expected);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_postgres_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async System.Threading.Tasks.Task When_postgres_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index(
         bool binaryMessagePayload)
     {
         const string tableName = "outbox_test";
         var ddl = PostgreSqlOutboxBuilder.GetDDL(tableName, binaryMessagePayload);
 
-        Assert.Contains("CREATE INDEX IF NOT EXISTS", ddl, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains($"idx_{tableName}_causationid", ddl, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("(causationid)", ddl, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(ddl).Contains("CREATE INDEX IF NOT EXISTS");
+        await Assert.That(ddl).Contains($"idx_{tableName}_causationid");
+        await Assert.That(ddl).Contains("(causationid)");
     }
 }
 
@@ -135,8 +132,8 @@ public class PostgreSqlOutboxBuilderDriftTests
 /// </summary>
 public class PostgreSqlInboxBuilderDriftTests
 {
-    [Fact]
-    public void When_postgres_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
+    [Test]
+    public async Task When_postgres_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
     {
         //Arrange
         const string tableName = "inbox_test";
@@ -158,14 +155,11 @@ public class PostgreSqlInboxBuilderDriftTests
         migrationColumns.UnionWith(PostgreSqlInboxHousekeeping.V1);
 
         //Assert
-        Assert.True(
-            builderColumns.SetEquals(migrationColumns),
-            $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-            $"V_latest ∪ housekeeping: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+        await Assert.That(builderColumns.SetEquals(migrationColumns)).IsTrue();
     }
 
-    [Fact]
-    public void When_postgres_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey_and_composite_pk()
+    [Test]
+    public async Task When_postgres_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey_and_composite_pk()
     {
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
@@ -175,17 +169,14 @@ public class PostgreSqlInboxBuilderDriftTests
         var migrations = new PostgreSqlInboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
-        Assert.Equal(1, v1.Version.Value);
-        Assert.Contains("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(
-            "PRIMARY KEY (CommandId, ContextKey)",
-            v1.UpScript,
-            StringComparison.OrdinalIgnoreCase);
+        await Assert.That(v1.Version.Value).IsEqualTo(1);
+        await Assert.That(v1.UpScript.Value).Contains("ContextKey");
+        await Assert.That(v1.UpScript.Value).Contains("CommandBody");
+        await Assert.That(v1.UpScript.Value).Contains("PRIMARY KEY (CommandId, ContextKey)");
     }
 
-    [Fact]
-    public void When_postgres_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder()
+    [Test]
+    public async Task When_postgres_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder()
     {
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
@@ -195,6 +186,6 @@ public class PostgreSqlInboxBuilderDriftTests
         var expected = PostgreSqlInboxBuilder.GetDDL(tableName, config.BinaryMessagePayload);
         var actual = new PostgreSqlInboxMigrationCatalog().FreshInstallDdl(config);
 
-        Assert.Equal(expected, actual);
+        await Assert.That(actual).IsEqualTo(expected);
     }
 }

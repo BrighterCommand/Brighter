@@ -9,17 +9,16 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Polly.Registry;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
-[Collection(ThreadPoolStarvationCollection.Name)]
+[NotInParallel]
 public class TimedOutboxSweeperStarvationTests
 {
     private static readonly TimeSpan s_waitForSweep = TimeSpan.FromSeconds(3);
 
-    [Fact]
-    public void When_thread_pool_workers_are_all_blocked_should_still_sweep_the_outbox()
+    [Test]
+    public async Task When_thread_pool_workers_are_all_blocked_should_still_sweep_the_outbox()
     {
         //Arrange
         var routingKey = new RoutingKey("MyCommand");
@@ -49,7 +48,7 @@ public class TimedOutboxSweeperStarvationTests
             var swept = SpinWait.SpinUntil(() => bus.Stream(routingKey).Any(), s_waitForSweep);
 
             //Assert
-            Assert.True(swept, $"The sweeper did not dispatch the outstanding message within {s_waitForSweep} while every thread-pool worker was blocked");
+            await Assert.That(swept).IsTrue().Because($"The sweeper did not dispatch the outstanding message within {s_waitForSweep} while every thread-pool worker was blocked");
         }
         finally
         {

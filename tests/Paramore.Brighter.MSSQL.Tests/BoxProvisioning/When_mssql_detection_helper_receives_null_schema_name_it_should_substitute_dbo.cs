@@ -26,7 +26,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -34,12 +33,12 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// Every <see cref="MsSqlBoxDetectionHelper"/> query treats a null schema as <c>dbo</c>
 /// (ADR 0058 §A.1).
 /// </summary>
-public class MsSqlDetectionHelperNullSchemaTests : IAsyncLifetime
+public class MsSqlDetectionHelperNullSchemaTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_mssql_detection_helper_receives_null_schema_name_it_should_substitute_dbo()
     {
         // Arrange
@@ -59,23 +58,23 @@ public class MsSqlDetectionHelperNullSchemaTests : IAsyncLifetime
         // Act + Assert
         var existsWithDbo = await helper.DoesTableExistAsync(connection, tableName, "dbo");
         var existsWithNull = await helper.DoesTableExistAsync(connection, tableName, schemaName: null);
-        Assert.True(existsWithDbo);
-        Assert.True(existsWithNull);
+        await Assert.That(existsWithDbo).IsTrue();
+        await Assert.That(existsWithNull).IsTrue();
 
         var historyWithDbo = await helper.DoesHistoryExistAsync(connection, tableName, "dbo", historySchema: null);
         var historyWithNull = await helper.DoesHistoryExistAsync(connection, tableName, schemaName: null, historySchema: null);
-        Assert.True(historyWithDbo);
-        Assert.True(historyWithNull);
+        await Assert.That(historyWithDbo).IsTrue();
+        await Assert.That(historyWithNull).IsTrue();
 
         var maxWithDbo = await helper.GetMaxVersionAsync(connection, tableName, "dbo", historySchema: null);
         var maxWithNull = await helper.GetMaxVersionAsync(connection, tableName, schemaName: null, historySchema: null);
-        Assert.Equal(3, maxWithDbo);
-        Assert.Equal(3, maxWithNull);
+        await Assert.That(maxWithDbo).IsEqualTo(3);
+        await Assert.That(maxWithNull).IsEqualTo(3);
 
         var colsWithDbo = await helper.GetTableColumnsAsync(connection, tableName, "dbo");
         var colsWithNull = await helper.GetTableColumnsAsync(connection, tableName, schemaName: null);
-        Assert.Contains("HeaderBag", colsWithDbo);
-        Assert.Contains("HeaderBag", colsWithNull);
+        await Assert.That(colsWithDbo).Contains("HeaderBag");
+        await Assert.That(colsWithNull).Contains("HeaderBag");
     }
 
     private string TrackTable(string tableName)
@@ -120,8 +119,10 @@ VALUES (@MigrationVersion, @SchemaName, @BoxTableName, @Description)";
         command.ExecuteNonQuery();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

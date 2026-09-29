@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Bus;
 
 public class InternalBusConcurrentEnqueueTests
 {
-    [Fact]
-    public void When_concurrently_enqueueing_to_a_fresh_routing_key_no_messages_are_lost()
+    [Test]
+    public async Task When_concurrently_enqueueing_to_a_fresh_routing_key_no_messages_are_lost()
     {
         // Reproduces issue #4098: TOCTOU race in InternalBus.Enqueue caused the
         // losing thread of a concurrent first-write to enqueue into a dangling
@@ -46,9 +45,9 @@ public class InternalBusConcurrentEnqueueTests
             }
         }
 
-        Assert.True(
-            lostIterations.Count == 0,
-            $"InternalBus dropped messages on {lostIterations.Count}/{iterations} iterations: " +
-            string.Join("; ", lostIterations.Take(5).Select(l => $"{l.Topic} expected={l.Expected} actual={l.Actual}")));
+        await Assert.That(lostIterations.Count).IsEqualTo(0)
+            .Because(
+                $"InternalBus dropped messages on {lostIterations.Count}/{iterations} iterations: " +
+                string.Join("; ", lostIterations.Take(5).Select(l => $"{l.Topic} expected={l.Expected} actual={l.Actual}")));
     }
 }

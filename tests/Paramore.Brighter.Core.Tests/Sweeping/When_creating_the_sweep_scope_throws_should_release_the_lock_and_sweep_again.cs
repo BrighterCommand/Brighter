@@ -10,7 +10,6 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -18,7 +17,7 @@ public class TimedOutboxSweeperScopeFailureTests
 {
     private static readonly TimeSpan s_waitForSweep = TimeSpan.FromSeconds(3);
 
-    [Fact]
+    [Test]
     public async Task When_creating_the_sweep_scope_throws_should_release_the_lock_and_sweep_again()
     {
         //Arrange
@@ -47,7 +46,7 @@ public class TimedOutboxSweeperScopeFailureTests
         sweeper.Dispose();
 
         //Assert
-        Assert.True(swept, $"The sweeper did not sweep again within {s_waitForSweep} after failing to create its scope");
+        await Assert.That(swept).IsTrue().Because($"The sweeper did not sweep again within {s_waitForSweep} after failing to create its scope");
     }
 
     private static OutboxProducerMediator<Message, CommittableTransaction> CreateMediator(

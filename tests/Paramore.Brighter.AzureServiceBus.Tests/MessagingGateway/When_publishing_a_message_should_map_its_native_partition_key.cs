@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -26,23 +27,22 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusNativePartitionKeyPublishingTests
 {
-    [Theory]
-    [InlineData("101", null, "101")]
-    [InlineData(" ", null, " ")]
-    [InlineData("", null, null)]
-    [InlineData(null, null, null)]
-    [InlineData("101", "101", "101")]
-    [InlineData("101", "session-42", "session-42")]
-    [InlineData("", "session-42", null)]
-    [InlineData(null, "session-42", null)]
-    public void When_publishing_a_message_should_map_its_native_partition_key(
+    [Test]
+    [Arguments("101", null, "101")]
+    [Arguments(" ", null, " ")]
+    [Arguments("", null, null)]
+    [Arguments(null, null, null)]
+    [Arguments("101", "101", "101")]
+    [Arguments("101", "session-42", "session-42")]
+    [Arguments("", "session-42", null)]
+    [Arguments(null, "session-42", null)]
+    public async System.Threading.Tasks.Task When_publishing_a_message_should_map_its_native_partition_key(
         string? partitionKey, string? sessionId, string? expectedNativeKey)
     {
         // Arrange
@@ -56,13 +56,13 @@ public class AzureServiceBusNativePartitionKeyPublishingTests
         var published = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message);
 
         // Assert
-        Assert.Equal(expectedNativeKey, published.PartitionKey);
-        Assert.Equal(sessionId, published.SessionId);
-        Assert.Equal(partitionKey ?? string.Empty, published.ApplicationProperties["cloudEvents:partitionkey"]);
+        await Assert.That(published.PartitionKey).IsEqualTo(expectedNativeKey);
+        await Assert.That(published.SessionId).IsEqualTo(sessionId);
+        await Assert.That(published.ApplicationProperties["cloudEvents:partitionkey"]).IsEqualTo(partitionKey ?? string.Empty);
     }
 
-    [Fact]
-    public void When_partition_key_has_maximum_native_length_should_publish_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_partition_key_has_maximum_native_length_should_publish_it()
     {
         // Arrange
         var partitionKey = new string('a', 128);
@@ -74,12 +74,12 @@ public class AzureServiceBusNativePartitionKeyPublishingTests
         var published = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message);
 
         // Assert
-        Assert.Equal(partitionKey, published.PartitionKey);
-        Assert.Equal(partitionKey, published.ApplicationProperties["cloudEvents:partitionkey"]);
+        await Assert.That(published.PartitionKey).IsEqualTo(partitionKey);
+        await Assert.That(published.ApplicationProperties["cloudEvents:partitionkey"]).IsEqualTo(partitionKey);
     }
 
-    [Fact]
-    public void When_partition_key_exceeds_native_length_limit_should_reject_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_partition_key_exceeds_native_length_limit_should_reject_it()
     {
         // Arrange
         var header = new MessageHeader(Id.Random(), new RoutingKey("orders"), MessageType.MT_EVENT,
@@ -87,10 +87,9 @@ public class AzureServiceBusNativePartitionKeyPublishingTests
         var message = new Message(header, new MessageBody("{}"));
 
         // Act
-        var exception = Assert.Throws<ArgumentOutOfRangeException>(
-            () => AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message));
+        var exception = await Assert.That(() => AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message)).ThrowsExactly<ArgumentOutOfRangeException>();
 
         // Assert
-        Assert.Equal("value", exception.ParamName);
+        await Assert.That(exception.ParamName).IsEqualTo("value");
     }
 }

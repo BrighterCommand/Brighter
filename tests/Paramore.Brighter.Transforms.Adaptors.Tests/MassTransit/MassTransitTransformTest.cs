@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transformers.MassTransit;
-using Xunit;
 
 namespace Paramore.Brighter.Transforms.Adaptors.Tests.MassTransit;
 
@@ -11,45 +10,45 @@ public class MassTransitTransformTest
 {
     private readonly MassTransitTransform _transform = new();
 
-    [Fact]
-    public void wrap_should_use_default_value()
+    [Test]
+    public async Task wrap_should_use_default_value()
     {
         var message = new Message(
             new MessageHeader
             {
-                MessageId = Id.Random(), 
-                CorrelationId = Id.Random(), 
+                MessageId = Id.Random(),
+                CorrelationId = Id.Random(),
                 TimeStamp = DateTimeOffset.UtcNow
             },
             new MessageBody("{\"test\": \"234\"}"));
-        
+
         var wrap = _transform.Wrap(message, new Publication());
 
         var envelop =
             JsonSerializer.Deserialize<MassTransitMessageEnvelop<JsonElement>>(wrap.Body.Bytes,
                 JsonSerialisationOptions.Options);
-        Assert.NotNull(envelop);
-        Assert.Null(envelop.ConversationId);
-        Assert.Null(envelop.DestinationAddress);
-        Assert.Null(envelop.FaultAddress);
-        Assert.Null(envelop.MessageType);
-        Assert.Null(envelop.RequestId);
-        Assert.Null(envelop.ResponseAddress);
-        Assert.Null(envelop.SourceAddress);
-        Assert.Null(envelop.ExpirationTime);
-        Assert.Equal(message.Header.MessageId, envelop.MessageId);
-        Assert.Equal(message.Header.CorrelationId, envelop.CorrelationId);
-        Assert.Equal(message.Header.TimeStamp.DateTime, envelop.SentTime);
+        await Assert.That(envelop).IsNotNull();
+        await Assert.That(envelop.ConversationId is null).IsTrue();
+        await Assert.That(envelop.DestinationAddress).IsNull();
+        await Assert.That(envelop.FaultAddress).IsNull();
+        await Assert.That(envelop.MessageType).IsNull();
+        await Assert.That(envelop.RequestId is null).IsTrue();
+        await Assert.That(envelop.ResponseAddress).IsNull();
+        await Assert.That(envelop.SourceAddress).IsNull();
+        await Assert.That(envelop.ExpirationTime).IsNull();
+        await Assert.That(envelop.MessageId?.Value).IsEqualTo(message.Header.MessageId.Value);
+        await Assert.That(envelop.CorrelationId?.Value).IsEqualTo(message.Header.CorrelationId.Value);
+        await Assert.That(envelop.SentTime).IsEqualTo(message.Header.TimeStamp.DateTime);
     }
-    
-    [Fact]
-    public void wrap_should_use_from_request_context()
+
+    [Test]
+    public async Task wrap_should_use_from_request_context()
     {
         var message = new Message(
             new MessageHeader
             {
-                MessageId = Id.Random(), 
-                CorrelationId = Id.Random(), 
+                MessageId = Id.Random(),
+                CorrelationId = Id.Random(),
                 TimeStamp = DateTimeOffset.UtcNow
             },
             new MessageBody("{\"test\": \"234\"}"));
@@ -79,34 +78,34 @@ public class MassTransitTransformTest
                 [MassTransitHeaderNames.SourceAddress] = sourceAddress
             }
         };
-        
+
         var wrap = _transform.Wrap(message, new Publication());
 
         var envelop =
             JsonSerializer.Deserialize<MassTransitMessageEnvelop<JsonElement>>(wrap.Body.Bytes,
                 JsonSerialisationOptions.Options);
-        Assert.NotNull(envelop);
-        Assert.Equal(conversationId, envelop.ConversationId?.Value);
-        Assert.Equal(destinationAddress, envelop.DestinationAddress?.ToString());
-        Assert.Equal(faultAddress, envelop.FaultAddress?.ToString());
-        Assert.Equal(messageType, envelop.MessageType);
-        Assert.Equal(requestId, envelop.RequestId?.Value);
-        Assert.Equal(responseAddress, envelop.ResponseAddress?.ToString());
-        Assert.Equal(sourceAddress, envelop.SourceAddress?.ToString());
-        Assert.Equal(expirationTime, envelop.ExpirationTime);
-        Assert.Equal(message.Header.MessageId, envelop.MessageId);
-        Assert.Equal(message.Header.CorrelationId, envelop.CorrelationId);
-        Assert.Equal(message.Header.TimeStamp.DateTime, envelop.SentTime);
+        await Assert.That(envelop).IsNotNull();
+        await Assert.That(envelop.ConversationId?.Value).IsEqualTo(conversationId);
+        await Assert.That(envelop.DestinationAddress?.ToString()).IsEqualTo(destinationAddress);
+        await Assert.That(envelop.FaultAddress?.ToString()).IsEqualTo(faultAddress);
+        await Assert.That(envelop.MessageType).IsEquivalentTo(messageType);
+        await Assert.That(envelop.RequestId?.Value).IsEqualTo(requestId);
+        await Assert.That(envelop.ResponseAddress?.ToString()).IsEqualTo(responseAddress);
+        await Assert.That(envelop.SourceAddress?.ToString()).IsEqualTo(sourceAddress);
+        await Assert.That(envelop.ExpirationTime).IsEqualTo(expirationTime);
+        await Assert.That(envelop.MessageId).IsEqualTo(message.Header.MessageId);
+        await Assert.That(envelop.CorrelationId).IsEqualTo(message.Header.CorrelationId);
+        await Assert.That(envelop.SentTime).IsEqualTo(message.Header.TimeStamp.DateTime);
     }
-    
-    [Fact]
-    public void wrap_should_use_from_transform()
+
+    [Test]
+    public async Task wrap_should_use_from_transform()
     {
         var message = new Message(
             new MessageHeader
             {
-                MessageId = Id.Random(), 
-                CorrelationId = Id.Random(), 
+                MessageId = Id.Random(),
+                CorrelationId = Id.Random(),
                 TimeStamp = DateTimeOffset.UtcNow
             },
             new MessageBody("{\"test\": \"234\"}"));
@@ -131,36 +130,36 @@ public class MassTransitTransformTest
                 [MassTransitHeaderNames.RequestId] = requestId
             }
         };
-        
+
         _transform.InitializeWrapFromAttributeParams(destinationAddress, faultAddress, responseAddress, sourceAddress, messageType);
-        
+
         var wrap = _transform.Wrap(message, new Publication());
 
         var envelop =
             JsonSerializer.Deserialize<MassTransitMessageEnvelop<JsonElement>>(wrap.Body.Bytes,
                 JsonSerialisationOptions.Options);
-        Assert.NotNull(envelop);
-        Assert.Equal(conversationId, envelop.ConversationId?.Value);
-        Assert.Equal(destinationAddress, envelop.DestinationAddress?.ToString());
-        Assert.Equal(faultAddress, envelop.FaultAddress?.ToString());
-        Assert.Equal(messageType, envelop.MessageType);
-        Assert.Equal(requestId, envelop.RequestId?.Value);
-        Assert.Equal(responseAddress, envelop.ResponseAddress?.ToString());
-        Assert.Equal(sourceAddress, envelop.SourceAddress?.ToString());
-        Assert.Equal(expirationTime, envelop.ExpirationTime);
-        Assert.Equal(message.Header.MessageId, envelop.MessageId);
-        Assert.Equal(message.Header.CorrelationId, envelop.CorrelationId);
-        Assert.Equal(message.Header.TimeStamp.DateTime, envelop.SentTime);
+        await Assert.That(envelop).IsNotNull();
+        await Assert.That(envelop.ConversationId?.Value).IsEqualTo(conversationId);
+        await Assert.That(envelop.DestinationAddress?.ToString()).IsEqualTo(destinationAddress);
+        await Assert.That(envelop.FaultAddress?.ToString()).IsEqualTo(faultAddress);
+        await Assert.That(envelop.MessageType).IsEquivalentTo(messageType);
+        await Assert.That(envelop.RequestId?.Value).IsEqualTo(requestId);
+        await Assert.That(envelop.ResponseAddress?.ToString()).IsEqualTo(responseAddress);
+        await Assert.That(envelop.SourceAddress?.ToString()).IsEqualTo(sourceAddress);
+        await Assert.That(envelop.ExpirationTime).IsEqualTo(expirationTime);
+        await Assert.That(envelop.MessageId).IsEqualTo(message.Header.MessageId);
+        await Assert.That(envelop.CorrelationId).IsEqualTo(message.Header.CorrelationId);
+        await Assert.That(envelop.SentTime).IsEqualTo(message.Header.TimeStamp.DateTime);
     }
-    
-    [Fact]
-    public void unwrap()
+
+    [Test]
+    public async Task unwrap()
     {
         var message = new Message(
             new MessageHeader
             {
-                MessageId = Id.Random(), 
-                CorrelationId = Id.Random(), 
+                MessageId = Id.Random(),
+                CorrelationId = Id.Random(),
                 TimeStamp = DateTimeOffset.UtcNow,
                 Bag =  new Dictionary<string, object>
                 {
@@ -189,27 +188,27 @@ public class MassTransitTransformTest
                 [MassTransitHeaderNames.RequestId] = requestId
             }
         };
-        
+
         _transform.InitializeWrapFromAttributeParams(destinationAddress, faultAddress, responseAddress, sourceAddress, messageType);
-        
+
         var wrap = _transform.Wrap(message, new Publication());
 
         var envelop =
             JsonSerializer.Deserialize<MassTransitMessageEnvelop<JsonElement>>(wrap.Body.Bytes,
                 JsonSerialisationOptions.Options);
-        Assert.NotNull(envelop);
-        Assert.Equal(conversationId, envelop.ConversationId?.Value);
-        Assert.Equal(destinationAddress, envelop.DestinationAddress?.ToString());
-        Assert.Equal(faultAddress, envelop.FaultAddress?.ToString());
-        Assert.Equal(messageType, envelop.MessageType);
-        Assert.Equal(requestId, envelop.RequestId?.Value);
-        Assert.Equal(responseAddress, envelop.ResponseAddress?.ToString());
-        Assert.Equal(sourceAddress, envelop.SourceAddress?.ToString());
-        Assert.Equal(expirationTime, envelop.ExpirationTime);
-        Assert.Equal(message.Header.MessageId, envelop.MessageId);
-        Assert.Equal(message.Header.CorrelationId, envelop.CorrelationId);
-        Assert.Equal(message.Header.TimeStamp.DateTime, envelop.SentTime);
-        Assert.Single(message.Header.Bag);
+        await Assert.That(envelop).IsNotNull();
+        await Assert.That(envelop.ConversationId?.Value).IsEqualTo(conversationId);
+        await Assert.That(envelop.DestinationAddress?.ToString()).IsEqualTo(destinationAddress);
+        await Assert.That(envelop.FaultAddress?.ToString()).IsEqualTo(faultAddress);
+        await Assert.That(envelop.MessageType).IsEquivalentTo(messageType);
+        await Assert.That(envelop.RequestId?.Value).IsEqualTo(requestId);
+        await Assert.That(envelop.ResponseAddress?.ToString()).IsEqualTo(responseAddress);
+        await Assert.That(envelop.SourceAddress?.ToString()).IsEqualTo(sourceAddress);
+        await Assert.That(envelop.ExpirationTime).IsEqualTo(expirationTime);
+        await Assert.That(envelop.MessageId).IsEqualTo(message.Header.MessageId);
+        await Assert.That(envelop.CorrelationId).IsEqualTo(message.Header.CorrelationId);
+        await Assert.That(envelop.SentTime).IsEqualTo(message.Header.TimeStamp.DateTime);
+        await Assert.That(message.Header.Bag).HasSingleItem();
     }
 
     public class SomeEvent() : Event(Guid.NewGuid())

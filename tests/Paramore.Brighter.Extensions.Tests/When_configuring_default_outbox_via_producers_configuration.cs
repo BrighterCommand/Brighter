@@ -24,16 +24,14 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class DefaultOutboxConfigurationTests
 {
-    [Fact]
-    public void When_custom_box_configuration_set_should_apply_to_default_outbox()
+    [Test]
+    public async Task When_custom_box_configuration_set_should_apply_to_default_outbox()
     {
-        // Arrange
         var services = new ServiceCollection();
         services.AddBrighter()
             .AddProducers(config =>
@@ -46,35 +44,31 @@ public class DefaultOutboxConfigurationTests
             });
         var provider = services.BuildServiceProvider();
 
-        // Act
         var outbox = provider.GetRequiredService<IAmAnOutbox>();
 
-        // Assert — should be an InMemoryOutbox with the custom configuration values
-        var inMemoryOutbox = Assert.IsType<InMemoryOutbox>(outbox);
-        Assert.Equal(8192, inMemoryOutbox.EntryLimit);
-        Assert.Equal(TimeSpan.FromMinutes(10), inMemoryOutbox.EntryTimeToLive);
+        await Assert.That(outbox).IsTypeOf<InMemoryOutbox>();
+        var inMemoryOutbox = (InMemoryOutbox)outbox;
+        await Assert.That(inMemoryOutbox.EntryLimit).IsEqualTo(8192);
+        await Assert.That(inMemoryOutbox.EntryTimeToLive).IsEqualTo(TimeSpan.FromMinutes(10));
     }
 
-    [Fact]
-    public void When_no_box_configuration_set_should_use_defaults()
+    [Test]
+    public async Task When_no_box_configuration_set_should_use_defaults()
     {
-        // Arrange
         var services = new ServiceCollection();
         services.AddBrighter()
             .AddProducers(config =>
             {
-                // No DefaultBoxConfiguration set
             });
         var provider = services.BuildServiceProvider();
 
-        // Act
         var outbox = provider.GetRequiredService<IAmAnOutbox>();
 
-        // Assert — should be an InMemoryOutbox with the built-in defaults
-        var inMemoryOutbox = Assert.IsType<InMemoryOutbox>(outbox);
-        Assert.Equal(2048, inMemoryOutbox.EntryLimit);
-        Assert.Equal(TimeSpan.FromMinutes(5), inMemoryOutbox.EntryTimeToLive);
-        Assert.Equal(TimeSpan.FromMinutes(10), inMemoryOutbox.ExpirationScanInterval);
-        Assert.Equal(0.5, inMemoryOutbox.CompactionPercentage);
+        await Assert.That(outbox).IsTypeOf<InMemoryOutbox>();
+        var inMemoryOutbox = (InMemoryOutbox)outbox;
+        await Assert.That(inMemoryOutbox.EntryLimit).IsEqualTo(2048);
+        await Assert.That(inMemoryOutbox.EntryTimeToLive).IsEqualTo(TimeSpan.FromMinutes(5));
+        await Assert.That(inMemoryOutbox.ExpirationScanInterval).IsEqualTo(TimeSpan.FromMinutes(10));
+        await Assert.That(inMemoryOutbox.CompactionPercentage).IsEqualTo(0.5);
     }
 }

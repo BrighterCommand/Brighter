@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,14 +25,13 @@ THE SOFTWARE. */
 
 using System.Linq;
 using Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration;
 
 public class ChannelFactoryDeclarationSweepGenericSubscriptionTests
 {
-    [Fact]
-    public void When_a_generic_subscription_declares_its_own_override_should_report_the_open_definition()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_generic_subscription_declares_its_own_override_should_report_the_open_definition()
     {
         // Arrange
         // Evident Data: an open generic Subscription subclass declaring its own sound override;
@@ -45,6 +45,6 @@ public class ChannelFactoryDeclarationSweepGenericSubscriptionTests
         // The reported Subject is the open definition itself, not a closed construction - the closed
         // type exists only so an instance can be produced to read ChannelFactoryType from
         var entry = result.Single(e => e.Subject == openDefinition);
-        Assert.Null(entry.Reason);
+        await Assert.That(entry.Reason).IsNull();
     }
 }

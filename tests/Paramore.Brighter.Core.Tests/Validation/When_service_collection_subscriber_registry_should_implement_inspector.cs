@@ -19,22 +19,17 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class ServiceCollectionSubscriberRegistryInspectorTests
 {
     private readonly ServiceCollectionSubscriberRegistry _registry;
-
     public ServiceCollectionSubscriberRegistryInspectorTests()
     {
         // Arrange
@@ -43,36 +38,33 @@ public class ServiceCollectionSubscriberRegistryInspectorTests
         _registry.Register<MyDescribableCommand, MyPublicSyncHandler>();
     }
 
-    [Fact]
-    public void When_cast_to_inspector_should_return_registered_request_types()
+    [Test]
+    public async Task When_cast_to_inspector_should_return_registered_request_types()
     {
         // Act
         var inspector = (IAmASubscriberRegistryInspector)_registry;
         var requestTypes = inspector.GetRegisteredRequestTypes();
-
         // Assert
-        Assert.Contains(typeof(MyDescribableCommand), requestTypes);
+        await Assert.That(requestTypes).Contains(typeof(MyDescribableCommand));
     }
 
-    [Fact]
-    public void When_cast_to_inspector_should_return_handler_types_for_request()
+    [Test]
+    public async Task When_cast_to_inspector_should_return_handler_types_for_request()
     {
         // Act
         var inspector = (IAmASubscriberRegistryInspector)_registry;
         var handlerTypes = inspector.GetHandlerTypes(typeof(MyDescribableCommand));
-
         // Assert
-        Assert.Contains(typeof(MyPublicSyncHandler), handlerTypes);
+        await Assert.That(handlerTypes).Contains(typeof(MyPublicSyncHandler));
     }
 
-    [Fact]
-    public void When_cast_to_inspector_should_return_empty_for_unregistered_request()
+    [Test]
+    public async Task When_cast_to_inspector_should_return_empty_for_unregistered_request()
     {
         // Act
         var inspector = (IAmASubscriberRegistryInspector)_registry;
         var handlerTypes = inspector.GetHandlerTypes(typeof(MyBareRequest));
-
         // Assert
-        Assert.Empty(handlerTypes);
+        await Assert.That(handlerTypes).IsEmpty();
     }
 }

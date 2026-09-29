@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +25,13 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusChannelAssumeTests
 {
-    [Fact]
-    public void When_creating_a_channel_with_assume_should_make_no_administration_requests()
+    [Test]
+    public async Task When_creating_a_channel_with_assume_should_make_no_administration_requests()
     {
         // Arrange
         var administrationClient = new InMemoryServiceBusAdministrationClient();
@@ -51,6 +50,6 @@ public class AzureServiceBusChannelAssumeTests
         using var channel = factory.CreateSyncChannel(subscription);
 
         // Assert
-        Assert.Equal(0, administrationClient.RequestCount);
+        await Assert.That(administrationClient.RequestCount).IsEqualTo(0);
     }
 }

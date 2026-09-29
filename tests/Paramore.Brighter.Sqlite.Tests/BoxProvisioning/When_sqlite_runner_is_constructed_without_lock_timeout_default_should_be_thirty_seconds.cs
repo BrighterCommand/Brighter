@@ -30,7 +30,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -38,7 +37,7 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// A runner constructed without a lockTimeout passes a 30-second default to the unit of work's
 /// BeginAsync. The spy unit of work records it, then throws to stop the migration.
 /// </summary>
-public class RunnerDefaultLockTimeoutTests : IAsyncLifetime
+public class RunnerDefaultLockTimeoutTests
 {
     // Per-test DB file, so the test does not interact with sibling tests on test.db.
     private readonly string _dbPath = Path.Combine(
@@ -51,7 +50,7 @@ public class RunnerDefaultLockTimeoutTests : IAsyncLifetime
         _connectionString = $"Data Source={_dbPath}";
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds()
     {
         //Arrange
@@ -61,17 +60,19 @@ public class RunnerDefaultLockTimeoutTests : IAsyncLifetime
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
-        await Assert.ThrowsAsync<TimeoutException>(() => capturingRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, freshHint));
+        await Assert.That(() => capturingRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, freshHint)).ThrowsExactly<TimeoutException>();
 
         //Assert
         var spy = capturingRunner.LastUnitOfWork;
-        Assert.NotNull(spy);
-        Assert.Equal(TimeSpan.FromSeconds(30), spy!.CapturedLockTimeout);
+        await Assert.That(spy).IsNotNull();
+        await Assert.That(spy!.CapturedLockTimeout).IsEqualTo(TimeSpan.FromSeconds(30));
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         SqliteConnection.ClearAllPools();

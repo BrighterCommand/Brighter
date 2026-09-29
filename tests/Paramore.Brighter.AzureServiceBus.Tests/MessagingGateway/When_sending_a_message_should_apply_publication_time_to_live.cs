@@ -1,18 +1,15 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia <irakli.gabisonia94@gmail.com>
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -33,7 +30,7 @@ using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
+
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
@@ -72,8 +69,8 @@ public class AzureServiceBusPublicationTimeToLiveTests
         }
     }
 
-    [Theory]
-    [MemberData(nameof(SendCases))]
+    [Test]
+    [MethodDataSource(nameof(SendCases))]
     public async Task When_sending_a_message_should_apply_publication_time_to_live(
         bool useQueues, bool useAsync, bool scheduled, TimeSpan? timeToLive)
     {
@@ -100,15 +97,15 @@ public class AzureServiceBusPublicationTimeToLiveTests
         }
 
         // Assert
-        AssertMessage(Assert.Single(_sender.SentMessages), message, timeToLive);
+        await AssertMessage((await Assert.That(_sender.SentMessages).HasSingleItem()), message, timeToLive);
         if (scheduled)
-            Assert.Same(_sender.SentMessages[0], Assert.Single(_sender.ScheduledMessages));
+            await Assert.That((await Assert.That(_sender.ScheduledMessages).HasSingleItem())).IsSameReferenceAs(_sender.SentMessages[0]);
         else
-            Assert.Empty(_sender.ScheduledMessages);
+            await Assert.That(_sender.ScheduledMessages).IsEmpty();
     }
 
-    [Theory]
-    [MemberData(nameof(BatchCases))]
+    [Test]
+    [MethodDataSource(nameof(BatchCases))]
     public async Task When_sending_batches_should_apply_publication_time_to_live_to_every_message(
         bool useQueues, int batchCapacity, TimeSpan? timeToLive)
     {
@@ -119,7 +116,9 @@ public class AzureServiceBusPublicationTimeToLiveTests
         var attempts = 0;
         _sender.TryAddMessageCallBack = message =>
         {
-            Assert.Equal(timeToLive, message.GetRawAmqpMessage().Header.TimeToLive);
+#pragma warning disable TUnitAssertions0002 // Synchronous callback: the assertion is executed by GetResult.
+            Assert.That(message.GetRawAmqpMessage().Header.TimeToLive).IsEqualTo(timeToLive).GetAwaiter().GetResult();
+#pragma warning restore TUnitAssertions0002
             attempts++;
             return batchCapacity > 0 && attempts % (batchCapacity + 1) != 0;
         };
@@ -130,24 +129,30 @@ public class AzureServiceBusPublicationTimeToLiveTests
             await producer.SendAsync(batch, default);
 
         // Assert
-        Assert.Equal(batchCapacity == 2 ? 1 : 2, batches.Length);
-        Assert.Equal(messages.Length, _sender.SentMessages.Count);
+        await Assert.That(batches.Length).IsEqualTo(batchCapacity == 2 ? 1 : 2);
+        await Assert.That(_sender.SentMessages.Count).IsEqualTo(messages.Length);
         if (batchCapacity == 0)
-            Assert.All(batches, batch => Assert.IsType<AzureServiceBusSingleMessageBatch>(batch));
+            foreach (var batch in batches)
+{
+    await Assert.That(batch).IsTypeOf<AzureServiceBusSingleMessageBatch>();
+}
         else
-            Assert.All(batches, batch => Assert.IsType<AzureServiceBusMessageBatch>(batch));
+            foreach (var batch in batches)
+{
+    await Assert.That(batch).IsTypeOf<AzureServiceBusMessageBatch>();
+}
         foreach (var message in messages)
         {
-            var sent = Assert.Single(_sender.SentMessages, sent => sent.MessageId == message.Id.Value);
-            AssertMessage(sent, message, timeToLive);
+            var sent = await Assert.That(_sender.SentMessages).HasSingleItem(sent => sent.MessageId == message.Id.Value);
+            await AssertMessage(sent, message, timeToLive);
         }
     }
 
-    [Theory]
-    [InlineData(false, null)]
-    [InlineData(true, null)]
-    [InlineData(false, 300)]
-    [InlineData(true, 300)]
+    [Test]
+    [Arguments(false, null)]
+    [Arguments(true, null)]
+    [Arguments(false, 300)]
+    [Arguments(true, 300)]
     public async Task When_a_batch_contains_an_oversized_message_should_preserve_time_to_live_for_all_messages(
         bool useQueues, int? seconds)
     {
@@ -161,7 +166,9 @@ public class AzureServiceBusPublicationTimeToLiveTests
         Message[] messages = [firstMessage, oversizedMessage, lastMessage];
         _sender.TryAddMessageCallBack = message =>
         {
-            Assert.Equal(timeToLive, message.GetRawAmqpMessage().Header.TimeToLive);
+#pragma warning disable TUnitAssertions0002 // Synchronous callback: the assertion is executed by GetResult.
+            Assert.That(message.GetRawAmqpMessage().Header.TimeToLive).IsEqualTo(timeToLive).GetAwaiter().GetResult();
+#pragma warning restore TUnitAssertions0002
             return message.MessageId != oversizedMessage.Id.Value;
         };
 
@@ -171,18 +178,18 @@ public class AzureServiceBusPublicationTimeToLiveTests
             await producer.SendAsync(batch, default);
 
         // Assert
-        Assert.Equal(2, batches.OfType<AzureServiceBusMessageBatch>().Count());
-        Assert.Single(batches.OfType<AzureServiceBusSingleMessageBatch>());
-        Assert.Equal(messages.Length, _sender.SentMessages.Count);
+        await Assert.That(batches.OfType<AzureServiceBusMessageBatch>().Count()).IsEqualTo(2);
+        await Assert.That(batches.OfType<AzureServiceBusSingleMessageBatch>()).HasSingleItem();
+        await Assert.That(_sender.SentMessages.Count).IsEqualTo(messages.Length);
         foreach (var message in messages)
         {
-            var sent = Assert.Single(_sender.SentMessages, sent => sent.MessageId == message.Id.Value);
-            AssertMessage(sent, message, timeToLive);
+            var sent = await Assert.That(_sender.SentMessages).HasSingleItem(sent => sent.MessageId == message.Id.Value);
+            await AssertMessage(sent, message, timeToLive);
         }
     }
 
-    [Fact]
-    public void When_publication_time_to_live_is_not_configured_should_use_entity_default()
+    [Test]
+    public async System.Threading.Tasks.Task When_publication_time_to_live_is_not_configured_should_use_entity_default()
     {
         // Arrange
         var publication = new AzureServiceBusPublication();
@@ -191,33 +198,32 @@ public class AzureServiceBusPublicationTimeToLiveTests
         var timeToLive = publication.TimeToLive;
 
         // Assert
-        Assert.Null(timeToLive);
-        Assert.Null(_publication.TimeToLive);
+        await Assert.That(timeToLive).IsNull();
+        await Assert.That(_publication.TimeToLive).IsNull();
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(long.MinValue)]
-    public void When_publication_time_to_live_is_not_positive_should_reject_value(long ticks)
+    [Test]
+    [Arguments(0)]
+    [Arguments(-1)]
+    [Arguments(long.MinValue)]
+    public async System.Threading.Tasks.Task When_publication_time_to_live_is_not_positive_should_reject_value(long ticks)
     {
         // Arrange
         var originalTimeToLive = TimeSpan.FromMinutes(5);
         _publication.TimeToLive = originalTimeToLive;
 
         // Act
-        var exception = Assert.Throws<ArgumentOutOfRangeException>(
-            () => _publication.TimeToLive = TimeSpan.FromTicks(ticks));
+        var exception = await Assert.That(() => _publication.TimeToLive = TimeSpan.FromTicks(ticks)).ThrowsExactly<ArgumentOutOfRangeException>();
 
         // Assert
-        Assert.Equal("value", exception.ParamName);
-        Assert.Equal(originalTimeToLive, _publication.TimeToLive);
+        await Assert.That(exception.ParamName).IsEqualTo("value");
+        await Assert.That(_publication.TimeToLive).IsEqualTo(originalTimeToLive);
     }
 
-    [Theory]
-    [InlineData(1)]
-    [InlineData(long.MaxValue)]
-    public void When_publication_time_to_live_is_positive_should_accept_value(long ticks)
+    [Test]
+    [Arguments(1)]
+    [Arguments(long.MaxValue)]
+    public async System.Threading.Tasks.Task When_publication_time_to_live_is_positive_should_accept_value(long ticks)
     {
         // Arrange
         var timeToLive = TimeSpan.FromTicks(ticks);
@@ -226,14 +232,14 @@ public class AzureServiceBusPublicationTimeToLiveTests
         _publication.TimeToLive = timeToLive;
 
         // Assert
-        Assert.Equal(timeToLive, _publication.TimeToLive);
+        await Assert.That(_publication.TimeToLive).IsEqualTo(timeToLive);
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(true, false)]
+    [Arguments(false, true)]
+    [Arguments(true, true)]
     public async Task When_clearing_publication_time_to_live_should_restore_entity_default(bool useQueues, bool bulk)
     {
         // Arrange
@@ -249,9 +255,9 @@ public class AzureServiceBusPublicationTimeToLiveTests
         await SendMessageAsync(secondMessage);
 
         // Assert
-        Assert.Collection(_sender.SentMessages,
-            sent => AssertMessage(sent, firstMessage, timeToLive),
-            sent => AssertMessage(sent, secondMessage, null));
+        await Assert.That(_sender.SentMessages).HasCount().EqualTo(2);
+        await AssertMessage(_sender.SentMessages[0], firstMessage, timeToLive);
+        await AssertMessage(_sender.SentMessages[1], secondMessage, null);
 
         async Task SendMessageAsync(Message message)
         {
@@ -281,11 +287,11 @@ public class AzureServiceBusPublicationTimeToLiveTests
         new MessageHeader(Id.Random(), new RoutingKey("ttl-topic"), MessageType.MT_EVENT),
         new MessageBody("A message body"));
 
-    private static void AssertMessage(ServiceBusMessage sent, Message original, TimeSpan? timeToLive)
+    private static async System.Threading.Tasks.Task AssertMessage(ServiceBusMessage sent, Message original, TimeSpan? timeToLive)
     {
-        Assert.Equal(timeToLive, sent.GetRawAmqpMessage().Header.TimeToLive);
-        Assert.Equal(timeToLive ?? TimeSpan.MaxValue, sent.TimeToLive);
-        Assert.Equal(original.Id.Value, sent.MessageId);
-        Assert.Equal(original.Body.Value, sent.Body.ToString());
+        await Assert.That(sent.GetRawAmqpMessage().Header.TimeToLive).IsEqualTo(timeToLive);
+        await Assert.That(sent.TimeToLive).IsEqualTo(timeToLive ?? TimeSpan.MaxValue);
+        await Assert.That(sent.MessageId).IsEqualTo(original.Id.Value);
+        await Assert.That(sent.Body.ToString()).IsEqualTo(original.Body.Value);
     }
 }

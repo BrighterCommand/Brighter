@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,7 +35,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -44,7 +43,7 @@ public class TrippedTopicCountTests
     private const string DESTINATION = "messaging.destination.name";
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_a_topic_is_tripped_should_still_count_it()
     {
         //Arrange
@@ -59,23 +58,21 @@ public class TrippedTopicCountTests
 
         //Act
         await monitor.StartAsync(default);
-        AdvanceThroughDueTimes(readings, 6);
-        WaitUntilTheMonitorWaits(readings);
+        await AdvanceThroughDueTimes(readings, 6);
+        await WaitUntilTheMonitorWaits(readings);
         _clock.Advance(TimeSpan.FromSeconds(30));
         var at120630 = metrics.Observe();
 
         //Assert
-        var overall = Assert.Single(at120630, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        Assert.Equal(3, overall.Value);
-        Assert.Equal(
-            new[] { "orders=2", "payments=1" },
-            at120630
+        var overall = await Assert.That(System.Linq.Enumerable.Where(at120630, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).HasSingleItem();
+        await Assert.That(overall.Value).IsEqualTo(3);
+        await Assert.That(at120630
                 .Where(m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES)
                 .Select(m => $"{m.Attributes[DESTINATION]}={m.Value}")
-                .OrderBy(series => series, StringComparer.Ordinal));
+                .OrderBy(series => series, StringComparer.Ordinal)).IsEqualTo(new[] { "orders=2", "payments=1" });
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_topic_is_tripped_should_still_ask_the_outbox_for_it()
     {
         //Arrange
@@ -86,16 +83,14 @@ public class TrippedTopicCountTests
 
         //Act
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(readings);
+        await WaitUntilTheMonitorWaits(readings);
         _clock.Advance(TimeSpan.FromMinutes(1));
         WaitForPerTopicCompletions(readings, 1);
 
         //Assert
         var at120100 = outbox.TopicCountCalls.First();
-        Assert.Equal(new DateTimeOffset(2026, 1, 1, 12, 1, 0, TimeSpan.Zero), at120100.CalledAt);
-        Assert.Equal(
-            new[] { "orders", "payments" },
-            at120100.DispatchedSinceByTopic.Keys.Select(topic => topic.Value).OrderBy(topic => topic, StringComparer.Ordinal));
+        await Assert.That(at120100.CalledAt).IsEqualTo(new DateTimeOffset(2026, 1, 1, 12, 1, 0, TimeSpan.Zero));
+        await Assert.That(at120100.DispatchedSinceByTopic.Keys.Select(topic => topic.Value).OrderBy(topic => topic, StringComparer.Ordinal)).IsEqualTo(new[] { "orders", "payments" });
     }
 
     private StaleMessageMetricsFixture CreateMetrics(IAmAnOutbox outbox, IAmAnOutboxCircuitBreaker breaker) =>
@@ -132,30 +127,30 @@ public class TrippedTopicCountTests
     private static Message Event(string topic) =>
         new(new MessageHeader(Id.Random(), new RoutingKey(topic), MessageType.MT_EVENT), new MessageBody("{}"));
 
-    private void AdvanceThroughDueTimes(OutboxStaleMessageReadings readings, int dueTimes)
+    private async System.Threading.Tasks.Task AdvanceThroughDueTimes(OutboxStaleMessageReadings readings, int dueTimes)
     {
         for (var i = 0; i < dueTimes; i++)
         {
             var completed = readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed);
-            WaitUntilTheMonitorWaits(readings);
+            await WaitUntilTheMonitorWaits(readings);
             _clock.Advance(TimeSpan.FromMinutes(1));
-            WaitForCompletions(readings, completed + 1);
+            await WaitForCompletions(readings, completed + 1);
         }
     }
 
-    private void WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
+    private async Task WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
     {
         var completed = readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed);
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= completed + 1, TimeSpan.FromSeconds(5))).IsTrue();
     }
 
-    private static void WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>
-        Assert.True(SpinWait.SpinUntil(
+    private static async Task WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed) >= completions,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 
-    private static void WaitForPerTopicCompletions(OutboxStaleMessageReadings readings, long completions) =>
-        Assert.True(SpinWait.SpinUntil(
+    private static async Task WaitForPerTopicCompletions(OutboxStaleMessageReadings readings, long completions) =>
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed) >= completions,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 }

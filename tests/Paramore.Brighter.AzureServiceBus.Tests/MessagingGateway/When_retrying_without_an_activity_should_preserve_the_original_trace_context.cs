@@ -28,15 +28,14 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusRetryWithoutActivityTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_retrying_without_an_activity_should_preserve_the_original_trace_context(bool synchronous)
     {
         // Arrange
@@ -56,14 +55,14 @@ public class AzureServiceBusRetryWithoutActivityTests
             else await scheduler.RequeueAsync(message, new ChannelName("queue"), TimeSpan.Zero);
 
             // Assert
-            var retry = Assert.Single(client.Scheduled).Message;
-            Assert.True(retry.ApplicationProperties.TryGetValue("cloudevents:traceparent", out var propagatedParent));
-            Assert.True(retry.ApplicationProperties.TryGetValue("cloudevents:tracestate", out var propagatedState));
-            Assert.Equal(traceParent, propagatedParent);
-            Assert.Equal(traceState, propagatedState);
-            Assert.Equal(traceParent, message.Header.TraceParent!.Value);
-            Assert.Equal(traceState, message.Header.TraceState!.Value);
-            Assert.Equal("original", message.Id.Value);
+            var retry = (await Assert.That(client.Scheduled).HasSingleItem()).Message;
+            await Assert.That(retry.ApplicationProperties.TryGetValue("cloudevents:traceparent", out var propagatedParent)).IsTrue();
+            await Assert.That(retry.ApplicationProperties.TryGetValue("cloudevents:tracestate", out var propagatedState)).IsTrue();
+            await Assert.That(propagatedParent).IsEqualTo(traceParent);
+            await Assert.That(propagatedState).IsEqualTo(traceState);
+            await Assert.That(message.Header.TraceParent!.Value).IsEqualTo(traceParent);
+            await Assert.That(message.Header.TraceState!.Value).IsEqualTo(traceState);
+            await Assert.That(message.Id.Value).IsEqualTo("original");
         }
         finally
         {

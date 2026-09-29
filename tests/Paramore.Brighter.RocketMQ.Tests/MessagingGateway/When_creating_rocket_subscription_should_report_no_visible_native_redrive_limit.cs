@@ -24,8 +24,7 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway;
 
 /// <summary>
@@ -35,12 +34,12 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway;
 /// see it here (R-10, R-11, ADR 0077 budget-rules table).
 /// </summary>
 // Broker-free: carries "RocketMQBrokerFree" too (see RocketMqEmptyHeaderPropertyTests for why).
-[Trait("Category", "RocketMQ")]
-[Trait("Category", "RocketMQBrokerFree")]
+[Property("Category", "RocketMQ")]
+[Property("Category", "RocketMQBrokerFree")]
 public class RocketSubscriptionNativeRedriveLimitTests
 {
-    [Fact]
-    public void When_creating_rocket_subscription_should_report_no_visible_native_redrive_limit()
+    [Test]
+    public async Task When_creating_rocket_subscription_should_report_no_visible_native_redrive_limit()
     {
         // Arrange & Act
         var subscription = new RocketSubscription(
@@ -51,12 +50,12 @@ public class RocketSubscriptionNativeRedriveLimitTests
             messagePumpType: MessagePumpType.Reactor);
 
         // Assert
-        var counting = Assert.IsAssignableFrom<IAmADeliveryCountingSubscription>(subscription);
-        Assert.Null(counting.NativeRedriveLimit);
+        var counting = ((IAmADeliveryCountingSubscription)(((IAmADeliveryCountingSubscription)(await Assert.That(subscription).IsAssignableTo<IAmADeliveryCountingSubscription>()))));
+        await Assert.That(counting.NativeRedriveLimit).IsNull();
     }
 
-    [Fact]
-    public void When_creating_rocket_mq_subscription_of_t_should_report_no_visible_native_redrive_limit()
+    [Test]
+    public async Task When_creating_rocket_mq_subscription_of_t_should_report_no_visible_native_redrive_limit()
     {
         // Arrange & Act
         var subscription = new RocketMqSubscription<MyCommand>(
@@ -66,7 +65,7 @@ public class RocketSubscriptionNativeRedriveLimitTests
             messagePumpType: MessagePumpType.Reactor);
 
         // Assert
-        var counting = Assert.IsAssignableFrom<IAmADeliveryCountingSubscription>(subscription);
-        Assert.Null(counting.NativeRedriveLimit);
+        var counting = ((IAmADeliveryCountingSubscription)(((IAmADeliveryCountingSubscription)(await Assert.That(subscription).IsAssignableTo<IAmADeliveryCountingSubscription>()))));
+        await Assert.That(counting.NativeRedriveLimit).IsNull();
     }
 }

@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // has completed.
 public class TwoPostsShareOneScopedMapperTests
 {
-    [Fact]
+    [Test]
     public async Task When_two_posts_run_in_one_request_they_should_share_one_scoped_mapper()
     {
         // Arrange
@@ -49,10 +49,10 @@ public class TwoPostsShareOneScopedMapperTests
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<PostedOrderMapperRecorder>();
         // both Posts resolved the same mapper instance - only one was ever constructed
-        Assert.Single(recorder.Constructed);
+        await Assert.That(recorder.Constructed).HasSingleItem();
         // the shared mapper was not disposed when the second Post returned, still inside the controller action
-        Assert.Equal(0, recorder.DisposeCountAfterSecondPost);
+        await Assert.That(recorder.DisposeCountAfterSecondPost).IsEqualTo(0);
         // ASP.NET disposes the request scope, and the mapper with it, exactly once, once the whole HTTP request has completed
-        Assert.Equal(1, recorder.Constructed[0].DisposeCount);
+        await Assert.That(recorder.Constructed[0].DisposeCount).IsEqualTo(1);
     }
 }

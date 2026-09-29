@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -27,24 +28,23 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusNativeSubjectReceivingTests
 {
-    [Theory]
-    [InlineData("order-placed", false, false)]
-    [InlineData("order-placed", false, true)]
-    [InlineData("order-placed", true, false)]
-    [InlineData("order-placed", true, true)]
-    [InlineData("შეკვეთა/注文", false, false)]
-    [InlineData("შეკვეთა/注文", true, true)]
-    [InlineData("", false, false)]
-    [InlineData("", true, true)]
-    [InlineData(null, false, false)]
-    [InlineData(null, true, true)]
+    [Test]
+    [Arguments("order-placed", false, false)]
+    [Arguments("order-placed", false, true)]
+    [Arguments("order-placed", true, false)]
+    [Arguments("order-placed", true, true)]
+    [Arguments("შეკვეთა/注文", false, false)]
+    [Arguments("შეკვეთა/注文", true, true)]
+    [Arguments("", false, false)]
+    [Arguments("", true, true)]
+    [Arguments(null, false, false)]
+    [Arguments(null, true, true)]
     public async Task When_receiving_a_message_should_use_its_native_subject(
         string? subject, bool useAsync, bool useQueue)
     {
@@ -74,8 +74,8 @@ public class AzureServiceBusNativeSubjectReceivingTests
         }
 
         // Assert
-        var received = Assert.Single(messages);
-        Assert.Equal(subject ?? string.Empty, received.Header.Subject);
-        Assert.False(received.Header.Bag.ContainsKey("cloudEvents:subject"));
+        var received = await Assert.That(messages).HasSingleItem();
+        await Assert.That(received.Header.Subject).IsEqualTo(subject ?? string.Empty);
+        await Assert.That(received.Header.Bag.ContainsKey("cloudEvents:subject")).IsFalse();
     }
 }

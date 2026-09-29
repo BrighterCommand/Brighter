@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.MessagingGateway.Redis;
 using Paramore.Brighter.Redis.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 
 public class RedisSubscriptionDlqRoutingKeyTests
 {
-    [Fact]
-    public void When_creating_redis_subscription_with_dlq_routing_keys_should_expose_properties()
+    [Test]
+    public async Task When_creating_redis_subscription_with_dlq_routing_keys_should_expose_properties()
     {
         //Arrange
         var deadLetterRoutingKey = new RoutingKey("orders-dlq");
@@ -47,17 +46,17 @@ public class RedisSubscriptionDlqRoutingKeyTests
         );
 
         //Assert
-        Assert.IsAssignableFrom<IUseBrighterDeadLetterSupport>(subscription);
+        await Assert.That(subscription).IsAssignableTo<IUseBrighterDeadLetterSupport>();
         var dlqSupport = (IUseBrighterDeadLetterSupport)subscription;
-        Assert.Equal(deadLetterRoutingKey, dlqSupport.DeadLetterRoutingKey);
+        await Assert.That(dlqSupport.DeadLetterRoutingKey).IsEqualTo(deadLetterRoutingKey);
 
-        Assert.IsAssignableFrom<IUseBrighterInvalidMessageSupport>(subscription);
+        await Assert.That(subscription).IsAssignableTo<IUseBrighterInvalidMessageSupport>();
         var invalidSupport = (IUseBrighterInvalidMessageSupport)subscription;
-        Assert.Equal(invalidMessageRoutingKey, invalidSupport.InvalidMessageRoutingKey);
+        await Assert.That(invalidSupport.InvalidMessageRoutingKey).IsEqualTo(invalidMessageRoutingKey);
     }
 
-    [Fact]
-    public void When_creating_redis_subscription_without_dlq_routing_keys_should_default_to_null()
+    [Test]
+    public async Task When_creating_redis_subscription_without_dlq_routing_keys_should_default_to_null()
     {
         //Arrange & Act
         var subscription = new RedisSubscription<MyCommand>(
@@ -67,12 +66,12 @@ public class RedisSubscriptionDlqRoutingKeyTests
         );
 
         //Assert
-        Assert.IsAssignableFrom<IUseBrighterDeadLetterSupport>(subscription);
+        await Assert.That(subscription).IsAssignableTo<IUseBrighterDeadLetterSupport>();
         var dlqSupport = (IUseBrighterDeadLetterSupport)subscription;
-        Assert.Null(dlqSupport.DeadLetterRoutingKey);
+        await Assert.That(dlqSupport.DeadLetterRoutingKey is null).IsTrue();
 
-        Assert.IsAssignableFrom<IUseBrighterInvalidMessageSupport>(subscription);
+        await Assert.That(subscription).IsAssignableTo<IUseBrighterInvalidMessageSupport>();
         var invalidSupport = (IUseBrighterInvalidMessageSupport)subscription;
-        Assert.Null(invalidSupport.InvalidMessageRoutingKey);
+        await Assert.That(invalidSupport.InvalidMessageRoutingKey is null).IsTrue();
     }
 }

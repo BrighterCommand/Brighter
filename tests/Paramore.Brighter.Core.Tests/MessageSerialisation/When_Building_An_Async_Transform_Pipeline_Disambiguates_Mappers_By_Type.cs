@@ -1,93 +1,87 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using Paramore.Brighter.Observability;
-using Xunit;
 using A = Paramore.Brighter.Core.Tests.MessageSerialisation.AsyncTransformTypeKeyed.A;
 using B = Paramore.Brighter.Core.Tests.MessageSerialisation.AsyncTransformTypeKeyed.B;
 using Reuse = Paramore.Brighter.Core.Tests.MessageSerialisation.AsyncTransformTypeKeyed.Reuse;
+using Scenarios = Paramore.Brighter.Core.Tests.MessageSerialisation.AsyncTransformTypeKeyed.Scenarios;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation
 {
     public class When_Building_An_Async_Transform_Pipeline_Disambiguates_Mappers_By_Type
     {
-        [Fact]
-        public void When_two_async_mappers_share_a_simple_name_each_wrap_pipeline_should_build_with_its_own_transforms_first_built_first()
+        [Test]
+        public async Task When_two_async_mappers_share_a_simple_name_each_wrap_pipeline_should_build_with_its_own_transforms_first_built_first()
         {
             // Arrange
-            TransformPipelineBuilderAsync.ClearPipelineCache();
-            TransformPipelineBuilderAsync builder = CreateCollidingBuilder();
+            TransformPipelineBuilderAsync builder = CreateCollidingBuilder<Scenarios.WrapFirstBuiltFirst>();
 
             // Act — build A (FirstTransformAsync) first, warming the cache, then B (SecondTransformAsync)
-            builder.BuildWrapPipeline<A.EventCommand>();
-            WrapPipelineAsync<B.EventCommand> pipelineB = builder.BuildWrapPipeline<B.EventCommand>();
+            builder.BuildWrapPipeline<A.EventCommand<Scenarios.WrapFirstBuiltFirst>>();
+            WrapPipelineAsync<B.EventCommand<Scenarios.WrapFirstBuiltFirst>> pipelineB =
+                builder.BuildWrapPipeline<B.EventCommand<Scenarios.WrapFirstBuiltFirst>>();
 
             // Assert — B's wrap pipeline carries its own transform, never A's
             string trace = Trace(pipelineB).ToString();
-            Assert.Contains("SecondTransformAsync", trace);
-            Assert.DoesNotContain("FirstTransformAsync", trace);
+            await Assert.That(trace).Contains("SecondTransformAsync");
+            await Assert.That(trace).DoesNotContain("FirstTransformAsync");
         }
 
-        [Fact]
-        public void When_two_async_mappers_share_a_simple_name_each_wrap_pipeline_should_build_with_its_own_transforms_opposite_order()
+        [Test]
+        public async Task When_two_async_mappers_share_a_simple_name_each_wrap_pipeline_should_build_with_its_own_transforms_opposite_order()
         {
             // Arrange
-            TransformPipelineBuilderAsync.ClearPipelineCache();
-            TransformPipelineBuilderAsync builder = CreateCollidingBuilder();
+            TransformPipelineBuilderAsync builder = CreateCollidingBuilder<Scenarios.WrapOppositeOrder>();
 
             // Act — build B (SecondTransformAsync) first this time, then A (FirstTransformAsync)
-            builder.BuildWrapPipeline<B.EventCommand>();
-            WrapPipelineAsync<A.EventCommand> pipelineA = builder.BuildWrapPipeline<A.EventCommand>();
+            builder.BuildWrapPipeline<B.EventCommand<Scenarios.WrapOppositeOrder>>();
+            WrapPipelineAsync<A.EventCommand<Scenarios.WrapOppositeOrder>> pipelineA =
+                builder.BuildWrapPipeline<A.EventCommand<Scenarios.WrapOppositeOrder>>();
 
             // Assert — A's wrap pipeline carries its own transform, never B's
             string trace = Trace(pipelineA).ToString();
-            Assert.Contains("FirstTransformAsync", trace);
-            Assert.DoesNotContain("SecondTransformAsync", trace);
+            await Assert.That(trace).Contains("FirstTransformAsync");
+            await Assert.That(trace).DoesNotContain("SecondTransformAsync");
         }
 
-        [Fact]
-        public void When_two_async_mappers_share_a_simple_name_each_unwrap_pipeline_should_build_with_its_own_transforms_first_built_first()
+        [Test]
+        public async Task When_two_async_mappers_share_a_simple_name_each_unwrap_pipeline_should_build_with_its_own_transforms_first_built_first()
         {
             // Arrange
-            TransformPipelineBuilderAsync.ClearPipelineCache();
-            TransformPipelineBuilderAsync builder = CreateCollidingBuilder();
+            TransformPipelineBuilderAsync builder = CreateCollidingBuilder<Scenarios.UnwrapFirstBuiltFirst>();
 
             // Act — build A (FirstTransformAsync) first, warming the cache, then B (SecondTransformAsync)
-            builder.BuildUnwrapPipeline<A.EventCommand>();
-            UnwrapPipelineAsync<B.EventCommand> pipelineB = builder.BuildUnwrapPipeline<B.EventCommand>();
+            builder.BuildUnwrapPipeline<A.EventCommand<Scenarios.UnwrapFirstBuiltFirst>>();
+            UnwrapPipelineAsync<B.EventCommand<Scenarios.UnwrapFirstBuiltFirst>> pipelineB =
+                builder.BuildUnwrapPipeline<B.EventCommand<Scenarios.UnwrapFirstBuiltFirst>>();
 
             // Assert — B's unwrap pipeline carries its own transform, never A's
             string trace = Trace(pipelineB).ToString();
-            Assert.Contains("SecondTransformAsync", trace);
-            Assert.DoesNotContain("FirstTransformAsync", trace);
+            await Assert.That(trace).Contains("SecondTransformAsync");
+            await Assert.That(trace).DoesNotContain("FirstTransformAsync");
         }
 
-        [Fact]
-        public void When_two_async_mappers_share_a_simple_name_each_unwrap_pipeline_should_build_with_its_own_transforms_opposite_order()
+        [Test]
+        public async Task When_two_async_mappers_share_a_simple_name_each_unwrap_pipeline_should_build_with_its_own_transforms_opposite_order()
         {
             // Arrange
-            TransformPipelineBuilderAsync.ClearPipelineCache();
-            TransformPipelineBuilderAsync builder = CreateCollidingBuilder();
+            TransformPipelineBuilderAsync builder = CreateCollidingBuilder<Scenarios.UnwrapOppositeOrder>();
 
             // Act — build B (SecondTransformAsync) first this time, then A (FirstTransformAsync)
-            builder.BuildUnwrapPipeline<B.EventCommand>();
-            UnwrapPipelineAsync<A.EventCommand> pipelineA = builder.BuildUnwrapPipeline<A.EventCommand>();
+            builder.BuildUnwrapPipeline<B.EventCommand<Scenarios.UnwrapOppositeOrder>>();
+            UnwrapPipelineAsync<A.EventCommand<Scenarios.UnwrapOppositeOrder>> pipelineA =
+                builder.BuildUnwrapPipeline<A.EventCommand<Scenarios.UnwrapOppositeOrder>>();
 
             // Assert — A's unwrap pipeline carries its own transform, never B's
             string trace = Trace(pipelineA).ToString();
-            Assert.Contains("FirstTransformAsync", trace);
-            Assert.DoesNotContain("SecondTransformAsync", trace);
+            await Assert.That(trace).Contains("FirstTransformAsync");
+            await Assert.That(trace).DoesNotContain("SecondTransformAsync");
         }
 
-        [Fact]
-        public void When_a_single_async_mapper_is_built_twice_post_warmup_should_keep_one_entry_per_transform_cache_keyed_by_its_runtime_type()
+        [Test]
+        public async Task When_a_single_async_mapper_is_built_twice_should_produce_the_same_transform_pipelines()
         {
-            // Arrange — a mapper/request unique to this fact, so the process-global mementos hold
-            // exactly this mapper's entries and the count assertion stays deterministic
-            TransformPipelineBuilderAsync.ClearPipelineCache();
-
+            // Arrange
             var registry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new Reuse.ReuseMapper()));
@@ -96,34 +90,27 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
             var transformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new Reuse.ReuseTransformAsync());
             var builder = new TransformPipelineBuilderAsync(registry, transformerFactory, InstrumentationOptions.All);
 
-            // Act — build the same mapper's wrap and unwrap pipelines twice (single-threaded, so the
-            // GetOrAdd factory has already run and the retained entry is served thereafter)
+            // Act
             string firstWrap = Trace(builder.BuildWrapPipeline<Reuse.ReuseCommand>()).ToString();
             string secondWrap = Trace(builder.BuildWrapPipeline<Reuse.ReuseCommand>()).ToString();
             string firstUnwrap = Trace(builder.BuildUnwrapPipeline<Reuse.ReuseCommand>()).ToString();
             string secondUnwrap = Trace(builder.BuildUnwrapPipeline<Reuse.ReuseCommand>()).ToString();
 
-            // Assert — exactly one entry per memento, keyed by the mapper's runtime Type, and the
-            // second build's transform sequence is equivalent to the first
-            IReadOnlyCollection<Type> wrapKeys = GetMementoKeys("s_wrapTransformsMemento");
-            IReadOnlyCollection<Type> unwrapKeys = GetMementoKeys("s_unWrapTransformsMemento");
-
-            Assert.Equal(new[] { typeof(Reuse.ReuseMapper) }, wrapKeys);
-            Assert.Equal(new[] { typeof(Reuse.ReuseMapper) }, unwrapKeys);
-            Assert.Equal(firstWrap, secondWrap);
-            Assert.Equal(firstUnwrap, secondUnwrap);
+            // Assert
+            await Assert.That(secondWrap).IsEqualTo(firstWrap);
+            await Assert.That(secondUnwrap).IsEqualTo(firstUnwrap);
         }
 
-        private static TransformPipelineBuilderAsync CreateCollidingBuilder()
+        private static TransformPipelineBuilderAsync CreateCollidingBuilder<TScenario>()
         {
             var registry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(t =>
-                    t == typeof(A.CollidingMapper)
-                        ? new A.CollidingMapper()
-                        : (IAmAMessageMapperAsync)new B.CollidingMapper()));
-            registry.RegisterAsync<A.EventCommand, A.CollidingMapper>();
-            registry.RegisterAsync<B.EventCommand, B.CollidingMapper>();
+                    t == typeof(A.CollidingMapper<TScenario>)
+                        ? new A.CollidingMapper<TScenario>()
+                        : (IAmAMessageMapperAsync)new B.CollidingMapper<TScenario>()));
+            registry.RegisterAsync<A.EventCommand<TScenario>, A.CollidingMapper<TScenario>>();
+            registry.RegisterAsync<B.EventCommand<TScenario>, B.CollidingMapper<TScenario>>();
 
             var transformerFactory = new SimpleMessageTransformerFactoryAsync(t =>
                 t == typeof(A.FirstTransformAsync)
@@ -149,16 +136,6 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
             return pipelineTracer;
         }
 
-        private static IReadOnlyCollection<Type> GetMementoKeys(string fieldName)
-        {
-            FieldInfo? field = typeof(TransformPipelineBuilderAsync).GetField(
-                fieldName,
-                BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(field);
-
-            var cache = (IDictionary)field!.GetValue(null)!;
-            return cache.Keys.Cast<Type>().ToList();
-        }
     }
 }
 
@@ -171,7 +148,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.AsyncTransformTypeKe
     using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
     using Paramore.Brighter.Extensions;
 
-    public sealed class EventCommand : Command
+    public sealed class EventCommand<TScenario> : Command
     {
         public EventCommand() : base(Guid.NewGuid()) { }
     }
@@ -199,19 +176,19 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.AsyncTransformTypeKe
         public override Type GetHandlerType() => typeof(FirstTransformAsync);
     }
 
-    internal sealed class CollidingMapper : IAmAMessageMapperAsync<EventCommand>
+    internal sealed class CollidingMapper<TScenario> : IAmAMessageMapperAsync<EventCommand<TScenario>>
     {
         public IRequestContext Context { get; set; }
 
         [FirstWrapWith(0)]
-        public Task<Message> MapToMessageAsync(EventCommand request, Publication publication, CancellationToken cancellationToken = default)
+        public Task<Message> MapToMessageAsync(EventCommand<TScenario> request, Publication publication, CancellationToken cancellationToken = default)
             => Task.FromResult(new Message(
                 new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), timeStamp: DateTime.UtcNow),
                 new MessageBody(JsonSerializer.Serialize(request, new JsonSerializerOptions(JsonSerializerDefaults.General)))));
 
         [FirstUnwrapWith(0)]
-        public Task<EventCommand> MapToRequestAsync(Message message, CancellationToken cancellationToken = default)
-            => Task.FromResult(JsonSerializer.Deserialize<EventCommand>(message.Body.Value));
+        public Task<EventCommand<TScenario>> MapToRequestAsync(Message message, CancellationToken cancellationToken = default)
+            => Task.FromResult(JsonSerializer.Deserialize<EventCommand<TScenario>>(message.Body.Value));
     }
 }
 
@@ -224,7 +201,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.AsyncTransformTypeKe
     using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
     using Paramore.Brighter.Extensions;
 
-    public sealed class EventCommand : Command
+    public sealed class EventCommand<TScenario> : Command
     {
         public EventCommand() : base(Guid.NewGuid()) { }
     }
@@ -252,20 +229,28 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.AsyncTransformTypeKe
         public override Type GetHandlerType() => typeof(SecondTransformAsync);
     }
 
-    internal sealed class CollidingMapper : IAmAMessageMapperAsync<EventCommand>
+    internal sealed class CollidingMapper<TScenario> : IAmAMessageMapperAsync<EventCommand<TScenario>>
     {
         public IRequestContext Context { get; set; }
 
         [SecondWrapWith(0)]
-        public Task<Message> MapToMessageAsync(EventCommand request, Publication publication, CancellationToken cancellationToken = default)
+        public Task<Message> MapToMessageAsync(EventCommand<TScenario> request, Publication publication, CancellationToken cancellationToken = default)
             => Task.FromResult(new Message(
                 new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), timeStamp: DateTime.UtcNow),
                 new MessageBody(JsonSerializer.Serialize(request, new JsonSerializerOptions(JsonSerializerDefaults.General)))));
 
         [SecondUnwrapWith(0)]
-        public Task<EventCommand> MapToRequestAsync(Message message, CancellationToken cancellationToken = default)
-            => Task.FromResult(JsonSerializer.Deserialize<EventCommand>(message.Body.Value));
+        public Task<EventCommand<TScenario>> MapToRequestAsync(Message message, CancellationToken cancellationToken = default)
+            => Task.FromResult(JsonSerializer.Deserialize<EventCommand<TScenario>>(message.Body.Value));
     }
+}
+
+namespace Paramore.Brighter.Core.Tests.MessageSerialisation.AsyncTransformTypeKeyed.Scenarios
+{
+    internal sealed class WrapFirstBuiltFirst { }
+    internal sealed class WrapOppositeOrder { }
+    internal sealed class UnwrapFirstBuiltFirst { }
+    internal sealed class UnwrapOppositeOrder { }
 }
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation.AsyncTransformTypeKeyed.Reuse

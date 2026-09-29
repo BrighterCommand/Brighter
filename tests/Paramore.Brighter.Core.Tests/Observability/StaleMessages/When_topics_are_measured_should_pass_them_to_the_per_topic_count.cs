@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,7 +35,6 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -43,7 +42,7 @@ public class PerTopicCountArgumentsTests
 {
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_topics_are_measured_should_pass_them_to_the_per_topic_count()
     {
         //Arrange
@@ -80,21 +79,15 @@ public class PerTopicCountArgumentsTests
 
         //Assert
         var calls = outbox.TopicCountCalls.ToArray();
-        Assert.Equal(3, calls.Length);
-        Assert.All(calls, call =>
-        {
-            Assert.Equal(
-                new Dictionary<RoutingKey, TimeSpan>
-                {
-                    [new RoutingKey("orders")] = TimeSpan.FromMinutes(2),
-                    [new RoutingKey("payments")] = TimeSpan.FromMinutes(5)
-                },
-                call.DispatchedSinceByTopic);
-            Assert.Equal(100, call.MaxCountPerTopic);
-            Assert.Equal(new Dictionary<string, object> { ["Topic"] = "orders" }, call.Args);
-            Assert.Null(call.RequestContext);
-            Assert.True(call.CancellationToken.CanBeCanceled);
-        });
+        await Assert.That(calls.Length).IsEqualTo(3);
+        foreach (var call in calls)
+{
+    await Assert.That(call.DispatchedSinceByTopic).IsEqualTo(new Dictionary<RoutingKey, TimeSpan> { [new RoutingKey("orders")] = TimeSpan.FromMinutes(2), [new RoutingKey("payments")] = TimeSpan.FromMinutes(5) });
+    await Assert.That(call.MaxCountPerTopic).IsEqualTo(100);
+    await Assert.That(call.Args).IsEqualTo(new Dictionary<string, object> { ["Topic"] = "orders" });
+    await Assert.That(call.RequestContext).IsNull();
+    await Assert.That(call.CancellationToken.CanBeCanceled).IsTrue();
+}
     }
 
     private static InMemoryMessageProducer Producer(string topic, TimeSpan? staleMessageAge) =>

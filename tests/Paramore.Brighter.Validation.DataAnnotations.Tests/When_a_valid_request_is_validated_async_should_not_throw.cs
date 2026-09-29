@@ -25,13 +25,12 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.DataAnnotations.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Validation.DataAnnotations.Tests;
 
 public class ValidRequestAsyncValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_valid_request_is_validated_async_should_not_throw()
     {
         //Arrange
@@ -40,9 +39,9 @@ public class ValidRequestAsyncValidationTests
         var validRequest = new RegisterUser { Name = "Ada", Email = "ada@example.com" };
 
         //Act
-        var exception = await Record.ExceptionAsync(() => handler.HandleAsync(validRequest));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => handler.HandleAsync(validRequest));
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

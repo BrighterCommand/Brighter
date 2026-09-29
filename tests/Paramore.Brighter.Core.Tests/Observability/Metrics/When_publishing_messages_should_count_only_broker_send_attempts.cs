@@ -29,14 +29,13 @@ using System.Diagnostics;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class SentMessageMetricsTests
 {
-    [Fact]
-    public void When_publishing_messages_should_count_only_broker_send_attempts()
+    [Test]
+    public async Task When_publishing_messages_should_count_only_broker_send_attempts()
     {
         //Arrange
         using var telemetry = new InMemoryMetricsFromTraces();
@@ -49,23 +48,23 @@ public class SentMessageMetricsTests
         for (var handler = 0; handler < 2; handler++)
         {
             var internalSpan = telemetry.Tracer.CreateSpan(CommandProcessorSpanOperation.Publish, new MyEvent());
-            Assert.NotNull(internalSpan);
+            await Assert.That(internalSpan).IsNotNull();
             telemetry.Tracer.EndSpan(internalSpan);
         }
 
         foreach (var failed in new[] { false, true })
         {
             var producerSpan = telemetry.Tracer.CreateProducerSpan(publication, message, parentActivity: null);
-            Assert.NotNull(producerSpan);
+            await Assert.That(producerSpan).IsNotNull();
             if (failed)
                 producerSpan.SetStatus(ActivityStatusCode.Error, "Broker send failed");
             telemetry.Tracer.EndSpan(producerSpan);
         }
 
-        Assert.True(telemetry.Flush());
+        await Assert.That(telemetry.Flush()).IsTrue();
 
         //Assert
-        Assert.Equal(4, telemetry.Spans.Count);
-        Assert.Equal(2, telemetry.CounterTotal("messaging.client.sent.messages"));
+        await Assert.That(telemetry.Spans.Count).IsEqualTo(4);
+        await Assert.That(telemetry.CounterTotal("messaging.client.sent.messages")).IsEqualTo(2);
     }
 }

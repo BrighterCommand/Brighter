@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
-using Xunit;
+
 using Loader = Paramore.Brighter.Test.Generator.Configuration.TestConfigurationLoader;
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConfigurationLoader;
@@ -47,8 +47,8 @@ public class DestinationFolderResolutionTests : IDisposable
 
     public DestinationFolderResolutionTests() => Directory.CreateDirectory(_projectFolder);
 
-    [Fact]
-    public void When_a_configuration_names_a_relative_destination_folder_should_resolve_it_against_the_default()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_configuration_names_a_relative_destination_folder_should_resolve_it_against_the_default()
     {
         // Arrange
         var configurationFile = WriteConfiguration("""
@@ -62,14 +62,12 @@ public class DestinationFolderResolutionTests : IDisposable
         var configuration = Loader.Load(configurationFile, defaultDestinationFolder: _projectFolder);
 
         // Assert - resolved, not left relative for the caller's current directory to decide
-        Assert.NotNull(configuration);
-        Assert.Equal(
-            Path.GetFullPath(Path.Combine(_projectFolder, "..", "Sibling.Tests")),
-            configuration.DestinationFolder);
+        await Assert.That(configuration).IsNotNull();
+        await Assert.That(configuration.DestinationFolder).IsEqualTo(Path.GetFullPath(Path.Combine(_projectFolder, "..", "Sibling.Tests")));
     }
 
-    [Fact]
-    public void When_the_default_folder_is_not_the_configurations_own_folder_should_resolve_against_the_configuration()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_default_folder_is_not_the_configurations_own_folder_should_resolve_against_the_configuration()
     {
         // Arrange - the two bases pulled apart, which is what running the generator from the
         // repository root against tests/Foo/test-configuration.json does
@@ -88,14 +86,12 @@ public class DestinationFolderResolutionTests : IDisposable
 
         // Assert - the configuration's own folder wins, so two callers running from different
         // directories read the same configuration the same way
-        Assert.NotNull(configuration);
-        Assert.Equal(
-            Path.GetFullPath(Path.Combine(_projectFolder, "..", "Sibling.Tests")),
-            configuration.DestinationFolder);
+        await Assert.That(configuration).IsNotNull();
+        await Assert.That(configuration.DestinationFolder).IsEqualTo(Path.GetFullPath(Path.Combine(_projectFolder, "..", "Sibling.Tests")));
     }
 
-    [Fact]
-    public void When_the_default_folder_is_relative_should_still_return_an_absolute_folder()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_default_folder_is_relative_should_still_return_an_absolute_folder()
     {
         // Arrange - the loader documents that what it hands back is always absolute
         var configurationFile = WriteConfiguration("""
@@ -108,13 +104,13 @@ public class DestinationFolderResolutionTests : IDisposable
         var configuration = Loader.Load(configurationFile, defaultDestinationFolder: "relative/output");
 
         // Assert
-        Assert.NotNull(configuration);
-        Assert.True(Path.IsPathRooted(configuration.DestinationFolder));
-        Assert.Equal(Path.GetFullPath("relative/output"), configuration.DestinationFolder);
+        await Assert.That(configuration).IsNotNull();
+        await Assert.That(Path.IsPathRooted(configuration.DestinationFolder)).IsTrue();
+        await Assert.That(configuration.DestinationFolder).IsEqualTo(Path.GetFullPath("relative/output"));
     }
 
-    [Fact]
-    public void When_a_configuration_names_no_destination_folder_should_use_the_default()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_configuration_names_no_destination_folder_should_use_the_default()
     {
         // Arrange
         var configurationFile = WriteConfiguration("""
@@ -127,12 +123,12 @@ public class DestinationFolderResolutionTests : IDisposable
         var configuration = Loader.Load(configurationFile, defaultDestinationFolder: _projectFolder);
 
         // Assert
-        Assert.NotNull(configuration);
-        Assert.Equal(_projectFolder, configuration.DestinationFolder);
+        await Assert.That(configuration).IsNotNull();
+        await Assert.That(configuration.DestinationFolder).IsEqualTo(_projectFolder);
     }
 
-    [Fact]
-    public void When_a_configuration_names_an_absolute_destination_folder_should_keep_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_configuration_names_an_absolute_destination_folder_should_keep_it()
     {
         // Arrange
         var elsewhere = Path.Combine(Path.GetTempPath(), $"LoaderTestsElsewhere_{Guid.NewGuid()}");
@@ -147,8 +143,8 @@ public class DestinationFolderResolutionTests : IDisposable
         var configuration = Loader.Load(configurationFile, defaultDestinationFolder: _projectFolder);
 
         // Assert - an absolute path has nothing to resolve against, so it is carried through
-        Assert.NotNull(configuration);
-        Assert.Equal(Path.GetFullPath(elsewhere), configuration.DestinationFolder);
+        await Assert.That(configuration).IsNotNull();
+        await Assert.That(configuration.DestinationFolder).IsEqualTo(Path.GetFullPath(elsewhere));
     }
 
     private string WriteConfiguration(string json)

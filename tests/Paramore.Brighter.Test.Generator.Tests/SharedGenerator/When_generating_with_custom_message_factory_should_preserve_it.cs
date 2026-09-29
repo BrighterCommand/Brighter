@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.SharedGenerator;
 
@@ -21,7 +20,7 @@ public class WhenGeneratingWithCustomMessageFactoryShouldPreserveIt : IDisposabl
         _logger = factory.CreateLogger<Generators.SharedGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_with_custom_message_factory_should_preserve_it()
     {
         // Arrange - through the loader, so that this asserts the defaulting leaves a configured
@@ -41,8 +40,8 @@ public class WhenGeneratingWithCustomMessageFactoryShouldPreserveIt : IDisposabl
         await generator.GenerateAsync(configuration);
 
         // Assert - the configured builder survives, and only the unset assertion is defaulted
-        Assert.Equal("TestMessageBuilder", configuration.MessageBuilder);
-        Assert.Equal("DefaultMessageAssertion", configuration.MessageAssertion);
+        await Assert.That(configuration.MessageBuilder).IsEqualTo("TestMessageBuilder");
+        await Assert.That(configuration.MessageAssertion).IsEqualTo("DefaultMessageAssertion");
     }
 
     public void Dispose()

@@ -33,21 +33,20 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ConsumerMissingInboxStartupValidationTests
 {
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, false)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, false)]
-    [InlineData(true, false, true)]
-    [InlineData(true, true, false)]
-    [InlineData(true, true, true)]
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(false, false, true)]
+    [Arguments(false, true, false)]
+    [Arguments(false, true, true)]
+    [Arguments(true, false, false)]
+    [Arguments(true, false, true)]
+    [Arguments(true, true, false)]
+    [Arguments(true, true, true)]
     public async Task When_an_explicit_inbox_is_missing_should_fail_pipeline_validation_at_startup(
         bool useOptionsFactory, bool useAsyncHandler, bool useIncompatibleInbox)
     {
@@ -70,13 +69,12 @@ public class ConsumerMissingInboxStartupValidationTests
         var hostedService = provider.GetServices<IHostedService>().OfType<ServiceActivatorHostedService>().Single();
 
         // Act
-        var exception = await Assert.ThrowsAsync<PipelineValidationException>(
-            () => hostedService.StartAsync(CancellationToken.None));
+        var exception = await Assert.That(() => hostedService.StartAsync(CancellationToken.None)).ThrowsExactly<PipelineValidationException>();
 
         // Assert
-        Assert.Contains(nameof(InboxConfiguration), exception.Message);
-        Assert.Contains(useAsyncHandler
+        await Assert.That(exception.Message).Contains(nameof(InboxConfiguration));
+        await Assert.That(exception.Message).Contains(useAsyncHandler
             ? nameof(ConsumerExplicitInboxAsyncCommandHandler)
-            : nameof(ConsumerExplicitInboxCommandHandler), exception.Message);
+            : nameof(ConsumerExplicitInboxCommandHandler));
     }
 }

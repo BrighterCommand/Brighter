@@ -27,14 +27,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class SweeperHealthChecksFailureStatusTests
 {
-    [Fact]
-    public void When_the_sweeper_health_checks_are_registered_should_have_failure_status_degraded()
+    [Test]
+    public async Task When_the_sweeper_health_checks_are_registered_should_have_failure_status_degraded()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -46,9 +45,9 @@ public class SweeperHealthChecksFailureStatusTests
         var registrations = provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations;
 
         //Assert
-        var restart = Assert.Single(registrations, r => r.Name == "brighter-outbox-sweeper-restart");
-        Assert.Equal(HealthStatus.Degraded, restart.FailureStatus);
-        var investigate = Assert.Single(registrations, r => r.Name == "brighter-outbox-sweeper-investigate");
-        Assert.Equal(HealthStatus.Degraded, investigate.FailureStatus);
+        var restart = await Assert.That(System.Linq.Enumerable.Where(registrations, r => r.Name == "brighter-outbox-sweeper-restart")).HasSingleItem();
+        await Assert.That(restart.FailureStatus).IsEqualTo(HealthStatus.Degraded);
+        var investigate = await Assert.That(System.Linq.Enumerable.Where(registrations, r => r.Name == "brighter-outbox-sweeper-investigate")).HasSingleItem();
+        await Assert.That(investigate.FailureStatus).IsEqualTo(HealthStatus.Degraded);
     }
 }

@@ -6,13 +6,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class SweeperFailedSweepMetricsTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_sweep_throws_should_record_a_failed_sweep()
     {
         //Arrange
@@ -34,7 +33,7 @@ public class SweeperFailedSweepMetricsTests
         sweeper.Dispose();
 
         //Assert
-        Assert.True(recorded, "The sweeper recorded no sweep");
-        Assert.Equal("failed", measurements.Of(RecordedSweeperMeasurements.Sweeps).First().Outcome);
+        await Assert.That(recorded).IsTrue().Because("The sweeper recorded no sweep");
+        await Assert.That(measurements.Of(RecordedSweeperMeasurements.Sweeps).First().Outcome).IsEqualTo("failed");
     }
 }

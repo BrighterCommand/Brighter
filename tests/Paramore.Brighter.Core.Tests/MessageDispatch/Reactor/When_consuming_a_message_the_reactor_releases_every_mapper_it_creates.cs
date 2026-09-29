@@ -7,7 +7,7 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 {
@@ -65,16 +65,16 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             channel.Enqueue(MessageFactory.CreateQuitMessage(_routingKey));
         }
 
-        [Fact]
-        public void When_consuming_a_message_the_reactor_releases_every_mapper_it_creates()
+        [Test]
+        public async System.Threading.Tasks.Task When_consuming_a_message_the_reactor_releases_every_mapper_it_creates()
         {
             //act
             _messagePump.Run();
 
             //assert — no GC is forced: release must be deterministic, driven by TranslateMessage disposing
             //the pipeline it built, not by the ~TransformPipeline finalizer
-            Assert.True(_mapperFactory.CreateCount > 0);
-            Assert.Equal(_mapperFactory.CreateCount, _mapperFactory.ReleaseCount);
+            await Assert.That(_mapperFactory.CreateCount > 0).IsTrue();
+            await Assert.That(_mapperFactory.ReleaseCount).IsEqualTo(_mapperFactory.CreateCount);
         }
 
         // Counts mappers handed out against mappers handed back. A mapper the pump creates but never

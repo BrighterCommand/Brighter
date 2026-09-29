@@ -4,14 +4,14 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class TransformPipelineBuilderFailureReleaseTests
 {
-    [Fact]
-    public void When_building_a_wrap_pipeline_throws_should_release_the_mapper()
+    [Test]
+    public async System.Threading.Tasks.Task When_building_a_wrap_pipeline_throws_should_release_the_mapper()
     {
         //arrange
         var scopeTracker = BuildScopeTracker(out var trackingProvider);
@@ -23,14 +23,14 @@ public class TransformPipelineBuilderFailureReleaseTests
 
         //act — the mapper is created, then building the transforms fails, so no pipeline is ever
         //constructed to take ownership of it
-        Assert.Throws<ConfigurationException>(() => pipelineBuilder.BuildWrapPipeline<MinimalCommand>());
+        await Assert.That(() => pipelineBuilder.BuildWrapPipeline<MinimalCommand>()).ThrowsExactly<ConfigurationException>();
 
         //assert
-        Assert.Equal(1, scopeTracker.DisposedCount);
+        await Assert.That(scopeTracker.DisposedCount).IsEqualTo(1);
     }
 
-    [Fact]
-    public void When_building_an_unwrap_pipeline_throws_should_release_the_mapper()
+    [Test]
+    public async System.Threading.Tasks.Task When_building_an_unwrap_pipeline_throws_should_release_the_mapper()
     {
         //arrange
         var scopeTracker = BuildScopeTracker(out var trackingProvider);
@@ -41,14 +41,14 @@ public class TransformPipelineBuilderFailureReleaseTests
         var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new NullTransformerFactory());
 
         //act
-        Assert.Throws<ConfigurationException>(() => pipelineBuilder.BuildUnwrapPipeline<MinimalCommand>());
+        await Assert.That(() => pipelineBuilder.BuildUnwrapPipeline<MinimalCommand>()).ThrowsExactly<ConfigurationException>();
 
         //assert
-        Assert.Equal(1, scopeTracker.DisposedCount);
+        await Assert.That(scopeTracker.DisposedCount).IsEqualTo(1);
     }
 
-    [Fact]
-    public void When_building_an_async_wrap_pipeline_throws_should_release_the_mapper()
+    [Test]
+    public async System.Threading.Tasks.Task When_building_an_async_wrap_pipeline_throws_should_release_the_mapper()
     {
         //arrange
         var scopeTracker = BuildScopeTracker(out var trackingProvider, async: true);
@@ -60,14 +60,14 @@ public class TransformPipelineBuilderFailureReleaseTests
             mapperRegistry, new NullTransformerFactoryAsync(), InstrumentationOptions.None);
 
         //act
-        Assert.Throws<ConfigurationException>(() => pipelineBuilder.BuildWrapPipeline<MinimalCommand>());
+        await Assert.That(() => pipelineBuilder.BuildWrapPipeline<MinimalCommand>()).ThrowsExactly<ConfigurationException>();
 
         //assert
-        Assert.Equal(1, scopeTracker.DisposedCount);
+        await Assert.That(scopeTracker.DisposedCount).IsEqualTo(1);
     }
 
-    [Fact]
-    public void When_building_an_async_unwrap_pipeline_throws_should_release_the_mapper()
+    [Test]
+    public async System.Threading.Tasks.Task When_building_an_async_unwrap_pipeline_throws_should_release_the_mapper()
     {
         //arrange
         var scopeTracker = BuildScopeTracker(out var trackingProvider, async: true);
@@ -79,10 +79,10 @@ public class TransformPipelineBuilderFailureReleaseTests
             mapperRegistry, new NullTransformerFactoryAsync(), InstrumentationOptions.None);
 
         //act
-        Assert.Throws<ConfigurationException>(() => pipelineBuilder.BuildUnwrapPipeline<MinimalCommand>());
+        await Assert.That(() => pipelineBuilder.BuildUnwrapPipeline<MinimalCommand>()).ThrowsExactly<ConfigurationException>();
 
         //assert
-        Assert.Equal(1, scopeTracker.DisposedCount);
+        await Assert.That(scopeTracker.DisposedCount).IsEqualTo(1);
     }
 
     private static ScopeTracker BuildScopeTracker(out IServiceProvider trackingProvider, bool async = false)

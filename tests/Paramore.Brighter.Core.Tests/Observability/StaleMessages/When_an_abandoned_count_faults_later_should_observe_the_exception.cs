@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -36,11 +36,11 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class AbandonedCountFaultsLaterTests
 {
     private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
@@ -51,7 +51,7 @@ public class AbandonedCountFaultsLaterTests
         _logs = fixture.Logs;
     }
 
-    [Fact]
+    [Test]
     public async Task When_an_abandoned_count_faults_later_should_observe_the_exception()
     {
         //Arrange
@@ -85,14 +85,14 @@ public class AbandonedCountFaultsLaterTests
             unobserved.Enqueue(args.Exception);
 
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
-        Assert.True(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5)));
+        await Assert.That(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5))).IsTrue();
         _clock.Advance(TimeSpan.FromSeconds(10));
-        Assert.True(SpinWait.SpinUntil(
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Abandoned) >= 1,
-            TimeSpan.FromSeconds(5)));
-        WaitUntilTheMonitorWaits(2);
+            TimeSpan.FromSeconds(5))).IsTrue();
+        await WaitUntilTheMonitorWaits(2);
         _clock.Advance(TimeSpan.FromSeconds(20));
 
         //Act
@@ -100,12 +100,12 @@ public class AbandonedCountFaultsLaterTests
         try
         {
             outbox.Release(0);
-            Assert.True(SpinWait.SpinUntil(() => outbox.CallEnded.IsCompleted, TimeSpan.FromSeconds(5)));
+            await Assert.That(SpinWait.SpinUntil(() => outbox.CallEnded.IsCompleted, TimeSpan.FromSeconds(5))).IsTrue();
             _clock.Advance(TimeSpan.FromSeconds(30));
-            Assert.True(SpinWait.SpinUntil(
+            await Assert.That(SpinWait.SpinUntil(
                 () => outbox.CountCalls.Count == 2
                     && readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed) >= 1,
-                TimeSpan.FromSeconds(5)));
+                TimeSpan.FromSeconds(5))).IsTrue();
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
@@ -116,13 +116,13 @@ public class AbandonedCountFaultsLaterTests
         }
 
         //Assert
-        Assert.DoesNotContain(unobserved, exception => exception.Flatten().InnerExceptions.Contains(faultedLater));
-        Assert.DoesNotContain(_logs.Entries, entry => entry.LogLevel == LogLevel.Error || entry.Message.Contains("failed"));
+        await Assert.That(System.Linq.Enumerable.Any(unobserved, exception => exception.Flatten().InnerExceptions.Contains(faultedLater))).IsFalse();
+        await Assert.That(System.Linq.Enumerable.Any(_logs.Entries, entry => entry.LogLevel == LogLevel.Error || entry.Message.Contains("failed"))).IsFalse();
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
         new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

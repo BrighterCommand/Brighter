@@ -26,7 +26,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.Outbox.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -39,8 +38,8 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// CI runs the two TFMs as concurrent processes against one SQL Server, where the drop can make another
 /// process's migration a deadlock victim; hence <c>Fragile=CI</c>.
 /// </remarks>
-[Trait("Fragile", "CI")]
-public class MsSqlHistoryTableNonDboSchemaTests : IAsyncLifetime
+[Property("Fragile", "CI")]
+public class MsSqlHistoryTableNonDboSchemaTests
 {
     private const string CollidingSchema = "stage_for_history_clash_test";
     private readonly string _connectionString = Configuration.DefaultConnectingString;
@@ -59,7 +58,7 @@ public class MsSqlHistoryTableNonDboSchemaTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_history_table_exists_in_a_non_dbo_schema_runner_should_still_create_it_in_dbo()
     {
         //Arrange
@@ -70,13 +69,13 @@ public class MsSqlHistoryTableNonDboSchemaTests : IAsyncLifetime
 
         //Act
         var act = async () => await _provisioner.ProvisionAsync();
-        var ex = await Record.ExceptionAsync(act);
+        var ex = await TestExceptionRecorder.CaptureAsync(act);
 
         //Assert
-        Assert.Null(ex);
-        Assert.True(DboHistoryTableExists(), "[dbo].[__BrighterMigrationHistory] must be created");
-        Assert.Equal(1, GetDboHistoryRowCountForBox());
-        Assert.Equal(0, GetCollidingHistoryRowCount());
+        await Assert.That(ex).IsNull();
+        await Assert.That(DboHistoryTableExists()).IsTrue().Because("[dbo].[__BrighterMigrationHistory] must be created");
+        await Assert.That(GetDboHistoryRowCountForBox()).IsEqualTo(1);
+        await Assert.That(GetCollidingHistoryRowCount()).IsEqualTo(0);
     }
 
     private void DropDboHistoryTable()
@@ -144,7 +143,11 @@ CREATE TABLE [{CollidingSchema}].[__BrighterMigrationHistory] (
         command.ExecuteNonQuery();
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public Task DisposeAsync()
     {

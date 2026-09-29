@@ -25,14 +25,13 @@ using System;
 using System.Collections.Generic;
 using Grpc.Core;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
 public class GcpStreamSubscriberConfigurationCompositionTests
 {
-    [Fact]
-    public void When_a_gcp_stream_subscription_sets_its_own_streaming_configuration_should_run_the_connection_configuration_first()
+    [Test]
+    public async Task When_a_gcp_stream_subscription_sets_its_own_streaming_configuration_should_run_the_connection_configuration_first()
     {
         // Arrange
         var configurationsRun = new List<string>();
@@ -66,6 +65,6 @@ public class GcpStreamSubscriberConfigurationCompositionTests
         using var consumer = factory.Create(subscription);
 
         // Assert
-        Assert.Equal(["connection", "subscription"], configurationsRun);
+        await Assert.That(configurationsRun).IsEqualTo(["connection", "subscription"]);
     }
 }

@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Outbox;
 
@@ -91,7 +90,7 @@ public abstract class OutstandingCountOutboxBaseTests<TTransaction> : IDisposabl
         var count = await WaitForCountAsync(100, 5);
 
         // Assert
-        Assert.Equal(5, count);
+        await Assert.That(count).IsEqualTo(5);
     }
 
     /// <summary>
@@ -107,7 +106,7 @@ public abstract class OutstandingCountOutboxBaseTests<TTransaction> : IDisposabl
         var count = await WaitForCountAsync(3, 3);
 
         // Assert
-        Assert.Equal(3, count);
+        await Assert.That(count).IsEqualTo(3);
     }
 
     /// <summary>
@@ -123,7 +122,7 @@ public abstract class OutstandingCountOutboxBaseTests<TTransaction> : IDisposabl
         var count = await WaitForCountAsync(5, 5);
 
         // Assert
-        Assert.Equal(5, count);
+        await Assert.That(count).IsEqualTo(5);
     }
 
     /// <summary>

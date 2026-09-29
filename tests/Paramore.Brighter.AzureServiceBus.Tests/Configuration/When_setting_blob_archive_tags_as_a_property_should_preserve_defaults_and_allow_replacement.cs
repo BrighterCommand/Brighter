@@ -32,16 +32,15 @@ using System.Net.Mime;
 using Azure.Storage.Blobs.Models;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.Storage.Azure;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.Configuration;
 
 public class AzureArchiveTagsConfigurationTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_setting_blob_archive_tags_as_a_property_should_preserve_defaults_and_allow_replacement(bool missingOptionalHeaders)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_setting_blob_archive_tags_as_a_property_should_preserve_defaults_and_allow_replacement(bool missingOptionalHeaders)
     {
         //Arrange
         var options = new AzureBlobArchiveProviderOptions(
@@ -58,15 +57,15 @@ public class AzureArchiveTagsConfigurationTests
         }
 
         var property = typeof(AzureBlobArchiveProviderOptions).GetProperty(nameof(options.TagsFunc));
-        Assert.NotNull(property);
-        var defaultTags = Assert.IsType<Func<Message, Dictionary<string, string?>>>(property.GetValue(options));
+        await Assert.That(property).IsNotNull();
+        var defaultTags = await Assert.That(property.GetValue(options)).IsTypeOf<Func<Message, Dictionary<string, string?>>>();
         var tags = defaultTags(message);
-        Assert.Equal(5, tags.Count);
-        Assert.Equal("orders", tags["topic"]);
-        Assert.Equal(missingOptionalHeaders ? null : "correlation-123", tags["correlationId"]);
-        Assert.Equal("MT_EVENT", tags["message_type"]);
-        Assert.Equal(timestamp.ToString(CultureInfo.InvariantCulture), tags["timestamp"]);
-        Assert.Equal(missingOptionalHeaders ? MediaTypeNames.Text.Plain : "application/json", tags["content_type"]);
+        await Assert.That(tags.Count).IsEqualTo(5);
+        await Assert.That(tags["topic"]).IsEqualTo("orders");
+        await Assert.That(tags["correlationId"]).IsEqualTo(missingOptionalHeaders ? null : "correlation-123");
+        await Assert.That(tags["message_type"]).IsEqualTo("MT_EVENT");
+        await Assert.That(tags["timestamp"]).IsEqualTo(timestamp.ToString(CultureInfo.InvariantCulture));
+        await Assert.That(tags["content_type"]).IsEqualTo(missingOptionalHeaders ? MediaTypeNames.Text.Plain : "application/json");
         var customTags = new Dictionary<string, string?> { ["custom"] = "value" };
         Func<Message, Dictionary<string, string?>> replacement = _ => customTags;
 
@@ -74,9 +73,9 @@ public class AzureArchiveTagsConfigurationTests
         property.SetValue(options, replacement);
 
         //Assert
-        Assert.Same(replacement, options.TagsFunc);
-        Assert.Same(customTags, options.TagsFunc(message));
+        await Assert.That(options.TagsFunc).IsSameReferenceAs(replacement);
+        await Assert.That(options.TagsFunc(message)).IsSameReferenceAs(customTags);
         options.TagsFunc = item => new Dictionary<string, string?> { ["id"] = item.Id.Value };
-        Assert.Equal("order-123", options.TagsFunc(message)["id"]);
+        await Assert.That(options.TagsFunc(message)["id"]).IsEqualTo("order-123");
     }
 }

@@ -42,7 +42,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -54,7 +53,7 @@ public class TornReadTests
     private const int ObservationsDuringSweep = 5;
     private static readonly TimeSpan Guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_another_thread_observes_while_sweeps_rotate_outcomes_should_never_see_a_torn_read()
     {
         //Arrange
@@ -113,12 +112,12 @@ public class TornReadTests
             await sweeper.StopAsync(CancellationToken.None).WaitAsync(Guard);
 
             //Assert
-            Assert.True(firstEnded, "The first sweep did not end");
-            Assert.True(allParked, "The sweeper did not park between sweeps");
-            Assert.True(allSweepsEnded, "A rotating sweep did not end");
-            Assert.True(allObserved, "The observer did not take every observation it was allowed");
-            Assert.Equal(Rounds * (ObservationsInPause + ObservationsDuringSweep), observer.Observations);
-            Assert.Empty(observer.Violations);
+            await Assert.That(firstEnded).IsTrue().Because("The first sweep did not end");
+            await Assert.That(allParked).IsTrue().Because("The sweeper did not park between sweeps");
+            await Assert.That(allSweepsEnded).IsTrue().Because("A rotating sweep did not end");
+            await Assert.That(allObserved).IsTrue().Because("The observer did not take every observation it was allowed");
+            await Assert.That(observer.Observations).IsEqualTo(Rounds * (ObservationsInPause + ObservationsDuringSweep));
+            await Assert.That(observer.Violations).IsEmpty();
         }
         finally
         {

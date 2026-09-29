@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests;
 
@@ -31,7 +30,7 @@ namespace Paramore.Brighter.InMemory.Tests;
 // slowly, starving every other pool work item in the process for tens of seconds — including
 // the InMemoryBox background expiry/compaction tasks that other tests wait on (#4475).
 // Serialising those tests through this collection stops them overlapping anything else.
-[CollectionDefinition(Name, DisableParallelization = true)]
+[System.Obsolete]
 public class ThreadPoolSaturatingCollection
 {
     public const string Name = "ThreadPoolSaturating";

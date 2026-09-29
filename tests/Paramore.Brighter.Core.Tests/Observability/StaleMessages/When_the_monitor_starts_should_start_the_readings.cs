@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -34,13 +34,12 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorStartReadingsTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_monitor_starts_should_start_the_readings()
     {
         //Arrange
@@ -50,12 +49,12 @@ public class StaleMessageMonitorStartReadingsTests
         await monitor.StartAsync(default);
 
         //Assert
-        Assert.True(readings.IsStarted);
-        Assert.Equal(nameof(StaleMessageTopicCountingOutbox), readings.OutboxType);
-        Assert.True(readings.MeasuresTopics);
+        await Assert.That(readings.IsStarted).IsTrue();
+        await Assert.That(readings.OutboxType).IsEqualTo(nameof(StaleMessageTopicCountingOutbox));
+        await Assert.That(readings.MeasuresTopics).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_monitor_starts_with_an_outbox_that_cannot_count_by_topic_should_start_the_readings_without_topics()
     {
         //Arrange
@@ -65,9 +64,9 @@ public class StaleMessageMonitorStartReadingsTests
         await monitor.StartAsync(default);
 
         //Assert
-        Assert.True(readings.IsStarted);
-        Assert.Equal(nameof(StaleMessageCountingOutbox), readings.OutboxType);
-        Assert.False(readings.MeasuresTopics);
+        await Assert.That(readings.IsStarted).IsTrue();
+        await Assert.That(readings.OutboxType).IsEqualTo(nameof(StaleMessageCountingOutbox));
+        await Assert.That(readings.MeasuresTopics).IsFalse();
     }
 
     private static (TimedOutboxStaleMessageMonitor Monitor, OutboxStaleMessageReadings Readings) BuildMonitor(

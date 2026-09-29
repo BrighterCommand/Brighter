@@ -1,14 +1,14 @@
 using Paramore.Brighter.CircuitBreaker;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker
 {
     public class OutboxCircuitBreakerTripLoggingTests
     {
-        [Fact]
-        public void When_a_healthy_topic_trips_should_log_warning()
+        [Test]
+        public async System.Threading.Tasks.Task When_a_healthy_topic_trips_should_log_warning()
         {
             using (TestCorrelator.CreateContext())
             {
@@ -21,11 +21,11 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
 
                 // Assert
                 var logEvents = TestCorrelator.GetLogEventsFromCurrentContext();
-                Assert.Contains(logEvents, e =>
+                await Assert.That(System.Linq.Enumerable.Any(logEvents, e =>
                     e.Level == LogEventLevel.Warning &&
                     e.MessageTemplate.Text == "Circuit breaker tripped for topic {Topic}; suppressing publish for {CooldownCount} cooldown cycle(s)" &&
                     e.Properties["Topic"].ToString() == "\"healthy.topic\"" &&
-                    e.Properties["CooldownCount"].ToString() == "3");
+                    e.Properties["CooldownCount"].ToString() == "3")).IsTrue();
             }
         }
     }

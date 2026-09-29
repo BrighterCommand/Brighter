@@ -33,8 +33,6 @@ using Org.Apache.Rocketmq;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
@@ -53,8 +51,8 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 /// auto-creates one) and pick their own message out by id, acknowledging anything stale, because a
 /// fresh consumer group can be handed messages earlier runs left on the topic.
 /// </remarks>
-[Trait("Category", "RocketMQ")]
-public class RocketMqDeliveryAttemptMeasurementTests(ITestOutputHelper output)
+[Property("Category", "RocketMQ")]
+public class RocketMqDeliveryAttemptMeasurementTests()
 {
     private const string Topic = "rmq_measure_delivery_attempt";
     private const int Deliveries = 3;
@@ -69,8 +67,9 @@ public class RocketMqDeliveryAttemptMeasurementTests(ITestOutputHelper output)
     /// disposed and a new one created — same consumer group — between deliveries 2 and 3, so a value
     /// that keeps rising cannot come from the client-local <c>IncrementAndGetDeliveryAttempt</c>.
     /// </summary>
-    [Fact(Skip = "measurement — AC-23")]
-    public void Measure_delivery_attempt_over_three_lease_lapse_redeliveries_with_a_fresh_client_before_the_third()
+    [Test]
+    [Skip("measurement — AC-23")]
+    public async Task Measure_delivery_attempt_over_three_lease_lapse_redeliveries_with_a_fresh_client_before_the_third()
     {
         var connection = GatewayFactory.CreateConnection();
         var routingKey = new RoutingKey(Topic);
@@ -107,15 +106,15 @@ public class RocketMqDeliveryAttemptMeasurementTests(ITestOutputHelper output)
                     // Rule out the client-local counter: the third delivery comes to a new client
                     consumer.Dispose();
                     consumer = factory.Create(subscription);
-                    output.WriteLine($"[7.1] consumer disposed and recreated (same group) before delivery {delivery}");
+                    Console.WriteLine($"[7.1] consumer disposed and recreated (same group) before delivery {delivery}");
                 }
 
                 var received = ReceiveOurs(consumer, message.Id);
-                Assert.NotNull(received);
+                await Assert.That(received).IsNotNull();
 
                 var view = (MessageView)received!.Header.Bag["ReceiptHandle"];
                 observed.Add(view.DeliveryAttempt);
-                output.WriteLine(
+                Console.WriteLine(
                     $"[7.1] delivery={delivery} DeliveryAttempt={view.DeliveryAttempt} " +
                     $"HandledCount={received.Header.HandledCount} t+{sent.Elapsed.TotalSeconds:F1}s " +
                     $"brokerMessageId={view.MessageId}");
@@ -125,7 +124,7 @@ public class RocketMqDeliveryAttemptMeasurementTests(ITestOutputHelper output)
                     consumer.Acknowledge(received);
             }
 
-            output.WriteLine($"[7.1] sequence=[{string.Join(", ", observed)}] {Verdict(observed)}");
+            Console.WriteLine($"[7.1] sequence=[{string.Join(", ", observed)}] {Verdict(observed)}");
         }
         finally
         {
@@ -138,7 +137,8 @@ public class RocketMqDeliveryAttemptMeasurementTests(ITestOutputHelper output)
     /// on RocketMQ.Client 5.2.1 make the message visible again before its 10 s lease lapses, and what
     /// <c>DeliveryAttempt</c> does the redelivery carry? Records an exception rather than failing on one.
     /// </summary>
-    [Fact(Skip = "measurement — AC-23 (ChangeInvisibleDuration probe)")]
+    [Test]
+    [Skip("measurement — AC-23 (ChangeInvisibleDuration probe)")]
     public async Task Probe_change_invisible_duration_to_zero_on_client_5_2_1()
     {
         var connection = GatewayFactory.CreateConnection();
@@ -162,23 +162,23 @@ public class RocketMqDeliveryAttemptMeasurementTests(ITestOutputHelper output)
         await producer.SendAsync(message);
 
         var first = await RawReceiveOursAsync(simpleConsumer, message.Id);
-        Assert.NotNull(first);
-        output.WriteLine($"[7.1-probe] delivery=1 DeliveryAttempt={first!.DeliveryAttempt}");
+        await Assert.That(first).IsNotNull();
+        Console.WriteLine($"[7.1-probe] delivery=1 DeliveryAttempt={first!.DeliveryAttempt}");
 
         var changed = Stopwatch.StartNew();
         try
         {
             await simpleConsumer.ChangeInvisibleDuration(first, TimeSpan.Zero);
-            output.WriteLine("[7.1-probe] ChangeInvisibleDuration(view, 0) returned without error");
+            Console.WriteLine("[7.1-probe] ChangeInvisibleDuration(view, 0) returned without error");
         }
         catch (Exception e)
         {
-            output.WriteLine($"[7.1-probe] ChangeInvisibleDuration(view, 0) threw {e.GetType().FullName}: {e.Message}");
+            Console.WriteLine($"[7.1-probe] ChangeInvisibleDuration(view, 0) threw {e.GetType().FullName}: {e.Message}");
         }
 
         var second = await RawReceiveOursAsync(simpleConsumer, message.Id);
-        Assert.NotNull(second);
-        output.WriteLine(
+        await Assert.That(second).IsNotNull();
+        Console.WriteLine(
             $"[7.1-probe] delivery=2 DeliveryAttempt={second!.DeliveryAttempt} " +
             $"after {changed.Elapsed.TotalSeconds:F1}s (lease is {s_invisibilityTimeout.TotalSeconds:F0}s; " +
             $"well under it means ChangeInvisibleDuration took effect)");
@@ -204,7 +204,7 @@ public class RocketMqDeliveryAttemptMeasurementTests(ITestOutputHelper output)
                 if (received.Id == messageId)
                     return received;
 
-                output.WriteLine($"[7.1] acknowledging stale message {received.Id}");
+                Console.WriteLine($"[7.1] acknowledging stale message {received.Id}");
                 consumer.Acknowledge(received);
             }
         }
@@ -223,7 +223,7 @@ public class RocketMqDeliveryAttemptMeasurementTests(ITestOutputHelper output)
                 if (view.Properties.TryGetValue(HeaderNames.MessageId, out var id) && id == messageId.Value)
                     return view;
 
-                output.WriteLine($"[7.1-probe] acknowledging stale message {view.MessageId}");
+                Console.WriteLine($"[7.1-probe] acknowledging stale message {view.MessageId}");
                 await consumer.Ack(view);
             }
         }

@@ -4,6 +4,7 @@ using Paramore.Brighter.MongoDb;
 
 namespace Paramore.Brighter.MongoDb.Tests.Inbox;
 
+[TUnit.Core.InheritsTests]
 public class MongoDbCausationTrackingInboxTest : CausationTrackingInboxBaseTests
 {
     private string? _collectionName;

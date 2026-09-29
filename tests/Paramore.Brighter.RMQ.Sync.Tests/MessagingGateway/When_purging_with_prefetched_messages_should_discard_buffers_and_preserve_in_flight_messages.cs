@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -37,20 +37,19 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[NotInParallel("RMQ")]
 public class RmqPurgeBufferedMessagesTests
 {
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(true, false, false)]
-    [InlineData(false, true, false)]
-    [InlineData(true, true, false)]
-    [InlineData(true, false, true)]
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(true, false, false)]
+    [Arguments(false, true, false)]
+    [Arguments(true, true, false)]
+    [Arguments(true, false, true)]
     public async Task When_purging_with_prefetched_messages_should_discard_buffers_and_preserve_in_flight_messages(
         bool bufferInBrighterChannel, bool recoverConnection, bool failAcknowledgement)
     {
@@ -82,7 +81,7 @@ public class RmqPurgeBufferedMessagesTests
             }
 
             waitForReadyMessages(adminChannel, queueName, 4);
-            Assert.True(Assert.Single(consumer.Receive(TimeSpan.Zero)).IsEmpty);
+            await Assert.That((await Assert.That(consumer.Receive(TimeSpan.Zero)).HasSingleItem()).IsEmpty).IsTrue();
             waitForReadyMessages(adminChannel, queueName, 1);
             if (recoverConnection)
             {
@@ -94,14 +93,14 @@ public class RmqPurgeBufferedMessagesTests
             if (bufferInBrighterChannel)
             {
                 inFlight = channel.Receive(TimeSpan.FromSeconds(5));
-                Assert.Equal(MessageType.MT_COMMAND, inFlight.Header.MessageType);
+                await Assert.That(inFlight.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
             }
 
             // Act
             if (failAcknowledgement)
             {
                 failure = "BasicAck";
-                Assert.Throws<InvalidOperationException>(() => channel.Purge());
+                await Assert.That(() => channel.Purge()).ThrowsExactly<InvalidOperationException>();
                 failure = null;
             }
 
@@ -118,28 +117,27 @@ public class RmqPurgeBufferedMessagesTests
             }
 
             // Assert
-            Assert.Equal(MessageType.MT_NONE,
-                (channel.Receive(TimeSpan.FromMilliseconds(500))).Header.MessageType);
+            await Assert.That((channel.Receive(TimeSpan.FromMilliseconds(500))).Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             if (inFlight != null)
             {
                 channel.Nack(inFlight);
                 var redelivered = channel.Receive(TimeSpan.FromSeconds(5));
-                Assert.Equal(inFlight.Id, redelivered.Id);
+                await Assert.That(redelivered.Id).IsEqualTo(inFlight.Id);
                 channel.Acknowledge(redelivered);
             }
 
             var fresh = createMessage(routingKey);
             producer.Send(fresh);
             var received = channel.Receive(TimeSpan.FromSeconds(5));
-            Assert.Equal(fresh.Id, received.Id);
+            await Assert.That(received.Id).IsEqualTo(fresh.Id);
             channel.Acknowledge(received);
             channel.Dispose();
 
             using var reconnected = new RmqMessageConsumer(connection, queueName, routingKey,
                 isDurable: true, batchSize: 3);
-            var afterReconnect = Assert.Single(reconnected.Receive(TimeSpan.FromSeconds(1)));
-            Assert.Equal(MessageType.MT_NONE, afterReconnect.Header.MessageType);
+            var afterReconnect = await Assert.That(reconnected.Receive(TimeSpan.FromSeconds(1))).HasSingleItem();
+            await Assert.That(afterReconnect.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {
@@ -171,7 +169,7 @@ public class RmqPurgeBufferedMessagesTests
             }
         }
 
-        Assert.NotNull(brokerName);
+        await Assert.That(brokerName).IsNotNull();
         using var response = await management.DeleteAsync($"connections/{Uri.EscapeDataString(brokerName)}");
         response.EnsureSuccessStatusCode();
         timeout.Restart();
@@ -180,13 +178,13 @@ public class RmqPurgeBufferedMessagesTests
             await Task.Delay(20);
         }
 
-        Assert.False(shared.IsOpen);
+        await Assert.That(shared.IsOpen).IsFalse();
         while (!shared.IsOpen && timeout.Elapsed < TimeSpan.FromSeconds(30))
         {
             await Task.Delay(20);
         }
 
-        Assert.True(shared.IsOpen);
+        await Assert.That(shared.IsOpen).IsTrue();
     }
 
     private static Message createMessage(RoutingKey routingKey) =>
@@ -206,6 +204,6 @@ public class RmqPurgeBufferedMessagesTests
             Thread.Sleep(20);
         }
 
-        Assert.Fail($"The broker did not reach {expected} ready messages before the timeout.");
+        Assert.Fail("Expected the operation to fail.");
     }
 }

@@ -25,8 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
 /// <summary>
@@ -34,12 +33,12 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// twice (the pump on quit, then the performer), so a second dispose must not count as another channel
 /// leaving and stop the client that the subscription's other performers are still reading from.
 /// </summary>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
 public class GcpStreamDoubleDisposeSharedClientTests
 {
-    [Fact]
-    public void When_a_gcp_stream_channel_is_disposed_twice_should_not_stop_another_channel_on_the_subscription()
+    [Test]
+    public async Task When_a_gcp_stream_channel_is_disposed_twice_should_not_stop_another_channel_on_the_subscription()
     {
         var provider = new GcpStreamMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -69,7 +68,7 @@ public class GcpStreamDoubleDisposeSharedClientTests
             var received = remainingChannel.Receive(TimeSpan.FromSeconds(20));
 
             // Assert — the remaining channel still receives
-            Assert.Equal(sent.Id, received.Id);
+            await Assert.That(received.Id).IsEqualTo(sent.Id);
             remainingChannel.Acknowledge(received);
         }
         finally

@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// A migration cancelled mid-flight calls <c>RollbackAsync</c> with <see cref="CancellationToken.None"/>,
 /// so the explicit <c>RELEASE_LOCK</c> still runs and the next migration can take the lock (ADR 0058 §B.3).
 /// </summary>
-public class MySqlMigrationCancellationTests : IAsyncLifetime
+public class MySqlMigrationCancellationTests
 {
     private static readonly TimeSpan s_cancelAfter = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan s_freshRunnerLockTimeout = TimeSpan.FromSeconds(5);
@@ -44,7 +43,7 @@ public class MySqlMigrationCancellationTests : IAsyncLifetime
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mysql_migration_is_cancelled_mid_flight_it_should_release_get_lock()
     {
         //Arrange
@@ -58,27 +57,24 @@ public class MySqlMigrationCancellationTests : IAsyncLifetime
         cts.CancelAfter(s_cancelAfter);
 
         //Act
-        var thrown = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancellingRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token));
+        var thrown = await Assert.That(() => cancellingRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token)).Throws<OperationCanceledException>();
 
         //Assert
-        Assert.NotNull(thrown);
+        await Assert.That(thrown).IsNotNull();
 
         var spy = cancellingRunner.LastUnitOfWork;
-        Assert.NotNull(spy);
-        Assert.True(spy!.RollbackInvoked,
-            "RollbackAsync should have been invoked after the mid-flight cancellation per ADR §B.3.");
+        await Assert.That(spy).IsNotNull();
+        await Assert.That(spy!.RollbackInvoked).IsTrue().Because("RollbackAsync should have been invoked after the mid-flight cancellation per ADR §B.3.");
 
-        Assert.False(spy.RollbackToken.IsCancellationRequested,
-            "RollbackAsync should receive CancellationToken.None to ensure RELEASE_LOCK completes.");
-        Assert.Equal(CancellationToken.None, spy.RollbackToken);
+        await Assert.That(spy.RollbackToken.IsCancellationRequested).IsFalse().Because("RollbackAsync should receive CancellationToken.None to ensure RELEASE_LOCK completes.");
+        await Assert.That(spy.RollbackToken).IsEqualTo(CancellationToken.None);
 
         var freshRunner = new MySqlBoxMigrationRunner(catalog, config, s_freshRunnerLockTimeout);
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
-        Assert.True(await TableExistsAsync(),
-            "Subsequent migration should have created the outbox table after the lock was released.");
+        await Assert.That(await TableExistsAsync()).IsTrue().Because("Subsequent migration should have created the outbox table after the lock was released.");
     }
 
     private async Task<bool> TableExistsAsync()
@@ -94,7 +90,11 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @TableName";
         return count > 0;
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

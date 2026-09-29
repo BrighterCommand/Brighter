@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia
@@ -37,18 +37,17 @@ using Grpc.Core;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
-[Trait("Category", "GcpPubSubPurge")]
+[Property("Category", "GcpPubSubPurge")]
 public class GcpPurgeConcurrentPublicationTests
 {
-    [Theory]
-    [InlineData(false, SubscriptionMode.Pull)]
-    [InlineData(true, SubscriptionMode.Pull)]
-    [InlineData(false, SubscriptionMode.Stream)]
-    [InlineData(true, SubscriptionMode.Stream)]
+    [Test]
+    [Arguments(false, SubscriptionMode.Pull)]
+    [Arguments(true, SubscriptionMode.Pull)]
+    [Arguments(false, SubscriptionMode.Stream)]
+    [Arguments(true, SubscriptionMode.Stream)]
     public async Task When_purging_during_publication_should_discard_the_old_backlog_and_deliver_new_messages(
         bool useAsync, SubscriptionMode mode)
     {
@@ -132,14 +131,14 @@ public class GcpPurgeConcurrentPublicationTests
                     : syncChannel!.Receive(TimeSpan.FromSeconds(1));
                 if (message.IsEmpty)
                     continue;
-                Assert.NotEqual("old", message.Body.Value);
+                await Assert.That(message.Body.Value).IsNotEqualTo("old");
                 foundNewMessage = message.Body.Value == "after-purge";
                 if (useAsync)
                     await asyncChannel!.AcknowledgeAsync(message);
                 else
                     syncChannel!.Acknowledge(message);
             }
-            Assert.True(foundNewMessage, "A message published after purge completion must remain deliverable.");
+            await Assert.That(foundNewMessage).IsTrue().Because("A message published after purge completion must remain deliverable.");
         }
         finally
         {

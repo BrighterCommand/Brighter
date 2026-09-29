@@ -5,13 +5,12 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class SweeperStateBlockedInLockAcquisitionTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_sweep_is_blocked_acquiring_the_lock_should_record_it_in_progress_and_not_active()
     {
         //Arrange
@@ -37,11 +36,11 @@ public class SweeperStateBlockedInLockAcquisitionTests
             blocked = state.Read();
 
             //Assert
-            Assert.True(reachedLock, "The sweep did not reach the lock");
-            Assert.True(blocked.IsSweepInProgress);
-            Assert.Equal(TimeSpan.FromSeconds(40), blocked.RunningTime);
-            Assert.False(blocked.HoldsLock);
-            Assert.False(blocked.IsActive);
+            await Assert.That(reachedLock).IsTrue().Because("The sweep did not reach the lock");
+            await Assert.That(blocked.IsSweepInProgress).IsTrue();
+            await Assert.That(blocked.RunningTime).IsEqualTo(TimeSpan.FromSeconds(40));
+            await Assert.That(blocked.HoldsLock).IsFalse();
+            await Assert.That(blocked.IsActive).IsFalse();
         }
         finally
         {

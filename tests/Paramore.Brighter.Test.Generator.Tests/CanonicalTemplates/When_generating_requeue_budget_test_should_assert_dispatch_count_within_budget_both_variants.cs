@@ -22,7 +22,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -87,7 +86,7 @@ public class WhenGeneratingRequeueBudgetTestShouldAssertDispatchCountWithinBudge
     ///   <item>HandledCount &gt;= deliveriesExpected is kept in both variants</item>
     /// </list>
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_generating_requeue_budget_test_should_assert_dispatch_count_within_budget_both_variants()
     {
         // Arrange
@@ -100,11 +99,11 @@ public class WhenGeneratingRequeueBudgetTestShouldAssertDispatchCountWithinBudge
 
         // Assert — Reactor variant
         var reactor = await File.ReadAllTextAsync(ReactorFr23Path());
-        AssertVariantObligations(reactor, "Reactor");
+        await AssertVariantObligations(reactor, "Reactor");
 
         // Assert — Proactor variant
         var proactor = await File.ReadAllTextAsync(ProactorFr23Path());
-        AssertVariantObligations(proactor, "Proactor");
+        await AssertVariantObligations(proactor, "Proactor");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -112,48 +111,35 @@ public class WhenGeneratingRequeueBudgetTestShouldAssertDispatchCountWithinBudge
     /// <summary>
     /// Asserts all R-27(c)(4) obligations for one variant (Reactor or Proactor).
     /// </summary>
-    private static void AssertVariantObligations(string content, string label)
+    private static async Task AssertVariantObligations(string content, string label)
     {
         // 1. Dispatch count is read using the correct key derivation
-        Assert.True(content.Contains(GET_DISPATCH_COUNT),
-            $"{label}: generated file must call {GET_DISPATCH_COUNT}");
-        Assert.True(content.Contains(KEY_OF_MESSAGE),
-            $"{label}: dispatch count key must use {KEY_OF_MESSAGE}");
+        await Assert.That(content.Contains(GET_DISPATCH_COUNT)).IsTrue().Because($"{label}: generated file must call {GET_DISPATCH_COUNT}");
+        await Assert.That(content.Contains(KEY_OF_MESSAGE)).IsTrue().Because($"{label}: dispatch count key must use {KEY_OF_MESSAGE}");
 
         // 2. Dispatch count is bounded by RequeueCount
-        Assert.True(content.Contains(DISPATCH_WITHIN_BUDGET),
-            $"{label}: must assert dispatch count {DISPATCH_WITHIN_BUDGET}");
+        await Assert.That(content.Contains(DISPATCH_WITHIN_BUDGET)).IsTrue().Because($"{label}: must assert dispatch count {DISPATCH_WITHIN_BUDGET}");
 
         // 3. Dispatch count assertion appears AFTER await pumping (R-4: window closes after quit-and-await)
         var awaitPumpingIndex = content.IndexOf(AWAIT_PUMPING, StringComparison.Ordinal);
         var dispatchCountIndex = content.IndexOf(GET_DISPATCH_COUNT, StringComparison.Ordinal);
 
-        Assert.True(awaitPumpingIndex >= 0,
-            $"{label}: '{AWAIT_PUMPING}' not found");
-        Assert.True(dispatchCountIndex >= 0,
-            $"{label}: '{GET_DISPATCH_COUNT}' not found");
-        Assert.True(dispatchCountIndex > awaitPumpingIndex,
-            $"{label}: {GET_DISPATCH_COUNT} (at {dispatchCountIndex}) must appear after " +
-            $"'{AWAIT_PUMPING}' (at {awaitPumpingIndex})");
+        await Assert.That(awaitPumpingIndex >= 0).IsTrue().Because($"{label}: '{AWAIT_PUMPING}' not found");
+        await Assert.That(dispatchCountIndex >= 0).IsTrue().Because($"{label}: '{GET_DISPATCH_COUNT}' not found");
+        await Assert.That(dispatchCountIndex > awaitPumpingIndex).IsTrue();
 
         // 4. StampsRejectionMetadata guard contains keys.RejectionReason == "DeliveryError"
-        Assert.True(content.Contains(STAMPS_REJECTION_METADATA),
-            $"{label}: must contain {STAMPS_REJECTION_METADATA} guard");
-        Assert.True(content.Contains(KEYS_REJECTION_REASON),
-            $"{label}: must assert via {KEYS_REJECTION_REASON}");
-        Assert.True(content.Contains(DELIVERY_ERROR_VALUE),
-            $"{label}: must assert {DELIVERY_ERROR_VALUE}");
+        await Assert.That(content.Contains(STAMPS_REJECTION_METADATA)).IsTrue().Because($"{label}: must contain {STAMPS_REJECTION_METADATA} guard");
+        await Assert.That(content.Contains(KEYS_REJECTION_REASON)).IsTrue().Because($"{label}: must assert via {KEYS_REJECTION_REASON}");
+        await Assert.That(content.Contains(DELIVERY_ERROR_VALUE)).IsTrue().Because($"{label}: must assert {DELIVERY_ERROR_VALUE}");
 
         // RejectionReason assertion must be INSIDE the StampsRejectionMetadata guard
         var stampsIndex = content.IndexOf(STAMPS_REJECTION_METADATA, StringComparison.Ordinal);
         var rejectionReasonIndex = content.IndexOf(KEYS_REJECTION_REASON, StringComparison.Ordinal);
-        Assert.True(rejectionReasonIndex > stampsIndex,
-            $"{label}: {KEYS_REJECTION_REASON} (at {rejectionReasonIndex}) must appear after " +
-            $"{STAMPS_REJECTION_METADATA} (at {stampsIndex}) — assertion must be inside the guard");
+        await Assert.That(rejectionReasonIndex > stampsIndex).IsTrue();
 
         // 5. Existing HandledCount >= RequeueCount - 1 assertion is kept (R-5 bound)
-        Assert.True(content.Contains(HANDLED_COUNT_BOUND),
-            $"{label}: must retain '{HANDLED_COUNT_BOUND}' assertion");
+        await Assert.That(content.Contains(HANDLED_COUNT_BOUND)).IsTrue().Because($"{label}: must retain '{HANDLED_COUNT_BOUND}' assertion");
     }
 
     private static InMemoryConformanceLedger PassLedger(string frColumn) =>

@@ -28,17 +28,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
 public class MsSqlMessageIdMigrationConflictTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_mssql_migrates_duplicate_message_ids_should_preserve_rows_and_allow_retry_after_resolution(
         bool binary, bool withHistory)
     {
@@ -52,20 +51,20 @@ public class MsSqlMessageIdMigrationConflictTests
         await outbox.AddAsync(MsSqlMessageIdOutboxStore.Message(id, "conflicting version"), context);
 
         //Act
-        var failure = await Record.ExceptionAsync(() => store.ProvisionAsync());
+        var failure = await TestExceptionRecorder.CaptureAsync(() => store.ProvisionAsync());
 
         //Assert
-        Assert.NotNull(failure);
-        Assert.Contains("MessageId", failure.ToString(), StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("duplicate", failure.ToString(), StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(store.Table, failure.ToString(), StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(withHistory ? 8 : 0, await store.LatestVersionAsync());
-        Assert.Equal(2, await store.RowCountAsync());
-        Assert.Equal(0, await store.MessageIdUniqueIndexesAsync());
+        await Assert.That(failure).IsNotNull();
+        await Assert.That(failure.ToString()).Contains("MessageId");
+        await Assert.That(failure.ToString()).Contains("duplicate");
+        await Assert.That(failure.ToString()).Contains(store.Table);
+        await Assert.That(await store.LatestVersionAsync()).IsEqualTo(withHistory ? 8 : 0);
+        await Assert.That(await store.RowCountAsync()).IsEqualTo(2);
+        await Assert.That(await store.MessageIdUniqueIndexesAsync()).IsEqualTo(0);
         var preserved = (await outbox.OutstandingMessagesAsync(TimeSpan.Zero, context)).ToArray();
-        Assert.Equal(2, preserved.Length);
-        Assert.Contains(preserved, message => message.Body.Value == "first version");
-        Assert.Contains(preserved, message => message.Body.Value == "conflicting version");
+        await Assert.That(preserved.Length).IsEqualTo(2);
+        await Assert.That(System.Linq.Enumerable.Any(preserved, message => message.Body.Value == "first version")).IsTrue();
+        await Assert.That(System.Linq.Enumerable.Any(preserved, message => message.Body.Value == "conflicting version")).IsTrue();
 
         //Arrange
         await store.ExecuteAsync($"DELETE FROM {store.QualifiedTable} WHERE [Id] = (SELECT MAX([Id]) FROM {store.QualifiedTable})");
@@ -75,8 +74,8 @@ public class MsSqlMessageIdMigrationConflictTests
         await outbox.AddAsync(MsSqlMessageIdOutboxStore.Message(id, "retry"), context);
 
         //Assert
-        Assert.Equal(1, await store.RowCountAsync());
-        Assert.Equal(9, await store.LatestVersionAsync());
-        Assert.True(await store.MessageIdUniqueIndexesAsync() > 0);
+        await Assert.That(await store.RowCountAsync()).IsEqualTo(1);
+        await Assert.That(await store.LatestVersionAsync()).IsEqualTo(9);
+        await Assert.That(await store.MessageIdUniqueIndexesAsync() > 0).IsTrue();
     }
 }

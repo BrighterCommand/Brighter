@@ -22,7 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -38,8 +38,8 @@ public class MySqlMigrationLockNameTests
     // truncated the name — which would let two distinct table names share a lock.
     private const int MySqlGetLockNameLimit = 64;
 
-    [Fact]
-    public void When_schema_and_table_name_are_short_lock_name_should_use_simple_composite_form()
+    [Test]
+    public async Task When_schema_and_table_name_are_short_lock_name_should_use_simple_composite_form()
     {
         //Arrange
         const string schema = "public";
@@ -49,12 +49,12 @@ public class MySqlMigrationLockNameTests
         var lockName = MySqlMigrationLockName.For(schema, tableName);
 
         //Assert
-        Assert.Equal("BrighterMigration_public.outbox_users", lockName);
-        Assert.True(lockName.Length <= MySqlGetLockNameLimit);
+        await Assert.That(lockName).IsEqualTo("BrighterMigration_public.outbox_users");
+        await Assert.That(lockName.Length <= MySqlGetLockNameLimit).IsTrue();
     }
 
-    [Fact]
-    public void When_schema_is_null_lock_name_should_omit_schema_segment()
+    [Test]
+    public async Task When_schema_is_null_lock_name_should_omit_schema_segment()
     {
         //Arrange
         const string tableName = "outbox_users";
@@ -63,12 +63,12 @@ public class MySqlMigrationLockNameTests
         var lockName = MySqlMigrationLockName.For(schema: null, tableName);
 
         //Assert
-        Assert.Equal("BrighterMigration_outbox_users", lockName);
-        Assert.True(lockName.Length <= MySqlGetLockNameLimit);
+        await Assert.That(lockName).IsEqualTo("BrighterMigration_outbox_users");
+        await Assert.That(lockName.Length <= MySqlGetLockNameLimit).IsTrue();
     }
 
-    [Fact]
-    public void When_composite_is_long_lock_name_should_stay_within_64_chars()
+    [Test]
+    public async Task When_composite_is_long_lock_name_should_stay_within_64_chars()
     {
         //Arrange
         const string schema = "public";
@@ -78,13 +78,11 @@ public class MySqlMigrationLockNameTests
         var lockName = MySqlMigrationLockName.For(schema, tableName);
 
         //Assert
-        Assert.True(
-            lockName.Length <= MySqlGetLockNameLimit,
-            $"Lock name was {lockName.Length} chars; MySQL GET_LOCK limit is {MySqlGetLockNameLimit}.");
+        await Assert.That(lockName.Length <= MySqlGetLockNameLimit).IsTrue().Because($"Lock name was {lockName.Length} chars; MySQL GET_LOCK limit is {MySqlGetLockNameLimit}.");
     }
 
-    [Fact]
-    public void When_two_long_table_names_share_a_long_prefix_lock_names_should_differ()
+    [Test]
+    public async Task When_two_long_table_names_share_a_long_prefix_lock_names_should_differ()
     {
         //Arrange
         const string schema = "public";
@@ -97,13 +95,13 @@ public class MySqlMigrationLockNameTests
         var secondLockName = MySqlMigrationLockName.For(schema, secondTableName);
 
         //Assert
-        Assert.True(firstLockName.Length <= MySqlGetLockNameLimit);
-        Assert.True(secondLockName.Length <= MySqlGetLockNameLimit);
-        Assert.NotEqual(firstLockName, secondLockName);
+        await Assert.That(firstLockName.Length <= MySqlGetLockNameLimit).IsTrue();
+        await Assert.That(secondLockName.Length <= MySqlGetLockNameLimit).IsTrue();
+        await Assert.That(secondLockName).IsNotEqualTo(firstLockName);
     }
 
-    [Fact]
-    public void When_two_distinct_schemas_share_a_table_name_lock_names_should_differ()
+    [Test]
+    public async Task When_two_distinct_schemas_share_a_table_name_lock_names_should_differ()
     {
         //Arrange
         const string firstSchema = "public";
@@ -115,6 +113,6 @@ public class MySqlMigrationLockNameTests
         var secondLockName = MySqlMigrationLockName.For(secondSchema, sharedTableName);
 
         //Assert
-        Assert.NotEqual(firstLockName, secondLockName);
+        await Assert.That(secondLockName).IsNotEqualTo(firstLockName);
     }
 }

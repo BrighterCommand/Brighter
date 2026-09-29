@@ -25,46 +25,45 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite.Tests.TestHelpers;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
-[Trait("Category", "Sqlite")]
+[Property("Category", "Sqlite")]
 public class SqliteOutboxNonUniqueConstraintTests
 {
-    [Theory]
-    [InlineData("CHECK", 275, false, false, false)]
-    [InlineData("CHECK", 275, false, false, true)]
-    [InlineData("CHECK", 275, false, true, false)]
-    [InlineData("CHECK", 275, false, true, true)]
-    [InlineData("CHECK", 275, true, false, false)]
-    [InlineData("CHECK", 275, true, false, true)]
-    [InlineData("CHECK", 275, true, true, false)]
-    [InlineData("CHECK", 275, true, true, true)]
-    [InlineData("NOT NULL", 1299, false, false, false)]
-    [InlineData("NOT NULL", 1299, false, false, true)]
-    [InlineData("NOT NULL", 1299, false, true, false)]
-    [InlineData("NOT NULL", 1299, false, true, true)]
-    [InlineData("NOT NULL", 1299, true, false, false)]
-    [InlineData("NOT NULL", 1299, true, false, true)]
-    [InlineData("NOT NULL", 1299, true, true, false)]
-    [InlineData("NOT NULL", 1299, true, true, true)]
-    [InlineData("FOREIGN KEY", 787, false, false, false)]
-    [InlineData("FOREIGN KEY", 787, false, false, true)]
-    [InlineData("FOREIGN KEY", 787, false, true, false)]
-    [InlineData("FOREIGN KEY", 787, false, true, true)]
-    [InlineData("FOREIGN KEY", 787, true, false, false)]
-    [InlineData("FOREIGN KEY", 787, true, false, true)]
-    [InlineData("FOREIGN KEY", 787, true, true, false)]
-    [InlineData("FOREIGN KEY", 787, true, true, true)]
-    [InlineData("TRIGGER", 1811, false, false, false)]
-    [InlineData("TRIGGER", 1811, false, false, true)]
-    [InlineData("TRIGGER", 1811, false, true, false)]
-    [InlineData("TRIGGER", 1811, false, true, true)]
-    [InlineData("TRIGGER", 1811, true, false, false)]
-    [InlineData("TRIGGER", 1811, true, false, true)]
-    [InlineData("TRIGGER", 1811, true, true, false)]
-    [InlineData("TRIGGER", 1811, true, true, true)]
+    [Test]
+    [Arguments("CHECK", 275, false, false, false)]
+    [Arguments("CHECK", 275, false, false, true)]
+    [Arguments("CHECK", 275, false, true, false)]
+    [Arguments("CHECK", 275, false, true, true)]
+    [Arguments("CHECK", 275, true, false, false)]
+    [Arguments("CHECK", 275, true, false, true)]
+    [Arguments("CHECK", 275, true, true, false)]
+    [Arguments("CHECK", 275, true, true, true)]
+    [Arguments("NOT NULL", 1299, false, false, false)]
+    [Arguments("NOT NULL", 1299, false, false, true)]
+    [Arguments("NOT NULL", 1299, false, true, false)]
+    [Arguments("NOT NULL", 1299, false, true, true)]
+    [Arguments("NOT NULL", 1299, true, false, false)]
+    [Arguments("NOT NULL", 1299, true, false, true)]
+    [Arguments("NOT NULL", 1299, true, true, false)]
+    [Arguments("NOT NULL", 1299, true, true, true)]
+    [Arguments("FOREIGN KEY", 787, false, false, false)]
+    [Arguments("FOREIGN KEY", 787, false, false, true)]
+    [Arguments("FOREIGN KEY", 787, false, true, false)]
+    [Arguments("FOREIGN KEY", 787, false, true, true)]
+    [Arguments("FOREIGN KEY", 787, true, false, false)]
+    [Arguments("FOREIGN KEY", 787, true, false, true)]
+    [Arguments("FOREIGN KEY", 787, true, true, false)]
+    [Arguments("FOREIGN KEY", 787, true, true, true)]
+    [Arguments("TRIGGER", 1811, false, false, false)]
+    [Arguments("TRIGGER", 1811, false, false, true)]
+    [Arguments("TRIGGER", 1811, false, true, false)]
+    [Arguments("TRIGGER", 1811, false, true, true)]
+    [Arguments("TRIGGER", 1811, true, false, false)]
+    [Arguments("TRIGGER", 1811, true, false, true)]
+    [Arguments("TRIGGER", 1811, true, true, false)]
+    [Arguments("TRIGGER", 1811, true, true, true)]
     public async Task When_sqlite_outbox_violates_a_non_unique_constraint_should_propagate_the_error(
         string constraint, int expectedExtendedCode, bool binary, bool useAsync, bool useBulk)
     {
@@ -77,7 +76,7 @@ public class SqliteOutboxNonUniqueConstraintTests
         var context = new RequestContext();
 
         //Act
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             if (useAsync)
             {
@@ -96,9 +95,9 @@ public class SqliteOutboxNonUniqueConstraintTests
         });
 
         //Assert
-        var sqliteException = Assert.IsType<SqliteException>(exception);
-        Assert.Equal(19, sqliteException.SqliteErrorCode);
-        Assert.Equal(expectedExtendedCode, sqliteException.SqliteExtendedErrorCode);
-        Assert.Equal(0L, database.RowCount());
+        var sqliteException = await Assert.That(exception).IsTypeOf<SqliteException>();
+        await Assert.That(sqliteException.SqliteErrorCode).IsEqualTo(19);
+        await Assert.That(sqliteException.SqliteExtendedErrorCode).IsEqualTo(expectedExtendedCode);
+        await Assert.That(database.RowCount()).IsEqualTo(0L);
     }
 }

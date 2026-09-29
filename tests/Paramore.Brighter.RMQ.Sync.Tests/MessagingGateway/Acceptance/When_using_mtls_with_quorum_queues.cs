@@ -7,7 +7,6 @@ using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Acceptance;
 
@@ -21,12 +20,12 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Acceptance;
 /// Rule #11: BrighterTracer.WriteProducerEvent must be called for all producers
 /// Rule #12: CloudEvents trace context must survive serialization
 /// </summary>
-[Trait("Category", "RabbitMQ")]
-[Trait("Category", "MutualTLS")]
-[Trait("Category", "Quorum")]
-[Trait("Category", "Observability")]
-[Trait("Requires", "Docker-mTLS")]
-[Collection("RabbitMQ mTLS")]
+[Category("RabbitMQ")]
+[Category("MutualTLS")]
+[Category("Quorum")]
+[Category("Observability")]
+[Property("Requires", "Docker-mTLS")]
+[NotInParallel("RabbitMQ mTLS")]
 public class RmqMutualTlsQuorumObservabilityTests : IDisposable
 {
     private readonly string _clientCertPath;
@@ -63,8 +62,8 @@ public class RmqMutualTlsQuorumObservabilityTests : IDisposable
             .Build();
     }
 
-    [Fact]
-    public void When_publishing_with_mtls_and_quorum_trace_context_is_preserved()
+    [Test]
+    public async Task When_publishing_with_mtls_and_quorum_trace_context_is_preserved()
     {
         // Arrange - mTLS connection
         var connection = new RmqMessagingGatewayConnection
@@ -102,7 +101,7 @@ public class RmqMutualTlsQuorumObservabilityTests : IDisposable
             new MessageBody("Testing trace context over mTLS + Quorum")
         );
 
-        producer.Send(message);
+        await producer.SendAsync(message);
 
         // Stop activity and flush to exporter
         activity?.Stop();
@@ -112,20 +111,20 @@ public class RmqMutualTlsQuorumObservabilityTests : IDisposable
         var receivedMessages = consumer.Receive(TimeSpan.FromSeconds(5));
 
         // Assert - Verify message was received
-        Assert.NotEmpty(receivedMessages);
+        await Assert.That(receivedMessages).IsNotEmpty();
         var receivedMessage = receivedMessages.First();
 
         // Assert - Rule #10: TraceParent must be preserved
-        Assert.NotNull(receivedMessage.Header.TraceParent);
-        Assert.Contains(activity?.TraceId.ToString() ?? "", receivedMessage.Header.TraceParent.Value);
+        await Assert.That(receivedMessage.Header.TraceParent).IsNotNull();
+        await Assert.That(receivedMessage.Header.TraceParent.Value).Contains(activity?.TraceId.ToString() ?? "");
 
         // Assert - Rule #11: BrighterTracer.WriteProducerEvent was called
         // The presence of activities in our exporter confirms the tracer is working
-        Assert.NotEmpty(_exportedActivities);
+        await Assert.That(_exportedActivities).IsNotEmpty();
     }
 
-    [Fact]
-    public void When_publishing_with_mtls_quorum_and_baggage_context_survives()
+    [Test]
+    public async Task When_publishing_with_mtls_quorum_and_baggage_context_survives()
     {
         // Arrange - mTLS connection
         var connection = new RmqMessagingGatewayConnection
@@ -163,17 +162,17 @@ public class RmqMutualTlsQuorumObservabilityTests : IDisposable
                 new MessageBody("Testing baggage over mTLS + Quorum")
             );
 
-            producer.Send(message);
+            await producer.SendAsync(message);
             var receivedMessages = consumer.Receive(TimeSpan.FromSeconds(5));
 
             // Assert - Baggage must survive (Rule #12)
-            Assert.NotEmpty(receivedMessages);
+            await Assert.That(receivedMessages).IsNotEmpty();
             var receivedMessage = receivedMessages.First();
 
-            Assert.NotNull(receivedMessage.Header.Baggage);
+            await Assert.That(receivedMessage.Header.Baggage).IsNotNull();
             var baggageString = receivedMessage.Header.Baggage.ToString();
-            Assert.Contains("userId=alice", baggageString);
-            Assert.Contains("serverNode=node-42", baggageString);
+            await Assert.That(baggageString).Contains("userId=alice");
+            await Assert.That(baggageString).Contains("serverNode=node-42");
         }
         finally
         {

@@ -26,7 +26,6 @@ using System;
 using System.Reflection;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
@@ -46,8 +45,8 @@ public class KafkaMessageConsumerFactoryDLQTests : IDisposable
             });
     }
 
-    [Fact]
-    public void When_creating_channel_with_dlq_subscription_should_pass_routing_keys()
+    [Test]
+    public async Task When_creating_channel_with_dlq_subscription_should_pass_routing_keys()
     {
         //Arrange
         var topic = Guid.NewGuid().ToString();
@@ -70,7 +69,7 @@ public class KafkaMessageConsumerFactoryDLQTests : IDisposable
         _consumer = _factory.Create(subscription);
 
         //Assert - verify the factory passed routing keys to the consumer
-        Assert.NotNull(_consumer);
+        await Assert.That(_consumer).IsNotNull();
 
         // Use reflection to verify the private fields were set correctly
         var consumerType = _consumer.GetType();
@@ -79,17 +78,17 @@ public class KafkaMessageConsumerFactoryDLQTests : IDisposable
         var invalidRoutingKeyField = consumerType.GetField("_invalidMessageRoutingKey",
             BindingFlags.NonPublic | BindingFlags.Instance);
 
-        Assert.NotNull(dlqRoutingKeyField);
-        Assert.NotNull(invalidRoutingKeyField);
+        await Assert.That(dlqRoutingKeyField).IsNotNull();
+        await Assert.That(invalidRoutingKeyField).IsNotNull();
 
         var actualDlqRoutingKey = dlqRoutingKeyField.GetValue(_consumer) as RoutingKey;
         var actualInvalidRoutingKey = invalidRoutingKeyField.GetValue(_consumer) as RoutingKey;
 
-        Assert.NotNull(actualDlqRoutingKey);
-        Assert.Equal(dlqTopic, actualDlqRoutingKey.Value);
+        await Assert.That(actualDlqRoutingKey).IsNotNull();
+        await Assert.That(actualDlqRoutingKey.Value).IsEqualTo(dlqTopic);
 
-        Assert.NotNull(actualInvalidRoutingKey);
-        Assert.Equal(invalidTopic, actualInvalidRoutingKey.Value);
+        await Assert.That(actualInvalidRoutingKey).IsNotNull();
+        await Assert.That(actualInvalidRoutingKey.Value).IsEqualTo(invalidTopic);
     }
 
     public void Dispose()

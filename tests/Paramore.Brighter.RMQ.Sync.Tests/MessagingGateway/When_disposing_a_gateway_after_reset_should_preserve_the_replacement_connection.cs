@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -26,16 +26,15 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
+[NotInParallel]
 public class RmqSharedConnectionResetTests
 {
-    [Fact]
-    public void When_disposing_a_gateway_after_reset_should_preserve_the_replacement_connection()
+    [Test]
+    public async Task When_disposing_a_gateway_after_reset_should_preserve_the_replacement_connection()
     {
         // Arrange
         var connection = new RmqMessagingGatewayConnection
@@ -54,34 +53,34 @@ public class RmqSharedConnectionResetTests
         var message = new Message(new MessageHeader(Id.Random(), routingKey, MessageType.MT_COMMAND),
             new MessageBody("before reset"));
         oldProducer.Send(message);
-        var received = Assert.Single(consumer.Receive(TimeSpan.FromSeconds(5)));
-        Assert.Equal(message.Id, received.Id);
+        var received = await Assert.That(consumer.Receive(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(received.Id).IsEqualTo(message.Id);
         consumer.Acknowledge(received);
         var originalConnection = pool.GetConnection(factory);
         pool.ResetConnection(factory);
-        Assert.False(originalConnection.IsOpen);
+        await Assert.That(originalConnection.IsOpen).IsFalse();
         consumer.Purge();
         producer.Send(message);
-        received = Assert.Single(consumer.Receive(TimeSpan.FromSeconds(5)));
-        Assert.Equal(message.Id, received.Id);
+        received = await Assert.That(consumer.Receive(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(received.Id).IsEqualTo(message.Id);
         consumer.Acknowledge(received);
         var replacementConnection = pool.GetConnection(factory);
-        Assert.NotSame(originalConnection, replacementConnection);
+        await Assert.That(replacementConnection).IsNotSameReferenceAs(originalConnection);
 
         // Act
         oldProducer.Dispose();
 
         // Assert
-        Assert.True(replacementConnection.IsOpen);
+        await Assert.That(replacementConnection.IsOpen).IsTrue();
         var afterReset = new Message(new MessageHeader(Id.Random(), routingKey, MessageType.MT_COMMAND),
             new MessageBody("after reset"));
         producer.Send(afterReset);
-        received = Assert.Single(consumer.Receive(TimeSpan.FromSeconds(5)));
-        Assert.Equal(afterReset.Id, received.Id);
+        received = await Assert.That(consumer.Receive(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(received.Id).IsEqualTo(afterReset.Id);
         consumer.Acknowledge(received);
         consumer.Dispose();
-        Assert.True(replacementConnection.IsOpen);
+        await Assert.That(replacementConnection.IsOpen).IsTrue();
         producer.Dispose();
-        Assert.False(replacementConnection.IsOpen);
+        await Assert.That(replacementConnection.IsOpen).IsFalse();
     }
 }

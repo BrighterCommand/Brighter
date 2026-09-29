@@ -27,7 +27,6 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
@@ -35,11 +34,11 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// #4508, async (Proactor) path: purging a Stream channel clears the messages published before the
 /// purge, including those the streaming client has already delivered into the consumer's local buffer.
 /// </summary>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
 public class GcpStreamPurgeAsyncTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_gcp_stream_channel_is_purged_should_receive_no_message_published_before_the_purge_async()
     {
         var provider = new GcpStreamMessageGatewayProvider();
@@ -81,7 +80,7 @@ public class GcpStreamPurgeAsyncTests
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
 
             // Assert
-            Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {

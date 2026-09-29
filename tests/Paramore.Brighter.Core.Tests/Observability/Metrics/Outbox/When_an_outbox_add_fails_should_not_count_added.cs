@@ -32,7 +32,6 @@ using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics.Outbox;
 
@@ -81,7 +80,7 @@ public class When_an_outbox_add_fails_should_not_count_added
             outboxMeter: _meter);
     }
 
-    [Fact]
+    [Test]
     public async Task When_async_single_add_fails_should_not_count()
     {
         var outbox = new CountingOutbox(_timeProvider) { FailAdd = true };
@@ -91,12 +90,11 @@ public class When_an_outbox_add_fails_should_not_count_added
             new MessageHeader(Id.Random(), _topic, MessageType.MT_COMMAND,
                 timeStamp: _timeProvider.GetUtcNow()), new MessageBody("{}"));
 
-        await Assert.ThrowsAsync<ChannelFailureException>(
-            () => mediator.AddToOutboxAsync(msg, ctx));
-        Assert.Empty(_meter.Added);
+        await Assert.That(() => mediator.AddToOutboxAsync(msg, ctx)).ThrowsExactly<ChannelFailureException>();
+        await Assert.That(_meter.Added).IsEmpty();
     }
 
-    [Fact]
+    [Test]
     public async Task When_async_batch_add_fails_should_not_count()
     {
         var outbox = new CountingOutbox(_timeProvider) { FailAdd = true };
@@ -111,13 +109,12 @@ public class When_an_outbox_add_fails_should_not_count_added
             await mediator.AddToOutboxAsync(msg, ctx, batchId: batchId);
         }
 
-        await Assert.ThrowsAsync<ChannelFailureException>(
-            () => mediator.EndBatchAddToOutboxAsync(batchId, null, ctx, CancellationToken.None));
-        Assert.Empty(_meter.Added);
+        await Assert.That(() => mediator.EndBatchAddToOutboxAsync(batchId, null, ctx, CancellationToken.None)).ThrowsExactly<ChannelFailureException>();
+        await Assert.That(_meter.Added).IsEmpty();
     }
 
-    [Fact]
-    public void When_sync_single_add_fails_should_not_count()
+    [Test]
+    public async Task When_sync_single_add_fails_should_not_count()
     {
         var outbox = new CountingOutbox(_timeProvider) { FailAdd = true };
         using var mediator = BuildSyncMediator(outbox);
@@ -126,12 +123,12 @@ public class When_an_outbox_add_fails_should_not_count_added
             new MessageHeader(Id.Random(), _topic, MessageType.MT_COMMAND,
                 timeStamp: _timeProvider.GetUtcNow()), new MessageBody("{}"));
 
-        Assert.Throws<ChannelFailureException>(() => mediator.AddToOutbox(msg, ctx));
-        Assert.Empty(_meter.Added);
+        await Assert.That(() => mediator.AddToOutbox(msg, ctx)).ThrowsExactly<ChannelFailureException>();
+        await Assert.That(_meter.Added).IsEmpty();
     }
 
-    [Fact]
-    public void When_sync_batch_add_fails_should_not_count()
+    [Test]
+    public async Task When_sync_batch_add_fails_should_not_count()
     {
         var outbox = new CountingOutbox(_timeProvider) { FailAdd = true };
         using var mediator = BuildSyncMediator(outbox);
@@ -145,7 +142,7 @@ public class When_an_outbox_add_fails_should_not_count_added
             mediator.AddToOutbox(msg, ctx, batchId: batchId);
         }
 
-        Assert.Throws<ChannelFailureException>(() => mediator.EndBatchAddToOutbox(batchId, null, ctx));
-        Assert.Empty(_meter.Added);
+        await Assert.That(() => mediator.EndBatchAddToOutbox(batchId, null, ctx)).ThrowsExactly<ChannelFailureException>();
+        await Assert.That(_meter.Added).IsEmpty();
     }
 }

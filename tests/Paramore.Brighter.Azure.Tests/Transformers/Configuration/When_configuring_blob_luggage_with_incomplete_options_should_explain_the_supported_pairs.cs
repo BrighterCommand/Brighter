@@ -26,25 +26,23 @@ THE SOFTWARE. */
 
 using Azure.Identity;
 using Paramore.Brighter.Transformers.Azure;
-using Xunit;
-using Assert = Xunit.Assert;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Azure.Tests.Transformers.Configuration;
 
 public class AzureBlobLuggageIncompleteConfigurationTests
 {
-    [Xunit.Theory]
-    [InlineData(null, null, false, false)]
-    [InlineData(null, "", false, false)]
-    [InlineData("", null, false, false)]
-    [InlineData("", "", false, false)]
-    [InlineData("UseDevelopmentStorage=true", null, false, false)]
-    [InlineData("UseDevelopmentStorage=true", "", false, false)]
-    [InlineData(null, "luggage", false, false)]
-    [InlineData("", "luggage", false, false)]
-    [InlineData(null, null, true, false)]
-    [InlineData(null, null, false, true)]
-    public void When_configuring_blob_luggage_with_incomplete_options_should_explain_the_supported_pairs(
+    [Test]
+    [Arguments(null, null, false, false)]
+    [Arguments(null, "", false, false)]
+    [Arguments("", null, false, false)]
+    [Arguments("", "", false, false)]
+    [Arguments("UseDevelopmentStorage=true", null, false, false)]
+    [Arguments("UseDevelopmentStorage=true", "", false, false)]
+    [Arguments(null, "luggage", false, false)]
+    [Arguments("", "luggage", false, false)]
+    [Arguments(null, null, true, false)]
+    [Arguments(null, null, false, true)]
+    public async Task When_configuring_blob_luggage_with_incomplete_options_should_explain_the_supported_pairs(
         string? connectionString, string? containerName, bool hasContainerUri, bool hasCredential)
     {
         // Arrange
@@ -57,14 +55,14 @@ public class AzureBlobLuggageIncompleteConfigurationTests
         };
 
         // Act
-        var exception = Record.Exception(() => new AzureBlobLuggageStore(options));
+        var exception = TestExceptionRecorder.Capture(() => new AzureBlobLuggageStore(options));
 
         // Assert
-        var argumentException = Assert.IsType<ArgumentException>(exception);
-        Assert.Equal("options", argumentException.ParamName);
-        Assert.Contains(nameof(AzureBlobLuggageOptions.ContainerUri), argumentException.Message);
-        Assert.Contains(nameof(AzureBlobLuggageOptions.Credential), argumentException.Message);
-        Assert.Contains(nameof(AzureBlobLuggageOptions.ConnectionString), argumentException.Message);
-        Assert.Contains(nameof(AzureBlobLuggageOptions.ContainerName), argumentException.Message);
+        var argumentException = await Assert.That(exception).IsTypeOf<ArgumentException>();
+        await Assert.That(argumentException.ParamName).IsEqualTo("options");
+        await Assert.That(argumentException.Message).Contains(nameof(AzureBlobLuggageOptions.ContainerUri));
+        await Assert.That(argumentException.Message).Contains(nameof(AzureBlobLuggageOptions.Credential));
+        await Assert.That(argumentException.Message).Contains(nameof(AzureBlobLuggageOptions.ConnectionString));
+        await Assert.That(argumentException.Message).Contains(nameof(AzureBlobLuggageOptions.ContainerName));
     }
 }

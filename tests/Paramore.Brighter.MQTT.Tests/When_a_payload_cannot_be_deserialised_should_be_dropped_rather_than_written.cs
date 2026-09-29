@@ -1,7 +1,7 @@
 using System.Text;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.MQTT;
-using Xunit;
+
 
 namespace Paramore.Brighter.MQTT.Tests;
 
@@ -27,16 +27,16 @@ namespace Paramore.Brighter.MQTT.Tests;
 /// <c>KafkaMessageCreator</c>, which <c>Paramore.Brighter.Kafka.Tests</c> covers the same way.
 /// </para>
 /// <para>
-/// ⚠️ Keep the <c>[Trait("Category", "MQTT")]</c> below: <c>mqtt-ci</c> filters on
+/// ⚠️ Keep the <c>[Property("Category", "MQTT")]</c> below: <c>mqtt-ci</c> filters on
 /// <c>Category=MQTT</c>, and the <c>build</c> job runs an explicit list of four projects that does
 /// not include this one, so a test here without that trait runs in NEITHER job.
 /// </para>
 /// </remarks>
-[Trait("Category", "MQTT")]
+[Property("Category", "MQTT")]
 public class MqttPayloadDeserialisationTests
 {
-    [Fact]
-    public void When_a_payload_cannot_be_deserialised_should_be_dropped_rather_than_written()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_payload_cannot_be_deserialised_should_be_dropped_rather_than_written()
     {
         // Arrange — the two payloads a publisher can put on the topic that the handler cannot
         // turn into a message: one that deserialises to null, one that does not parse at all
@@ -48,12 +48,12 @@ public class MqttPayloadDeserialisationTests
         var fromMalformed = MqttMessageCreator.CreateMessage(malformed, "test/topic");
 
         // Assert — both are dropped, and neither throws out of the handler
-        Assert.Null(fromNull);
-        Assert.Null(fromMalformed);
+        await Assert.That(fromNull).IsNull();
+        await Assert.That(fromMalformed).IsNull();
     }
 
-    [Fact]
-    public void When_a_payload_carries_an_illegal_header_value_should_be_dropped_rather_than_escaping()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_payload_carries_an_illegal_header_value_should_be_dropped_rather_than_escaping()
     {
         // Arrange - payloads that parse as JSON but carry a value no header field will accept.
         // ContentType is the reachable case: MessageHeader exposes System.Net.Mime.ContentType
@@ -69,13 +69,13 @@ public class MqttPayloadDeserialisationTests
 
         // Act / Assert - each is dropped. A throw here reaches MQTTnet's dispatch loop rather
         // than any caller, so one such payload would stop the consumer for every other message.
-        Assert.Null(MqttMessageCreator.CreateMessage(illegalMediaType, "test/topic"));
-        Assert.Null(MqttMessageCreator.CreateMessage(emptyMediaType, "test/topic"));
-        Assert.Null(MqttMessageCreator.CreateMessage(nullContentType, "test/topic"));
+        await Assert.That(MqttMessageCreator.CreateMessage(illegalMediaType, "test/topic")).IsNull();
+        await Assert.That(MqttMessageCreator.CreateMessage(emptyMediaType, "test/topic")).IsNull();
+        await Assert.That(MqttMessageCreator.CreateMessage(nullContentType, "test/topic")).IsNull();
     }
 
-    [Fact]
-    public void When_a_payload_is_a_valid_message_should_be_returned_for_writing()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_payload_is_a_valid_message_should_be_returned_for_writing()
     {
         // Arrange — a well-formed message, so the test above cannot pass by dropping everything
         var message = new Message(
@@ -88,7 +88,7 @@ public class MqttPayloadDeserialisationTests
         var deserialised = MqttMessageCreator.CreateMessage(payload, "test/topic");
 
         // Assert
-        Assert.NotNull(deserialised);
-        Assert.Equal(message.Body.Value, deserialised!.Body.Value);
+        await Assert.That(deserialised).IsNotNull();
+        await Assert.That(deserialised!.Body.Value).IsEqualTo(message.Body.Value);
     }
 }

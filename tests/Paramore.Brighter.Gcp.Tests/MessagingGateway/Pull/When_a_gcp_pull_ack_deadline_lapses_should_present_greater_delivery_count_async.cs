@@ -28,7 +28,6 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 using DeadLetterPolicy = Paramore.Brighter.MessagingGateway.GcpPubSub.DeadLetterPolicy;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
@@ -40,8 +39,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// pump and no <c>RequeueAsync</c> call is involved.
 /// </summary>
 /// <summary>Pull (unordered), async (Proactor) path.</summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpPullAckDeadlineLapseDeliveryCountAsyncTests
 {
     private const int AckDeadlineSeconds = 10;
@@ -53,7 +52,7 @@ public class GcpPullAckDeadlineLapseDeliveryCountAsyncTests
     /// published with <c>HandledCount = 0</c>. Receiving m1, holding it, letting the ack deadline
     /// lapse and receiving again presents a strictly greater <c>HandledCount</c> on m2.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_a_gcp_pull_ack_deadline_lapses_should_present_greater_delivery_count_async()
     {
         // Arrange — AckDeadlineSeconds: 10 is the knob that actually governs the lease for
@@ -93,14 +92,14 @@ public class GcpPullAckDeadlineLapseDeliveryCountAsyncTests
 
             var message = new DefaultMessageBuilder().SetTopic(routingKey).Build();
             // Evident data: a freshly-built Message presents HandledCount 0 before it is ever sent.
-            Assert.Equal(0, message.Header.HandledCount);
+            await Assert.That(message.Header.HandledCount).IsEqualTo(0);
             await producer.SendAsync(message);
 
             // Act — receive m1 and hold it: no AcknowledgeAsync, RejectAsync or RequeueAsync. Wait
             // past the 10s ack deadline so Pub/Sub's own lease expiry — not a RequeueAsync call —
             // makes it redeliverable, then receive again directly off the channel (no pump involved).
             var m1 = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, m1.Header.MessageType);
+            await Assert.That(m1.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             await Task.Delay(TimeSpan.FromSeconds(AckDeadlineSeconds + 2));
 
@@ -115,11 +114,9 @@ public class GcpPullAckDeadlineLapseDeliveryCountAsyncTests
             }
 
             // Assert — the expiry redelivery presents a strictly greater count than m1's (AC-42).
-            Assert.NotEqual(MessageType.MT_NONE, m2.Header.MessageType);
-            Assert.Equal(m1.Id, m2.Id);
-            Assert.True(m2.Header.HandledCount > m1.Header.HandledCount,
-                $"AC-42: the expiry redelivery's count {m2.Header.HandledCount} must be strictly "
-                + $"greater than the first delivery's count {m1.Header.HandledCount}");
+            await Assert.That(m2.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(m2.Id).IsEqualTo(m1.Id);
+            await Assert.That(m2.Header.HandledCount > m1.Header.HandledCount).IsTrue();
 
             // Settle m2 so it does not keep redelivering into later tests. m1's ack id is stale by
             // now (Pub/Sub does not honour it once the lease has lapsed and been redelivered), so
@@ -134,8 +131,8 @@ public class GcpPullAckDeadlineLapseDeliveryCountAsyncTests
 }
 
 /// <summary>PullOrdering, async (Proactor) path — same clauses as the unordered Pull configuration.</summary>
-[Trait("Category", "GcpPubSubPullOrdering")]
-[Collection("PullOrdering")]
+[Property("Category", "GcpPubSubPullOrdering")]
+[NotInParallel("PullOrdering")]
 public class GcpPullOrderingAckDeadlineLapseDeliveryCountAsyncTests
 {
     private const int AckDeadlineSeconds = 10;
@@ -145,7 +142,7 @@ public class GcpPullOrderingAckDeadlineLapseDeliveryCountAsyncTests
     /// AC-42, async path, on an ordering-enabled subscription: same clauses as
     /// <see cref="GcpPullAckDeadlineLapseDeliveryCountAsyncTests"/>.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_a_gcp_pull_ordering_ack_deadline_lapses_should_present_greater_delivery_count_async()
     {
         // Arrange
@@ -182,12 +179,12 @@ public class GcpPullOrderingAckDeadlineLapseDeliveryCountAsyncTests
             channel = await provider.CreateChannelAsync(subscription);
 
             var message = new DefaultMessageBuilder().SetTopic(routingKey).Build();
-            Assert.Equal(0, message.Header.HandledCount);
+            await Assert.That(message.Header.HandledCount).IsEqualTo(0);
             await producer.SendAsync(message);
 
             // Act
             var m1 = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, m1.Header.MessageType);
+            await Assert.That(m1.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             await Task.Delay(TimeSpan.FromSeconds(AckDeadlineSeconds + 2));
 
@@ -202,11 +199,9 @@ public class GcpPullOrderingAckDeadlineLapseDeliveryCountAsyncTests
             }
 
             // Assert
-            Assert.NotEqual(MessageType.MT_NONE, m2.Header.MessageType);
-            Assert.Equal(m1.Id, m2.Id);
-            Assert.True(m2.Header.HandledCount > m1.Header.HandledCount,
-                $"AC-42: the expiry redelivery's count {m2.Header.HandledCount} must be strictly "
-                + $"greater than the first delivery's count {m1.Header.HandledCount}");
+            await Assert.That(m2.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(m2.Id).IsEqualTo(m1.Id);
+            await Assert.That(m2.Header.HandledCount > m1.Header.HandledCount).IsTrue();
 
             await channel.AcknowledgeAsync(m2);
         }

@@ -23,8 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
 /// <summary>
@@ -37,11 +36,11 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 /// All assertions are made on the constructed <see cref="GcpPubSubSubscription"/> without
 /// touching the broker.
 /// </summary>
-[Trait("Category", "GcpPubSub")]
+[Property("Category", "GcpPubSub")]
 public class GcpConformanceProviderBudgetAndIamMembersTests
 {
-    [Fact]
-    public void When_reading_gcp_pull_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members_only_on_the_emulator()
+    [Test]
+    public async System.Threading.Tasks.Task When_reading_gcp_pull_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members_only_on_the_emulator()
     {
         // Arrange
         var provider = new GcpPullMessageGatewayProvider();
@@ -56,12 +55,12 @@ public class GcpConformanceProviderBudgetAndIamMembersTests
         );
 
         // Assert
-        AssertDlqBackedSubscription(subscription, keys.StampsRejectionMetadata, keys.RejectionReason,
+        await AssertDlqBackedSubscription(subscription, keys.StampsRejectionMetadata, keys.RejectionReason,
             keys.RejectionMessage, keys.RejectionTimestamp, keys.OriginalTopic, keys.OriginalType);
     }
 
-    [Fact]
-    public void When_reading_gcp_pull_ordering_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members_only_on_the_emulator()
+    [Test]
+    public async System.Threading.Tasks.Task When_reading_gcp_pull_ordering_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members_only_on_the_emulator()
     {
         // Arrange
         var provider = new GcpPullOrderingMessageGatewayProvider();
@@ -76,12 +75,12 @@ public class GcpConformanceProviderBudgetAndIamMembersTests
         );
 
         // Assert
-        AssertDlqBackedSubscription(subscription, keys.StampsRejectionMetadata, keys.RejectionReason,
+        await AssertDlqBackedSubscription(subscription, keys.StampsRejectionMetadata, keys.RejectionReason,
             keys.RejectionMessage, keys.RejectionTimestamp, keys.OriginalTopic, keys.OriginalType);
     }
 
-    [Fact]
-    public void When_reading_gcp_stream_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members_only_on_the_emulator()
+    [Test]
+    public async System.Threading.Tasks.Task When_reading_gcp_stream_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members_only_on_the_emulator()
     {
         // Arrange
         var provider = new GcpStreamMessageGatewayProvider();
@@ -96,12 +95,12 @@ public class GcpConformanceProviderBudgetAndIamMembersTests
         );
 
         // Assert
-        AssertDlqBackedSubscription(subscription, keys.StampsRejectionMetadata, keys.RejectionReason,
+        await AssertDlqBackedSubscription(subscription, keys.StampsRejectionMetadata, keys.RejectionReason,
             keys.RejectionMessage, keys.RejectionTimestamp, keys.OriginalTopic, keys.OriginalType);
     }
 
-    [Fact]
-    public void When_reading_gcp_stream_ordering_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members_only_on_the_emulator()
+    [Test]
+    public async System.Threading.Tasks.Task When_reading_gcp_stream_ordering_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members_only_on_the_emulator()
     {
         // Arrange
         var provider = new GcpStreamOrderingMessageGatewayProvider();
@@ -116,11 +115,11 @@ public class GcpConformanceProviderBudgetAndIamMembersTests
         );
 
         // Assert
-        AssertDlqBackedSubscription(subscription, keys.StampsRejectionMetadata, keys.RejectionReason,
+        await AssertDlqBackedSubscription(subscription, keys.StampsRejectionMetadata, keys.RejectionReason,
             keys.RejectionMessage, keys.RejectionTimestamp, keys.OriginalTopic, keys.OriginalType);
     }
 
-    private static void AssertDlqBackedSubscription(
+    private static async Task AssertDlqBackedSubscription(
         GcpPubSubSubscription subscription,
         bool stampsRejectionMetadata,
         string rejectionReasonKey,
@@ -130,39 +129,35 @@ public class GcpConformanceProviderBudgetAndIamMembersTests
         string originalTypeKey)
     {
         // The pump budget (requeueCount) is strictly below the native policy limit (R-27(a), A-5)
-        Assert.Equal(3, subscription.RequeueCount);
+        await Assert.That(subscription.RequeueCount).IsEqualTo(3);
 
         // The Brighter dead-letter route is set (R-27(a)); distinct from the native DeadLetterPolicy
-        Assert.NotNull(subscription.DeadLetterRoutingKey);
+        await Assert.That(subscription.DeadLetterRoutingKey).IsNotNull();
 
         // Native policy M=5 on the {deadLetterRoutingKey}.native topic and subscription (ADR 0078 step 5)
-        Assert.Equal(5, subscription.DeadLetter!.MaxDeliveryAttempts);
-        Assert.Equal(
-            $"{subscription.DeadLetterRoutingKey}.native",
-            subscription.DeadLetter.TopicName.Value);
-        Assert.Equal(
-            $"{subscription.DeadLetterRoutingKey}.native",
-            subscription.DeadLetter.Subscription.Value);
+        await Assert.That(subscription.DeadLetter!.MaxDeliveryAttempts).IsEqualTo(5);
+        await Assert.That(subscription.DeadLetter.TopicName.Value).IsEqualTo($"{subscription.DeadLetterRoutingKey}.native");
+        await Assert.That(subscription.DeadLetter.Subscription.Value).IsEqualTo($"{subscription.DeadLetterRoutingKey}.native");
 
         // Both IAM members are set on the emulator only (C-11), where they skip the Cloud Resource Manager
         // call. Real Pub/Sub validates IAM members, so there they are left unset for the gateway to derive
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PUBSUB_EMULATOR_HOST")))
         {
-            Assert.Null(subscription.DeadLetter.PublisherMember);
-            Assert.Null(subscription.SubscriberMember);
+            await Assert.That(subscription.DeadLetter.PublisherMember).IsNull();
+            await Assert.That(subscription.SubscriberMember).IsNull();
         }
         else
         {
-            Assert.StartsWith("serviceAccount:", subscription.DeadLetter.PublisherMember);
-            Assert.StartsWith("serviceAccount:", subscription.SubscriberMember);
+            await Assert.That(subscription.DeadLetter.PublisherMember).StartsWith("serviceAccount:");
+            await Assert.That(subscription.SubscriberMember).StartsWith("serviceAccount:");
         }
 
         // Gateway stamps Brighter rejection metadata (R-27(b), AC-36)
-        Assert.True(stampsRejectionMetadata);
-        Assert.Equal(RejectionMetadataKeyNames.RejectionReason, rejectionReasonKey);
-        Assert.Equal(RejectionMetadataKeyNames.RejectionMessage, rejectionMessageKey);
-        Assert.Equal(RejectionMetadataKeyNames.RejectionTimestamp, rejectionTimestampKey);
-        Assert.Equal(RejectionMetadataKeyNames.OriginalTopic, originalTopicKey);
-        Assert.Equal(RejectionMetadataKeyNames.OriginalMessageType, originalTypeKey);
+        await Assert.That(stampsRejectionMetadata).IsTrue();
+        await Assert.That(rejectionReasonKey).IsEqualTo(RejectionMetadataKeyNames.RejectionReason);
+        await Assert.That(rejectionMessageKey).IsEqualTo(RejectionMetadataKeyNames.RejectionMessage);
+        await Assert.That(rejectionTimestampKey).IsEqualTo(RejectionMetadataKeyNames.RejectionTimestamp);
+        await Assert.That(originalTopicKey).IsEqualTo(RejectionMetadataKeyNames.OriginalTopic);
+        await Assert.That(originalTypeKey).IsEqualTo(RejectionMetadataKeyNames.OriginalMessageType);
     }
 }

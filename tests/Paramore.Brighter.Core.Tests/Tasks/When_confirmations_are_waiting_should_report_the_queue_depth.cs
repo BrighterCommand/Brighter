@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Tasks.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Tasks;
 
@@ -13,8 +12,8 @@ public class BatchedCallbackQueueDepthTests
 {
     private const int WaitingConfirmations = 4;
 
-    [Fact]
-    public void When_confirmations_are_waiting_should_report_the_queue_depth()
+    [Test]
+    public async Task When_confirmations_are_waiting_should_report_the_queue_depth()
     {
         //Arrange
         using var observed = new ObservedQueueDepths();
@@ -35,16 +34,16 @@ public class BatchedCallbackQueueDepthTests
                 releaseDrain.Wait();
                 return Task.CompletedTask;
             });
-            Assert.True(drainParked.Wait(TimeSpan.FromSeconds(5)), "The drain thread did not start");
+            await Assert.That(drainParked.Wait(TimeSpan.FromSeconds(5))).IsTrue().Because("The drain thread did not start");
             for (var i = 1; i < WaitingConfirmations; i++)
                 queue.Enqueue(() => Task.CompletedTask);
 
             var depths = observed.Observe().Where(d => d.Destination == topic.Value).ToList();
 
             //Assert
-            var depth = Assert.Single(depths);
-            Assert.Equal(WaitingConfirmations, depth.Value);
-            Assert.Equal("kafka", depth.MessagingSystem);
+            var depth = await Assert.That(depths).HasSingleItem();
+            await Assert.That(depth.Value).IsEqualTo(WaitingConfirmations);
+            await Assert.That(depth.MessagingSystem).IsEqualTo("kafka");
         }
         finally
         {

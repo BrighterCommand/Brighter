@@ -32,14 +32,13 @@ using System.Text;
 using System.Threading.Tasks;
 using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Outbox;
 
 /// <summary>
 /// Exercises DataRef persistence and claim-check retrieval against relational outboxes.
 /// </summary>
-public abstract class RelationalOutboxDataRefTests : IAsyncLifetime
+public abstract class RelationalOutboxDataRefTests
 {
     private RelationalDatabaseConfiguration? _configuration;
     private bool _tableCreated;
@@ -99,8 +98,8 @@ public abstract class RelationalOutboxDataRefTests : IAsyncLifetime
     /// <summary>
     /// A DataRef-only claim must survive the outbox without a legacy claim in the header bag.
     /// </summary>
-    [Theory]
-    [MemberData(nameof(DataRefCases))]
+    [Test]
+    [MethodDataSource(nameof(DataRefCases))]
     public async Task When_relational_outbox_round_trips_dataref_should_retrieve_claimed_payload(
         bool binary, bool useAsync, bool bulk, bool causation)
     {
@@ -130,14 +129,14 @@ public abstract class RelationalOutboxDataRefTests : IAsyncLifetime
         var retrieved = await ReadAsync(outbox, messages, context, useAsync);
 
         // Assert
-        Assert.Equal(causation, useAsync
+        await Assert.That(useAsync
             ? await outbox.SupportsCausationTrackingAsync()
-            : outbox.SupportsCausationTracking());
+            : outbox.SupportsCausationTracking()).IsEqualTo(causation);
         for (var i = 0; i < messages.Length; i++)
         {
-            Assert.Equal(messages[i].Header.DataRef, retrieved[i].Header.DataRef);
-            Assert.Empty(retrieved[i].Header.Bag);
-            Assert.Equal(messages[i].Body.ToByteArray(), retrieved[i].Body.ToByteArray());
+            await Assert.That(retrieved[i].Header.DataRef).IsEqualTo(messages[i].Header.DataRef);
+            await Assert.That(retrieved[i].Header.Bag).IsEmpty();
+            await Assert.That(retrieved[i].Body.ToByteArray()).IsEqualTo(messages[i].Body.ToByteArray());
         }
 
         var firstUnwrapped = useAsync
@@ -146,15 +145,15 @@ public abstract class RelationalOutboxDataRefTests : IAsyncLifetime
         var secondUnwrapped = useAsync
             ? await transformer.UnwrapAsync(retrieved[2])
             : transformer.Unwrap(retrieved[2]);
-        Assert.Equal(firstPayload, firstUnwrapped.Body.ToByteArray());
-        Assert.Equal(secondPayload, secondUnwrapped.Body.ToByteArray());
+        await Assert.That(firstUnwrapped.Body.ToByteArray()).IsEqualTo(firstPayload);
+        await Assert.That(secondUnwrapped.Body.ToByteArray()).IsEqualTo(secondPayload);
     }
 
     /// <summary>
     /// Ordinary writes remain usable before DataRef exists, and a new outbox uses the upgraded table.
     /// </summary>
-    [Theory]
-    [MemberData(nameof(UpgradeCases))]
+    [Test]
+    [MethodDataSource(nameof(UpgradeCases))]
     public async Task When_legacy_table_gains_dataref_should_preserve_old_messages_and_new_references(
         bool binary, bool useAsync, bool bulk)
     {
@@ -165,9 +164,12 @@ public abstract class RelationalOutboxDataRefTests : IAsyncLifetime
         var context = new RequestContext();
         await WriteAsync(legacyOutbox, oldMessages, context, useAsync, bulk);
         var oldRetrieved = await ReadAsync(legacyOutbox, oldMessages, context, useAsync);
-        Assert.Equal("old first", oldRetrieved[0].Body.Value);
-        Assert.Equal("old second", oldRetrieved[1].Body.Value);
-        Assert.All(oldRetrieved, message => Assert.Null(message.Header.DataRef));
+        await Assert.That(oldRetrieved[0].Body.Value).IsEqualTo("old first");
+        await Assert.That(oldRetrieved[1].Body.Value).IsEqualTo("old second");
+        foreach (var message in oldRetrieved)
+{
+    await Assert.That(message.Header.DataRef).IsNull();
+}
         await ExecuteSqlAsync(AddDataRefSql);
         var upgradedOutbox = CreateOutbox(_configuration!);
         var newMessages = new[]
@@ -184,19 +186,19 @@ public abstract class RelationalOutboxDataRefTests : IAsyncLifetime
         // Assert
         for (var i = 0; i < newMessages.Length; i++)
         {
-            Assert.Equal(newMessages[i].Header.DataRef, newRetrieved[i].Header.DataRef);
-            Assert.Empty(newRetrieved[i].Header.Bag);
-            Assert.Equal(newMessages[i].Body.Value, newRetrieved[i].Body.Value);
-            Assert.Null(oldAfterUpgrade[i].Header.DataRef);
-            Assert.Equal(oldMessages[i].Body.Value, oldAfterUpgrade[i].Body.Value);
+            await Assert.That(newRetrieved[i].Header.DataRef).IsEqualTo(newMessages[i].Header.DataRef);
+            await Assert.That(newRetrieved[i].Header.Bag).IsEmpty();
+            await Assert.That(newRetrieved[i].Body.Value).IsEqualTo(newMessages[i].Body.Value);
+            await Assert.That(oldAfterUpgrade[i].Header.DataRef).IsNull();
+            await Assert.That(oldAfterUpgrade[i].Body.Value).IsEqualTo(oldMessages[i].Body.Value);
         }
     }
 
     /// <inheritdoc />
-    public Task InitializeAsync() => Task.CompletedTask;
+    [Before(HookType.Test)]public Task InitializeAsync() => Task.CompletedTask;
 
     /// <inheritdoc />
-    public async Task DisposeAsync()
+    [After(HookType.Test)]public async Task DisposeAsync()
     {
         try
         {

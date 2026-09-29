@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,7 +28,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
@@ -42,8 +42,8 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             return new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
         }
 
-        [Fact]
-        public void When_registering_outbox_with_causation_tracking_should_register_role_interface()
+        [Test]
+        public async System.Threading.Tasks.Task When_registering_outbox_with_causation_tracking_should_register_role_interface()
         {
             // Arrange — the default outbox (InMemoryOutbox) supports causation tracking
             var services = new ServiceCollection();
@@ -54,11 +54,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             var trackingOutbox = provider.GetService<IAmACausationTrackingOutbox>();
 
             // Assert — the outbox is resolvable under its role interface
-            Assert.NotNull(trackingOutbox);
+            await Assert.That(trackingOutbox).IsNotNull();
         }
 
-        [Fact]
-        public void When_registering_outbox_with_causation_tracking_should_resolve_same_instance()
+        [Test]
+        public async System.Threading.Tasks.Task When_registering_outbox_with_causation_tracking_should_resolve_same_instance()
         {
             // Arrange — the default outbox (InMemoryOutbox) supports causation tracking
             var services = new ServiceCollection();
@@ -70,11 +70,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             var trackingOutbox = provider.GetService<IAmACausationTrackingOutbox>();
 
             // Assert — both interfaces resolve to the same singleton instance
-            Assert.Same(outbox, trackingOutbox);
+            await Assert.That(trackingOutbox).IsSameReferenceAs(outbox);
         }
 
-        [Fact]
-        public void When_registering_outbox_without_causation_tracking_should_not_register_role_interface()
+        [Test]
+        public async System.Threading.Tasks.Task When_registering_outbox_without_causation_tracking_should_not_register_role_interface()
         {
             // Arrange — SpyOutbox does NOT implement IAmACausationTrackingOutbox
             var services = new ServiceCollection();
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             var trackingOutbox = provider.GetService<IAmACausationTrackingOutbox>();
 
             // Assert — no role interface registration for a non-tracking outbox
-            Assert.Null(trackingOutbox);
+            await Assert.That(trackingOutbox).IsNull();
         }
     }
 }

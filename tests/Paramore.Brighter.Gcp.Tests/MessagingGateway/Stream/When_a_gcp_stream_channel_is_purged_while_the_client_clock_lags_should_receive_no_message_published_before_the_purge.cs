@@ -26,8 +26,7 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 
 /// <summary>
@@ -35,12 +34,12 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// the client's clock lags the Pub/Sub server's, so their server-stamped publish times look later than
 /// the purge.
 /// </summary>
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
 public class GcpStreamPurgeClockLagTests
 {
-    [Fact]
-    public void When_a_gcp_stream_channel_is_purged_while_the_client_clock_lags_should_receive_no_message_published_before_the_purge()
+    [Test]
+    public async Task When_a_gcp_stream_channel_is_purged_while_the_client_clock_lags_should_receive_no_message_published_before_the_purge()
     {
         var provider = new GcpStreamMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -83,7 +82,7 @@ public class GcpStreamPurgeClockLagTests
             var received = channel.Receive(TimeSpan.FromSeconds(10));
 
             // Assert
-            Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {

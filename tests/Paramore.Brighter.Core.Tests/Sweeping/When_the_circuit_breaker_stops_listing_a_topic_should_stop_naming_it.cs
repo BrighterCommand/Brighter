@@ -8,13 +8,12 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.Outbox.Hosting.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class When_the_circuit_breaker_stops_listing_a_topic_should_stop_naming_it_tests
 {
-    [Fact]
+    [Test]
     public async Task When_the_circuit_breaker_stops_listing_a_topic_should_stop_naming_it()
     {
         //Arrange
@@ -36,24 +35,24 @@ public class When_the_circuit_breaker_stops_listing_a_topic_should_stop_naming_i
         var noneTripped = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
 
         //Assert
-        Assert.True(state.Read().IsActive);
-        Assert.Equal(HealthStatus.Degraded, bothTripped.Status);
-        Assert.Equal(new[] { "orders", "payments" }, TrippedNames(bothTripped));
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), bothTripped.Data[RemedyCheckConvention.RemedyKindKey]);
+        await Assert.That(state.Read().IsActive).IsTrue();
+        await Assert.That(bothTripped.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(TrippedNames(bothTripped)).IsEqualTo(new[] { "orders", "payments" });
+        await Assert.That(bothTripped.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
 
-        Assert.Equal(HealthStatus.Degraded, onlyOrders.Status);
-        Assert.Equal(new[] { "orders" }, TrippedNames(onlyOrders));
-        Assert.DoesNotContain("payments", onlyOrders.Description);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), onlyOrders.Data[RemedyCheckConvention.RemedyKindKey]);
+        await Assert.That(onlyOrders.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(TrippedNames(onlyOrders)).IsEqualTo(new[] { "orders" });
+        await Assert.That(onlyOrders.Description).DoesNotContain("payments");
+        await Assert.That(onlyOrders.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
 
-        Assert.Equal(HealthStatus.Healthy, noneTripped.Status);
-        Assert.Empty(Assert.IsType<string[]>(noneTripped.Data[RemedyCheckConvention.ConditionsKey]));
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), noneTripped.Data[RemedyCheckConvention.RemedyKindKey]);
+        await Assert.That(noneTripped.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That((await Assert.That(noneTripped.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEmpty();
+        await Assert.That(noneTripped.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
     }
 
-    private static string[] TrippedNames(HealthCheckResult result)
+    private static async Task<string[]> TrippedNames(HealthCheckResult result)
     {
-        var tripped = Assert.IsAssignableFrom<IDictionary<string, object>>(result.Data["tripped_topics"]);
-        return Assert.IsType<string[]>(tripped["topics"]);
+        var tripped = ((IDictionary<string, object>)(((IDictionary<string, object>)(await Assert.That(result.Data["tripped_topics"]).IsAssignableTo<IDictionary<string, object>>()))));
+        return await Assert.That(tripped["topics"]).IsTypeOf<string[]>();
     }
 }

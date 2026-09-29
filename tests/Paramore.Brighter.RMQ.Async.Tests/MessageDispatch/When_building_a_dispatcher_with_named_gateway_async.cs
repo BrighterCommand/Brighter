@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -7,7 +7,6 @@ using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessageDispatch;
 
@@ -82,11 +81,11 @@ public class DispatchBuilderWithNamedGatewayAsync
             .ConfigureInstrumentation(tracer, instrumentationOptions);
     }
 
-    [Fact]
-    public void When_building_a_dispatcher_with_named_gateway()
+    [Test]
+    public async Task When_building_a_dispatcher_with_named_gateway()
     {
         using var dispatcher = _builder.Build();
 
-        Assert.NotNull(dispatcher);
+        await Assert.That(dispatcher).IsNotNull();
     }
 }

@@ -24,8 +24,6 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -36,8 +34,8 @@ public class SpyCommandProcessorFindRecordedCallsTests
     private readonly MyCommand _command2 = new() { Value = "second" };
     private readonly MyEvent _event1 = new() { Data = "event" };
 
-    [Fact]
-    public void Should_return_all_calls_for_command_type()
+    [Test]
+    public async Task Should_return_all_calls_for_command_type()
     {
         // Arrange
         _spy.Send(_command1);
@@ -48,14 +46,14 @@ public class SpyCommandProcessorFindRecordedCallsTests
         var sendCalls = _spy.GetCalls(CommandType.Send);
 
         // Assert
-        sendCalls.ShouldNotBeNull();
-        sendCalls.Count().ShouldBe(2);
-        sendCalls.Select(c => c.Request).ShouldContain(_command1);
-        sendCalls.Select(c => c.Request).ShouldContain(_command2);
+        await Assert.That(sendCalls).IsNotNull();
+        await Assert.That(sendCalls.Count()).IsEqualTo(2);
+        await Assert.That(sendCalls.Select(c => c.Request)).Contains(_command1);
+        await Assert.That(sendCalls.Select(c => c.Request)).Contains(_command2);
     }
 
-    [Fact]
-    public void Should_return_recorded_call_with_full_details()
+    [Test]
+    public async Task Should_return_recorded_call_with_full_details()
     {
         // Arrange
         var context = new RequestContext();
@@ -66,16 +64,16 @@ public class SpyCommandProcessorFindRecordedCallsTests
 
         // Assert
         var call = calls.Single();
-        call.Type.ShouldBe(CommandType.Send);
-        call.Request.ShouldBe(_command1);
-        call.Context.ShouldBe(context);
-        call.Timestamp.ShouldBeInRange(
+        await Assert.That(call.Type).IsEqualTo(CommandType.Send);
+        await Assert.That(call.Request).IsEqualTo(_command1);
+        await Assert.That(call.Context).IsEqualTo(context);
+        await Assert.That(call.Timestamp).IsBetween(
             DateTime.UtcNow.AddSeconds(-5),
             DateTime.UtcNow.AddSeconds(1));
     }
 
-    [Fact]
-    public void Should_return_empty_when_no_matching_calls()
+    [Test]
+    public async Task Should_return_empty_when_no_matching_calls()
     {
         // Arrange
         _spy.Send(_command1);
@@ -84,11 +82,11 @@ public class SpyCommandProcessorFindRecordedCallsTests
         var publishCalls = _spy.GetCalls(CommandType.Publish);
 
         // Assert
-        publishCalls.ShouldBeEmpty();
+        await Assert.That(publishCalls).IsEmpty();
     }
 
-    [Fact]
-    public void Should_filter_to_specific_command_type_only()
+    [Test]
+    public async Task Should_filter_to_specific_command_type_only()
     {
         // Arrange
         _spy.Send(_command1);
@@ -99,8 +97,8 @@ public class SpyCommandProcessorFindRecordedCallsTests
         var publishCalls = _spy.GetCalls(CommandType.Publish);
 
         // Assert
-        publishCalls.Count().ShouldBe(1);
-        publishCalls.Single().Request.ShouldBe(_event1);
+        await Assert.That(publishCalls.Count()).IsEqualTo(1);
+        await Assert.That(publishCalls.Single().Request).IsEqualTo(_event1);
     }
 
     private sealed class MyCommand : Command

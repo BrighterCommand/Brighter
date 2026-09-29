@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -33,13 +33,12 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorInvalidEmptyTopicStaleAgeTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_publication_with_an_empty_topic_has_an_invalid_stale_age_should_fail_to_start()
     {
         //Arrange
@@ -73,12 +72,12 @@ public class StaleMessageMonitorInvalidEmptyTopicStaleAgeTests
         var monitor = provider.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
 
         //Act
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => monitor.StartAsync(default));
+        var exception = await Assert.That(() => monitor.StartAsync(default)).ThrowsExactly<ConfigurationException>();
         timeProvider.Advance(interval);
 
         //Assert
-        Assert.Contains(staleMessageAge.ToString(), exception.Message);
-        Assert.DoesNotContain("for topic", exception.Message);
-        Assert.Empty(outbox.CountCalls);
+        await Assert.That(exception.Message).Contains(staleMessageAge.ToString());
+        await Assert.That(exception.Message).DoesNotContain("for topic");
+        await Assert.That(outbox.CountCalls).IsEmpty();
     }
 }

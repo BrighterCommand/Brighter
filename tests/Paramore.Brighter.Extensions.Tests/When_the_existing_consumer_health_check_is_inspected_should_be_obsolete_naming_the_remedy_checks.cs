@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia <irakli.gabisonia94@gmail.com>
 
@@ -26,8 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Reflection;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Extensions.Tests;
 
 /// <summary>
@@ -35,8 +34,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class ObsoleteConsumerHealthCheckTests
 {
-    [Fact]
-    public void When_the_existing_consumer_health_check_is_inspected_should_be_obsolete_naming_the_remedy_checks()
+    [Test]
+    public async Task When_the_existing_consumer_health_check_is_inspected_should_be_obsolete_naming_the_remedy_checks()
     {
         //Arrange
         var type = typeof(BrighterServiceActivatorHealthCheck);
@@ -45,8 +44,8 @@ public class ObsoleteConsumerHealthCheckTests
         var obsolete = type.GetCustomAttribute<ObsoleteAttribute>(inherit: false);
 
         //Assert
-        Assert.NotNull(obsolete);
-        Assert.False(obsolete.IsError);
-        Assert.Contains("AddBrighterConsumerHealthChecks", obsolete.Message);
+        await Assert.That(obsolete).IsNotNull();
+        await Assert.That(obsolete.IsError).IsFalse();
+        await Assert.That(obsolete.Message).Contains("AddBrighterConsumerHealthChecks");
     }
 }

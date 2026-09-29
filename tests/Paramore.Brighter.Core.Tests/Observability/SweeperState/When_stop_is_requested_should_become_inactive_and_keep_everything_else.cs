@@ -1,14 +1,13 @@
 using System;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.SweeperState;
 
 public class SweeperStateStopTests
 {
-    [Fact]
-    public void When_stop_is_requested_after_failed_sweeps_should_become_inactive_and_keep_everything_else()
+    [Test]
+    public async Task When_stop_is_requested_after_failed_sweeps_should_become_inactive_and_keep_everything_else()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -23,33 +22,33 @@ public class SweeperStateStopTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.Equal(3, snapshot.ConsecutiveFailedSweeps);
-        Assert.Equal(SweepOutcome.Failed, snapshot.LastOutcome);
-        Assert.True(snapshot.IsStopped);
-        Assert.False(snapshot.IsActive);
+        await Assert.That(snapshot.ConsecutiveFailedSweeps).IsEqualTo(3);
+        await Assert.That(snapshot.LastOutcome).IsEqualTo(SweepOutcome.Failed);
+        await Assert.That(snapshot.IsStopped).IsTrue();
+        await Assert.That(snapshot.IsActive).IsFalse();
     }
 
-    [Fact]
-    public void When_stop_is_requested_after_a_sweep_that_obtained_the_lock_should_not_be_active()
+    [Test]
+    public async Task When_stop_is_requested_after_a_sweep_that_obtained_the_lock_should_not_be_active()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
         state.SweepStarted();
         state.LockObtained();
         state.SweepEnded(SweepOutcome.Completed);
-        Assert.True(state.Read().IsActive);
+        await Assert.That(state.Read().IsActive).IsTrue();
 
         //Act
         state.Stopped();
         var snapshot = state.Read();
 
         //Assert
-        Assert.True(snapshot.IsStopped);
-        Assert.False(snapshot.IsActive);
+        await Assert.That(snapshot.IsStopped).IsTrue();
+        await Assert.That(snapshot.IsActive).IsFalse();
     }
 
-    [Fact]
-    public void When_stop_is_requested_during_a_sweep_should_keep_timing_the_sweep()
+    [Test]
+    public async Task When_stop_is_requested_during_a_sweep_should_keep_timing_the_sweep()
     {
         //Arrange
         var clock = new FakeTimeProvider();
@@ -63,12 +62,12 @@ public class SweeperStateStopTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.True(snapshot.IsSweepInProgress);
-        Assert.Equal(TimeSpan.FromSeconds(56), snapshot.RunningTime);
+        await Assert.That(snapshot.IsSweepInProgress).IsTrue();
+        await Assert.That(snapshot.RunningTime).IsEqualTo(TimeSpan.FromSeconds(56));
     }
 
-    [Fact]
-    public void When_a_sweep_ends_after_a_stop_should_record_the_outcome_and_stay_inactive()
+    [Test]
+    public async Task When_a_sweep_ends_after_a_stop_should_record_the_outcome_and_stay_inactive()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -81,14 +80,14 @@ public class SweeperStateStopTests
         var snapshot = state.Read();
 
         //Assert
-        Assert.Equal(SweepOutcome.Failed, snapshot.LastOutcome);
-        Assert.Equal(1, snapshot.ConsecutiveFailedSweeps);
-        Assert.True(snapshot.IsStopped);
-        Assert.False(snapshot.IsActive);
+        await Assert.That(snapshot.LastOutcome).IsEqualTo(SweepOutcome.Failed);
+        await Assert.That(snapshot.ConsecutiveFailedSweeps).IsEqualTo(1);
+        await Assert.That(snapshot.IsStopped).IsTrue();
+        await Assert.That(snapshot.IsActive).IsFalse();
     }
 
-    [Fact]
-    public void When_stop_is_requested_twice_should_be_idempotent()
+    [Test]
+    public async Task When_stop_is_requested_twice_should_be_idempotent()
     {
         //Arrange
         var state = new OutboxSweeperState(new FakeTimeProvider());
@@ -103,7 +102,7 @@ public class SweeperStateStopTests
         var afterSecondStop = state.Read();
 
         //Assert
-        Assert.Equal(afterFirstStop, afterSecondStop);
-        Assert.True(afterSecondStop.IsStopped);
+        await Assert.That(afterSecondStop).IsEqualTo(afterFirstStop);
+        await Assert.That(afterSecondStop.IsStopped).IsTrue();
     }
 }

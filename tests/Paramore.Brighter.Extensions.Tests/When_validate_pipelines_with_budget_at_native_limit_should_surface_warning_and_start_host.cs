@@ -29,8 +29,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Extensions.Tests;
 
 /// <summary>
@@ -40,8 +39,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class ValidatePipelinesBudgetAtNativeLimitTests
 {
-    [Fact]
-    public void When_validate_pipelines_with_budget_at_native_limit_should_surface_warning_and_start_host()
+    [Test]
+    public async Task When_validate_pipelines_with_budget_at_native_limit_should_surface_warning_and_start_host()
     {
         // Arrange — subscription with requeueCount: 5 and NativeRedriveLimit: 5 (R == M)
         var services = new ServiceCollection();
@@ -72,10 +71,10 @@ public class ValidatePipelinesBudgetAtNativeLimitTests
             provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
 
         // Assert — budget at native limit produces exactly one Warning; no Errors; host starts
-        Assert.True(result.IsValid);
-        Assert.Single(result.Warnings);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings).HasSingleItem();
         var warning = result.Warnings.First();
-        Assert.Contains("5", warning.Message);
-        Assert.Contains("native", warning.Message, System.StringComparison.OrdinalIgnoreCase);
+        await Assert.That(warning.Message).Contains("5");
+        await Assert.That(warning.Message).Contains("native");
     }
 }

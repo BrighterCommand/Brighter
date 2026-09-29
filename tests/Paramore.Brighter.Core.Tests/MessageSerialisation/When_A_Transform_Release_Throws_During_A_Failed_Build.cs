@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -17,8 +17,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 // replace the original configuration error the caller needs to see.
 public class TransformPipelineFailedBuildReleaseThrowTests
 {
-    [Fact]
-    public void When_a_transform_release_throws_during_a_partial_build_the_others_are_released_and_the_error_is_not_masked()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_transform_release_throws_during_a_partial_build_the_others_are_released_and_the_error_is_not_masked()
     {
         //arrange — a mapper declaring three wrap transforms; the factory builds the first two but cannot
         //build the third, so the build fails part-way and the two already-built transforms must be released.
@@ -37,20 +37,20 @@ public class TransformPipelineFailedBuildReleaseThrowTests
         var exception = Catch.Exception(() => pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
 
         //assert — two transforms were built before the third failed to build
-        Assert.Equal(2, transformerFactory.Created.Count);
+        await Assert.That(transformerFactory.Created.Count).IsEqualTo(2);
         //the second (non-throwing) transform is released even though releasing the first threw: the failed-build
         //cleanup drains every transform rather than stopping at the first throw. There is no pipeline and no
         //finalizer here, so a skipped release would leak that transform's DI scope permanently.
-        Assert.Contains(transformerFactory.Created[1], transformerFactory.Released);
+        await Assert.That(transformerFactory.Released).Contains(transformerFactory.Created[1]);
         //the caller still sees the real build error (the transform that could not be created), not the release
         //failure: cleanup must not mask the configuration error the user needs to fix
-        var configException = Assert.IsType<ConfigurationException>(exception);
-        var inner = Assert.IsType<ConfigurationException>(configException.InnerException);
-        Assert.Contains("Could not create transformer", inner.Message);
+        var configException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        var inner = await Assert.That(configException.InnerException).IsTypeOf<ConfigurationException>();
+        await Assert.That(inner.Message).Contains("Could not create transformer");
     }
 
-    [Fact]
-    public void When_cleanup_of_a_failed_build_throws_the_original_error_is_not_masked()
+    [Test]
+    public async System.Threading.Tasks.Task When_cleanup_of_a_failed_build_throws_the_original_error_is_not_masked()
     {
         //arrange — the wrap pipeline (and its one transform) is constructed, then unwrap discovery throws
         //because MapToRequest is an explicit interface implementation. Cleanup disposes the constructed
@@ -69,9 +69,9 @@ public class TransformPipelineFailedBuildReleaseThrowTests
 
         //assert — the caller sees the wrap-build ConfigurationException whose inner is the unwrap-discovery
         //failure, not the release InvalidOperationException raised while disposing the discarded pipeline
-        var configException = Assert.IsType<ConfigurationException>(exception);
-        var inner = Assert.IsType<ConfigurationException>(configException.InnerException);
-        Assert.Contains("No MapToRequest", inner.Message);
+        var configException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        var inner = await Assert.That(configException.InnerException).IsTypeOf<ConfigurationException>();
+        await Assert.That(inner.Message).Contains("No MapToRequest");
     }
 
     // a mapper declaring three wrap transforms, built in descending step order; the third cannot be built
@@ -161,8 +161,8 @@ public class TransformPipelineFailedBuildReleaseThrowTests
 
 public class AsyncTransformPipelineFailedBuildReleaseThrowTests
 {
-    [Fact]
-    public void When_a_transform_release_throws_during_a_partial_build_the_others_are_released_and_the_error_is_not_masked_async()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_transform_release_throws_during_a_partial_build_the_others_are_released_and_the_error_is_not_masked_async()
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
@@ -178,15 +178,15 @@ public class AsyncTransformPipelineFailedBuildReleaseThrowTests
         var exception = Catch.Exception(() => pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
 
         //assert
-        Assert.Equal(2, transformerFactory.Created.Count);
-        Assert.Contains(transformerFactory.Created[1], transformerFactory.Released);
-        var configException = Assert.IsType<ConfigurationException>(exception);
-        var inner = Assert.IsType<ConfigurationException>(configException.InnerException);
-        Assert.Contains("Could not create transformer", inner.Message);
+        await Assert.That(transformerFactory.Created.Count).IsEqualTo(2);
+        await Assert.That(transformerFactory.Released).Contains(transformerFactory.Created[1]);
+        var configException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        var inner = await Assert.That(configException.InnerException).IsTypeOf<ConfigurationException>();
+        await Assert.That(inner.Message).Contains("Could not create transformer");
     }
 
-    [Fact]
-    public void When_cleanup_of_a_failed_build_throws_the_original_error_is_not_masked_async()
+    [Test]
+    public async System.Threading.Tasks.Task When_cleanup_of_a_failed_build_throws_the_original_error_is_not_masked_async()
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
@@ -202,9 +202,9 @@ public class AsyncTransformPipelineFailedBuildReleaseThrowTests
         var exception = Catch.Exception(() => pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
 
         //assert
-        var configException = Assert.IsType<ConfigurationException>(exception);
-        var inner = Assert.IsType<ConfigurationException>(configException.InnerException);
-        Assert.Contains("No MapToRequestAsync", inner.Message);
+        var configException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        var inner = await Assert.That(configException.InnerException).IsTypeOf<ConfigurationException>();
+        await Assert.That(inner.Message).Contains("No MapToRequestAsync");
     }
 
     private sealed class MyThreeWrapTransformMessageMapperAsync : IAmAMessageMapperAsync<MyTransformableCommand>

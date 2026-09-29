@@ -29,7 +29,6 @@ using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
 using Paramore.Brighter.Sqlite.Tests.BoxProvisioning.Legacy;
 using Paramore.Brighter.Sqlite.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -38,7 +37,7 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// bootstrap row) because SQLite runs it in one BEGIN IMMEDIATE transaction (ADR 0057 §5a); a retry with
 /// the real chain then completes.
 /// </summary>
-public class RunnerMidChainFailureRollbackTests : IAsyncLifetime
+public class RunnerMidChainFailureRollbackTests
 {
     private const int SeedVersion = 3;
     private const int BrokenVersion = 6;
@@ -52,7 +51,7 @@ public class RunnerMidChainFailureRollbackTests : IAsyncLifetime
     private readonly string _connectionString = Configuration.ConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_runner_fails_mid_chain_it_should_roll_back_all_migrations_and_history_rows_atomically()
     {
         //Arrange
@@ -70,18 +69,18 @@ public class RunnerMidChainFailureRollbackTests : IAsyncLifetime
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
         //Act + Assert
-        await Assert.ThrowsAsync<SqliteException>(() => brokenRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, staleHint));
+        await Assert.That(() => brokenRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, staleHint)).ThrowsExactly<SqliteException>();
 
         //Assert
-        Assert.Empty(await GetHistoryRowsByVersion());
+        await Assert.That(await GetHistoryRowsByVersion()).IsEmpty();
 
         var columnsAfterFailure = await GetTableColumns();
-        Assert.Contains("ContentType", columnsAfterFailure);
-        Assert.DoesNotContain("PartitionKey", columnsAfterFailure);
-        Assert.DoesNotContain("Source", columnsAfterFailure);
+        await Assert.That(columnsAfterFailure).Contains("ContentType");
+        await Assert.That(columnsAfterFailure).DoesNotContain("PartitionKey");
+        await Assert.That(columnsAfterFailure).DoesNotContain("Source");
 
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
 
         //Act
         var realRunner = new SqliteBoxMigrationRunner(realCatalog, config);
@@ -95,24 +94,24 @@ public class RunnerMidChainFailureRollbackTests : IAsyncLifetime
 
         //Assert
         var rowsByVersion = await GetHistoryRowsByVersion();
-        Assert.Equal(ExpectedMigrationVersions.OutboxLatest - SeedVersion + 1, rowsByVersion.Count);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(ExpectedMigrationVersions.OutboxLatest - SeedVersion + 1);
 
-        var syntheticDescription = Assert.Contains(SeedVersion, rowsByVersion);
-        Assert.StartsWith($"bootstrap: detected at V{SeedVersion}", syntheticDescription);
+        await Assert.That(rowsByVersion.ContainsKey(SeedVersion)).IsTrue();
+
+        var syntheticDescription = rowsByVersion[SeedVersion];
+        await Assert.That(syntheticDescription).StartsWith($"bootstrap: detected at V{SeedVersion}");
 
         for (var v = SeedVersion + 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            var appliedDescription = Assert.Contains(v, rowsByVersion);
-            Assert.False(
-                appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal),
-                $"V{v} should be an applied migration row, not a synthetic bootstrap row " +
-                $"(description was: '{appliedDescription}')");
+            await Assert.That(rowsByVersion.ContainsKey(v)).IsTrue();
+            var appliedDescription = rowsByVersion[v];
+            await Assert.That(appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
         }
 
         var columnsAfterRetry = await GetTableColumns();
-        Assert.Contains("DataRef", columnsAfterRetry);
-        Assert.Contains("PartitionKey", columnsAfterRetry);
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(columnsAfterRetry).Contains("DataRef");
+        await Assert.That(columnsAfterRetry).Contains("PartitionKey");
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private async Task SeedMarkerRow()
@@ -179,7 +178,11 @@ ORDER BY [MigrationVersion]";
         return Convert.ToInt64(await command.ExecuteScalarAsync());
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

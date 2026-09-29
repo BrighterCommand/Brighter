@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Classic.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
-public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncLifetime
+[Property("Category", "Kafka")]
+[NotInParallel("Kafka")]
+public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -31,17 +32,20 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
         _messageBuilder = new DefaultMessageBuilder();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
+    
     public async Task When_rejecting_message_with_unknown_reason_should_send_to_dlq_async()
     {
         // Arrange — both a dead-letter queue and an invalid-message channel are configured
@@ -62,12 +66,12 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
 
         // Act
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         var rejected = await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.None, "Test unknown rejection reason"));
 
         // Assert — RejectAsync returns true when the copy was routed
-        Assert.True(rejected, "RejectAsync should return true when the message was routed");
+        await Assert.That(rejected).IsTrue().Because("RejectAsync should return true when the message was routed");
 
         // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
         var dlqMessage = new Message();
@@ -82,23 +86,22 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
             await Task.Delay(500);
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
-        Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(dlqMessage.Body.Value).IsEqualTo(message.Body.Value);
 
         // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
         // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
         if (keys.StampsRejectionMetadata)
         {
-            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
-            Assert.Equal(RejectionReason.None.ToString(), dlqMessage.Header.Bag[keys.RejectionReason].ToString());
-            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
-            Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason)).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag[keys.RejectionReason].ToString()).IsEqualTo(RejectionReason.None.ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic)).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag[keys.OriginalTopic].ToString()).IsEqualTo(_publication.Topic!.Value);
         }
 
         // Assert — nothing reached the invalid-message channel. A single receive rather than a
         // poll loop: the claim is that no message arrives, so polling would wait out the ceiling.
         var invalidMessage = await _messageGatewayProvider.GetMessageFromInvalidChannelAsync(_subscription);
-        Assert.Equal(MessageType.MT_NONE, invalidMessage.Header.MessageType);
-    }
-}
+        await Assert.That(invalidMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
+    }}

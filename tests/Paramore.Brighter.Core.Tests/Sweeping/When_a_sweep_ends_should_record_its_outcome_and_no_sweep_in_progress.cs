@@ -7,13 +7,12 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class SweeperEndedSweepStateTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_sweep_completes_should_record_its_outcome_and_no_sweep_in_progress()
     {
         //Arrange
@@ -23,14 +22,14 @@ public class SweeperEndedSweepStateTests
         var ended = await SweepOnceAndRead(outbox.ScopeFactory, new InMemoryLock());
 
         //Assert
-        Assert.False(ended.IsSweepInProgress);
-        Assert.Equal(TimeSpan.Zero, ended.RunningTime);
-        Assert.Equal(SweepOutcome.Completed, ended.LastOutcome);
-        Assert.Equal(0, ended.ConsecutiveFailedSweeps);
-        Assert.True(ended.IsActive);
+        await Assert.That(ended.IsSweepInProgress).IsFalse();
+        await Assert.That(ended.RunningTime).IsEqualTo(TimeSpan.Zero);
+        await Assert.That(ended.LastOutcome).IsEqualTo(SweepOutcome.Completed);
+        await Assert.That(ended.ConsecutiveFailedSweeps).IsEqualTo(0);
+        await Assert.That(ended.IsActive).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_sweep_fails_should_record_its_outcome_and_no_sweep_in_progress()
     {
         //Arrange
@@ -42,14 +41,14 @@ public class SweeperEndedSweepStateTests
         var ended = await SweepOnceAndRead(provider.GetRequiredService<IServiceScopeFactory>(), new InMemoryLock());
 
         //Assert
-        Assert.False(ended.IsSweepInProgress);
-        Assert.Equal(TimeSpan.Zero, ended.RunningTime);
-        Assert.Equal(SweepOutcome.Failed, ended.LastOutcome);
-        Assert.Equal(1, ended.ConsecutiveFailedSweeps);
-        Assert.True(ended.IsActive);
+        await Assert.That(ended.IsSweepInProgress).IsFalse();
+        await Assert.That(ended.RunningTime).IsEqualTo(TimeSpan.Zero);
+        await Assert.That(ended.LastOutcome).IsEqualTo(SweepOutcome.Failed);
+        await Assert.That(ended.ConsecutiveFailedSweeps).IsEqualTo(1);
+        await Assert.That(ended.IsActive).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_sweep_lock_is_held_should_record_its_outcome_and_no_sweep_in_progress()
     {
         //Arrange
@@ -59,10 +58,10 @@ public class SweeperEndedSweepStateTests
         var ended = await SweepOnceAndRead(outbox.ScopeFactory, new HeldDistributedLock());
 
         //Assert
-        Assert.False(ended.IsSweepInProgress);
-        Assert.Equal(TimeSpan.Zero, ended.RunningTime);
-        Assert.Equal(SweepOutcome.LockUnavailable, ended.LastOutcome);
-        Assert.False(ended.IsActive);
+        await Assert.That(ended.IsSweepInProgress).IsFalse();
+        await Assert.That(ended.RunningTime).IsEqualTo(TimeSpan.Zero);
+        await Assert.That(ended.LastOutcome).IsEqualTo(SweepOutcome.LockUnavailable);
+        await Assert.That(ended.IsActive).IsFalse();
     }
 
     private static async Task<OutboxSweeperSnapshot> SweepOnceAndRead(IServiceScopeFactory scopeFactory, IDistributedLock distributedLock)
@@ -84,7 +83,7 @@ public class SweeperEndedSweepStateTests
         await sweeper.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
         sweeper.Dispose();
 
-        Assert.True(recorded, "The sweeper recorded no sweep");
+        await Assert.That(recorded).IsTrue().Because("The sweeper recorded no sweep");
         return ended;
     }
 }

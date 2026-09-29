@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
@@ -37,8 +36,8 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 /// delay here is longer than the subscription's invisibility lease, so a redelivery that arrives inside
 /// the quiet window can only have come from the receive lease lapsing, which means the delay was ignored.
 /// </summary>
-[Trait("Category", "RocketMQ")]
-public class RocketMqRequeueDelayBeyondLeaseTestsAsync : IAsyncLifetime
+[Property("Category", "RocketMQ")]
+public class RocketMqRequeueDelayBeyondLeaseTestsAsync
 {
     private const string Topic = "rmq_requeue_beyond_lease_p";
     private static readonly TimeSpan s_invisibilityTimeout = TimeSpan.FromSeconds(10);
@@ -51,7 +50,7 @@ public class RocketMqRequeueDelayBeyondLeaseTestsAsync : IAsyncLifetime
     private RocketMqMessageProducer? _producer;
     private IAmAMessageConsumerAsync? _consumer;
 
-    public async Task InitializeAsync()
+    [Before(HookType.Test)]public async Task InitializeAsync()
     {
         var connection = GatewayFactory.CreateConnection();
         var routingKey = new RoutingKey(Topic);
@@ -76,7 +75,7 @@ public class RocketMqRequeueDelayBeyondLeaseTestsAsync : IAsyncLifetime
         _consumer = new RocketMessageConsumerFactory(connection).CreateAsync(subscription);
     }
 
-    public async Task DisposeAsync()
+    [After(HookType.Test)]public async Task DisposeAsync()
     {
         if (_consumer != null)
             await _consumer.DisposeAsync();
@@ -85,7 +84,7 @@ public class RocketMqRequeueDelayBeyondLeaseTestsAsync : IAsyncLifetime
             await _producer.DisposeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_rocketmq_message_is_requeued_with_a_delay_longer_than_the_lease_should_not_redeliver_before_the_delay_async()
     {
         // Arrange
@@ -96,22 +95,20 @@ public class RocketMqRequeueDelayBeyondLeaseTestsAsync : IAsyncLifetime
         await _producer!.SendAsync(message);
 
         var received = await ReceiveOursAsync(message.Id, s_receiveCeiling);
-        Assert.NotNull(received);
+        await Assert.That(received).IsNotNull();
 
         // Act
         var requeued = await _consumer!.RequeueAsync(received!, s_requeueDelay);
         var sinceRequeue = Stopwatch.StartNew();
 
         // Assert - nothing within the quiet window, then the message comes back
-        Assert.True(requeued);
+        await Assert.That(requeued).IsTrue();
 
         var early = await ReceiveOursAsync(message.Id, s_quietWindow);
-        Assert.True(early == null,
-            $"Requeued with a {s_requeueDelay.TotalSeconds:F0} s delay but redelivered after " +
-            $"{sinceRequeue.Elapsed.TotalSeconds:F1} s; the {s_invisibilityTimeout.TotalSeconds:F0} s lease, not the delay, decided it");
+        await Assert.That(early == null).IsTrue();
 
         var redelivered = await ReceiveOursAsync(message.Id, s_receiveCeiling);
-        Assert.NotNull(redelivered);
+        await Assert.That(redelivered).IsNotNull();
 
         await _consumer.AcknowledgeAsync(redelivered!);
     }

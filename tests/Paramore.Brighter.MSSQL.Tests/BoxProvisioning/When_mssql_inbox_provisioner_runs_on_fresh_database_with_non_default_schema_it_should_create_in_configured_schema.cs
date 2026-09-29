@@ -25,7 +25,6 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -34,7 +33,7 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// <c>dbo</c>, and a second run changes nothing. The schema must already exist; the runner does not
 /// create schemas.
 /// </summary>
-public class MsSqlInboxNonDefaultSchemaTests : IAsyncLifetime
+public class MsSqlInboxNonDefaultSchemaTests
 {
     private const string NonDefaultSchema = "billing_for_inbox_schema_test";
     private readonly string _connectionString = Configuration.DefaultConnectingString;
@@ -56,7 +55,7 @@ public class MsSqlInboxNonDefaultSchemaTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_inbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
         //Arrange
@@ -66,21 +65,21 @@ public class MsSqlInboxNonDefaultSchemaTests : IAsyncLifetime
         DropAnyExistingTable(_tableName, "dbo");
 
         //Act
-        var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var firstException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert
-        Assert.Null(firstException);
-        Assert.True(TableExistsInSchema(_tableName, NonDefaultSchema));
-        Assert.False(TableExistsInSchema(_tableName, "dbo"));
-        Assert.Equal(1, GetHistoryRowCount(NonDefaultSchema, _tableName));
+        await Assert.That(firstException).IsNull();
+        await Assert.That(TableExistsInSchema(_tableName, NonDefaultSchema)).IsTrue();
+        await Assert.That(TableExistsInSchema(_tableName, "dbo")).IsFalse();
+        await Assert.That(GetHistoryRowCount(NonDefaultSchema, _tableName)).IsEqualTo(1);
 
         //Act
-        var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var secondException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert
-        Assert.Null(secondException);
-        Assert.True(TableExistsInSchema(_tableName, NonDefaultSchema));
-        Assert.Equal(1, GetHistoryRowCount(NonDefaultSchema, _tableName));
+        await Assert.That(secondException).IsNull();
+        await Assert.That(TableExistsInSchema(_tableName, NonDefaultSchema)).IsTrue();
+        await Assert.That(GetHistoryRowCount(NonDefaultSchema, _tableName)).IsEqualTo(1);
     }
 
     private void EnsureSchemaExists(string schemaName) =>
@@ -132,8 +131,10 @@ IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = '{schemaName}')
         command.ExecuteNonQuery();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public Task DisposeAsync()
     {
         try

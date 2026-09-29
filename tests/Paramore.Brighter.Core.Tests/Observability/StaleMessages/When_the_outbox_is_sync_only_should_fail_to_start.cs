@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -33,13 +33,12 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleMessageMonitorSyncOnlyOutboxTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_outbox_is_sync_only_should_fail_to_start()
     {
         //Arrange
@@ -62,13 +61,13 @@ public class StaleMessageMonitorSyncOnlyOutboxTests
         var readings = provider.GetRequiredService<OutboxStaleMessageReadings>();
 
         //Act
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => monitor.StartAsync(default));
+        var exception = await Assert.That(() => monitor.StartAsync(default)).ThrowsExactly<ConfigurationException>();
         timeProvider.Advance(interval);
 
         //Assert
-        Assert.Contains(nameof(SyncOnlyOutbox), exception.Message);
-        Assert.Contains("sync-only", exception.Message);
-        Assert.False(readings.IsStarted);
-        Assert.Empty(outbox.CountCalls);
+        await Assert.That(exception.Message).Contains(nameof(SyncOnlyOutbox));
+        await Assert.That(exception.Message).Contains("sync-only");
+        await Assert.That(readings.IsStarted).IsFalse();
+        await Assert.That(outbox.CountCalls).IsEmpty();
     }
 }

@@ -26,7 +26,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // behaviour, not something a startup check reports on.
 public class ApplicationAssignedAffinityOverriddenByExtensionTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_extensions_default_join_ambient_runs_after_the_applications_own_always_new_it_should_win()
     {
         // Arrange - the application's own delegate sets AlwaysNew; the extension is then called with no
@@ -58,12 +58,12 @@ public class ApplicationAssignedAffinityOverriddenByExtensionTests
         // the controller's own Scoped instance because adoption actually happened
         response.EnsureSuccessStatusCode();
         var options = factory.Services.GetRequiredService<IBrighterOptions>();
-        Assert.Equal(ScopeAffinity.JoinAmbient, options.DefaultScopeAffinity);
+        await Assert.That(options.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.JoinAmbient);
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.Same(recorder.ControllerInstance, recorder.HandlerInstance);
+        await Assert.That(recorder.HandlerInstance).IsSameReferenceAs(recorder.ControllerInstance);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_extensions_default_join_ambient_runs_before_the_applications_own_always_new_it_should_still_win()
     {
         // Arrange - same disagreement as the first fact, but the extension call is registered before
@@ -80,12 +80,12 @@ public class ApplicationAssignedAffinityOverriddenByExtensionTests
         // Assert - unchanged from the first fact: registration order does not matter
         response.EnsureSuccessStatusCode();
         var options = factory.Services.GetRequiredService<IBrighterOptions>();
-        Assert.Equal(ScopeAffinity.JoinAmbient, options.DefaultScopeAffinity);
+        await Assert.That(options.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.JoinAmbient);
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.Same(recorder.ControllerInstance, recorder.HandlerInstance);
+        await Assert.That(recorder.HandlerInstance).IsSameReferenceAs(recorder.ControllerInstance);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_extension_carries_always_new_it_should_win_over_the_applications_own_join_ambient()
     {
         // Arrange - the mirror image of the disagreement: the application's own delegate sets
@@ -105,9 +105,9 @@ public class ApplicationAssignedAffinityOverriddenByExtensionTests
         // instance rather than sharing the controller's own
         response.EnsureSuccessStatusCode();
         var options = factory.Services.GetRequiredService<IBrighterOptions>();
-        Assert.Equal(ScopeAffinity.AlwaysNew, options.DefaultScopeAffinity);
+        await Assert.That(options.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.AlwaysNew);
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.NotSame(recorder.ControllerInstance, recorder.HandlerInstance);
-        Assert.Equal(1, recorder.HandlerInstance!.DisposeCount);
+        await Assert.That(recorder.HandlerInstance).IsNotSameReferenceAs(recorder.ControllerInstance);
+        await Assert.That(recorder.HandlerInstance!.DisposeCount).IsEqualTo(1);
     }
 }

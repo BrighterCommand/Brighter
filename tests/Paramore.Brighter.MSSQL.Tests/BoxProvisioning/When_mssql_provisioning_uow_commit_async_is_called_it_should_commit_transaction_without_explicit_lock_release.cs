@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -30,7 +30,6 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -39,20 +38,22 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// @LockOwner='Transaction'</c> has nothing to release separately (ADR 0058 §B.1). A second
 /// <c>Commit()</c> throwing shows the transaction completed.
 /// </summary>
-public class MsSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
+public class MsSqlProvisioningUnitOfWorkCommitTests
 {
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
     private readonly FakeMsSqlAdvisoryLock _advisoryLock = new(throwOnAcquire: null);
 
-    public async Task InitializeAsync()
+    [Before(HookType.Test)]public async Task InitializeAsync()
     {
         await Configuration.EnsureDatabaseExistsAsync(_connection.ConnectionString);
         await _connection.OpenAsync();
     }
 
+    [After(HookType.Test)]
+
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mssql_provisioning_uow_commit_async_is_called_it_should_commit_transaction_without_explicit_lock_release()
     {
         // Arrange
@@ -67,6 +68,6 @@ public class MsSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
         await uow.CommitAsync(CancellationToken.None);
 
         // Assert
-        Assert.Throws<InvalidOperationException>(() => transaction.Commit());
+        await Assert.That(() => transaction.Commit()).ThrowsExactly<InvalidOperationException>();
     }
 }

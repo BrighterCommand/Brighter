@@ -29,14 +29,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests.RelationalConfiguration;
 
 public class DeferredRelationalConfigurationTests
 {
-    [Fact]
-    public void When_deferring_producer_configuration_should_preserve_optional_database_lookup()
+    [Test]
+    public async Task When_deferring_producer_configuration_should_preserve_optional_database_lookup()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -59,13 +58,13 @@ public class DeferredRelationalConfigurationTests
         using var provider = services.BuildServiceProvider();
 
         //Assert
-        Assert.Equal(0, factoryCalls);
-        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IAmARelationalDatabaseConfiguration));
+        await Assert.That(factoryCalls).IsEqualTo(0);
+        await Assert.That(services.Any(descriptor => descriptor.ServiceType == typeof(IAmARelationalDatabaseConfiguration))).IsFalse();
         var resolvedConfiguration = provider.GetRequiredService<IAmProducersConfiguration>();
-        Assert.NotNull(outbox);
-        Assert.Same(outbox, resolvedConfiguration.Outbox);
-        Assert.Equal(1, factoryCalls);
-        Assert.Same(resolvedConfiguration, provider.GetRequiredService<IAmProducersConfiguration>());
-        Assert.Equal(1, factoryCalls);
+        await Assert.That(outbox).IsNotNull();
+        await Assert.That(resolvedConfiguration.Outbox).IsSameReferenceAs(outbox);
+        await Assert.That(factoryCalls).IsEqualTo(1);
+        await Assert.That(provider.GetRequiredService<IAmProducersConfiguration>()).IsSameReferenceAs(resolvedConfiguration);
+        await Assert.That(factoryCalls).IsEqualTo(1);
     }
 }

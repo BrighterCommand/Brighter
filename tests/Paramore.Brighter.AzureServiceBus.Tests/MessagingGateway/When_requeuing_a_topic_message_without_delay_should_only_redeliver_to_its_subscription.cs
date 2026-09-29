@@ -26,19 +26,18 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "AzureServiceBus")]
-[Collection("AzureServiceBus")]
+[Property("Category", "AzureServiceBus")]
+[NotInParallel("AzureServiceBus")]
 public class AzureServiceBusImmediateRetryIsolationTests
 {
-    [Theory]
-    [InlineData(null, false)]
-    [InlineData(0, false)]
-    [InlineData(null, true)]
-    [InlineData(0, true)]
+    [Test]
+    [Arguments(null, false)]
+    [Arguments(0, false)]
+    [Arguments(null, true)]
+    [Arguments(0, true)]
     public async Task When_requeuing_a_topic_message_without_delay_should_only_redeliver_to_its_subscription(
         int? delayMilliseconds, bool synchronous)
     {
@@ -69,10 +68,10 @@ public class AzureServiceBusImmediateRetryIsolationTests
             var received = await ReceiveRetryAsync();
             var receivedB = await otherB.ReceiveAsync(TimeSpan.FromSeconds(10));
             var receivedC = await otherC.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.Equal(original.MessageId, received.Id.Value);
-            Assert.Equal(original.MessageId, receivedB.Id.Value);
-            Assert.Equal(original.MessageId, receivedC.Id.Value);
-            Assert.Equal(0, received.Header.HandledCount);
+            await Assert.That(received.Id.Value).IsEqualTo(original.MessageId);
+            await Assert.That(receivedB.Id.Value).IsEqualTo(original.MessageId);
+            await Assert.That(receivedC.Id.Value).IsEqualTo(original.MessageId);
+            await Assert.That(received.Header.HandledCount).IsEqualTo(0);
             await otherB.AcknowledgeAsync(receivedB);
             await otherC.AcknowledgeAsync(receivedC);
 
@@ -84,19 +83,19 @@ public class AzureServiceBusImmediateRetryIsolationTests
             {
                 // Act
                 received.Header.UpdateHandledCount();
-                Assert.True(synchronous
+                await Assert.That(synchronous
                     ? syncRetrying!.Requeue(received, delay)
-                    : await asyncRetrying!.RequeueAsync(received, delay));
+                    : await asyncRetrying!.RequeueAsync(received, delay)).IsTrue();
                 received = await ReceiveRetryAsync();
 
                 // Assert
-                Assert.Equal(original.MessageId, received.Id.Value);
-                Assert.Equal(original.Body.ToString(), received.Body.Value);
-                Assert.Equal(attempt, received.Header.HandledCount);
+                await Assert.That(received.Id.Value).IsEqualTo(original.MessageId);
+                await Assert.That(received.Body.Value).IsEqualTo(original.Body.ToString());
+                await Assert.That(received.Header.HandledCount).IsEqualTo(attempt);
                 var unexpectedB = await otherB.ReceiveAsync(TimeSpan.FromSeconds(1));
                 var unexpectedC = await otherC.ReceiveAsync(TimeSpan.FromSeconds(1));
-                Assert.Equal(MessageType.MT_NONE, unexpectedB.Header.MessageType);
-                Assert.Equal(MessageType.MT_NONE, unexpectedC.Header.MessageType);
+                await Assert.That(unexpectedB.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
+                await Assert.That(unexpectedC.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
             }
 
             if (synchronous)

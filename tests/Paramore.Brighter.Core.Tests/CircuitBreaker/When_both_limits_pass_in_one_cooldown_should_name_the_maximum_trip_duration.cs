@@ -4,14 +4,13 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker;
 
 public class InMemoryBothLimitsPassTests
 {
-    [Fact]
-    public void When_both_limits_pass_in_one_cooldown_should_name_the_maximum_trip_duration()
+    [Test]
+    public async Task When_both_limits_pass_in_one_cooldown_should_name_the_maximum_trip_duration()
     {
         using (TestCorrelator.CreateContext())
         {
@@ -33,8 +32,8 @@ public class InMemoryBothLimitsPassTests
             var resets = TestCorrelator.GetLogEventsFromCurrentContext()
                 .Where(e => e.Level == LogEventLevel.Information && e.MessageTemplate.Text.StartsWith("Circuit breaker reset for topic"))
                 .ToList();
-            var reset = Assert.Single(resets);
-            Assert.Equal("\"maximum trip duration\"", reset.Properties["ResetCause"].ToString());
+            var reset = await Assert.That(resets).HasSingleItem();
+            await Assert.That(reset.Properties["ResetCause"].ToString()).IsEqualTo("\"maximum trip duration\"");
         }
     }
 }

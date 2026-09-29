@@ -29,7 +29,7 @@ using Paramore.Brighter.BoxProvisioning.Tests.Drift;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.Drift;
 using Paramore.Brighter.Outbox.MySql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -42,10 +42,10 @@ public class MySqlOutboxBuilderDriftTests
 {
     private const string IgnoredConnectionString = "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;";
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_mysql_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async System.Threading.Tasks.Task When_mysql_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
         bool hasBinaryMessagePayload)
     {
         //Arrange
@@ -67,16 +67,13 @@ public class MySqlOutboxBuilderDriftTests
         migrationColumns.UnionWith(MySqlOutboxHousekeeping.V1);
 
         //Assert
-        Assert.True(
-            builderColumns.SetEquals(migrationColumns),
-            $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-            $"V_latest ∪ housekeeping: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+        await Assert.That(builderColumns.SetEquals(migrationColumns)).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_mysql_outbox_v1_upscript_is_inspected_it_should_carry_pre_dispatched_historical_baseline(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_mysql_outbox_v1_upscript_is_inspected_it_should_carry_pre_dispatched_historical_baseline(
         bool hasBinaryMessagePayload)
     {
         const string tableName = "outbox_test";
@@ -88,15 +85,15 @@ public class MySqlOutboxBuilderDriftTests
         var migrations = new MySqlOutboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
-        Assert.Equal(1, v1.Version.Value);
-        Assert.DoesNotContain("Dispatched", v1.UpScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("HeaderBag", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(v1.Version.Value).IsEqualTo(1);
+        await Assert.That(v1.UpScript.Value).DoesNotContain("Dispatched");
+        await Assert.That(v1.UpScript.Value).Contains("HeaderBag");
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_mysql_outbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_mysql_outbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
         bool hasBinaryMessagePayload)
     {
         const string tableName = "outbox_test";
@@ -108,20 +105,20 @@ public class MySqlOutboxBuilderDriftTests
         var expected = MySqlOutboxBuilder.GetDDL(tableName, hasBinaryMessagePayload);
         var actual = new MySqlOutboxMigrationCatalog().FreshInstallDdl(config);
 
-        Assert.Equal(expected, actual);
+        await Assert.That(actual).IsEqualTo(expected);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_mysql_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async System.Threading.Tasks.Task When_mysql_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index(
         bool hasBinaryMessagePayload)
     {
         const string tableName = "outbox_test";
         var ddl = MySqlOutboxBuilder.GetDDL(tableName, hasBinaryMessagePayload);
 
-        Assert.Contains("KEY `idx_CausationId`", ddl, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("`CausationId`", ddl, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(ddl).Contains("KEY `idx_CausationId`");
+        await Assert.That(ddl).Contains("`CausationId`");
     }
 }
 
@@ -134,8 +131,8 @@ public class MySqlInboxBuilderDriftTests
 {
     private const string IgnoredConnectionString = "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;";
 
-    [Fact]
-    public void When_mysql_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
+    [Test]
+    public async System.Threading.Tasks.Task When_mysql_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
     {
         //Arrange
         const string tableName = "inbox_test";
@@ -155,14 +152,11 @@ public class MySqlInboxBuilderDriftTests
         migrationColumns.UnionWith(MySqlInboxHousekeeping.V1);
 
         //Assert
-        Assert.True(
-            builderColumns.SetEquals(migrationColumns),
-            $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-            $"V_latest ∪ housekeeping: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+        await Assert.That(builderColumns.SetEquals(migrationColumns)).IsTrue();
     }
 
-    [Fact]
-    public void When_mysql_inbox_v1_upscript_is_inspected_it_should_carry_the_pre_contextkey_historical_baseline()
+    [Test]
+    public async Task When_mysql_inbox_v1_upscript_is_inspected_it_should_carry_the_pre_contextkey_historical_baseline()
     {
         //Arrange
         const string tableName = "inbox_test";
@@ -175,13 +169,13 @@ public class MySqlInboxBuilderDriftTests
         var v1 = migrations[0];
 
         //Assert
-        Assert.Equal(1, v1.Version.Value);
-        Assert.DoesNotContain("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(v1.Version.Value).IsEqualTo(1);
+        await Assert.That((v1.UpScript).Value).DoesNotContain("ContextKey");
+        await Assert.That((v1.UpScript).Value).Contains("CommandBody");
     }
 
-    [Fact]
-    public void When_mysql_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder()
+    [Test]
+    public async Task When_mysql_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder()
     {
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
@@ -191,6 +185,6 @@ public class MySqlInboxBuilderDriftTests
         var expected = MySqlInboxBuilder.GetDDL(tableName, config.BinaryMessagePayload);
         var actual = new MySqlInboxMigrationCatalog().FreshInstallDdl(config);
 
-        Assert.Equal(expected, actual);
+        await Assert.That(actual).IsEqualTo(expected);
     }
 }

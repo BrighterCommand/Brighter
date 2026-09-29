@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Tasks;
 
@@ -12,8 +11,8 @@ public class BatchedCallbackQueueBatchingTests
     private const int QueuedCallbacks = 40; // more than one batch
     private static readonly TimeSpan s_wait = TimeSpan.FromSeconds(5);
 
-    [Fact]
-    public void When_more_callbacks_are_queued_than_the_batch_size_should_run_a_batch_at_once()
+    [Test]
+    public async Task When_more_callbacks_are_queued_than_the_batch_size_should_run_a_batch_at_once()
     {
         //Arrange
         var queue = new BatchedCallbackQueue();
@@ -31,7 +30,7 @@ public class BatchedCallbackQueueBatchingTests
             releaseDrain.Wait();
             return Task.CompletedTask;
         });
-        Assert.True(drainParked.Wait(s_wait), "The drain thread did not start");
+        await Assert.That(drainParked.Wait(s_wait)).IsTrue().Because("The drain thread did not start");
 
         try
         {
@@ -55,10 +54,10 @@ public class BatchedCallbackQueueBatchingTests
             var allRan = allDone.Wait(s_wait);
 
             //Assert
-            Assert.True(batchRunning, $"Expected {BatchSize} callbacks in progress at once, but at most {Volatile.Read(ref mostAtOnce)} were");
-            Assert.Equal(BatchSize, atOnceBeforeRelease);
-            Assert.True(allRan, "Not every queued callback ran");
-            Assert.Equal(BatchSize, mostAtOnce);
+            await Assert.That(batchRunning).IsTrue().Because($"Expected {BatchSize} callbacks in progress at once, but at most {Volatile.Read(ref mostAtOnce)} were");
+            await Assert.That(atOnceBeforeRelease).IsEqualTo(BatchSize);
+            await Assert.That(allRan).IsTrue().Because("Not every queued callback ran");
+            await Assert.That(mostAtOnce).IsEqualTo(BatchSize);
         }
         finally
         {

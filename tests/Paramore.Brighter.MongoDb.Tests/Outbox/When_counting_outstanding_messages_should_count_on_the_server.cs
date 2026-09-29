@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -36,12 +36,11 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using Paramore.Brighter.Outbox.MongoDb;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDb.Tests.Outbox;
 
-[Trait("Category", "MongoDB")]
-public class OutstandingCountOnServerTests : IAsyncLifetime
+[Property("Category", "MongoDB")]
+public class OutstandingCountOnServerTests
 {
     private readonly MongoClient _client;
     private readonly string _collectionName = $"Outbox{Uuid.New():N}";
@@ -75,7 +74,7 @@ public class OutstandingCountOnServerTests : IAsyncLifetime
         });
     }
 
-    public async Task InitializeAsync()
+    [Before(HookType.Test)]public async Task InitializeAsync()
     {
         var old = _clock.GetUtcNow().AddMinutes(-10);
         var recent = _clock.GetUtcNow().AddMinutes(-1);
@@ -87,17 +86,17 @@ public class OutstandingCountOnServerTests : IAsyncLifetime
         ]);
     }
 
-    [Theory]
-    [InlineData(false, null, 100, 4)]
-    [InlineData(true, null, 100, 4)]
-    [InlineData(false, "selected", 100, 3)]
-    [InlineData(true, "selected", 100, 3)]
-    [InlineData(false, "selected", 2, 2)]
-    [InlineData(true, "selected", 2, 2)]
-    [InlineData(false, "selected", 0, 3)]
-    [InlineData(true, "selected", 0, 3)]
-    [InlineData(false, "missing", 100, 0)]
-    [InlineData(true, "missing", 100, 0)]
+    [Test]
+    [Arguments(false, null, 100, 4)]
+    [Arguments(true, null, 100, 4)]
+    [Arguments(false, "selected", 100, 3)]
+    [Arguments(true, "selected", 100, 3)]
+    [Arguments(false, "selected", 2, 2)]
+    [Arguments(true, "selected", 2, 2)]
+    [Arguments(false, "selected", 0, 3)]
+    [Arguments(true, "selected", 0, 3)]
+    [Arguments(false, "missing", 100, 0)]
+    [Arguments(true, "missing", 100, 0)]
     public async Task When_counting_outstanding_messages_should_count_on_the_server(bool useAsync, string? topic, int maxCount, int expected)
     {
         //Arrange
@@ -110,23 +109,23 @@ public class OutstandingCountOnServerTests : IAsyncLifetime
             : _outbox.GetOutstandingMessageCount(age, new RequestContext(), maxCount, args);
 
         //Assert
-        Assert.Equal(expected, count);
-        var command = Assert.Single(_commands.Values);
-        Assert.True(command.Contains("aggregate"));
+        await Assert.That(count).IsEqualTo(expected);
+        var command = await Assert.That(_commands.Values).HasSingleItem();
+        await Assert.That(command.Contains("aggregate")).IsTrue();
         if (maxCount == 0)
-            Assert.DoesNotContain(command["pipeline"].AsBsonArray, stage => stage.AsBsonDocument.Contains("$limit"));
+            await Assert.That(System.Linq.Enumerable.Any(command["pipeline"].AsBsonArray, stage => stage.AsBsonDocument.Contains("$limit"))).IsFalse();
         else
-            Assert.Contains(command["pipeline"].AsBsonArray, stage =>
-                stage.AsBsonDocument.TryGetValue("$limit", out var limit) && limit.ToInt64() == maxCount);
+            await Assert.That(System.Linq.Enumerable.Any(command["pipeline"].AsBsonArray, stage =>
+                stage.AsBsonDocument.TryGetValue("$limit", out var limit) && limit.ToInt64() == maxCount)).IsTrue();
 
-        var batch = Assert.Single(_replies)["cursor"]["firstBatch"].AsBsonArray;
+        var batch = (await Assert.That(_replies).HasSingleItem())["cursor"]["firstBatch"].AsBsonArray;
         if (expected == 0)
-            Assert.Empty(batch);
+            await Assert.That(batch).IsEmpty();
         else
         {
-            var result = Assert.Single(batch).AsBsonDocument;
-            Assert.Equal(expected, result["n"].ToInt32());
-            Assert.Equal(new[] { "_id", "n" }, result.Names.OrderBy(name => name));
+            var result = (await Assert.That(batch).HasSingleItem()).AsBsonDocument;
+            await Assert.That(result["n"].ToInt32()).IsEqualTo(expected);
+            await Assert.That(result.Names.OrderBy(name => name)).IsEqualTo(new[] { "_id", "n" });
         }
     }
 
@@ -137,7 +136,7 @@ public class OutstandingCountOnServerTests : IAsyncLifetime
         return new OutboxMessage(message) { TimeStamp = timestamp, Dispatched = dispatched };
     }
 
-    public async Task DisposeAsync()
+    [After(HookType.Test)]public async Task DisposeAsync()
     {
         try
         {

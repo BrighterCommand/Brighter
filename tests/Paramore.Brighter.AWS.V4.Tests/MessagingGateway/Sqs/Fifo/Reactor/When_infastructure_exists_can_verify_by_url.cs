@@ -7,21 +7,22 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
-[Trait("Category", "AWS")]
-public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class AwsValidateInfrastructureByUrlTests : IAsyncDisposable
 {
-    private readonly Message _message;
-    private readonly IAmAMessageConsumerSync _consumer;
-    private readonly SqsMessageProducer _messageProducer;
-    private readonly ChannelFactory _channelFactory;
-    private readonly MyCommand _myCommand;
+    private Message _message;
+    private IAmAMessageConsumerSync _consumer;
+    private SqsMessageProducer _messageProducer;
+    private ChannelFactory _channelFactory;
+    private MyCommand _myCommand;
 
-    public AwsValidateInfrastructureByUrlTests ()
+    [Before(HookType.Test)]
+    public async Task Setup()
     {
         var replyTo = new RoutingKey("http:\\queueUrl");
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
@@ -37,14 +38,14 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         var queueAttributes = new SqsAttributes(
             type: SqsType.Fifo,
             tags: new Dictionary<string, string> { { "Environment", "Test" } });
-        
+
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
-            routingKey: routingKey, 
-            messagePumpType: MessagePumpType.Reactor, 
-            queueAttributes: queueAttributes, 
+            routingKey: routingKey,
+            messagePumpType: MessagePumpType.Reactor,
+            queueAttributes: queueAttributes,
             makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
@@ -61,7 +62,7 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
-        var queueUrl = FindQueueUrl(awsConnection, routingKey.ToValidSQSQueueName(true));
+        var queueUrl = await FindQueueUrl(awsConnection, routingKey.ToValidSQSQueueName(true));
 
         //Now change the subscription to validate, just check what we made
         subscription.MakeChannels = OnMissingChannel.Validate;
@@ -71,20 +72,20 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         _messageProducer = new SqsMessageProducer(
             awsConnection,
             new SqsPublication (
-                channelName: new ChannelName(queueUrl), 
-                queueAttributes: queueAttributes, 
-                findQueueBy: QueueFindBy.Url, 
+                channelName: new ChannelName(queueUrl),
+                queueAttributes: queueAttributes,
+                findQueueBy: QueueFindBy.Url,
                 makeChannels: OnMissingChannel.Validate)
             );
 
         _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_infrastructure_exists_can_verify()
     {
         //arrange
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
 
         await Task.Delay(1000);
 
@@ -92,19 +93,20 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
 
         //Assert
         var message = messages.First();
-        Assert.Equal(_myCommand.Id, message.Id);
+        await Assert.That(message.Id).IsEqualTo(_myCommand.Id);
 
         //clear the queue
         _consumer.Acknowledge(message);
     }
 
-    public void Dispose()
+    [After(HookType.Test)]
+    public async Task Cleanup()
     {
         //Clean up resources that we have created
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
         _consumer.Dispose();
-        _messageProducer.Dispose();
+        await _messageProducer.DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -115,10 +117,10 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         await _messageProducer.DisposeAsync();
     }
 
-    private static string FindQueueUrl(AWSMessagingGatewayConnection connection, string queueName)
+    private static async Task<string> FindQueueUrl(AWSMessagingGatewayConnection connection, string queueName)
     {
-         using var snsClient = new AWSClientFactory(connection).CreateSqsClient();
-        var topicResponse = snsClient.GetQueueUrlAsync(queueName).GetAwaiter().GetResult();
+        using var snsClient = new AWSClientFactory(connection).CreateSqsClient();
+        var topicResponse = await snsClient.GetQueueUrlAsync(queueName);
         return topicResponse.QueueUrl;
     }
 }

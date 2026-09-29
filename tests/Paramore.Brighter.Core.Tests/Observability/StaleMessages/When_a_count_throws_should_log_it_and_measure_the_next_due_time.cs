@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,11 +35,11 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class FailedCountTests
 {
     private const string COUNT = "paramore.brighter.outbox.stale.count";
@@ -53,7 +53,7 @@ public class FailedCountTests
         _logs = fixture.Logs;
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_count_throws_should_log_it_and_measure_the_next_due_time()
     {
         //Arrange
@@ -83,7 +83,7 @@ public class FailedCountTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        await WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromSeconds(59));
 
         var failedAt = s_start.AddMinutes(1);
@@ -127,20 +127,20 @@ public class FailedCountTests
         }
 
         //Assert
-        Assert.Null(heldAt);
-        Assert.Equal([failedAt, measuredAt], outbox.CountCalls.Select(call => call.CalledAt));
-        Assert.DoesNotContain(beforeTheNextDueTime, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
+        await Assert.That(heldAt).IsNull();
+        await Assert.That(outbox.CountCalls.Select(call => call.CalledAt)).IsEqualTo([failedAt, measuredAt]);
+        await Assert.That(System.Linq.Enumerable.Any(beforeTheNextDueTime, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).IsFalse();
         var overall = fromTheNextDueTime
             .Where(m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)
             .Select(m => m.Value)
             .Distinct();
-        Assert.Equal([2], overall);
-        Assert.True(CompletedOverall(afterTheMeasurement) > CompletedOverall(afterTheFailure));
+        await Assert.That(overall).IsEqualTo([2]);
+        await Assert.That(CompletedOverall(afterTheMeasurement) > CompletedOverall(afterTheFailure)).IsTrue();
 
-        var warning = Assert.Single(_logs.Entries, entry => entry.LogLevel == LogLevel.Warning);
-        Assert.Same(connectionRefused, warning.Exception);
-        Assert.Contains(nameof(StaleMessageCountingOutbox), warning.Message);
-        Assert.Contains("Overall", warning.Message);
+        var warning = await Assert.That(System.Linq.Enumerable.Where(_logs.Entries, entry => entry.LogLevel == LogLevel.Warning)).HasSingleItem();
+        await Assert.That(warning.Exception).IsSameReferenceAs(connectionRefused);
+        await Assert.That(warning.Message).Contains(nameof(StaleMessageCountingOutbox));
+        await Assert.That(warning.Message).Contains("Overall");
     }
 
     private static long CompletedOverall(IEnumerable<StaleMeasurement> measurements) =>
@@ -159,6 +159,6 @@ public class FailedCountTests
         return SpinWait.SpinUntil(() => advance.IsCompleted, TimeSpan.FromSeconds(5));
     }
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 }

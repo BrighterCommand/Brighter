@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -27,17 +28,16 @@ using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.Handlers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline;
 
 public class GlobalInboxScopeCommandTests
 {
-    [Theory]
-    [InlineData(InboxScope.Commands, true)]
-    [InlineData(InboxScope.Events, false)]
-    [InlineData(InboxScope.All, true)]
-    public void When_handling_commands_should_apply_the_global_inbox_scope(InboxScope scope, bool shouldUseInbox)
+    [Test]
+    [Arguments(InboxScope.Commands, true)]
+    [Arguments(InboxScope.Events, false)]
+    [Arguments(InboxScope.All, true)]
+    public async System.Threading.Tasks.Task When_handling_commands_should_apply_the_global_inbox_scope(InboxScope scope, bool shouldUseInbox)
     {
         // Arrange
         var inbox = new InMemoryInbox(TimeProvider.System);
@@ -57,8 +57,7 @@ public class GlobalInboxScopeCommandTests
         pipeline.Handle(request);
 
         // Assert
-        Assert.Equal(shouldUseInbox ? 1 : 2, request.HandleCount);
-        Assert.Equal(shouldUseInbox,
-            inbox.Exists<InboxScopeCommand>(request.Id, typeof(InboxScopeCommandHandler).FullName!, null));
+        await Assert.That(request.HandleCount).IsEqualTo(shouldUseInbox ? 1 : 2);
+        await Assert.That(inbox.Exists<InboxScopeCommand>(request.Id, typeof(InboxScopeCommandHandler).FullName!, null)).IsEqualTo(shouldUseInbox);
     }
 }

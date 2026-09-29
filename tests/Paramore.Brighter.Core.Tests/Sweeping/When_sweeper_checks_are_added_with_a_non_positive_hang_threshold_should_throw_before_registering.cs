@@ -28,16 +28,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
 public class NonPositiveHangThresholdTests
 {
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void When_sweeper_checks_are_added_with_a_non_positive_hang_threshold_should_throw_before_registering(int seconds)
+    [Test]
+    [Arguments(0)]
+    [Arguments(-1)]
+    public async Task When_sweeper_checks_are_added_with_a_non_positive_hang_threshold_should_throw_before_registering(int seconds)
     {
         //Arrange
         var services = new ServiceCollection();
@@ -45,16 +44,17 @@ public class NonPositiveHangThresholdTests
         var builder = services.AddHealthChecks();
 
         //Act
-        var exception = Record.Exception(() => builder.AddBrighterOutboxSweeperHealthChecks(TimeSpan.FromSeconds(seconds)));
+        Exception? exception = null;
+        try { builder.AddBrighterOutboxSweeperHealthChecks(TimeSpan.FromSeconds(seconds)); } catch (Exception e) { exception = e; }
 
         //Assert
-        Assert.IsType<ArgumentOutOfRangeException>(exception);
+        await Assert.That(exception).IsTypeOf<ArgumentOutOfRangeException>();
         using var provider = services.BuildServiceProvider();
-        Assert.Empty(provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations);
+        await Assert.That(provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations).IsEmpty();
     }
 
-    [Fact]
-    public void When_sweeper_checks_are_added_with_a_positive_hang_threshold_should_not_throw()
+    [Test]
+    public async Task When_sweeper_checks_are_added_with_a_positive_hang_threshold_should_not_throw()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -62,9 +62,10 @@ public class NonPositiveHangThresholdTests
         var builder = services.AddHealthChecks();
 
         //Act
-        var exception = Record.Exception(() => builder.AddBrighterOutboxSweeperHealthChecks(TimeSpan.FromSeconds(5)));
+        Exception? exception = null;
+        try { builder.AddBrighterOutboxSweeperHealthChecks(TimeSpan.FromSeconds(5)); } catch (Exception e) { exception = e; }
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

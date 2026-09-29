@@ -7,7 +7,7 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
@@ -64,8 +64,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             );
         }
 
-        [Fact]
-        public void When_Posting_A_Message_With_A_Resilience_Context_Should_Still_Send_The_Message()
+        [Test]
+        public async System.Threading.Tasks.Task When_Posting_A_Message_With_A_Resilience_Context_Should_Still_Send_The_Message()
         {
             // Arrange
             // The resilience context is the only thing that differs from an ordinary Post; its
@@ -79,8 +79,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _commandProcessor.Post(_myCommand, requestContext);
 
             // Assert
-            Assert.True(_internalBus.Stream(new RoutingKey(Topic)).Any());
-            Assert.NotNull(_outbox.Get(_myCommand.Id, requestContext));
+            await Assert.That(_internalBus.Stream(new RoutingKey(Topic)).Any()).IsTrue();
+            await Assert.That(_outbox.Get(_myCommand.Id, requestContext)).IsNotNull();
         }
     }
 }

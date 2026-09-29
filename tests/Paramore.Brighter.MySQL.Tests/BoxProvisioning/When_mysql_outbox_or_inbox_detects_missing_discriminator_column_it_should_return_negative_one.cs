@@ -27,7 +27,6 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -36,12 +35,12 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// is missing, 0 when the discriminator is present but the V1 columns are not, and otherwise the highest
 /// cumulative version; the provisioner refuses to touch a table detected as -1 or 0.
 /// </summary>
-public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
+public class MySqlBoxDiscriminatorDetectionTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_mysql_outbox_detects_table_missing_headerbag_discriminator_it_should_return_negative_one()
     {
         //Arrange
@@ -62,7 +61,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(-1, detected);
+        await Assert.That(detected).IsEqualTo(-1);
 
         //Act
         var runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
@@ -72,14 +71,14 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             new MySqlPayloadModeValidator(),
             config,
             runner);
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
+        var ex = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("not a Brighter outbox", ex.Message);
-        Assert.Contains("HeaderBag", ex.Message);
+        await Assert.That(ex.Message).Contains("not a Brighter outbox");
+        await Assert.That(ex.Message).Contains("HeaderBag");
     }
 
-    [Fact]
+    [Test]
     public async Task When_mysql_inbox_detects_table_missing_commandbody_discriminator_it_should_return_negative_one()
     {
         //Arrange
@@ -100,7 +99,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(-1, detected);
+        await Assert.That(detected).IsEqualTo(-1);
 
         //Act
         var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
@@ -110,14 +109,14 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             new MySqlPayloadModeValidator(),
             config,
             runner);
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
+        var ex = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("not a Brighter inbox", ex.Message);
-        Assert.Contains("CommandBody", ex.Message);
+        await Assert.That(ex.Message).Contains("not a Brighter inbox");
+        await Assert.That(ex.Message).Contains("CommandBody");
     }
 
-    [Fact]
+    [Test]
     public async Task When_mysql_outbox_detects_headerbag_present_but_no_v1_columns_it_should_return_zero()
     {
         //Arrange
@@ -138,7 +137,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(0, detected);
+        await Assert.That(detected).IsEqualTo(0);
 
         //Act
         var runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
@@ -148,13 +147,13 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             new MySqlPayloadModeValidator(),
             config,
             runner);
-        var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
+        var ex = await Assert.That(() => provisioner.ProvisionAsync()).ThrowsExactly<ConfigurationException>();
 
         //Assert
-        Assert.Contains("does not match any known schema version", ex.Message);
+        await Assert.That(ex.Message).Contains("does not match any known schema version");
     }
 
-    [Fact]
+    [Test]
     public async Task When_mysql_outbox_detects_v3_shaped_table_it_should_return_three()
     {
         //Arrange
@@ -187,10 +186,10 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(3, detected);
+        await Assert.That(detected).IsEqualTo(3);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mysql_inbox_detects_v1_shaped_table_it_should_return_one()
     {
         //Arrange
@@ -217,7 +216,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         }
 
         //Assert
-        Assert.Equal(1, detected);
+        await Assert.That(detected).IsEqualTo(1);
     }
 
     private async Task ExecuteDdl(string sql)
@@ -241,8 +240,10 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         return builder.Database;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

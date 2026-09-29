@@ -30,19 +30,18 @@ using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "AzureServiceBus")]
-[Collection("AzureServiceBus")]
+[Property("Category", "AzureServiceBus")]
+[NotInParallel("AzureServiceBus")]
 public class AzureServiceBusValidRetryQueueNameTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_retrying_a_queue_with_a_subscriptions_segment_should_deliver_to_that_queue(bool synchronous, bool useQueue)
     {
         // Arrange
@@ -75,19 +74,19 @@ public class AzureServiceBusValidRetryQueueNameTests
             await sender.SendMessageAsync(original);
             var message = synchronous ? syncChannel!.Receive(TimeSpan.FromSeconds(10))
                 : await asyncChannel!.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.Equal(original.MessageId, message.Id.Value);
+            await Assert.That(message.Id.Value).IsEqualTo(original.MessageId);
             message.Header.UpdateHandledCount();
             // Act
-            Assert.True(synchronous ? syncChannel!.Requeue(message, TimeSpan.Zero)
-                : await asyncChannel!.RequeueAsync(message, TimeSpan.Zero));
+            await Assert.That(synchronous ? syncChannel!.Requeue(message, TimeSpan.Zero)
+                : await asyncChannel!.RequeueAsync(message, TimeSpan.Zero)).IsTrue();
             await using var receiver = client.CreateReceiver(queue);
             var retry = await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(10));
 
             // Assert
-            Assert.NotNull(retry);
-            Assert.NotEqual(original.MessageId, retry.MessageId);
-            Assert.Equal(original.MessageId, retry.ApplicationProperties[Message.OriginalMessageIdHeaderName]);
-            Assert.Equal(original.Body.ToArray(), retry.Body.ToArray());
+            await Assert.That(retry).IsNotNull();
+            await Assert.That(retry.MessageId).IsNotEqualTo(original.MessageId);
+            await Assert.That(retry.ApplicationProperties[Message.OriginalMessageIdHeaderName]).IsEqualTo(original.MessageId);
+            await Assert.That(retry.Body.ToArray()).IsEqualTo(original.Body.ToArray());
             await receiver.CompleteMessageAsync(retry);
         }
         finally

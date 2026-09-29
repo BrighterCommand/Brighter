@@ -25,8 +25,7 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
 /// <summary>
@@ -37,8 +36,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 /// </summary>
 public class GcpPubSubSubscriptionDeliveryBudgetUnenforceableTests
 {
-    [Fact]
-    public void When_a_gcp_subscription_has_no_dead_letter_policy_should_report_budget_unenforceable()
+    [Test]
+    public async Task When_a_gcp_subscription_has_no_dead_letter_policy_should_report_budget_unenforceable()
     {
         // Arrange & Act
         var subscription = new GcpPubSubSubscription<MyCommand>(
@@ -48,11 +47,11 @@ public class GcpPubSubSubscriptionDeliveryBudgetUnenforceableTests
             messagePumpType: MessagePumpType.Reactor);
 
         // Assert
-        Assert.IsAssignableFrom<IAmADeliveryCountingSubscription>(subscription);
+        await Assert.That(subscription).IsAssignableTo<IAmADeliveryCountingSubscription>();
         var counting = (IAmADeliveryCountingSubscription)subscription;
-        Assert.Equal(subscription.DeadLetter?.MaxDeliveryAttempts, counting.NativeRedriveLimit);
-        Assert.Null(counting.NativeRedriveLimit);
-        Assert.NotNull(counting.DeliveryBudgetUnenforceableReason);
-        Assert.Contains("DeadLetterPolicy", counting.DeliveryBudgetUnenforceableReason);
+        await Assert.That(counting.NativeRedriveLimit).IsEqualTo(subscription.DeadLetter?.MaxDeliveryAttempts);
+        await Assert.That(counting.NativeRedriveLimit).IsNull();
+        await Assert.That(counting.DeliveryBudgetUnenforceableReason).IsNotNull();
+        await Assert.That(counting.DeliveryBudgetUnenforceableReason).Contains("DeadLetterPolicy");
     }
 }

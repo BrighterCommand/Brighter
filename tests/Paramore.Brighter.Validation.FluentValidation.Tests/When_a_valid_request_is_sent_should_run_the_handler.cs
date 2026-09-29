@@ -23,14 +23,14 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.FluentValidation.Tests
 {
     public class ValidRequestValidationTests
     {
-        [Fact]
-        public void When_a_valid_request_is_sent_should_run_the_handler()
+        [Test]
+        public async Task When_a_valid_request_is_sent_should_run_the_handler()
         {
             //Arrange
             var harness = CommandProcessorHarness.With(new GreetingCommandValidator());
@@ -40,8 +40,8 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests
             harness.CommandProcessor.Send(command);
 
             //Assert
-            Assert.True(harness.Receipt.Handled);
-            Assert.Equal("Ada", harness.Receipt.HandledName);
+            await Assert.That(harness.Receipt.Handled).IsTrue();
+            await Assert.That(harness.Receipt.HandledName).IsEqualTo("Ada");
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -29,19 +29,18 @@ using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusQueueConfigurationTests
 {
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, true, false)]
-    [InlineData(true, false, false)]
-    [InlineData(true, true, false)]
-    [InlineData(false, false, true)]
-    [InlineData(true, false, true)]
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(false, true, false)]
+    [Arguments(true, false, false)]
+    [Arguments(true, true, false)]
+    [Arguments(false, false, true)]
+    [Arguments(true, false, true)]
     public async Task When_creating_a_queue_should_apply_subscription_configuration(
         bool useAsync, bool requireSession, bool useDefaults)
     {
@@ -77,13 +76,13 @@ public class AzureServiceBusQueueConfigurationTests
             consumer.Receive(TimeSpan.FromMilliseconds(1));
 
         // Assert
-        var queue = Assert.Single(administration.Queues).Value;
-        Assert.Equal("orders", queue.Name);
-        Assert.Equal(configuration.RequireSession, queue.RequiresSession);
-        Assert.Equal(configuration.MaxDeliveryCount, queue.MaxDeliveryCount);
-        Assert.Equal(configuration.LockDuration, queue.LockDuration);
-        Assert.Equal(configuration.DefaultMessageTimeToLive, queue.DefaultMessageTimeToLive);
-        Assert.Equal(configuration.DeadLetteringOnMessageExpiration, queue.DeadLetteringOnMessageExpiration);
-        Assert.Equal(configuration.QueueIdleBeforeDelete, queue.AutoDeleteOnIdle);
+        var queue = (await Assert.That(administration.Queues).HasSingleItem()).Value;
+        await Assert.That(queue.Name).IsEqualTo("orders");
+        await Assert.That(queue.RequiresSession).IsEqualTo(configuration.RequireSession);
+        await Assert.That(queue.MaxDeliveryCount).IsEqualTo(configuration.MaxDeliveryCount);
+        await Assert.That(queue.LockDuration).IsEqualTo(configuration.LockDuration);
+        await Assert.That(queue.DefaultMessageTimeToLive).IsEqualTo(configuration.DefaultMessageTimeToLive);
+        await Assert.That(queue.DeadLetteringOnMessageExpiration).IsEqualTo(configuration.DeadLetteringOnMessageExpiration);
+        await Assert.That(queue.AutoDeleteOnIdle).IsEqualTo(configuration.QueueIdleBeforeDelete);
     }
 }

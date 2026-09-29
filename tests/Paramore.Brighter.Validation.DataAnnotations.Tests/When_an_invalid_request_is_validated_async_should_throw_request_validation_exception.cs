@@ -26,13 +26,12 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.DataAnnotations.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Validation.DataAnnotations.Tests;
 
 public class InvalidRequestAsyncValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_an_invalid_request_is_validated_async_should_throw_request_validation_exception()
     {
         //Arrange
@@ -41,9 +40,9 @@ public class InvalidRequestAsyncValidationTests
         var invalidRequest = new RegisterUser { Name = "", Email = "ada@example.com" };
 
         //Act
-        var exception = await Assert.ThrowsAsync<RequestValidationException>(() => handler.HandleAsync(invalidRequest));
+        var exception = await Assert.That(() => handler.HandleAsync(invalidRequest)).ThrowsExactly<RequestValidationException>();
 
         //Assert
-        Assert.Contains(exception.Errors, error => error.PropertyName == nameof(RegisterUser.Name));
+        await Assert.That((exception.Errors).Any(error => error.PropertyName == nameof(RegisterUser.Name))).IsTrue();
     }
 }

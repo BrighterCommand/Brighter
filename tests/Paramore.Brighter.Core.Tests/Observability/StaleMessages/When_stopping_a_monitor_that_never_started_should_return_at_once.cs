@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -33,16 +33,15 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StoppingAMonitorThatNeverStartedTests
 {
-    [Theory]
-    [InlineData(false, nameof(IAmProducersConfiguration))]
-    [InlineData(true, nameof(IAmProducersConfiguration))]
-    [InlineData(true, nameof(IAmAnOutbox))]
+    [Test]
+    [Arguments(false, nameof(IAmProducersConfiguration))]
+    [Arguments(true, nameof(IAmProducersConfiguration))]
+    [Arguments(true, nameof(IAmAnOutbox))]
     public async Task When_stopping_a_monitor_that_never_started_should_return_at_once(bool startFirst, string missingRegistration)
     {
         //Arrange
@@ -63,14 +62,15 @@ public class StoppingAMonitorThatNeverStartedTests
         var provider = services.BuildServiceProvider();
         var monitor = provider.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         if (startFirst)
-            await Assert.ThrowsAsync<ConfigurationException>(() => monitor.StartAsync(default));
+            await Assert.That(() => monitor.StartAsync(default)).ThrowsExactly<ConfigurationException>();
 
         //Act
         Task? stopping = null;
-        var exception = Record.Exception(() => { stopping = monitor.StopAsync(CancellationToken.None); });
+        Exception? exception = null;
+        try { stopping = monitor.StopAsync(CancellationToken.None); } catch (Exception e) { exception = e; }
 
         //Assert
-        Assert.Null(exception);
-        Assert.True(stopping!.IsCompletedSuccessfully);
+        await Assert.That(exception).IsNull();
+        await Assert.That(stopping!.IsCompletedSuccessfully).IsTrue();
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
@@ -6,11 +6,10 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 {
-    [Trait("Category", "MSSQL")]
+    [Category("MSSQL")]
     public class PostMessageTest : IAsyncDisposable, IDisposable
     {
         private readonly string _queueName = Guid.NewGuid().ToString();
@@ -37,11 +36,11 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
         }
 
-        [Fact]
-        public void When_a_message_is_sent_keep_order()
+        [Test]
+        public async Task When_a_message_is_sent_keep_order()
         {
             IAmAMessageConsumerSync consumer = _consumer;
-            
+
             var messageId = Guid.NewGuid().ToString();
             var messageType = MessageType.MT_COMMAND;
             var source = new Uri("http://testing.example");
@@ -79,15 +78,15 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 baggage: baggage);
 
             var body = new MessageBody($"test content [{_queueName}]");
-            
+
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(new Message(
                 header,
                 body));
 
             var firstMessage = ConsumeMessages(consumer);
             var message = firstMessage.First();
-            Assert.False(message.IsEmpty);
-            Assert.Equal(messageId, message.Id);
+            await Assert.That(message.IsEmpty).IsFalse();
+            await Assert.That(message.Id).IsEqualTo(messageId);
         }
 
         private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumerSync consumer)

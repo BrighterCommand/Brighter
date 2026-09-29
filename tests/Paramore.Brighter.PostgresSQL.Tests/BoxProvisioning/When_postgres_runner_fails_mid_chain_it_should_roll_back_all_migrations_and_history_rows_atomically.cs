@@ -29,7 +29,6 @@ using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.Legacy;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -37,7 +36,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// A migration that fails mid-chain rolls back the whole chain, DDL and history rows, in one transaction (ADR 0057 §5a), so a
 /// retry with the real chain bootstraps from the seeded version and existing rows survive.
 /// </summary>
-public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
+public class PostgreSqlRunnerMidChainFailureRollbackTests
 {
     private const int SeedVersion = 3;
     private const int BrokenVersion = 6;
@@ -52,7 +51,7 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_postgres_runner_fails_mid_chain_it_should_roll_back_all_migrations_and_history_rows_atomically()
     {
         //Arrange
@@ -71,17 +70,17 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
         //Act + Assert
-        await Assert.ThrowsAsync<PostgresException>(() => brokenRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, staleHint));
+        await Assert.That(() => brokenRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, staleHint)).ThrowsExactly<PostgresException>();
 
-        Assert.Empty(await GetHistoryRowsByVersion());
+        await Assert.That(await GetHistoryRowsByVersion()).IsEmpty();
 
         var columnsAfterFailure = await GetTableColumns();
-        Assert.Contains(ColumnAddedInV3, columnsAfterFailure);
-        Assert.DoesNotContain(ColumnAddedInV4, columnsAfterFailure);
-        Assert.DoesNotContain(ColumnAddedInV5, columnsAfterFailure);
+        await Assert.That(columnsAfterFailure).Contains(ColumnAddedInV3);
+        await Assert.That(columnsAfterFailure).DoesNotContain(ColumnAddedInV4);
+        await Assert.That(columnsAfterFailure).DoesNotContain(ColumnAddedInV5);
 
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
 
         //Act
         var realRunner = new PostgreSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
@@ -95,24 +94,24 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
 
         //Assert
         var rowsByVersion = await GetHistoryRowsByVersion();
-        Assert.Equal(ExpectedMigrationVersions.OutboxLatest - SeedVersion + 1, rowsByVersion.Count);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(ExpectedMigrationVersions.OutboxLatest - SeedVersion + 1);
 
-        var syntheticDescription = Assert.Contains(SeedVersion, rowsByVersion);
-        Assert.StartsWith($"bootstrap: detected at V{SeedVersion}", syntheticDescription);
+        await Assert.That(rowsByVersion.ContainsKey(SeedVersion)).IsTrue();
+
+        var syntheticDescription = rowsByVersion[SeedVersion];
+        await Assert.That(syntheticDescription).StartsWith($"bootstrap: detected at V{SeedVersion}");
 
         for (var v = SeedVersion + 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            var appliedDescription = Assert.Contains(v, rowsByVersion);
-            Assert.False(
-                appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal),
-                $"V{v} should be an applied migration row, not a synthetic bootstrap row " +
-                $"(description was: '{appliedDescription}')");
+            await Assert.That(rowsByVersion.ContainsKey(v)).IsTrue();
+            var appliedDescription = rowsByVersion[v];
+            await Assert.That(appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
         }
 
         var columnsAfterRetry = await GetTableColumns();
-        Assert.Contains(ColumnAddedInV7, columnsAfterRetry);
-        Assert.Contains(ColumnAddedInV4, columnsAfterRetry);
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(columnsAfterRetry).Contains(ColumnAddedInV7);
+        await Assert.That(columnsAfterRetry).Contains(ColumnAddedInV4);
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private async Task SeedMarkerRow()
@@ -180,7 +179,11 @@ ORDER BY ""MigrationVersion""";
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

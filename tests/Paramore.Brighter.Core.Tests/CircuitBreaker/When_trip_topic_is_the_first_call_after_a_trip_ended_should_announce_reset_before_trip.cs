@@ -8,14 +8,13 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker;
 
 public class InMemoryTripTopicObservesEndedTripTests
 {
-    [Fact]
-    public void When_trip_topic_is_the_first_call_after_a_trip_ended_should_announce_reset_before_trip()
+    [Test]
+    public async Task When_trip_topic_is_the_first_call_after_a_trip_ended_should_announce_reset_before_trip()
     {
         // Arrange
         var orders = new RoutingKey("orders");
@@ -27,14 +26,12 @@ public class InMemoryTripTopicObservesEndedTripTests
 
         // Assert
         provider.ForceFlush();
-        Assert.Equal(
-            [SpanName(orders, CircuitBreakerSpanOperation.Reset), SpanName(orders, CircuitBreakerSpanOperation.Trip)],
-            SpansAfterTheFirstTrip(exported));
-        Assert.Contains(orders, breaker.TrippedTopics);
+        await Assert.That(SpansAfterTheFirstTrip(exported)).IsEqualTo([SpanName(orders, CircuitBreakerSpanOperation.Reset), SpanName(orders, CircuitBreakerSpanOperation.Trip)]);
+        await Assert.That(breaker.TrippedTopics).Contains(orders);
     }
 
-    [Fact]
-    public void When_trip_topic_for_another_topic_is_the_first_call_after_a_trip_ended_should_announce_the_reset_before_the_trip()
+    [Test]
+    public async Task When_trip_topic_for_another_topic_is_the_first_call_after_a_trip_ended_should_announce_the_reset_before_the_trip()
     {
         // Arrange
         var orders = new RoutingKey("orders");
@@ -47,10 +44,8 @@ public class InMemoryTripTopicObservesEndedTripTests
 
         // Assert
         provider.ForceFlush();
-        Assert.Equal(
-            [SpanName(orders, CircuitBreakerSpanOperation.Reset), SpanName(invoices, CircuitBreakerSpanOperation.Trip)],
-            SpansAfterTheFirstTrip(exported));
-        Assert.Equal([invoices], breaker.TrippedTopics);
+        await Assert.That(SpansAfterTheFirstTrip(exported)).IsEqualTo([SpanName(orders, CircuitBreakerSpanOperation.Reset), SpanName(invoices, CircuitBreakerSpanOperation.Trip)]);
+        await Assert.That(breaker.TrippedTopics).IsEqualTo([invoices]);
     }
 
     private static (InMemoryOutboxCircuitBreaker Breaker, List<Activity> Exported, TracerProvider Provider)

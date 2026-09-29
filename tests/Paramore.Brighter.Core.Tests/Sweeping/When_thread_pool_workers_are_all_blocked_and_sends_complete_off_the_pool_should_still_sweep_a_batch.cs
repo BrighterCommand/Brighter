@@ -9,18 +9,17 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Polly.Registry;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
-[Collection(ThreadPoolStarvationCollection.Name)]
+[NotInParallel]
 public class TimedOutboxSweeperAsyncSendStarvationTests
 {
     private const int OutstandingMessages = 5;
     private static readonly TimeSpan s_waitForSweep = TimeSpan.FromSeconds(3);
 
-    [Fact]
-    public void When_thread_pool_workers_are_all_blocked_and_sends_complete_off_the_pool_should_still_sweep_a_batch()
+    [Test]
+    public async Task When_thread_pool_workers_are_all_blocked_and_sends_complete_off_the_pool_should_still_sweep_a_batch()
     {
         //Arrange
         var routingKey = new RoutingKey("MyCommand");
@@ -54,7 +53,7 @@ public class TimedOutboxSweeperAsyncSendStarvationTests
             var swept = SpinWait.SpinUntil(() => bus.Stream(routingKey).Count() == OutstandingMessages, s_waitForSweep);
 
             //Assert
-            Assert.True(swept, $"The sweeper dispatched {bus.Stream(routingKey).Count()} of {OutstandingMessages} outstanding messages within {s_waitForSweep} while every thread-pool worker was blocked");
+            await Assert.That(swept).IsTrue().Because($"The sweeper dispatched {bus.Stream(routingKey).Count()} of {OutstandingMessages} outstanding messages within {s_waitForSweep} while every thread-pool worker was blocked");
         }
         finally
         {

@@ -29,7 +29,6 @@ using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -38,14 +37,14 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// relational backend (ADR 0058, Guards and contracts). Only the detection-helper constructor makes
 /// <c>lockTimeout</c> optional, so the test uses it.
 /// </summary>
-public class MySqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
+public class MySqlRunnerDefaultLockTimeoutTests
 {
     private static readonly TimeSpan s_expectedDefaultLockTimeout = TimeSpan.FromSeconds(30);
 
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mysql_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds()
     {
         //Arrange
@@ -58,14 +57,18 @@ public class MySqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
-        await Assert.ThrowsAsync<TimeoutException>(() => runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, freshHint));
+        await Assert.That(() => runner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, freshHint)).ThrowsExactly<TimeoutException>();
 
         //Assert
-        Assert.Equal(s_expectedDefaultLockTimeout, fakeLock.AcquiredTimeout);
+        await Assert.That(fakeLock.AcquiredTimeout).IsEqualTo(s_expectedDefaultLockTimeout);
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public async Task DisposeAsync()
     {

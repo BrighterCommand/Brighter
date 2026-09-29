@@ -31,17 +31,16 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using Paramore.Brighter.Outbox.MongoDb;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDb.Tests.Outbox;
 
-[Trait("Category", "MongoDB")]
-[Collection("MongoDbOutbox")]
+[Property("Category", "MongoDB")]
+[NotInParallel("MongoDbOutbox")]
 public class MongoDbTopicCountQueryTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_counting_by_topic_should_count_on_the_server_without_transferring_message_bodies(
         bool caseInsensitiveCollection)
     {
@@ -70,7 +69,7 @@ public class MongoDbTopicCountQueryTests
             TimeProvider = new FakeTimeProvider(now),
             Outbox = new MongoDbCollectionConfiguration { Name = collectionName }
         });
-        var counting = Assert.IsAssignableFrom<IAmATopicCountingOutbox>(outbox);
+        var counting = (await Assert.That(outbox).IsAssignableTo<IAmATopicCountingOutbox>());
         var orders = new RoutingKey("orders");
         var payments = new RoutingKey("payments");
         var refunds = new RoutingKey("refunds");
@@ -105,25 +104,31 @@ public class MongoDbTopicCountQueryTests
             var uncapped = await counting.GetOutstandingMessageCountsByTopicAsync(ages, null, 100, args);
 
             //Assert
-            Assert.Equal(3, capped.Count);
-            Assert.Equal(2, capped[orders]);
-            Assert.Equal(1, capped[payments]);
-            Assert.Equal(0, capped[refunds]);
-            Assert.Equal(3, uncapped.Count);
-            Assert.Equal(3, uncapped[orders]);
-            Assert.Equal(1, uncapped[payments]);
-            Assert.Equal(0, uncapped[refunds]);
-            Assert.Equal(originalArgs, args.ToArray());
-            Assert.DoesNotContain(commands, command => command.Name == "find");
+            await Assert.That(capped.Count).IsEqualTo(3);
+            await Assert.That(capped[orders]).IsEqualTo(2);
+            await Assert.That(capped[payments]).IsEqualTo(1);
+            await Assert.That(capped[refunds]).IsEqualTo(0);
+            await Assert.That(uncapped.Count).IsEqualTo(3);
+            await Assert.That(uncapped[orders]).IsEqualTo(3);
+            await Assert.That(uncapped[payments]).IsEqualTo(1);
+            await Assert.That(uncapped[refunds]).IsEqualTo(0);
+            await Assert.That(args.ToArray()).IsEqualTo(originalArgs);
+            await Assert.That(System.Linq.Enumerable.Any(commands, command => command.Name == "find")).IsFalse();
             var aggregates = commands.Where(command => command.Name == "aggregate").ToArray();
-            Assert.NotEmpty(aggregates);
-            Assert.All(aggregates, command => Assert.True(command.HasLimit));
-            Assert.NotEmpty(countFields);
-            Assert.All(countFields, fields =>
-            {
-                Assert.Contains("n", fields);
-                Assert.All(fields, name => Assert.True(name is "_id" or "n"));
-            });
+            await Assert.That(aggregates).IsNotEmpty();
+            foreach (var command in aggregates)
+{
+    await Assert.That(command.HasLimit).IsTrue();
+}
+            await Assert.That(countFields).IsNotEmpty();
+            foreach (var fields in countFields)
+{
+    await Assert.That(fields).Contains("n");
+    foreach (var name in fields)
+    {
+        await Assert.That(name is "_id" or "n").IsTrue();
+    }
+}
         }
         finally
         {

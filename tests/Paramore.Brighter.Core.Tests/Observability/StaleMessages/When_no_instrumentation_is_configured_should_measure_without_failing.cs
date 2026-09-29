@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -36,11 +36,11 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class NoInstrumentationTests
 {
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
@@ -52,7 +52,7 @@ public class NoInstrumentationTests
         _logs = fixture.Logs;
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_instrumentation_is_configured_should_measure_without_failing()
     {
         //Arrange
@@ -81,28 +81,28 @@ public class NoInstrumentationTests
         var readings = provider.GetRequiredService<OutboxStaleMessageReadings>();
 
         //Act
-        var exception = await Record.ExceptionAsync(() => monitor.StartAsync(default));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => monitor.StartAsync(default));
         if (exception is null)
         {
             for (var dueTime = 1; dueTime <= 5; dueTime++)
             {
-                Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= dueTime, TimeSpan.FromSeconds(5)));
+                await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= dueTime, TimeSpan.FromSeconds(5))).IsTrue();
                 _clock.Advance(TimeSpan.FromMinutes(1));
-                Assert.True(SpinWait.SpinUntil(
+                await Assert.That(SpinWait.SpinUntil(
                     () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed) >= dueTime
                         && readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed) >= dueTime,
-                    TimeSpan.FromSeconds(5)));
+                    TimeSpan.FromSeconds(5))).IsTrue();
             }
 
-            exception = await Record.ExceptionAsync(() => monitor.StopAsync(default));
+            exception = await TestExceptionRecorder.CaptureAsync(() => monitor.StopAsync(default));
         }
 
         //Assert
-        Assert.Null(exception);
-        Assert.DoesNotContain(_logs.Entries, entry => entry.LogLevel >= LogLevel.Warning);
-        Assert.Equal(5, readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed));
-        Assert.Equal(5, readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed));
-        Assert.Equal(0, readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Failed));
-        Assert.Equal(0, readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Failed));
+        await Assert.That(exception).IsNull();
+        await Assert.That(System.Linq.Enumerable.Any(_logs.Entries, entry => entry.LogLevel >= LogLevel.Warning)).IsFalse();
+        await Assert.That(readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed)).IsEqualTo(5);
+        await Assert.That(readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed)).IsEqualTo(5);
+        await Assert.That(readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Failed)).IsEqualTo(0);
+        await Assert.That(readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Failed)).IsEqualTo(0);
     }
 }

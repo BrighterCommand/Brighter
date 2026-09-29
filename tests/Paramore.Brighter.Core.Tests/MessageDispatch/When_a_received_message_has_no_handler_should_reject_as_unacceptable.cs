@@ -33,7 +33,6 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.MessageMappers;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
@@ -44,15 +43,15 @@ public class ReceivedMessageWithoutHandlerTests
     private readonly RoutingKey _deadLetterTopic = new("received-without-handler-dead-letter");
     private readonly InternalBus _bus = new();
 
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, true, false)]
-    [InlineData(true, false, false)]
-    [InlineData(true, true, false)]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, true)]
-    [InlineData(true, true, true)]
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(false, true, false)]
+    [Arguments(true, false, false)]
+    [Arguments(true, true, false)]
+    [Arguments(false, false, true)]
+    [Arguments(false, true, true)]
+    [Arguments(true, false, true)]
+    [Arguments(true, true, true)]
     public void When_a_received_message_has_no_handler_should_reject_as_unacceptable(
         bool useProactor, bool isEvent, bool useDeadLetterFallback)
     {
@@ -62,7 +61,7 @@ public class ReceivedMessageWithoutHandlerTests
             VerifyMissingHandler<UnhandledReceivedCommand>(useProactor, useDeadLetterFallback);
     }
 
-    private void VerifyMissingHandler<TRequest>(bool useProactor, bool useDeadLetterFallback)
+    private async Task VerifyMissingHandler<TRequest>(bool useProactor, bool useDeadLetterFallback)
         where TRequest : class, IRequest, new()
     {
         //Arrange
@@ -78,22 +77,22 @@ public class ReceivedMessageWithoutHandlerTests
         pump.Run();
 
         //Assert
-        Assert.Equal(MessagePumpStatus.MP_STOPPED, pump.Status);
-        var rejected = Assert.Single(_bus.Stream(useDeadLetterFallback ? _deadLetterTopic : _invalidTopic));
-        Assert.Equal(originalId, rejected.Id);
-        Assert.Equal(originalBody, rejected.Body.Value);
-        var reason = Assert.IsType<string>(rejected.Header.Bag[Message.RejectionReasonHeaderName]);
-        Assert.Contains("handler", reason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(typeof(TRequest).FullName!, reason);
-        Assert.Empty(_bus.Stream(_topic));
-        Assert.Empty(_bus.Stream(useDeadLetterFallback ? _invalidTopic : _deadLetterTopic));
+        await Assert.That(pump.Status).IsEqualTo(MessagePumpStatus.MP_STOPPED);
+        var rejected = await Assert.That(_bus.Stream(useDeadLetterFallback ? _deadLetterTopic : _invalidTopic)).HasSingleItem();
+        await Assert.That(rejected.Id).IsEqualTo(originalId);
+        await Assert.That(rejected.Body.Value).IsEqualTo(originalBody);
+        var reason = await Assert.That(rejected.Header.Bag[Message.RejectionReasonHeaderName]).IsTypeOf<string>();
+        await Assert.That(reason).Contains("handler");
+        await Assert.That(reason).Contains(typeof(TRequest).FullName!);
+        await Assert.That(_bus.Stream(_topic)).IsEmpty();
+        await Assert.That(_bus.Stream(useDeadLetterFallback ? _invalidTopic : _deadLetterTopic)).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public void When_runtime_routing_selects_no_handler_should_reject_and_continue(
         bool useProactor, bool isEvent)
     {
@@ -103,7 +102,7 @@ public class ReceivedMessageWithoutHandlerTests
             VerifyEmptySelection<UnhandledReceivedCommand>(useProactor);
     }
 
-    private void VerifyEmptySelection<TRequest>(bool useProactor) where TRequest : class, IRequest, new()
+    private async Task VerifyEmptySelection<TRequest>(bool useProactor) where TRequest : class, IRequest, new()
     {
         //Arrange
         var before = new TRequest();
@@ -145,21 +144,20 @@ public class ReceivedMessageWithoutHandlerTests
         pump.Run();
 
         //Assert
-        Assert.Equal(MessagePumpStatus.MP_STOPPED, pump.Status);
-        Assert.Equal(new[] { before.Id, after.Id }, handled);
-        Assert.Equal(new[] { before.Id, unhandled.Id, after.Id }, selections);
-        var rejected = Assert.Single(_bus.Stream(_invalidTopic));
-        Assert.Equal(unhandled.Id, rejected.Id);
-        Assert.Equal(originalBody, rejected.Body.Value);
-        Assert.Contains("handler", Assert.IsType<string>(
-            rejected.Header.Bag[Message.RejectionReasonHeaderName]), StringComparison.OrdinalIgnoreCase);
-        Assert.Empty(_bus.Stream(_deadLetterTopic));
-        Assert.Empty(_bus.Stream(_topic));
+        await Assert.That(pump.Status).IsEqualTo(MessagePumpStatus.MP_STOPPED);
+        await Assert.That(handled).IsEqualTo(new[] { before.Id, after.Id });
+        await Assert.That(selections).IsEqualTo(new[] { before.Id, unhandled.Id, after.Id });
+        var rejected = await Assert.That(_bus.Stream(_invalidTopic)).HasSingleItem();
+        await Assert.That(rejected.Id).IsEqualTo(unhandled.Id);
+        await Assert.That(rejected.Body.Value).IsEqualTo(originalBody);
+        await Assert.That((await Assert.That(rejected.Header.Bag[Message.RejectionReasonHeaderName]).IsTypeOf<string>())).Contains("handler");
+        await Assert.That(_bus.Stream(_deadLetterTopic)).IsEmpty();
+        await Assert.That(_bus.Stream(_topic)).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_publishing_locally_without_handlers_should_complete(bool useProactor)
     {
         //Arrange
@@ -167,18 +165,18 @@ public class ReceivedMessageWithoutHandlerTests
 
         //Act
         var exception = useProactor
-            ? await Record.ExceptionAsync(() => processor.PublishAsync(new UnhandledNestedEvent()))
-            : Record.Exception(() => processor.Publish(new UnhandledNestedEvent()));
+            ? await TestExceptionRecorder.CaptureAsync(() => processor.PublishAsync(new UnhandledNestedEvent()))
+            : TestExceptionRecorder.Capture(() => processor.Publish(new UnhandledNestedEvent()));
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public void When_a_received_handler_publishes_an_unhandled_local_event_should_complete(
         bool useProactor, bool isEvent)
     {
@@ -188,7 +186,7 @@ public class ReceivedMessageWithoutHandlerTests
             VerifyNestedPublication<UnhandledReceivedCommand>(useProactor);
     }
 
-    private void VerifyNestedPublication<TRequest>(bool useProactor) where TRequest : class, IRequest, new()
+    private async Task VerifyNestedPublication<TRequest>(bool useProactor) where TRequest : class, IRequest, new()
     {
         //Arrange
         var subscribers = new SubscriberRegistry();
@@ -202,13 +200,13 @@ public class ReceivedMessageWithoutHandlerTests
         processor = CreateProcessor<TRequest>(useProactor, subscribers,
             (_, context) =>
             {
-                Assert.NotNull(context.OriginatingMessage);
+                if (context.OriginatingMessage is null) throw new InvalidOperationException("The originating message was not supplied");
                 processor.Publish(new UnhandledNestedEvent(), (RequestContext)context);
                 completed = true;
             },
             async (_, context) =>
             {
-                Assert.NotNull(context.OriginatingMessage);
+                if (context.OriginatingMessage is null) throw new InvalidOperationException("The originating message was not supplied");
                 await processor.PublishAsync(new UnhandledNestedEvent(), (RequestContext)context);
                 completed = true;
             });
@@ -220,11 +218,11 @@ public class ReceivedMessageWithoutHandlerTests
         pump.Run();
 
         //Assert
-        Assert.True(completed);
-        Assert.Equal(MessagePumpStatus.MP_STOPPED, pump.Status);
-        Assert.Empty(_bus.Stream(_invalidTopic));
-        Assert.Empty(_bus.Stream(_deadLetterTopic));
-        Assert.Empty(_bus.Stream(_topic));
+        await Assert.That(completed).IsTrue();
+        await Assert.That(pump.Status).IsEqualTo(MessagePumpStatus.MP_STOPPED);
+        await Assert.That(_bus.Stream(_invalidTopic)).IsEmpty();
+        await Assert.That(_bus.Stream(_deadLetterTopic)).IsEmpty();
+        await Assert.That(_bus.Stream(_topic)).IsEmpty();
     }
 
     private static CommandProcessor CreateProcessor<TRequest>(

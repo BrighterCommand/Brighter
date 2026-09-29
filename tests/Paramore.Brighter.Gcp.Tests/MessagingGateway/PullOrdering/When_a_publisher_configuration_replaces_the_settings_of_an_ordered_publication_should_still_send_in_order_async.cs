@@ -32,7 +32,6 @@ using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering;
 
@@ -41,11 +40,11 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering;
 /// message ordering an ordered publication asked for. Brighter sends every keyed message with an ordering key, so with
 /// ordering switched off the Google client refuses the send.
 /// </summary>
-[Trait("Category", "GcpPubSubPullOrdering")]
-[Collection("PullOrdering")]
+[Property("Category", "GcpPubSubPullOrdering")]
+[NotInParallel("PullOrdering")]
 public class GcpOrderedPublicationSettingsReplacedAsyncTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_publisher_configuration_replaces_the_settings_of_an_ordered_publication_should_still_send_in_order_async()
     {
         var provider = new GcpPullOrderingMessageGatewayProvider();
@@ -103,7 +102,7 @@ public class GcpOrderedPublicationSettingsReplacedAsyncTests
             }
 
             // Assert
-            Assert.Equal(sent.Select(m => m.Id), received.Select(m => m.Id));
+            await Assert.That(received.Select(m => m.Id)).IsEqualTo(sent.Select(m => m.Id));
         }
         finally
         {

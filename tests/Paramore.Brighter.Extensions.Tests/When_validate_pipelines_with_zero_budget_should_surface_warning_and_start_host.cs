@@ -28,8 +28,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Extensions.Tests;
 
 /// <summary>
@@ -39,8 +38,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class ValidatePipelinesZeroBudgetTests
 {
-    [Fact]
-    public void When_validate_pipelines_with_zero_budget_should_surface_warning_and_start_host()
+    [Test]
+    public async Task When_validate_pipelines_with_zero_budget_should_surface_warning_and_start_host()
     {
         // Arrange — subscription with requeueCount: 0; handler registered so no "no handler" error obscures the test
         var services = new ServiceCollection();
@@ -70,11 +69,11 @@ public class ValidatePipelinesZeroBudgetTests
             provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
 
         // Assert — zero budget produces exactly one Warning; no Errors; IsValid is true (host starts)
-        Assert.True(result.IsValid);
-        Assert.Single(result.Warnings);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings).HasSingleItem();
         var warning = result.Warnings.First();
-        Assert.Contains("0", warning.Message);
-        Assert.Contains("-1", warning.Message);
-        Assert.Contains("1", warning.Message);
+        await Assert.That(warning.Message).Contains("0");
+        await Assert.That(warning.Message).Contains("-1");
+        await Assert.That(warning.Message).Contains("1");
     }
 }

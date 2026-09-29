@@ -1,32 +1,27 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
+[Category("Kafka")]
 public class KafkaMessageConsumerSweepOffsets : IDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly KafkaMessageConsumer _consumer;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaMessageConsumerSweepOffsets(ITestOutputHelper output)
+    public KafkaMessageConsumerSweepOffsets()
     {
         string groupId = Guid.NewGuid().ToString();
-        _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
-                Name = "Kafka Producer Send Test", 
+                Name = "Kafka Producer Send Test",
                 BootStrapServers = new[] {"localhost:9092"}
             },
             [
@@ -42,7 +37,7 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
                     MakeChannels = OnMissingChannel.Create
                 }
             ]).Create();
-            
+
         _consumer = (KafkaMessageConsumer)new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
@@ -50,7 +45,7 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
                     BootStrapServers = new[] { "localhost:9092" }
                 })
             .Create(new KafkaSubscription<MyCommand>(
-                    channelName: new ChannelName(_queueName), 
+                    channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
                     groupId: groupId,
                     commitBatchSize: 20,  //This large commit batch size may never be sent
@@ -63,16 +58,16 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
             );
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_message_is_acknowldeged_but_no_batch_sent_sweep_offsets()
     {
         //allow topic to propogate on the broker
         await Task.Delay(500);
-        
+
         var routingKey = new RoutingKey(_topic);
 
         var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
-        
+
         //send x messages to Kafka
         var sentMessages = new string[10];
         for (int i = 0; i < 10; i++)
@@ -83,7 +78,7 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
                 new MessageBody($"test content [{_queueName}]")));
             sentMessages[i] = msgId;
         }
-       
+
         //ensure messages are sent
         ((KafkaMessageProducer)producer).Flush();
 
@@ -93,15 +88,15 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
             consumedMessages.Add(await ReadMessageAsync());
         }
 
-        Assert.Equal(9, consumedMessages.Count);
-        Assert.Equal(9, _consumer.StoredOffsets());
+        await Assert.That(consumedMessages.Count).IsEqualTo(9);
+        await Assert.That(_consumer.StoredOffsets()).IsEqualTo(9);
 
         //Let time elapse with no activity
         await Task.Delay(10000);
-            
+
         //This should trigger a sweeper run (can be fragile when non scheduled in containers etc)
         consumedMessages.Add(await ReadMessageAsync());
-            
+
         //Poll for the sweeper to commit offsets - can be slow in CI environments
         int sweepRetries = 0;
         while (_consumer.StoredOffsets() > 0 && sweepRetries < 20)
@@ -111,7 +106,7 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
         }
 
         //Sweeper will commit these
-        Assert.Equal(0, _consumer.StoredOffsets());
+        await Assert.That(_consumer.StoredOffsets()).IsEqualTo(0);
         return;
 
         async Task<Message> ReadMessageAsync()
@@ -123,11 +118,11 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
                 try
                 {
                     maxTries++;
-                    messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
+                    messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     {
-                        _consumer.Acknowledge(messages[0]);
+                        await _consumer.AcknowledgeAsync(messages[0]);
                         return messages[0];
                     }
 
@@ -135,7 +130,7 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
                 catch (ChannelFailureException cfx)
                 {
                     //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
-                    _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                    Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                     await Task.Delay(1000);
                 }
             } while (maxTries <= 10);

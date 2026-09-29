@@ -39,7 +39,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -47,7 +46,7 @@ public class SweepersSharingALockHolderHungTests
 {
     private const string RestartCheck = "brighter-outbox-sweeper-restart";
 
-    [Fact]
+    [Test]
     public async Task When_two_sweepers_share_a_lock_and_the_holder_hangs_should_report_only_the_holder_hung()
     {
         //Arrange
@@ -82,22 +81,22 @@ public class SweepersSharingALockHolderHungTests
             var waiterGauge = waiter.RunningTime.Values.Last();
 
             //Assert
-            Assert.Equal(HealthStatus.Degraded, holderReport.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, holderReport.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), holderReport.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Equal(new[] { "hung_sweep" }, Assert.IsType<string[]>(holderReport.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Equal(31.0, holderGauge);
-            Assert.Equal(31.0, maxGauge);
+            await Assert.That(holderReport.Status).IsEqualTo(HealthStatus.Degraded);
+            await Assert.That(holderReport.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(holderReport.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+            await Assert.That((await Assert.That(holderReport.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "hung_sweep" });
+            await Assert.That(holderGauge).IsEqualTo(31.0);
+            await Assert.That(maxGauge).IsEqualTo(31.0);
 
-            Assert.Equal(HealthStatus.Healthy, waiterReport.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, waiterReport.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Restart), waiterReport.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.Empty(Assert.IsType<string[]>(waiterReport.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Equal(0.0, waiterGauge);
+            await Assert.That(waiterReport.Status).IsEqualTo(HealthStatus.Healthy);
+            await Assert.That(waiterReport.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(waiterReport.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Restart));
+            await Assert.That((await Assert.That(waiterReport.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEmpty();
+            await Assert.That(waiterGauge).IsEqualTo(0.0);
 
-            Assert.True(holderReachedMediator, "The holder's sweep did not reach the mediator");
-            Assert.True(waiterTriedOnce, "The waiting sweeper did not try for the lock at the start");
-            Assert.True(waiterTriedTwice, "The waiting sweeper's second lock-unavailable sweep did not end");
+            await Assert.That(holderReachedMediator).IsTrue().Because("The holder's sweep did not reach the mediator");
+            await Assert.That(waiterTriedOnce).IsTrue().Because("The waiting sweeper did not try for the lock at the start");
+            await Assert.That(waiterTriedTwice).IsTrue().Because("The waiting sweeper's second lock-unavailable sweep did not end");
         }
         finally
         {

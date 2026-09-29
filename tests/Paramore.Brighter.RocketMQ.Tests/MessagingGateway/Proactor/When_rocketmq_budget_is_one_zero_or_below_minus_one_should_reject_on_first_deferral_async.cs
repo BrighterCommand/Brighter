@@ -30,7 +30,6 @@ using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
@@ -68,10 +67,10 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 /// acknowledging anything else, rather than trusting the first message a read returns.
 /// </para>
 /// </remarks>
-[Trait("Category", "RocketMQ")]
+[Property("Category", "RocketMQ")]
 // Shares ConformanceDeferredPump's static dispatch counter with the generated pump tests, so it runs
 // in their collection: a ResetDispatchCount from a parallel test would wipe this test's count.
-[Collection("RocketMQMessagingGateway")]
+[NotInParallel("RocketMQMessagingGateway")]
 public class RocketMqBudgetOneZeroOrBelowMinusOneRejectsOnFirstDeferralProactorTests
 {
     private const string Topic = "rmq_budget_first_p";
@@ -85,10 +84,10 @@ public class RocketMqBudgetOneZeroOrBelowMinusOneRejectsOnFirstDeferralProactorT
     /// recording consumer's observed <c>RequeueAsync</c> count is 0, and a <c>DeliveryError</c>
     /// rejection is issued placing the message on the Brighter DLQ (R-7, AC-6, AC-35).
     /// </summary>
-    [Theory]
-    [InlineData(1)]
-    [InlineData(0)]
-    [InlineData(-3)]
+    [Test]
+    [Arguments(1)]
+    [Arguments(0)]
+    [Arguments(-3)]
     public async Task When_rocketmq_budget_is_one_zero_or_below_minus_one_should_reject_on_first_deferral_async(
         int requeueCount)
     {
@@ -160,20 +159,18 @@ public class RocketMqBudgetOneZeroOrBelowMinusOneRejectsOnFirstDeferralProactorT
             // once instead of rejecting on the first deferral; requeue count is > 0 instead of 0.
             // Checked first so this assertion is the one that surfaces under mutation (b).
             var requeueCountActual = ConformanceDeferredPump.GetRequeueCount(key);
-            Assert.Equal(0, requeueCountActual);
+            await Assert.That(requeueCountActual).IsEqualTo(0);
 
             // Under mutation (a) the 0 and -3 rows requeue instead of rejecting, and the requeue
             // redelivers them within the 30 s poll window, so the dispatch count exceeds 1.
             var dispatchCount = ConformanceDeferredPump.GetDispatchCount(key);
-            Assert.Equal(1, dispatchCount);
+            await Assert.That(dispatchCount).IsEqualTo(1);
 
             // A DeliveryError rejection was issued — the DLQ copy must carry rejectionReason.
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
-            Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionReason"),
-                "DLQ bag must carry rejectionReason");
-            Assert.Equal(RejectionReason.DeliveryError.ToString(),
-                dlqMessage.Header.Bag["rejectionReason"].ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionReason")).IsTrue().Because("DLQ bag must carry rejectionReason");
+            await Assert.That(dlqMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.DeliveryError.ToString());
         }
         finally
         {

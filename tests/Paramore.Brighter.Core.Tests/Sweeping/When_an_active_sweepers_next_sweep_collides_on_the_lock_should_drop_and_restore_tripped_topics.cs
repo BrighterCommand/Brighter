@@ -41,7 +41,6 @@ using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -50,7 +49,7 @@ public class TrippedTopicSignalsLockCollisionGapTests
     private const string InvestigateCheck = "brighter-outbox-sweeper-investigate";
     private const string TrippedTopicsGauge = "paramore.brighter.outbox_sweeper.tripped_topics";
 
-    [Fact]
+    [Test]
     public async Task When_an_active_sweepers_next_sweep_collides_on_the_lock_should_drop_and_restore_tripped_topics()
     {
         //Arrange
@@ -92,14 +91,14 @@ public class TrippedTopicSignalsLockCollisionGapTests
             var afterCollision = await Observe(healthChecks, trippedTopics, timeProvider);
 
             //Assert
-            Assert.True(firstCompleted && collided && thirdCompleted, "The sweeps did not all end");
-            AssertTripped(beforeCollision);
-            AssertTripped(afterCollision);
-            Assert.Equal(HealthStatus.Healthy, duringCollision.Report.Status);
-            Assert.NotEqual(HealthStatus.Unhealthy, duringCollision.Report.Status);
-            Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), duringCollision.Report.Data[RemedyCheckConvention.RemedyKindKey]);
-            Assert.DoesNotContain("tripped_topics", Assert.IsType<string[]>(duringCollision.Report.Data[RemedyCheckConvention.ConditionsKey]));
-            Assert.Equal(0L, duringCollision.Gauge);
+            await Assert.That(firstCompleted && collided && thirdCompleted).IsTrue().Because("The sweeps did not all end");
+            await AssertTripped(beforeCollision);
+            await AssertTripped(afterCollision);
+            await Assert.That(duringCollision.Report.Status).IsEqualTo(HealthStatus.Healthy);
+            await Assert.That(duringCollision.Report.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+            await Assert.That(duringCollision.Report.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+            await Assert.That((await Assert.That(duringCollision.Report.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).DoesNotContain("tripped_topics");
+            await Assert.That(duringCollision.Gauge).IsEqualTo(0L);
         }
         finally
         {
@@ -107,14 +106,14 @@ public class TrippedTopicSignalsLockCollisionGapTests
         }
     }
 
-    private static void AssertTripped((HealthReportEntry Report, long Gauge) observation)
+    private static async Task AssertTripped((HealthReportEntry Report, long Gauge) observation)
     {
-        Assert.Equal(HealthStatus.Degraded, observation.Report.Status);
-        Assert.NotEqual(HealthStatus.Unhealthy, observation.Report.Status);
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), observation.Report.Data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Equal(new[] { "tripped_topics" }, Assert.IsType<string[]>(observation.Report.Data[RemedyCheckConvention.ConditionsKey]));
-        Assert.Contains("orders", observation.Report.Description);
-        Assert.Equal(1L, observation.Gauge);
+        await Assert.That(observation.Report.Status).IsEqualTo(HealthStatus.Degraded);
+        await Assert.That(observation.Report.Status).IsNotEqualTo(HealthStatus.Unhealthy);
+        await Assert.That(observation.Report.Data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        await Assert.That((await Assert.That(observation.Report.Data[RemedyCheckConvention.ConditionsKey]).IsTypeOf<string[]>())).IsEqualTo(new[] { "tripped_topics" });
+        await Assert.That(observation.Report.Description).Contains("orders");
+        await Assert.That(observation.Gauge).IsEqualTo(1L);
     }
 
     private static async Task<(HealthReportEntry Report, long Gauge)> Observe(

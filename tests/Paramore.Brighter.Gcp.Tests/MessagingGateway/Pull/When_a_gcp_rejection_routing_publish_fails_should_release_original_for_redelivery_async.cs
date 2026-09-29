@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
@@ -40,8 +39,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// "Divergence from SQS"). The async path disposes the failed producer via DisposeAsync() properly,
 /// so this file does not need the sync file's Stopwatch risk assertion on RejectAsync itself.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpPullConsumerRejectRoutingFailureReleasesOriginalAsyncTests
 {
     private const int WindowSeconds = 10;
@@ -51,7 +50,7 @@ public class GcpPullConsumerRejectRoutingFailureReleasesOriginalAsyncTests
     /// does not exist. RejectAsync releases the original (proven by redelivery within W), returns
     /// true, and the destination topic is still absent.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejection_routing_publish_fails_async_on_pull_with_assume_should_release_original_for_redelivery()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -79,13 +78,13 @@ public class GcpPullConsumerRejectRoutingFailureReleasesOriginalAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act — the routing publish fails (destination topic never existed).
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "publish failure"));
 
             // Assert — RejectAsync returns true
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — the original is released (not acked): it is redelivered within W
             Message redelivered = new Message();
@@ -98,14 +97,14 @@ public class GcpPullConsumerRejectRoutingFailureReleasesOriginalAsyncTests
                 await Task.Delay(250);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-            Assert.Equal(received.Id, redelivered.Id);
+            await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(redelivered.Id).IsEqualTo(received.Id);
 
             // Settle the redelivered message so it does not keep redeliverying into later tests.
             await channel.AcknowledgeAsync(redelivered);
 
             // Assert — the destination topic was never created
-            Assert.False(await provider.TopicExistsAsync(deadLetterRoutingKey));
+            await Assert.That(await provider.TopicExistsAsync(deadLetterRoutingKey)).IsFalse();
         }
         finally
         {
@@ -120,7 +119,7 @@ public class GcpPullConsumerRejectRoutingFailureReleasesOriginalAsyncTests
     /// topic is still absent. Exactly one RejectAsync is issued in this test (the topic-existence
     /// check cache trap — see ADR 0078 / tasks.md 5.8).
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_rejection_routing_publish_fails_async_on_pull_with_validate_should_release_original_for_redelivery()
     {
         var provider = new GcpPullMessageGatewayProvider();
@@ -148,13 +147,13 @@ public class GcpPullConsumerRejectRoutingFailureReleasesOriginalAsyncTests
             await producer.SendAsync(message);
 
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // Act — the destination producer construction fails Validate; exactly one RejectAsync call.
             var result = await channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "validate failure"));
 
             // Assert — RejectAsync returns true
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — the original is released (not acked): it is redelivered within W
             Message redelivered = new Message();
@@ -167,14 +166,14 @@ public class GcpPullConsumerRejectRoutingFailureReleasesOriginalAsyncTests
                 await Task.Delay(250);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-            Assert.Equal(received.Id, redelivered.Id);
+            await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(redelivered.Id).IsEqualTo(received.Id);
 
             // Settle the redelivered message so it does not keep redeliverying into later tests.
             await channel.AcknowledgeAsync(redelivered);
 
             // Assert — the destination topic was never created
-            Assert.False(await provider.TopicExistsAsync(deadLetterRoutingKey));
+            await Assert.That(await provider.TopicExistsAsync(deadLetterRoutingKey)).IsFalse();
         }
         finally
         {

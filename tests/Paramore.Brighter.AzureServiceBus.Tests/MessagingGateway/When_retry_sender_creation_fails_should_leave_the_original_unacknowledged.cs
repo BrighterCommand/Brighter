@@ -28,15 +28,14 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusRetrySenderFailureTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_retry_sender_creation_fails_should_leave_the_original_unacknowledged(bool synchronous)
     {
         // Arrange
@@ -60,20 +59,20 @@ public class AzureServiceBusRetrySenderFailureTests
         var failure = new ObjectDisposedException(nameof(ServiceBusClient));
         client.SenderCreationFailures.Enqueue(failure);
         var previousAttempts = client.SenderCreationAttempts;
-        client.OnSenderCreation = () => Assert.Equal(0, client.Receiver.CompletionAttempts);
+        await Assert.That(client.Receiver.CompletionAttempts).IsEqualTo(0);
 
         // Act
-        var error = await Record.ExceptionAsync(async () =>
+        var error = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             if (synchronous) syncChannel!.Requeue(message, TimeSpan.Zero);
             else await asyncChannel!.RequeueAsync(message, TimeSpan.Zero);
         });
 
         // Assert
-        Assert.Same(failure, Assert.IsType<ChannelFailureException>(error).InnerException);
-        Assert.Equal(1, client.SenderCreationAttempts - previousAttempts);
-        Assert.Empty(client.Scheduled);
-        Assert.Equal(0, client.Receiver.CompletionAttempts);
-        Assert.Equal("original", message.Id.Value);
+        await Assert.That((await Assert.That(error).IsTypeOf<ChannelFailureException>()).InnerException).IsSameReferenceAs(failure);
+        await Assert.That(client.SenderCreationAttempts - previousAttempts).IsEqualTo(1);
+        await Assert.That(client.Scheduled).IsEmpty();
+        await Assert.That(client.Receiver.CompletionAttempts).IsEqualTo(0);
+        await Assert.That(message.Id.Value).IsEqualTo("original");
     }
 }

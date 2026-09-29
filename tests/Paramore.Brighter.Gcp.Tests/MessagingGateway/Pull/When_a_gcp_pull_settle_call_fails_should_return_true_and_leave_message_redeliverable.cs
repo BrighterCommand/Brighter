@@ -35,8 +35,7 @@ using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
 /// <summary>
@@ -55,9 +54,9 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 ///
 /// Covers GCP / Pull and GCP / PullOrdering.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
-[Trait("Requires", "PubSubEmulator")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
+[Property("Requires", "PubSubEmulator")]
 public class GcpPullSettleCallFailureTests
 {
     private const int AckDeadlineSeconds = 10;
@@ -119,8 +118,8 @@ public class GcpPullSettleCallFailureTests
     /// an Error names the message id, the interceptor fired, the message is redelivered once
     /// disarmed, and the destination holds the routed copy.
     /// </summary>
-    [Fact]
-    public void When_ack_fails_on_pull_with_destination_should_return_true_and_redeliver_and_route()
+    [Test]
+    public async Task When_ack_fails_on_pull_with_destination_should_return_true_and_redeliver_and_route()
     {
         var provider = new GcpPullMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -158,7 +157,7 @@ public class GcpPullSettleCallFailureTests
             producer.Send(message);
 
             var received = provisioningChannel.Receive(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             // The channel under test: the same broker subscription, but its consumer's Acknowledge
             // RPC is intercepted.
@@ -179,23 +178,21 @@ public class GcpPullSettleCallFailureTests
             var result = armedChannel.Reject(received, new MessageRejectionReason(RejectionReason.DeliveryError, "ack rpc fault"));
 
             // Assert — Reject returns true and does not throw
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — the interceptor actually fired
-            Assert.True(faults.FiredCount > 0,
-                "The fault-injecting interceptor never fired; the armed invoker may have been dropped");
+            await Assert.That(faults.FiredCount > 0).IsTrue().Because("The fault-injecting interceptor never fired; the armed invoker may have been dropped");
 
             // Assert — an Error names the message id
-            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
-                e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(received.Id.Value));
-            Assert.NotNull(settleError);
+            var settleError = await Assert.That(System.Linq.Enumerable.Where(TestCorrelator.GetLogEventsFromCurrentContext(), e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(received.Id.Value))).HasSingleItem();
+            await Assert.That(settleError).IsNotNull();
 
             faults.Disarm();
 
             // Assert — after disarming, the message is redelivered once its deadline lapses
             var redelivered = PollForRedelivery(provisioningChannel, received.Id, RedeliveryWindowSeconds);
-            Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-            Assert.Equal(received.Id, redelivered.Id);
+            await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(redelivered.Id).IsEqualTo(received.Id);
 
             // Settle the redelivered message so it does not keep redelivering into later tests.
             provisioningChannel.Acknowledge(redelivered);
@@ -211,7 +208,7 @@ public class GcpPullSettleCallFailureTests
                 Thread.Sleep(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
         }
         finally
         {
@@ -226,8 +223,8 @@ public class GcpPullSettleCallFailureTests
     /// returns true, an Error names the message id, the interceptor fired, and the message is
     /// redelivered once disarmed.
     /// </summary>
-    [Fact]
-    public void When_ack_fails_on_pull_with_no_destination_should_return_true_and_redeliver()
+    [Test]
+    public async Task When_ack_fails_on_pull_with_no_destination_should_return_true_and_redeliver()
     {
         var provider = new GcpPullMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -236,7 +233,7 @@ public class GcpPullSettleCallFailureTests
         var channelName = provider.GetOrCreateChannelName();
 
         var subscriptionUnderTest = provider.CreateSubscription(routingKey, channelName, OnMissingChannel.Create);
-        Assert.Equal(AckDeadlineSeconds, subscriptionUnderTest.AckDeadlineSeconds);
+        await Assert.That(subscriptionUnderTest.AckDeadlineSeconds).IsEqualTo(AckDeadlineSeconds);
 
         var faults = new GcpFaultInjectingInterceptor(AcknowledgeMethod);
         var armedConnection = BuildArmedConnection(faults);
@@ -254,7 +251,7 @@ public class GcpPullSettleCallFailureTests
             producer.Send(message);
 
             var received = provisioningChannel.Receive(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var armedConsumer = new GcpPullMessageConsumer(
                 armedConnection,
@@ -272,23 +269,21 @@ public class GcpPullSettleCallFailureTests
             var result = armedChannel.Reject(received, new MessageRejectionReason(RejectionReason.DeliveryError, "ack rpc fault"));
 
             // Assert — Reject returns true and does not throw
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — the interceptor actually fired
-            Assert.True(faults.FiredCount > 0,
-                "The fault-injecting interceptor never fired; the armed invoker may have been dropped");
+            await Assert.That(faults.FiredCount > 0).IsTrue().Because("The fault-injecting interceptor never fired; the armed invoker may have been dropped");
 
             // Assert — an Error names the message id
-            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
-                e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(received.Id.Value));
-            Assert.NotNull(settleError);
+            var settleError = await Assert.That(System.Linq.Enumerable.Where(TestCorrelator.GetLogEventsFromCurrentContext(), e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(received.Id.Value))).HasSingleItem();
+            await Assert.That(settleError).IsNotNull();
 
             faults.Disarm();
 
             // Assert — after disarming, the message is redelivered once its deadline lapses
             var redelivered = PollForRedelivery(provisioningChannel, received.Id, RedeliveryWindowSeconds);
-            Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-            Assert.Equal(received.Id, redelivered.Id);
+            await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(redelivered.Id).IsEqualTo(received.Id);
 
             provisioningChannel.Acknowledge(redelivered);
         }
@@ -306,8 +301,8 @@ public class GcpPullSettleCallFailureTests
     /// the message id, the interceptor fired, and the message is redelivered once disarmed (it was
     /// never released; it returns at its own ack deadline, ADR 0078 "Accepted case 1").
     /// </summary>
-    [Fact]
-    public void When_release_fails_on_pull_should_return_true_and_redeliver()
+    [Test]
+    public async Task When_release_fails_on_pull_should_return_true_and_redeliver()
     {
         var provider = new GcpPullMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -345,7 +340,7 @@ public class GcpPullSettleCallFailureTests
             producer.Send(message);
 
             var received = provisioningChannel.Receive(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var armedConsumer = new GcpPullMessageConsumer(
                 armedConnection,
@@ -364,27 +359,25 @@ public class GcpPullSettleCallFailureTests
             var result = armedChannel.Reject(received, new MessageRejectionReason(RejectionReason.DeliveryError, "release rpc fault"));
 
             // Assert — Reject returns true and does not throw
-            Assert.True(result);
+            await Assert.That(result).IsTrue();
 
             // Assert — the interceptor actually fired
-            Assert.True(faults.FiredCount > 0,
-                "The fault-injecting interceptor never fired; the armed invoker may have been dropped");
+            await Assert.That(faults.FiredCount > 0).IsTrue().Because("The fault-injecting interceptor never fired; the armed invoker may have been dropped");
 
             // Assert — an Error names the message id for the failed settle RPC. GcpRejectionRouter
             // also logs its own Error for the failed routing publish, so this must be narrowed to
             // the settle-specific log line (Log.RejectError's "rejecting the message" text).
-            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
-                e => e.Level == LogEventLevel.Error
+            var settleError = await Assert.That(System.Linq.Enumerable.Where(TestCorrelator.GetLogEventsFromCurrentContext(), e => e.Level == LogEventLevel.Error
                      && e.RenderMessage().Contains(received.Id.Value)
-                     && e.RenderMessage().Contains("rejecting the message"));
-            Assert.NotNull(settleError);
+                     && e.RenderMessage().Contains("rejecting the message"))).HasSingleItem();
+            await Assert.That(settleError).IsNotNull();
 
             faults.Disarm();
 
             // Assert — after disarming, the message is redelivered once its (unaltered) deadline lapses
             var redelivered = PollForRedelivery(provisioningChannel, received.Id, RedeliveryWindowSeconds);
-            Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-            Assert.Equal(received.Id, redelivered.Id);
+            await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(redelivered.Id).IsEqualTo(received.Id);
 
             provisioningChannel.Acknowledge(redelivered);
         }
@@ -402,8 +395,8 @@ public class GcpPullSettleCallFailureTests
     /// <summary>
     /// Scenario (a) on an ordering-enabled subscription: destination exists, Acknowledge armed.
     /// </summary>
-    [Fact]
-    public void When_ack_fails_on_pull_ordering_with_destination_should_return_true_and_redeliver_and_route()
+    [Test]
+    public async Task When_ack_fails_on_pull_ordering_with_destination_should_return_true_and_redeliver_and_route()
     {
         var provider = new GcpPullOrderingMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -439,7 +432,7 @@ public class GcpPullSettleCallFailureTests
             producer.Send(message);
 
             var received = provisioningChannel.Receive(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var armedConsumer = new GcpPullMessageConsumer(
                 armedConnection,
@@ -456,19 +449,17 @@ public class GcpPullSettleCallFailureTests
 
             var result = armedChannel.Reject(received, new MessageRejectionReason(RejectionReason.DeliveryError, "ack rpc fault"));
 
-            Assert.True(result);
-            Assert.True(faults.FiredCount > 0,
-                "The fault-injecting interceptor never fired; the armed invoker may have been dropped");
+            await Assert.That(result).IsTrue();
+            await Assert.That(faults.FiredCount > 0).IsTrue().Because("The fault-injecting interceptor never fired; the armed invoker may have been dropped");
 
-            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
-                e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(received.Id.Value));
-            Assert.NotNull(settleError);
+            var settleError = await Assert.That(System.Linq.Enumerable.Where(TestCorrelator.GetLogEventsFromCurrentContext(), e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(received.Id.Value))).HasSingleItem();
+            await Assert.That(settleError).IsNotNull();
 
             faults.Disarm();
 
             var redelivered = PollForRedelivery(provisioningChannel, received.Id, RedeliveryWindowSeconds);
-            Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-            Assert.Equal(received.Id, redelivered.Id);
+            await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(redelivered.Id).IsEqualTo(received.Id);
 
             provisioningChannel.Acknowledge(redelivered);
 
@@ -482,7 +473,7 @@ public class GcpPullSettleCallFailureTests
                 Thread.Sleep(500);
             }
 
-            Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
         }
         finally
         {
@@ -494,8 +485,8 @@ public class GcpPullSettleCallFailureTests
     /// <summary>
     /// Scenario (b) on an ordering-enabled subscription: no destination configured, Acknowledge armed.
     /// </summary>
-    [Fact]
-    public void When_ack_fails_on_pull_ordering_with_no_destination_should_return_true_and_redeliver()
+    [Test]
+    public async Task When_ack_fails_on_pull_ordering_with_no_destination_should_return_true_and_redeliver()
     {
         var provider = new GcpPullOrderingMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -504,7 +495,7 @@ public class GcpPullSettleCallFailureTests
         var channelName = provider.GetOrCreateChannelName();
 
         var subscriptionUnderTest = provider.CreateSubscription(routingKey, channelName, OnMissingChannel.Create);
-        Assert.Equal(AckDeadlineSeconds, subscriptionUnderTest.AckDeadlineSeconds);
+        await Assert.That(subscriptionUnderTest.AckDeadlineSeconds).IsEqualTo(AckDeadlineSeconds);
 
         var faults = new GcpFaultInjectingInterceptor(AcknowledgeMethod);
         var armedConnection = BuildArmedConnection(faults);
@@ -522,7 +513,7 @@ public class GcpPullSettleCallFailureTests
             producer.Send(message);
 
             var received = provisioningChannel.Receive(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var armedConsumer = new GcpPullMessageConsumer(
                 armedConnection,
@@ -538,19 +529,17 @@ public class GcpPullSettleCallFailureTests
 
             var result = armedChannel.Reject(received, new MessageRejectionReason(RejectionReason.DeliveryError, "ack rpc fault"));
 
-            Assert.True(result);
-            Assert.True(faults.FiredCount > 0,
-                "The fault-injecting interceptor never fired; the armed invoker may have been dropped");
+            await Assert.That(result).IsTrue();
+            await Assert.That(faults.FiredCount > 0).IsTrue().Because("The fault-injecting interceptor never fired; the armed invoker may have been dropped");
 
-            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
-                e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(received.Id.Value));
-            Assert.NotNull(settleError);
+            var settleError = await Assert.That(System.Linq.Enumerable.Where(TestCorrelator.GetLogEventsFromCurrentContext(), e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(received.Id.Value))).HasSingleItem();
+            await Assert.That(settleError).IsNotNull();
 
             faults.Disarm();
 
             var redelivered = PollForRedelivery(provisioningChannel, received.Id, RedeliveryWindowSeconds);
-            Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-            Assert.Equal(received.Id, redelivered.Id);
+            await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(redelivered.Id).IsEqualTo(received.Id);
 
             provisioningChannel.Acknowledge(redelivered);
         }
@@ -564,8 +553,8 @@ public class GcpPullSettleCallFailureTests
     /// <summary>
     /// Scenario (c) on an ordering-enabled subscription: AC-18 Given, ModifyAckDeadline armed.
     /// </summary>
-    [Fact]
-    public void When_release_fails_on_pull_ordering_should_return_true_and_redeliver()
+    [Test]
+    public async Task When_release_fails_on_pull_ordering_should_return_true_and_redeliver()
     {
         var provider = new GcpPullOrderingMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -600,7 +589,7 @@ public class GcpPullSettleCallFailureTests
             producer.Send(message);
 
             var received = provisioningChannel.Receive(TimeSpan.FromSeconds(10));
-            Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             var armedConsumer = new GcpPullMessageConsumer(
                 armedConnection,
@@ -617,24 +606,22 @@ public class GcpPullSettleCallFailureTests
 
             var result = armedChannel.Reject(received, new MessageRejectionReason(RejectionReason.DeliveryError, "release rpc fault"));
 
-            Assert.True(result);
-            Assert.True(faults.FiredCount > 0,
-                "The fault-injecting interceptor never fired; the armed invoker may have been dropped");
+            await Assert.That(result).IsTrue();
+            await Assert.That(faults.FiredCount > 0).IsTrue().Because("The fault-injecting interceptor never fired; the armed invoker may have been dropped");
 
             // GcpRejectionRouter also logs its own Error for the failed routing publish, so this
             // must be narrowed to the settle-specific log line (Log.RejectError's "rejecting the
             // message" text).
-            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
-                e => e.Level == LogEventLevel.Error
+            var settleError = await Assert.That(System.Linq.Enumerable.Where(TestCorrelator.GetLogEventsFromCurrentContext(), e => e.Level == LogEventLevel.Error
                      && e.RenderMessage().Contains(received.Id.Value)
-                     && e.RenderMessage().Contains("rejecting the message"));
-            Assert.NotNull(settleError);
+                     && e.RenderMessage().Contains("rejecting the message"))).HasSingleItem();
+            await Assert.That(settleError).IsNotNull();
 
             faults.Disarm();
 
             var redelivered = PollForRedelivery(provisioningChannel, received.Id, RedeliveryWindowSeconds);
-            Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-            Assert.Equal(received.Id, redelivered.Id);
+            await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(redelivered.Id).IsEqualTo(received.Id);
 
             provisioningChannel.Acknowledge(redelivered);
         }

@@ -26,7 +26,7 @@ using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.BoxProvisioning.Spanner;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
@@ -35,8 +35,8 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 /// length, so Spanner stamps the version its fresh-install schema really has (ADR 0057 §6). The PostgreSQL
 /// inbox, born with <c>ContextKey</c>, is one version behind the others (ADR 0057 §1).
 /// </summary>
-[Trait("Category", "Spanner")]
-[Collection("Spanner")]
+[Property("Category", "Spanner")]
+[NotInParallel]
 public class SpannerVLatestDriftAgainstRelationalCatalogTests
 {
     private const int PostgreSqlInboxLatest = 2;
@@ -48,21 +48,21 @@ public class SpannerVLatestDriftAgainstRelationalCatalogTests
             outBoxTableName: "drift_test_outbox",
             inboxTableName: "drift_test_inbox");
 
-    [Fact]
-    public void Vlatest_outbox_should_equal_every_relational_outbox_catalog_count()
+    [Test]
+    public async Task Vlatest_outbox_should_equal_every_relational_outbox_catalog_count()
     {
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestOutbox, new MsSqlOutboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestOutbox, new MySqlOutboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestOutbox, new PostgreSqlOutboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestOutbox, new SqliteOutboxMigrationCatalog().All(Configuration).Count);
+        await Assert.That(new MsSqlOutboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestOutbox);
+        await Assert.That(new MySqlOutboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestOutbox);
+        await Assert.That(new PostgreSqlOutboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestOutbox);
+        await Assert.That(new SqliteOutboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestOutbox);
     }
 
-    [Fact]
-    public void Vlatest_inbox_should_equal_every_relational_inbox_catalog_count_except_postgres()
+    [Test]
+    public async Task Vlatest_inbox_should_equal_every_relational_inbox_catalog_count_except_postgres()
     {
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new MsSqlInboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new MySqlInboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new SqliteInboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(PostgreSqlInboxLatest, new PostgreSqlInboxMigrationCatalog().All(Configuration).Count);
+        await Assert.That(new MsSqlInboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestInbox);
+        await Assert.That(new MySqlInboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestInbox);
+        await Assert.That(new SqliteInboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestInbox);
+        await Assert.That(new PostgreSqlInboxMigrationCatalog().All(Configuration).Count).IsEqualTo(PostgreSqlInboxLatest);
     }
 }

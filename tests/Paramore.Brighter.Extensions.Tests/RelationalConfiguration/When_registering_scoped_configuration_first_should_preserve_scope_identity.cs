@@ -29,14 +29,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests.RelationalConfiguration;
 
 public class ScopedRelationalConfigurationTests
 {
-    [Fact]
-    public void When_registering_scoped_configuration_first_should_preserve_scope_identity()
+    [Test]
+    public async Task When_registering_scoped_configuration_first_should_preserve_scope_identity()
     {
         //Arrange
         var outboxConfiguration = new RelationalDatabaseConfiguration("Data Source=:memory:");
@@ -53,7 +52,7 @@ public class ScopedRelationalConfigurationTests
             options.TransactionProvider = typeof(SqliteTransactionProvider);
             options.ConnectionProvider = typeof(SqliteConnectionProvider);
         }, ServiceLifetime.Scoped);
-        Assert.Equal(0, factoryCalls);
+        await Assert.That(factoryCalls).IsEqualTo(0);
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
         using var firstScope = provider.CreateScope();
         using var secondScope = provider.CreateScope();
@@ -64,14 +63,14 @@ public class ScopedRelationalConfigurationTests
         var second = secondScope.ServiceProvider.GetRequiredService<IAmARelationalDatabaseConfiguration>();
 
         //Assert
-        Assert.NotSame(outboxConfiguration, first);
-        Assert.Same(first, repeated);
-        Assert.NotSame(first, second);
-        Assert.Equal(2, factoryCalls);
-        Assert.IsType<SqliteTransactionProvider>(firstScope.ServiceProvider.GetRequiredService<IAmABoxTransactionProvider>());
-        Assert.IsType<SqliteConnectionProvider>(firstScope.ServiceProvider.GetRequiredService<IAmARelationalDbConnectionProvider>());
-        Assert.IsType<SqliteTransactionProvider>(secondScope.ServiceProvider.GetRequiredService<IAmABoxTransactionProvider>());
-        Assert.IsType<SqliteConnectionProvider>(secondScope.ServiceProvider.GetRequiredService<IAmARelationalDbConnectionProvider>());
-        Assert.Equal(2, factoryCalls);
+        await Assert.That(first).IsNotSameReferenceAs(outboxConfiguration);
+        await Assert.That(repeated).IsSameReferenceAs(first);
+        await Assert.That(second).IsNotSameReferenceAs(first);
+        await Assert.That(factoryCalls).IsEqualTo(2);
+        await Assert.That(firstScope.ServiceProvider.GetRequiredService<IAmABoxTransactionProvider>()).IsTypeOf<SqliteTransactionProvider>();
+        await Assert.That(firstScope.ServiceProvider.GetRequiredService<IAmARelationalDbConnectionProvider>()).IsTypeOf<SqliteConnectionProvider>();
+        await Assert.That(secondScope.ServiceProvider.GetRequiredService<IAmABoxTransactionProvider>()).IsTypeOf<SqliteTransactionProvider>();
+        await Assert.That(secondScope.ServiceProvider.GetRequiredService<IAmARelationalDbConnectionProvider>()).IsTypeOf<SqliteConnectionProvider>();
+        await Assert.That(factoryCalls).IsEqualTo(2);
     }
 }

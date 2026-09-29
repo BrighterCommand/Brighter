@@ -29,7 +29,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -37,19 +36,19 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// With enableWalMode false the runner leaves the file's journal mode alone: journal mode is persistent and
 /// file-wide, and a host may have chosen DELETE. Each test uses its own database file.
 /// </summary>
-public class RunnerWalModeJournalTests : IAsyncLifetime
+public class RunnerWalModeJournalTests
 {
     private readonly string _databasePath = Path.Combine(
         Path.GetTempPath(), $"brighter_wal_optout_{Guid.NewGuid():N}.db");
 
     private string ConnectionString => $"DataSource=\"{_databasePath}\"";
 
-    [Fact]
+    [Test]
     public async Task When_wal_mode_disabled_it_should_preserve_existing_delete_journal_mode()
     {
         //Arrange
         await SetJournalModeAsync(ConnectionString, "DELETE");
-        Assert.Equal("delete", await GetJournalModeAsync(ConnectionString));
+        await Assert.That(await GetJournalModeAsync(ConnectionString)).IsEqualTo("delete");
 
         var tableName = $"test_outbox_{Guid.NewGuid():N}";
         var config = new RelationalDatabaseConfiguration(
@@ -62,15 +61,15 @@ public class RunnerWalModeJournalTests : IAsyncLifetime
         await runner.MigrateAsync(tableName, schemaName: null, BoxType.Outbox, freshHint);
 
         //Assert
-        Assert.Equal("delete", await GetJournalModeAsync(ConnectionString));
+        await Assert.That(await GetJournalModeAsync(ConnectionString)).IsEqualTo("delete");
     }
 
-    [Fact]
+    [Test]
     public async Task When_wal_mode_enabled_it_should_switch_to_wal_journal_mode()
     {
         //Arrange
         await SetJournalModeAsync(ConnectionString, "DELETE");
-        Assert.Equal("delete", await GetJournalModeAsync(ConnectionString));
+        await Assert.That(await GetJournalModeAsync(ConnectionString)).IsEqualTo("delete");
 
         var tableName = $"test_outbox_{Guid.NewGuid():N}";
         var config = new RelationalDatabaseConfiguration(
@@ -83,7 +82,7 @@ public class RunnerWalModeJournalTests : IAsyncLifetime
         await runner.MigrateAsync(tableName, schemaName: null, BoxType.Outbox, freshHint);
 
         //Assert
-        Assert.Equal("wal", await GetJournalModeAsync(ConnectionString));
+        await Assert.That(await GetJournalModeAsync(ConnectionString)).IsEqualTo("wal");
     }
 
     private static async Task SetJournalModeAsync(string connectionString, string mode)
@@ -105,7 +104,11 @@ public class RunnerWalModeJournalTests : IAsyncLifetime
         return ((string)raw!).ToLowerInvariant();
     }
 
+    [Before(HookType.Test)]
+
     public Task InitializeAsync() => Task.CompletedTask;
+
+    [After(HookType.Test)]
 
     public Task DisposeAsync()
     {

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -27,16 +27,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ScannedEventHandlersTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_scanning_assemblies_repeatedly_should_preserve_distinct_event_handlers(bool addConsumers)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async System.Threading.Tasks.Task When_scanning_assemblies_repeatedly_should_preserve_distinct_event_handlers(bool addConsumers)
     {
         //Arrange
         var services = new ServiceCollection();
@@ -51,7 +51,7 @@ public class ScannedEventHandlersTests
         processor.Publish(notification);
 
         //Assert
-        Assert.Equal(1, notification.FirstHandlerCalls);
-        Assert.Equal(1, notification.SecondHandlerCalls);
+        await Assert.That(notification.FirstHandlerCalls).IsEqualTo(1);
+        await Assert.That(notification.SecondHandlerCalls).IsEqualTo(1);
     }
 }

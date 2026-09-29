@@ -31,7 +31,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -44,8 +44,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 // publish (NFR-4).
 public class NestedPipelineSuppressionTests
 {
-    [Fact]
-    public void When_a_subscriber_issues_a_nested_pipeline_it_should_not_adopt_the_ambient()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_subscriber_issues_a_nested_pipeline_it_should_not_adopt_the_ambient()
     {
         // Arrange - a JoinAmbient host, all three lifetimes Scoped, with a live ambient established on
         // the caller's own flow through an AsyncLocal-backed provider (the shape a non-ASP.NET console
@@ -126,7 +126,7 @@ public class NestedPipelineSuppressionTests
         // Assert - the nested Send and nested Post, issued from inside the subscriber's own Handle,
         // both resolved a fresh, already-disposed instance Brighter created - neither adopted the
         // ambient still live on this flow
-        AssertNestedResolutionsDidNotAdopt(recorder, ambientUnitOfWork);
+        await AssertNestedResolutionsDidNotAdopt(recorder, ambientUnitOfWork);
 
         // Act - a Send and a Post issued outside any subscriber, after the publish has already
         // returned, on the same flow the ambient was established on
@@ -137,10 +137,10 @@ public class NestedPipelineSuppressionTests
 
         // Assert - the caller's own flow was left unsuppressed once the publish returned: both resolved
         // the ambient's own, still-live instance
-        AssertOutsideResolutionsAdopted(recorder, ambientUnitOfWork);
+        await AssertOutsideResolutionsAdopted(recorder, ambientUnitOfWork);
     }
 
-    [Fact]
+    [Test]
     public async Task When_an_async_subscriber_issues_a_nested_pipeline_it_should_not_adopt_the_ambient()
     {
         // Arrange - the async twin: PublishAsync starts every subscriber on the caller's flow and awaits
@@ -219,7 +219,7 @@ public class NestedPipelineSuppressionTests
 
         // Assert - the nested Send and nested Post, issued from inside the subscriber's own
         // HandleAsync, both resolved a fresh, already-disposed instance Brighter created
-        AssertNestedResolutionsDidNotAdopt(recorder, ambientUnitOfWork);
+        await AssertNestedResolutionsDidNotAdopt(recorder, ambientUnitOfWork);
 
         // Act - a Send and a Post issued outside any subscriber, after the publish has already
         // returned, on the same flow the ambient was established on
@@ -229,27 +229,27 @@ public class NestedPipelineSuppressionTests
         scopeProvider.Clear();
 
         // Assert - the caller's own flow was left unsuppressed once the publish returned
-        AssertOutsideResolutionsAdopted(recorder, ambientUnitOfWork);
+        await AssertOutsideResolutionsAdopted(recorder, ambientUnitOfWork);
     }
 
-    private static void AssertNestedResolutionsDidNotAdopt(UnitOfWorkRecorder recorder, IUnitOfWork ambientUnitOfWork)
+    private static async System.Threading.Tasks.Task AssertNestedResolutionsDidNotAdopt(UnitOfWorkRecorder recorder, IUnitOfWork ambientUnitOfWork)
     {
-        Assert.Equal(2, recorder.UnitsOfWork.Count);
+        await Assert.That(recorder.UnitsOfWork.Count).IsEqualTo(2);
         var nestedSendUnitOfWork = recorder.UnitsOfWork[0];
         var nestedPostUnitOfWork = recorder.UnitsOfWork[1];
-        Assert.NotSame(ambientUnitOfWork, nestedSendUnitOfWork);
-        Assert.NotSame(ambientUnitOfWork, nestedPostUnitOfWork);
-        Assert.True(nestedSendUnitOfWork.IsDisposed);
-        Assert.True(nestedPostUnitOfWork.IsDisposed);
+        await Assert.That(nestedSendUnitOfWork).IsNotSameReferenceAs(ambientUnitOfWork);
+        await Assert.That(nestedPostUnitOfWork).IsNotSameReferenceAs(ambientUnitOfWork);
+        await Assert.That(nestedSendUnitOfWork.IsDisposed).IsTrue();
+        await Assert.That(nestedPostUnitOfWork.IsDisposed).IsTrue();
     }
 
-    private static void AssertOutsideResolutionsAdopted(UnitOfWorkRecorder recorder, IUnitOfWork ambientUnitOfWork)
+    private static async System.Threading.Tasks.Task AssertOutsideResolutionsAdopted(UnitOfWorkRecorder recorder, IUnitOfWork ambientUnitOfWork)
     {
-        Assert.Equal(4, recorder.UnitsOfWork.Count);
+        await Assert.That(recorder.UnitsOfWork.Count).IsEqualTo(4);
         var outsideSendUnitOfWork = recorder.UnitsOfWork[2];
         var outsidePostUnitOfWork = recorder.UnitsOfWork[3];
-        Assert.Same(ambientUnitOfWork, outsideSendUnitOfWork);
-        Assert.Same(ambientUnitOfWork, outsidePostUnitOfWork);
-        Assert.False(ambientUnitOfWork.IsDisposed);
+        await Assert.That(outsideSendUnitOfWork).IsSameReferenceAs(ambientUnitOfWork);
+        await Assert.That(outsidePostUnitOfWork).IsSameReferenceAs(ambientUnitOfWork);
+        await Assert.That(ambientUnitOfWork.IsDisposed).IsFalse();
     }
 }

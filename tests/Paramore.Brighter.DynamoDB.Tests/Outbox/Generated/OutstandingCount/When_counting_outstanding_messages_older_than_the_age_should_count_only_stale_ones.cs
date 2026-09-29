@@ -7,12 +7,11 @@
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox.OutstandingCount;
 
-[Trait("Category", "DynamoDB")]
-[Collection("DynamoDBOutbox")]
+[Property("Category", "DynamoDB")]
+[NotInParallel("DynamoDBOutbox")]
 public class WhenCountingOutstandingMessagesOlderThanTheAgeShouldCountOnlyStaleOnes : OutstandingCountOutboxBaseTests<Amazon.DynamoDBv2.Model.TransactWriteItemsRequest>
 {
     private readonly IAmAnOutstandingCountOutboxProvider _outboxProvider = new Paramore.Brighter.DynamoDB.Tests.Outbox.DynamoDBOutboxProvider();
@@ -37,9 +36,8 @@ public class WhenCountingOutstandingMessagesOlderThanTheAgeShouldCountOnlyStaleO
         await Outbox.AddAsync(aged, new RequestContext());
     }
 
-    [Fact]
+    [Test]
     public async Task When_counting_outstanding_messages_older_than_the_age_should_count_only_stale_ones()
     {
         await AssertAgeAsync();
-    }
-}
+    }}

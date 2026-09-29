@@ -26,8 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Diagnostics;
 using System.Threading;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
 /// <summary>
@@ -36,12 +35,12 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// router must not reuse the producer it built for the first destination when the second
 /// rejection chooses the other one.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpConsumerRejectsTwiceRoutingTests
 {
-    [Fact]
-    public void When_a_gcp_consumer_rejects_twice_with_different_reasons_should_route_each_to_its_own_destination()
+    [Test]
+    public async Task When_a_gcp_consumer_rejects_twice_with_different_reasons_should_route_each_to_its_own_destination()
     {
         var provider = new GcpPullMessageGatewayProvider();
 
@@ -79,11 +78,11 @@ public class GcpConsumerRejectsTwiceRoutingTests
 
             // Assert — the DeliveryError copy is on the DLQ
             var dlqMessage = WaitFor(() => provider.GetMessageFromDeadLetterQueue(subscription));
-            Assert.Equal(deliveryErrorMessage.Id, dlqMessage.Id);
+            await Assert.That(dlqMessage.Id).IsEqualTo(deliveryErrorMessage.Id);
 
             // Assert — the Unacceptable copy is on the invalid-message topic, not the DLQ
             var invalidMessage = WaitFor(() => provider.GetMessageFromInvalidChannel(subscription));
-            Assert.Equal(unacceptableMessage.Id, invalidMessage.Id);
+            await Assert.That(invalidMessage.Id).IsEqualTo(unacceptableMessage.Id);
         }
         finally
         {
@@ -106,7 +105,7 @@ public class GcpConsumerRejectsTwiceRoutingTests
         throw new TimeoutException($"Message {id} was not received from the source");
     }
 
-    private static Message WaitFor(Func<Message> read)
+    private static async Task<Message> WaitFor(Func<Message> read)
     {
         var message = new Message();
         var stopwatch = Stopwatch.StartNew();
@@ -118,7 +117,7 @@ public class GcpConsumerRejectsTwiceRoutingTests
             Thread.Sleep(500);
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, message.Header.MessageType);
+        await Assert.That(message.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
         return message;
     }
 }

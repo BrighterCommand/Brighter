@@ -30,12 +30,11 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
 
 namespace {{ Namespace }}.Outbox{{ Prefix }}.TopicCounting;
 
-{% if Category != null %}[Trait("Category", "{{Category}}")]{% endif %}
-{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
+{% if Category != null %}[Property("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[NotInParallel("{{CollectionName}}")]{% endif %}
 public class TopicCountingOutboxTests : TopicCountingOutboxBaseTests<{{ Transaction }}>
 {
     private readonly {{ OutboxProvider }} _outboxProvider = new();
@@ -50,5 +49,4 @@ public class TopicCountingOutboxTests : TopicCountingOutboxBaseTests<{{ Transact
     protected override void DeleteStore() => _outboxProvider.DeleteStore([]);
 
     protected override Task AddMessageWithAgeAsync(Message message, TimeSpan age) =>
-        _outboxProvider.AddMessageWithAgeAsync(message, age);
-}
+        _outboxProvider.AddMessageWithAgeAsync(message, age);}

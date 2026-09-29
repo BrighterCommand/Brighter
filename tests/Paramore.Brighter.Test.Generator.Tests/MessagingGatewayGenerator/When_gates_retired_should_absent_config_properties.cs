@@ -1,6 +1,6 @@
 using System.Reflection;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.MessagingGatewayGenerator;
 
@@ -16,36 +16,24 @@ namespace Paramore.Brighter.Test.Generator.Tests.MessagingGatewayGenerator;
 /// </summary>
 public class WhenGatesRetiredShouldAbsentConfigProperties
 {
-    [Fact]
-    public void When_gates_retired_should_absent_config_properties()
+    [Test]
+    public async System.Threading.Tasks.Task When_gates_retired_should_absent_config_properties()
     {
         // Arrange
         var type = typeof(MessagingGatewayConfiguration);
 
         // Act + Assert — the three retired properties are absent from the compiled surface
-        Assert.True(
-            type.GetProperty("HasSupportToDelayedMessages", BindingFlags.Public | BindingFlags.Instance) == null,
-            "HasSupportToDelayedMessages must be absent — its gate was retired (ADR 0066 Step C, FR-10(4))");
+        await Assert.That(type.GetProperty("HasSupportToDelayedMessages", BindingFlags.Public | BindingFlags.Instance) == null).IsTrue().Because("HasSupportToDelayedMessages must be absent — its gate was retired (ADR 0066 Step C, FR-10(4))");
 
-        Assert.True(
-            type.GetProperty("HasSupportToDeadLetterQueue", BindingFlags.Public | BindingFlags.Instance) == null,
-            "HasSupportToDeadLetterQueue must be absent — its gate was retired (ADR 0066 Step C, FR-10(4))");
+        await Assert.That(type.GetProperty("HasSupportToDeadLetterQueue", BindingFlags.Public | BindingFlags.Instance) == null).IsTrue().Because("HasSupportToDeadLetterQueue must be absent — its gate was retired (ADR 0066 Step C, FR-10(4))");
 
-        Assert.True(
-            type.GetProperty("HasSupportToRequeue", BindingFlags.Public | BindingFlags.Instance) == null,
-            "HasSupportToRequeue must be absent — its gate was retired (ADR 0066 Step C, FR-10(4))");
+        await Assert.That(type.GetProperty("HasSupportToRequeue", BindingFlags.Public | BindingFlags.Instance) == null).IsTrue().Because("HasSupportToRequeue must be absent — its gate was retired (ADR 0066 Step C, FR-10(4))");
 
         // Assert — the retained flag properties are still present (not emptied or renamed)
-        Assert.True(
-            type.GetProperty("HasSupportToPublishConfirmation", BindingFlags.Public | BindingFlags.Instance) != null,
-            "HasSupportToPublishConfirmation must remain — it gates a retained template (confirming_posting)");
+        await Assert.That(type.GetProperty("HasSupportToPublishConfirmation", BindingFlags.Public | BindingFlags.Instance) != null).IsTrue().Because("HasSupportToPublishConfirmation must remain — it gates a retained template (confirming_posting)");
 
-        Assert.True(
-            type.GetProperty("HasSupportToValidateBrokerExistence", BindingFlags.Public | BindingFlags.Instance) != null,
-            "HasSupportToValidateBrokerExistence must remain — it gates a retained template (no_broker_created)");
+        await Assert.That(type.GetProperty("HasSupportToValidateBrokerExistence", BindingFlags.Public | BindingFlags.Instance) != null).IsTrue().Because("HasSupportToValidateBrokerExistence must remain — it gates a retained template (no_broker_created)");
 
-        Assert.True(
-            type.GetProperty("HasSupportToValidateInfrastructure", BindingFlags.Public | BindingFlags.Instance) != null,
-            "HasSupportToValidateInfrastructure must remain — it gates retained templates (assume_channel, validate_channel)");
+        await Assert.That(type.GetProperty("HasSupportToValidateInfrastructure", BindingFlags.Public | BindingFlags.Instance) != null).IsTrue().Because("HasSupportToValidateInfrastructure must remain — it gates retained templates (assume_channel, validate_channel)");
     }
 }

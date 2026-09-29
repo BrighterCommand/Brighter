@@ -2,17 +2,14 @@
 
 /* The MIT License (MIT)
 Copyright © 2026 Avtandil Ushikishvili <a.ushikishvili@gmail.com>
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -30,21 +27,21 @@ using Amazon;
 using Amazon.Runtime;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
+
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway;
 
 public class SqsSchedulerSelectionTests
 {
-    [Theory]
-    [InlineData(SqsType.Standard, false, false)]
-    [InlineData(SqsType.Standard, false, true)]
-    [InlineData(SqsType.Standard, true, false)]
-    [InlineData(SqsType.Standard, true, true)]
-    [InlineData(SqsType.Fifo, false, false)]
-    [InlineData(SqsType.Fifo, false, true)]
-    [InlineData(SqsType.Fifo, true, false)]
-    [InlineData(SqsType.Fifo, true, true)]
+    [Test]
+    [Arguments(SqsType.Standard, false, false)]
+    [Arguments(SqsType.Standard, false, true)]
+    [Arguments(SqsType.Standard, true, false)]
+    [Arguments(SqsType.Standard, true, true)]
+    [Arguments(SqsType.Fifo, false, false)]
+    [Arguments(SqsType.Fifo, false, true)]
+    [Arguments(SqsType.Fifo, true, false)]
+    [Arguments(SqsType.Fifo, true, true)]
     public async Task When_sending_with_an_available_sqs_scheduler_should_schedule_the_original_message(
         SqsType queueType, bool useAsyncSend, bool useAsyncScheduler)
     {
@@ -65,22 +62,21 @@ public class SqsSchedulerSelectionTests
             producer.SendWithDelay(message, delay);
 
         //Assert
-        Assert.Same(message, recorder.ScheduledMessage);
-        Assert.Equal(delay, recorder.ScheduledDelay);
-        Assert.Equal(useAsyncScheduler, recorder.UsedAsync);
-        Assert.Equal(useAsyncSend && useAsyncScheduler ? cancellation.Token : CancellationToken.None,
-            recorder.CancellationToken);
+        await Assert.That(recorder.ScheduledMessage).IsSameReferenceAs(message);
+        await Assert.That(recorder.ScheduledDelay).IsEqualTo(delay);
+        await Assert.That(recorder.UsedAsync).IsEqualTo(useAsyncScheduler);
+        await Assert.That(recorder.CancellationToken).IsEqualTo(useAsyncSend && useAsyncScheduler ? cancellation.Token : CancellationToken.None);
     }
 
-    [Theory]
-    [InlineData(SqsType.Standard, false, false)]
-    [InlineData(SqsType.Standard, false, true)]
-    [InlineData(SqsType.Standard, true, false)]
-    [InlineData(SqsType.Standard, true, true)]
-    [InlineData(SqsType.Fifo, false, false)]
-    [InlineData(SqsType.Fifo, false, true)]
-    [InlineData(SqsType.Fifo, true, false)]
-    [InlineData(SqsType.Fifo, true, true)]
+    [Test]
+    [Arguments(SqsType.Standard, false, false)]
+    [Arguments(SqsType.Standard, false, true)]
+    [Arguments(SqsType.Standard, true, false)]
+    [Arguments(SqsType.Standard, true, true)]
+    [Arguments(SqsType.Fifo, false, false)]
+    [Arguments(SqsType.Fifo, false, true)]
+    [Arguments(SqsType.Fifo, true, false)]
+    [Arguments(SqsType.Fifo, true, true)]
     public async Task When_sending_without_a_usable_sqs_scheduler_should_explain_the_configuration_error(
         SqsType queueType, bool useAsyncSend, bool markerOnly)
     {
@@ -92,19 +88,19 @@ public class SqsSchedulerSelectionTests
 
         //Act
         var exception = useAsyncSend
-            ? await Assert.ThrowsAsync<ConfigurationException>(() => producer.SendWithDelayAsync(message, delay))
-            : Assert.Throws<ConfigurationException>(() => producer.SendWithDelay(message, delay));
+            ? await Assert.That(() => producer.SendWithDelayAsync(message, delay)).ThrowsExactly<ConfigurationException>()
+            : (await Assert.That(() => producer.SendWithDelay(message, delay)).ThrowsExactly<ConfigurationException>());
 
         //Assert
-        Assert.Contains("SqsMessageProducer", exception.Message);
-        Assert.Contains("MessageSchedulerFactory", exception.Message);
+        await Assert.That(exception.Message).Contains("SqsMessageProducer");
+        await Assert.That(exception.Message).Contains("MessageSchedulerFactory");
     }
 
-    [Theory]
-    [InlineData(SqsType.Standard, false)]
-    [InlineData(SqsType.Standard, true)]
-    [InlineData(SqsType.Fifo, false)]
-    [InlineData(SqsType.Fifo, true)]
+    [Test]
+    [Arguments(SqsType.Standard, false)]
+    [Arguments(SqsType.Standard, true)]
+    [Arguments(SqsType.Fifo, false)]
+    [Arguments(SqsType.Fifo, true)]
     public async Task When_both_sqs_scheduler_interfaces_are_available_should_prefer_the_calling_interface(
         SqsType queueType, bool useAsyncSend)
     {
@@ -122,15 +118,15 @@ public class SqsSchedulerSelectionTests
             producer.SendWithDelay(message, delay);
 
         //Assert
-        Assert.Same(message, scheduler.ScheduledMessage);
-        Assert.Equal(delay, scheduler.ScheduledDelay);
-        Assert.Equal(useAsyncSend, scheduler.UsedAsync);
-        Assert.Equal(useAsyncSend ? cancellation.Token : CancellationToken.None, scheduler.CancellationToken);
+        await Assert.That(scheduler.ScheduledMessage).IsSameReferenceAs(message);
+        await Assert.That(scheduler.ScheduledDelay).IsEqualTo(delay);
+        await Assert.That(scheduler.UsedAsync).IsEqualTo(useAsyncSend);
+        await Assert.That(scheduler.CancellationToken).IsEqualTo(useAsyncSend ? cancellation.Token : CancellationToken.None);
     }
 
-    [Theory]
-    [InlineData(SqsType.Standard)]
-    [InlineData(SqsType.Fifo)]
+    [Test]
+    [Arguments(SqsType.Standard)]
+    [Arguments(SqsType.Fifo)]
     public async Task When_async_sqs_scheduling_is_cancelled_should_propagate_cancellation(SqsType queueType)
     {
         //Arrange
@@ -140,12 +136,11 @@ public class SqsSchedulerSelectionTests
         cancellation.Cancel();
 
         //Act
-        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => producer.SendWithDelayAsync(CreateMessage(), DelayFor(queueType), cancellation.Token));
+        var exception = await Assert.That(() => producer.SendWithDelayAsync(CreateMessage(), DelayFor(queueType), cancellation.Token)).Throws<OperationCanceledException>();
 
         //Assert
-        Assert.Equal(cancellation.Token, exception.CancellationToken);
-        Assert.Null(recorder.ScheduledMessage);
+        await Assert.That(exception.CancellationToken).IsEqualTo(cancellation.Token);
+        await Assert.That(recorder.ScheduledMessage).IsNull();
     }
 
     private static SqsMessageProducer CreateProducer(SqsType queueType, IAmAMessageScheduler? scheduler)

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -28,8 +28,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class StaleCountsCompletedTests
@@ -40,8 +39,8 @@ public class StaleCountsCompletedTests
     private const string COUNT = "paramore.brighter.outbox.stale.count";
     private const string OUTCOME = "paramore.brighter.outbox.stale.outcome";
 
-    [Fact]
-    public void When_both_counts_complete_should_report_each_gauge()
+    [Test]
+    public async Task When_both_counts_complete_should_report_each_gauge()
     {
         //Arrange
         using var observed = new ObservedStaleMessageInstruments();
@@ -59,24 +58,29 @@ public class StaleCountsCompletedTests
         var measurements = observed.Observe();
 
         //Assert
-        var overall = Assert.Single(measurements, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        Assert.Equal(2, overall.Value);
-        Assert.Equal([IMPLEMENTATION], overall.Attributes.Keys.ToArray());
-        Assert.Equal(OUTBOX_TYPE, overall.Attributes[IMPLEMENTATION]);
+        var overall = (await Assert.That(System.Linq.Enumerable.Where(measurements, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).HasSingleItem());
+        await Assert.That(overall.Value).IsEqualTo(2);
+        await Assert.That(overall.Attributes.Keys.ToArray()).IsEqualTo([IMPLEMENTATION]);
+        await Assert.That(overall.Attributes[IMPLEMENTATION]).IsEqualTo(OUTBOX_TYPE);
 
         var topics = measurements.Where(m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES).ToArray();
-        Assert.All(topics, m => Assert.Equal([DESTINATION, IMPLEMENTATION], m.Attributes.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray()));
-        Assert.All(topics, m => Assert.IsType<string>(m.Attributes[DESTINATION]));
-        Assert.Equal(
-            ["orders=2", "payments=0"],
-            topics.Select(m => $"{m.Attributes[DESTINATION]}={m.Value}").OrderBy(s => s, StringComparer.Ordinal).ToArray());
-        Assert.All(topics, m => Assert.Equal(OUTBOX_TYPE, m.Attributes[IMPLEMENTATION]));
+        foreach (var m in topics)
+{
+    await Assert.That(m.Attributes.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray()).IsEqualTo([DESTINATION, IMPLEMENTATION]);
+}
+        foreach (var m in topics)
+{
+    await Assert.That(m.Attributes[DESTINATION]).IsTypeOf<string>();
+}
+        await Assert.That(topics.Select(m => $"{m.Attributes[DESTINATION]}={m.Value}").OrderBy(s => s, StringComparer.Ordinal).ToArray()).IsEqualTo(["orders=2", "payments=0"]);
+        foreach (var m in topics)
+{
+    await Assert.That(m.Attributes[IMPLEMENTATION]).IsEqualTo(OUTBOX_TYPE);
+}
 
         var completed = measurements
             .Where(m => m.Instrument == ObservedStaleMessageInstruments.MEASUREMENTS && Equals(m.Attributes[OUTCOME], "completed"))
             .ToArray();
-        Assert.Equal(
-            ["overall=1", "per_topic=1"],
-            completed.Select(m => $"{m.Attributes[COUNT]}={m.Value}").OrderBy(s => s, StringComparer.Ordinal).ToArray());
+        await Assert.That(completed.Select(m => $"{m.Attributes[COUNT]}={m.Value}").OrderBy(s => s, StringComparer.Ordinal).ToArray()).IsEqualTo(["overall=1", "per_topic=1"]);
     }
 }

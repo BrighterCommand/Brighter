@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -33,7 +33,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -41,7 +40,7 @@ public class StaleStepNotAddedTests
 {
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
-    [Fact]
+    [Test]
     public async Task When_the_stale_step_is_not_added_should_measure_nothing()
     {
         //Arrange
@@ -79,9 +78,9 @@ public class StaleStepNotAddedTests
             await hostedService.StopAsync(default);
 
         //Assert
-        Assert.Empty(outbox.CountCalls);
-        Assert.Empty(outbox.TopicCountCalls);
-        Assert.DoesNotContain(observed, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES);
-        Assert.DoesNotContain(observed, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES);
+        await Assert.That(outbox.CountCalls).IsEmpty();
+        await Assert.That(outbox.TopicCountCalls).IsEmpty();
+        await Assert.That(System.Linq.Enumerable.Any(observed, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).IsFalse();
+        await Assert.That(System.Linq.Enumerable.Any(observed, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES)).IsFalse();
     }
 }

@@ -24,19 +24,18 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
 /// <summary>
 /// #4508: purging a Pull channel clears the messages already published to its subscription.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class GcpPullPurgeTests
 {
-    [Fact]
-    public void When_a_gcp_pull_channel_is_purged_should_receive_no_message_published_before_the_purge()
+    [Test]
+    public async Task When_a_gcp_pull_channel_is_purged_should_receive_no_message_published_before_the_purge()
     {
         var provider = new GcpPullMessageGatewayProvider();
         var builder = new DefaultMessageBuilder();
@@ -64,7 +63,7 @@ public class GcpPullPurgeTests
             var received = channel.Receive(TimeSpan.FromSeconds(10));
 
             // Assert
-            Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
+            await Assert.That(received.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {

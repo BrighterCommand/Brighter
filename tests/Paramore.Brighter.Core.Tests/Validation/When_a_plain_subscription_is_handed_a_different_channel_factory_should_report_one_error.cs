@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class PlainSubscriptionHandedDifferentChannelFactoryValidationTests
 {
-    [Fact]
-    public void When_a_plain_subscription_is_handed_a_different_channel_factory_should_report_one_error()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_plain_subscription_is_handed_a_different_channel_factory_should_report_one_error()
     {
         // Arrange — a plain subscription (no ChannelFactoryType override) handed a default
         // channel factory whose type it does not declare
@@ -48,10 +48,10 @@ public class PlainSubscriptionHandedDifferentChannelFactoryValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — exactly one Error, sourced to the subscription name
-        Assert.False(satisfied);
-        var result = Assert.Single(results);
-        Assert.NotNull(result.Error);
-        Assert.Equal(ValidationSeverity.Error, result.Error!.Severity);
-        Assert.Equal("Subscription 'greeting-sub'", result.Error.Source);
+        await Assert.That(satisfied).IsFalse();
+        var result = await Assert.That(results).HasSingleItem();
+        await Assert.That(result.Error).IsNotNull();
+        await Assert.That(result.Error!.Severity).IsEqualTo(ValidationSeverity.Error);
+        await Assert.That(result.Error.Source).IsEqualTo("Subscription 'greeting-sub'");
     }
 }

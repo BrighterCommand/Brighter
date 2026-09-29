@@ -9,12 +9,11 @@ using System.Threading;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using RabbitMQ.Client;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ connection pool")]
+[Property("Category", "RMQ")]
+[NotInParallel]
 public class RmqAutoRecoveryConfirmationTests : IDisposable
 {
     private const string ManagementApi = "http://localhost:15672/api/connections";
@@ -47,8 +46,8 @@ public class RmqAutoRecoveryConfirmationTests : IDisposable
             "Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("guest:guest")));
     }
 
-    [Fact]
-    public void When_the_connection_auto_recovers_should_not_confirm_messages_pending_before_the_outage()
+    [Test]
+    public async Task When_the_connection_auto_recovers_should_not_confirm_messages_pending_before_the_outage()
     {
         //Arrange — two messages await confirmation when the broker force-closes the connection
         var confirmations = new List<PublishConfirmationResult>();
@@ -59,15 +58,15 @@ public class RmqAutoRecoveryConfirmationTests : IDisposable
 
         var channel = (IModel)(object)_messageProducer.Confirms;
         var pooledConnection = _connectionPool.GetConnection(_connectionFactory);
-        Assert.NotNull(pooledConnection);
+        await Assert.That(pooledConnection).IsNotNull();
         CloseConnectionFromTheBroker();
 
         // nothing sends during the outage, so the client recovers the same channel rather than the gateway replacing it
-        WaitUntil(() => channel.IsClosed, "the channel to close");
-        WaitUntil(() => channel.IsOpen, "the client to recover the channel");
-        Assert.Same(pooledConnection, _connectionPool.GetConnection(_connectionFactory));
-        Assert.Single(_messageProducer.Channels);
-        Assert.Equal(1ul, channel.NextPublishSeqNo);
+        await WaitUntil(() => channel.IsClosed, "the channel to close");
+        await WaitUntil(() => channel.IsOpen, "the client to recover the channel");
+        await Assert.That(_connectionPool.GetConnection(_connectionFactory)).IsSameReferenceAs(pooledConnection);
+        await Assert.That(_messageProducer.Channels).HasSingleItem();
+        await Assert.That(channel.NextPublishSeqNo).IsEqualTo(1ul);
 
         // the recovered channel numbers its delivery tags from 1 again
         var sentAfterRecovery = new[] { NewMessage(), NewMessage() };
@@ -78,15 +77,15 @@ public class RmqAutoRecoveryConfirmationTests : IDisposable
         _messageProducer.Confirms.RaiseAck(deliveryTag: 2, multiple: true);
 
         //Assert — only the messages sent after recovery are confirmed
-        Assert.Equal(sentAfterRecovery.Select(m => m.Id), confirmations.Select(c => c.MessageId));
+        await Assert.That(confirmations.Select(c => c.MessageId)).IsEqualTo(sentAfterRecovery.Select(m => m.Id));
     }
 
-    private void CloseConnectionFromTheBroker()
+    private async System.Threading.Tasks.Task CloseConnectionFromTheBroker()
     {
         // The management plugin lists a connection only after its next statistics interval
         string? brokerName = null;
         var seen = new List<string>();
-        WaitUntil(() =>
+        await WaitUntil(() =>
         {
             using var listing = JsonDocument.Parse(_management.GetStringAsync(ManagementApi).GetAwaiter().GetResult());
             seen = listing.RootElement.EnumerateArray()
@@ -107,12 +106,12 @@ public class RmqAutoRecoveryConfirmationTests : IDisposable
     }
 
     // The client recovers on its own thread, after a network recovery interval of 5 seconds
-    private static void WaitUntil(Func<bool> condition, string description)
+    private static async Task WaitUntil(Func<bool> condition, string description)
     {
         var deadline = DateTime.UtcNow.AddSeconds(30);
         while (!condition())
         {
-            Assert.True(DateTime.UtcNow < deadline, $"Timed out waiting for {description}");
+            await Assert.That(DateTime.UtcNow < deadline).IsTrue().Because($"Timed out waiting for {description}");
             Thread.Sleep(50);
         }
     }

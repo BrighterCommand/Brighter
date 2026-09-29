@@ -9,7 +9,6 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
 
@@ -17,7 +16,7 @@ public class TimedOutboxSweeperStopTests
 {
     private static readonly TimeSpan s_graceForStop = TimeSpan.FromMilliseconds(500);
 
-    [Fact]
+    [Test]
     public async Task When_stopping_during_a_sweep_should_wait_for_the_sweep_to_finish()
     {
         //Arrange
@@ -33,7 +32,7 @@ public class TimedOutboxSweeperStopTests
             new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero });
 
         await sweeper.StartAsync(CancellationToken.None);
-        Assert.True(sweepInFlight.WaitForSweepToStart(TimeSpan.FromSeconds(5)), "No sweep started");
+        await Assert.That(sweepInFlight.WaitForSweepToStart(TimeSpan.FromSeconds(5))).IsTrue().Because("No sweep started");
 
         //Act
         var stopping = Task.Run(() => sweeper.StopAsync(CancellationToken.None));
@@ -44,7 +43,7 @@ public class TimedOutboxSweeperStopTests
         sweeper.Dispose();
 
         //Assert
-        Assert.False(stoppedMidSweep, "StopAsync returned while a sweep was still running");
+        await Assert.That(stoppedMidSweep).IsFalse().Because("StopAsync returned while a sweep was still running");
     }
 
     private static OutboxProducerMediator<Message, CommittableTransaction> CreateMediator(RoutingKey routingKey)

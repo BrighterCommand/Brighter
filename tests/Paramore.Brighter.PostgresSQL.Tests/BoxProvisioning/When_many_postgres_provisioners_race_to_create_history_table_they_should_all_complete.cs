@@ -33,7 +33,6 @@ using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -42,8 +41,9 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// and emits the race-swallowed event (ADR 0057 §3). Fragile on CI, whose Postgres serialises the racers too tightly for
 /// the losing path to fire on every run.
 /// </summary>
-[Trait("Fragile", "CI")]
-public class PostgreSqlManyProvisionersHistoryRaceTests : IAsyncLifetime
+[Property("Fragile", "CI")]
+[NotInParallel]
+public class PostgreSqlManyProvisionersHistoryRaceTests
 {
     private const int RacerCount = 16;
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
@@ -56,7 +56,7 @@ public class PostgreSqlManyProvisionersHistoryRaceTests : IAsyncLifetime
             .ToArray();
     }
 
-    [Fact]
+    [Test]
     public async Task When_many_postgres_provisioners_race_to_create_history_table_they_should_all_complete()
     {
         // Arrange
@@ -92,18 +92,15 @@ public class PostgreSqlManyProvisionersHistoryRaceTests : IAsyncLifetime
         startGate.SetResult(true);
 
         // Assert
-        var aggregate = await Record.ExceptionAsync(() => Task.WhenAll(racers));
-        Assert.Null(aggregate);
+        var aggregate = await TestExceptionRecorder.CaptureAsync(() => Task.WhenAll(racers));
+        await Assert.That(aggregate).IsNull();
 
         tracerProvider.ForceFlush();
 
         var swallowEvents = exportedActivities
             .SelectMany(a => a.Events)
             .Count(e => e.Name == BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed);
-        Assert.True(
-            swallowEvents > 0,
-            $"Expected at least one '{BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed}' " +
-            $"event across {RacerCount} racers; got none. The race window did not fire.");
+        await Assert.That(swallowEvents > 0).IsTrue();
     }
 
     private async Task DropHistoryTableAsync()
@@ -115,8 +112,10 @@ public class PostgreSqlManyProvisionersHistoryRaceTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

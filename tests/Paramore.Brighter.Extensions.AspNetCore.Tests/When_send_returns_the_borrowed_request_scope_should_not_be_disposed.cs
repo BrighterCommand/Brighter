@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // finished, ASP.NET - not Brighter - must be the one to dispose it, and exactly once.
 public class BorrowedRequestScopeNotDisposedTests
 {
-    [Fact]
+    [Test]
     public async Task When_send_returns_the_borrowed_request_scope_should_not_be_disposed()
     {
         // Arrange
@@ -50,8 +50,8 @@ public class BorrowedRequestScopeNotDisposedTests
         // the controller's own post-Send use of its IOrderDbContext only succeeds if Brighter left it usable
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.NotNull(recorder.ControllerInstance);
+        await Assert.That(recorder.ControllerInstance).IsNotNull();
         // ASP.NET disposes the request scope once, after the whole HTTP request - including the controller action - has completed
-        Assert.Equal(1, recorder.ControllerInstance!.DisposeCount);
+        await Assert.That(recorder.ControllerInstance!.DisposeCount).IsEqualTo(1);
     }
 }

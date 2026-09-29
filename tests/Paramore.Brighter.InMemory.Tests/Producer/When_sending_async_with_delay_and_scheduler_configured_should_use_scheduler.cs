@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,7 +26,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Producer;
 
@@ -57,19 +56,19 @@ public class When_sending_async_with_delay_and_scheduler_configured_should_use_s
         _delay = TimeSpan.FromSeconds(30);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_call_scheduler_schedule_async_method()
     {
         // Act
         await _producer.SendWithDelayAsync(_message, _delay);
 
         // Assert
-        Assert.True(_scheduler.ScheduleAsyncCalled, "Scheduler.ScheduleAsync should have been called");
-        Assert.Equal(_message, _scheduler.ScheduledMessage);
-        Assert.Equal(_delay, _scheduler.ScheduledDelay);
+        await Assert.That(_scheduler.ScheduleAsyncCalled).IsTrue();
+        await Assert.That(_scheduler.ScheduledMessage).IsEqualTo(_message);
+        await Assert.That(_scheduler.ScheduledDelay).IsEqualTo(_delay);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_not_send_message_immediately_to_bus()
     {
         // Act
@@ -77,7 +76,7 @@ public class When_sending_async_with_delay_and_scheduler_configured_should_use_s
 
         // Assert
         var messagesOnBus = _bus.Stream(new RoutingKey("test.topic"));
-        Assert.Empty(messagesOnBus);
+        await Assert.That(messagesOnBus).IsEmpty();
     }
 
     /// <summary>

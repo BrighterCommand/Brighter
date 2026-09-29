@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -35,11 +35,11 @@ using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class OnlyTheOverallCountRunsTests
 {
     private const string COUNT = "paramore.brighter.outbox.stale.count";
@@ -56,11 +56,11 @@ public class OnlyTheOverallCountRunsTests
         _logs = fixture.Logs;
     }
 
-    [Theory]
-    [InlineData(NO_CAPABILITY)]
-    [InlineData(NO_REGISTRY)]
-    [InlineData(EMPTY_REGISTRY)]
-    [InlineData(EMPTY_TOPIC_ONLY)]
+    [Test]
+    [Arguments(NO_CAPABILITY)]
+    [Arguments(NO_REGISTRY)]
+    [Arguments(EMPTY_REGISTRY)]
+    [Arguments(EMPTY_TOPIC_ONLY)]
     public async Task When_the_per_topic_count_is_left_out_should_run_only_the_overall_count(string setup)
     {
         //Arrange
@@ -85,26 +85,33 @@ public class OnlyTheOverallCountRunsTests
         await monitor.StartAsync(default);
         for (var dueTime = 1; dueTime <= 5; dueTime++)
         {
-            WaitUntilTheMonitorWaits(dueTime);
+            await WaitUntilTheMonitorWaits(dueTime);
             _clock.Advance(TimeSpan.FromMinutes(1));
-            WaitForCompletions(readings, dueTime);
+            await WaitForCompletions(readings, dueTime);
             collections.Add(metrics.Observe());
         }
-        WaitUntilTheMonitorWaits(6);
+        await WaitUntilTheMonitorWaits(6);
         _clock.Advance(TimeSpan.FromSeconds(30));
         collections.Add(metrics.Observe());
 
         //Assert
-        Assert.All(collections, measurements => Assert.Single(measurements, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES));
-        Assert.All(collections, measurements => Assert.DoesNotContain(measurements, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES));
-        Assert.All(collections, measurements => Assert.DoesNotContain(
-            measurements,
-            m => m.Instrument == ObservedStaleMessageInstruments.MEASUREMENTS && Equals(m.Attributes[COUNT], "per_topic")));
-        Assert.Equal(5, outbox.CountCalls.Count);
+        foreach (var measurements in collections)
+{
+    await Assert.That(System.Linq.Enumerable.Where(measurements, m => m.Instrument == ObservedStaleMessageInstruments.MESSAGES)).HasSingleItem();
+}
+        foreach (var measurements in collections)
+{
+    await Assert.That(System.Linq.Enumerable.Any(measurements, m => m.Instrument == ObservedStaleMessageInstruments.TOPIC_MESSAGES)).IsFalse();
+}
+        foreach (var measurements in collections)
+{
+    await Assert.That(System.Linq.Enumerable.Any(measurements, m => m.Instrument == ObservedStaleMessageInstruments.MEASUREMENTS && Equals(m.Attributes[COUNT], "per_topic"))).IsFalse();
+}
+        await Assert.That(outbox.CountCalls.Count).IsEqualTo(5);
         if (outbox is StaleMessageTopicCountingOutbox topicCountingOutbox)
-            Assert.Empty(topicCountingOutbox.TopicCountCalls);
-        var entry = Assert.Single(_logs.Entries, logEntry => logEntry.LogLevel >= LogLevel.Information);
-        Assert.Contains(setup == NO_CAPABILITY ? "no capability" : "no measured topic", entry.Message);
+            await Assert.That(topicCountingOutbox.TopicCountCalls).IsEmpty();
+        var entry = (await Assert.That(System.Linq.Enumerable.Where(_logs.Entries, logEntry => logEntry.LogLevel >= LogLevel.Information)).HasSingleItem());
+        await Assert.That(entry.Message).Contains(setup == NO_CAPABILITY ? "no capability" : "no measured topic");
     }
 
     private static IAmAProducerRegistry? CreateRegistry(string setup) => setup switch
@@ -125,11 +132,11 @@ public class OnlyTheOverallCountRunsTests
     private static InMemoryMessageProducer Producer(RoutingKey topic) =>
         new(new InternalBus(), new Publication { Topic = topic });
 
-    private void WaitUntilTheMonitorWaits(int timers) =>
-        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
+    private async Task WaitUntilTheMonitorWaits(int timers) =>
+        await Assert.That(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5))).IsTrue();
 
-    private static void WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>
-        Assert.True(SpinWait.SpinUntil(
+    private static async Task WaitForCompletions(OutboxStaleMessageReadings readings, long completions) =>
+        await Assert.That(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed) >= completions,
-            TimeSpan.FromSeconds(5)));
+            TimeSpan.FromSeconds(5))).IsTrue();
 }

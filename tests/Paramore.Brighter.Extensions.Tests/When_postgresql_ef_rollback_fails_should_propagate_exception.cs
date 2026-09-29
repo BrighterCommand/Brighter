@@ -3,14 +3,14 @@ using FakeItEasy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Paramore.Brighter.PostgreSql.EntityFrameworkCore;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class PostgreSqlEntityFrameworkTransactionProviderRollbackTests
 {
-    [Fact]
-    public void When_postgresql_ef_rollback_fails_should_propagate_exception()
+    [Test]
+    public async System.Threading.Tasks.Task When_postgresql_ef_rollback_fails_should_propagate_exception()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -22,6 +22,6 @@ public class PostgreSqlEntityFrameworkTransactionProviderRollbackTests
         var provider = new PostgreSqlEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => provider.Rollback());
+        await Assert.That(() => provider.Rollback()).ThrowsExactly<InvalidOperationException>();
     }
 }

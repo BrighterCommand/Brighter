@@ -30,17 +30,16 @@ using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "AzureServiceBus")]
-[Collection("AzureServiceBus")]
+[Property("Category", "AzureServiceBus")]
+[NotInParallel("AzureServiceBus")]
 public class AzureServiceBusRetryRedeliveryDeduplicationTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_completion_fails_should_deduplicate_retry_after_broker_redelivery(bool synchronous)
     {
         // Arrange
@@ -70,35 +69,35 @@ public class AzureServiceBusRetryRedeliveryDeduplicationTests
             original.ApplicationProperties["MessageType"] = "MT_COMMAND";
             await sender.SendMessageAsync(original);
             var first = await ReceiveAsync();
-            Assert.Equal(original.MessageId, first.Id.Value);
-            Assert.Equal(0, first.Header.HandledCount);
+            await Assert.That(first.Id.Value).IsEqualTo(original.MessageId);
+            await Assert.That(first.Header.HandledCount).IsEqualTo(0);
             first.Header.UpdateHandledCount();
 
             // Act
-            var error = await Record.ExceptionAsync(() => RequeueAsync(first));
-            Assert.Equal(ServiceBusFailureReason.ServiceBusy, Assert.IsType<ServiceBusException>(error).Reason);
+            var error = await TestExceptionRecorder.CaptureAsync(() => RequeueAsync(first));
+            await Assert.That((await Assert.That(error).IsTypeOf<ServiceBusException>()).Reason).IsEqualTo(ServiceBusFailureReason.ServiceBusy);
             if (synchronous) syncChannel!.Nack(first);
             else await asyncChannel!.NackAsync(first);
             var redelivery = await ReceiveAsync();
-            Assert.NotSame(first, redelivery);
-            Assert.Equal(original.MessageId, redelivery.Id.Value);
-            Assert.Equal(0, redelivery.Header.HandledCount);
+            await Assert.That(redelivery).IsNotSameReferenceAs(first);
+            await Assert.That(redelivery.Id.Value).IsEqualTo(original.MessageId);
+            await Assert.That(redelivery.Header.HandledCount).IsEqualTo(0);
             redelivery.Header.UpdateHandledCount();
-            Assert.True(await RequeueAsync(redelivery));
+            await Assert.That(await RequeueAsync(redelivery)).IsTrue();
             var retry = await ReceiveAsync();
 
             // Assert
-            Assert.NotEqual(MessageType.MT_NONE, retry.Header.MessageType);
-            Assert.NotEqual(original.MessageId, retry.Id.Value);
-            Assert.Equal(original.MessageId, retry.Header.Bag[Message.OriginalMessageIdHeaderName]);
-            Assert.Equal(1, retry.Header.HandledCount);
-            Assert.Equal("order", retry.Body.Value);
-            Assert.Equal(2, faultClient.Receiver!.CompletionAttempts);
+            await Assert.That(retry.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+            await Assert.That(retry.Id.Value).IsNotEqualTo(original.MessageId);
+            await Assert.That(retry.Header.Bag[Message.OriginalMessageIdHeaderName]).IsEqualTo(original.MessageId);
+            await Assert.That(retry.Header.HandledCount).IsEqualTo(1);
+            await Assert.That(retry.Body.Value).IsEqualTo("order");
+            await Assert.That(faultClient.Receiver!.CompletionAttempts).IsEqualTo(2);
             if (synchronous) syncChannel!.Acknowledge(retry);
             else await asyncChannel!.AcknowledgeAsync(retry);
             var extra = synchronous ? syncChannel!.Receive(TimeSpan.FromSeconds(12))
                 : await asyncChannel!.ReceiveAsync(TimeSpan.FromSeconds(12));
-            Assert.Equal(MessageType.MT_NONE, extra.Header.MessageType);
+            await Assert.That(extra.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
             Task<Message> ReceiveAsync() => synchronous
                 ? Task.FromResult(syncChannel!.Receive(TimeSpan.FromSeconds(20)))

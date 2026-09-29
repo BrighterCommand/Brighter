@@ -24,30 +24,29 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite.Tests.TestHelpers;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
-[Trait("Category", "Sqlite")]
+[Property("Category", "Sqlite")]
 public class SqliteOutboxDuplicateConstraintTests
 {
-    [Theory]
-    [InlineData("PRIMARY KEY", false, false, false)]
-    [InlineData("PRIMARY KEY", false, false, true)]
-    [InlineData("PRIMARY KEY", false, true, false)]
-    [InlineData("PRIMARY KEY", false, true, true)]
-    [InlineData("PRIMARY KEY", true, false, false)]
-    [InlineData("PRIMARY KEY", true, false, true)]
-    [InlineData("PRIMARY KEY", true, true, false)]
-    [InlineData("PRIMARY KEY", true, true, true)]
-    [InlineData("UNIQUE", false, false, false)]
-    [InlineData("UNIQUE", false, false, true)]
-    [InlineData("UNIQUE", false, true, false)]
-    [InlineData("UNIQUE", false, true, true)]
-    [InlineData("UNIQUE", true, false, false)]
-    [InlineData("UNIQUE", true, false, true)]
-    [InlineData("UNIQUE", true, true, false)]
-    [InlineData("UNIQUE", true, true, true)]
+    [Test]
+    [Arguments("PRIMARY KEY", false, false, false)]
+    [Arguments("PRIMARY KEY", false, false, true)]
+    [Arguments("PRIMARY KEY", false, true, false)]
+    [Arguments("PRIMARY KEY", false, true, true)]
+    [Arguments("PRIMARY KEY", true, false, false)]
+    [Arguments("PRIMARY KEY", true, false, true)]
+    [Arguments("PRIMARY KEY", true, true, false)]
+    [Arguments("PRIMARY KEY", true, true, true)]
+    [Arguments("UNIQUE", false, false, false)]
+    [Arguments("UNIQUE", false, false, true)]
+    [Arguments("UNIQUE", false, true, false)]
+    [Arguments("UNIQUE", false, true, true)]
+    [Arguments("UNIQUE", true, false, false)]
+    [Arguments("UNIQUE", true, false, true)]
+    [Arguments("UNIQUE", true, true, false)]
+    [Arguments("UNIQUE", true, true, true)]
     public async Task When_sqlite_outbox_receives_a_duplicate_should_keep_one_row(
         string constraint, bool binary, bool useAsync, bool useBulk)
     {
@@ -60,7 +59,7 @@ public class SqliteOutboxDuplicateConstraintTests
         var context = new RequestContext();
 
         //Act
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             for (var attempt = 0; attempt < 2; attempt++)
             {
@@ -82,8 +81,8 @@ public class SqliteOutboxDuplicateConstraintTests
         });
 
         //Assert
-        Assert.Null(exception);
-        Assert.Equal(1L, database.RowCount());
-        Assert.Equal("original", outbox.Get(message.Id, context).Body.Value);
+        await Assert.That(exception).IsNull();
+        await Assert.That(database.RowCount()).IsEqualTo(1L);
+        await Assert.That(outbox.Get(message.Id, context).Body.Value).IsEqualTo("original");
     }
 }

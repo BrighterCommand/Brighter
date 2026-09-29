@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -51,7 +51,7 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_no_channels_reject_reactor_file_should_exist_with_correct_name()
     {
         // Arrange
@@ -64,11 +64,10 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
 
         // Assert — Reactor file exists at the mandated path
         var reactorPath = ReactorOutputPath(configuration);
-        Assert.True(File.Exists(reactorPath),
-            $"Reactor canonical no-channels file not found at {reactorPath}");
+        await Assert.That(File.Exists(reactorPath)).IsTrue().Because($"Reactor canonical no-channels file not found at {reactorPath}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_no_channels_reject_proactor_file_should_exist_with_correct_name()
     {
         // Arrange
@@ -81,11 +80,10 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
 
         // Assert — Proactor file exists at the mandated path
         var proactorPath = ProactorOutputPath(configuration);
-        Assert.True(File.Exists(proactorPath),
-            $"Proactor canonical no-channels file not found at {proactorPath}");
+        await Assert.That(File.Exists(proactorPath)).IsTrue().Because($"Proactor canonical no-channels file not found at {proactorPath}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_no_channels_reject_reactor_should_create_subscription_with_neither_routing_key()
     {
         // Arrange
@@ -98,11 +96,11 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
 
         // Assert — subscription must have neither deadLetterRoutingKey nor invalidMessageRoutingKey
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.DoesNotContain("deadLetterRoutingKey:", content);
-        Assert.DoesNotContain("invalidMessageRoutingKey:", content);
+        await Assert.That(content).DoesNotContain("deadLetterRoutingKey:");
+        await Assert.That(content).DoesNotContain("invalidMessageRoutingKey:");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_no_channels_reject_proactor_should_create_subscription_with_neither_routing_key()
     {
         // Arrange
@@ -115,11 +113,11 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
 
         // Assert — subscription must have neither deadLetterRoutingKey nor invalidMessageRoutingKey
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.DoesNotContain("deadLetterRoutingKey:", content);
-        Assert.DoesNotContain("invalidMessageRoutingKey:", content);
+        await Assert.That(content).DoesNotContain("deadLetterRoutingKey:");
+        await Assert.That(content).DoesNotContain("invalidMessageRoutingKey:");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_no_channels_reject_reactor_should_reject_with_delivery_error_and_assert_true()
     {
         // Arrange
@@ -132,12 +130,12 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
 
         // Assert — Reject is called with DeliveryError and return is asserted true
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("Reject(", content);
-        Assert.Contains("DeliveryError", content);
-        Assert.Contains("Assert.True(rejected", content);
+        await Assert.That(content).Contains("Reject(");
+        await Assert.That(content).Contains("DeliveryError");
+        await Assert.That(content).Contains("Assert.That(rejected).IsTrue(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_no_channels_reject_proactor_should_reject_async_with_delivery_error_and_assert_true()
     {
         // Arrange
@@ -150,12 +148,12 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
 
         // Assert — RejectAsync is called with DeliveryError and return is asserted true
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("RejectAsync(", content);
-        Assert.Contains("DeliveryError", content);
-        Assert.Contains("Assert.True(rejected", content);
+        await Assert.That(content).Contains("RejectAsync(");
+        await Assert.That(content).Contains("DeliveryError");
+        await Assert.That(content).Contains("Assert.That(rejected).IsTrue(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_no_channels_reject_reactor_should_poll_for_the_following_message_inside_a_bounded_retry_loop()
     {
         // Arrange
@@ -168,12 +166,12 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
 
         // Assert — the following message's receipt is polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
-        Assert.Contains("500", content);
+        await Assert.That(content).Contains("Stopwatch");
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(30)");
+        await Assert.That(content).Contains("500");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_no_channels_reject_proactor_should_poll_for_the_following_message_inside_a_bounded_retry_loop()
     {
         // Arrange
@@ -186,12 +184,12 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
 
         // Assert — the following message's receipt is polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
-        Assert.Contains("500", content);
+        await Assert.That(content).Contains("Stopwatch");
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(30)");
+        await Assert.That(content).Contains("500");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_no_channels_reject_reactor_should_tell_the_following_message_from_the_rejected_one()
     {
         // Arrange
@@ -206,17 +204,17 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
         // id and body. Sharing a builder without this makes them the same message, and a rejected
         // message that came back would then be indistinguishable from the one that should follow.
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
+        await Assert.That(Occurrences(content, "SetMessageId(Id.Random())")).IsEqualTo(DISTINCTLY_BUILT_MESSAGES);
+        await Assert.That(Occurrences(content, ".SetBody(")).IsEqualTo(DISTINCTLY_BUILT_MESSAGES);
 
         // Assert — the arm identifies the message that follows by id rather than assuming it is
         // the one sent second, and forbids the rejected message coming back. Identifying by id is
         // what lets this hold on a transport that does not order its deliveries (NFR-4).
-        Assert.Contains("_messageAssertion.Assert(theOtherMessage, receivedOther)", content);
-        Assert.Contains("Assert.NotEqual(rejectedMessage.Header.MessageId, next.Header.MessageId)", content);
+        await Assert.That(content).Contains("await _messageAssertion.AssertAsync(theOtherMessage, receivedOther)");
+        await Assert.That(content).Contains("Assert.That(next.Header.MessageId).IsNotEqualTo(rejectedMessage.Header.MessageId)");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_no_channels_reject_proactor_should_tell_the_following_message_from_the_rejected_one()
     {
         // Arrange
@@ -231,20 +229,20 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
         // id and body. Sharing a builder without this makes them the same message, and a rejected
         // message that came back would then be indistinguishable from the one that should follow.
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
+        await Assert.That(Occurrences(content, "SetMessageId(Id.Random())")).IsEqualTo(DISTINCTLY_BUILT_MESSAGES);
+        await Assert.That(Occurrences(content, ".SetBody(")).IsEqualTo(DISTINCTLY_BUILT_MESSAGES);
 
         // Assert — the arm identifies the message that follows by id rather than assuming it is
         // the one sent second, and forbids the rejected message coming back. Identifying by id is
         // what lets this hold on a transport that does not order its deliveries (NFR-4).
-        Assert.Contains("_messageAssertion.Assert(theOtherMessage, receivedOther)", content);
-        Assert.Contains("Assert.NotEqual(rejectedMessage.Header.MessageId, next.Header.MessageId)", content);
+        await Assert.That(content).Contains("await _messageAssertion.AssertAsync(theOtherMessage, receivedOther)");
+        await Assert.That(content).Contains("Assert.That(next.Header.MessageId).IsNotEqualTo(rejectedMessage.Header.MessageId)");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_pass_reactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange — ledger cell is Pass; the [Test] must carry no Skip argument
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -252,13 +250,13 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact] present; Skip absent (conditional pattern renders nothing when Skip is empty)
+        // Assert — [Test] present; Skip absent (conditional pattern renders nothing when Skip is empty)
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("[Fact]", content);
-        Assert.DoesNotContain("Skip =", content);
+        await Assert.That(content).Contains("[Test]");
+        await Assert.That(content).DoesNotContain("[Skip(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_deferred_reactor_should_emit_skip_on_fact()
     {
         // Arrange — ledger cell is Deferred; the template must conditionally emit Skip
@@ -273,15 +271,15 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact, Skip = "Deferred: #9999 ..."] is emitted
+        // Assert — [Test, Skip = "Deferred: #9999 ..."] is emitted
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("Skip = \"Deferred: #9999", content);
+        await Assert.That(content).Contains("Skip(\"Deferred: #9999");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_pass_proactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange — ledger cell is Pass; the [Test] must carry no Skip argument
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -291,8 +289,8 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
 
         // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("[Fact]", content);
-        Assert.DoesNotContain("Skip =", content);
+        await Assert.That(content).Contains("[Test]");
+        await Assert.That(content).DoesNotContain("[Skip(");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

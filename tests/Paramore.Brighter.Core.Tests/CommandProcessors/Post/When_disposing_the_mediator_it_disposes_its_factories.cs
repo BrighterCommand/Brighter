@@ -8,14 +8,14 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
     public class OutboxProducerMediatorDisposalTests
     {
-        [Fact]
-        public void When_disposing_the_mediator_it_disposes_the_registry_and_transform_factories()
+        [Test]
+        public async System.Threading.Tasks.Task When_disposing_the_mediator_it_disposes_the_registry_and_transform_factories()
         {
             //arrange
             var timeProvider = new FakeTimeProvider();
@@ -49,14 +49,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             mediator.Dispose();
 
             //assert — the registry cascade disposes both mapper factories; both transform factories directly
-            Assert.Equal(1, syncMapperFactory.DisposeCount);
-            Assert.Equal(1, asyncMapperFactory.DisposeCount);
-            Assert.Equal(1, syncTransformerFactory.DisposeCount);
-            Assert.Equal(1, asyncTransformerFactory.DisposeCount);
+            await Assert.That(syncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(syncTransformerFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncTransformerFactory.DisposeCount).IsEqualTo(1);
         }
 
-        [Fact]
-        public void When_closing_the_producers_throws_the_factories_are_still_disposed_and_dispose_is_claimed()
+        [Test]
+        public async System.Threading.Tasks.Task When_closing_the_producers_throws_the_factories_are_still_disposed_and_dispose_is_claimed()
         {
             //arrange
             var timeProvider = new FakeTimeProvider();
@@ -92,15 +92,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             mediator.Dispose();
 
             //assert — the throw was swallowed, every factory disposed exactly once, and CloseAll ran only once
-            Assert.Equal(1, producerRegistry.CloseAllCount);
-            Assert.Equal(1, syncMapperFactory.DisposeCount);
-            Assert.Equal(1, asyncMapperFactory.DisposeCount);
-            Assert.Equal(1, syncTransformerFactory.DisposeCount);
-            Assert.Equal(1, asyncTransformerFactory.DisposeCount);
+            await Assert.That(producerRegistry.CloseAllCount).IsEqualTo(1);
+            await Assert.That(syncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(syncTransformerFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncTransformerFactory.DisposeCount).IsEqualTo(1);
         }
 
-        [Fact]
-        public void When_disposing_the_registry_throws_the_transform_factories_are_still_disposed()
+        [Test]
+        public async System.Threading.Tasks.Task When_disposing_the_registry_throws_the_transform_factories_are_still_disposed()
         {
             //arrange
             var timeProvider = new FakeTimeProvider();
@@ -134,9 +134,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             //assert — the async mapper factory (disposed in the registry's finally) and both transform
             //factories were disposed despite the sync mapper factory throwing
-            Assert.Equal(1, asyncMapperFactory.DisposeCount);
-            Assert.Equal(1, syncTransformerFactory.DisposeCount);
-            Assert.Equal(1, asyncTransformerFactory.DisposeCount);
+            await Assert.That(asyncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(syncTransformerFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncTransformerFactory.DisposeCount).IsEqualTo(1);
         }
 
         private sealed class ThrowingProducerRegistry : IAmAProducerRegistry

@@ -30,7 +30,6 @@ using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
@@ -70,11 +69,11 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 /// first message a read returns.
 /// </para>
 /// </remarks>
-[Trait("Category", "RocketMQ")]
+[Property("Category", "RocketMQ")]
 // Shares ConformanceDeferredPump's static dispatch/requeue/handled-count state with the generated
 // pump tests, so it runs in their collection: a ResetDispatchCount from a parallel test would wipe
 // this test's recorded state.
-[Collection("RocketMQMessagingGateway")]
+[NotInParallel("RocketMQMessagingGateway")]
 public class RocketMqBudgetExhaustedDlqHandledCountProactorTests
 {
     private const string Topic = "rmq_dlq_count_p";
@@ -83,7 +82,7 @@ public class RocketMqBudgetExhaustedDlqHandledCountProactorTests
     private static readonly TimeSpan s_receiveMessageTimeout = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan s_dlqReadCeiling = TimeSpan.FromSeconds(30);
 
-    [Fact]
+    [Test]
     public async Task When_rocketmq_budget_is_exhausted_dead_letter_copy_should_keep_stamped_count_and_metadata_async()
     {
         // Arrange
@@ -181,38 +180,26 @@ public class RocketMqBudgetExhaustedDlqHandledCountProactorTests
                 }
             }
 
-            Assert.Equal(MessageType.MT_COMMAND, dlqMessage.Header.MessageType);
+            await Assert.That(dlqMessage.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
 
             // AC-4 / R-5: the five rejection metadata keys. Checked before HandledCount below —
             // neither named mutation touches these keys (both (a) and (b) affect only HandledCount),
             // so this order does not mask either mutation; it confirms the metadata survives the
             // round trip before the count assertion is reached.
-            Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionReason"),
-                "bag must carry rejectionReason");
-            Assert.Equal(RejectionReason.DeliveryError.ToString(),
-                dlqMessage.Header.Bag["rejectionReason"].ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionReason")).IsTrue().Because("bag must carry rejectionReason");
+            await Assert.That(dlqMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.DeliveryError.ToString());
 
-            Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionMessage"),
-                "bag must carry rejectionMessage");
-            Assert.False(
-                string.IsNullOrWhiteSpace(dlqMessage.Header.Bag["rejectionMessage"].ToString()),
-                "rejectionMessage must be non-empty");
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionMessage")).IsTrue().Because("bag must carry rejectionMessage");
+            await Assert.That(string.IsNullOrWhiteSpace(dlqMessage.Header.Bag["rejectionMessage"].ToString())).IsFalse().Because("rejectionMessage must be non-empty");
 
-            Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp"),
-                "bag must carry rejectionTimestamp");
-            Assert.True(
-                DateTimeOffset.TryParse(dlqMessage.Header.Bag["rejectionTimestamp"].ToString(), out _),
-                $"rejectionTimestamp must be ISO-8601 parseable but was "
-                + $"'{dlqMessage.Header.Bag["rejectionTimestamp"]}'");
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp")).IsTrue().Because("bag must carry rejectionTimestamp");
+            await Assert.That(DateTimeOffset.TryParse(dlqMessage.Header.Bag["rejectionTimestamp"].ToString(), out _)).IsTrue();
 
-            Assert.True(dlqMessage.Header.Bag.ContainsKey("originalTopic"),
-                "bag must carry originalTopic");
-            Assert.Equal(routingKey.Value, dlqMessage.Header.Bag["originalTopic"].ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalTopic")).IsTrue().Because("bag must carry originalTopic");
+            await Assert.That(dlqMessage.Header.Bag["originalTopic"].ToString()).IsEqualTo(routingKey.Value);
 
-            Assert.True(dlqMessage.Header.Bag.ContainsKey("originalMessageType"),
-                "bag must carry originalMessageType");
-            Assert.Equal(MessageType.MT_COMMAND.ToString(),
-                dlqMessage.Header.Bag["originalMessageType"].ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalMessageType")).IsTrue().Because("bag must carry originalMessageType");
+            await Assert.That(dlqMessage.Header.Bag["originalMessageType"].ToString()).IsEqualTo(MessageType.MT_COMMAND.ToString());
 
             // R-28 / AC-41: HandledCount must be >= 3 (the stamped count) and NOT 0 (the DLQ copy's
             // own normalised counter). Both named mutations surface here:
@@ -220,9 +207,8 @@ public class RocketMqBudgetExhaustedDlqHandledCountProactorTests
             //     copy's own normalised count (0) instead of the stamped header count;
             // (b) the publisher's bag loop no longer skipping header-owned keys lets the stale bag
             //     HandledCount = "0" win (last-write-wins) over the correct header-owned property.
-            Assert.True(dlqMessage.Header.HandledCount >= 3,
-                $"R-28: HandledCount must be >= 3 but was {dlqMessage.Header.HandledCount}");
-            Assert.NotEqual(0, dlqMessage.Header.HandledCount);
+            await Assert.That(dlqMessage.Header.HandledCount >= 3).IsTrue().Because($"R-28: HandledCount must be >= 3 but was {dlqMessage.Header.HandledCount}");
+            await Assert.That(dlqMessage.Header.HandledCount).IsNotEqualTo(0);
         }
         finally
         {

@@ -30,7 +30,6 @@ using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
@@ -65,10 +64,10 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 /// else, rather than trusting the first message a read returns.
 /// </para>
 /// </remarks>
-[Trait("Category", "RocketMQ")]
+[Property("Category", "RocketMQ")]
 // Shares ConformanceDeferredPump's static dispatch counter with the generated pump tests, so it runs
 // in their collection: a ResetDispatchCount from a parallel test would wipe this test's count.
-[Collection("RocketMQMessagingGateway")]
+[NotInParallel("RocketMQMessagingGateway")]
 public class RocketMqBudgetMinusOneNeverRejectsProactorTests
 {
     private const string Topic = "rmq_budget_m1_p";
@@ -77,7 +76,7 @@ public class RocketMqBudgetMinusOneNeverRejectsProactorTests
     private static readonly TimeSpan s_receiveMessageTimeout = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan s_dlqReadCeiling = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_rocketmq_budget_is_minus_one_should_never_reject_async()
     {
         // Arrange
@@ -137,12 +136,10 @@ public class RocketMqBudgetMinusOneNeverRejectsProactorTests
             var dispatchCount = ConformanceDeferredPump.GetDispatchCount(key);
 
             // Assert — R-6 / AC-5: handler invoked more than 3 times with budget -1
-            Assert.True(dispatchCount > 3,
-                $"Expected dispatch count > 3 after 60 s with requeueCount: -1, but was {dispatchCount}");
+            await Assert.That(dispatchCount > 3).IsTrue().Because($"Expected dispatch count > 3 after 60 s with requeueCount: -1, but was {dispatchCount}");
 
             // No DeliveryError rejection was issued — our message must not be on the Brighter DLQ.
-            Assert.False(await IsOnDeadLetterQueueAsync(cmd.Id),
-                "Expected the message not to reach the Brighter DLQ with requeueCount: -1");
+            await Assert.That(await IsOnDeadLetterQueueAsync(cmd.Id)).IsFalse().Because("Expected the message not to reach the Brighter DLQ with requeueCount: -1");
         }
         finally
         {

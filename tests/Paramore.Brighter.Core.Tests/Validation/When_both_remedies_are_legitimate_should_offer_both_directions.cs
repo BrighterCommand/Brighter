@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class BothRemediesLegitimateOfferBothDirectionsValidationTests
 {
-    [Fact]
-    public void When_both_remedies_are_legitimate_should_offer_both_directions()
+    [Test]
+    public async System.Threading.Tasks.Task When_both_remedies_are_legitimate_should_offer_both_directions()
     {
         // Arrange — the AC-4 configuration: a DeclaringSubscription (D == DeclaredChannelFactory,
         // not the in-memory default) falling back to a mismatched default (NonMatchingChannelFactory)
@@ -47,10 +47,8 @@ public class BothRemediesLegitimateOfferBothDirectionsValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — the message offers both remedies, asymmetrically: {D} to configure, {F} to change subscription type
-        var result = Assert.Single(results);
-        Assert.EndsWith(
-            "— either configure a channel factory of type Paramore.Brighter.Core.Tests.Validation.TestDoubles.DeclaredChannelFactory, " +
-            "or use a subscription type whose ChannelFactoryType is Paramore.Brighter.Core.Tests.Validation.TestDoubles.NonMatchingChannelFactory",
-            result.Error!.Message);
+        var result = await Assert.That(results).HasSingleItem();
+        await Assert.That(result.Error!.Message).EndsWith("— either configure a channel factory of type Paramore.Brighter.Core.Tests.Validation.TestDoubles.DeclaredChannelFactory, " +
+            "or use a subscription type whose ChannelFactoryType is Paramore.Brighter.Core.Tests.Validation.TestDoubles.NonMatchingChannelFactory");
     }
 }

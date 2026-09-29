@@ -28,12 +28,13 @@ THE SOFTWARE. */
 // </auto-generated>
 
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.MySQL.Tests.Outbox.Binary.Causation;
 
-[Trait("Category", "MySQL")]
-[Collection("MySQLBinaryOutbox")]
+[Property("Category", "MySQL")]
+[NotInParallel("MySQLBinaryOutbox")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<System.Data.Common.DbTransaction>
 {
     private readonly MySQLBinaryOutboxProvider _outboxProvider = new();

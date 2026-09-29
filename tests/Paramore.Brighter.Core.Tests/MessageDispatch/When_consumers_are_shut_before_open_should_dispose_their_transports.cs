@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia <irakli.gabisonia94@gmail.com>
@@ -34,7 +34,6 @@ using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
@@ -43,13 +42,13 @@ public class DispatcherUnopenedConsumerDisposalTests : IObserver<LogEvent>
     private Dispatcher? _dispatcher;
     private IAmAConsumer[] _unopenedConsumers = [];
 
-    [Theory]
-    [InlineData(MessagePumpType.Reactor, 1, false)]
-    [InlineData(MessagePumpType.Proactor, 1, false)]
-    [InlineData(MessagePumpType.Reactor, 3, false)]
-    [InlineData(MessagePumpType.Proactor, 3, false)]
-    [InlineData(MessagePumpType.Reactor, 3, true)]
-    [InlineData(MessagePumpType.Proactor, 3, true)]
+    [Test]
+    [Arguments(MessagePumpType.Reactor, 1, false)]
+    [Arguments(MessagePumpType.Proactor, 1, false)]
+    [Arguments(MessagePumpType.Reactor, 3, false)]
+    [Arguments(MessagePumpType.Proactor, 3, false)]
+    [Arguments(MessagePumpType.Reactor, 3, true)]
+    [Arguments(MessagePumpType.Proactor, 3, true)]
     public async Task When_consumers_are_shut_before_open_should_dispose_their_transports(
         MessagePumpType pumpType, int performerCount, bool throwOnDispose)
     {
@@ -81,21 +80,21 @@ public class DispatcherUnopenedConsumerDisposalTests : IObserver<LogEvent>
             await dispatcher.End().WaitAsync(TimeSpan.FromSeconds(10));
 
             // Assert
-            Assert.Equal(performerCount, _unopenedConsumers.Length);
-            Assert.Equal(performerCount, channelFactory.Transports.Count);
-            Assert.All(_unopenedConsumers, consumer =>
-            {
-                Assert.Equal(ConsumerState.Shut, consumer.State);
-                Assert.Null(consumer.Job);
-                Assert.Equal(0, consumer.JobId);
-            });
-            Assert.All(channelFactory.Transports, transport =>
-            {
-                Assert.Equal(0, transport.ReceiveCount);
-                Assert.Equal(1, transport.DisposeCount);
-            });
-            Assert.Empty(dispatcher.Consumers);
-            Assert.Equal(DispatcherState.DS_STOPPED, dispatcher.State);
+            await Assert.That(_unopenedConsumers.Length).IsEqualTo(performerCount);
+            await Assert.That(channelFactory.Transports.Count).IsEqualTo(performerCount);
+            foreach (var consumer in _unopenedConsumers)
+{
+    await Assert.That(consumer.State).IsEqualTo(ConsumerState.Shut);
+    await Assert.That(consumer.Job).IsNull();
+    await Assert.That(consumer.JobId).IsEqualTo(0);
+}
+            foreach (var transport in channelFactory.Transports)
+{
+    await Assert.That(transport.ReceiveCount).IsEqualTo(0);
+    await Assert.That(transport.DisposeCount).IsEqualTo(1);
+}
+            await Assert.That(dispatcher.Consumers).IsEmpty();
+            await Assert.That(dispatcher.State).IsEqualTo(DispatcherState.DS_STOPPED);
         }
         finally
         {

@@ -32,8 +32,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class When_the_gauges_are_observed_after_many_sweeps_and_topics_should_keep_a_fixed_attribute_set
@@ -44,8 +43,8 @@ public class When_the_gauges_are_observed_after_many_sweeps_and_topics_should_ke
     private const int Sweeps = 1000;
     private const int Topics = 100;
 
-    [Fact]
-    public void When_1000_sweeps_trip_100_topics_should_publish_one_empty_attribute_set_per_gauge()
+    [Test]
+    public async Task When_1000_sweeps_trip_100_topics_should_publish_one_empty_attribute_set_per_gauge()
     {
         //Arrange
         using var metrics = new ServiceCollection().AddMetrics().BuildServiceProvider();
@@ -82,10 +81,16 @@ public class When_the_gauges_are_observed_after_many_sweeps_and_topics_should_ke
         GC.KeepAlive(meter);
 
         //Assert
-        Assert.Equal(Topics, breaker.TrippedTopics.Count());
-        Assert.Equal([RunningTime, TrippedTopics], attributeSets.Keys.OrderBy(name => name).ToArray());
-        Assert.All(attributeSets.Keys, name => Assert.StartsWith(GaugePrefix, name));
-        Assert.All(attributeSets.Values, sets => Assert.Equal([string.Empty], sets.ToArray()));
+        await Assert.That(breaker.TrippedTopics.Count()).IsEqualTo(Topics);
+        await Assert.That(attributeSets.Keys.OrderBy(name => name).ToArray()).IsEqualTo([RunningTime, TrippedTopics]);
+        foreach (var name in attributeSets.Keys)
+{
+    await Assert.That(name).StartsWith(GaugePrefix);
+}
+        foreach (var sets in attributeSets.Values)
+{
+    await Assert.That(sets.ToArray()).IsEqualTo([string.Empty]);
+}
     }
 
     private static string Canonical(ReadOnlySpan<KeyValuePair<string, object?>> tags) =>

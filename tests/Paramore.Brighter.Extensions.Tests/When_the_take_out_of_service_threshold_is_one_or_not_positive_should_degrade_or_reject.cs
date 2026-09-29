@@ -33,16 +33,15 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(DispatcherHealthCheckCollection.NAME)]
+[NotInParallel]
 public class ConsumerTakeOutOfServiceThresholdTests
 {
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
 
-    [Fact]
+    [Test]
     public async Task When_the_threshold_is_one_should_degrade_on_a_single_failure()
     {
         //Arrange
@@ -54,23 +53,23 @@ public class ConsumerTakeOutOfServiceThresholdTests
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        Assert.Equal(HealthStatus.Degraded, result.Status);
+        await Assert.That(result.Status).IsEqualTo(HealthStatus.Degraded);
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void When_the_threshold_is_not_positive_should_throw_from_the_constructor(int threshold)
+    [Test]
+    [Arguments(0)]
+    [Arguments(-1)]
+    public async Task When_the_threshold_is_not_positive_should_throw_from_the_constructor(int threshold)
     {
         //Arrange
         //Act
-        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => new ConsumerTakeOutOfServiceHealthCheck(null, threshold));
+        var exception = (await Assert.That(() => new ConsumerTakeOutOfServiceHealthCheck(null, threshold)).ThrowsExactly<ArgumentOutOfRangeException>());
 
         //Assert
-        Assert.Equal("channelFailureThreshold", exception.ParamName);
+        await Assert.That(exception.ParamName).IsEqualTo("channelFailureThreshold");
     }
 
-    [Fact]
+    [Test]
     public async Task When_no_threshold_is_given_should_default_to_three_failures()
     {
         //Arrange
@@ -86,8 +85,8 @@ public class ConsumerTakeOutOfServiceThresholdTests
         var atResult = await atCheck.CheckHealthAsync(new HealthCheckContext());
 
         //Assert
-        Assert.Equal(HealthStatus.Healthy, belowResult.Status);
-        Assert.Equal(HealthStatus.Degraded, atResult.Status);
+        await Assert.That(belowResult.Status).IsEqualTo(HealthStatus.Healthy);
+        await Assert.That(atResult.Status).IsEqualTo(HealthStatus.Degraded);
     }
 
     private static MultiSubscriptionReceiveHealthTestHost StartedHost(int[] failures, out Task ready)

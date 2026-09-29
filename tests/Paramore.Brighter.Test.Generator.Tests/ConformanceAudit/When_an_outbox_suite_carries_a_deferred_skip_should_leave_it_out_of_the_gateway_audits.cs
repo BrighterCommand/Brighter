@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
 /// <summary>
@@ -11,8 +10,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// </summary>
 public class GatewayArtifactScopeAuditTests
 {
-    [Fact]
-    public void When_an_outbox_suite_carries_a_deferred_skip_should_leave_it_out_of_the_gateway_audits()
+    [Test]
+    public async Task When_an_outbox_suite_carries_a_deferred_skip_should_leave_it_out_of_the_gateway_audits()
     {
         // Arrange
         var repoRoot = Path.Combine(Path.GetTempPath(), $"gateway-scope-{Guid.NewGuid():N}");
@@ -31,17 +30,17 @@ public class GatewayArtifactScopeAuditTests
             var template = Path.Combine(templateDir, "gateway.cs.liquid");
             var gatewayFile = Path.Combine(gatewayDir, "When_a_gateway_test_is_generated.cs");
             var outboxFile = Path.Combine(outboxDir, "When_an_outbox_test_is_generated.cs");
-            File.WriteAllText(template, "[Fact(Skip = \"Deferred: #4240\")]\n");
-            File.WriteAllText(gatewayFile, "[Fact(Skip = \"Deferred: #4240\")]\n");
-            File.WriteAllText(outboxFile, "[Fact(Skip = \"Deferred: #9999\")]\n");
+            File.WriteAllText(template, "[Test]\n[Skip(\"Deferred: #4240\")]\n");
+            File.WriteAllText(gatewayFile, "[Test]\n[Skip(\"Deferred: #4240\")]\n");
+            File.WriteAllText(outboxFile, "[Test]\n[Skip(\"Deferred: #9999\")]\n");
 
             // Act
             var artifacts = GatewaySkipConventionAudit.EnumerateGatewayArtifacts(repoRoot).ToList();
 
             // Assert
-            Assert.Contains(template, artifacts);
-            Assert.Contains(gatewayFile, artifacts);
-            Assert.DoesNotContain(outboxFile, artifacts);
+            await Assert.That(artifacts).Contains(template);
+            await Assert.That(artifacts).Contains(gatewayFile);
+            await Assert.That(artifacts).DoesNotContain(outboxFile);
         }
         finally
         {

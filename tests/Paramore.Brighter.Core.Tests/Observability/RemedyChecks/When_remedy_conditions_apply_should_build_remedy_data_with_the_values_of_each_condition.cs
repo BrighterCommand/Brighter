@@ -26,14 +26,13 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.RemedyChecks;
 
 public class RemedyCheckConventionDataTests
 {
-    [Fact]
-    public void When_remedy_conditions_apply_should_build_remedy_data_with_the_values_of_each_condition()
+    [Test]
+    public async Task When_remedy_conditions_apply_should_build_remedy_data_with_the_values_of_each_condition()
     {
         //Arrange
         var hung = new Dictionary<string, object> { ["running_seconds"] = 91 };
@@ -48,9 +47,9 @@ public class RemedyCheckConventionDataTests
         var data = RemedyCheckConvention.Data(RemedyKind.Investigate, conditions);
 
         //Assert
-        Assert.Equal(RemedyCheckConvention.Name(RemedyKind.Investigate), data[RemedyCheckConvention.RemedyKindKey]);
-        Assert.Equal(new[] { "hung_sweep", "consecutive_failed_sweeps" }, Assert.IsAssignableFrom<IEnumerable<string>>(data[RemedyCheckConvention.ConditionsKey]).ToArray());
-        Assert.Same(hung, data["hung_sweep"]);
-        Assert.Same(failed, data["consecutive_failed_sweeps"]);
+        await Assert.That(data[RemedyCheckConvention.RemedyKindKey]).IsEqualTo(RemedyCheckConvention.Name(RemedyKind.Investigate));
+        await Assert.That((((IEnumerable<string>)(((IEnumerable<string>)(await Assert.That(data[RemedyCheckConvention.ConditionsKey]).IsAssignableTo<IEnumerable<string>>()))))).ToArray()).IsEqualTo(new[] { "hung_sweep", "consecutive_failed_sweeps" });
+        await Assert.That(data["hung_sweep"]).IsSameReferenceAs(hung);
+        await Assert.That(data["consecutive_failed_sweeps"]).IsSameReferenceAs(failed);
     }
 }

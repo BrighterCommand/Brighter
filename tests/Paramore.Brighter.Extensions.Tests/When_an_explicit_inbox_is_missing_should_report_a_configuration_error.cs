@@ -27,21 +27,20 @@ using FakeItEasy;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ConsumerMissingExplicitInboxTests
 {
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, false)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, false)]
-    [InlineData(true, false, true)]
-    [InlineData(true, true, false)]
-    [InlineData(true, true, true)]
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(false, false, true)]
+    [Arguments(false, true, false)]
+    [Arguments(false, true, true)]
+    [Arguments(true, false, false)]
+    [Arguments(true, false, true)]
+    [Arguments(true, true, false)]
+    [Arguments(true, true, true)]
     public async Task When_an_explicit_inbox_is_missing_should_report_a_configuration_error(
         bool useOptionsFactory, bool useAsyncHandler, bool useIncompatibleInbox)
     {
@@ -62,14 +61,14 @@ public class ConsumerMissingExplicitInboxTests
 
         // Act
         var exception = useAsyncHandler
-            ? await Assert.ThrowsAsync<ConfigurationException>(() => processor.SendAsync(asyncCommand))
-            : Assert.Throws<ConfigurationException>(() => processor.Send(command));
+            ? await Assert.That(() => processor.SendAsync(asyncCommand)).ThrowsExactly<ConfigurationException>()
+            : (await Assert.That(() => processor.Send(command)).ThrowsExactly<ConfigurationException>());
 
         // Assert
         var diagnostic = exception.ToString();
         var inboxType = useAsyncHandler ? nameof(IAmAnInboxAsync) : nameof(IAmAnInboxSync);
-        Assert.True(diagnostic.Contains(inboxType) || diagnostic.Contains(nameof(InboxConfiguration)), diagnostic);
-        Assert.Equal(0, command.HandleCount);
-        Assert.Equal(0, asyncCommand.HandleCount);
+        await Assert.That(diagnostic.Contains(inboxType) || diagnostic.Contains(nameof(InboxConfiguration))).IsTrue();
+        await Assert.That(command.HandleCount).IsEqualTo(0);
+        await Assert.That(asyncCommand.HandleCount).IsEqualTo(0);
     }
 }

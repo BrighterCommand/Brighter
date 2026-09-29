@@ -29,8 +29,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Extensions.Tests;
 
 /// <summary>
@@ -40,8 +39,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class ValidatePipelinesUnenforceableBudgetTests
 {
-    [Fact]
-    public void When_validate_pipelines_with_unenforceable_budget_should_surface_warning_and_start_host()
+    [Test]
+    public async Task When_validate_pipelines_with_unenforceable_budget_should_surface_warning_and_start_host()
     {
         // Arrange — subscription with requeueCount: 3 and unenforceability reason "no DeadLetterPolicy"
         var services = new ServiceCollection();
@@ -72,10 +71,10 @@ public class ValidatePipelinesUnenforceableBudgetTests
             provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
 
         // Assert — unenforceable budget produces exactly one Warning; no Errors; host starts
-        Assert.True(result.IsValid);
-        Assert.Single(result.Warnings);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings).HasSingleItem();
         var warning = result.Warnings.First();
-        Assert.Contains("3", warning.Message);
-        Assert.Contains("no DeadLetterPolicy", warning.Message);
+        await Assert.That(warning.Message).Contains("3");
+        await Assert.That(warning.Message).Contains("no DeadLetterPolicy");
     }
 }

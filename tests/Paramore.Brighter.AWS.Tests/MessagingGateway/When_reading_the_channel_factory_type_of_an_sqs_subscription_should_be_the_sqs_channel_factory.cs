@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -20,29 +21,56 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+
+
 #endregion
 
+
+
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
+
+
+
+
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway;
 
+
+
 public class SqsSubscriptionChannelFactoryTypeTests
+
 {
-    [Fact]
-    public void When_reading_the_channel_factory_type_of_an_sqs_subscription_should_be_the_sqs_channel_factory()
+
+    [Test]
+
+    public async System.Threading.Tasks.Task When_reading_the_channel_factory_type_of_an_sqs_subscription_should_be_the_sqs_channel_factory()
+
     {
+
         // Arrange — no explicit messagePumpType is needed: SqsSubscription<T> already defaults to Proactor
+
         var subscription = new SqsSubscription<MyCommand>(
+
             new SubscriptionName("t"),
+
             new ChannelName("t"),
+
             routingKey: new RoutingKey("t"));
 
+
+
         // Act
+
         var channelFactoryType = subscription.ChannelFactoryType;
 
+
+
         // Assert
-        Assert.Equal(typeof(ChannelFactory), channelFactoryType);
+
+        await Assert.That(channelFactoryType).IsEqualTo(typeof(ChannelFactory));
+
     }
+
 }

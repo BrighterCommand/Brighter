@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 
@@ -31,5 +31,5 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 /// connections at once. Serialising the classes keeps that contention inside the test that is
 /// measuring it.
 /// </summary>
-[CollectionDefinition("MsSqlQueueProvisioning", DisableParallelization = true)]
+[System.Obsolete]
 public class MsSqlQueueProvisioningCollection;

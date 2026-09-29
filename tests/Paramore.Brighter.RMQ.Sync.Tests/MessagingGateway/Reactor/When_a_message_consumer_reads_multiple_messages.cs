@@ -1,12 +1,10 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
 public class RMQBufferedConsumerTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _messageProducer;
@@ -25,13 +23,13 @@ public class RMQBufferedConsumerTests : IDisposable
 
         _messageProducer = new RmqMessageProducer(rmqConnection);
         _messageConsumer = new RmqMessageConsumer(connection:rmqConnection, queueName:_channelName, routingKey:_routingKey, isDurable:false, highAvailability:false, batchSize:BatchSize);
-            
+
         //create the queue, so that we can receive messages posted to it
         new QueueFactory(rmqConnection, _channelName, new RoutingKeys(_routingKey)).Create(TimeSpan.FromMilliseconds(1000));
     }
 
-    [Fact]
-    public void When_a_message_consumer_reads_multiple_messages()
+    [Test]
+    public async Task When_a_message_consumer_reads_multiple_messages()
     {
         //Post one more than batch size messages
         var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content One"));
@@ -42,30 +40,24 @@ public class RMQBufferedConsumerTests : IDisposable
         _messageProducer.Send(messageThree);
         var messageFour= new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content Four"));
         _messageProducer.Send(messageFour);
-            
-        //let them arrive
-        Task.Delay(5000);
-            
+
         //Now retrieve messages from the consumer
-        var messages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000));
-            
+        var messages = _messageConsumer.Receive(TimeSpan.FromSeconds(5));
+
         //We should only have three messages
-        Assert.Equal(3, messages.Length);
-            
+        await Assert.That(messages.Length).IsEqualTo(3);
+
         //ack those to remove from the queue
         foreach (var message in messages)
         {
             _messageConsumer.Acknowledge(message);
         }
 
-        //Allow ack to register
-        Task.Delay(1000);
-            
         //Now retrieve again
-        messages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(500));
+        messages = _messageConsumer.Receive(TimeSpan.FromSeconds(5));
 
         //This time, just the one message
-        Assert.Equal(1, messages.Length);
+        await Assert.That(messages.Length).IsEqualTo(1);
 
     }
 

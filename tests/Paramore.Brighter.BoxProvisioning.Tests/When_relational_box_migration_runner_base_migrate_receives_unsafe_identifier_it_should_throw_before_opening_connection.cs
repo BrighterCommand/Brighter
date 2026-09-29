@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -40,58 +39,58 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class SqlBoxMigrationRunnerIdentifierValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_migrate_table_name_is_unsafe_it_should_throw_before_opening_connection()
     {
         //Arrange
         var runner = new IdentifierProbeTestRunner();
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => runner.MigrateAsync(
             tableName: "Outbox; DROP TABLE x",
             schemaName: null,
             boxType: BoxType.Outbox,
             tableState: new BoxTableState(false, false, 0)));
 
         //Assert
-        Assert.IsType<ConfigurationException>(thrown);
-        Assert.False(runner.OpenConnectionCalled);
+        await Assert.That(thrown).IsTypeOf<ConfigurationException>();
+        await Assert.That(runner.OpenConnectionCalled).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_migrate_schema_name_is_unsafe_it_should_throw_before_opening_connection()
     {
         //Arrange
         var runner = new IdentifierProbeTestRunner();
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => runner.MigrateAsync(
             tableName: "Outbox",
             schemaName: "dbo; --",
             boxType: BoxType.Outbox,
             tableState: new BoxTableState(false, false, 0)));
 
         //Assert
-        Assert.IsType<ConfigurationException>(thrown);
-        Assert.False(runner.OpenConnectionCalled);
+        await Assert.That(thrown).IsTypeOf<ConfigurationException>();
+        await Assert.That(runner.OpenConnectionCalled).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_migrate_schema_name_is_null_it_should_not_throw_for_identifier_validation()
     {
         //Arrange
         var runner = new IdentifierProbeTestRunner();
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => runner.MigrateAsync(
             tableName: "Outbox",
             schemaName: null,
             boxType: BoxType.Outbox,
             tableState: new BoxTableState(false, false, 0)));
 
         //Assert
-        Assert.IsNotType<ConfigurationException>(thrown);
-        Assert.True(runner.OpenConnectionCalled);
+        await Assert.That(thrown).IsNotTypeOf<ConfigurationException>();
+        await Assert.That(runner.OpenConnectionCalled).IsTrue();
     }
 
     // Hooks after OpenConnectionAsync throw NotSupportedException, so a validation that runs too late surfaces as the wrong exception.

@@ -36,7 +36,6 @@ using Paramore.Brighter.MessagingGateway.GcpPubSub;
 using Serilog.Events;
 using Serilog.Formatting.Display;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 using DeadLetterPolicy = Paramore.Brighter.MessagingGateway.GcpPubSub.DeadLetterPolicy;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
@@ -61,13 +60,13 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// the DeadLetterPolicy negative cases also emit (ADR 0078 GcpIamCallTolerance) do not pollute the
 /// count.
 /// </summary>
-[Trait("Category", "GcpPubSubPull")]
+[Property("Category", "GcpPubSubPull")]
 public class GcpChannelUnenforceableBudgetWarningAsyncTests
 {
     private const string BudgetWarningMarker = "delivery count cannot advance";
     private const string IamMember = "serviceAccount:test@brighter-test.iam.gserviceaccount.com";
 
-    [Fact]
+    [Test]
     public async Task When_a_gcp_channel_is_created_for_an_unenforceable_budget_should_log_one_warning_async()
     {
         // Arrange
@@ -86,7 +85,7 @@ public class GcpChannelUnenforceableBudgetWarningAsyncTests
             requeueCount: 3,
             makeChannels: OnMissingChannel.Create,
             subscriptionMode: SubscriptionMode.Pull
-            // deadLetter intentionally omitted — R-11 (no DeadLetterPolicy configured)
+        // deadLetter intentionally omitted — R-11 (no DeadLetterPolicy configured)
         );
 
         IAmAChannelAsync? channel = null;
@@ -99,18 +98,18 @@ public class GcpChannelUnenforceableBudgetWarningAsyncTests
 
             // Assert — exactly one budget Warning naming the subscription, 3, and the reason
             var warnings = GetBudgetWarnings();
-            Assert.Single(warnings);
-            Assert.Contains(channelName.Value, warnings[0]);
-            Assert.Contains("3", warnings[0]);
-            Assert.Contains("no DeadLetterPolicy is configured", warnings[0]);
+            await Assert.That(warnings).HasSingleItem();
+            await Assert.That(warnings[0]).Contains(channelName.Value);
+            await Assert.That(warnings[0]).Contains("3");
+            await Assert.That(warnings[0]).Contains("no DeadLetterPolicy is configured");
 
             // Act — receive 100 messages; the Warning count must not change (NFR-4)
             await PublishAndReceiveAsync(connection, channel, topicName, 100);
-            Assert.Single(GetBudgetWarnings());
+            await Assert.That(GetBudgetWarnings()).HasSingleItem();
 
             // Act — receive another 100; still unchanged
             await PublishAndReceiveAsync(connection, channel, topicName, 100);
-            Assert.Single(GetBudgetWarnings());
+            await Assert.That(GetBudgetWarnings()).HasSingleItem();
         }
         finally
         {
@@ -120,10 +119,10 @@ public class GcpChannelUnenforceableBudgetWarningAsyncTests
         }
     }
 
-    [Trait("Requires", "PubSubEmulator")]
-    [Theory]
-    [InlineData(0, 5)] // R-7: requeueCount 0 — a pipeline-validation concern, not logged here
-    [InlineData(5, 5)] // R-10: budget at the native redrive limit — also pipeline-validation only
+    [Property("Requires", "PubSubEmulator")]
+    [Test]
+    [Arguments(0, 5)] // R-7: requeueCount 0 — a pipeline-validation concern, not logged here
+    [Arguments(5, 5)] // R-10: budget at the native redrive limit — also pipeline-validation only
     public async Task When_a_gcp_channel_is_created_for_a_budget_with_dead_letter_policy_should_log_expected_warnings_async(
         int requeueCount, int maxDeliveryAttempts)
     {
@@ -170,13 +169,13 @@ public class GcpChannelUnenforceableBudgetWarningAsyncTests
             channel = await channelFactory.CreateAsyncChannelAsync(subscription);
 
             // Assert
-            Assert.Equal(expectedWarnings, GetBudgetWarnings().Count);
+            await Assert.That(GetBudgetWarnings().Count).IsEqualTo(expectedWarnings);
 
             await PublishAndReceiveAsync(connection, channel, topicName, 100);
-            Assert.Equal(expectedWarnings, GetBudgetWarnings().Count);
+            await Assert.That(GetBudgetWarnings().Count).IsEqualTo(expectedWarnings);
 
             await PublishAndReceiveAsync(connection, channel, topicName, 100);
-            Assert.Equal(expectedWarnings, GetBudgetWarnings().Count);
+            await Assert.That(GetBudgetWarnings().Count).IsEqualTo(expectedWarnings);
         }
         finally
         {
@@ -212,7 +211,7 @@ public class GcpChannelUnenforceableBudgetWarningAsyncTests
             while (received < count)
             {
                 attempts++;
-                Assert.True(attempts < 2000, $"Gave up waiting for {count} messages; received {received}");
+                await Assert.That(attempts < 2000).IsTrue().Because($"Gave up waiting for {count} messages; received {received}");
 
                 var message = await channel.ReceiveAsync(TimeSpan.FromSeconds(10));
                 if (message.Header.MessageType == MessageType.MT_NONE) continue;

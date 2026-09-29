@@ -27,24 +27,23 @@ using System;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class ClaimCheckUnsettledDeliveryTests
 {
-    [Theory]
-    [InlineData(false, "nack")]
-    [InlineData(true, "nack")]
-    [InlineData(false, "reject")]
-    [InlineData(true, "reject")]
-    [InlineData(false, "mapping-failure")]
-    [InlineData(true, "mapping-failure")]
-    [InlineData(false, "acknowledgement-failure")]
-    [InlineData(true, "acknowledgement-failure")]
-    [InlineData(false, "requeue-failure")]
-    [InlineData(true, "requeue-failure")]
-    public void When_a_claimed_delivery_is_not_completed_should_preserve_luggage(bool useAsync, string outcome)
+    [Test]
+    [Arguments(false, "nack")]
+    [Arguments(true, "nack")]
+    [Arguments(false, "reject")]
+    [Arguments(true, "reject")]
+    [Arguments(false, "mapping-failure")]
+    [Arguments(true, "mapping-failure")]
+    [Arguments(false, "acknowledgement-failure")]
+    [Arguments(true, "acknowledgement-failure")]
+    [Arguments(false, "requeue-failure")]
+    [Arguments(true, "requeue-failure")]
+    public async Task When_a_claimed_delivery_is_not_completed_should_preserve_luggage(bool useAsync, string outcome)
     {
         //Arrange
         using var scenario = new ClaimCheckPumpScenario(useAsync);
@@ -60,30 +59,33 @@ public class ClaimCheckUnsettledDeliveryTests
         scenario.Channel.FailRequeue = outcome == "requeue-failure";
 
         //Act
-        var error = Record.Exception(scenario.Run);
+        var error = TestExceptionRecorder.Capture(scenario.Run);
 
         //Assert
         if (scenario.Channel.FailAcknowledge)
-            Assert.NotNull(error);
+            await Assert.That(error).IsNotNull();
         else
-            Assert.Null(error);
-        Assert.Equal(0, scenario.Channel.AcknowledgeCount);
+            await Assert.That(error).IsNull();
+        await Assert.That(scenario.Channel.AcknowledgeCount).IsEqualTo(0);
         if (outcome is "nack" or "requeue-failure")
-            Assert.Single(scenario.Channel.Nacked);
+            await Assert.That(scenario.Channel.Nacked).HasSingleItem();
         if (outcome is "reject" or "mapping-failure")
-            Assert.Single(scenario.Channel.Rejected);
+            await Assert.That(scenario.Channel.Rejected).HasSingleItem();
         if (outcome == "requeue-failure")
-            Assert.Equal(1, scenario.Channel.RequeueCount);
+            await Assert.That(scenario.Channel.RequeueCount).IsEqualTo(1);
         if (outcome == "mapping-failure")
-            Assert.Empty(scenario.HandledPayloads);
+            await Assert.That(scenario.HandledPayloads).IsEmpty();
         else
-            Assert.Equal(scenario.Payload, Assert.Single(scenario.HandledPayloads));
+            await Assert.That((await Assert.That(scenario.HandledPayloads).HasSingleItem())).IsEqualTo(scenario.Payload);
 
-        Assert.True(scenario.Storage.HasClaim(scenario.ClaimId));
-        Assert.Equal(scenario.ClaimBody, scenario.Message.Body.Value);
-        Assert.Equal(scenario.ClaimId, scenario.Message.Header.DataRef);
-        Assert.Equal(scenario.ClaimId, scenario.Message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK]);
-        Assert.NotEmpty(scenario.ScopedStores);
-        Assert.All(scenario.ScopedStores, storage => Assert.True(storage.IsDisposed));
+        await Assert.That(scenario.Storage.HasClaim(scenario.ClaimId)).IsTrue();
+        await Assert.That(scenario.Message.Body.Value).IsEqualTo(scenario.ClaimBody);
+        await Assert.That(scenario.Message.Header.DataRef).IsEqualTo(scenario.ClaimId);
+        await Assert.That(scenario.Message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK]).IsEqualTo(scenario.ClaimId);
+        await Assert.That(scenario.ScopedStores).IsNotEmpty();
+        foreach (var storage in scenario.ScopedStores)
+{
+    await Assert.That(storage.IsDisposed).IsTrue();
+}
     }
 }

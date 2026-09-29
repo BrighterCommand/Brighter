@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia <irakli.gabisonia94@gmail.com>
@@ -31,18 +31,17 @@ using System.Net.Mime;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Paramore.Brighter.Observability;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
 public class MessageHeaderNewtonsoftContentTypeRoundTripTests
 {
-    [Theory]
-    [InlineData(null)]
-    [InlineData("application/json")]
-    [InlineData("application/json; charset=utf-8; profile=\"urn:example:orders\"")]
-    [InlineData("multipart/mixed; boundary=orders-boundary; name=orders.json")]
-    public void When_round_tripping_a_message_header_through_newtonsoft_should_preserve_content_type(string? mimeType)
+    [Test]
+    [Arguments(null)]
+    [Arguments("application/json")]
+    [Arguments("application/json; charset=utf-8; profile=\"urn:example:orders\"")]
+    [Arguments("multipart/mixed; boundary=orders-boundary; name=orders.json")]
+    public async Task When_round_tripping_a_message_header_through_newtonsoft_should_preserve_content_type(string? mimeType)
     {
         // Arrange
         var baggage = new Baggage
@@ -65,31 +64,31 @@ public class MessageHeaderNewtonsoftContentTypeRoundTripTests
         MessageHeader? roundTripped = JsonConvert.DeserializeObject<MessageHeader>(json);
 
         // Assert
-        Assert.NotNull(roundTripped);
-        Assert.Equal(header.MessageId, roundTripped.MessageId);
-        Assert.Equal(header.Topic, roundTripped.Topic);
-        Assert.Equal(header.ReplyTo, roundTripped.ReplyTo);
-        Assert.Equal(header.TraceParent, roundTripped.TraceParent);
-        Assert.Equal(header.TraceState, roundTripped.TraceState);
-        Assert.Equal("acme", roundTripped.Baggage.Single().Value);
-        Assert.Equal("tenant", roundTripped.Baggage.Single().Key);
-        Assert.Equal("session-42", roundTripped.Bag["SessionId"]);
-        Assert.Equal(header.ContentType.MediaType, roundTripped.ContentType.MediaType);
-        Assert.Equal(header.ContentType.CharSet, roundTripped.ContentType.CharSet);
-        Assert.Equal(header.ContentType.Boundary, roundTripped.ContentType.Boundary);
-        Assert.Equal(header.ContentType.Name, roundTripped.ContentType.Name);
-        Assert.Equal(header.ContentType.Parameters.Count, roundTripped.ContentType.Parameters.Count);
+        await Assert.That(roundTripped).IsNotNull();
+        await Assert.That(roundTripped.MessageId).IsEqualTo(header.MessageId);
+        await Assert.That(roundTripped.Topic).IsEqualTo(header.Topic);
+        await Assert.That(roundTripped.ReplyTo).IsEqualTo(header.ReplyTo);
+        await Assert.That(roundTripped.TraceParent).IsEqualTo(header.TraceParent);
+        await Assert.That(roundTripped.TraceState).IsEqualTo(header.TraceState);
+        await Assert.That(roundTripped.Baggage.Single().Value).IsEqualTo("acme");
+        await Assert.That(roundTripped.Baggage.Single().Key).IsEqualTo("tenant");
+        await Assert.That(roundTripped.Bag["SessionId"]).IsEqualTo("session-42");
+        await Assert.That(roundTripped.ContentType.MediaType).IsEqualTo(header.ContentType.MediaType);
+        await Assert.That(roundTripped.ContentType.CharSet).IsEqualTo(header.ContentType.CharSet);
+        await Assert.That(roundTripped.ContentType.Boundary).IsEqualTo(header.ContentType.Boundary);
+        await Assert.That(roundTripped.ContentType.Name).IsEqualTo(header.ContentType.Name);
+        await Assert.That(roundTripped.ContentType.Parameters.Count).IsEqualTo(header.ContentType.Parameters.Count);
 
-        JObject persistedContentType = Assert.IsType<JObject>(JObject.Parse(json)["ContentType"]);
-        Assert.Equal(header.ContentType.MediaType, persistedContentType["MediaType"]!.Value<string>());
-        JArray persistedParameters = Assert.IsType<JArray>(persistedContentType["Parameters"]);
-        Assert.Equal(header.ContentType.Parameters.Count, persistedParameters.Count);
+        JObject persistedContentType = await Assert.That(JObject.Parse(json)["ContentType"]).IsTypeOf<JObject>();
+        await Assert.That(persistedContentType["MediaType"]!.Value<string>()).IsEqualTo(header.ContentType.MediaType);
+        JArray persistedParameters = await Assert.That(persistedContentType["Parameters"]).IsTypeOf<JArray>();
+        await Assert.That(persistedParameters.Count).IsEqualTo(header.ContentType.Parameters.Count);
         foreach (DictionaryEntry parameter in header.ContentType.Parameters)
         {
             var key = (string)parameter.Key;
-            Assert.Equal(parameter.Value, roundTripped.ContentType.Parameters[key]);
-            Assert.Contains(persistedParameters, entry =>
-                entry["Key"]!.Value<string>() == key && entry["Value"]!.Value<string>() == (string?)parameter.Value);
+            await Assert.That(roundTripped.ContentType.Parameters[key]).IsEqualTo(parameter.Value);
+            await Assert.That(System.Linq.Enumerable.Any(persistedParameters, entry =>
+                entry["Key"]!.Value<string>() == key && entry["Value"]!.Value<string>() == (string?)parameter.Value)).IsTrue();
         }
     }
 }

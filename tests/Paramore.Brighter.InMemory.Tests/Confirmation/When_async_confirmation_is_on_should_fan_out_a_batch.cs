@@ -26,13 +26,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Confirmation;
 
 public class AsyncConfirmationBatchFanOutTests
 {
-    [Fact]
+    [Test]
     public async Task When_async_confirmation_is_on_should_fan_out_a_batch()
     {
         // Arrange
@@ -64,15 +63,15 @@ public class AsyncConfirmationBatchFanOutTests
         await producer.SendAsync(batch, CancellationToken.None);
 
         // Assert — bus write is deferred: bus is empty immediately after SendAsync returns
-        Assert.Empty(bus.Stream(new RoutingKey(topic)));
+        await Assert.That(bus.Stream(new RoutingKey(topic))).IsEmpty();
 
         // Wait for all N confirmations (max 5s)
         await allConfirmed.Task.WaitAsync(System.TimeSpan.FromSeconds(5));
 
         // Assert — all N messages written and N confirmations raised, in FIFO batch order
         var busMessages = bus.Stream(new RoutingKey(topic)).ToList();
-        Assert.Equal(batchSize, busMessages.Count);
+        await Assert.That(busMessages.Count).IsEqualTo(batchSize);
         for (var i = 0; i < batchSize; i++)
-            Assert.Equal(messages[i].Id, busMessages[i].Id);
+            await Assert.That(busMessages[i].Id).IsEqualTo(messages[i].Id);
     }
 }

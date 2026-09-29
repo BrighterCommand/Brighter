@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -39,7 +39,6 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
@@ -51,7 +50,8 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 /// A thread held before either step can make the next post skip its check, so the wait for that post times out. Each
 /// window can only make the test fail.
 /// </summary>
-[Collection(StaleMessageLoggingCollection.Name)]
+[NotInParallel]
+[ClassDataSource<StaleMessageLoggingFixture>(Shared = SharedType.PerTestSession)]
 public class OutstandingCheckUnchangedTests
 {
     private const int MaxOutStandingMessages = 5;
@@ -66,7 +66,7 @@ public class OutstandingCheckUnchangedTests
         _logs = fixture.Logs;
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_feature_is_enabled_should_leave_the_outstanding_check_unchanged()
     {
         //Arrange
@@ -78,21 +78,21 @@ public class OutstandingCheckUnchangedTests
         var enabled = await PostUntilTheLimit(withTheFeature: true);
 
         //Assert
-        Assert.Equal(0, disabled.CallsBeforeTheFirstPost);
-        Assert.Equal(0, enabled.CallsBeforeTheFirstPost);
-        Assert.All(disabled.Checked, Assert.True);
-        Assert.All(enabled.Checked, Assert.True);
-        Assert.Equal(disabled.Calls.Length, enabled.Calls.Length);
+        await Assert.That(disabled.CallsBeforeTheFirstPost).IsEqualTo(0);
+        await Assert.That(enabled.CallsBeforeTheFirstPost).IsEqualTo(0);
+        foreach (var item in disabled.Checked) { await Assert.That(item).IsTrue(); }
+        foreach (var item in enabled.Checked) { await Assert.That(item).IsTrue(); }
+        await Assert.That(enabled.Calls.Length).IsEqualTo(disabled.Calls.Length);
         foreach (var (withoutTheFeature, withTheFeature) in disabled.Calls.Zip(enabled.Calls))
         {
-            Assert.Equal(withoutTheFeature.DispatchedSince, withTheFeature.DispatchedSince);
-            Assert.Equal(withoutTheFeature.MaxCount, withTheFeature.MaxCount);
-            Assert.Equal(withoutTheFeature.Args, withTheFeature.Args);
+            await Assert.That(withTheFeature.DispatchedSince).IsEqualTo(withoutTheFeature.DispatchedSince);
+            await Assert.That(withTheFeature.MaxCount).IsEqualTo(withoutTheFeature.MaxCount);
+            await Assert.That(withTheFeature.Args).IsEqualTo(withoutTheFeature.Args);
         }
-        Assert.IsType<OutboxLimitReachedException>(disabled.Thrown);
-        Assert.IsType<OutboxLimitReachedException>(enabled.Thrown);
-        Assert.True(disabled.Posts >= 7);
-        Assert.Equal(disabled.Posts, enabled.Posts);
+        await Assert.That(disabled.Thrown).IsTypeOf<OutboxLimitReachedException>();
+        await Assert.That(enabled.Thrown).IsTypeOf<OutboxLimitReachedException>();
+        await Assert.That(disabled.Posts >= 7).IsTrue();
+        await Assert.That(enabled.Posts).IsEqualTo(disabled.Posts);
     }
 
     private async Task<LimitRun> PostUntilTheLimit(bool withTheFeature)
@@ -134,7 +134,7 @@ public class OutstandingCheckUnchangedTests
         var posts = 0;
         while (thrown is null && posts < MaxPosts)
         {
-            thrown = Record.Exception(() => commandProcessor.Post(new MyCommand()));
+            thrown = TestExceptionRecorder.Capture(() => commandProcessor.Post(new MyCommand()));
             posts++;
             if (thrown is null)
                 checkedInTime.Add(SpinWait.SpinUntil(

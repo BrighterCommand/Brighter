@@ -24,14 +24,14 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using Paramore.Brighter.Observability;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.InMemory.Tests.Confirmation;
 
 public class PublishFailurePredicateTests
 {
-    [Fact]
-    public void When_publish_failure_predicate_returns_true_should_raise_failure()
+    [Test]
+    public async Task When_publish_failure_predicate_returns_true_should_raise_failure()
     {
         // Arrange
         const string topic = "test_topic";
@@ -52,15 +52,15 @@ public class PublishFailurePredicateTests
         producer.Send(message);
 
         // Assert — message NOT written to the bus; failure confirmation carries id and wire topic
-        Assert.Empty(bus.Stream(new RoutingKey(topic)));
-        Assert.Single(confirmations);
-        Assert.False(confirmations[0].Success);
-        Assert.Equal(messageId, confirmations[0].MessageId);
-        Assert.Equal(new RoutingKey(topic), confirmations[0].Topic);
+        await Assert.That(bus.Stream(new RoutingKey(topic))).IsEmpty();
+        await Assert.That(confirmations).HasSingleItem();
+        await Assert.That(confirmations[0].Success).IsFalse();
+        await Assert.That(confirmations[0].MessageId).IsEqualTo(messageId);
+        await Assert.That(confirmations[0].Topic).IsEqualTo(new RoutingKey(topic));
     }
 
-    [Fact]
-    public void When_publish_failure_predicate_is_null_should_succeed()
+    [Test]
+    public async Task When_publish_failure_predicate_is_null_should_succeed()
     {
         // Arrange — default predicate is null (never fail)
         const string topic = "test_topic_null";
@@ -78,13 +78,13 @@ public class PublishFailurePredicateTests
         producer.Send(message);
 
         // Assert — null predicate behaves as success
-        Assert.Single(bus.Stream(new RoutingKey(topic)));
-        Assert.Single(confirmations);
-        Assert.True(confirmations[0].Success);
+        await Assert.That(bus.Stream(new RoutingKey(topic))).HasSingleItem();
+        await Assert.That(confirmations).HasSingleItem();
+        await Assert.That(confirmations[0].Success).IsTrue();
     }
 
-    [Fact]
-    public void When_publish_failure_predicate_returns_false_should_succeed()
+    [Test]
+    public async Task When_publish_failure_predicate_returns_false_should_succeed()
     {
         // Arrange — predicate explicitly passes the message through
         const string topic = "test_topic_false";
@@ -105,8 +105,8 @@ public class PublishFailurePredicateTests
         producer.Send(message);
 
         // Assert — false-returning predicate behaves as success
-        Assert.Single(bus.Stream(new RoutingKey(topic)));
-        Assert.Single(confirmations);
-        Assert.True(confirmations[0].Success);
+        await Assert.That(bus.Stream(new RoutingKey(topic))).HasSingleItem();
+        await Assert.That(confirmations).HasSingleItem();
+        await Assert.That(confirmations[0].Success).IsTrue();
     }
 }

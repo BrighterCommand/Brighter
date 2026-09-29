@@ -34,7 +34,6 @@ using Paramore.Brighter.Extensions;
 using Polly.Registry;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Confirmation
 {
@@ -79,7 +78,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             new MessageHeader(new Id(Guid.NewGuid().ToString()), _topic, MessageType.MT_EVENT),
             new MessageBody("test"));
 
-        [Fact]
+        [Test]
         public async Task When_concurrent_same_topic_confirmations_fail_should_not_lose_trips()
         {
             using var context = TestCorrelator.CreateContext();
@@ -96,9 +95,9 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 .Where(e => e.Level == LogEventLevel.Warning)
                 .Where(e => e.MessageTemplate.Text == "Publish confirmation failed for message Id:{Id} on topic {Topic}")
                 .ToList();
-            Assert.Equal(ConcurrentFailures, warnings.Count);
+            await Assert.That(warnings.Count).IsEqualTo(ConcurrentFailures);
 
-            Assert.Contains(_topic, _circuitBreaker.TrippedTopics);
+            await Assert.That(_circuitBreaker.TrippedTopics).Contains(_topic);
         }
     }
 }

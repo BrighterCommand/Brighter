@@ -30,12 +30,11 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDB.Tests.Outbox.TopicCounting;
 
-[Trait("Category", "MongoDB")]
-[Collection("MongoDbOutbox")]
+[Property("Category", "MongoDB")]
+[NotInParallel("MongoDbOutbox")]
 public class TopicCountingOutboxTests : TopicCountingOutboxBaseTests<global::MongoDB.Driver.IClientSessionHandle>
 {
     private readonly Paramore.Brighter.MongoDb.Tests.Outbox.MongoDbOutboxProvider _outboxProvider = new();
@@ -48,5 +47,4 @@ public class TopicCountingOutboxTests : TopicCountingOutboxBaseTests<global::Mon
     protected override void DeleteStore() => _outboxProvider.DeleteStore([]);
 
     protected override Task AddMessageWithAgeAsync(Message message, TimeSpan age) =>
-        _outboxProvider.AddMessageWithAgeAsync(message, age);
-}
+        _outboxProvider.AddMessageWithAgeAsync(message, age);}

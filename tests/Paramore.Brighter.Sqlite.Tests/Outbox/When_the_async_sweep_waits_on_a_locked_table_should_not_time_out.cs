@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -25,13 +25,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
 public class AsyncOutstandingSweepNoTimeoutTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_async_sweep_waits_on_a_locked_table_should_not_time_out()
     {
         //Arrange
@@ -41,15 +40,15 @@ public class AsyncOutstandingSweepNoTimeoutTests
 
         //Act
         IEnumerable<Message> messages = null;
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             messages = await locked.Outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext());
         });
         stopwatch.Stop();
 
         //Assert
-        Assert.Null(exception);
-        Assert.Single(messages);
-        Assert.True(stopwatch.Elapsed >= TimeSpan.FromSeconds(16), $"The sweep returned after {stopwatch.Elapsed}, before the lock was released");
+        await Assert.That(exception).IsNull();
+        await Assert.That(messages).HasSingleItem();
+        await Assert.That(stopwatch.Elapsed >= TimeSpan.FromSeconds(16)).IsTrue().Because($"The sweep returned after {stopwatch.Elapsed}, before the lock was released");
     }
 }

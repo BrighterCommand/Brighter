@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -32,16 +32,15 @@ using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.Azure;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusScheduledRetryFailureTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(true, false)]
+    [Arguments(false, true)]
     public async Task When_retry_scheduling_fails_should_leave_the_original_unacknowledged(bool synchronous, bool cancel)
     {
         // Arrange
@@ -58,25 +57,28 @@ public class AzureServiceBusScheduledRetryFailureTests
         if (cancel) cancellation.Cancel();
 
         // Act
-        var error = await Record.ExceptionAsync(async () =>
+        var error = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             if (synchronous) syncChannel!.Requeue(message, TimeSpan.FromSeconds(5));
             else await asyncChannel!.RequeueAsync(message, TimeSpan.FromSeconds(5), cancellation.Token);
         });
 
         // Assert
-        if (cancel) Assert.IsAssignableFrom<OperationCanceledException>(error);
-        else Assert.Same(failure, Assert.IsType<ChannelFailureException>(error).InnerException);
-        Assert.Equal(0, client.Receiver.CompletionAttempts);
-        Assert.Equal("original", message.Id.Value);
-        Assert.Equal(originalBag, message.Header.Bag.ToArray());
-        Assert.All(client.Senders.Skip(1), sender => Assert.True(sender.Disposed));
-        if (cancel) Assert.Empty(client.Scheduled);
+        if (cancel) await Assert.That(error).IsAssignableTo<OperationCanceledException>();
+        else await Assert.That((await Assert.That(error).IsTypeOf<ChannelFailureException>()).InnerException).IsSameReferenceAs(failure);
+        await Assert.That(client.Receiver.CompletionAttempts).IsEqualTo(0);
+        await Assert.That(message.Id.Value).IsEqualTo("original");
+        await Assert.That(message.Header.Bag.ToArray()).IsEqualTo(originalBag);
+        foreach (var sender in client.Senders.Skip(1))
+{
+    await Assert.That(sender.Disposed).IsTrue();
+}
+        if (cancel) await Assert.That(client.Scheduled).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_acknowledgement_fails_should_reuse_the_scheduled_retry_identity(bool synchronous)
     {
         // Arrange
@@ -92,32 +94,35 @@ public class AzureServiceBusScheduledRetryFailureTests
         // Act
         for (var i = 0; i < 2; i++)
         {
-            var error = await Record.ExceptionAsync(async () =>
+            var error = await TestExceptionRecorder.CaptureAsync(async () =>
             {
                 if (synchronous) syncChannel!.Requeue(message, TimeSpan.Zero);
                 else await asyncChannel!.RequeueAsync(message, TimeSpan.Zero);
             });
-            Assert.Same(failure, error);
+            await Assert.That(error).IsSameReferenceAs(failure);
         }
 
         // Assert
-        Assert.Equal(2, client.Receiver.CompletionAttempts);
-        Assert.Equal(2, client.Scheduled.Count);
-        Assert.All(client.Scheduled, scheduled =>
-        {
-            Assert.Equal("retry-queue", scheduled.Queue);
-            Assert.NotEqual("original", scheduled.Message.MessageId);
-            Assert.Equal("original", scheduled.Message.ApplicationProperties[Message.OriginalMessageIdHeaderName]);
-            Assert.Equal(new byte[] { 0, 255, 128, 1 }, scheduled.Message.Body.ToArray());
-        });
-        Assert.Equal(client.Scheduled[0].Message.MessageId, client.Scheduled[1].Message.MessageId);
-        Assert.All(client.Senders.Skip(1), sender => Assert.True(sender.Disposed));
-        Assert.Equal("original", message.Id.Value);
+        await Assert.That(client.Receiver.CompletionAttempts).IsEqualTo(2);
+        await Assert.That(client.Scheduled.Count).IsEqualTo(2);
+        foreach (var scheduled in client.Scheduled)
+{
+    await Assert.That(scheduled.Queue).IsEqualTo("retry-queue");
+    await Assert.That(scheduled.Message.MessageId).IsNotEqualTo("original");
+    await Assert.That(scheduled.Message.ApplicationProperties[Message.OriginalMessageIdHeaderName]).IsEqualTo("original");
+    await Assert.That(scheduled.Message.Body.ToArray()).IsEqualTo(new byte[] { 0, 255, 128, 1 });
+}
+        await Assert.That(client.Scheduled[1].Message.MessageId).IsEqualTo(client.Scheduled[0].Message.MessageId);
+        foreach (var sender in client.Senders.Skip(1))
+{
+    await Assert.That(sender.Disposed).IsTrue();
+}
+        await Assert.That(message.Id.Value).IsEqualTo("original");
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_selecting_a_retry_scheduler_should_use_its_configured_broker(bool useGlobalScheduler)
     {
         // Arrange
@@ -129,14 +134,14 @@ public class AzureServiceBusScheduledRetryFailureTests
         message.Header.UpdateHandledCount();
 
         // Act
-        Assert.True(await channel.RequeueAsync(message, TimeSpan.FromSeconds(5)));
+        await Assert.That(await channel.RequeueAsync(message, TimeSpan.FromSeconds(5))).IsTrue();
 
         // Assert
         var selected = useGlobalScheduler ? remote : local;
         var unselected = useGlobalScheduler ? local : remote;
-        Assert.Equal("retry-queue", Assert.Single(selected.Scheduled).Queue);
-        Assert.Empty(unselected.Scheduled);
-        Assert.Equal(1, local.Receiver.CompletionAttempts);
+        await Assert.That((await Assert.That(selected.Scheduled).HasSingleItem()).Queue).IsEqualTo("retry-queue");
+        await Assert.That(unselected.Scheduled).IsEmpty();
+        await Assert.That(local.Receiver.CompletionAttempts).IsEqualTo(1);
     }
 
     private static (InMemoryRetryServiceBusClient, AzureServiceBusChannelFactory, AzureServiceBusSubscription) Create(bool synchronous, bool useGlobalScheduler = false)

@@ -31,7 +31,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
@@ -55,8 +55,8 @@ public class BeginSpanMetricsTests : IDisposable
         _processor = new BrighterMetricsFromTracesProcessor(_tracer, new DisabledDbMeter(), _messagingMeter);
     }
 
-    [Fact]
-    public void When_ending_a_message_pump_begin_span_should_not_record_a_client_operation()
+    [Test]
+    public async Task When_ending_a_message_pump_begin_span_should_not_record_a_client_operation()
     {
         //arrange
         var beginSpan = _tracer.CreateMessagePumpSpan(
@@ -70,7 +70,7 @@ public class BeginSpanMetricsTests : IDisposable
         _processor.OnEnd(beginSpan);
 
         //assert
-        Assert.Equal(0, _messagingMeter.RecordClientOperationCallCount);
+        await Assert.That(_messagingMeter.RecordClientOperationCallCount).IsEqualTo(0);
     }
 
     public void Dispose() => _traceProvider.Dispose();

@@ -27,15 +27,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Reactor;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 
 // Real-GCP only: the local Pub/Sub emulator does not reproduce this race (see #4321), so this
 // test is only meaningful against real Pub/Sub, i.e. in the gcp-ci job or locally with
 // GOOGLE_CLOUD_PROJECT + Application Default Credentials set and PUBSUB_EMULATOR_HOST unset.
-[Trait("Category", "GcpPubSubPull")]
-[Collection("Pull")]
+[Property("Category", "GcpPubSubPull")]
+[NotInParallel("Pull")]
 public class RequeueZeroDelayShortPollWindowTests : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -62,8 +61,8 @@ public class RequeueZeroDelayShortPollWindowTests : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
-    public void When_requeuing_a_message_with_zero_delay_and_polling_with_a_short_window_should_still_redeliver_promptly()
+    [Test]
+    public async Task When_requeuing_a_message_with_zero_delay_and_polling_with_a_short_window_should_still_redeliver_promptly()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -81,10 +80,10 @@ public class RequeueZeroDelayShortPollWindowTests : IDisposable
 
         // Act — receive the message and requeue it with an explicit TimeSpan.Zero
         var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         var requeued = _channel.Requeue(received, TimeSpan.Zero);
-        Assert.True(requeued);
+        await Assert.That(requeued).IsTrue();
 
         // The window opens when Requeue RETURNS. The call's own duration is a round trip to the
         // broker to issue the instruction — the cost of asking, not a delay applied to the
@@ -106,9 +105,8 @@ public class RequeueZeroDelayShortPollWindowTests : IDisposable
             }
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5),
-            $"Expected redelivery within 5 s of Requeue(M, TimeSpan.Zero) returning; elapsed: {stopwatch.Elapsed}");
-        _messageAssertion.Assert(message, redelivered);
+        await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(stopwatch.Elapsed < TimeSpan.FromSeconds(5)).IsTrue().Because($"Expected redelivery within 5 s of Requeue(M, TimeSpan.Zero) returning; elapsed: {stopwatch.Elapsed}");
+        await _messageAssertion.AssertAsync(message, redelivered);
     }
 }
