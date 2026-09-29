@@ -215,7 +215,8 @@ stream `Requeue` through a pump. A Brighter pump that requeues on a GCP Stream c
 ([#4479](https://github.com/BrighterCommand/Brighter/issues/4479); related
 [#4449](https://github.com/BrighterCommand/Brighter/issues/4449)). That is a defect in the consumer's
 settle path, not in the counter this branch rule measures. It may still block the AC-19 stream tasks
-(6.11, 6.14, and 6.16's `GCP / Stream*` rows) until it is fixed.
+that drive redelivery through a deferring pump (6.11, and 6.16's `GCP / Stream*` rows) until it is
+fixed. 6.14 redelivers by lease lapse with no pump and no `Requeue`, so it is not on that path.
 
 #### GCP stream consumer lease-lapse procedure for AC-42 (first branch only)
 
