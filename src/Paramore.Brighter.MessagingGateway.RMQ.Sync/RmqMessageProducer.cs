@@ -235,23 +235,28 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
+            try
             {
-                if (Channel != null && Channel.IsOpen && _confirmsSelected)
+                if (disposing)
                 {
-                    //In the event this fails, then consequence is not marked as sent in outbox
-                    //As we are disposing, just let that happen
-                    Channel.WaitForConfirms(TimeSpan.FromMilliseconds(_waitForConfirmsTimeOutInMilliseconds), out bool timedOut);
-                    if (timedOut)
-                        Log.FailedToAwaitPublisherConfirms(s_logger);
+                    if (Channel != null && Channel.IsOpen && _confirmsSelected)
+                    {
+                        //In the event this fails, then consequence is not marked as sent in outbox
+                        //As we are disposing, just let that happen
+                        Channel.WaitForConfirms(TimeSpan.FromMilliseconds(_waitForConfirmsTimeOutInMilliseconds), out bool timedOut);
+                        if (timedOut)
+                            Log.FailedToAwaitPublisherConfirms(s_logger);
+                    }
+
+                    // WaitForConfirms drains the broker acks; the callbacks those acks spawned (including
+                    // the awaited Outbox mark-dispatched) run on worker tasks, so wait for them too.
+                    WaitForConfirmationCallbacks();
                 }
-
-                // WaitForConfirms drains the broker acks; the callbacks those acks spawned (including
-                // the awaited Outbox mark-dispatched) run on worker tasks, so wait for them too.
-                WaitForConfirmationCallbacks();
             }
-
-            base.Dispose(disposing);
+            finally
+            {
+                base.Dispose(disposing);
+            }
         }
 
         private void OnPublishFailed(object? sender, BasicNackEventArgs e)

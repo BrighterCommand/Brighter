@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -114,14 +115,24 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         }
 
         /// <summary>
-        /// Create a Subscription.
-        /// Sync over Async but alright in the context of creating a subscription
+        /// Create a subscription, or reconcile its explicitly configured rule if it already exists.
         /// </summary>
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription.</param>
         /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
         public async Task CreateSubscriptionAsync(string topicName, string subscriptionName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
         {
+            var configuredRule = subscriptionConfiguration.GetRuleOptions();
+            if (await SubscriptionExistsAsync(topicName, subscriptionName))
+            {
+                if (configuredRule is not null)
+                {
+                    await EnsureRuleAsync(topicName, subscriptionName, configuredRule);
+                }
+
+                return;
+            }
+
             Log.CreatingSubscriptionForTopic(s_logger, subscriptionName, topicName);
 
             if (!await TopicExistsAsync(topicName))
@@ -139,12 +150,18 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 RequiresSession = subscriptionConfiguration.RequireSession
             };
 
-            var ruleOptions = string.IsNullOrEmpty(subscriptionConfiguration.SqlFilter)
-                ? new CreateRuleOptions() : new CreateRuleOptions("sqlFilter",new SqlRuleFilter(subscriptionConfiguration.SqlFilter));
+            var ruleOptions = configuredRule ?? new CreateRuleOptions();
 
             try
             {
                 await _administrationClient.CreateSubscriptionAsync(subscriptionOptions, ruleOptions);
+            }
+            catch (ServiceBusException e) when (e.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+            {
+                if (configuredRule is not null)
+                {
+                    await EnsureRuleAsync(topicName, subscriptionName, configuredRule);
+                }
             }
             catch (Exception e)
             {
@@ -154,7 +171,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             Log.SubscriptionForTopicCreated(s_logger, subscriptionName, topicName);
         }
-
 
         /// <summary>
         /// Create a Topic
@@ -335,6 +351,45 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             return result;
         }
         
+        private async Task EnsureRuleAsync(string topicName, string subscriptionName, CreateRuleOptions options)
+        {
+            RuleProperties rule;
+            try
+            {
+                rule = (await _administrationClient.GetRuleAsync(topicName, subscriptionName, options.Name)).Value;
+            }
+            catch (ServiceBusException e) when (e.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
+            {
+                try
+                {
+                    rule = (await _administrationClient.CreateRuleAsync(topicName, subscriptionName, options)).Value;
+                }
+                catch (ServiceBusException conflict) when (conflict.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+                {
+                    rule = (await _administrationClient.GetRuleAsync(topicName, subscriptionName, options.Name)).Value;
+                }
+            }
+
+            if (!Equals(rule.Filter, options.Filter) || !Equals(rule.Action, options.Action))
+            {
+                rule.Filter = options.Filter;
+                rule.Action = options.Action;
+                await _administrationClient.UpdateRuleAsync(topicName, subscriptionName, rule);
+            }
+
+            if (options.Name != CreateRuleOptions.DefaultRuleName)
+            {
+                try
+                {
+                    await _administrationClient.DeleteRuleAsync(topicName, subscriptionName, CreateRuleOptions.DefaultRuleName);
+                }
+                catch (ServiceBusException e) when (e.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
+                {
+                    // Another consumer may already have removed the default rule.
+                }
+            }
+        }
+
         private void Initialise()
         {
             Log.InitialisingNewManagementClientWrapper(s_logger);
