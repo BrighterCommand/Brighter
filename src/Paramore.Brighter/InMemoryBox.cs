@@ -26,6 +26,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -175,28 +176,34 @@ namespace Paramore.Brighter
                 scheduler: TaskScheduler.Default);
         }
 
+        // A failed operation must not skip the others taken in the same pass, nor end the worker early:
+        // the worker only ever stops in TryTakeCleanupRequests, so no request can be stranded. The first
+        // failure is rethrown once the worker has stopped, surfacing as an unobserved task exception.
         private void RunCleanupWorker()
+        {
+            ExceptionDispatchInfo? firstFailure = null;
+
+            while (TryTakeCleanupRequests(out var expiryRequestedAt, out var compactionRequested))
+            {
+                if (expiryRequestedAt.HasValue)
+                    TryRunCleanup(() => RemoveExpiredMessages(expiryRequestedAt.Value), ref firstFailure);
+
+                if (compactionRequested.HasValue)
+                    TryRunCleanup(() => CompactIfStillOverLimit(compactionRequested.Value), ref firstFailure);
+            }
+
+            firstFailure?.Throw();
+        }
+
+        private static void TryRunCleanup(Action cleanup, ref ExceptionDispatchInfo? firstFailure)
         {
             try
             {
-                while (TryTakeCleanupRequests(out var expiryRequestedAt, out var compactionRequested))
-                {
-                    if (expiryRequestedAt.HasValue)
-                        RemoveExpiredMessages(expiryRequestedAt.Value);
-
-                    if (compactionRequested.HasValue)
-                        CompactIfStillOverLimit(compactionRequested.Value);
-                }
+                cleanup();
             }
-            catch
+            catch (Exception exception)
             {
-                //let the next request start a new worker
-                lock (_cleanupStateLock)
-                {
-                    _cleanupWorkerRunning = false;
-                }
-
-                throw;
+                firstFailure ??= ExceptionDispatchInfo.Capture(exception);
             }
         }
 
