@@ -28,7 +28,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
+
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
@@ -39,8 +39,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 /// has to ride it out instead — but only within the caller's timeout, and only while the caller's
 /// budget lasts, so a genuine outage is still reported as the exception rather than as a bare MT_NONE.
 /// </summary>
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Property("Category", "Kafka")]
+[System.Obsolete]
 public class RetryableChannelTransientFailureTests
 {
     private static readonly TimeSpan s_failureDelay = TimeSpan.FromMilliseconds(250);
@@ -49,8 +49,8 @@ public class RetryableChannelTransientFailureTests
         new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("gen.test"), MessageType.MT_EVENT),
         new MessageBody("delivered after the topic propagated"));
 
-    [Fact]
-    public void When_the_inner_channel_throws_a_transient_channel_failure_should_retry_within_the_remaining_timeout()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_inner_channel_throws_a_transient_channel_failure_should_retry_within_the_remaining_timeout()
     {
         //Arrange - the first receive fails, taking 250ms of the caller's 1s budget, the second delivers
         var inner = new FlakyChannelSync(failures: 1, s_failureDelay, _delivered);
@@ -60,13 +60,12 @@ public class RetryableChannelTransientFailureTests
         var received = channel.Receive(TimeSpan.FromSeconds(1));
 
         //Assert - the message is ridden out to, and the retry drew from what was left of the budget
-        Assert.Equal(_delivered.Id, received.Id);
-        Assert.Equal(2, inner.ReceiveTimeouts.Count);
-        Assert.True(inner.ReceiveTimeouts[1] < inner.ReceiveTimeouts[0],
-            $"the retry asked for {inner.ReceiveTimeouts[1]}, which must be less than the original {inner.ReceiveTimeouts[0]}");
+        await Assert.That(received.Id).IsEqualTo(_delivered.Id);
+        await Assert.That(inner.ReceiveTimeouts.Count).IsEqualTo(2);
+        await Assert.That(inner.ReceiveTimeouts[1] < inner.ReceiveTimeouts[0]).IsTrue().Because($"the retry asked for {inner.ReceiveTimeouts[1]}, which must be less than the original {inner.ReceiveTimeouts[0]}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_inner_channel_throws_a_transient_channel_failure_should_retry_within_the_remaining_timeout_async()
     {
         //Arrange - the first receive fails, taking 250ms of the caller's 1s budget, the second delivers
@@ -77,14 +76,13 @@ public class RetryableChannelTransientFailureTests
         var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(1));
 
         //Assert - the message is ridden out to, and the retry drew from what was left of the budget
-        Assert.Equal(_delivered.Id, received.Id);
-        Assert.Equal(2, inner.ReceiveTimeouts.Count);
-        Assert.True(inner.ReceiveTimeouts[1] < inner.ReceiveTimeouts[0],
-            $"the retry asked for {inner.ReceiveTimeouts[1]}, which must be less than the original {inner.ReceiveTimeouts[0]}");
+        await Assert.That(received.Id).IsEqualTo(_delivered.Id);
+        await Assert.That(inner.ReceiveTimeouts.Count).IsEqualTo(2);
+        await Assert.That(inner.ReceiveTimeouts[1] < inner.ReceiveTimeouts[0]).IsTrue().Because($"the retry asked for {inner.ReceiveTimeouts[1]}, which must be less than the original {inner.ReceiveTimeouts[0]}");
     }
 
-    [Fact]
-    public void When_the_channel_failure_outlasts_the_timeout_should_rethrow_rather_than_report_no_message()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_channel_failure_outlasts_the_timeout_should_rethrow_rather_than_report_no_message()
     {
         //Arrange - every receive fails, each taking 250ms of a 300ms budget
         var inner = new FlakyChannelSync(failures: int.MaxValue, s_failureDelay, _delivered);
@@ -92,15 +90,22 @@ public class RetryableChannelTransientFailureTests
         var stopwatch = Stopwatch.StartNew();
 
         //Act
-        var exception = Record.Exception(() => channel.Receive(TimeSpan.FromMilliseconds(300)));
+        Exception? exception = null;
+        try
+        {
+            channel.Receive(TimeSpan.FromMilliseconds(300));
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert - a real outage surfaces as the exception, and the retrying stops with the budget
-        Assert.IsType<ChannelFailureException>(exception);
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2),
-            $"retrying should have stopped with the budget, but took {stopwatch.Elapsed}");
+        await Assert.That(exception).IsTypeOf<ChannelFailureException>();
+        await Assert.That(stopwatch.Elapsed < TimeSpan.FromSeconds(2)).IsTrue().Because($"retrying should have stopped with the budget, but took {stopwatch.Elapsed}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_channel_failure_outlasts_the_timeout_should_rethrow_rather_than_report_no_message_async()
     {
         //Arrange - every receive fails, each taking 250ms of a 300ms budget
@@ -109,29 +114,36 @@ public class RetryableChannelTransientFailureTests
         var stopwatch = Stopwatch.StartNew();
 
         //Act
-        var exception = await Record.ExceptionAsync(() => channel.ReceiveAsync(TimeSpan.FromMilliseconds(300)));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => channel.ReceiveAsync(TimeSpan.FromMilliseconds(300)));
 
         //Assert - a real outage surfaces as the exception, and the retrying stops with the budget
-        Assert.IsType<ChannelFailureException>(exception);
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2),
-            $"retrying should have stopped with the budget, but took {stopwatch.Elapsed}");
+        await Assert.That(exception).IsTypeOf<ChannelFailureException>();
+        await Assert.That(stopwatch.Elapsed < TimeSpan.FromSeconds(2)).IsTrue().Because($"retrying should have stopped with the budget, but took {stopwatch.Elapsed}");
     }
 
-    [Fact]
-    public void When_a_channel_failure_is_followed_only_by_empty_receives_should_rethrow_rather_than_report_no_message()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_channel_failure_is_followed_only_by_empty_receives_should_rethrow_rather_than_report_no_message()
     {
         //Arrange - one failure, then a topic that stays silent for the rest of the 400ms budget
         var inner = new FlakyChannelSync(failures: 1, TimeSpan.FromMilliseconds(100), Message.Empty);
         var channel = new RetryableChannelSync(inner);
 
         //Act
-        var exception = Record.Exception(() => channel.Receive(TimeSpan.FromMilliseconds(400)));
+        Exception? exception = null;
+        try
+        {
+            channel.Receive(TimeSpan.FromMilliseconds(400));
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert - the failure is only swallowed when a message actually arrives, and none did
-        Assert.IsType<ChannelFailureException>(exception);
+        await Assert.That(exception).IsTypeOf<ChannelFailureException>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_channel_failure_is_followed_only_by_empty_receives_should_rethrow_rather_than_report_no_message_async()
     {
         //Arrange - one failure, then a topic that stays silent for the rest of the 400ms budget
@@ -139,10 +151,10 @@ public class RetryableChannelTransientFailureTests
         var channel = new RetryableChannelAsync(inner);
 
         //Act
-        var exception = await Record.ExceptionAsync(() => channel.ReceiveAsync(TimeSpan.FromMilliseconds(400)));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => channel.ReceiveAsync(TimeSpan.FromMilliseconds(400)));
 
         //Assert - the failure is only swallowed when a message actually arrives, and none did
-        Assert.IsType<ChannelFailureException>(exception);
+        await Assert.That(exception).IsTypeOf<ChannelFailureException>();
     }
 
     /// <summary>

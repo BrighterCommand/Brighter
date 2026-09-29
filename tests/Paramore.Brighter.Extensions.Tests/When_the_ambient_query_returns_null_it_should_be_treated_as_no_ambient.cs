@@ -27,7 +27,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -39,11 +39,11 @@ namespace Paramore.Brighter.Extensions.Tests;
 // left on the default affinity (never opting in to joining an ambient scope) must record no warning at
 // all for that same provider type. Without that second host, an implementation that warns on every ask a
 // provider fails to answer - opted in or not - would pass this test for the wrong reason.
-[Collection(LoggerCaptureCollection.NAME)]
+[System.Obsolete]
 public class NullAmbientQueryDiagnosticTests
 {
-    [Fact]
-    public void When_the_ambient_query_returns_null_it_should_be_treated_as_no_ambient()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_ambient_query_returns_null_it_should_be_treated_as_no_ambient()
     {
         // Arrange - a JoinAmbient host whose registered scope provider never offers an ambient
         var recorder = new HandlerMarkerRecorder();
@@ -68,21 +68,21 @@ public class NullAmbientQueryDiagnosticTests
 
         // Assert - both Sends succeeded exactly as the unregistered case would: two distinct dependencies,
         // each already disposed by the time its own Send returned
-        Assert.Equal(2, recorder.Markers.Count);
-        Assert.True(recorder.Markers[0].IsDisposed);
-        Assert.True(recorder.Markers[1].IsDisposed);
-        Assert.NotSame(recorder.Markers[0], recorder.Markers[1]);
+        await Assert.That(recorder.Markers.Count).IsEqualTo(2);
+        await Assert.That(recorder.Markers[0].IsDisposed).IsTrue();
+        await Assert.That(recorder.Markers[1].IsDisposed).IsTrue();
+        await Assert.That(recorder.Markers[1]).IsNotSameReferenceAs(recorder.Markers[0]);
 
         // Assert - exactly one warning across both Sends, naming the no-ambient-offered condition and the
         // provider's own implementation type
         var warnings = capturingProvider.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        var warning = Assert.Single(warnings);
-        Assert.Contains("NoAmbientOffered", warning.Message);
-        Assert.Contains(nameof(RecordingScopeProvider), warning.Message);
+        var warning = await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains("NoAmbientOffered");
+        await Assert.That(warning.Message).Contains(nameof(RecordingScopeProvider));
     }
 
-    [Fact]
-    public void When_the_same_provider_type_is_registered_under_AlwaysNew_it_should_not_warn()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_same_provider_type_is_registered_under_AlwaysNew_it_should_not_warn()
     {
         // Arrange - a fresh container of the same shape and the same provider type, but this host never
         // opts in to joining an ambient scope, so its affinity stays the default, AlwaysNew
@@ -106,6 +106,6 @@ public class NullAmbientQueryDiagnosticTests
         commandProcessor.Send(new ScopedHandlerCommand());
 
         // Assert - no warning at all: an AlwaysNew ask returning nothing is ordinary, not diagnosable
-        Assert.Empty(capturingProvider.Entries.Where(e => e.Level == LogLevel.Warning));
+        await Assert.That(capturingProvider.Entries.Where(e => e.Level == LogLevel.Warning)).IsEmpty();
     }
 }

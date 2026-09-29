@@ -1,17 +1,14 @@
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -32,7 +29,7 @@ using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
@@ -58,8 +55,8 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _inbox.Add(_command, ContextKey, new RequestContext());
         }
 
-        [Fact]
-        public void When_inbox_handler_handles_command_should_add_telemetry_events()
+        [Test]
+        public async System.Threading.Tasks.Task When_inbox_handler_handles_command_should_add_telemetry_events()
         {
             //Arrange — first time the command is seen, so it is added to the inbox
             using var span = new Activity("pipeline").Start();
@@ -72,12 +69,12 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             //Assert — an Add telemetry event is added to the pipeline span carrying the request id
             var addEvent = span.Events.SingleOrDefault(e => e.Name == AddEventName);
-            Assert.Equal(AddEventName, addEvent.Name);
+            await Assert.That(addEvent.Name).IsEqualTo(AddEventName);
             var tags = addEvent.Tags.ToDictionary(t => t.Key, t => t.Value);
-            Assert.Equal(_command.Id.Value, tags[BrighterSemanticConventions.RequestId]);
+            await Assert.That(tags[BrighterSemanticConventions.RequestId]).IsEqualTo(_command.Id.Value);
         }
 
-        [Fact]
+        [Test]
         public async Task When_inbox_handler_handles_command_async_should_add_add_telemetry_event()
         {
             //Arrange — first time the command is seen
@@ -91,11 +88,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             //Assert
             var addEvent = span.Events.SingleOrDefault(e => e.Name == AddEventName);
-            Assert.Equal(AddEventName, addEvent.Name);
+            await Assert.That(addEvent.Name).IsEqualTo(AddEventName);
         }
 
-        [Fact]
-        public void When_duplicate_with_throw_should_add_throw_telemetry_event()
+        [Test]
+        public async System.Threading.Tasks.Task When_duplicate_with_throw_should_add_throw_telemetry_event()
         {
             //Arrange — the command has already been seen and the action is Throw
             SeedAsAlreadySeen();
@@ -105,16 +102,16 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             handler.Context = new RequestContext { Span = span };
 
             //Act — the duplicate throws, but the telemetry event must be written first
-            Assert.Throws<OnceOnlyException>(() => handler.Handle(_command));
+            await Assert.That(() => handler.Handle(_command)).ThrowsExactly<OnceOnlyException>();
 
             //Assert
             var throwEvent = span.Events.SingleOrDefault(e => e.Name == ThrowEventName);
-            Assert.Equal(ThrowEventName, throwEvent.Name);
+            await Assert.That(throwEvent.Name).IsEqualTo(ThrowEventName);
             var tags = throwEvent.Tags.ToDictionary(t => t.Key, t => t.Value);
-            Assert.Equal(_command.Id.Value, tags[BrighterSemanticConventions.RequestId]);
+            await Assert.That(tags[BrighterSemanticConventions.RequestId]).IsEqualTo(_command.Id.Value);
         }
 
-        [Fact]
+        [Test]
         public async Task When_duplicate_with_throw_async_should_add_throw_telemetry_event()
         {
             //Arrange
@@ -125,15 +122,15 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             handler.Context = new RequestContext { Span = span };
 
             //Act
-            await Assert.ThrowsAsync<OnceOnlyException>(() => handler.HandleAsync(_command));
+            await Assert.That(() => handler.HandleAsync(_command)).ThrowsExactly<OnceOnlyException>();
 
             //Assert
             var throwEvent = span.Events.SingleOrDefault(e => e.Name == ThrowEventName);
-            Assert.Equal(ThrowEventName, throwEvent.Name);
+            await Assert.That(throwEvent.Name).IsEqualTo(ThrowEventName);
         }
 
-        [Fact]
-        public void When_duplicate_with_warn_should_add_warn_telemetry_event()
+        [Test]
+        public async System.Threading.Tasks.Task When_duplicate_with_warn_should_add_warn_telemetry_event()
         {
             //Arrange — the command has already been seen and the action is Warn
             SeedAsAlreadySeen();
@@ -147,12 +144,12 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             //Assert
             var warnEvent = span.Events.SingleOrDefault(e => e.Name == WarnEventName);
-            Assert.Equal(WarnEventName, warnEvent.Name);
+            await Assert.That(warnEvent.Name).IsEqualTo(WarnEventName);
             var tags = warnEvent.Tags.ToDictionary(t => t.Key, t => t.Value);
-            Assert.Equal(_command.Id.Value, tags[BrighterSemanticConventions.RequestId]);
+            await Assert.That(tags[BrighterSemanticConventions.RequestId]).IsEqualTo(_command.Id.Value);
         }
 
-        [Fact]
+        [Test]
         public async Task When_duplicate_with_warn_async_should_add_warn_telemetry_event()
         {
             //Arrange
@@ -167,11 +164,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             //Assert
             var warnEvent = span.Events.SingleOrDefault(e => e.Name == WarnEventName);
-            Assert.Equal(WarnEventName, warnEvent.Name);
+            await Assert.That(warnEvent.Name).IsEqualTo(WarnEventName);
         }
 
-        [Fact]
-        public void When_handling_command_without_brighter_instrumentation_should_not_add_event()
+        [Test]
+        public async System.Threading.Tasks.Task When_handling_command_without_brighter_instrumentation_should_not_add_event()
         {
             //Arrange — a context whose instrumentation does not include the Brighter flag
             using var span = new Activity("pipeline").Start();
@@ -186,11 +183,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             handler.Handle(_command);
 
             //Assert — no telemetry event is written when Brighter instrumentation is disabled
-            Assert.DoesNotContain(span.Events, e => e.Name == AddEventName);
+            await Assert.That(span.Events).DoesNotContain(e => e.Name == AddEventName);
         }
 
-        [Fact]
-        public void When_handling_command_with_no_span_should_not_throw_and_still_add()
+        [Test]
+        public async System.Threading.Tasks.Task When_handling_command_with_no_span_should_not_throw_and_still_add()
         {
             //Arrange — no span on the context
             var handler = new UseInboxHandler<MyCommand>(_inbox);
@@ -202,7 +199,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             handler.Handle(_command);
 
             //Assert — the command was still recorded in the inbox (handling still happened)
-            Assert.True(_inbox.Exists<MyCommand>(_command.Id.Value, ContextKey, context));
+            await Assert.That(_inbox.Exists<MyCommand>(_command.Id.Value, ContextKey, context)).IsTrue();
         }
     }
 }

@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,24 +24,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
     public class AmbientScopeSourceExceptionConstructionTests
     {
-        [Fact]
-        public void When_an_ambient_scope_source_exception_is_constructed_with_no_inner_it_should_throw()
+        [Test]
+        public async System.Threading.Tasks.Task When_an_ambient_scope_source_exception_is_constructed_with_no_inner_it_should_throw()
         {
             // Arrange — no inner exception to carry
             Exception? inner = null;
 
             // Act & Assert — the constructor must guard the never-null invariant itself
-            Assert.Throws<ArgumentNullException>(() => new AmbientScopeSourceException(inner!));
+            await Assert.That(() => new AmbientScopeSourceException(inner!)).ThrowsExactly<ArgumentNullException>();
         }
 
-        [Fact]
-        public void When_an_ambient_scope_source_exception_is_constructed_with_an_inner_it_should_carry_it()
+        [Test]
+        public async System.Threading.Tasks.Task When_an_ambient_scope_source_exception_is_constructed_with_an_inner_it_should_carry_it()
         {
             // Arrange
             var providerFault = new InvalidOperationException("the provider's own fault");
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var courier = new AmbientScopeSourceException(providerFault);
 
             // Assert — the inner exception passed is the one carried, and it is never null
-            Assert.Same(providerFault, courier.InnerException);
+            await Assert.That(courier.InnerException).IsSameReferenceAs(providerFault);
         }
     }
 }

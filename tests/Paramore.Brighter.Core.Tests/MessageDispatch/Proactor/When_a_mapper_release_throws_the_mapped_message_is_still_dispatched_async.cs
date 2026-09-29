@@ -6,7 +6,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor;
 
@@ -73,14 +72,14 @@ public class AsyncMessagePumpMapperReleaseThrowsTests
         channel.Enqueue(MessageFactory.CreateQuitMessage(_routingKey));
     }
 
-    [Fact]
-    public void When_a_mapper_release_throws_the_mapped_message_is_still_dispatched()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_mapper_release_throws_the_mapped_message_is_still_dispatched()
     {
         _messagePump.Run();
 
         //the message mapped, so it must reach the handler — not be rejected as Unacceptable because cleanup threw
-        Assert.Contains(nameof(MyEventHandlerAsync), _receivedMessages);
-        Assert.Equal(_myEvent.Id, _receivedMessages[nameof(MyEventHandlerAsync)]);
+        await Assert.That(_receivedMessages).ContainsKey(nameof(MyEventHandlerAsync));
+        await Assert.That(_receivedMessages[nameof(MyEventHandlerAsync)]).IsEqualTo(_myEvent.Id);
     }
 
     private sealed class ThrowingOnReleaseMessageMapperFactoryAsync(Func<Type, IAmAMessageMapperAsync> factoryMethod)

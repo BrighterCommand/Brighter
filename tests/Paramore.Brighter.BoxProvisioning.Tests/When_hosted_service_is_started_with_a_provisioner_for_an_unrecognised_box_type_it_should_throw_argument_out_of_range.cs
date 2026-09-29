@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -43,8 +42,7 @@ public class BoxProvisioningHostedServiceUnknownBoxTypeTests
     // mis-ordering in production. This test pins that contract using (BoxType)999 as
     // the probe — a value safely outside the declared enum range that any future
     // BoxType addition will not collide with.
-
-    [Fact]
+    [Test]
     public async Task When_hosted_service_is_started_with_a_provisioner_for_an_unrecognised_box_type_it_should_throw_argument_out_of_range()
     {
         //Arrange — drive the default arm of the new OrderingOrdinal switch with a BoxType
@@ -61,7 +59,7 @@ public class BoxProvisioningHostedServiceUnknownBoxTypeTests
         //Assert — the message names the unknown value (so the operator sees which BoxType
         //         tripped the guard) and the switch method (so the next contributor knows
         //         exactly where to add the new arm).
-        Assert.Contains("999", ex.Message, StringComparison.Ordinal);
-        Assert.Contains("OrderingOrdinal", ex.Message, StringComparison.Ordinal);
+        await Assert.That(ex.Message).Contains("999");
+        await Assert.That(ex.Message).Contains("OrderingOrdinal");
     }
 }

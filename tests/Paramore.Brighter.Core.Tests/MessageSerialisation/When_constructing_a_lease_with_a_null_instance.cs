@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -20,12 +21,21 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+
+
 #endregion
 
+
+
 using System;
-using Xunit;
+
+
+
+
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
+
+
 
 /// <summary>
 /// Regression for PR #4254 review finding 5. <see cref="Lease{T}"/> is public API on six public factory and
@@ -37,12 +47,21 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 /// constructor must reject a null instance so the invariant is enforced at the one place it can be.
 /// </summary>
 public class LeaseConstructionTests
-{
-    [Fact]
-    public void When_constructing_a_lease_with_a_null_instance_it_throws()
-    {
-        var exception = Assert.Throws<ArgumentNullException>(() => new Lease<object>(null!));
 
-        Assert.Equal("instance", exception.ParamName);
+{
+
+    [Test]
+
+    public async System.Threading.Tasks.Task When_constructing_a_lease_with_a_null_instance_it_throws()
+
+    {
+
+        var exception = await Assert.That(() => new Lease<object>(null!)).ThrowsExactly<ArgumentNullException>();
+
+
+
+        await Assert.That(exception.ParamName).IsEqualTo("instance");
+
     }
+
 }

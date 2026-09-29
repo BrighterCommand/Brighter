@@ -28,21 +28,23 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.Core.Tests.Monitoring;
 
-[Trait("Category", "Monitoring")]
+[Category("Monitoring")]
 public class MonitorEventMessageMapperAsyncTests
 {
-    [Theory]
-    [InlineData("monitoring.events")]
-    [InlineData(null)]
+    [Test]
+    [Arguments("monitoring.events")]
+    [Arguments(null)]
     public async Task When_mapping_monitor_events_async_should_preserve_the_sync_message_format(string? topic)
     {
         //Arrange
         var mapper = new MonitorEventMessageMapper();
-        var asyncMapper = Assert.IsAssignableFrom<IAmAMessageMapperAsync<MonitorEvent>>(mapper);
+        await Assert.That(mapper).IsAssignableTo<IAmAMessageMapperAsync<MonitorEvent>>();
+        var asyncMapper = (IAmAMessageMapperAsync<MonitorEvent>)mapper;
         var monitorEvent = new MonitorEvent("UnitTests", MonitorEventType.EnterHandler,
             "TestHandler", "TestHandler, TestAssembly", "{\"Value\":\"Hello\"}", DateTime.UtcNow, 34);
         var publication = new Publication { Topic = topic is null ? null : new RoutingKey(topic) };
@@ -53,17 +55,17 @@ public class MonitorEventMessageMapperAsyncTests
         var restored = await asyncMapper.MapToRequestAsync(message);
 
         //Assert
-        Assert.Equal(syncMessage.Header.MessageId, message.Header.MessageId);
-        Assert.Equal(syncMessage.Header.Topic, message.Header.Topic);
-        Assert.Equal(syncMessage.Body.Value, message.Body.Value);
-        Assert.Equal(monitorEvent.Id, restored.Id);
-        Assert.Equal(monitorEvent.InstanceName, restored.InstanceName);
-        Assert.Equal(monitorEvent.EventType, restored.EventType);
-        Assert.Equal(monitorEvent.HandlerName, restored.HandlerName);
-        Assert.Equal(monitorEvent.HandlerFullAssemblyName, restored.HandlerFullAssemblyName);
-        Assert.Equal(monitorEvent.RequestBody, restored.RequestBody);
-        Assert.Equal(monitorEvent.EventTime, restored.EventTime);
-        Assert.Equal(monitorEvent.TimeElapsedMs, restored.TimeElapsedMs);
-        Assert.Null(restored.Exception);
+        await Assert.That(message.Header.MessageId).IsEqualTo(syncMessage.Header.MessageId);
+        await Assert.That(message.Header.Topic).IsEqualTo(syncMessage.Header.Topic);
+        await Assert.That(message.Body.Value).IsEqualTo(syncMessage.Body.Value);
+        await Assert.That(restored.Id).IsEqualTo(monitorEvent.Id);
+        await Assert.That(restored.InstanceName).IsEqualTo(monitorEvent.InstanceName);
+        await Assert.That(restored.EventType).IsEqualTo(monitorEvent.EventType);
+        await Assert.That(restored.HandlerName).IsEqualTo(monitorEvent.HandlerName);
+        await Assert.That(restored.HandlerFullAssemblyName).IsEqualTo(monitorEvent.HandlerFullAssemblyName);
+        await Assert.That(restored.RequestBody).IsEqualTo(monitorEvent.RequestBody);
+        await Assert.That(restored.EventTime).IsEqualTo(monitorEvent.EventTime);
+        await Assert.That(restored.TimeElapsedMs).IsEqualTo(monitorEvent.TimeElapsedMs);
+        await Assert.That(restored.Exception).IsNull();
     }
 }

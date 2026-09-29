@@ -28,7 +28,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 /// claim mean something — the same code path, one error that must stay raw and one that must be
 /// wrapped. Without the second, a gateway that had stopped wrapping anything would pass.
 /// </summary>
-[Collection("MsSqlQueueProvisioning")]
+[NotInParallel]
 public class MsSqlQueueProvisioningTransientTests : IDisposable
 {
     private readonly string _queueTable = MsSqlQueueProvisioningCreateTests.UniqueQueueTableName();
@@ -52,8 +52,8 @@ public class MsSqlQueueProvisioningTransientTests : IDisposable
     public MsSqlQueueProvisioningTransientTests() =>
         Configuration.EnsureDatabaseExists(Configuration.DefaultConnectingString);
 
-    [Fact]
-    public void When_provisioning_hits_a_transient_failure_should_leave_it_as_the_provider_threw_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_provisioning_hits_a_transient_failure_should_leave_it_as_the_provider_threw_it()
     {
         //Arrange -- a timeout provoked by a lock rather than by a clock, so this is deterministic
         //rather than a race the test hopes to win. The queue table exists but has no topic index,
@@ -68,15 +68,23 @@ public class MsSqlQueueProvisioningTransientTests : IDisposable
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
 
         //Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(Subscription()));
+        Exception? exception = null;
+        try
+        {
+            channelFactory.CreateSyncChannel(Subscription());
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert -- raw, and specifically not the ConfigurationException a permission denial gets.
-        var sqlException = Assert.IsType<SqlException>(exception);
-        Assert.Equal(-2, sqlException.Number);
+        var sqlException = await Assert.That(exception).IsTypeOf<SqlException>();
+        await Assert.That(sqlException.Number).IsEqualTo(-2);
     }
 
-    [Fact]
-    public void When_provisioning_hits_a_permission_failure_should_still_wrap_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_provisioning_hits_a_permission_failure_should_still_wrap_it()
     {
         //Arrange -- the control, and the reason the fact above is not vacuous: an error that is not
         //transient, on the same code path, must still arrive as a ConfigurationException. A gateway
@@ -92,10 +100,18 @@ public class MsSqlQueueProvisioningTransientTests : IDisposable
         try
         {
             //Act
-            var exception = Record.Exception(() => channelFactory.CreateSyncChannel(Subscription()));
+            Exception? exception = null;
+            try
+            {
+                channelFactory.CreateSyncChannel(Subscription());
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
 
             //Assert
-            Assert.IsType<ConfigurationException>(exception);
+            await Assert.That(exception).IsTypeOf<ConfigurationException>();
         }
         finally
         {
@@ -103,8 +119,8 @@ public class MsSqlQueueProvisioningTransientTests : IDisposable
         }
     }
 
-    [Fact]
-    public void When_the_connect_itself_is_transient_should_leave_it_as_the_provider_threw_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_connect_itself_is_transient_should_leave_it_as_the_provider_threw_it()
     {
         //Arrange -- the same rule on the other path, and this is the path that matters most: of the
         //codes in the transient set, the majority are raised during login and can never come out of
@@ -127,15 +143,23 @@ public class MsSqlQueueProvisioningTransientTests : IDisposable
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
 
         //Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(Subscription()));
+        Exception? exception = null;
+        try
+        {
+            channelFactory.CreateSyncChannel(Subscription());
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        var sqlException = Assert.IsType<SqlException>(exception);
-        Assert.Equal(-2, sqlException.Number);
+        var sqlException = await Assert.That(exception).IsTypeOf<SqlException>();
+        await Assert.That(sqlException.Number).IsEqualTo(-2);
     }
 
-    [Fact]
-    public void When_the_connect_fails_for_a_reason_that_will_not_pass_should_wrap_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_connect_fails_for_a_reason_that_will_not_pass_should_wrap_it()
     {
         //Arrange -- the control for the fact above, and the reason 4060, 40615 and 11001 are
         //deliberately absent from the transient set: a server that is not there at all is the
@@ -146,11 +170,19 @@ public class MsSqlQueueProvisioningTransientTests : IDisposable
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
 
         //Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(Subscription()));
+        Exception? exception = null;
+        try
+        {
+            channelFactory.CreateSyncChannel(Subscription());
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        var configurationException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains(_queueTable, configurationException.Message);
+        var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configurationException.Message).Contains(_queueTable);
     }
 
     private static async Task AcceptAndIgnore(TcpListener listener)

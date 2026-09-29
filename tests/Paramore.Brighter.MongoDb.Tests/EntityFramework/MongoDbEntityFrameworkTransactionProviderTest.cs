@@ -1,20 +1,20 @@
 using System;
 using System.Data.Common;
+using System.Threading;
 using FakeItEasy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using MongoDB.Driver;
 using Paramore.Brighter.MongoDb.EntityFramework;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDb.Tests.EntityFramework;
 
-[Trait("Category", "MongoDb")]
-[Trait("Feature", "EntityFramework.TransactionProvider")]
+[Category("MongoDb")]
+[Property("Feature", "EntityFramework.TransactionProvider")]
 public class MongoDbEntityFrameworkTransactionProviderTest
 {
-    [Fact]
-    public void When_Creating_Provider_With_DbContext_Should_Initialize_Correctly()
+    [Test]
+    public async Task When_Creating_Provider_With_DbContext_Should_Initialize_Correctly()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -23,11 +23,11 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         var provider = new MongoDbEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Assert
-        Assert.NotNull(provider);
+        await Assert.That(provider).IsNotNull();
     }
 
-    [Fact]
-    public void When_Getting_IsSharedConnection_Should_Return_True()
+    [Test]
+    public async Task When_Getting_IsSharedConnection_Should_Return_True()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -37,11 +37,11 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         var isShared = provider.IsSharedConnection;
 
         // Assert
-        Assert.True(isShared);
+        await Assert.That(isShared).IsTrue();
     }
 
-    [Fact]
-    public void When_HasOpenTransaction_Initially_Should_Return_False()
+    [Test]
+    public async Task When_HasOpenTransaction_Initially_Should_Return_False()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -52,11 +52,11 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         var hasOpenTransaction = provider.HasOpenTransaction;
 
         // Assert
-        Assert.False(hasOpenTransaction);
+        await Assert.That(hasOpenTransaction).IsFalse();
     }
 
-    [Fact]
-    public void When_HasOpenTransaction_With_Active_Transaction_Should_Return_True()
+    [Test]
+    public async Task When_HasOpenTransaction_With_Active_Transaction_Should_Return_True()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -68,11 +68,11 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         var hasOpenTransaction = provider.HasOpenTransaction;
 
         // Assert
-        Assert.True(hasOpenTransaction);
+        await Assert.That(hasOpenTransaction).IsTrue();
     }
 
-    [Fact]
-    public void When_Getting_Transaction_With_Non_MongoTransaction_Throws()
+    [Test]
+    public async Task When_Getting_Transaction_With_Non_MongoTransaction_Throws()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -84,12 +84,12 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         var provider = new MongoDbEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() => provider.GetTransaction());
-        Assert.Contains("not a MongoTransaction", ex.Message);
+        var ex = await Assert.That(() => provider.GetTransaction()).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(ex.Message).Contains("not a MongoTransaction");
     }
 
-    [Fact]
-    public void When_Committing_Active_Transaction_Should_Call_Commit()
+    [Test]
+    public async Task When_Committing_Active_Transaction_Should_Call_Commit()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -105,8 +105,8 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         A.CallTo(() => mockTransaction.Commit()).MustHaveHappenedOnceExactly();
     }
 
-    [Fact]
-    public void When_Committing_Null_Transaction_Does_Not_Throw()
+    [Test]
+    public async Task When_Committing_Null_Transaction_Does_Not_Throw()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -118,8 +118,8 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         provider.Commit();
     }
 
-    [Fact]
-    public void When_Rolling_Back_Active_Transaction_Should_Call_Rollback()
+    [Test]
+    public async Task When_Rolling_Back_Active_Transaction_Should_Call_Rollback()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -129,14 +129,14 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         var provider = new MongoDbEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Act
-        provider.Rollback();
+        await provider.RollbackAsync();
 
         // Assert
-        A.CallTo(() => mockTransaction.Rollback()).MustHaveHappenedOnceExactly();
+        A.CallTo(() => mockTransaction.RollbackAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
     }
 
-    [Fact]
-    public void When_Rolling_Back_Null_Transaction_Does_Not_Throw()
+    [Test]
+    public async Task When_Rolling_Back_Null_Transaction_Does_Not_Throw()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -145,11 +145,11 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         var provider = new MongoDbEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Act & Assert - Should not throw
-        provider.Rollback();
+        await provider.RollbackAsync();
     }
 
-    [Fact]
-    public void When_Closing_Active_Transaction_Should_Call_Dispose()
+    [Test]
+    public async Task When_Closing_Active_Transaction_Should_Call_Dispose()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -165,8 +165,8 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         A.CallTo(() => mockTransaction.Dispose()).MustHaveHappenedOnceExactly();
     }
 
-    [Fact]
-    public void When_Closing_Null_Transaction_Does_Not_Throw()
+    [Test]
+    public async Task When_Closing_Null_Transaction_Does_Not_Throw()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -178,8 +178,8 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         provider.Close();
     }
 
-    [Fact]
-    public void When_Committing_And_Then_Checking_HasOpenTransaction()
+    [Test]
+    public async Task When_Committing_And_Then_Checking_HasOpenTransaction()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -193,16 +193,16 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         var provider = new MongoDbEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Act
-        Assert.True(provider.HasOpenTransaction);
+        await Assert.That(provider.HasOpenTransaction).IsTrue();
         provider.Commit();
         var hasTransactionAfterCommit = provider.HasOpenTransaction;
 
         // Assert
-        Assert.False(hasTransactionAfterCommit);
+        await Assert.That(hasTransactionAfterCommit).IsFalse();
     }
 
-    [Fact]
-    public void When_Rolling_Back_And_Then_Checking_HasOpenTransaction()
+    [Test]
+    public async Task When_Rolling_Back_And_Then_Checking_HasOpenTransaction()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -215,16 +215,16 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         var provider = new MongoDbEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Act
-        Assert.True(provider.HasOpenTransaction);
-        provider.Rollback();
+        await Assert.That(provider.HasOpenTransaction).IsTrue();
+        await provider.RollbackAsync();
         var hasTransactionAfterRollback = provider.HasOpenTransaction;
 
         // Assert
-        Assert.False(hasTransactionAfterRollback);
+        await Assert.That(hasTransactionAfterRollback).IsFalse();
     }
 
-    [Fact]
-    public void When_Closing_And_Then_Checking_HasOpenTransaction()
+    [Test]
+    public async Task When_Closing_And_Then_Checking_HasOpenTransaction()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -237,16 +237,16 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         var provider = new MongoDbEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Act
-        Assert.True(provider.HasOpenTransaction);
+        await Assert.That(provider.HasOpenTransaction).IsTrue();
         provider.Close();
         var hasTransactionAfterClose = provider.HasOpenTransaction;
 
         // Assert
-        Assert.False(hasTransactionAfterClose);
+        await Assert.That(hasTransactionAfterClose).IsFalse();
     }
 
-    [Fact]
-    public void When_Commit_Called_Multiple_Times_Should_Not_Throw()
+    [Test]
+    public async Task When_Commit_Called_Multiple_Times_Should_Not_Throw()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -264,8 +264,8 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         provider.Commit(); // Second commit with null transaction - should not throw
     }
 
-    [Fact]
-    public void When_Rollback_Called_Multiple_Times_Should_Not_Throw()
+    [Test]
+    public async Task When_Rollback_Called_Multiple_Times_Should_Not_Throw()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -278,7 +278,7 @@ public class MongoDbEntityFrameworkTransactionProviderTest
         var provider = new MongoDbEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Act & Assert
-        provider.Rollback(); // First rollback
-        provider.Rollback(); // Second rollback with null transaction - should not throw
+        await provider.RollbackAsync(); // First rollback
+        await provider.RollbackAsync(); // Second rollback with null transaction - should not throw
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,7 +9,6 @@ using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessageDispatch;
 
@@ -36,7 +35,7 @@ public class DispatchBuilderTests
 
         var tracer = new BrighterTracer(TimeProvider.System);
         var instrumentationOptions = InstrumentationOptions.All;
-            
+
         var commandProcessor = CommandProcessorBuilder.StartNew()
             .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
             .DefaultResilience()
@@ -70,27 +69,27 @@ public class DispatchBuilderTests
             .ConfigureInstrumentation(tracer, instrumentationOptions);
     }
 
-    [Fact]
+    [Test]
     public async Task When_Building_A_Dispatcher()
     {
         _dispatcher = _builder.Build();
 
-        Assert.NotNull(_dispatcher);
-        Assert.NotNull(GetConnection("foo"));
-        Assert.NotNull(GetConnection("bar"));
-        Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
-            
+        await Assert.That(_dispatcher).IsNotNull();
+        await Assert.That(GetConnection("foo")).IsNotNull();
+        await Assert.That(GetConnection("bar")).IsNotNull();
+        await Assert.That(_dispatcher.State).IsEqualTo(DispatcherState.DS_AWAITING);
+
         await Task.Delay(1000);
 
         _dispatcher.Receive();
 
         await Task.Delay(1000);
 
-        Assert.Equal(DispatcherState.DS_RUNNING, _dispatcher.State);
+        await Assert.That(_dispatcher.State).IsEqualTo(DispatcherState.DS_RUNNING);
 
         await _dispatcher.End();
-            
-        Assert.Equal(DispatcherState.DS_STOPPED, _dispatcher.State);
+
+        await Assert.That(_dispatcher.State).IsEqualTo(DispatcherState.DS_STOPPED);
     }
     private Subscription GetConnection(string name)
     {

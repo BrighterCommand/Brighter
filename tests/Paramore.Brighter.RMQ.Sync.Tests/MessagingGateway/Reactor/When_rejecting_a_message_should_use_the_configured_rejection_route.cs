@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -27,15 +27,15 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
-using Xunit;
+
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[System.Obsolete]
 public class RmqInvalidMessageRoutingTests
 {
-    public static TheoryData<RejectionReason?, bool, bool, string> RoutingCases
+    public static IEnumerable<(RejectionReason?, bool, bool, string)> RoutingCases
     {
         get
         {
@@ -50,16 +50,16 @@ public class RmqInvalidMessageRoutingTests
                 (null, true, true, "dead-letter"),
                 (RejectionReason.DeliveryError, true, false, "none")
             };
-            var cases = new TheoryData<RejectionReason?, bool, bool, string>();
+            var cases = new List<(RejectionReason?, bool, bool, string)>();
             foreach (var (reason, invalid, deadLetter, destination) in reasons)
-                cases.Add(reason, invalid, deadLetter, destination);
+                cases.Add((reason, invalid, deadLetter, destination));
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(RoutingCases))]
-    public void When_rejecting_a_message_should_use_the_configured_rejection_route(RejectionReason? rejectionReason, bool hasInvalidChannel, bool hasDeadLetterQueue, string expectedDestination)
+    [Test]
+    [MethodDataSource(nameof(RoutingCases))]
+    public async System.Threading.Tasks.Task When_rejecting_a_message_should_use_the_configured_rejection_route(RejectionReason? rejectionReason, bool hasInvalidChannel, bool hasDeadLetterQueue, string expectedDestination)
     {
         //Arrange
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
@@ -110,32 +110,32 @@ public class RmqInvalidMessageRoutingTests
             consumer.Receive(TimeSpan.Zero);
             producer.Send(message);
             var received = consumer.Receive(TimeSpan.FromSeconds(10)).Single();
-            Assert.Equal(message.Id, received.Id);
+            await Assert.That(received.Id).IsEqualTo(message.Id);
 
             //Act
             var rejected = consumer.Reject(received, reason);
 
             //Assert
-            Assert.True(rejected);
-            Assert.Equal(routingKey, received.Header.Topic);
+            await Assert.That(rejected).IsTrue();
+            await Assert.That(received.Header.Topic).IsEqualTo(routingKey);
             var invalidMessage = hasInvalidChannel
                 ? invalidConsumer.Receive(expectedDestination == "invalid" ? TimeSpan.FromSeconds(10) : TimeSpan.FromMilliseconds(500)).Single()
                 : new Message();
             if (expectedDestination == "invalid")
             {
-                Assert.Equal(message.Id, invalidMessage.Id);
-                Assert.Equal(message.Body.Value, invalidMessage.Body.Value);
-                Assert.Equal(routingKey.Value, invalidMessage.Header.Bag[HeaderNames.ORIGINAL_TOPIC].ToString());
-                Assert.Equal(MessageType.MT_COMMAND.ToString(), invalidMessage.Header.Bag[HeaderNames.ORIGINAL_TYPE].ToString());
-                Assert.Equal(RejectionReason.Unacceptable.ToString(), invalidMessage.Header.Bag[HeaderNames.REJECTION_REASON].ToString());
-                Assert.Equal(reason!.Description, invalidMessage.Header.Bag[HeaderNames.REJECTION_MESSAGE].ToString());
-                Assert.True(DateTimeOffset.TryParse(invalidMessage.Header.Bag[HeaderNames.REJECTION_TIMESTAMP].ToString(), out var rejectedAt));
-                Assert.InRange(rejectedAt, DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow);
+                await Assert.That(invalidMessage.Id).IsEqualTo(message.Id);
+                await Assert.That(invalidMessage.Body.Value).IsEqualTo(message.Body.Value);
+                await Assert.That(invalidMessage.Header.Bag[HeaderNames.ORIGINAL_TOPIC].ToString()).IsEqualTo(routingKey.Value);
+                await Assert.That(invalidMessage.Header.Bag[HeaderNames.ORIGINAL_TYPE].ToString()).IsEqualTo(MessageType.MT_COMMAND.ToString());
+                await Assert.That(invalidMessage.Header.Bag[HeaderNames.REJECTION_REASON].ToString()).IsEqualTo(RejectionReason.Unacceptable.ToString());
+                await Assert.That(invalidMessage.Header.Bag[HeaderNames.REJECTION_MESSAGE].ToString()).IsEqualTo(reason!.Description);
+                await Assert.That(DateTimeOffset.TryParse(invalidMessage.Header.Bag[HeaderNames.REJECTION_TIMESTAMP].ToString(), out var rejectedAt)).IsTrue();
+                await Assert.That(rejectedAt).IsBetween(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow);
                 invalidConsumer.Acknowledge(invalidMessage);
             }
             else
             {
-                Assert.Equal(MessageType.MT_NONE, invalidMessage.Header.MessageType);
+                await Assert.That(invalidMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
             }
 
             var deadLetterMessage = hasDeadLetterQueue
@@ -143,16 +143,16 @@ public class RmqInvalidMessageRoutingTests
                 : new Message();
             if (expectedDestination == "dead-letter")
             {
-                Assert.Equal(message.Id, deadLetterMessage.Id);
-                Assert.Equal(message.Body.Value, deadLetterMessage.Body.Value);
+                await Assert.That(deadLetterMessage.Id).IsEqualTo(message.Id);
+                await Assert.That(deadLetterMessage.Body.Value).IsEqualTo(message.Body.Value);
                 deadLetterConsumer.Acknowledge(deadLetterMessage);
             }
             else
             {
-                Assert.Equal(MessageType.MT_NONE, deadLetterMessage.Header.MessageType);
+                await Assert.That(deadLetterMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
             }
             consumer.Dispose();
-            Assert.Null(administration.BasicGet(subscription.ChannelName.Value, true));
+            await Assert.That(administration.BasicGet(subscription.ChannelName.Value, true)).IsNull();
         }
         finally
         {

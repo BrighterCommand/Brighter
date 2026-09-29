@@ -22,14 +22,13 @@ THE SOFTWARE. */
 
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class When_no_scheduler_configured_should_default_to_InMemorySchedulerFactory
 {
-    [Fact]
-    public void Should_resolve_InMemorySchedulerFactory_as_default()
+    [Test]
+    public async Task Should_resolve_InMemorySchedulerFactory_as_default()
     {
         // Arrange — AddBrighter with no explicit UseScheduler or UseMessageScheduler
         var services = new ServiceCollection();
@@ -40,12 +39,12 @@ public class When_no_scheduler_configured_should_default_to_InMemorySchedulerFac
         var factory = provider.GetService<IAmAMessageSchedulerFactory>();
 
         // Assert — the default factory should be InMemorySchedulerFactory
-        Assert.NotNull(factory);
-        Assert.IsType<InMemorySchedulerFactory>(factory);
+        await Assert.That(factory).IsNotNull();
+        await Assert.That(factory).IsTypeOf<InMemorySchedulerFactory>();
     }
 
-    [Fact]
-    public void Should_resolve_IAmAMessageScheduler_from_default_factory()
+    [Test]
+    public async Task Should_resolve_IAmAMessageScheduler_from_default_factory()
     {
         // Arrange — AddBrighter with no explicit UseScheduler
         var services = new ServiceCollection();
@@ -56,12 +55,12 @@ public class When_no_scheduler_configured_should_default_to_InMemorySchedulerFac
         var scheduler = provider.GetService<IAmAMessageScheduler>();
 
         // Assert — a scheduler should be resolvable from the default factory
-        Assert.NotNull(scheduler);
-        Assert.IsAssignableFrom<IAmAMessageScheduler>(scheduler);
+        await Assert.That(scheduler).IsNotNull();
+        await Assert.That(scheduler).IsAssignableTo<IAmAMessageScheduler>();
     }
 
-    [Fact]
-    public void Should_resolve_IAmARequestSchedulerFactory_as_default()
+    [Test]
+    public async Task Should_resolve_IAmARequestSchedulerFactory_as_default()
     {
         // Arrange — AddBrighter with no explicit UseScheduler
         var services = new ServiceCollection();
@@ -72,7 +71,7 @@ public class When_no_scheduler_configured_should_default_to_InMemorySchedulerFac
         var factory = provider.GetService<IAmARequestSchedulerFactory>();
 
         // Assert — the default request scheduler factory should also be InMemorySchedulerFactory
-        Assert.NotNull(factory);
-        Assert.IsType<InMemorySchedulerFactory>(factory);
+        await Assert.That(factory).IsNotNull();
+        await Assert.That(factory).IsTypeOf<InMemorySchedulerFactory>();
     }
 }

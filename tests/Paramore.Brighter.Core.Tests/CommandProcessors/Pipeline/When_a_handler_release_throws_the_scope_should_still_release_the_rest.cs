@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,14 +27,13 @@ using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
     public class HandlerLifetimeScopePartialReleaseTests
     {
-        [Fact]
-        public void When_a_handler_release_throws_the_scope_should_still_release_the_rest()
+        [Test]
+        public async System.Threading.Tasks.Task When_a_handler_release_throws_the_scope_should_still_release_the_rest()
         {
             // Arrange — three tracked handlers, a factory whose Release throws for the first, and a
             // recording IAmAScope handle supplied by that factory's CreatePipelineScope()
@@ -58,19 +58,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             // Assert — the other two handlers were still released, both tracking lists were cleared,
             // and the handle was disposed, last, after every release
-            Assert.Contains("Released:First", recorder.Events);
-            Assert.Contains("Released:Second", recorder.Events);
-            Assert.Contains("Released:Third", recorder.Events);
-            Assert.True(scopeHandle.WasDisposed);
-            Assert.Equal(0, lifetimeScope.TrackedItemCount);
-            Assert.Equal("ScopeDisposed", recorder.Events.Last());
+            await Assert.That(recorder.Events).Contains("Released:First");
+            await Assert.That(recorder.Events).Contains("Released:Second");
+            await Assert.That(recorder.Events).Contains("Released:Third");
+            await Assert.That(scopeHandle.WasDisposed).IsTrue();
+            await Assert.That(lifetimeScope.TrackedItemCount).IsEqualTo(0);
+            await Assert.That(recorder.Events.Last()).IsEqualTo("ScopeDisposed");
 
             // exactly one Error record naming the failing release
             var errors = TestCorrelator.GetLogEventsFromCurrentContext()
                 .Where(e => e.Level == LogEventLevel.Error)
                 .ToList();
-            Assert.Single(errors);
-            Assert.Contains("First", errors[0].RenderMessage());
+            await Assert.That(errors).HasSingleItem();
+            await Assert.That(errors[0].RenderMessage()).Contains("First");
         }
     }
 }

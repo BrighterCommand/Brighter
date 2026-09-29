@@ -41,16 +41,14 @@ public static class GatewaySkipConventionAudit
     private static readonly Regex DEFERRED_PATTERN =
         new(@"^Deferred: #\d+", RegexOptions.Compiled);
 
-    // Captures the string literal after Skip = "…". Whitespace around '=' is optional, since
-    // Skip="flaky" is as valid C# as Skip = "flaky", and the capture is [^"]* so that a reasonless
-    // Skip = "" is surfaced as a violation rather than slipping past the extractor — a silent
-    // skip is forbidden, and the empty value is the most silent of all.
+    // Captures the TUnit Skip attribute reason, including an empty reason so the
+    // audit reports silent skips rather than overlooking them.
     //
     // Scope note: this audit walks the templates and the Generated/ trees only (see the class
     // remarks). Hand-written gateway tests are out of scope by design - they are not generated, so
     // a Skip on one is a maintainer's explicit choice rather than something the ledger emitted.
     private static readonly Regex SKIP_EXTRACTOR =
-        new(@"Skip\s*=\s*""([^""]*)""", RegexOptions.Compiled);
+        new(@"Skip\s*\(\s*""([^""]*)""", RegexOptions.Compiled);
 
     // Liquid template placeholder — this is template syntax, not a real Skip value.
     private const string LIQUID_SKIP_PLACEHOLDER = "{{ Skip }}";

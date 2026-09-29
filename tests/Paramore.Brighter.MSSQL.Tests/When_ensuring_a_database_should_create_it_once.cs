@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -29,18 +29,18 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Data.SqlClient;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests;
 
-[Trait("Category", "MSSQL")]
+[Property("Category", "MSSQL")]
 public class MsSqlDatabaseSetupTests : IDisposable
 {
     private readonly List<string> _databases = [];
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_ensuring_a_database_should_create_it_once(bool useAsync)
     {
         //Arrange
@@ -52,14 +52,14 @@ public class MsSqlDatabaseSetupTests : IDisposable
         await EnsureDatabaseAsync(connectionString, useAsync);
 
         //Assert
-        Assert.True(DatabaseExists(database));
+        await Assert.That(DatabaseExists(database)).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_database_creation_fails_should_retry_instead_of_remembering_success(
         bool firstAsync, bool retryAsync)
     {
@@ -68,17 +68,17 @@ public class MsSqlDatabaseSetupTests : IDisposable
         string database = NewDatabaseName();
 
         //Act
-        var firstError = await Record.ExceptionAsync(() => EnsureDatabaseAsync(invalidConnectionString, firstAsync));
-        var retryError = await Record.ExceptionAsync(() => EnsureDatabaseAsync(invalidConnectionString, retryAsync));
+        var firstError = await TestExceptionRecorder.CaptureAsync(() => EnsureDatabaseAsync(invalidConnectionString, firstAsync));
+        var retryError = await TestExceptionRecorder.CaptureAsync(() => EnsureDatabaseAsync(invalidConnectionString, retryAsync));
         await EnsureDatabaseAsync(ConnectionString(database), retryAsync);
 
         //Assert
-        Assert.IsType<SqlException>(firstError);
-        Assert.IsType<SqlException>(retryError);
-        Assert.True(DatabaseExists(database));
+        await Assert.That(firstError).IsTypeOf<SqlException>();
+        await Assert.That(retryError).IsTypeOf<SqlException>();
+        await Assert.That(DatabaseExists(database)).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_ensuring_different_databases_should_create_each_one()
     {
         //Arrange
@@ -90,11 +90,11 @@ public class MsSqlDatabaseSetupTests : IDisposable
         await Configuration.EnsureDatabaseExistsAsync(ConnectionString(second));
 
         //Assert
-        Assert.True(DatabaseExists(first));
-        Assert.True(DatabaseExists(second));
+        await Assert.That(DatabaseExists(first)).IsTrue();
+        await Assert.That(DatabaseExists(second)).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_sync_and_async_callers_create_the_same_database_should_all_succeed()
     {
         //Arrange
@@ -113,12 +113,12 @@ public class MsSqlDatabaseSetupTests : IDisposable
         await Task.WhenAll(callers);
 
         //Assert
-        Assert.True(DatabaseExists(database));
+        await Assert.That(DatabaseExists(database)).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_the_database_name_contains_quotes_or_brackets_should_use_the_literal_name(bool useAsync)
     {
         //Arrange
@@ -128,12 +128,12 @@ public class MsSqlDatabaseSetupTests : IDisposable
         await EnsureDatabaseAsync(ConnectionString(database), useAsync);
 
         //Assert
-        Assert.True(DatabaseExists(database));
+        await Assert.That(DatabaseExists(database)).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_database_setup_runs_inside_an_ambient_transaction_should_create_outside_it(bool useAsync)
     {
         //Arrange
@@ -146,7 +146,7 @@ public class MsSqlDatabaseSetupTests : IDisposable
         }
 
         //Assert
-        Assert.True(DatabaseExists(database));
+        await Assert.That(DatabaseExists(database)).IsTrue();
     }
 
     private string NewDatabaseName(string suffix = "")

@@ -1,17 +1,14 @@
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -33,7 +30,7 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
@@ -69,8 +66,8 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _timeProvider.Advance(TimeSpan.FromSeconds(10));
         }
 
-        [Fact]
-        public void When_replaying_duplicate_should_add_replay_telemetry_event_to_span()
+        [Test]
+        public async System.Threading.Tasks.Task When_replaying_duplicate_should_add_replay_telemetry_event_to_span()
         {
             //Arrange
             using var span = new Activity("pipeline").Start();
@@ -83,15 +80,15 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             //Assert — a replay telemetry event is added to the pipeline span
             var replayEvent = span.Events.SingleOrDefault(e => e.Name == ReplayEventName);
-            Assert.Equal(ReplayEventName, replayEvent.Name);
+            await Assert.That(replayEvent.Name).IsEqualTo(ReplayEventName);
 
             //Assert — the event carries the request id and the replayed causation id
             var tags = replayEvent.Tags.ToDictionary(t => t.Key, t => t.Value);
-            Assert.Equal(_command.Id.Value, tags[BrighterSemanticConventions.RequestId]);
-            Assert.Equal(CausationId, tags[BrighterSemanticConventions.CausationId]);
+            await Assert.That(tags[BrighterSemanticConventions.RequestId]).IsEqualTo(_command.Id.Value);
+            await Assert.That(tags[BrighterSemanticConventions.CausationId]).IsEqualTo(CausationId);
         }
 
-        [Fact]
+        [Test]
         public async Task When_replaying_duplicate_async_should_add_replay_telemetry_event_to_span()
         {
             //Arrange
@@ -105,16 +102,16 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             //Assert — a replay telemetry event is added to the pipeline span
             var replayEvent = span.Events.SingleOrDefault(e => e.Name == ReplayEventName);
-            Assert.Equal(ReplayEventName, replayEvent.Name);
+            await Assert.That(replayEvent.Name).IsEqualTo(ReplayEventName);
 
             //Assert — the event carries the request id and the replayed causation id
             var tags = replayEvent.Tags.ToDictionary(t => t.Key, t => t.Value);
-            Assert.Equal(_command.Id.Value, tags[BrighterSemanticConventions.RequestId]);
-            Assert.Equal(CausationId, tags[BrighterSemanticConventions.CausationId]);
+            await Assert.That(tags[BrighterSemanticConventions.RequestId]).IsEqualTo(_command.Id.Value);
+            await Assert.That(tags[BrighterSemanticConventions.CausationId]).IsEqualTo(CausationId);
         }
 
-        [Fact]
-        public void When_replaying_duplicate_with_no_causation_id_should_add_distinct_skipped_event()
+        [Test]
+        public async System.Threading.Tasks.Task When_replaying_duplicate_with_no_causation_id_should_add_distinct_skipped_event()
         {
             //Arrange — a command that has been seen but has NO causation id stored against it
             var inbox = new InMemoryInbox(_timeProvider);
@@ -131,17 +128,17 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             handler.Handle(command);
 
             //Assert — nothing was replayed, so the event is the distinct "skipped" event, not the replay event
-            Assert.DoesNotContain(span.Events, e => e.Name == ReplayEventName);
+            await Assert.That(span.Events).DoesNotContain(e => e.Name == ReplayEventName);
             var skippedEvent = span.Events.SingleOrDefault(e => e.Name == ReplaySkippedEventName);
-            Assert.Equal(ReplaySkippedEventName, skippedEvent.Name);
+            await Assert.That(skippedEvent.Name).IsEqualTo(ReplaySkippedEventName);
 
             //Assert — the event still carries the request id for correlation
             var tags = skippedEvent.Tags.ToDictionary(t => t.Key, t => t.Value);
-            Assert.Equal(command.Id.Value, tags[BrighterSemanticConventions.RequestId]);
+            await Assert.That(tags[BrighterSemanticConventions.RequestId]).IsEqualTo(command.Id.Value);
         }
 
-        [Fact]
-        public void When_replaying_duplicate_but_outbox_could_not_replay_should_add_distinct_skipped_event()
+        [Test]
+        public async System.Threading.Tasks.Task When_replaying_duplicate_but_outbox_could_not_replay_should_add_distinct_skipped_event()
         {
             //Arrange — a seen command WITH a causation id, but the outbox cannot replay it because its live
             //schema does not support causation tracking (the "inbox migrated, outbox not" mixed state).
@@ -154,16 +151,16 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             handler.Handle(_command);
 
             //Assert — nothing was actually replayed, so the event is the "skipped" event, not the replay event
-            Assert.DoesNotContain(span.Events, e => e.Name == ReplayEventName);
+            await Assert.That(span.Events).DoesNotContain(e => e.Name == ReplayEventName);
             var skippedEvent = span.Events.SingleOrDefault(e => e.Name == ReplaySkippedEventName);
-            Assert.Equal(ReplaySkippedEventName, skippedEvent.Name);
+            await Assert.That(skippedEvent.Name).IsEqualTo(ReplaySkippedEventName);
 
             //Assert — the event still carries the request id for correlation
             var tags = skippedEvent.Tags.ToDictionary(t => t.Key, t => t.Value);
-            Assert.Equal(_command.Id.Value, tags[BrighterSemanticConventions.RequestId]);
+            await Assert.That(tags[BrighterSemanticConventions.RequestId]).IsEqualTo(_command.Id.Value);
         }
 
-        [Fact]
+        [Test]
         public async Task When_replaying_duplicate_async_but_outbox_could_not_replay_should_add_distinct_skipped_event()
         {
             //Arrange — a seen command WITH a causation id, but the outbox cannot replay it (mixed-migration state)
@@ -176,17 +173,17 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             await handler.HandleAsync(_command);
 
             //Assert — nothing was actually replayed, so the event is the "skipped" event, not the replay event
-            Assert.DoesNotContain(span.Events, e => e.Name == ReplayEventName);
+            await Assert.That(span.Events).DoesNotContain(e => e.Name == ReplayEventName);
             var skippedEvent = span.Events.SingleOrDefault(e => e.Name == ReplaySkippedEventName);
-            Assert.Equal(ReplaySkippedEventName, skippedEvent.Name);
+            await Assert.That(skippedEvent.Name).IsEqualTo(ReplaySkippedEventName);
 
             //Assert — the event still carries the request id for correlation
             var tags = skippedEvent.Tags.ToDictionary(t => t.Key, t => t.Value);
-            Assert.Equal(_command.Id.Value, tags[BrighterSemanticConventions.RequestId]);
+            await Assert.That(tags[BrighterSemanticConventions.RequestId]).IsEqualTo(_command.Id.Value);
         }
 
-        [Fact]
-        public void When_replaying_duplicate_without_brighter_instrumentation_should_not_add_replay_event()
+        [Test]
+        public async System.Threading.Tasks.Task When_replaying_duplicate_without_brighter_instrumentation_should_not_add_replay_event()
         {
             //Arrange — a context whose instrumentation does not include the Brighter flag
             using var span = new Activity("pipeline").Start();
@@ -201,11 +198,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             handler.Handle(_command);
 
             //Assert — no telemetry event is written when Brighter instrumentation is disabled
-            Assert.DoesNotContain(span.Events, e => e.Name == ReplayEventName);
+            await Assert.That(span.Events).DoesNotContain(e => e.Name == ReplayEventName);
         }
 
-        [Fact]
-        public void When_replaying_duplicate_with_no_span_should_not_throw_and_still_replay()
+        [Test]
+        public async System.Threading.Tasks.Task When_replaying_duplicate_with_no_span_should_not_throw_and_still_replay()
         {
             //Arrange — no span on the context
             var handler = new UseInboxHandler<MyCommand>(_inbox, _outbox);
@@ -218,7 +215,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             //Assert — the matching causation's message is outstanding again (replay still happened)
             var outstanding = _outbox.OutstandingMessages(TimeSpan.Zero, context);
-            Assert.Single(outstanding);
+            await Assert.That(outstanding).HasSingleItem();
         }
 
         // A causation-tracking outbox whose live schema does NOT support causation tracking, so ReplayCausation

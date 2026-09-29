@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class ReportingChannelFactoryMismatchNamesSubscriptionTypeTests
 {
-    [Fact]
-    public void When_reporting_a_channel_factory_mismatch_should_name_the_subscription_type()
+    [Test]
+    public async System.Threading.Tasks.Task When_reporting_a_channel_factory_mismatch_should_name_the_subscription_type()
     {
         // Arrange — a plain subscription (no ChannelFactoryType override) handed a default
         // channel factory whose type it does not declare
@@ -48,9 +48,7 @@ public class ReportingChannelFactoryMismatchNamesSubscriptionTypeTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — the message names the subscription's own runtime type as a display name
-        var result = Assert.Single(results);
-        Assert.Contains(
-            "Paramore.Brighter.Subscription<Paramore.Brighter.Core.Tests.Validation.TestDoubles.FakeChannelFactoryRequest>",
-            result.Error!.Message);
+        var result = await Assert.That(results).HasSingleItem();
+        await Assert.That(result.Error!.Message).Contains("Paramore.Brighter.Subscription<Paramore.Brighter.Core.Tests.Validation.TestDoubles.FakeChannelFactoryRequest>");
     }
 }

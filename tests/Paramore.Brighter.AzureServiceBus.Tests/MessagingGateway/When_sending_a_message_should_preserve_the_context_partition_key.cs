@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -30,11 +31,10 @@ using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessageMappers;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusContextPartitionKeyTests
 {
     private readonly FakeServiceBusSenderWrapper _sender = new();
@@ -44,15 +44,15 @@ public class AzureServiceBusContextPartitionKeyTests
         MakeChannels = OnMissingChannel.Assume
     };
 
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, false)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, false)]
-    [InlineData(true, false, true)]
-    [InlineData(true, true, false)]
-    [InlineData(true, true, true)]
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(false, false, true)]
+    [Arguments(false, true, false)]
+    [Arguments(false, true, true)]
+    [Arguments(true, false, false)]
+    [Arguments(true, false, true)]
+    [Arguments(true, true, false)]
+    [Arguments(true, true, true)]
     public async Task When_sending_a_message_should_preserve_the_context_partition_key(
         bool useQueue, bool useAsync, bool scheduled)
     {
@@ -78,17 +78,17 @@ public class AzureServiceBusContextPartitionKeyTests
         }
 
         // Assert
-        var sent = Assert.Single(_sender.SentMessages);
-        Assert.Equal("101", sent.PartitionKey);
-        Assert.Equal("101", sent.ApplicationProperties["cloudEvents:partitionkey"]);
-        Assert.Equal(message.Id.Value, sent.MessageId);
+        var sent = await Assert.That(_sender.SentMessages).HasSingleItem();
+        await Assert.That(sent.PartitionKey).IsEqualTo("101");
+        await Assert.That(sent.ApplicationProperties["cloudEvents:partitionkey"]).IsEqualTo("101");
+        await Assert.That(sent.MessageId).IsEqualTo(message.Id.Value);
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_sending_batches_should_preserve_the_context_partition_key(
         bool useQueue, bool oversized)
     {
@@ -97,7 +97,9 @@ public class AzureServiceBusContextPartitionKeyTests
         Message[] messages = [CreateMessage(), CreateMessage()];
         _sender.TryAddMessageCallBack = message =>
         {
-            Assert.Equal("101", message.PartitionKey);
+#pragma warning disable TUnitAssertions0002 // Synchronous callback: the assertion is executed by GetResult.
+            Assert.That(message.PartitionKey).IsEqualTo("101").GetAwaiter().GetResult();
+#pragma warning restore TUnitAssertions0002
             return !oversized;
         };
 
@@ -108,15 +110,18 @@ public class AzureServiceBusContextPartitionKeyTests
 
         // Assert
         if (oversized)
-            Assert.All(batches, batch => Assert.IsType<AzureServiceBusSingleMessageBatch>(batch));
+            foreach (var batch in batches)
+{
+    await Assert.That(batch).IsTypeOf<AzureServiceBusSingleMessageBatch>();
+}
         else
-            Assert.IsType<AzureServiceBusMessageBatch>(Assert.Single(batches));
-        Assert.Equal(messages.Length, _sender.SentMessages.Count);
+            await Assert.That((await Assert.That(batches).HasSingleItem())).IsTypeOf<AzureServiceBusMessageBatch>();
+        await Assert.That(_sender.SentMessages.Count).IsEqualTo(messages.Length);
         foreach (var message in messages)
         {
-            var sent = Assert.Single(_sender.SentMessages, sent => sent.MessageId == message.Id.Value);
-            Assert.Equal("101", sent.PartitionKey);
-            Assert.Equal("101", sent.ApplicationProperties["cloudEvents:partitionkey"]);
+            var sent = await Assert.That(_sender.SentMessages).HasSingleItem(sent => sent.MessageId == message.Id.Value);
+            await Assert.That(sent.PartitionKey).IsEqualTo("101");
+            await Assert.That(sent.ApplicationProperties["cloudEvents:partitionkey"]).IsEqualTo("101");
         }
     }
 

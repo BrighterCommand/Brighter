@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -19,8 +19,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class TransientScopeReferenceIdentityTests
 {
-    [Fact]
-    public void When_two_transient_scopes_are_value_equal_releasing_one_should_not_reclaim_the_other()
+    [Test]
+    public async System.Threading.Tasks.Task When_two_transient_scopes_are_value_equal_releasing_one_should_not_reclaim_the_other()
     {
         // Arrange — a SINGLETON mapper resolved under a Transient MapperLifetime, so each Create opens its own
         // scope over the one shared instance. The scope factory hands back scopes that are VALUE-equal (every
@@ -44,8 +44,8 @@ public class TransientScopeReferenceIdentityTests
 
         // Assert — both scopes opened must be disposed. Under a value-based comparer the second scope collides
         // with the first on its key, is never tracked, and its release reclaims nothing: created != disposed.
-        Assert.Equal(2, scopeFactory.CreatedCount);
-        Assert.Equal(scopeFactory.CreatedCount, scopeFactory.DisposedCount);
+        await Assert.That(scopeFactory.CreatedCount).IsEqualTo(2);
+        await Assert.That(scopeFactory.DisposedCount).IsEqualTo(scopeFactory.CreatedCount);
     }
 
     private sealed class MinimalCommand : Command

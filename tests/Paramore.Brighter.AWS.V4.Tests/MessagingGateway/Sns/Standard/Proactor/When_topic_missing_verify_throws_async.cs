@@ -1,13 +1,12 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Standard.Proactor;
 
-[Trait("Category", "AWS")]
-public class AwsValidateMissingTopicTestsAsync 
+[Category("AWS")]
+public class AwsValidateMissingTopicTestsAsync
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly RoutingKey _routingKey;
@@ -22,7 +21,7 @@ public class AwsValidateMissingTopicTestsAsync
         // Because we don't use channel factory to create the infrastructure - it won't exist
     }
 
-    [Fact]
+    [Test]
     public async Task When_topic_missing_verify_throws_async()
     {
         // arrange
@@ -33,7 +32,7 @@ public class AwsValidateMissingTopicTestsAsync
             });
 
         // act & assert
-        await Assert.ThrowsAsync<BrokerUnreachableException>(async () => 
+        await Assert.ThrowsAsync<BrokerUnreachableException>(async () =>
             await producer.SendAsync(new Message(
                 new MessageHeader("", _routingKey, MessageType.MT_EVENT, type: new CloudEventsType("plain/text")),
                 new MessageBody("Test"))));

@@ -27,7 +27,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -38,11 +38,11 @@ namespace Paramore.Brighter.Extensions.Tests;
 // per-pipeline scoping this spec builds exists to prevent. Brighter must recognise its own root and
 // refuse to borrow from it, falling back to creating and owning a scope per request exactly as it does
 // for any other unusable ambient, and say so once rather than silently defeating its own guarantee.
-[Collection(LoggerCaptureCollection.NAME)]
+[System.Obsolete]
 public class RootProviderAmbientDiagnosticTests
 {
-    [Fact]
-    public void When_an_offered_ambient_names_the_root_provider_it_should_be_declined()
+    [Test]
+    public async System.Threading.Tasks.Task When_an_offered_ambient_names_the_root_provider_it_should_be_declined()
     {
         // Arrange - a JoinAmbient host built without opting into container scope validation, so an
         // implementation that failed to recognise its own root would succeed at resolving from it
@@ -74,18 +74,18 @@ public class RootProviderAmbientDiagnosticTests
         // Assert - each Send resolved and disposed a scope Brighter created and owns: two distinct
         // instances, each already disposed by the time its own Send returned, neither shared with the
         // other
-        Assert.Equal(2, recorder.Markers.Count);
-        Assert.True(recorder.Markers[0].IsDisposed);
-        Assert.True(recorder.Markers[1].IsDisposed);
-        Assert.NotSame(recorder.Markers[0], recorder.Markers[1]);
+        await Assert.That(recorder.Markers.Count).IsEqualTo(2);
+        await Assert.That(recorder.Markers[0].IsDisposed).IsTrue();
+        await Assert.That(recorder.Markers[1].IsDisposed).IsTrue();
+        await Assert.That(recorder.Markers[1]).IsNotSameReferenceAs(recorder.Markers[0]);
 
         // Assert - exactly one warning across both Sends, naming the ambient-unusable condition and the
         // provider's own implementation type, and nothing naming either of the other two conditions
         var warnings = capturingProvider.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        var warning = Assert.Single(warnings);
-        Assert.Contains("AmbientUnusable", warning.Message);
-        Assert.Contains(nameof(RootNamingScopeProvider), warning.Message);
-        Assert.DoesNotContain(warnings, w => w.Message.Contains("NoAmbientOffered"));
-        Assert.DoesNotContain(warnings, w => w.Message.Contains("AmbientIgnoredForAlwaysNew"));
+        var warning = await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains("AmbientUnusable");
+        await Assert.That(warning.Message).Contains(nameof(RootNamingScopeProvider));
+        await Assert.That(warnings).DoesNotContain(w => w.Message.Contains("NoAmbientOffered"));
+        await Assert.That(warnings).DoesNotContain(w => w.Message.Contains("AmbientIgnoredForAlwaysNew"));
     }
 }

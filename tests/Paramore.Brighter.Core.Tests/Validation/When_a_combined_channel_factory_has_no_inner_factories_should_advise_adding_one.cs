@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class EmptyCombinedChannelFactoryAdvisesAddingOneValidationTests
 {
-    [Fact]
-    public void When_a_combined_channel_factory_has_no_inner_factories_should_advise_adding_one()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_combined_channel_factory_has_no_inner_factories_should_advise_adding_one()
     {
         // Arrange — a combined channel factory with no inner factories at all
         var defaultChannelFactory = new CombinedChannelFactory([]);
@@ -46,12 +46,12 @@ public class EmptyCombinedChannelFactoryAdvisesAddingOneValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — exactly one Error for empty-sub
-        Assert.False(satisfied);
-        var result = Assert.Single(results);
-        Assert.Equal("Subscription 'empty-sub'", result.Error!.Source);
+        await Assert.That(satisfied).IsFalse();
+        var result = await Assert.That(results).HasSingleItem();
+        await Assert.That(result.Error!.Source).IsEqualTo("Subscription 'empty-sub'");
 
         var message = result.Error.Message;
-        Assert.EndsWith("— add a channel factory to the combined channel factory", message);
-        Assert.DoesNotContain("is one of:", message);
+        await Assert.That(message).EndsWith("— add a channel factory to the combined channel factory");
+        await Assert.That(message).DoesNotContain("is one of:");
     }
 }

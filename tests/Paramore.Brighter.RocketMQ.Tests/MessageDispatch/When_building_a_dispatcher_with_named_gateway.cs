@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -8,7 +8,6 @@ using Paramore.Brighter.RocketMQ.Tests.Utils;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessageDispatch;
 
@@ -38,13 +37,13 @@ public class DispatchBuilderWithNamedGateway
             }
         };
 
-        var connection = GatewayFactory.CreateConnection(); 
+        var connection = GatewayFactory.CreateConnection();
         var consumerFactory = new RocketMessageConsumerFactory(connection);
 
         var container = new ServiceCollection();
         var tracer = new BrighterTracer(TimeProvider.System);
         var instrumentationOptions = InstrumentationOptions.All;
-            
+
         var commandProcessor = CommandProcessorBuilder.StartNew()
             .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
             .DefaultResilience()
@@ -79,10 +78,10 @@ public class DispatchBuilderWithNamedGateway
             .ConfigureInstrumentation(tracer, instrumentationOptions);
     }
 
-    [Fact]
-    public void When_building_a_dispatcher_with_named_gateway()
+    [Test]
+    public async Task When_building_a_dispatcher_with_named_gateway()
     {
         _dispatcher = _builder.Build();
-        Assert.NotNull(_dispatcher);
+        await Assert.That(_dispatcher).IsNotNull();
     }
 }

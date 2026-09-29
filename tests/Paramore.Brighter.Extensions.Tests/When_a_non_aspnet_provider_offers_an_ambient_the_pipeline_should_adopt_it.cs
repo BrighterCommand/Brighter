@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -36,8 +36,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 // Send must fall back to creating and owning its own, exactly as it does when nothing is registered.
 public class NonAspNetAmbientAdoptionTests
 {
-    [Fact]
-    public void When_a_non_aspnet_provider_offers_an_ambient_the_pipeline_should_adopt_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_non_aspnet_provider_offers_an_ambient_the_pipeline_should_adopt_it()
     {
         // Arrange - a host with no ASP.NET reference, opted in to joining an ambient scope, whose
         // handler resolves a Scoped IUnitOfWork
@@ -69,18 +69,18 @@ public class NonAspNetAmbientAdoptionTests
             scopeProvider.Clear();
 
             // Assert - the handler resolved the ambient's own instance, and Brighter did not dispose it
-            var resolvedWithinAmbient = Assert.Single(recorder.UnitsOfWork);
-            Assert.Same(ambientUnitOfWork, resolvedWithinAmbient);
-            Assert.False(ambientUnitOfWork.IsDisposed);
+            var resolvedWithinAmbient = await Assert.That(recorder.UnitsOfWork).HasSingleItem();
+            await Assert.That(resolvedWithinAmbient).IsSameReferenceAs(ambientUnitOfWork);
+            await Assert.That(ambientUnitOfWork.IsDisposed).IsFalse();
         }
 
         // Act - a second Send made outside any established ambient
         commandProcessor.Send(new AmbientAdoptionCommand());
 
         // Assert - Brighter created and disposed its own scope for this one, distinct from the ambient
-        Assert.Equal(2, recorder.UnitsOfWork.Count);
+        await Assert.That(recorder.UnitsOfWork.Count).IsEqualTo(2);
         var resolvedOutsideAmbient = recorder.UnitsOfWork[1];
-        Assert.NotSame(ambientUnitOfWork, resolvedOutsideAmbient);
-        Assert.True(resolvedOutsideAmbient.IsDisposed);
+        await Assert.That(resolvedOutsideAmbient).IsNotSameReferenceAs(ambientUnitOfWork);
+        await Assert.That(resolvedOutsideAmbient.IsDisposed).IsTrue();
     }
 }

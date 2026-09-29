@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -26,16 +26,16 @@ THE SOFTWARE. */
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class MapperScanVisibilityTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_scanning_mappers_should_register_only_public_types(bool autoFromAssemblies)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async System.Threading.Tasks.Task When_scanning_mappers_should_register_only_public_types(bool autoFromAssemblies)
     {
         //Arrange
         var services = new ServiceCollection();
@@ -51,15 +51,15 @@ public class MapperScanVisibilityTests
             builder.MapperRegistryFromAssemblies(assemblies);
 
         //Assert
-        Assert.Equal(typeof(PublicScanMessageMapper), registry.Mappers[typeof(MapperScanCommand)]);
-        Assert.Equal(typeof(PublicScanMessageMapper), registry.AsyncMappers[typeof(MapperScanCommand)]);
-        Assert.Equal(typeof(NestedScanMessageMappers.PublicMapper), registry.Mappers[typeof(NestedMapperScanCommand)]);
-        Assert.Equal(typeof(NestedScanMessageMappers.PublicMapper), registry.AsyncMappers[typeof(NestedMapperScanCommand)]);
-        Assert.DoesNotContain(services, service => service.ServiceType == typeof(InternalScanMessageMapper));
-        Assert.DoesNotContain(services, service => service.ServiceType == typeof(NestedScanMessageMappers.InternalMapper));
-        Assert.DoesNotContain(services, service => service.ServiceType == NestedScanMessageMappers.PrivateMapperType);
+        await Assert.That(registry.Mappers[typeof(MapperScanCommand)]).IsEqualTo(typeof(PublicScanMessageMapper));
+        await Assert.That(registry.AsyncMappers[typeof(MapperScanCommand)]).IsEqualTo(typeof(PublicScanMessageMapper));
+        await Assert.That(registry.Mappers[typeof(NestedMapperScanCommand)]).IsEqualTo(typeof(NestedScanMessageMappers.PublicMapper));
+        await Assert.That(registry.AsyncMappers[typeof(NestedMapperScanCommand)]).IsEqualTo(typeof(NestedScanMessageMappers.PublicMapper));
+        await Assert.That(services).DoesNotContain(service => service.ServiceType == typeof(InternalScanMessageMapper));
+        await Assert.That(services).DoesNotContain(service => service.ServiceType == typeof(NestedScanMessageMappers.InternalMapper));
+        await Assert.That(services).DoesNotContain(service => service.ServiceType == NestedScanMessageMappers.PrivateMapperType);
         using var provider = services.BuildServiceProvider();
-        Assert.NotNull(provider.GetRequiredService<PublicScanMessageMapper>());
-        Assert.NotNull(provider.GetRequiredService<NestedScanMessageMappers.PublicMapper>());
+        await Assert.That(provider.GetRequiredService<PublicScanMessageMapper>()).IsNotNull();
+        await Assert.That(provider.GetRequiredService<NestedScanMessageMappers.PublicMapper>()).IsNotNull();
     }
 }

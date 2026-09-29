@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -30,21 +30,21 @@ using System.Threading;
 using System.Threading.Tasks;
 using RabbitMQ.Client.Exceptions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
+
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[System.Obsolete]
 public class RmqInvalidMessageForwardingFailureTests
 {
-    [Theory]
-    [InlineData(QueueType.Classic, false, false)]
-    [InlineData(QueueType.Classic, true, false)]
-    [InlineData(QueueType.Quorum, false, false)]
-    [InlineData(QueueType.Quorum, true, false)]
-    [InlineData(QueueType.Classic, true, true)]
-    [InlineData(QueueType.Quorum, true, true)]
+    [Test]
+    [Arguments(QueueType.Classic, false, false)]
+    [Arguments(QueueType.Classic, true, false)]
+    [Arguments(QueueType.Quorum, false, false)]
+    [Arguments(QueueType.Quorum, true, false)]
+    [Arguments(QueueType.Classic, true, true)]
+    [Arguments(QueueType.Quorum, true, true)]
     public async Task When_invalid_message_forwarding_fails_should_preserve_the_original_message_async(QueueType queueType, bool useAsync, bool cancel)
     {
         //Arrange
@@ -101,7 +101,7 @@ public class RmqInvalidMessageForwardingFailureTests
             var received = (useAsync
                 ? await consumer.ReceiveAsync(TimeSpan.FromSeconds(10))
                 : consumer.Receive(TimeSpan.FromSeconds(10))).Single();
-            Assert.Equal(message.Id, received.Id);
+            await Assert.That(received.Id).IsEqualTo(message.Id);
 
             using var cancellation = new CancellationTokenSource();
             if (cancel)
@@ -110,7 +110,7 @@ public class RmqInvalidMessageForwardingFailureTests
                 await administration.QueueUnbindAsync(invalidRoutingKey.Value, connection.Exchange.Name, invalidRoutingKey.Value);
 
             //Act
-            var exception = await Record.ExceptionAsync(async () =>
+            var exception = await TestExceptionRecorder.CaptureAsync(async () =>
             {
                 if (useAsync)
                     await consumer.RejectAsync(received, reason, cancellation.Token);
@@ -120,16 +120,16 @@ public class RmqInvalidMessageForwardingFailureTests
 
             //Assert
             if (cancel)
-                Assert.IsAssignableFrom<OperationCanceledException>(exception);
+                await Assert.That(exception).IsAssignableTo<OperationCanceledException>();
             else
-                Assert.IsAssignableFrom<PublishException>(exception);
-            Assert.Equal(routingKey, received.Header.Topic);
+                await Assert.That(exception).IsAssignableTo<PublishException>();
+            await Assert.That(received.Header.Topic).IsEqualTo(routingKey);
             await consumer.NackAsync(received);
             var redelivered = (await consumer.ReceiveAsync(TimeSpan.FromSeconds(10))).Single();
-            Assert.Equal(message.Id, redelivered.Id);
+            await Assert.That(redelivered.Id).IsEqualTo(message.Id);
             await consumer.AcknowledgeAsync(redelivered);
-            Assert.Equal(MessageType.MT_NONE, (await invalidConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(500))).Single().Header.MessageType);
-            Assert.Equal(MessageType.MT_NONE, (await deadLetterConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(500))).Single().Header.MessageType);
+            await Assert.That((await invalidConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(500))).Single().Header.MessageType).IsEqualTo(MessageType.MT_NONE);
+            await Assert.That((await deadLetterConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(500))).Single().Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {

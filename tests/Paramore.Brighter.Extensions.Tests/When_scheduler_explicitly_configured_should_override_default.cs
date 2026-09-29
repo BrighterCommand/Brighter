@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,25 +25,24 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class When_scheduler_explicitly_configured_should_override_default
 {
-    [Theory]
-    [InlineData(RequestSchedulerType.Send, false, false)]
-    [InlineData(RequestSchedulerType.Send, false, true)]
-    [InlineData(RequestSchedulerType.Send, true, false)]
-    [InlineData(RequestSchedulerType.Send, true, true)]
-    [InlineData(RequestSchedulerType.Publish, false, false)]
-    [InlineData(RequestSchedulerType.Publish, false, true)]
-    [InlineData(RequestSchedulerType.Publish, true, false)]
-    [InlineData(RequestSchedulerType.Publish, true, true)]
-    [InlineData(RequestSchedulerType.Post, false, false)]
-    [InlineData(RequestSchedulerType.Post, false, true)]
-    [InlineData(RequestSchedulerType.Post, true, false)]
-    [InlineData(RequestSchedulerType.Post, true, true)]
+    [Test]
+    [Arguments(RequestSchedulerType.Send, false, false)]
+    [Arguments(RequestSchedulerType.Send, false, true)]
+    [Arguments(RequestSchedulerType.Send, true, false)]
+    [Arguments(RequestSchedulerType.Send, true, true)]
+    [Arguments(RequestSchedulerType.Publish, false, false)]
+    [Arguments(RequestSchedulerType.Publish, false, true)]
+    [Arguments(RequestSchedulerType.Publish, true, false)]
+    [Arguments(RequestSchedulerType.Publish, true, true)]
+    [Arguments(RequestSchedulerType.Post, false, false)]
+    [Arguments(RequestSchedulerType.Post, false, true)]
+    [Arguments(RequestSchedulerType.Post, true, false)]
+    [Arguments(RequestSchedulerType.Post, true, true)]
     public async Task When_scheduling_with_a_legacy_scheduler_should_keep_using_its_existing_contract(
         RequestSchedulerType operation, bool isAsync, bool useDateTime)
     {
@@ -77,11 +76,11 @@ public class When_scheduler_explicitly_configured_should_override_default
         };
 
         //Assert
-        Assert.Equal("stub", id);
+        await Assert.That(id).IsEqualTo("stub");
     }
 
-    [Fact]
-    public void Should_resolve_custom_factory_instead_of_InMemorySchedulerFactory()
+    [Test]
+    public async System.Threading.Tasks.Task Should_resolve_custom_factory_instead_of_InMemorySchedulerFactory()
     {
         // Arrange — configure a custom scheduler factory via UseScheduler
         var customFactory = new StubSchedulerFactory();
@@ -95,13 +94,13 @@ public class When_scheduler_explicitly_configured_should_override_default
         var resolvedFactory = provider.GetRequiredService<IAmAMessageSchedulerFactory>();
 
         // Assert — the custom factory should be resolved, not the default InMemorySchedulerFactory
-        Assert.NotNull(resolvedFactory);
-        Assert.IsType<StubSchedulerFactory>(resolvedFactory);
-        Assert.Same(customFactory, resolvedFactory);
+        await Assert.That(resolvedFactory).IsNotNull();
+        await Assert.That(resolvedFactory).IsTypeOf<StubSchedulerFactory>();
+        await Assert.That(resolvedFactory).IsSameReferenceAs(customFactory);
     }
 
-    [Fact]
-    public void Should_resolve_scheduler_from_custom_factory()
+    [Test]
+    public async Task Should_resolve_scheduler_from_custom_factory()
     {
         // Arrange — configure a custom scheduler factory via UseScheduler
         var customFactory = new StubSchedulerFactory();
@@ -115,12 +114,12 @@ public class When_scheduler_explicitly_configured_should_override_default
         var scheduler = provider.GetRequiredService<IAmAMessageScheduler>();
 
         // Assert — the scheduler should come from the custom factory
-        Assert.NotNull(scheduler);
-        Assert.IsType<StubMessageScheduler>(scheduler);
+        await Assert.That(scheduler).IsNotNull();
+        await Assert.That(scheduler).IsTypeOf<StubMessageScheduler>();
     }
 
-    [Fact]
-    public void Should_resolve_custom_request_scheduler_factory()
+    [Test]
+    public async Task Should_resolve_custom_request_scheduler_factory()
     {
         // Arrange — configure a custom scheduler factory via UseScheduler
         var customFactory = new StubSchedulerFactory();
@@ -134,9 +133,9 @@ public class When_scheduler_explicitly_configured_should_override_default
         var resolvedFactory = provider.GetRequiredService<IAmARequestSchedulerFactory>();
 
         // Assert — the custom factory should be resolved for request scheduling too
-        Assert.NotNull(resolvedFactory);
-        Assert.IsType<StubSchedulerFactory>(resolvedFactory);
-        Assert.Same(customFactory, resolvedFactory);
+        await Assert.That(resolvedFactory).IsNotNull();
+        await Assert.That(resolvedFactory).IsTypeOf<StubSchedulerFactory>();
+        await Assert.That(resolvedFactory).IsSameReferenceAs(customFactory);
     }
 
     private class StubSchedulerFactory : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory

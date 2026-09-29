@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,14 +29,13 @@ using Amazon.Runtime;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway;
 
 public class V4SqsCorrectedSubscriptionValidationTests
 {
-    [Fact]
-    public void When_validating_a_corrected_v4_sqs_subscription_should_report_no_findings()
+    [Test]
+    public async System.Threading.Tasks.Task When_validating_a_corrected_v4_sqs_subscription_should_report_no_findings()
     {
         // Arrange — construction only, so no AWS connection is made (NFR-3): the AWSSQS.V4 ChannelFactory
         // and its underlying AWSMessagingGatewayConnection only store credentials/config until a channel
@@ -58,7 +58,7 @@ public class V4SqsCorrectedSubscriptionValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — no findings: the corrected declared type matches the real SQS channel factory
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis.Testing;
+using Microsoft.CodeAnalysis.Testing;
 using Paramore.Brighter.Analyzer.Analyzers;
 using Paramore.Brighter.Analyzer.Tests.Analyzers;
 
@@ -8,7 +8,7 @@ namespace Paramore.Brighter.Analyzer.Test.Analyzers
     public class PublicationRequestTypeAssignmentAnalyzerTest : BaseAnalyzerTest<PublicationRequestTypeAssignmentAnalyzer>
     {
 
-        [Fact]
+        [Test]
         public async Task When_Initializing_Publication_WithOut_RequestType()
         {
 
@@ -17,7 +17,7 @@ using Paramore.Brighter;
 namespace TestNamespace
 {
 var publication = {|#0:new PublicationTest()|};
-        
+
     public class PublicationTest : Publication
     {
     }
@@ -28,7 +28,7 @@ var publication = {|#0:new PublicationTest()|};
             await testContext.RunAsync();
         }
 
-        [Fact]
+        [Test]
         public async Task When_Initializing_Publication_With_Right_RequestType()
         {
             testContext.TestCode = /* lang=c#-test */ """
@@ -39,7 +39,7 @@ var publication =new PublicationTest()
 {
 RequestType = typeof(EventSample)
 };
-        
+
     public class PublicationTest : Publication
     {
     }
@@ -54,7 +54,7 @@ RequestType = typeof(EventSample)
             await testContext.RunAsync();
         }
 
-        [Fact]
+        [Test]
         public async Task When_Initializing_Publication_With_Wrong_RequestType()
         {
             testContext.TestCode = /* lang=c#-test */ """
@@ -65,7 +65,7 @@ var publication = new PublicationTest()
 {
 RequestType = {|#0:typeof(EventSample)|}
 };
-        
+
     public class PublicationTest : Publication
     {}
     public class EventSample{}
@@ -76,7 +76,7 @@ RequestType = {|#0:typeof(EventSample)|}
             await testContext.RunAsync();
         }
 
-        [Fact]
+        [Test]
         public async Task When_Initializing_Non_Publication_Type()
         {
             testContext.TestCode = /* lang=c#-test */ """

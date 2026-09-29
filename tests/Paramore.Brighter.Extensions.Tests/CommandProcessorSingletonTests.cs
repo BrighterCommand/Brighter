@@ -29,7 +29,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -45,8 +44,8 @@ public class CommandProcessorSingletonTests
     /// Verifies that resolving IAmACommandProcessor twice from the same
     /// service provider returns the exact same instance.
     /// </summary>
-    [Fact]
-    public void SameProvider_MultipleResolutions_ReturnsSameInstance()
+    [Test]
+    public async Task SameProvider_MultipleResolutions_ReturnsSameInstance()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -59,16 +58,16 @@ public class CommandProcessorSingletonTests
         var processor3 = provider.GetRequiredService<IAmACommandProcessor>();
 
         // Assert - All should be the exact same instance
-        Assert.Same(processor1, processor2);
-        Assert.Same(processor2, processor3);
+        await Assert.That(processor2).IsSameReferenceAs(processor1);
+        await Assert.That(processor3).IsSameReferenceAs(processor2);
     }
 
     /// <summary>
     /// Verifies that resolving IAmACommandProcessor from different scopes
     /// within the same service provider returns the same singleton instance.
     /// </summary>
-    [Fact]
-    public void SameProvider_DifferentScopes_ReturnsSameInstance()
+    [Test]
+    public async Task SameProvider_DifferentScopes_ReturnsSameInstance()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -94,15 +93,15 @@ public class CommandProcessorSingletonTests
         }
 
         // Assert - All should be the same singleton instance
-        Assert.Same(processor1, processor2);
-        Assert.Same(processor2, processor3);
+        await Assert.That(processor2).IsSameReferenceAs(processor1);
+        await Assert.That(processor3).IsSameReferenceAs(processor2);
     }
 
     /// <summary>
     /// Verifies that concurrent resolution of IAmACommandProcessor from multiple
     /// threads returns the same singleton instance to all threads.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task SameProvider_ConcurrentResolutions_ReturnsSameInstance()
     {
         // Arrange
@@ -128,15 +127,15 @@ public class CommandProcessorSingletonTests
 
         // Assert - All 100 resolutions should return the same instance
         var distinctProcessors = processors.Distinct().ToList();
-        Assert.Single(distinctProcessors);
+        await Assert.That(distinctProcessors).HasSingleItem();
     }
 
     /// <summary>
     /// Verifies that the command processor singleton is preserved when resolved
     /// alongside other services in the same scope.
     /// </summary>
-    [Fact]
-    public void SameProvider_ResolvedWithOtherServices_ReturnsSameInstance()
+    [Test]
+    public async Task SameProvider_ResolvedWithOtherServices_ReturnsSameInstance()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -161,16 +160,16 @@ public class CommandProcessorSingletonTests
         }
 
         // Assert
-        Assert.Same(processorFromRoot, processorFromScope1);
-        Assert.Same(processorFromScope1, processorFromScope2);
+        await Assert.That(processorFromScope1).IsSameReferenceAs(processorFromRoot);
+        await Assert.That(processorFromScope2).IsSameReferenceAs(processorFromScope1);
     }
 
     /// <summary>
     /// Verifies that the command processor instance is the same when resolved
     /// sequentially many times in a loop.
     /// </summary>
-    [Fact]
-    public void SameProvider_ManySequentialResolutions_ReturnsSameInstance()
+    [Test]
+    public async Task SameProvider_ManySequentialResolutions_ReturnsSameInstance()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -185,7 +184,7 @@ public class CommandProcessorSingletonTests
             var processor = provider.GetRequiredService<IAmACommandProcessor>();
 
             // Assert each one is the same
-            Assert.Same(firstProcessor, processor);
+            await Assert.That(processor).IsSameReferenceAs(firstProcessor);
         }
     }
 
@@ -193,8 +192,8 @@ public class CommandProcessorSingletonTests
     /// Verifies that when producers are configured, the command processor
     /// is still a singleton across multiple resolutions.
     /// </summary>
-    [Fact]
-    public void WithProducers_MultipleResolutions_ReturnsSameInstance()
+    [Test]
+    public async Task WithProducers_MultipleResolutions_ReturnsSameInstance()
     {
         // Arrange
         var timeProvider = new FakeTimeProvider();
@@ -230,16 +229,16 @@ public class CommandProcessorSingletonTests
         var processor3 = scope.ServiceProvider.GetRequiredService<IAmACommandProcessor>();
 
         // Assert
-        Assert.Same(processor1, processor2);
-        Assert.Same(processor2, processor3);
+        await Assert.That(processor2).IsSameReferenceAs(processor1);
+        await Assert.That(processor3).IsSameReferenceAs(processor2);
     }
 
     /// <summary>
     /// Verifies that using the Func overloads still results in a singleton
     /// command processor.
     /// </summary>
-    [Fact]
-    public void WithFuncOverloads_MultipleResolutions_ReturnsSameInstance()
+    [Test]
+    public async Task WithFuncOverloads_MultipleResolutions_ReturnsSameInstance()
     {
         // Arrange
         var timeProvider = new FakeTimeProvider();
@@ -282,15 +281,15 @@ public class CommandProcessorSingletonTests
         var processor3 = scope.ServiceProvider.GetRequiredService<IAmACommandProcessor>();
 
         // Assert
-        Assert.Same(processor1, processor2);
-        Assert.Same(processor2, processor3);
+        await Assert.That(processor2).IsSameReferenceAs(processor1);
+        await Assert.That(processor3).IsSameReferenceAs(processor2);
     }
 
     /// <summary>
     /// Verifies that concurrent resolutions with producers configured
     /// all return the same singleton instance.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task WithProducers_ConcurrentResolutions_ReturnsSameInstance()
     {
         // Arrange
@@ -337,14 +336,14 @@ public class CommandProcessorSingletonTests
 
         // Assert - All should be the same instance
         var distinctProcessors = processors.Distinct().ToList();
-        Assert.Single(distinctProcessors);
+        await Assert.That(distinctProcessors).HasSingleItem();
     }
 
     /// <summary>
     /// Verifies that concurrent resolutions from different scopes
     /// all return the same singleton instance.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task SameProvider_ConcurrentScopedResolutions_ReturnsSameInstance()
     {
         // Arrange
@@ -371,14 +370,14 @@ public class CommandProcessorSingletonTests
 
         // Assert - All should be the same singleton instance
         var distinctProcessors = processors.Distinct().ToList();
-        Assert.Single(distinctProcessors);
+        await Assert.That(distinctProcessors).HasSingleItem();
     }
 
     /// <summary>
     /// Verifies that the command processor is only instantiated once even under
     /// heavy concurrent load using an instantiation counter.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task SameProvider_ConcurrentResolutions_OnlyInstantiatesOnce()
     {
         // This test verifies that the singleton is truly only created once
@@ -426,15 +425,15 @@ public class CommandProcessorSingletonTests
         await Task.WhenAll(tasks);
 
         // Assert
-        Assert.Equal(1, instantiationCount);
-        Assert.Single(processors.Distinct());
+        await Assert.That(instantiationCount).IsEqualTo(1);
+        await Assert.That(processors.Distinct()).HasSingleItem();
     }
 
     /// <summary>
     /// Verifies that the GetHashCode of all resolved processors is identical,
     /// providing another confirmation they are the same object instance.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task SameProvider_AllResolutions_HaveSameHashCode()
     {
         // Arrange
@@ -458,15 +457,15 @@ public class CommandProcessorSingletonTests
 
         // Assert - All hash codes should be the same
         var distinctHashCodes = hashCodes.Distinct().ToList();
-        Assert.Single(distinctHashCodes);
+        await Assert.That(distinctHashCodes).HasSingleItem();
     }
 
     /// <summary>
     /// Verifies that even when resolving from nested scopes,
     /// the same singleton instance is returned.
     /// </summary>
-    [Fact]
-    public void SameProvider_NestedScopes_ReturnsSameInstance()
+    [Test]
+    public async Task SameProvider_NestedScopes_ReturnsSameInstance()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -494,9 +493,9 @@ public class CommandProcessorSingletonTests
         }
 
         // Assert
-        Assert.Same(processorFromRoot, processorFromLevel1);
-        Assert.Same(processorFromLevel1, processorFromLevel2);
-        Assert.Same(processorFromLevel2, processorFromLevel3);
+        await Assert.That(processorFromLevel1).IsSameReferenceAs(processorFromRoot);
+        await Assert.That(processorFromLevel2).IsSameReferenceAs(processorFromLevel1);
+        await Assert.That(processorFromLevel3).IsSameReferenceAs(processorFromLevel2);
     }
 
     private class SingletonTestCommand : Command

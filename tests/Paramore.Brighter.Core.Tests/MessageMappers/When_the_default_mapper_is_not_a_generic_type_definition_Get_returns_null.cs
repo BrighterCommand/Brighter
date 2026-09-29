@@ -2,7 +2,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageMappers
 {
@@ -13,9 +12,8 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
         //cannot be closed over the request type, so it is not a usable mapper for that type. Get<T>/GetAsync<T>
         //must agree: they should return null too, not reach MakeGenericType on a non-generic type and throw
         //InvalidOperationException. Otherwise HasPipeline says "no pipeline" while Get says "boom".
-
-        [Fact]
-        public void When_the_default_mapper_is_not_a_generic_type_definition_Get_returns_null()
+        [Test]
+        public async System.Threading.Tasks.Task When_the_default_mapper_is_not_a_generic_type_definition_Get_returns_null()
         {
             //arrange — a default mapper that is a closed type, not an open generic (typeof(NonGenericDefaultMapper)
             //.IsGenericTypeDefinition is false), and a request with no explicit registration
@@ -26,12 +24,12 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
             var mapper = registry.Get<UnregisteredRequest>();
 
             //assert — null, matching ResolveMapperInfo, rather than throwing InvalidOperationException
-            Assert.Null(mapper);
-            Assert.Null(registry.ResolveMapperInfo(typeof(UnregisteredRequest)).MapperType);
+            await Assert.That(mapper).IsNull();
+            await Assert.That(registry.ResolveMapperInfo(typeof(UnregisteredRequest)).MapperType).IsNull();
         }
 
-        [Fact]
-        public void When_the_default_mapper_is_not_a_generic_type_definition_GetAsync_returns_null()
+        [Test]
+        public async System.Threading.Tasks.Task When_the_default_mapper_is_not_a_generic_type_definition_GetAsync_returns_null()
         {
             //arrange — a default async mapper that is a closed type, not an open generic, and a request with
             //no explicit registration
@@ -42,8 +40,8 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
             var mapper = registry.GetAsync<UnregisteredRequest>();
 
             //assert — null, matching ResolveAsyncMapperInfo, rather than throwing InvalidOperationException
-            Assert.Null(mapper);
-            Assert.Null(registry.ResolveAsyncMapperInfo(typeof(UnregisteredRequest)).MapperType);
+            await Assert.That(mapper).IsNull();
+            await Assert.That(registry.ResolveAsyncMapperInfo(typeof(UnregisteredRequest)).MapperType).IsNull();
         }
 
         private sealed class UnregisteredRequest : Command

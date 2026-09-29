@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,38 +25,37 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
     public class AmbientScopeSuppressionTests
     {
-        [Fact]
-        public void When_suppression_brackets_are_nested_they_should_restore_the_captured_value()
+        [Test]
+        public async System.Threading.Tasks.Task When_suppression_brackets_are_nested_they_should_restore_the_captured_value()
         {
             // Arrange & Act & Assert — a reader outside any bracket sees false, and never throws
-            Assert.False(AmbientScopeSuppression.IsSuppressed);
+            await Assert.That(AmbientScopeSuppression.IsSuppressed).IsFalse();
 
             // a lexically nested pair restores the captured value on dispose, not unconditionally false
             using (AmbientScopeSuppression.Suppress())
             {
-                Assert.True(AmbientScopeSuppression.IsSuppressed);
+                await Assert.That(AmbientScopeSuppression.IsSuppressed).IsTrue();
 
                 using (AmbientScopeSuppression.Suppress())
                 {
-                    Assert.True(AmbientScopeSuppression.IsSuppressed);
+                    await Assert.That(AmbientScopeSuppression.IsSuppressed).IsTrue();
                 }
 
                 // the inner bracket's dispose restored what it captured — still suppressed here
-                Assert.True(AmbientScopeSuppression.IsSuppressed);
+                await Assert.That(AmbientScopeSuppression.IsSuppressed).IsTrue();
             }
 
             // the outer bracket's dispose restored what it captured — back to unsuppressed
-            Assert.False(AmbientScopeSuppression.IsSuppressed);
+            await Assert.That(AmbientScopeSuppression.IsSuppressed).IsFalse();
         }
 
-        [Fact]
-        public void When_a_suppression_bracket_is_disposed_twice_it_should_be_a_no_op()
+        [Test]
+        public async System.Threading.Tasks.Task When_a_suppression_bracket_is_disposed_twice_it_should_be_a_no_op()
         {
             // Arrange
             var bracket = AmbientScopeSuppression.Suppress();
@@ -65,10 +65,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             bracket.Dispose();
 
             // Assert — no exception, and the value is still the one the first dispose restored
-            Assert.False(AmbientScopeSuppression.IsSuppressed);
+            await Assert.That(AmbientScopeSuppression.IsSuppressed).IsFalse();
         }
 
-        [Fact]
+        [Test]
         public async Task When_a_flow_branches_before_a_bracket_is_taken_the_branched_flow_should_not_observe_it()
         {
             // Arrange — a child flow is started (and so captures its own ExecutionContext) before
@@ -87,8 +87,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             // Assert — the branched flow never sees the parent's later write, exactly AsyncLocal<bool>'s
             // own semantics; the parent flow that took the bracket does see it
-            Assert.False(branchedValue);
-            Assert.True(AmbientScopeSuppression.IsSuppressed);
+            await Assert.That(branchedValue).IsFalse();
+            await Assert.That(AmbientScopeSuppression.IsSuppressed).IsTrue();
         }
     }
 }

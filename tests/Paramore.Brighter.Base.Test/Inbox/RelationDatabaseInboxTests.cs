@@ -1,14 +1,15 @@
-﻿using System;
+using System;
 
 namespace Paramore.Brighter.Base.Test.Inbox;
 
+[TUnit.Core.InheritsTests]
 public abstract class RelationalDatabaseInboxTests : InboxTests
 {
     private RelationalDatabaseInbox? _inbox;
     protected override IAmAnInboxSync Inbox => _inbox ?? throw new InvalidOperationException();
-    
-    protected RelationalDatabaseConfiguration? Configuration { get; private set; } 
-    
+
+    protected RelationalDatabaseConfiguration? Configuration { get; private set; }
+
     protected abstract string DefaultConnectingString { get; }
     protected abstract string TableNamePrefix { get; }
     protected abstract bool BinaryMessagePayload { get; }
@@ -19,19 +20,19 @@ public abstract class RelationalDatabaseInboxTests : InboxTests
     protected abstract void DeleteInboxTable(RelationalDatabaseConfiguration configuration);
 
     protected override void BeforeEachTest()
-    { 
+    {
         var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             connectionString = DefaultConnectingString;
         }
-        
-        Configuration = new RelationalDatabaseConfiguration(connectionString, 
+
+        Configuration = new RelationalDatabaseConfiguration(connectionString,
             inboxTableName: $"{TableNamePrefix}{Uuid.New():N}",
             schemaName: SchemaName,
             binaryMessagePayload: BinaryMessagePayload,
             jsonMessagePayload: JsonMessagePayload);
-        
+
         _inbox = CreateInbox(Configuration);
         base.BeforeEachTest();
     }

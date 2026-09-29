@@ -28,7 +28,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
@@ -46,7 +46,7 @@ public class SingleOutboxSuiteGenerationTests : IDisposable
         _logger = factory.CreateLogger<Generators.OutboxGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_with_single_outbox_should_emit_sync_and_async_suites()
     {
         // Arrange
@@ -73,28 +73,16 @@ public class SingleOutboxSuiteGenerationTests : IDisposable
         // Assert
         var generated = Path.Combine(_testDirectory, "Outbox", "Generated");
 
-        Assert.True(
-            File.Exists(Path.Combine(generated, "Sync", "IAmAnOutboxProviderSync.cs")),
-            "a singular Outbox should generate the Sync suite"
-        );
-        Assert.True(
-            File.Exists(
+        await Assert.That(File.Exists(Path.Combine(generated, "Sync", "IAmAnOutboxProviderSync.cs"))).IsTrue().Because("a singular Outbox should generate the Sync suite");
+        await Assert.That(File.Exists(
                 Path.Combine(
                     generated,
                     "Sync",
                     "When_Adding_A_Message_It_Should_Be_Stored_With_All_Properties.cs"
                 )
-            ),
-            "the generated Sync suite should include the outbox conformance tests"
-        );
-        Assert.True(
-            File.Exists(Path.Combine(generated, "Async", "IAmAnOutboxProviderAsync.cs")),
-            "a singular Outbox should still generate the Async suite"
-        );
-        Assert.True(
-            File.Exists(Path.Combine(generated, "Causation", "CausationTrackingOutboxTests.cs")),
-            "a singular Outbox should still generate the Causation suite"
-        );
+            )).IsTrue().Because("the generated Sync suite should include the outbox conformance tests");
+        await Assert.That(File.Exists(Path.Combine(generated, "Async", "IAmAnOutboxProviderAsync.cs"))).IsTrue().Because("a singular Outbox should still generate the Async suite");
+        await Assert.That(File.Exists(Path.Combine(generated, "Causation", "CausationTrackingOutboxTests.cs"))).IsTrue().Because("a singular Outbox should still generate the Causation suite");
     }
 
     public void Dispose()

@@ -37,23 +37,23 @@ using Paramore.Brighter.Validation;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
+
 
 namespace Paramore.Brighter.Kafka.Tests.Validation;
 
-[Trait("Category", "Kafka")]
+[Property("Category", "Kafka")]
 public class KafkaMissingTopicWarningTests
 {
-    [Theory]
-    [InlineData(GroupProtocol.Consumer, OnMissingChannel.Assume, true)]
-    [InlineData(GroupProtocol.Consumer, OnMissingChannel.Validate, false)]
-    [InlineData(GroupProtocol.Consumer, OnMissingChannel.Create, false)]
-    [InlineData(GroupProtocol.Classic, OnMissingChannel.Assume, false)]
-    [InlineData(GroupProtocol.Classic, OnMissingChannel.Validate, false)]
-    [InlineData(GroupProtocol.Classic, OnMissingChannel.Create, false)]
-    [InlineData(null, OnMissingChannel.Assume, false)]
-    [InlineData(null, OnMissingChannel.Validate, false)]
-    [InlineData(null, OnMissingChannel.Create, false)]
+    [Test]
+    [Arguments(GroupProtocol.Consumer, OnMissingChannel.Assume, true)]
+    [Arguments(GroupProtocol.Consumer, OnMissingChannel.Validate, false)]
+    [Arguments(GroupProtocol.Consumer, OnMissingChannel.Create, false)]
+    [Arguments(GroupProtocol.Classic, OnMissingChannel.Assume, false)]
+    [Arguments(GroupProtocol.Classic, OnMissingChannel.Validate, false)]
+    [Arguments(GroupProtocol.Classic, OnMissingChannel.Create, false)]
+    [Arguments(null, OnMissingChannel.Assume, false)]
+    [Arguments(null, OnMissingChannel.Validate, false)]
+    [Arguments(null, OnMissingChannel.Create, false)]
     public async Task When_consumer_protocol_assumes_a_topic_should_warn_at_startup(
         GroupProtocol? protocol, OnMissingChannel policy, bool expectWarning)
     {
@@ -84,32 +84,32 @@ public class KafkaMissingTopicWarningTests
             await service.StartAsync(CancellationToken.None);
 
         //Assert
-        Assert.True(result.IsValid);
-        Assert.Empty(result.Errors);
-        Assert.Equal(policy, subscription.MakeChannels);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Errors).IsEmpty();
+        await Assert.That(subscription.MakeChannels).IsEqualTo(policy);
         var loggedWarnings = TestCorrelator.GetLogEventsFromCurrentContext()
             .Where(entry => entry.Level == LogEventLevel.Warning && entry.RenderMessage().Contains("KIP-848"))
             .ToList();
         if (!expectWarning)
         {
-            Assert.Empty(result.Warnings);
-            Assert.Empty(loggedWarnings);
+            await Assert.That(result.Warnings).IsEmpty();
+            await Assert.That(loggedWarnings).IsEmpty();
             return;
         }
 
-        var warning = Assert.Single(result.Warnings);
-        Assert.Equal(ValidationSeverity.Warning, warning.Severity);
-        Assert.Contains("orders-subscription", warning.Source);
-        Assert.Contains("orders-topic", warning.Message);
-        Assert.Contains("KIP-848", warning.Message);
-        Assert.Contains("Assume", warning.Message);
-        Assert.Contains("missing topic", warning.Message);
-        Assert.Contains("Validate", warning.Message);
-        Assert.Contains(warning.Message, Assert.Single(loggedWarnings).RenderMessage());
+        var warning = await Assert.That(result.Warnings).HasSingleItem();
+        await Assert.That(warning.Severity).IsEqualTo(ValidationSeverity.Warning);
+        await Assert.That(warning.Source).Contains("orders-subscription");
+        await Assert.That(warning.Message).Contains("orders-topic");
+        await Assert.That(warning.Message).Contains("KIP-848");
+        await Assert.That(warning.Message).Contains("Assume");
+        await Assert.That(warning.Message).Contains("missing topic");
+        await Assert.That(warning.Message).Contains("Validate");
+        await Assert.That((await Assert.That(loggedWarnings).HasSingleItem()).RenderMessage()).Contains(warning.Message);
     }
 
-    [Fact]
-    public void When_subscription_is_not_kafka_should_not_warn_about_missing_kafka_topics()
+    [Test]
+    public async System.Threading.Tasks.Task When_subscription_is_not_kafka_should_not_warn_about_missing_kafka_topics()
     {
         //Arrange
         var subscription = new Subscription<Event>(makeChannels: OnMissingChannel.Assume);
@@ -119,9 +119,9 @@ public class KafkaMissingTopicWarningTests
         var result = PipelineValidationResult.Combine(provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
 
         //Assert
-        Assert.True(result.IsValid);
-        Assert.Empty(result.Errors);
-        Assert.Empty(result.Warnings);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Errors).IsEmpty();
+        await Assert.That(result.Warnings).IsEmpty();
     }
 
     private static ServiceProvider CreateProvider(Subscription subscription)

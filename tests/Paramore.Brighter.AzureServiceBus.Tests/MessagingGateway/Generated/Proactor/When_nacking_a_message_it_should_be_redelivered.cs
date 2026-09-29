@@ -8,13 +8,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "AzureServiceBus")]
-[Collection("AzureServiceBus")]
-public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
+[Property("Category", "AzureServiceBus")]
+[NotInParallel("AzureServiceBus")]
+public class WhenNackingAMessageItShouldBeRedeliveredAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -35,17 +36,20 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
         _messageAssertion = new DefaultMessageAssertion();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
+
     public async Task When_nacking_a_message_it_should_be_redelivered_async()
     {
         // Arrange
@@ -67,7 +71,7 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
 
         // Act — receive the message and nack it
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         await _channel.NackAsync(received);
 
@@ -83,11 +87,12 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
             }
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-        _messageAssertion.Assert(message, redelivered);
+        await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await _messageAssertion.AssertAsync(message, redelivered);
     }
 
-    [Fact]
+    [Test]
+
     public async Task When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second_async()
     {
         // Arrange — two queued messages: the first is nacked and must come back, and the one
@@ -123,7 +128,7 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
         // belongs to the transport, not to Brighter, so the message to nack is identified by its
         // id rather than assumed to be the one sent first (NFR-4).
         var receivedForNack = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
-        Assert.NotEqual(MessageType.MT_NONE, receivedForNack.Header.MessageType);
+        await Assert.That(receivedForNack.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         var nackedMessage = _sentMessages.Single(m => m.Header.MessageId == receivedForNack.Header.MessageId);
         var theOtherMessage = _sentMessages.Single(m => m.Header.MessageId != nackedMessage.Header.MessageId);
@@ -150,7 +155,7 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
             await _channel.AcknowledgeAsync(received);
         }
 
-        Assert.Contains(nackedMessage.Header.MessageId.Value, observedIds);
-        Assert.Contains(theOtherMessage.Header.MessageId.Value, observedIds);
+        await Assert.That(observedIds).Contains(nackedMessage.Header.MessageId.Value);
+        await Assert.That(observedIds).Contains(theOtherMessage.Header.MessageId.Value);
     }
 }

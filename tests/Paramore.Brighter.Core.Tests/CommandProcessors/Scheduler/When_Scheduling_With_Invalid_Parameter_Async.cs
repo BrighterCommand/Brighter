@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -11,10 +11,8 @@ using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Scheduler;
-
 public class CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests
 {
     private const string Topic = "MyCommand";
@@ -24,93 +22,62 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests
     private readonly FakeTimeProvider _timeProvider;
     private readonly InMemoryOutbox _outbox;
     private readonly InternalBus _internalBus = new();
-
     public CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests()
     {
-        _myCommand = new() { Value = $"Hello World {Guid.NewGuid():N}" };
+        _myCommand = new()
+        {
+            Value = $"Hello World {Guid.NewGuid():N}"};
         var routingKey = new RoutingKey("MyCommand");
         _timeProvider = new FakeTimeProvider();
         _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
-
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<FireSchedulerRequest, FireSchedulerRequestHandler>();
         registry.Register<MyCommand, MyCommandHandler>();
-        var handlerFactory = new SimpleHandlerFactory(
-            _ => new MyCommandHandler(_receivedMessages),
-            _ => new FireSchedulerRequestHandler(_commandProcessor!));
-
-        var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
-            null);
-
+        var handlerFactory = new SimpleHandlerFactory(_ => new MyCommandHandler(_receivedMessages), _ => new FireSchedulerRequestHandler(_commandProcessor!));
+        var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()), null);
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-
         var producer = new InMemoryMessageProducer(_internalBus, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
-
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
-        var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
-            .AddBrighterDefault();
-
+        var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
         var tracer = new BrighterTracer(_timeProvider);
-        _outbox = new InMemoryOutbox(_timeProvider) { Tracer = tracer };
-
-        IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry,
-            resiliencePipelineRegistry,
-            messageMapperRegistry,
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox
-        );
-
-        _commandProcessor = new CommandProcessor(registry,
-            handlerFactory,
-            new InMemoryRequestContextFactory(),
-            new DefaultPolicy(),
-            resiliencePipelineRegistry,
-            bus,
-            new InMemorySchedulerFactory { TimeProvider = _timeProvider });
-        PipelineBuilder<MyCommand>.ClearPipelineCache();
-        PipelineBuilder<FireSchedulerRequest>.ClearPipelineCache();
+        _outbox = new InMemoryOutbox(_timeProvider)
+        {
+            Tracer = tracer
+        };
+        IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(producerRegistry, resiliencePipelineRegistry, messageMapperRegistry, new EmptyMessageTransformerFactory(), new EmptyMessageTransformerFactoryAsync(), tracer, new FindPublicationByPublicationTopicOrRequestType(), _outbox);
+        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new DefaultPolicy(), resiliencePipelineRegistry, bus, new InMemorySchedulerFactory { TimeProvider = _timeProvider });
     }
 
-    [Fact]
+    [Test]
     public async Task When_Scheduling_Send_With_Invalid_Parameter_Async()
     {
-        var exception = await Catch.ExceptionAsync(() =>
-            _commandProcessor.SendAsync(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
-        Assert.NotNull(exception);
-        Assert.True((exception) is ArgumentOutOfRangeException);
-
+        var exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
+        await Assert.That(exception).IsNotNull();
+        await Assert.That((exception) is ArgumentOutOfRangeException).IsTrue();
         exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(TimeSpan.FromMilliseconds(-1), _myCommand));
-        Assert.NotNull(exception);
-        Assert.True((exception) is ArgumentOutOfRangeException);
+        await Assert.That(exception).IsNotNull();
+        await Assert.That((exception) is ArgumentOutOfRangeException).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_Scheduling_Publish_With_Invalid_Parameter()
     {
-        var exception = await Catch.ExceptionAsync(() =>
-            _commandProcessor.PublishAsync(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
-        Assert.NotNull(exception);
-        Assert.True((exception) is ArgumentOutOfRangeException);
-
+        var exception = await Catch.ExceptionAsync(() => _commandProcessor.PublishAsync(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
+        await Assert.That(exception).IsNotNull();
+        await Assert.That((exception) is ArgumentOutOfRangeException).IsTrue();
         exception = await Catch.ExceptionAsync(() => _commandProcessor.PublishAsync(TimeSpan.FromMilliseconds(-1), _myCommand));
-        Assert.NotNull(exception);
-        Assert.True((exception) is ArgumentOutOfRangeException);
+        await Assert.That(exception).IsNotNull();
+        await Assert.That((exception) is ArgumentOutOfRangeException).IsTrue();
     }
-    
-    [Fact]
+
+    [Test]
     public async Task When_Scheduling_Post_With_Invalid_Parameter()
     {
         var exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
-        Assert.NotNull(exception);
-        Assert.True((exception) is ArgumentOutOfRangeException);
-
+        await Assert.That(exception).IsNotNull();
+        await Assert.That((exception) is ArgumentOutOfRangeException).IsTrue();
         exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(TimeSpan.FromMilliseconds(-1), _myCommand));
-        Assert.NotNull(exception);
-        Assert.True((exception) is ArgumentOutOfRangeException);
+        await Assert.That(exception).IsNotNull();
+        await Assert.That((exception) is ArgumentOutOfRangeException).IsTrue();
     }
 }

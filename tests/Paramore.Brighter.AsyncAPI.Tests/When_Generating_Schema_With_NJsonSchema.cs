@@ -28,7 +28,6 @@ using FakeItEasy;
 using Microsoft.Extensions.Logging;
 using Neuroglia.AsyncApi.v3;
 using Paramore.Brighter.AsyncAPI.NJsonSchema;
-using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
 {
@@ -46,30 +45,30 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         // JsonSchema.ToJson(); we declare the same dialect via SchemaFormat so the AsyncAPI
         // envelope tells the truth about what we emit. Property names are camelCase to mirror
         // Brighter's default JsonMessageMapper wire format (JsonSerialisationOptions.Options).
-        [Fact]
+        [Test]
         public async Task It_Should_Return_Empty_Object_For_Null_Type()
         {
             var result = await _generator.GenerateAsync(null);
 
-            Assert.NotNull(result);
-            Assert.Equal("application/schema+json;version=draft-04", result.SchemaFormat);
+            await Assert.That(result).IsNotNull();
+            await Assert.That(result.SchemaFormat).IsEqualTo("application/schema+json;version=draft-04");
             var schema = (JsonElement)result.Schema;
-            Assert.Equal(JsonValueKind.Object, schema.ValueKind);
-            Assert.Equal("{}", schema.GetRawText());
+            await Assert.That(schema.ValueKind).IsEqualTo(JsonValueKind.Object);
+            await Assert.That(schema.GetRawText()).IsEqualTo("{}");
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Generate_Schema_For_Valid_Type()
         {
             var result = await _generator.GenerateAsync(typeof(TestSchemaType));
 
-            Assert.NotNull(result);
-            Assert.Equal("application/schema+json;version=draft-04", result.SchemaFormat);
+            await Assert.That(result).IsNotNull();
+            await Assert.That(result.SchemaFormat).IsEqualTo("application/schema+json;version=draft-04");
             var schema = (JsonElement)result.Schema;
-            Assert.Equal(JsonValueKind.Object, schema.ValueKind);
-            Assert.True(schema.TryGetProperty("properties", out var properties));
-            Assert.True(properties.TryGetProperty("name", out _));
-            Assert.True(properties.TryGetProperty("age", out _));
+            await Assert.That(schema.ValueKind).IsEqualTo(JsonValueKind.Object);
+            await Assert.That(schema.TryGetProperty("properties", out var properties)).IsTrue();
+            await Assert.That(properties.TryGetProperty("name", out _)).IsTrue();
+            await Assert.That(properties.TryGetProperty("age", out _)).IsTrue();
         }
 
 

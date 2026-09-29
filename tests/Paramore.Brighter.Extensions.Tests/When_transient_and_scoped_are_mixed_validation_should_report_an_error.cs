@@ -31,14 +31,14 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(LoggerCaptureCollection.NAME)]
+[System.Obsolete]
 public class MixedTransientAndScopedValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_transient_and_scoped_are_mixed_and_affinity_is_join_ambient_startup_should_fail()
     {
         // Arrange — a producer-only host with a mixed triple: Handler and Transformer Scoped, Mapper Transient
@@ -57,19 +57,18 @@ public class MixedTransientAndScopedValidationTests
         var hostedService = provider.GetServices<IHostedService>().OfType<BrighterValidationHostedService>().Single();
 
         // Act & Assert — startup fails, the error is not conditional on affinity
-        var exception = await Assert.ThrowsAsync<PipelineValidationException>(
-            () => hostedService.StartAsync(CancellationToken.None));
+        var exception = await Assert.That(() => hostedService.StartAsync(CancellationToken.None)).ThrowsExactly<PipelineValidationException>();
 
-        Assert.Contains("HandlerLifetime", exception.Message);
-        Assert.Contains("MapperLifetime", exception.Message);
-        Assert.Contains("TransformerLifetime", exception.Message);
-        Assert.Contains("Scoped", exception.Message);
-        Assert.Contains("Transient", exception.Message);
-        Assert.Contains("do not share", exception.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", exception.Message);
+        await Assert.That(exception.Message).Contains("HandlerLifetime");
+        await Assert.That(exception.Message).Contains("MapperLifetime");
+        await Assert.That(exception.Message).Contains("TransformerLifetime");
+        await Assert.That(exception.Message).Contains("Scoped");
+        await Assert.That(exception.Message).Contains("Transient");
+        await Assert.That(exception.Message).Contains("do not share");
+        await Assert.That(exception.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_transient_and_scoped_are_mixed_and_affinity_is_always_new_startup_should_fail()
     {
         // Arrange — the identical mixed triple, but with affinity AlwaysNew — the error is not about
@@ -89,19 +88,18 @@ public class MixedTransientAndScopedValidationTests
         var hostedService = provider.GetServices<IHostedService>().OfType<BrighterValidationHostedService>().Single();
 
         // Act & Assert — startup fails identically under AlwaysNew
-        var exception = await Assert.ThrowsAsync<PipelineValidationException>(
-            () => hostedService.StartAsync(CancellationToken.None));
+        var exception = await Assert.That(() => hostedService.StartAsync(CancellationToken.None)).ThrowsExactly<PipelineValidationException>();
 
-        Assert.Contains("HandlerLifetime", exception.Message);
-        Assert.Contains("MapperLifetime", exception.Message);
-        Assert.Contains("TransformerLifetime", exception.Message);
-        Assert.Contains("Scoped", exception.Message);
-        Assert.Contains("Transient", exception.Message);
-        Assert.Contains("do not share", exception.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", exception.Message);
+        await Assert.That(exception.Message).Contains("HandlerLifetime");
+        await Assert.That(exception.Message).Contains("MapperLifetime");
+        await Assert.That(exception.Message).Contains("TransformerLifetime");
+        await Assert.That(exception.Message).Contains("Scoped");
+        await Assert.That(exception.Message).Contains("Transient");
+        await Assert.That(exception.Message).Contains("do not share");
+        await Assert.That(exception.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_transient_and_scoped_are_mixed_and_throw_on_error_is_false_the_same_message_should_be_logged_as_error()
     {
         // Arrange — the same mixed triple, but throwOnError: false
@@ -124,13 +122,13 @@ public class MixedTransientAndScopedValidationTests
         await hostedService.StartAsync(CancellationToken.None);
 
         // Assert — the identical message is logged at Error instead of thrown
-        var errorEntry = Assert.Single(capturingProvider.Entries, e => e.Level == LogLevel.Error);
-        Assert.Contains("HandlerLifetime", errorEntry.Message);
-        Assert.Contains("MapperLifetime", errorEntry.Message);
-        Assert.Contains("TransformerLifetime", errorEntry.Message);
-        Assert.Contains("Scoped", errorEntry.Message);
-        Assert.Contains("Transient", errorEntry.Message);
-        Assert.Contains("do not share", errorEntry.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", errorEntry.Message);
+        var errorEntry = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level == LogLevel.Error);
+        await Assert.That(errorEntry.Message).Contains("HandlerLifetime");
+        await Assert.That(errorEntry.Message).Contains("MapperLifetime");
+        await Assert.That(errorEntry.Message).Contains("TransformerLifetime");
+        await Assert.That(errorEntry.Message).Contains("Scoped");
+        await Assert.That(errorEntry.Message).Contains("Transient");
+        await Assert.That(errorEntry.Message).Contains("do not share");
+        await Assert.That(errorEntry.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 }

@@ -4,14 +4,14 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ReleaseScopeDisposalThrowRetentionTests
 {
-    [Fact]
-    public void When_a_release_scope_disposal_throws_it_should_not_retain_the_instance()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_release_scope_disposal_throws_it_should_not_retain_the_instance()
     {
         // Arrange — a transient mapper resolved through a scope whose Dispose throws (as MS DI's sync scope
         // Dispose does for an IAsyncDisposable-only service). The scope is tracked against the instance.
@@ -29,10 +29,10 @@ public class ReleaseScopeDisposalThrowRetentionTests
         // Act — releasing removes the resolution's scope from tracking, then disposes it; the disposal
         // throws. The tracking removal is an atomic TryRemove that runs BEFORE the disposal, so the throw
         // cannot leave the scope retained.
-        Assert.Throws<InvalidOperationException>(() => factory.Release(lease));
+        await Assert.That(() => factory.Release(lease)).ThrowsExactly<InvalidOperationException>();
 
         // Assert — the released resolution's scope is no longer tracked, even though its disposal threw.
-        Assert.False(StillTracks(factory, lease.ReleaseToken!), "the released scope is still retained in tracking");
+        await Assert.That(StillTracks(factory, lease.ReleaseToken!)).IsFalse().Because("the released scope is still retained in tracking");
     }
 
     private static bool StillTracks(ServiceProviderMapperFactory factory, object scope)

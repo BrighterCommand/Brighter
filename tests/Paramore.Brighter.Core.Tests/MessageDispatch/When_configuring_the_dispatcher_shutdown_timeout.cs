@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
@@ -16,22 +15,22 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     /// </summary>
     public class DispatcherShutdownTimeoutConfigurationTests
     {
-        [Fact]
-        public void When_no_shutdown_timeout_is_supplied_it_defaults_to_ten_seconds()
+        [Test]
+        public async System.Threading.Tasks.Task When_no_shutdown_timeout_is_supplied_it_defaults_to_ten_seconds()
         {
             var dispatcher = BuildDispatcher(shutdownTimeout: null);
 
-            Assert.Equal(TimeSpan.FromSeconds(10), dispatcher.ShutdownTimeout);
+            await Assert.That(dispatcher.ShutdownTimeout).IsEqualTo(TimeSpan.FromSeconds(10));
         }
 
-        [Fact]
-        public void When_a_shutdown_timeout_is_supplied_it_is_honoured()
+        [Test]
+        public async System.Threading.Tasks.Task When_a_shutdown_timeout_is_supplied_it_is_honoured()
         {
             var configured = TimeSpan.FromMinutes(5);
 
             var dispatcher = BuildDispatcher(shutdownTimeout: configured);
 
-            Assert.Equal(configured, dispatcher.ShutdownTimeout);
+            await Assert.That(dispatcher.ShutdownTimeout).IsEqualTo(configured);
         }
 
         private static Dispatcher BuildDispatcher(TimeSpan? shutdownTimeout)

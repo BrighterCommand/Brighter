@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -28,19 +28,19 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.Handlers;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class CommandProcessorBuilderInboxAsyncTests
 {
-    [Theory]
-    [InlineData(InboxScope.Commands, true)]
-    [InlineData(InboxScope.Commands, false)]
-    [InlineData(InboxScope.Events, true)]
-    [InlineData(InboxScope.Events, false)]
-    [InlineData(InboxScope.All, true)]
-    [InlineData(InboxScope.All, false)]
+    [Test]
+    [Arguments(InboxScope.Commands, true)]
+    [Arguments(InboxScope.Commands, false)]
+    [Arguments(InboxScope.Events, true)]
+    [Arguments(InboxScope.Events, false)]
+    [Arguments(InboxScope.All, true)]
+    [Arguments(InboxScope.All, false)]
     public async Task When_building_without_external_bus_should_apply_the_inbox_configuration_async(
         InboxScope scope, bool onceOnly)
     {
@@ -68,15 +68,15 @@ public class CommandProcessorBuilderInboxAsyncTests
 
         // Act
         await processor.SendAsync(command);
-        var exception = await Record.ExceptionAsync(() => processor.SendAsync(duplicate));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => processor.SendAsync(duplicate));
 
         // Assert
         if (shouldReject)
-            Assert.IsType<OnceOnlyException>(exception);
+            await Assert.That(exception).IsTypeOf<OnceOnlyException>();
         else
-            Assert.Null(exception);
-        Assert.Equal(1, command.HandleCount);
-        Assert.Equal(shouldReject ? 0 : 1, duplicate.HandleCount);
-        Assert.Equal(shouldStore, await inbox.ExistsAsync<ConsumerGlobalInboxAsyncCommand>(command.Id, "builder-inbox", null));
+            await Assert.That(exception).IsNull();
+        await Assert.That(command.HandleCount).IsEqualTo(1);
+        await Assert.That(duplicate.HandleCount).IsEqualTo(shouldReject ? 0 : 1);
+        await Assert.That(await inbox.ExistsAsync<ConsumerGlobalInboxAsyncCommand>(command.Id, "builder-inbox", null)).IsEqualTo(shouldStore);
     }
 }

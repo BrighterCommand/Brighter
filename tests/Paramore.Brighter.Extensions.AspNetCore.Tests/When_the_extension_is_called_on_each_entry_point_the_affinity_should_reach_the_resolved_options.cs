@@ -30,7 +30,7 @@ using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -48,8 +48,8 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // carry AlwaysNew and the handler's marker is a fresh instance, not the ambient's.
 public class RequestScopeRegistrationEntryPointTests
 {
-    [Fact]
-    public void When_add_brighter_action_calls_the_extension_the_affinity_should_reach_the_options_and_adoption_should_work()
+    [Test]
+    public async System.Threading.Tasks.Task When_add_brighter_action_calls_the_extension_the_affinity_should_reach_the_options_and_adoption_should_work()
     {
         // Arrange - AddBrighter(Action<BrighterOptions>), extension called with the JoinAmbient default
         var services = new ServiceCollection();
@@ -69,12 +69,12 @@ public class RequestScopeRegistrationEntryPointTests
         var ambientMarker = SendUnderAmbientScope(provider);
 
         // Assert - the extension's affinity reached the object the factories read, and adoption worked
-        Assert.Equal(ScopeAffinity.JoinAmbient, resolvedOptions.DefaultScopeAffinity);
-        Assert.Same(ambientMarker, provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.JoinAmbient);
+        await Assert.That(provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker).IsSameReferenceAs(ambientMarker);
     }
 
-    [Fact]
-    public void When_add_brighter_action_already_sets_join_ambient_the_extensions_always_new_should_still_win()
+    [Test]
+    public async System.Threading.Tasks.Task When_add_brighter_action_already_sets_join_ambient_the_extensions_always_new_should_still_win()
     {
         // Arrange - falsifiable direction: the host itself sets JoinAmbient, the extension overrides with AlwaysNew
         var services = new ServiceCollection();
@@ -95,12 +95,12 @@ public class RequestScopeRegistrationEntryPointTests
         var ambientMarker = SendUnderAmbientScope(provider);
 
         // Assert - the extension wins regardless of order, and nothing adopted the live ambient
-        Assert.Equal(ScopeAffinity.AlwaysNew, resolvedOptions.DefaultScopeAffinity);
-        Assert.NotSame(ambientMarker, provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.AlwaysNew);
+        await Assert.That(provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker).IsNotSameReferenceAs(ambientMarker);
     }
 
-    [Fact]
-    public void When_add_brighter_func_calls_the_extension_the_affinity_should_reach_the_options_and_adoption_should_work()
+    [Test]
+    public async System.Threading.Tasks.Task When_add_brighter_func_calls_the_extension_the_affinity_should_reach_the_options_and_adoption_should_work()
     {
         // Arrange - AddBrighter(Func<IServiceProvider, BrighterOptions>), extension called with the JoinAmbient default
         var services = new ServiceCollection();
@@ -120,12 +120,12 @@ public class RequestScopeRegistrationEntryPointTests
         var ambientMarker = SendUnderAmbientScope(provider);
 
         // Assert
-        Assert.Equal(ScopeAffinity.JoinAmbient, resolvedOptions.DefaultScopeAffinity);
-        Assert.Same(ambientMarker, provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.JoinAmbient);
+        await Assert.That(provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker).IsSameReferenceAs(ambientMarker);
     }
 
-    [Fact]
-    public void When_add_brighter_func_already_sets_join_ambient_the_extensions_always_new_should_still_win()
+    [Test]
+    public async System.Threading.Tasks.Task When_add_brighter_func_already_sets_join_ambient_the_extensions_always_new_should_still_win()
     {
         // Arrange - falsifiable direction
         var services = new ServiceCollection();
@@ -146,12 +146,12 @@ public class RequestScopeRegistrationEntryPointTests
         var ambientMarker = SendUnderAmbientScope(provider);
 
         // Assert
-        Assert.Equal(ScopeAffinity.AlwaysNew, resolvedOptions.DefaultScopeAffinity);
-        Assert.NotSame(ambientMarker, provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.AlwaysNew);
+        await Assert.That(provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker).IsNotSameReferenceAs(ambientMarker);
     }
 
-    [Fact]
-    public void When_add_consumers_action_alone_calls_the_extension_the_affinity_should_reach_the_options_and_adoption_should_work()
+    [Test]
+    public async System.Threading.Tasks.Task When_add_consumers_action_alone_calls_the_extension_the_affinity_should_reach_the_options_and_adoption_should_work()
     {
         // Arrange - AddConsumers(Action<ConsumersOptions>) alone, extension called with the JoinAmbient default
         var services = new ServiceCollection();
@@ -172,12 +172,12 @@ public class RequestScopeRegistrationEntryPointTests
         var ambientMarker = SendUnderAmbientScope(provider);
 
         // Assert
-        Assert.Equal(ScopeAffinity.JoinAmbient, resolvedOptions.DefaultScopeAffinity);
-        Assert.Same(ambientMarker, provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.JoinAmbient);
+        await Assert.That(provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker).IsSameReferenceAs(ambientMarker);
     }
 
-    [Fact]
-    public void When_add_consumers_action_already_sets_join_ambient_the_extensions_always_new_should_still_win()
+    [Test]
+    public async System.Threading.Tasks.Task When_add_consumers_action_already_sets_join_ambient_the_extensions_always_new_should_still_win()
     {
         // Arrange - falsifiable direction
         var services = new ServiceCollection();
@@ -199,12 +199,12 @@ public class RequestScopeRegistrationEntryPointTests
         var ambientMarker = SendUnderAmbientScope(provider);
 
         // Assert
-        Assert.Equal(ScopeAffinity.AlwaysNew, resolvedOptions.DefaultScopeAffinity);
-        Assert.NotSame(ambientMarker, provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.AlwaysNew);
+        await Assert.That(provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker).IsNotSameReferenceAs(ambientMarker);
     }
 
-    [Fact]
-    public void When_add_consumers_func_alone_calls_the_extension_the_affinity_should_reach_the_options_and_adoption_should_work()
+    [Test]
+    public async System.Threading.Tasks.Task When_add_consumers_func_alone_calls_the_extension_the_affinity_should_reach_the_options_and_adoption_should_work()
     {
         // Arrange - AddConsumers(Func<IServiceProvider, ConsumersOptions>) alone, extension called with the JoinAmbient default
         var services = new ServiceCollection();
@@ -225,12 +225,12 @@ public class RequestScopeRegistrationEntryPointTests
         var ambientMarker = SendUnderAmbientScope(provider);
 
         // Assert
-        Assert.Equal(ScopeAffinity.JoinAmbient, resolvedOptions.DefaultScopeAffinity);
-        Assert.Same(ambientMarker, provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.JoinAmbient);
+        await Assert.That(provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker).IsSameReferenceAs(ambientMarker);
     }
 
-    [Fact]
-    public void When_add_consumers_func_already_sets_join_ambient_the_extensions_always_new_should_still_win()
+    [Test]
+    public async System.Threading.Tasks.Task When_add_consumers_func_already_sets_join_ambient_the_extensions_always_new_should_still_win()
     {
         // Arrange - falsifiable direction
         var services = new ServiceCollection();
@@ -252,8 +252,8 @@ public class RequestScopeRegistrationEntryPointTests
         var ambientMarker = SendUnderAmbientScope(provider);
 
         // Assert
-        Assert.Equal(ScopeAffinity.AlwaysNew, resolvedOptions.DefaultScopeAffinity);
-        Assert.NotSame(ambientMarker, provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.AlwaysNew);
+        await Assert.That(provider.GetRequiredService<RegistrationAffinityRecorder>().ResolvedMarker).IsNotSameReferenceAs(ambientMarker);
     }
 
     // Puts a request-scope ambient directly onto IHttpContextAccessor.HttpContext - the same thing

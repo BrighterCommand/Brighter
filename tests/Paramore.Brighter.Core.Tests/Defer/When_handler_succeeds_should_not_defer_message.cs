@@ -19,15 +19,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Defer.TestDoubles;
 using Paramore.Brighter.Defer.Handlers;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Defer
 {
@@ -35,13 +32,11 @@ namespace Paramore.Brighter.Core.Tests.Defer
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _command = new();
-
         public When_handler_succeeds_should_not_defer_message()
         {
             //Arrange
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MySucceedingDeferHandler>();
-
             var handlerFactory = new SimpleHandlerFactorySync(type =>
             {
                 if (type == typeof(MySucceedingDeferHandler))
@@ -50,28 +45,21 @@ namespace Paramore.Brighter.Core.Tests.Defer
                     return new DeferMessageOnErrorHandler<MyCommand>();
                 throw new ArgumentOutOfRangeException(nameof(type), type.Name, null);
             });
-
             MySucceedingDeferHandler.HandlerCalled = false;
-
-            _commandProcessor = new CommandProcessor(
-                registry,
-                handlerFactory,
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry(),
-                new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory()
-            );
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
-        [Fact]
-        public void It_should_complete_without_throwing()
+        [Test]
+        public async Task It_should_complete_without_throwing()
         {
             //Act
-            var exception = Record.Exception(() => _commandProcessor.Send(_command));
+            Exception? exception = null;
+            try { _commandProcessor.Send(_command); }
+            catch (Exception e) { exception = e; }
 
             //Assert
-            Assert.Null(exception); // No exception thrown
-            Assert.True(MySucceedingDeferHandler.HandlerCalled); // Handler was invoked
+            await Assert.That(exception).IsNull(); // No exception thrown
+            await Assert.That(MySucceedingDeferHandler.HandlerCalled).IsTrue(); // Handler was invoked
         }
     }
 }

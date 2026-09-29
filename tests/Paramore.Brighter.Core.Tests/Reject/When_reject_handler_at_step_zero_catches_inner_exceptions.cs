@@ -19,9 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -29,7 +27,6 @@ using Paramore.Brighter.Core.Tests.Reject.TestDoubles;
 using Paramore.Brighter.Logging.Handlers;
 using Paramore.Brighter.Reject.Handlers;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Reject
 {
@@ -41,13 +38,11 @@ namespace Paramore.Brighter.Core.Tests.Reject
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _command = new();
-
         public When_reject_handler_at_step_zero_catches_inner_exceptions()
         {
             //Arrange
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyMultiStepFailingHandler>();
-
             var handlerFactory = new SimpleHandlerFactorySync(type =>
             {
                 if (type == typeof(MyMultiStepFailingHandler))
@@ -58,29 +53,19 @@ namespace Paramore.Brighter.Core.Tests.Reject
                     return new RequestLoggingHandler<MyCommand>();
                 throw new ArgumentOutOfRangeException(nameof(type), type.Name, null);
             });
-
             MyMultiStepFailingHandler.HandlerCalled = false;
-
-            _commandProcessor = new CommandProcessor(
-                registry,
-                handlerFactory,
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry(),
-                new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory()
-            );
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
-        [Fact]
-        public void It_should_catch_exception_at_outermost_handler()
+        [Test]
+        public async Task It_should_catch_exception_at_outermost_handler()
         {
             //Act
-            var exception = Assert.Throws<RejectMessageAction>(() => _commandProcessor.Send(_command));
-
+            var exception = await Assert.That(() => _commandProcessor.Send(_command)).ThrowsExactly<RejectMessageAction>();
             //Assert
-            Assert.True(MyMultiStepFailingHandler.HandlerCalled); // Handler was invoked through the pipeline
-            Assert.Equal(MyMultiStepFailingHandler.EXCEPTION_MESSAGE, exception.Message); // Caught the inner exception
-            Assert.IsType<InvalidOperationException>(exception.InnerException); // Preserves original exception type
+            await Assert.That(MyMultiStepFailingHandler.HandlerCalled).IsTrue(); // Handler was invoked through the pipeline
+            await Assert.That(exception.Message).IsEqualTo(MyMultiStepFailingHandler.EXCEPTION_MESSAGE); // Caught the inner exception
+            await Assert.That(exception.InnerException).IsTypeOf<InvalidOperationException>(); // Preserves original exception type
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,24 +22,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 public class MigrationDescriptionRoundTripTests
 {
-    [Fact]
-    public void When_a_migration_description_is_created_from_a_string_it_should_expose_the_value()
+    [Test]
+    public async Task When_a_migration_description_is_created_from_a_string_it_should_expose_the_value()
     {
         //Arrange
         MigrationDescription d = "Add Source column";
 
         //Act + Assert
-        Assert.Equal("Add Source column", d.Value);
+        await Assert.That(d.Value).IsEqualTo("Add Source column");
     }
 
-    [Fact]
-    public void When_a_migration_description_is_implicitly_converted_to_string_it_should_yield_the_original()
+    [Test]
+    public async Task When_a_migration_description_is_implicitly_converted_to_string_it_should_yield_the_original()
     {
         //Arrange
         MigrationDescription d = "Add Source column";
@@ -47,55 +47,55 @@ public class MigrationDescriptionRoundTripTests
         string? s = d;
 
         //Assert
-        Assert.Equal("Add Source column", s);
+        await Assert.That(s).IsEqualTo("Add Source column");
     }
 
-    [Fact]
-    public void When_to_string_is_called_on_a_migration_description_it_should_return_the_value()
+    [Test]
+    public async Task When_to_string_is_called_on_a_migration_description_it_should_return_the_value()
     {
         //Arrange
         MigrationDescription d = new("Add Source column");
 
         //Act + Assert
-        Assert.Equal("Add Source column", d.ToString());
+        await Assert.That(d.ToString()).IsEqualTo("Add Source column");
     }
 
-    [Fact]
-    public void When_two_migration_descriptions_have_the_same_string_they_should_be_equal()
+    [Test]
+    public async Task When_two_migration_descriptions_have_the_same_string_they_should_be_equal()
     {
         //Arrange
         var a = new MigrationDescription("Add Source column");
         var b = (MigrationDescription)"Add Source column";
 
         //Act + Assert
-        Assert.Equal(a, b);
-        Assert.True(a == b);
+        await Assert.That(b).IsEqualTo(a);
+        await Assert.That(a == b).IsTrue();
     }
 
-    [Fact]
-    public void When_migration_description_is_null_or_empty_is_called_with_null_it_should_return_true()
+    [Test]
+    public async Task When_migration_description_is_null_or_empty_is_called_with_null_it_should_return_true()
     {
         //Act + Assert
-        Assert.True(MigrationDescription.IsNullOrEmpty(null));
+        await Assert.That(MigrationDescription.IsNullOrEmpty(null)).IsTrue();
     }
 
-    [Fact]
-    public void When_migration_description_is_null_or_empty_is_called_with_empty_string_it_should_return_true()
+    [Test]
+    public async Task When_migration_description_is_null_or_empty_is_called_with_empty_string_it_should_return_true()
     {
         //Arrange
         var empty = (MigrationDescription)"";
 
         //Act + Assert
-        Assert.True(MigrationDescription.IsNullOrEmpty(empty));
+        await Assert.That(MigrationDescription.IsNullOrEmpty(empty)).IsTrue();
     }
 
-    [Fact]
-    public void When_migration_description_is_null_or_empty_is_called_with_non_empty_string_it_should_return_false()
+    [Test]
+    public async Task When_migration_description_is_null_or_empty_is_called_with_non_empty_string_it_should_return_false()
     {
         //Arrange
         var d = (MigrationDescription)"Add Source column";
 
         //Act + Assert
-        Assert.False(MigrationDescription.IsNullOrEmpty(d));
+        await Assert.That(MigrationDescription.IsNullOrEmpty(d)).IsFalse();
     }
 }

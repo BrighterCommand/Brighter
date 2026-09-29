@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // from the root provider would leave the instances undisposed after PublishAsync returns.
 public class PublishSubscriberScopeTeardownTests
 {
-    [Fact]
+    [Test]
     public async Task When_publishing_to_three_subscribers_each_should_get_its_own_scope()
     {
         // Arrange
@@ -58,10 +58,14 @@ public class PublishSubscriberScopeTeardownTests
         await commandProcessor.PublishAsync(new OrderPlaced());
 
         // Assert — three distinct IUnitOfWork instances were resolved, one per subscriber
-        Assert.Equal(3, recorder.UnitsOfWork.Count);
-        Assert.Equal(3, recorder.UnitsOfWork.Distinct().Count());
-
-        // Assert — by the time PublishAsync returns, all three have already been disposed
-        Assert.All(recorder.UnitsOfWork, unitOfWork => Assert.True(unitOfWork.IsDisposed));
+        await Assert.That(recorder.UnitsOfWork.Count).IsEqualTo(3);
+        await Assert.That(recorder.UnitsOfWork.Distinct().Count()).IsEqualTo(3);
+        using (Assert.Multiple())
+        {
+            foreach (var unitOfWork in recorder.UnitsOfWork)
+            {
+                await Assert.That(unitOfWork.IsDisposed).IsTrue();
+            }
+        }
     }
 }

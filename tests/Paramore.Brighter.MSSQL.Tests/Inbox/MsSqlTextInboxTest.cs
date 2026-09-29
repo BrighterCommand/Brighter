@@ -1,10 +1,11 @@
-﻿using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MsSql;
 
 namespace Paramore.Brighter.MSSQL.Tests.Inbox;
+[TUnit.Core.InheritsTests]
 
-public class MsSqlTextInboxTest : RelationalDatabaseInboxTests 
+public class MsSqlTextInboxTest : RelationalDatabaseInboxTests
 {
     protected override string DefaultConnectingString => Tests.Configuration.DefaultConnectingString;
     protected override string TableNamePrefix => Tests.Configuration.TablePrefix;

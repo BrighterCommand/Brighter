@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // bracket 3, landed in T5.4), not on however the Dispatcher happened to be started.
 public class DispatcherStartedFromRequestTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_dispatcher_is_started_from_inside_a_request_the_consumer_should_not_adopt()
     {
         // Arrange - an opted-in host (JoinAmbient given as the extension's own argument), lifetime triple
@@ -68,25 +68,44 @@ public class DispatcherStartedFromRequestTests
         // Assert - the pump's flow genuinely carried the request's own, live ambient: every handler's own
         // IHttpContextAccessor observed the very HttpContext the controller was itself serving, not a
         // stale or absent one
-        Assert.NotNull(recorder.ControllerHttpContext);
-        Assert.Equal(DispatcherFromRequestWebApplicationFactory.MessageCount, recorder.ObservedHttpContexts.Count);
-        Assert.All(recorder.ObservedHttpContexts, ctx => Assert.Same(recorder.ControllerHttpContext, ctx));
+        await Assert.That(recorder.ControllerHttpContext).IsNotNull();
+        await Assert.That(recorder.ObservedHttpContexts.Count).IsEqualTo(DispatcherFromRequestWebApplicationFactory.MessageCount);
+        foreach (var ctx in recorder.ObservedHttpContexts)
+{
+    await Assert.That(ctx).IsSameReferenceAs(recorder.ControllerHttpContext);
+}
 
         // Assert - ten distinct, disposed mapper and handler instances - a consumer pipeline resolving
         // the ambient's own scope would instead have collapsed every message onto the one, shared,
         // still-open instance that scope's container caches (T5.4's own lesson)
-        Assert.Equal(DispatcherFromRequestWebApplicationFactory.MessageCount, recorder.Mappers.Distinct().Count());
-        Assert.Equal(DispatcherFromRequestWebApplicationFactory.MessageCount, recorder.Handlers.Distinct().Count());
-        Assert.All(recorder.Mappers, mapper => Assert.True(mapper.IsDisposed));
-        Assert.All(recorder.Handlers, handler => Assert.True(handler.IsDisposed));
-
+        await Assert.That(recorder.Mappers.Distinct().Count()).IsEqualTo(DispatcherFromRequestWebApplicationFactory.MessageCount);
+        await Assert.That(recorder.Handlers.Distinct().Count()).IsEqualTo(DispatcherFromRequestWebApplicationFactory.MessageCount);
+        using (Assert.Multiple())
+        {
+            foreach (var mapper in recorder.Mappers)
+            {
+                await Assert.That(mapper.IsDisposed).IsTrue();
+            }
+        }
+        using (Assert.Multiple())
+        {
+            foreach (var handler in recorder.Handlers)
+            {
+                await Assert.That(handler.IsDisposed).IsTrue();
+            }
+        }
         // Assert - every ask this pump made carried AlwaysNew, never JoinAmbient
         var scopeProviderRecorder = (DelegatingScopeProviderRecorder)factory.Services.GetRequiredService<IAmAScopeProvider>();
-        Assert.NotEmpty(scopeProviderRecorder.Decisions);
-        Assert.All(scopeProviderRecorder.Decisions, decision => Assert.Equal(ScopeAffinity.AlwaysNew, decision));
-
+        await Assert.That(scopeProviderRecorder.Decisions).IsNotEmpty();
+        using (Assert.Multiple())
+        {
+            foreach (var decision in scopeProviderRecorder.Decisions)
+            {
+                await Assert.That(decision).IsEqualTo(ScopeAffinity.AlwaysNew);
+            }
+        }
         // Assert - no Warning: FR-24's diagnostics are JoinAmbient-only, and this pump's ask never carried
         // that affinity
-        Assert.DoesNotContain(factory.LogEntries, entry => entry.Level >= LogLevel.Warning);
+        await Assert.That(factory.LogEntries).DoesNotContain(entry => entry.Level >= LogLevel.Warning);
     }
 }

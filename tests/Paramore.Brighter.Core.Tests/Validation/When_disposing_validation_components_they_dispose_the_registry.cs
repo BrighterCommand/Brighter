@@ -3,7 +3,7 @@ using System;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.Validation
 {
@@ -12,8 +12,8 @@ namespace Paramore.Brighter.Core.Tests.Validation
         private static Publication PublicationFor<TRequest>(string topic) =>
             new() { Topic = new RoutingKey(topic), RequestType = typeof(TRequest) };
 
-        [Fact]
-        public void When_disposing_the_validator_it_disposes_the_mapper_registry()
+        [Test]
+        public async System.Threading.Tasks.Task When_disposing_the_validator_it_disposes_the_mapper_registry()
         {
             //arrange — the registry is built lazily, so give the validator a publication and a probe so the
             //wrap-transform check runs and actually builds it; only then does disposal have one to drain.
@@ -37,16 +37,16 @@ namespace Paramore.Brighter.Core.Tests.Validation
             //The container disposes the validator at shutdown; it must cascade so the registry's factory
             //(and any scope it holds) is drained rather than retained until the process exits.
             var disposable = validator as IDisposable;
-            Assert.NotNull(disposable);
+            await Assert.That(disposable).IsNotNull();
 
             disposable!.Dispose();
 
             //assert
-            Assert.Equal(1, mapperFactory.DisposeCount);
+            await Assert.That(mapperFactory.DisposeCount).IsEqualTo(1);
         }
 
-        [Fact]
-        public void When_disposing_the_diagnostic_writer_it_disposes_the_mapper_registry()
+        [Test]
+        public async System.Threading.Tasks.Task When_disposing_the_diagnostic_writer_it_disposes_the_mapper_registry()
         {
             //arrange — the registry is built lazily, so give the writer a publication to describe so it
             //actually builds it; only then does disposal have one to drain.
@@ -67,12 +67,12 @@ namespace Paramore.Brighter.Core.Tests.Validation
 
             //act
             var disposable = writer as IDisposable;
-            Assert.NotNull(disposable);
+            await Assert.That(disposable).IsNotNull();
 
             disposable!.Dispose();
 
             //assert
-            Assert.Equal(1, mapperFactory.DisposeCount);
+            await Assert.That(mapperFactory.DisposeCount).IsEqualTo(1);
         }
 
         private sealed class DisposeCountingMapperFactory : IAmAMessageMapperFactory, IDisposable

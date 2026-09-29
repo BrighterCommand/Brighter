@@ -19,11 +19,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using FakeItEasy;
-using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
@@ -36,7 +33,6 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         private readonly ConfigurationCommandHandler _configurationCommandHandler;
         private readonly ConfigurationCommand _configurationCommand;
         private readonly IDispatcher _dispatcher;
-
         public ConfigurationCommandStartTests()
         {
             _dispatcher = A.Fake<IDispatcher>();
@@ -44,11 +40,10 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTCHANNEL, new SubscriptionName(SubscriptionName));
         }
 
-        [Fact]
-        public void When_receiving_a_start_message_for_a_connection()
+        [Test]
+        public async Task When_receiving_a_start_message_for_a_connection()
         {
             _configurationCommandHandler.Handle(_configurationCommand);
-
             //_should_call_stop_for_the_given_connection
             A.CallTo(() => _dispatcher.Shut(new SubscriptionName(SubscriptionName)));
         }

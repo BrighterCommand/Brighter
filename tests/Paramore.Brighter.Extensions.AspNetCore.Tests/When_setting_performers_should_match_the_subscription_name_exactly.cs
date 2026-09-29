@@ -32,20 +32,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Control.Api;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
 public class ControlApiSubscriptionNameTests
 {
-    [Theory]
-    [InlineData("orders-subscription", "orders-subscription", HttpStatusCode.OK, 0)]
-    [InlineData("orders-subscription", "ORDERS-SUBSCRIPTION", HttpStatusCode.BadRequest, 0)]
-    [InlineData("orders-subscription", "Orders-Subscription", HttpStatusCode.BadRequest, 0)]
-    [InlineData("ORDERS-SUBSCRIPTION", "ORDERS-SUBSCRIPTION", HttpStatusCode.OK, 0)]
-    [InlineData("ORDERS-SUBSCRIPTION", "orders-subscription", HttpStatusCode.BadRequest, 0)]
-    [InlineData("orders-subscription", "unknown-subscription", HttpStatusCode.BadRequest, 0)]
-    [InlineData("orders-subscription", "ORDERS-SUBSCRIPTION", HttpStatusCode.BadRequest, 3)]
+    [Test]
+    [Arguments("orders-subscription", "orders-subscription", HttpStatusCode.OK, 0)]
+    [Arguments("orders-subscription", "ORDERS-SUBSCRIPTION", HttpStatusCode.BadRequest, 0)]
+    [Arguments("orders-subscription", "Orders-Subscription", HttpStatusCode.BadRequest, 0)]
+    [Arguments("ORDERS-SUBSCRIPTION", "ORDERS-SUBSCRIPTION", HttpStatusCode.OK, 0)]
+    [Arguments("ORDERS-SUBSCRIPTION", "orders-subscription", HttpStatusCode.BadRequest, 0)]
+    [Arguments("orders-subscription", "unknown-subscription", HttpStatusCode.BadRequest, 0)]
+    [Arguments("orders-subscription", "ORDERS-SUBSCRIPTION", HttpStatusCode.BadRequest, 3)]
     public async Task When_setting_performers_should_match_the_subscription_name_exactly(
         string registeredName, string requestedName, HttpStatusCode expectedStatus, int requestedPerformers)
     {
@@ -69,11 +68,11 @@ public class ControlApiSubscriptionNameTests
         using var response = await client.PatchAsync($"/control/subscriptions/{requestedName}/performers/{requestedPerformers}", null);
 
         // Assert
-        Assert.Equal(expectedStatus, response.StatusCode);
+        await Assert.That(response.StatusCode).IsEqualTo(expectedStatus);
         var expectedMessage = expectedStatus == HttpStatusCode.OK
             ? $"Active performers for {requestedName} set to {requestedPerformers}"
             : $"No such subscription {requestedName}";
-        Assert.Equal(expectedMessage, await response.Content.ReadFromJsonAsync<string>());
-        Assert.Equal(0, subscription.NoOfPerformers);
+        await Assert.That(await response.Content.ReadFromJsonAsync<string>()).IsEqualTo(expectedMessage);
+        await Assert.That(subscription.NoOfPerformers).IsEqualTo(0);
     }
 }

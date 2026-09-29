@@ -29,18 +29,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.JsonConverters;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 /// <summary>
 /// Tests that verify CommandProcessor instances are properly isolated,
-/// enabling parallel test execution without [Collection] serialization.
+/// enabling parallel test execution without collection-level serialization.
 /// </summary>
 public class CommandProcessorIsolationTests
 {
-    [Fact]
-    public void TwoCommandProcessors_HaveIsolatedState()
+    [Test]
+    public async Task TwoCommandProcessors_HaveIsolatedState()
     {
         // Arrange - Create two independent service providers
         var services1 = new ServiceCollection();
@@ -56,10 +55,10 @@ public class CommandProcessorIsolationTests
         var cp2 = provider2.GetRequiredService<IAmACommandProcessor>();
 
         // Assert - They should be different instances
-        Assert.NotSame(cp1, cp2);
+        await Assert.That(cp2).IsNotSameReferenceAs(cp1);
     }
 
-    [Fact]
+    [Test]
     public async Task ParallelTests_DoNotInterfere()
     {
         // This test demonstrates that parallel execution is safe
@@ -85,7 +84,7 @@ public class CommandProcessorIsolationTests
         {
             for (int j = i + 1; j < 10; j++)
             {
-                Assert.NotSame(processors[i], processors[j]);
+                await Assert.That(processors[j]).IsNotSameReferenceAs(processors[i]);
             }
         }
     }
@@ -95,7 +94,7 @@ public class CommandProcessorIsolationTests
     /// Multiple test classes creating full Brighter setups with producers and outboxes in parallel.
     /// Previously, the static singleton pattern caused all tests to share the same outbox.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task ParallelBrighterSetups_WithProducers_HaveIsolatedOutboxes()
     {
         // Arrange - simulate 5 parallel test setups
@@ -150,7 +149,7 @@ public class CommandProcessorIsolationTests
         {
             for (int j = i + 1; j < parallelTests; j++)
             {
-                Assert.NotSame(commandProcessors[i], commandProcessors[j]);
+                await Assert.That(commandProcessors[j]).IsNotSameReferenceAs(commandProcessors[i]);
             }
         }
 
@@ -159,7 +158,7 @@ public class CommandProcessorIsolationTests
         {
             for (int j = i + 1; j < parallelTests; j++)
             {
-                Assert.NotSame(outboxes[i], outboxes[j]);
+                await Assert.That(outboxes[j]).IsNotSameReferenceAs(outboxes[i]);
             }
         }
     }
@@ -169,7 +168,7 @@ public class CommandProcessorIsolationTests
     /// Brighter configuration using the new Func overloads.
     /// This is the recommended pattern for test isolation.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task ParallelBrighterSetups_WithFuncOverloads_AreIsolated()
     {
         const int parallelTests = 5;
@@ -225,8 +224,8 @@ public class CommandProcessorIsolationTests
         {
             for (int j = i + 1; j < parallelTests; j++)
             {
-                Assert.NotSame(results[i].Processor, results[j].Processor);
-                Assert.NotSame(results[i].Outbox, results[j].Outbox);
+                await Assert.That(results[j].Processor).IsNotSameReferenceAs(results[i].Processor);
+                await Assert.That(results[j].Outbox).IsNotSameReferenceAs(results[i].Outbox);
             }
         }
     }

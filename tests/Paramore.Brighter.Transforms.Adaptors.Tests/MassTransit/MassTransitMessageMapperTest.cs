@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transformers.MassTransit;
-using Xunit;
 
 namespace Paramore.Brighter.Transforms.Adaptors.Tests.MassTransit;
 
@@ -16,41 +15,41 @@ public class MassTransitMessageMapperTests
         Source = new Uri("http://source")
     };
 
-    [Fact]
-    public void MapToMessage_CommandType_SetsMT_COMMAND()
+    [Test]
+    public async Task MapToMessage_CommandType_SetsMT_COMMAND()
     {
         var mapper = new MassTransitMessageMapper<TestCommand> { Context = _context };
 
         var request = new TestCommand();
-        var message = mapper.MapToMessage(request, _publication);
+        var message = await mapper.MapToMessageAsync(request, _publication);
 
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
     }
 
-    [Fact]
-    public void MapToMessage_EventType_SetsMT_EVENT()
+    [Test]
+    public async Task MapToMessage_EventType_SetsMT_EVENT()
     {
         var mapper = new MassTransitMessageMapper<TestEvent> { Context = _context };
 
         var request = new TestEvent();
-        var message = mapper.MapToMessage(request, _publication);
+        var message = await mapper.MapToMessageAsync(request, _publication);
 
-        Assert.Equal(MessageType.MT_EVENT, message.Header.MessageType);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_EVENT);
     }
 
-    [Fact]
-    public void MapToMessage_OtherType_SetsMT_DOCUMENT()
+    [Test]
+    public async Task MapToMessage_OtherType_SetsMT_DOCUMENT()
     {
         var mapper = new MassTransitMessageMapper<TestOtherRequest> { Context = _context };
 
         var request = new TestOtherRequest();
-        var message = mapper.MapToMessage(request, _publication);
+        var message = await mapper.MapToMessageAsync(request, _publication);
 
-        Assert.Equal(MessageType.MT_DOCUMENT, message.Header.MessageType);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_DOCUMENT);
     }
 
-    [Fact]
-    public void MapToMessage_ContextHasCorrelationId_UsesIt()
+    [Test]
+    public async Task MapToMessage_ContextHasCorrelationId_UsesIt()
     {
         const string correlationId = "test-correlation";
         _context.Bag[MassTransitHeaderNames.CorrelationId] = correlationId;
@@ -58,24 +57,24 @@ public class MassTransitMessageMapperTests
         var mapper = new MassTransitMessageMapper<TestOtherRequest> { Context = _context };
 
         var request = new TestOtherRequest();
-        var message = mapper.MapToMessage(request, _publication);
+        var message = await mapper.MapToMessageAsync(request, _publication);
 
-        Assert.Equal(correlationId, message.Header.CorrelationId);
+        await Assert.That(message.Header.CorrelationId).IsEqualTo(correlationId);
     }
 
-    [Fact]
-    public void MapToMessage_NoCorrelationIdInContext_GeneratesNew()
+    [Test]
+    public async Task MapToMessage_NoCorrelationIdInContext_GeneratesNew()
     {
         var mapper = new MassTransitMessageMapper<TestOtherRequest> { Context = _context };
 
         var request = new TestOtherRequest();
-        var message = mapper.MapToMessage(request, _publication);
+        var message = await mapper.MapToMessageAsync(request, _publication);
 
-        Assert.NotEqual(Guid.Empty.ToString(), message.Header.CorrelationId.Value);
+        await Assert.That(message.Header.CorrelationId.Value).IsNotEqualTo(Guid.Empty.ToString());
     }
 
-    [Fact]
-    public void MapToRequest_DeserializesEnvelopeCorrectly()
+    [Test]
+    public async Task MapToRequest_DeserializesEnvelopeCorrectly()
     {
         var expectedId = Guid.NewGuid().ToString();
         var envelope = new MassTransitMessageEnvelop<TestOtherRequest>
@@ -99,13 +98,13 @@ public class MassTransitMessageMapperTests
         );
 
         var mapper = new MassTransitMessageMapper<TestOtherRequest>();
-        var result = mapper.MapToRequest(message);
+        var result = await mapper.MapToRequestAsync(message);
 
-        Assert.Equal(expectedId, result.Id);
+        await Assert.That(result.Id).IsEqualTo(expectedId);
     }
 
-    [Fact]
-    public void MapToMessage_EnvelopeContainsConversationIdFromContext()
+    [Test]
+    public async Task MapToMessage_EnvelopeContainsConversationIdFromContext()
     {
         const string conversationId = "conv123";
         _context.Bag[MassTransitHeaderNames.ConversationId] = conversationId;
@@ -113,14 +112,14 @@ public class MassTransitMessageMapperTests
         var mapper = new MassTransitMessageMapper<TestOtherRequest> { Context = _context };
 
         var request = new TestOtherRequest();
-        var message = mapper.MapToMessage(request, _publication);
+        var message = await mapper.MapToMessageAsync(request, _publication);
 
         var envelope = JsonSerializer.Deserialize<MassTransitMessageEnvelop<TestOtherRequest>>(message.Body.Bytes, JsonSerialisationOptions.Options);
 
-        Assert.Equal(conversationId, envelope?.ConversationId?.Value);
+        await Assert.That(envelope?.ConversationId?.Value).IsEqualTo(conversationId);
     }
 
-    [Fact]
+    [Test]
     public async Task MapToMessageAsync_CallsMapToMessage()
     {
         var mapper = new MassTransitMessageMapper<TestOtherRequest>();
@@ -128,10 +127,10 @@ public class MassTransitMessageMapperTests
 
         var message = await mapper.MapToMessageAsync(request, _publication);
 
-        Assert.NotNull(message);
+        await Assert.That(message).IsNotNull();
     }
 
-    [Fact]
+    [Test]
     public async Task MapToRequestAsync_CallsMapToRequest()
     {
         var expectedId = Id.Random();
@@ -159,7 +158,7 @@ public class MassTransitMessageMapperTests
         var mapper = new MassTransitMessageMapper<TestOtherRequest>();
         var result = await mapper.MapToRequestAsync(message);
 
-        Assert.Equal(expectedId, result.Id);
+        await Assert.That(result.Id).IsEqualTo(expectedId);
     }
 }
 

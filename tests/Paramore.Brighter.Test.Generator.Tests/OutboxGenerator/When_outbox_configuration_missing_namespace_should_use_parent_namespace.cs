@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
@@ -21,7 +20,7 @@ public class WhenOutboxConfigurationMissingNamespaceShouldUseParentNamespace : I
         _logger = factory.CreateLogger<Generators.OutboxGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_outbox_configuration_missing_namespace_should_use_parent_namespace()
     {
         // Arrange
@@ -50,7 +49,7 @@ public class WhenOutboxConfigurationMissingNamespaceShouldUseParentNamespace : I
             "Generated", "Sync", "When_Adding_A_Message_It_Should_Be_Stored_With_All_Properties.cs"));
         // The whole line, not a prefix of it: the singular branch does not dot-qualify, so
         // "namespace MyApp.Tests.Outbox" would match MyApp.Tests.OutboxAnythingElse too
-        Assert.Contains("namespace MyApp.Tests.OutboxSqlServer.Sync;", generated);
+        await Assert.That(generated).Contains("namespace MyApp.Tests.OutboxSqlServer.Sync;");
     }
 
     public void Dispose()

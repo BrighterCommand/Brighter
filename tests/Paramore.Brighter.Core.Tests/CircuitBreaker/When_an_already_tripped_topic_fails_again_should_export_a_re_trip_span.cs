@@ -6,14 +6,14 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker
 {
     public class OutboxCircuitBreakerReTripSpanTests
     {
-        [Fact]
-        public void When_an_already_tripped_topic_fails_again_should_export_a_re_trip_span()
+        [Test]
+        public async System.Threading.Tasks.Task When_an_already_tripped_topic_fails_again_should_export_a_re_trip_span()
         {
             // Arrange
             var exportedActivities = new List<Activity>();
@@ -37,9 +37,9 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
             // Assert
             var reTripSpan = exportedActivities.SingleOrDefault(a =>
                 a.DisplayName == $"{topic} {CircuitBreakerSpanOperation.ReTrip.ToSpanName()}");
-            Assert.NotNull(reTripSpan);
-            Assert.Contains(reTripSpan!.Tags, t => t.Key == BrighterSemanticConventions.CircuitBreakerTopic && t.Value == topic.Value);
-            Assert.Contains(reTripSpan.TagObjects, t => t.Key == BrighterSemanticConventions.CircuitBreakerCooldownCount && (int)t.Value! == 4);
+            await Assert.That(reTripSpan).IsNotNull();
+            await Assert.That(reTripSpan!.Tags).Contains(t => t.Key == BrighterSemanticConventions.CircuitBreakerTopic && t.Value == topic.Value);
+            await Assert.That(reTripSpan.TagObjects).Contains(t => t.Key == BrighterSemanticConventions.CircuitBreakerCooldownCount && (int)t.Value! == 4);
         }
     }
 }

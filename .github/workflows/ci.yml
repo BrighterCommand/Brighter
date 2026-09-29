@@ -15,7 +15,7 @@ on:
       - '*.*.*'
   pull_request:
     branches: [ master, release/9X ]
-  
+
 env:
  # Stop wasting time caching packages
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
@@ -59,6 +59,12 @@ jobs:
             Linux-nuget-
       - name: Build
         run: dotnet build --configuration Release
+      - name: Enable Automated Test Artifact Uploads
+        uses: actions/github-script@v9
+        with:
+          script: |
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env['ACTIONS_RUNTIME_TOKEN']);
+            core.exportVariable('ACTIONS_RESULTS_URL', process.env['ACTIONS_RESULTS_URL']);
       # The generator's own tests include the audit that compares the Generated/ tree with what
       # the checked-in configurations would produce. It has to run somewhere to be worth having,
       # and it runs first: it needs no infrastructure and takes seconds, so generator drift is
@@ -67,7 +73,7 @@ jobs:
         # One framework rather than both: the audit walks the repository tree, and neither the walk
         # nor the generator it plans with is framework-sensitive, so the second run re-answers a
         # question already answered. net10.0 matches what generate-test.sh runs.
-        run: dotnet test tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build -f net10.0
+        run: dotnet test --project tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -c Release --no-restore --no-build -f net10.0
 
       # Every shipped gateway's channel factory declaration sweep (ADR 0073). Construction-only and
       # needs no broker, so it runs here rather than in a transport job - MQTT's job filters to
@@ -78,38 +84,38 @@ jobs:
       # of twelve - do not remove or reorder that step.
       - name: Gateway Channel Factory Declaration Sweeps
         run: |
-          dotnet test tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
-          dotnet test tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
-          dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
-          dotnet test tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
-          dotnet test tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
-          dotnet test tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
-          dotnet test tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
-          dotnet test tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
-          dotnet test tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
-          dotnet test tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
-          dotnet test tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
-          dotnet test tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test --project tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --treenode-filter "/*/*/GatewayChannelFactoryDeclarationTests/*" -c Release --no-restore --no-build
+          dotnet test --project tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --treenode-filter "/*/*/GatewayChannelFactoryDeclarationTests/*" -c Release --no-restore --no-build
+          dotnet test --project tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --treenode-filter "/*/*/GatewayChannelFactoryDeclarationTests/*" -c Release --no-restore --no-build
+          dotnet test --project tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --treenode-filter "/*/*/GatewayChannelFactoryDeclarationTests/*" -c Release --no-restore --no-build
+          dotnet test --project tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --treenode-filter "/*/*/GatewayChannelFactoryDeclarationTests/*" -c Release --no-restore --no-build
+          dotnet test --project tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --treenode-filter "/*/*/GatewayChannelFactoryDeclarationTests/*" -c Release --no-restore --no-build
+          dotnet test --project tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --treenode-filter "/*/*/GatewayChannelFactoryDeclarationTests/*" -c Release --no-restore --no-build
+          dotnet test --project tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --treenode-filter "/*/*/GatewayChannelFactoryDeclarationTests/*" -c Release --no-restore --no-build
+          dotnet test --project tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --treenode-filter "/*/*/GatewayChannelFactoryDeclarationTests/*" -c Release --no-restore --no-build
+          dotnet test --project tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --treenode-filter "/*/*/GatewayChannelFactoryDeclarationTests/*" -c Release --no-restore --no-build
+          dotnet test --project tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --treenode-filter "/*/*/GatewayChannelFactoryDeclarationTests/*" -c Release --no-restore --no-build
+          dotnet test --project tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --treenode-filter "/*/*/GatewayChannelFactoryDeclarationTests/*" -c Release --no-restore --no-build
 
       # The RocketMQ gateway's broker-free tests. rocketmq-ci is commented out below, so without
       # this step the whole RocketMQ suite - and with it the builder-block extraction in
       # RocketMqMessagePublisher - is executed by nothing in CI. The filter is what keeps the step
       # honest: the other 47 tests in that project need a live broker and would fail here.
       - name: RocketMQ Broker-Free Tests
-        run: dotnet test tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "Category=RocketMQBrokerFree" -c Release --logger GitHubActions --no-restore --no-build
+        run: dotnet test --project tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --treenode-filter "/*/*/*/*[Category=RocketMQBrokerFree]" -c Release --no-restore --no-build
 
       # These producer race tests use in-memory clients and do not need the Azure job's secrets.
       - name: Azure Service Bus Creation Race Tests
-        run: dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "FullyQualifiedName~AzureServiceBusProducerCreationRaceTests" -c Release --logger GitHubActions --no-restore --no-build
+        run: dotnet test --project tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --treenode-filter "/*/*/AzureServiceBusProducerCreationRaceTests/*" -c Release --no-restore --no-build
 
       - name: Azure Configuration Tests
-        run: dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "FullyQualifiedName~Paramore.Brighter.AzureServiceBus.Tests.Configuration." -c Release --logger GitHubActions --no-restore --no-build
+        run: dotnet test --project tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --treenode-filter "/*/Paramore.Brighter.AzureServiceBus.Tests.Configuration/*/*" -c Release --no-restore --no-build
 
       - name: Core Tests
         run: |
-          dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --logger GitHubActions --no-restore --no-build
-          dotnet test tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build
-          dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test --project tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" -c Release --no-restore --no-build --verbosity d --hangdump --hangdump-timeout 15m --hangdump-type Mini
+          dotnet test --project tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj -c Release --no-restore --no-build --verbosity d --hangdump --hangdump-timeout 15m --hangdump-type Mini
+          dotnet test --project tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --no-build --verbosity d --hangdump --hangdump-timeout 15m --hangdump-type Mini
 
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@v7
@@ -151,7 +157,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test --project ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
 
   hangfire:
     runs-on: ubuntu-latest
@@ -169,7 +175,14 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Hangfire Tests
-        run: dotnet test ./tests/Paramore.Brighter.Hangfire.Tests/Paramore.Brighter.Hangfire.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test --project ./tests/Paramore.Brighter.Hangfire.Tests/Paramore.Brighter.Hangfire.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
 
   quartz:
     runs-on: ubuntu-latest
@@ -187,7 +200,14 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Quartz Tests
-        run: dotnet test ./tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test --project ./tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
 
   tickerq:
     runs-on: ubuntu-latest
@@ -205,7 +225,14 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: TickerQ Tests
-        run: dotnet test ./tests/Paramore.Brighter.TickerQ.Tests/Paramore.Brighter.TickerQ.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test --project ./tests/Paramore.Brighter.TickerQ.Tests/Paramore.Brighter.TickerQ.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
 
   redis-ci:
     runs-on: ubuntu-latest
@@ -215,7 +242,7 @@ jobs:
     needs: [build]
 
     services:
-      redis:  
+      redis:
         image: redis:latest
         ports:
         - 6379:6379
@@ -223,7 +250,7 @@ jobs:
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 10             
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v7
@@ -236,7 +263,14 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Redis Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test --project ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
 
   mqtt-ci:
     runs-on: ubuntu-latest
@@ -244,7 +278,7 @@ jobs:
     needs: [build]
 
     services:
-      mosquitto:  
+      mosquitto:
         image: efrecon/mosquitto:latest
         ports:
         - 1883:1883
@@ -252,7 +286,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
-      - name: Setup dotnet 
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
@@ -261,7 +295,14 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: MQTT Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Category=MQTT&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test --project ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
 
   rabbitmq-async-ci:
     runs-on: ubuntu-latest
@@ -272,7 +313,7 @@ jobs:
       rabbitmq:
         image: rabbitmq:4.2-management
         ports:
-        - 5672:5672 
+        - 5672:5672
         # needed because the rabbitmq container does not provide a healthcheck
         options: >-
           --health-cmd "rabbitmqctl node_health_check"
@@ -289,7 +330,7 @@ jobs:
             9.0.x
             10.0.x
       - name: RMQ Async Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test --project ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --treenode-filter "/*/*/*/*[(Fragile!=CI)&(Requires!=Docker-mTLS)]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
 
   rabbitmq-sync-ci:
     runs-on: ubuntu-latest
@@ -300,7 +341,7 @@ jobs:
       rabbitmq:
         image: rabbitmq:3.13-management
         ports:
-        - 5672:5672 
+        - 5672:5672
         # needed because the rabbitmq container does not provide a healthcheck
         options: >-
           --health-cmd "rabbitmqctl node_health_check"
@@ -317,7 +358,14 @@ jobs:
             9.0.x
             10.0.x
       - name: RMQ Sync Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test --project ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --treenode-filter "/*/*/*/*[(Fragile!=CI)&(Requires!=Docker-mTLS)]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
 
   kafka-ci:
     runs-on: ubuntu-latest
@@ -339,13 +387,13 @@ jobs:
           KAFKA_PROCESS_ROLES: broker,controller
           KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
           CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk' # Required by Docker to format KRaft storage
-          
+
           # 2. Updated Listeners to include the KRaft Controller
           KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093
           KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
           KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
           KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-          
+
           # 3. Your Existing Configurations
           KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
           KAFKA_DELETE_TOPIC_ENABLE: "true"
@@ -394,7 +442,14 @@ jobs:
     - name: Install dependencies
       run: dotnet restore
     - name: Kafka Transport Tests
-      run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --filter "Category=Kafka&Category!=Confluent&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+      run: dotnet test --project ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --treenode-filter "/*/*/*/*[(Category!=Confluent)&(Fragile!=CI)]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+    - name: Upload hang dumps
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: hangdumps-${{ github.job }}
+        path: "**/*.dmp"
+        if-no-files-found: ignore
 
   postgres-ci:
     runs-on: ubuntu-latest
@@ -404,7 +459,7 @@ jobs:
     services:
       postgres:
         image: postgres
-        ports: 
+        ports:
           - 5432:5432
         env:
           POSTGRES_PASSWORD: password
@@ -416,7 +471,7 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v7
-      - name: Setup dotnet 
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
@@ -425,7 +480,14 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Postgres Tests
-        run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test --project ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
 
   sqlserver-ci:
     runs-on: ubuntu-latest
@@ -442,7 +504,7 @@ jobs:
           MSSQL_SA_PASSWORD: Password123!
     steps:
       - uses: actions/checkout@v7
-      - name: Setup dotnet 
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
@@ -451,7 +513,14 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: MSSQL Tests
-        run: dotnet test ./tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test --project ./tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
 
   mysql-ci:
     runs-on: ubuntu-latest
@@ -470,7 +539,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-      - name: Setup dotnet 
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
@@ -486,7 +555,14 @@ jobs:
             sleep 1
           done
       - name: MySQL Tests
-        run: dotnet test ./tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test --project ./tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
 
   dynamo-ci:
     runs-on: ubuntu-latest
@@ -496,12 +572,12 @@ jobs:
     services:
       dynamo:
         image: dwmkerr/dynamodb
-        ports: 
+        ports:
           - 8000:8000
 
     steps:
       - uses: actions/checkout@v7
-      - name: Setup dotnet 
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
@@ -511,8 +587,8 @@ jobs:
         run: dotnet restore
       - name: DynamoDB Tests
         run: |
-          dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test --project ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+          dotnet test --project ./tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
   aws-mock-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -556,8 +632,15 @@ jobs:
       # tracking without an account, and are what a fork PR is checked against.
       - name: AWS Tests
         run: |
-          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "LiveAWS!=true" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "LiveAWS!=true" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test --project ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --treenode-filter "/*/*/*/*[(Fragile!=CI)&(LiveAWS!=true)]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+          dotnet test --project ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --treenode-filter "/*/*/*/*[(Fragile!=CI)&(LiveAWS!=true)]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
 
   aws-ci:
     runs-on: ubuntu-latest
@@ -574,11 +657,11 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: eu-west-1
-      AWS_DEFAULT_OUTPUT: json    
+      AWS_DEFAULT_OUTPUT: json
 
     steps:
       - uses: actions/checkout@v7
-      - name: Setup dotnet 
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
@@ -596,8 +679,21 @@ jobs:
       # that need a real account, which is exactly what this job has. Only Fragile!=CI applies here.
       - name: AWS SNS, SQS and S3 Tests
         run: |
-          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test --project ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+          dotnet test --project ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
+      - name: Cleanup orphaned test resources
+        if: always()
+        run: |
+          chmod +x ./clean_failed_tests_aws_assets.sh
+          ./clean_failed_tests_aws_assets.sh
+        continue-on-error: true
 
   aws-scheduler-ci:
     runs-on: ubuntu-latest
@@ -630,8 +726,21 @@ jobs:
           aws-region: eu-west-1
       - name: Scheduler Tests
         run: |
-          dotnet test ./tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.AWSScheduler.V4.Tests/Paramore.Brighter.AWSScheduler.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test --project ./tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+          dotnet test --project ./tests/Paramore.Brighter.AWSScheduler.V4.Tests/Paramore.Brighter.AWSScheduler.V4.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
+      - name: Cleanup orphaned test resources
+        if: always()
+        run: |
+          chmod +x ./clean_failed_tests_aws_assets.sh
+          ./clean_failed_tests_aws_assets.sh
+        continue-on-error: true
 
   sqlite-ci:
     runs-on: ubuntu-latest
@@ -640,7 +749,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-      - name: Setup dotnet 
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
@@ -649,7 +758,14 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Sqlite Tests
-        run: dotnet test ./tests/Paramore.Brighter.Sqlite.Tests/Paramore.Brighter.Sqlite.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test --project ./tests/Paramore.Brighter.Sqlite.Tests/Paramore.Brighter.Sqlite.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
 
   azure-ci:
     runs-on: ubuntu-latest
@@ -671,7 +787,14 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Azure Tests
-        run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test --project ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
 
   mongodb-ci:
     runs-on: ubuntu-latest
@@ -703,8 +826,15 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: MongoDB Tests
-        run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-    
+        run: dotnet test --project ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini
+      - name: Upload hang dumps
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hangdumps-${{ github.job }}
+          path: "**/*.dmp"
+          if-no-files-found: ignore
+
   gcp-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -714,33 +844,33 @@ jobs:
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
     steps:
       - uses: actions/checkout@v7
-        with: 
+        with:
           fetch-depth: 0 # Required to fetch the Git tags
           filter: tree:0
-          show-progress: false 
-          
+          show-progress: false
+
       - name: Google Cloud auth
         uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
-            
+
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
         with:
           version: '>= 363.0.0'
-      
+
       - name: Setup dotnet
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             10.0.x
-            
+
       - name: Install dependencies
         run: dotnet restore
-        
+
       - name: GCP Tests
-        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --blame-hang-timeout 15min --framework net10.0
-        
+        run: dotnet test --project ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --treenode-filter "/*/*/*/*[(Category!=Spanner)&(Category!=GcpPubSubStream)&(Category!=GcpPubSubStreamOrdering)&(Fragile!=CI)]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini --framework net10.0
+
 #  TODO: Rafael Andrade is working on how to run RocketMQ on GHA
 #  rocketmq-ci:
 #    runs-on: ubuntu-latest
@@ -779,28 +909,28 @@ jobs:
 #          BROKER_NAME: "broker-a"
 #          BROKER_ID: "0"
 #          AUTO_CREATE_TOPIC_ENABLE: "true"  # Auto-create topics
-#          
+#
 #    steps:
 #      - uses: actions/checkout@v7
 #        with:
 #          fetch-depth: 0 # Required to fetch the Git tags
 #          filter: tree:0
-#          show-progress: false 
-#          
+#          show-progress: false
+#
 #      - name: Wait for RocketMQ to be ready
 #        run: |
 #          sleep 15
 #          echo "RocketMQ should be ready now"
-#          
+#
 #      - name: Setup dotnet
 #        uses: actions/setup-dotnet@v6
 #        with:
 #          dotnet-version: |
 #            8.0.x
 #            9.0.x
-#            
+#
 #      - name: Install dependencies
 #        run: dotnet restore
-#        
+#
 #      - name: RocketMQ Tests
-#        run: dotnet test ./tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+#        run: dotnet test --project ./tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --treenode-filter "/*/*/*/*[Fragile!=CI]" --configuration Release --hangdump --hangdump-timeout 15m --hangdump-type Mini

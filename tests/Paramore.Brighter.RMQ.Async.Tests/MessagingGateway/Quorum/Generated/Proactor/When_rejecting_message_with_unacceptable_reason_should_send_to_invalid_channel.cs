@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Quorum.Proactor;
 
-[Trait("Category", "RMQ")]
-[Collection("Quorum")]
-public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChannelAsync : IAsyncLifetime
+[Property("Category", "RMQ")]
+[NotInParallel("Quorum")]
+public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChannelAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -31,17 +32,20 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         _messageBuilder = new DefaultMessageBuilder();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
+
     public async Task When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel_async()
     {
         // Arrange
@@ -62,7 +66,7 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
 
         // Act
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message"));
 
@@ -79,20 +83,20 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
             await Task.Delay(500);
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, invalidMessage.Header.MessageType);
+        await Assert.That(invalidMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
         if (keys.StampsRejectionMetadata)
         {
-            Assert.True(invalidMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
-            Assert.Equal(_publication.Topic!.Value, invalidMessage.Header.Bag[keys.OriginalTopic].ToString());
-            Assert.True(invalidMessage.Header.Bag.ContainsKey(keys.RejectionReason));
-            Assert.Equal(RejectionReason.Unacceptable.ToString(), invalidMessage.Header.Bag[keys.RejectionReason].ToString());
+            await Assert.That(invalidMessage.Header.Bag.ContainsKey(keys.OriginalTopic)).IsTrue();
+            await Assert.That(invalidMessage.Header.Bag[keys.OriginalTopic].ToString()).IsEqualTo(_publication.Topic!.Value);
+            await Assert.That(invalidMessage.Header.Bag.ContainsKey(keys.RejectionReason)).IsTrue();
+            await Assert.That(invalidMessage.Header.Bag[keys.RejectionReason].ToString()).IsEqualTo(RejectionReason.Unacceptable.ToString());
         }
 
         // Assert — nothing reached the dead-letter queue. A single receive rather than a poll
         // loop: the claim is that no message arrives, so polling could only wait out the ceiling.
         var dlqMessage = await _messageGatewayProvider.GetMessageFromDeadLetterQueueAsync(_subscription);
-        Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        await Assert.That(dlqMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 }

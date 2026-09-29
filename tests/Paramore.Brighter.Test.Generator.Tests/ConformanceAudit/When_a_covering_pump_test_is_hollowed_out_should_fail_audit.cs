@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
@@ -26,11 +26,11 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// </remarks>
 public class HollowedOutPumpTestAuditTests
 {
-    [Fact]
-    public void When_a_covering_pump_test_is_hollowed_out_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_covering_pump_test_is_hollowed_out_should_fail_audit()
     {
         // Arrange — every required behaviour covered in both pump variants, except that the
-        // Proactor half of the requeue-count threshold kept its name and its [Fact] while its
+        // Proactor half of the requeue-count threshold kept its name and its [Test] while its
         // assertions were taken out
         var hollowed = "requeue count threshold reached";
         var repoRoot = BuildSyntheticRepo(hollowingTheProactorHalfOf: hollowed);
@@ -42,16 +42,14 @@ public class HollowedOutPumpTestAuditTests
 
             // Assert — the audit names the hollowed test rather than counting its file name as
             // coverage, and says which file to go and look at
-            Assert.True(
-                result.Violations.Any(v =>
+            await Assert.That(result.Violations.Any(v =>
                     v.Kind == "PumpBehaviourCoverageHollowedOut"
                     && v.Behaviour == hollowed
-                    && v.Detail.Contains("Proactor", StringComparison.Ordinal)),
-                $"Expected a PumpBehaviourCoverageHollowedOut violation for '{hollowed}' but got:\n"
+                    && v.Detail.Contains("Proactor", StringComparison.Ordinal))).IsTrue().Because($"Expected a PumpBehaviourCoverageHollowedOut violation for '{hollowed}' but got:\n"
                 + FormatViolations(result.Violations));
 
             // Assert — the behaviours whose tests still assert are not reported
-            Assert.DoesNotContain(result.Violations, v => v.Behaviour != hollowed);
+            await Assert.That(result.Violations).DoesNotContain(v => v.Behaviour != hollowed);
         }
         finally
         {
@@ -93,7 +91,7 @@ public class HollowedOutPumpTestAuditTests
 
     /// <summary>
     /// Writes a canary test file that either asserts or has had its assertions removed while
-    /// keeping its name and its <c>[Fact]</c> — the shape a test hollowed out in place actually
+    /// keeping its name and its <c>[Test]</c> — the shape a test hollowed out in place actually
     /// takes.
     /// </summary>
     private static void WriteTest(string directory, string testName, bool asserting) =>
@@ -101,10 +99,10 @@ public class HollowedOutPumpTestAuditTests
             Path.Combine(directory, $"{testName}.cs"),
             "public class CanaryTests\n"
             + "{\n"
-            + "    [Fact]\n"
+            + "    [Test]\n"
             + $"    public void {testName}()\n"
             + "    {\n"
-            + (asserting ? "        Assert.True(true);\n" : "        // assertions removed\n")
+            + (asserting ? "        await Assert.That(true).IsTrue();\n" : "        // assertions removed\n")
             + "    }\n"
             + "}\n");
 

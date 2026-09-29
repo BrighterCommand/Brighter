@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -37,11 +37,12 @@ using OpenTelemetry.Context.Propagation;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(JsonSerialisationCollection.NAME)]
+[System.Obsolete]
+[NotInParallel]
 public class ScheduledRequestTraceTests : IDisposable
 {
     private readonly TextMapPropagator _originalPropagator = Propagators.DefaultTextMapPropagator;
@@ -51,25 +52,25 @@ public class ScheduledRequestTraceTests : IDisposable
 
     public void Dispose() => Sdk.SetDefaultTextMapPropagator(_originalPropagator);
 
-    public static TheoryData<RequestSchedulerType, bool, bool> ScheduleCases
+    public static IEnumerable<(RequestSchedulerType, bool, bool)> ScheduleCases
     {
         get
         {
-            var cases = new TheoryData<RequestSchedulerType, bool, bool>();
+            var cases = new List<(RequestSchedulerType, bool, bool)>();
             foreach (var operation in new[] { RequestSchedulerType.Send, RequestSchedulerType.Publish, RequestSchedulerType.Post })
             {
                 foreach (var isAsync in new[] { false, true })
                 {
                     foreach (var useDateTime in new[] { false, true })
-                        cases.Add(operation, isAsync, useDateTime);
+                        cases.Add((operation, isAsync, useDateTime));
                 }
             }
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(ScheduleCases))]
+    [Test]
+    [MethodDataSource(nameof(ScheduleCases))]
     public async Task When_scheduling_a_request_should_resume_its_trace(RequestSchedulerType operation, bool isAsync, bool useDateTime)
     {
         //Arrange
@@ -113,32 +114,35 @@ public class ScheduledRequestTraceTests : IDisposable
             await ScheduleAsync(new ScheduledContextEvent());
         parent.AddBaggage("tenant", "changed-after-scheduling");
         parent.Stop();
-        using var unrelated = new Activity("scheduler worker").SetIdFormat(ActivityIdFormat.W3C).Start();
+        // Give the worker its own trace even when the test runner supplies an ambient Activity.
+        using var unrelated = new Activity("scheduler worker")
+            .SetParentId(ActivityTraceId.CreateRandom(), ActivitySpanId.CreateRandom(), ActivityTraceFlags.Recorded)
+            .Start();
         timeProvider.Advance(delay);
 
         //Assert
         Activity? restoredSpan;
         if (operation == RequestSchedulerType.Post)
         {
-            var message = Assert.Single(bus.Stream(isAsync ? asyncTopic : syncTopic));
-            Assert.NotNull(message.Header.TraceParent);
-            Assert.Contains(parent.TraceId.ToString(), message.Header.TraceParent.Value);
-            Assert.Equal("vendor=value", message.Header.TraceState?.Value);
-            restoredSpan = Assert.Single(completedSpans.Where(span => span.DisplayName == $"{(isAsync ? asyncTopic : syncTopic)} publish"));
+            var message = await Assert.That(bus.Stream(isAsync ? asyncTopic : syncTopic)).HasSingleItem();
+            await Assert.That(message.Header.TraceParent).IsNotNull();
+            await Assert.That(message.Header.TraceParent.Value).Contains(parent.TraceId.ToString());
+            await Assert.That(message.Header.TraceState?.Value).IsEqualTo("vendor=value");
+            restoredSpan = (await Assert.That(completedSpans.Where(span => span.DisplayName == $"{(isAsync ? asyncTopic : syncTopic)} publish")).HasSingleItem());
         }
         else
         {
             var spans = isAsync ? provider.GetRequiredService<ScheduledContextEventHandlerAsync>().Spans
                 : provider.GetRequiredService<ScheduledContextEventHandler>().Spans;
-            restoredSpan = Assert.Single(spans);
+            restoredSpan = (await Assert.That(spans).HasSingleItem());
         }
-        Assert.NotNull(restoredSpan);
-        Assert.NotSame(parent, restoredSpan);
-        Assert.Equal(parent.TraceId, restoredSpan.TraceId);
-        Assert.NotEqual(unrelated.TraceId, restoredSpan.TraceId);
-        Assert.Equal("vendor=value", restoredSpan.TraceStateString);
-        Assert.Equal("tenant-1", restoredSpan.GetBaggageItem("tenant"));
-        Assert.Same(unrelated, Activity.Current);
+        await Assert.That(restoredSpan).IsNotNull();
+        await Assert.That(restoredSpan).IsNotSameReferenceAs(parent);
+        await Assert.That(restoredSpan.TraceId).IsEqualTo(parent.TraceId);
+        await Assert.That(restoredSpan.TraceId).IsNotEqualTo(unrelated.TraceId);
+        await Assert.That(restoredSpan.TraceStateString).IsEqualTo("vendor=value");
+        await Assert.That(restoredSpan.GetBaggageItem("tenant")).IsEqualTo("tenant-1");
+        await Assert.That(Activity.Current).IsSameReferenceAs(unrelated);
 
         async Task ScheduleAsync<TRequest>(TRequest request) where TRequest : class, IRequest
         {

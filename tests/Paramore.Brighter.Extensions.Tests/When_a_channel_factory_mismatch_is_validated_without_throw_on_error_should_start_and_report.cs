@@ -34,13 +34,13 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ChannelFactoryMismatchThrowOnErrorFalseTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_channel_factory_mismatch_is_validated_without_throw_on_error_should_start_and_report()
     {
         // Arrange — the AC-16 configuration, but with throwOnError: false
@@ -67,7 +67,7 @@ public class ChannelFactoryMismatchThrowOnErrorFalseTests
         await service.StartAsync(CancellationToken.None);
 
         // Assert — the host started and reached Receive
-        Assert.True(dispatcher.ReceiveWasCalled);
+        await Assert.That(dispatcher.ReceiveWasCalled).IsTrue();
 
         // Assert — the mismatch Error is still present in the validation results, combined across
         // every registered validator (ADR 0074 registers a second IAmAPipelineValidator alongside
@@ -75,9 +75,7 @@ public class ChannelFactoryMismatchThrowOnErrorFalseTests
         // validator, not the union of both — see BrighterValidationHostedService)
         var validators = provider.GetServices<IAmAPipelineValidator>();
         var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
-        Assert.Contains(
-            result.Errors,
-            e => e.Severity == ValidationSeverity.Error
+        await Assert.That(result.Errors).Contains(e => e.Severity == ValidationSeverity.Error
                 && e.Source == "Subscription 'sub-a'"
                 && e.Message.Contains(nameof(ExtensionsDeclaredChannelFactory)));
     }

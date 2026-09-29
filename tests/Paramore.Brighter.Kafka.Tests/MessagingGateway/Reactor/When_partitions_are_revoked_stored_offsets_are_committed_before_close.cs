@@ -28,25 +28,22 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "Kafka")]
-[Trait("Fragile", "CI")]
-[Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
+[Property("Category", "Kafka")]
+[Property("Fragile", "CI")]
+[System.Obsolete]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageConsumerCommitsRevokedOffsetsBeforeClose : IDisposable
 {
-    private readonly ITestOutputHelper _output;
+
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly string _groupId = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
 
-    public KafkaMessageConsumerCommitsRevokedOffsetsBeforeClose(ITestOutputHelper output)
+    public KafkaMessageConsumerCommitsRevokedOffsetsBeforeClose()
     {
-        _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
@@ -73,7 +70,7 @@ public class KafkaMessageConsumerCommitsRevokedOffsetsBeforeClose : IDisposable
     /// batch path nor the sweeper can fire, so any committed offset observed before Close() can
     /// only have come from the revoke handler.
     /// </summary>
-    [Fact]
+    [Test]
     public async Task When_partitions_are_revoked_stored_offsets_are_committed_before_close()
     {
         //allow topic to propagate on the broker
@@ -112,8 +109,8 @@ public class KafkaMessageConsumerCommitsRevokedOffsetsBeforeClose : IDisposable
             }
         }
 
-        _output.WriteLine($"Consumer A acknowledged {ackedCount} messages, none committed (below batch threshold, sweeper disabled)");
-        Assert.True(ackedCount > 0);
+        Console.WriteLine($"Consumer A acknowledged {ackedCount} messages, none committed (below batch threshold, sweeper disabled)");
+        await Assert.That(ackedCount > 0).IsTrue();
 
         //Consumer B joins the group - triggers rebalance and revoke on A for some partitions
         using var consumerB = CreateConsumer();
@@ -131,9 +128,9 @@ public class KafkaMessageConsumerCommitsRevokedOffsetsBeforeClose : IDisposable
         //a revoke handler that commits nothing), the sum of committed offsets across all
         //partitions must account for every message A acknowledged
         var totalCommitted = GetTotalCommittedOffset();
-        _output.WriteLine($"Total committed offset across partitions before Close(): {totalCommitted}");
+        Console.WriteLine($"Total committed offset across partitions before Close(): {totalCommitted}");
 
-        Assert.Equal(ackedCount, totalCommitted);
+        await Assert.That(totalCommitted).IsEqualTo(ackedCount);
 
         consumerA.Close();
         consumerB.Close();
@@ -200,7 +197,7 @@ public class KafkaMessageConsumerCommitsRevokedOffsetsBeforeClose : IDisposable
             }
             catch (ChannelFailureException cfx)
             {
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 Task.Delay(1000).GetAwaiter().GetResult();
             }
         } while (maxTries <= 10);

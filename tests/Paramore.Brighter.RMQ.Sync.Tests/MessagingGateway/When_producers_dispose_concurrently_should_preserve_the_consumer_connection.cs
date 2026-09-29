@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -29,15 +29,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
+[NotInParallel]
 public class RmqConcurrentGatewayDisposalTests
 {
-    [Fact]
+    [Test]
     public async Task When_producers_dispose_concurrently_should_preserve_the_consumer_connection()
     {
         // Arrange
@@ -66,17 +65,17 @@ public class RmqConcurrentGatewayDisposalTests
         }))).WaitAsync(TimeSpan.FromSeconds(30));
 
         // Assert
-        Assert.True(sharedConnection.IsOpen);
+        await Assert.That(sharedConnection.IsOpen).IsTrue();
         var receivedIds = new HashSet<Id>();
         for (var i = 0; i < messages.Length; i++)
         {
-            var received = Assert.Single(consumer.Receive(TimeSpan.FromSeconds(5)));
-            Assert.Contains(received.Id, messages.Select(sent => sent.Id));
-            Assert.True(receivedIds.Add(received.Id));
+            var received = await Assert.That(consumer.Receive(TimeSpan.FromSeconds(5))).HasSingleItem();
+            await Assert.That(messages.Select(sent => sent.Id)).Contains(received.Id);
+            await Assert.That(receivedIds.Add(received.Id)).IsTrue();
             consumer.Acknowledge(received);
         }
 
         consumer.Dispose();
-        Assert.False(sharedConnection.IsOpen);
+        await Assert.That(sharedConnection.IsOpen).IsFalse();
     }
 }

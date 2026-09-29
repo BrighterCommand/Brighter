@@ -7,7 +7,6 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
@@ -65,11 +64,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Receive();
         }
 
-        [Fact]
-        public void When_a_pump_will_not_drain_in_time_dispose_still_returns_and_disposes_the_factories()
+        [Test]
+        public async System.Threading.Tasks.Task When_a_pump_will_not_drain_in_time_dispose_still_returns_and_disposes_the_factories()
         {
             //wait until a message is in flight and the handler is wedged, so End()'s quit cannot be picked up
-            Assert.True(_commandProcessor.PublishEntered.Wait(TimeSpan.FromSeconds(5)), "the pump never reached the handler");
+            await Assert.That(_commandProcessor.PublishEntered.Wait(TimeSpan.FromSeconds(5))).IsTrue().Because("the pump never reached the handler");
 
             var disposeReturned = new ManualResetEventSlim(false);
             var disposeThread = new Thread(() =>
@@ -80,10 +79,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             disposeThread.Start();
 
             //the 250ms drain times out and Dispose returns; a regression to an unbounded wait would hang here
-            Assert.True(disposeReturned.Wait(TimeSpan.FromSeconds(5)), "Dispose did not return within the bound — the shutdown timeout was not honoured");
+            await Assert.That(disposeReturned.Wait(TimeSpan.FromSeconds(5))).IsTrue().Because("Dispose did not return within the bound — the shutdown timeout was not honoured");
 
             //disposal proceeded past the timed-out drain and tore down the owned factory
-            Assert.Equal(1, _transformerFactory.DisposeCount);
+            await Assert.That(_transformerFactory.DisposeCount).IsEqualTo(1);
         }
 
         public void Dispose()

@@ -120,18 +120,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         compressionStream.Close();
 #endif
 
-        var originalContentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
-        var contentType = new ContentType(mimeType);
-        contentType.CharSet = message.Header.ContentType?.CharSet ?? CharacterEncoding.UTF8.FromCharacterEncoding();
-        message.Header.ContentType = contentType;
-        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
-
-        if (output.TryGetBuffer(out var buffer))
-            message.Body = new MessageBody(buffer.AsMemory(), contentType, CharacterEncoding.Raw);
-        else
-            message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
-
-        return message;
+        return SetCompressedBody(message, output, mimeType);
     }
 
     /// <summary>
@@ -196,17 +185,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         input.CopyTo(compressionStream);
         compressionStream.Close();
 
-        var originalContentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
-        var contentType = new ContentType(mimeType);
-        message.Header.ContentType = contentType;
-        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
-
-        if (output.TryGetBuffer(out var buffer))
-            message.Body = new MessageBody(buffer.AsMemory(), contentType, CharacterEncoding.Raw);
-        else
-            message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
-
-        return message;
+        return SetCompressedBody(message, output, mimeType);
     }
 
         
@@ -242,6 +221,21 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         return message;
     }
        
+    private static Message SetCompressedBody(Message message, MemoryStream output, string mimeType)
+    {
+        var originalContentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
+        var contentType = new ContentType(mimeType);
+        message.Header.ContentType = contentType;
+        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
+
+        if (output.TryGetBuffer(out var buffer))
+            message.Body = new MessageBody(buffer.AsMemory(), contentType, CharacterEncoding.Raw);
+        else
+            message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
+
+        return message;
+    }
+
     private (Stream , string) CreateCompressionStream(MemoryStream uncompressed)
     {
         switch (_compressionMethod)

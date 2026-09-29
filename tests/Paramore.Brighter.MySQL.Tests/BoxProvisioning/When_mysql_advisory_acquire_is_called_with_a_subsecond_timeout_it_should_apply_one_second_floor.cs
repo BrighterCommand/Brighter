@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -53,7 +52,7 @@ public class MySqlAdvisoryAcquireSubsecondTimeoutFloorTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
 
-    [Fact]
+    [Test]
     public async Task When_acquire_is_called_with_a_subsecond_timeout_it_should_block_at_least_one_second()
     {
         //Arrange — a holder session pre-acquires the lock; the system-under-test session then
@@ -75,9 +74,7 @@ public class MySqlAdvisoryAcquireSubsecondTimeoutFloorTests
                 advisoryLock.AcquireAsync(contender, lockKey, TimeSpan.FromMilliseconds(500), CancellationToken.None));
 
             stopwatch.Stop();
-            Assert.True(
-                stopwatch.ElapsedMilliseconds >= 900,
-                $"Expected acquire to block for ≥ 900ms (one-second floor minus jitter); blocked for {stopwatch.ElapsedMilliseconds}ms.");
+            await Assert.That(stopwatch.ElapsedMilliseconds >= 900).IsTrue().Because($"Expected acquire to block for ≥ 900ms (one-second floor minus jitter); blocked for {stopwatch.ElapsedMilliseconds}ms.");
         }
         finally
         {
@@ -85,7 +82,7 @@ public class MySqlAdvisoryAcquireSubsecondTimeoutFloorTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_acquire_blocks_until_lock_available_within_subsecond_timeout_it_should_succeed_after_floor_applied()
     {
         //Arrange — holder pre-acquires the lock; we schedule a release at ~300ms; the
@@ -112,7 +109,7 @@ public class MySqlAdvisoryAcquireSubsecondTimeoutFloorTests
 
             //Assert — releasing on the contender after a successful acquire must return true.
             var releaseResult = await advisoryLock.ReleaseAsync(contender, lockKey, CancellationToken.None);
-            Assert.True(releaseResult);
+            await Assert.That(releaseResult).IsTrue();
         }
         finally
         {

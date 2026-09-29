@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
@@ -32,9 +32,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 public class RejectionMetadataContractAuditTests
 {
     // ── 1. Synthetic-tree canaries ────────────────────────────────────────────
-
-    [Fact]
-    public void When_a_routing_only_provider_claims_fr8_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_routing_only_provider_claims_fr8_should_fail_audit()
     {
         // Arrange — stamps nothing, yet the conformance ledger claims Pass for rejection
         // metadata (FR-8), and it is not a declared relaxation
@@ -48,9 +47,7 @@ public class RejectionMetadataContractAuditTests
             var result = RejectionMetadataContractAudit.Audit(repo.RepoRoot, repo.LedgerPath);
 
             // Assert
-            Assert.True(
-                result.Violations.Any(v => v.Kind == "UndeclaredRoutingOnly"),
-                "Expected an UndeclaredRoutingOnly violation for a provider that stamps no metadata " +
+            await Assert.That(result.Violations.Any(v => v.Kind == "UndeclaredRoutingOnly")).IsTrue().Because("Expected an UndeclaredRoutingOnly violation for a provider that stamps no metadata " +
                 $"while claiming FR-8 Pass, but got:\n{Format(result)}");
         }
         finally
@@ -59,8 +56,8 @@ public class RejectionMetadataContractAuditTests
         }
     }
 
-    [Fact]
-    public void When_a_routing_only_provider_defers_fr8_should_pass_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_routing_only_provider_defers_fr8_should_pass_audit()
     {
         // Arrange — stamps nothing and makes no rejection-metadata claim (FR-8), so there is
         // nothing to reconcile
@@ -74,9 +71,7 @@ public class RejectionMetadataContractAuditTests
             var result = RejectionMetadataContractAudit.Audit(repo.RepoRoot, repo.LedgerPath);
 
             // Assert
-            Assert.False(
-                result.Violations.Any(v => v.Kind == "UndeclaredRoutingOnly"),
-                $"A Deferred FR-8 cell claims nothing, so it needs no relaxation:\n{Format(result)}");
+            await Assert.That(result.Violations.Any(v => v.Kind == "UndeclaredRoutingOnly")).IsFalse().Because($"A Deferred FR-8 cell claims nothing, so it needs no relaxation:\n{Format(result)}");
         }
         finally
         {
@@ -84,8 +79,8 @@ public class RejectionMetadataContractAuditTests
         }
     }
 
-    [Fact]
-    public void When_a_provider_fills_only_some_rejection_keys_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_provider_fills_only_some_rejection_keys_should_fail_audit()
     {
         // Arrange — RejectionReason is filled, so StampsRejectionMetadata says "stamps", but
         // OriginalTopic is empty and the generated test would look up Bag[""]
@@ -105,9 +100,7 @@ public class RejectionMetadataContractAuditTests
             var result = RejectionMetadataContractAudit.Audit(repo.RepoRoot, repo.LedgerPath);
 
             // Assert
-            Assert.True(
-                result.Violations.Any(v => v.Kind == "MixedRejectionKeys"),
-                $"Expected a MixedRejectionKeys violation for a partly-filled key set:\n{Format(result)}");
+            await Assert.That(result.Violations.Any(v => v.Kind == "MixedRejectionKeys")).IsTrue().Because($"Expected a MixedRejectionKeys violation for a partly-filled key set:\n{Format(result)}");
         }
         finally
         {
@@ -115,8 +108,8 @@ public class RejectionMetadataContractAuditTests
         }
     }
 
-    [Fact]
-    public void When_a_provider_stamps_every_rejection_key_should_pass_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_provider_stamps_every_rejection_key_should_pass_audit()
     {
         // Arrange — the ordinary case: a transport that really does stamp Brighter metadata
         var repo = BuildSyntheticRepo(
@@ -129,7 +122,7 @@ public class RejectionMetadataContractAuditTests
             var result = RejectionMetadataContractAudit.Audit(repo.RepoRoot, repo.LedgerPath);
 
             // Assert
-            Assert.Empty(result.Violations);
+            await Assert.That(result.Violations).IsEmpty();
         }
         finally
         {
@@ -139,8 +132,8 @@ public class RejectionMetadataContractAuditTests
 
     // ── 2. Live-tree fact ─────────────────────────────────────────────────────
 
-    [Fact]
-    public void When_auditing_the_real_tree_every_routing_only_provider_should_be_a_declared_relaxation()
+    [Test]
+    public async System.Threading.Tasks.Task When_auditing_the_real_tree_every_routing_only_provider_should_be_a_declared_relaxation()
     {
         // Arrange
         var repoRoot = FindRepoRoot(AppContext.BaseDirectory)
@@ -154,16 +147,13 @@ public class RejectionMetadataContractAuditTests
 
         // Assert — non-vacuity: the scan must actually have found providers, and some of them must
         // stamp nothing, or this fact would pass against an empty sweep.
-        Assert.True(result.ProvidersScanned > 0,
-            "The audit found no gateway providers to scan - the discovery path is wrong.");
+        await Assert.That(result.ProvidersScanned > 0).IsTrue().Because("The audit found no gateway providers to scan - the discovery path is wrong.");
 
-        Assert.True(result.RoutingOnlyProvidersFound > 0,
-            "The audit found no routing-only providers. RMQ and Azure Service Bus dead-letter " +
+        await Assert.That(result.RoutingOnlyProvidersFound > 0).IsTrue().Because("The audit found no routing-only providers. RMQ and Azure Service Bus dead-letter " +
             "natively and stamp nothing, so finding none means the key extraction is broken.");
 
         // Assert — prose and code agree
-        Assert.True(result.Violations.Count == 0,
-            $"{result.Violations.Count} rejection-metadata contract violation(s):\n{Format(result)}");
+        await Assert.That(result.Violations.Count == 0).IsTrue().Because($"{result.Violations.Count} rejection-metadata contract violation(s):\n{Format(result)}");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

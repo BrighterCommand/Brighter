@@ -3,14 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class TransientScopeKeyCollisionTests
 {
-    [Fact]
-    public void When_the_same_transient_mapper_is_resolved_twice_before_release_should_dispose_every_scope()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_same_transient_mapper_is_resolved_twice_before_release_should_dispose_every_scope()
     {
         // Arrange — the mapper is registered as a SINGLETON, so the container returns the same
         // reference every resolution, while MapperLifetime is configured Transient. Each Create
@@ -37,8 +37,8 @@ public class TransientScopeKeyCollisionTests
         // Assert — both resolutions returned the one shared instance, but each Create returned its own
         // lease over its own scope (release now keys on the lease/resolution, not the shared instance),
         // and every scope opened has been disposed: scopes created == scopes disposed, nothing orphaned.
-        Assert.Same(first!.Instance, second!.Instance);
-        Assert.Equal(scopeTracker.CreatedCount, scopeTracker.DisposedCount);
+        await Assert.That(second!.Instance).IsSameReferenceAs(first!.Instance);
+        await Assert.That(scopeTracker.DisposedCount).IsEqualTo(scopeTracker.CreatedCount);
     }
 
     private sealed class MinimalCommand : Command

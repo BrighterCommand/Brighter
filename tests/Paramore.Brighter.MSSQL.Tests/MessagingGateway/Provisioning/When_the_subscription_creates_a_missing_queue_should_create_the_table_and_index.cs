@@ -26,7 +26,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 
@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 /// was accepted and never acted on by this gateway — the PostgreSQL gateway creates its queue table,
 /// this one did not. These tests are the specification for that behaviour arriving.
 /// </summary>
-[Collection("MsSqlQueueProvisioning")]
+[NotInParallel]
 public class MsSqlQueueProvisioningCreateTests : IDisposable
 {
     private readonly string _queueTable = UniqueQueueTableName();
@@ -48,8 +48,8 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
             Configuration.DefaultConnectingString, queueStoreTable: _queueTable);
     }
 
-    [Fact]
-    public void When_the_subscription_creates_a_missing_queue_should_create_the_table_and_index()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_subscription_creates_a_missing_queue_should_create_the_table_and_index()
     {
         //Arrange
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
@@ -64,12 +64,12 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         using var channel = channelFactory.CreateSyncChannel(subscription);
 
         //Assert
-        Assert.True(QueueTableExists(_queueTable));
-        Assert.True(TopicIndexExists(_queueTable));
+        await Assert.That(QueueTableExists(_queueTable)).IsTrue();
+        await Assert.That(TopicIndexExists(_queueTable)).IsTrue();
     }
 
-    [Fact]
-    public void When_the_queue_is_created_twice_should_not_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_queue_is_created_twice_should_not_throw()
     {
         //Arrange -- idempotence is what makes this safe to run on every start, which is the whole
         //premise of doing it at channel-open time rather than in a migration. Two factories rather
@@ -86,19 +86,24 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
                    .CreateSyncChannel(subscription)) { }
 
         //Act
-        var exception = Record.Exception(() =>
+        Exception? exception = null;
+        try
         {
             using var second = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration))
                 .CreateSyncChannel(subscription);
-        });
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        Assert.Null(exception);
-        Assert.True(QueueTableExists(_queueTable));
+        await Assert.That(exception).IsNull();
+        await Assert.That(QueueTableExists(_queueTable)).IsTrue();
     }
 
-    [Fact]
-    public void When_the_publication_creates_a_missing_queue_should_create_the_table_and_index()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_publication_creates_a_missing_queue_should_create_the_table_and_index()
     {
         //Arrange -- the producer side provisions too, because a sender may start before any
         //consumer has ever run.
@@ -113,12 +118,12 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         producerFactory.Create();
 
         //Assert
-        Assert.True(QueueTableExists(_queueTable));
-        Assert.True(TopicIndexExists(_queueTable));
+        await Assert.That(QueueTableExists(_queueTable)).IsTrue();
+        await Assert.That(TopicIndexExists(_queueTable)).IsTrue();
     }
 
-    [Fact]
-    public void When_the_queue_table_name_would_close_the_ddl_bracket_should_throw_before_touching_the_database()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_queue_table_name_would_close_the_ddl_bracket_should_throw_before_touching_the_database()
     {
         //Arrange -- the DDL formats the name into CREATE TABLE [{0}] and escapes nothing, so a ']'
         //closes the bracket and everything after it is free SQL. The guard belongs here, beside
@@ -139,19 +144,27 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
             makeChannels: OnMissingChannel.Create);
 
         //Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(subscription));
+        Exception? exception = null;
+        try
+        {
+            channelFactory.CreateSyncChannel(subscription);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert -- the type alone does not discriminate here, and asserting it alone was a defect
         //this file carried for one commit. Connect wraps a failed connect in a ConfigurationException
         //too, so against the unreachable server the type check passes with the guard deleted. The
         //message is what separates "refused the name" from "could not reach the server".
-        var configurationException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains("close the bracket", configurationException.Message);
-        Assert.DoesNotContain("provider said", configurationException.Message);
+        var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configurationException.Message).Contains("close the bracket");
+        await Assert.That(configurationException.Message).DoesNotContain("provider said");
     }
 
-    [Fact]
-    public void When_the_queue_table_name_is_a_guid_with_hyphens_should_provision_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_queue_table_name_is_a_guid_with_hyphens_should_provision_it()
     {
         //Arrange -- a bracketed identifier legally holds hyphens, and the gateway's own test suite
         //names queue tables this way. A guard that demanded a plain unquoted identifier would
@@ -173,7 +186,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
                 makeChannels: OnMissingChannel.Create));
 
             //Assert
-            Assert.True(QueueTableExists(hyphenated));
+            await Assert.That(QueueTableExists(hyphenated)).IsTrue();
         }
         finally
         {
@@ -181,8 +194,8 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         }
     }
 
-    [Fact]
-    public void When_the_queue_table_name_is_longer_than_sql_servers_limit_should_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_queue_table_name_is_longer_than_sql_servers_limit_should_throw()
     {
         //Arrange -- 129 characters; 128 is SQL Server's own identifier limit.
         //
@@ -202,16 +215,24 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
             makeChannels: OnMissingChannel.Validate);
 
         //Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(subscription));
+        Exception? exception = null;
+        try
+        {
+            channelFactory.CreateSyncChannel(subscription);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        var configurationException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains("128", configurationException.Message);
-        Assert.DoesNotContain("119", configurationException.Message);
+        var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configurationException.Message).Contains("128");
+        await Assert.That(configurationException.Message).DoesNotContain("119");
     }
 
-    [Fact]
-    public void When_the_queue_table_name_is_over_both_bounds_should_report_the_absolute_one()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_queue_table_name_is_over_both_bounds_should_report_the_absolute_one()
     {
         //Arrange -- 129 characters through Create, where both length guards match. Which one answers
         //is load-bearing and nothing else holds it in place: the 119 guard's message ends by saying
@@ -224,22 +245,30 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
 
         //Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(
+        Exception? exception = null;
+        try
+        {
+            channelFactory.CreateSyncChannel(
             new MsSqlSubscription<MyCommand>(
                 new SubscriptionName("create.subscription"),
                 new ChannelName("create.channel"),
                 new RoutingKey("create.topic"),
                 messagePumpType: MessagePumpType.Reactor,
-                makeChannels: OnMissingChannel.Create)));
+                makeChannels: OnMissingChannel.Create));
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        var configurationException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains("128", configurationException.Message);
-        Assert.DoesNotContain("119", configurationException.Message);
+        var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configurationException.Message).Contains("128");
+        await Assert.That(configurationException.Message).DoesNotContain("119");
     }
 
-    [Fact]
-    public void When_the_queue_table_name_leaves_no_room_for_the_index_name_should_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_queue_table_name_leaves_no_room_for_the_index_name_should_throw()
     {
         //Arrange -- 120 characters, which SQL Server accepts as a table name and rejects as the
         //index name derived from it: CREATE NONCLUSTERED INDEX [IX_{table}_Topic] is nine
@@ -252,21 +281,29 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
 
         //Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(
+        Exception? exception = null;
+        try
+        {
+            channelFactory.CreateSyncChannel(
             new MsSqlSubscription<MyCommand>(
                 new SubscriptionName("create.subscription"),
                 new ChannelName("create.channel"),
                 new RoutingKey("create.topic"),
                 messagePumpType: MessagePumpType.Reactor,
-                makeChannels: OnMissingChannel.Create)));
+                makeChannels: OnMissingChannel.Create));
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        var configurationException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains("119", configurationException.Message);
+        var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configurationException.Message).Contains("119");
     }
 
-    [Fact]
-    public void When_the_queue_table_name_is_as_long_as_the_index_name_allows_should_provision_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_queue_table_name_is_as_long_as_the_index_name_allows_should_provision_it()
     {
         //Arrange -- the control for the fact above, and the one that stops the bound from being
         //tightened arbitrarily: 119 characters yields an index name of exactly 128, which SQL
@@ -287,8 +324,8 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
                 makeChannels: OnMissingChannel.Create));
 
             //Assert
-            Assert.True(QueueTableExists(longest));
-            Assert.True(TopicIndexExists(longest));
+            await Assert.That(QueueTableExists(longest)).IsTrue();
+            await Assert.That(TopicIndexExists(longest)).IsTrue();
         }
         finally
         {
@@ -296,8 +333,8 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         }
     }
 
-    [Fact]
-    public void When_something_else_owns_the_table_name_should_not_mistake_it_for_a_lost_race()
+    [Test]
+    public async System.Threading.Tasks.Task When_something_else_owns_the_table_name_should_not_mistake_it_for_a_lost_race()
     {
         //Arrange -- a view holding the name. This is the hazard the post-create re-probe exists for
         //and the only place a swallowed error could otherwise become a silent success: the
@@ -318,12 +355,20 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         try
         {
             //Act
-            var exception = Record.Exception(() => channelFactory.CreateSyncChannel(subscription));
+            Exception? exception = null;
+            try
+            {
+                channelFactory.CreateSyncChannel(subscription);
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
 
             //Assert
-            var configurationException = Assert.IsType<ConfigurationException>(exception);
-            Assert.Contains(_queueTable, configurationException.Message);
-            Assert.Contains("owns that name", configurationException.Message);
+            var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+            await Assert.That(configurationException.Message).Contains(_queueTable);
+            await Assert.That(configurationException.Message).Contains("owns that name");
         }
         finally
         {
@@ -331,8 +376,8 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         }
     }
 
-    [Fact]
-    public void When_the_queue_store_table_name_is_blank_should_say_so()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_queue_store_table_name_is_blank_should_say_so()
     {
         //Arrange -- reachable only this way: the producer factory's constructor refuses an empty
         //name first, and RelationalDatabaseConfiguration substitutes its default for null, so a
@@ -342,17 +387,25 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
 
         //Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(
+        Exception? exception = null;
+        try
+        {
+            channelFactory.CreateSyncChannel(
             new MsSqlSubscription<MyCommand>(
                 new SubscriptionName("create.subscription"),
                 new ChannelName("create.channel"),
                 new RoutingKey("create.topic"),
                 messagePumpType: MessagePumpType.Reactor,
-                makeChannels: OnMissingChannel.Create)));
+                makeChannels: OnMissingChannel.Create));
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        var configurationException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains("missing", configurationException.Message);
+        var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configurationException.Message).Contains("missing");
     }
 
     private static void CreateView(string name)
@@ -373,8 +426,8 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         command.ExecuteNonQuery();
     }
 
-    [Fact]
-    public void When_the_index_naming_convention_is_read_from_the_builder_should_still_be_the_one_the_guard_assumes()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_index_naming_convention_is_read_from_the_builder_should_still_be_the_one_the_guard_assumes()
     {
         //Arrange -- the guard above hard-codes "IX_" and "_Topic" because MsSqlQueueBuilder owns
         //that convention and exposes only the finished DDL. If the convention ever moves, the bound
@@ -385,7 +438,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         var ddl = MsSqlQueueBuilder.GetIndexDDL(table);
 
         //Assert
-        Assert.Contains($"[IX_{table}_Topic]", ddl);
+        await Assert.That(ddl).Contains($"[IX_{table}_Topic]");
     }
 
     internal static string UniqueQueueTableName() => "Queue_" + Guid.NewGuid().ToString("N");

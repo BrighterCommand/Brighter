@@ -1,47 +1,45 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Transformers.Gcp;
 
 namespace Paramore.Brighter.Gcp.Tests.Transformers;
 
-[Trait("Category", "GCS")]
+[Category("GCS")]
 public class LuggageUploadMissingParametersTests
 {
     private readonly string _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
 
-    [Fact]
-    public void When_creating_luggagestore_missing_projectId()
+    [Test]
+    public async Task When_creating_luggagestore_missing_projectId()
     {
         //arrange
-        var exception = Assert.Throws<ConfigurationException>(() =>
+        Assert.ThrowsExactly<ConfigurationException>(() =>
         {
             var gcs = new GcsLuggageStore(new GcsLuggageOptions());
             gcs.EnsureStoreExists();
         });
-
-        Assert.NotNull(exception);
+        return;
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData(null)]
-    public void When_creating_luggagestore_missing_bucketName(string? bucketName)
+    [Test]
+    [Arguments("")]
+    [Arguments(null)]
+    public async Task When_creating_luggagestore_missing_bucketName(string? bucketName)
     {
         //arrange
-        var exception = Assert.Throws<ConfigurationException>(() =>
+        Assert.ThrowsExactly<ConfigurationException>(() =>
         {
             var gcs = new GcsLuggageStore(new GcsLuggageOptions
             {
                 ProjectId = Guid.NewGuid().ToString(),
                 BucketName = bucketName!
             });
-            
+
             gcs.EnsureStoreExists();
         });
-        
-        Assert.NotNull(exception);
+        return;
     }
-    [Fact]
+    [Test]
     public async Task When_creating_luggagestore_missing_projectId_async()
     {
         //arrange
@@ -51,12 +49,12 @@ public class LuggageUploadMissingParametersTests
             await gcs.EnsureStoreExistsAsync();
         });
 
-        Assert.NotNull(exception);
+        await Assert.That(exception).IsNotNull();
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData(null)]
+    [Test]
+    [Arguments("")]
+    [Arguments(null)]
     public async Task When_creating_luggagestore_missing_bucketName_async(string? bucketName)
     {
         //arrange
@@ -67,10 +65,10 @@ public class LuggageUploadMissingParametersTests
                 ProjectId = Guid.NewGuid().ToString(),
                 BucketName = bucketName!
             });
-            
+
             await gcs.EnsureStoreExistsAsync();
         });
-        
-        Assert.NotNull(exception);
+
+        await Assert.That(exception).IsNotNull();
     }
 }

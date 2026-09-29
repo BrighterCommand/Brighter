@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -28,20 +29,19 @@ using Azure.Core.Amqp;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusSubjectRoundTripTests
 {
-    [Theory]
-    [InlineData("order-placed", false)]
-    [InlineData("order-placed", true)]
-    [InlineData("შეკვეთა/注文", false)]
-    [InlineData("შეკვეთა/注文", true)]
-    [InlineData(" ", false)]
-    [InlineData(" ", true)]
+    [Test]
+    [Arguments("order-placed", false)]
+    [Arguments("order-placed", true)]
+    [Arguments("შეკვეთა/注文", false)]
+    [Arguments("შეკვეთა/注文", true)]
+    [Arguments(" ", false)]
+    [Arguments(" ", true)]
     public async Task When_round_tripping_a_message_should_preserve_its_native_subject(
         string subject, bool removeCloudEventsSubject)
     {
@@ -68,13 +68,13 @@ public class AzureServiceBusSubjectRoundTripTests
         var messages = await consumer.ReceiveAsync(TimeSpan.FromSeconds(1));
 
         // Assert
-        Assert.Equal(subject, native.Subject);
-        var received = Assert.Single(messages);
-        Assert.Equal(subject, received.Header.Subject);
-        Assert.Equal(original.Id, received.Id);
-        Assert.Equal(original.Body.Value, received.Body.Value);
-        Assert.Equal(!removeCloudEventsSubject, received.Header.Bag.ContainsKey("cloudEvents:subject"));
+        await Assert.That(native.Subject).IsEqualTo(subject);
+        var received = await Assert.That(messages).HasSingleItem();
+        await Assert.That(received.Header.Subject).IsEqualTo(subject);
+        await Assert.That(received.Id).IsEqualTo(original.Id);
+        await Assert.That(received.Body.Value).IsEqualTo(original.Body.Value);
+        await Assert.That(received.Header.Bag.ContainsKey("cloudEvents:subject")).IsEqualTo(!removeCloudEventsSubject);
         if (!removeCloudEventsSubject)
-            Assert.Equal(subject, received.Header.Bag["cloudEvents:subject"]);
+            await Assert.That(received.Header.Bag["cloudEvents:subject"]).IsEqualTo(subject);
     }
 }

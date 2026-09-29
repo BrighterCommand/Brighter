@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Paramore.Brighter.Test.Generator;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
@@ -43,8 +43,8 @@ public class LedgerCellAgreementAuditTests
 
     // ── 1. Synthetic cases ────────────────────────────────────────────────────
 
-    [Fact]
-    public void When_a_test_is_skipped_but_its_cell_says_pass_should_report_a_violation()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_test_is_skipped_but_its_cell_says_pass_should_report_a_violation()
     {
         // Arrange — the conformance ledger says the Nack-redelivers behaviour (FR-16) passes for
         // this configuration, so no Skip should exist,
@@ -57,14 +57,14 @@ public class LedgerCellAgreementAuditTests
         var result = LedgerSkipCrossCheckAudit.CheckCellAgreement(tree.RepoRoot, tree.LedgerPath);
 
         // Assert
-        var violation = Assert.Single(result.Violations);
-        Assert.Equal("FR-16", violation.FrColumn);
-        Assert.Equal(string.Empty, violation.ExpectedSkip);
-        Assert.Contains("Deferred: #4240", violation.ActualSkip);
+        var violation = await Assert.That(result.Violations).HasSingleItem();
+        await Assert.That(violation.FrColumn).IsEqualTo("FR-16");
+        await Assert.That(violation.ExpectedSkip).IsEqualTo(string.Empty);
+        await Assert.That(violation.ActualSkip).Contains("Deferred: #4240");
     }
 
-    [Fact]
-    public void When_a_cell_is_deferred_but_its_test_carries_no_skip_should_report_a_violation()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_cell_is_deferred_but_its_test_carries_no_skip_should_report_a_violation()
     {
         // Arrange — the conformance ledger defers the Nack-redelivers behaviour (FR-16), so the
         // generated file must carry a Skip; it has none
@@ -77,14 +77,14 @@ public class LedgerCellAgreementAuditTests
         var result = LedgerSkipCrossCheckAudit.CheckCellAgreement(tree.RepoRoot, tree.LedgerPath);
 
         // Assert
-        var violation = Assert.Single(result.Violations);
-        Assert.Equal("FR-16", violation.FrColumn);
-        Assert.Contains("Deferred: #4240", violation.ExpectedSkip);
-        Assert.Equal(string.Empty, violation.ActualSkip);
+        var violation = await Assert.That(result.Violations).HasSingleItem();
+        await Assert.That(violation.FrColumn).IsEqualTo("FR-16");
+        await Assert.That(violation.ExpectedSkip).Contains("Deferred: #4240");
+        await Assert.That(violation.ActualSkip).IsEqualTo(string.Empty);
     }
 
-    [Fact]
-    public void When_a_skip_cites_a_different_issue_than_its_cell_should_report_a_violation()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_skip_cites_a_different_issue_than_its_cell_should_report_a_violation()
     {
         // Arrange — cell defers to #4240 but the Skip cites #9999
         using var tree = SyntheticTree.Create(
@@ -95,13 +95,13 @@ public class LedgerCellAgreementAuditTests
         var result = LedgerSkipCrossCheckAudit.CheckCellAgreement(tree.RepoRoot, tree.LedgerPath);
 
         // Assert
-        var violation = Assert.Single(result.Violations);
-        Assert.Contains("#4240", violation.ExpectedSkip);
-        Assert.Contains("#9999", violation.ActualSkip);
+        var violation = await Assert.That(result.Violations).HasSingleItem();
+        await Assert.That(violation.ExpectedSkip).Contains("#4240");
+        await Assert.That(violation.ActualSkip).Contains("#9999");
     }
 
-    [Fact]
-    public void When_a_skip_matches_its_own_deferred_cell_exactly_should_report_no_violation()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_skip_matches_its_own_deferred_cell_exactly_should_report_no_violation()
     {
         // Arrange — the Skip is exactly what the generator would emit for this cell
         using var tree = SyntheticTree.Create(
@@ -112,14 +112,14 @@ public class LedgerCellAgreementAuditTests
         var result = LedgerSkipCrossCheckAudit.CheckCellAgreement(tree.RepoRoot, tree.LedgerPath);
 
         // Assert
-        Assert.Empty(result.Violations);
-        Assert.Equal(1, result.FilesChecked);
+        await Assert.That(result.Violations).IsEmpty();
+        await Assert.That(result.FilesChecked).IsEqualTo(1);
     }
 
     // ── 2. Live-tree fact ─────────────────────────────────────────────────────
 
-    [Fact]
-    public void When_checking_the_real_tree_every_generated_skip_should_agree_with_its_own_ledger_cell()
+    [Test]
+    public async System.Threading.Tasks.Task When_checking_the_real_tree_every_generated_skip_should_agree_with_its_own_ledger_cell()
     {
         // Arrange
         var repoRoot = FindRepoRoot(AppContext.BaseDirectory)
@@ -132,23 +132,19 @@ public class LedgerCellAgreementAuditTests
 
         // Assert — non-vacuity: the check must have resolved real configurations and real files,
         // and must have exercised BOTH branches (cells that expect a Skip and cells that do not).
-        Assert.True(result.LedgerKeysResolved > 0,
-            "Zero configurations resolved to a Generated directory — the audit is vacuous. " +
+        await Assert.That(result.LedgerKeysResolved > 0).IsTrue().Because("Zero configurations resolved to a Generated directory — the audit is vacuous. " +
             "The generator's output-path convention (MessagingGateway/<prefix>/Generated) has " +
             "probably changed; update EnumerateGeneratedCanonicalFiles to match.");
 
-        Assert.True(result.FilesChecked > 0,
-            $"Resolved {result.LedgerKeysResolved} configuration(s) but checked zero canonical " +
+        await Assert.That(result.FilesChecked > 0).IsTrue().Because($"Resolved {result.LedgerKeysResolved} configuration(s) but checked zero canonical " +
             "generated files — the audit is vacuous.");
 
-        Assert.True(result.ExpectedSkipCount > 0 && result.ExpectedNoSkipCount > 0,
-            $"The check exercised only one branch (expect-Skip: {result.ExpectedSkipCount}, " +
+        await Assert.That(result.ExpectedSkipCount > 0 && result.ExpectedNoSkipCount > 0).IsTrue().Because($"The check exercised only one branch (expect-Skip: {result.ExpectedSkipCount}, " +
             $"expect-no-Skip: {result.ExpectedNoSkipCount}). Both must occur for this to be a " +
             "real check — the ledger holds both Deferred and Pass/Fixed cells.");
 
         // Assert — every generated Skip agrees with its own cell, in both directions
-        Assert.True(result.Violations.Count == 0,
-            $"{result.Violations.Count} generated test(s) disagree with their own ledger cell " +
+        await Assert.That(result.Violations.Count == 0).IsTrue().Because($"{result.Violations.Count} generated test(s) disagree with their own ledger cell " +
             $"(regenerate with ./generate-test.sh, or correct the ledger):\n" +
             string.Join("\n", result.Violations.Select(v =>
                 $"  {v.FilePath}\n" +
@@ -205,7 +201,7 @@ public class LedgerCellAgreementAuditTests
             var ledgerPath = Path.Combine(ledgerDir, "conformance-status.md");
             File.WriteAllText(ledgerPath, LEDGER_HEADER + $"| Canary / CanaryGateway | {frColumnValues} |\n");
 
-            var skipAttribute = skipValue == null ? "[Fact]" : $"[Fact(Skip = \"{skipValue}\")]";
+            var skipAttribute = skipValue == null ? "[Test]" : $"[Test][Skip(\"{skipValue}\")]";
             File.WriteAllText(
                 Path.Combine(generatedDir, $"{NACK_TEMPLATE}.cs"),
                 $"public class Canary\n{{\n    {skipAttribute}\n    public void Run() {{ }}\n}}\n");

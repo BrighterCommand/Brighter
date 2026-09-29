@@ -1,4 +1,5 @@
-﻿#region Licence
+﻿using System.Threading.Tasks;
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -29,14 +30,15 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Generated.Conformance;
 
 public class GatewayChannelFactoryDeclarationTests
 {
-    [Fact]
-    public void When_sweeping_the_gateway_assembly_should_find_no_invalid_channel_factory_declaration()
+    [Test]
+    public async Task When_sweeping_the_gateway_assembly_should_find_no_invalid_channel_factory_declaration()
     {
         // Arrange
         var expected = new[] { typeof(Paramore.Brighter.MessagingGateway.RMQ.Sync.RmqSubscription) }.ToHashSet();
@@ -45,7 +47,10 @@ public class GatewayChannelFactoryDeclarationTests
         var result = Paramore.Brighter.SubscriptionChannelFactoryDeclaration.Sweep(typeof(Paramore.Brighter.MessagingGateway.RMQ.Sync.RmqSubscription).Assembly);
 
         // Assert
-        Assert.Equal(expected, result.Select(entry => entry.Subject).ToHashSet());
-        Assert.All(result, entry => Assert.Null(entry.Reason));
+        await Assert.That(result.Select(entry => entry.Subject).ToHashSet()).IsEquivalentTo(expected);
+        foreach (var entry in result)
+        {
+            await Assert.That(entry.Reason).IsNull();
+        }
     }
 }

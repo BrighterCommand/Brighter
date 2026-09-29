@@ -26,8 +26,6 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
 {
@@ -41,8 +39,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
     /// satisfies. These assert the wait, which is what the Reactor pump depends on: a receive that
     /// returns instantly turns the pump's blocking wait into a spin.
     /// </remarks>
-    [Trait("Category", "MQTT")]
-    [Collection("MQTT")]
+    [Property("Category", "MQTT")]
+    [System.Obsolete]
     public class ArrivalSignalTests : MqttTestClassBase<ArrivalSignalTests>
     {
         private const string ClientId = "BrighterIntegrationTests-ArrivalSignal";
@@ -57,8 +55,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
         // Scheduling slack: the wait need only be observably close to the timeout.
         private static readonly TimeSpan MinimumWait = TimeSpan.FromMilliseconds(400);
 
-        public ArrivalSignalTests(ITestOutputHelper testOutputHelper)
-            : base(ClientId, TopicPrefix, testOutputHelper)
+        public ArrivalSignalTests()
+            : base(ClientId, TopicPrefix)
         {
         }
 
@@ -66,8 +64,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
 
         private IAmAMessageConsumerSync MessageConsumerSync => (MessageConsumerAsync as IAmAMessageConsumerSync)!;
 
-        [Fact]
-        public void When_a_purge_discards_buffered_messages_should_wait_for_the_next_arrival()
+        [Test]
+        public async System.Threading.Tasks.Task When_a_purge_discards_buffered_messages_should_wait_for_the_next_arrival()
         {
             // Arrange - a burst arrives and is then thrown away, so the buffer is empty.
             SendBurst();
@@ -80,14 +78,13 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
             stopwatch.Stop();
 
             // Assert - nothing to hand back, so the receive waited for its timeout.
-            Assert.Contains(_noopMessage, received);
-            Assert.True(stopwatch.Elapsed >= MinimumWait,
-                $"Receive returned after {stopwatch.ElapsedMilliseconds}ms with an empty buffer; "
+            await Assert.That(received).Contains(_noopMessage);
+            await Assert.That(stopwatch.Elapsed >= MinimumWait).IsTrue().Because($"Receive returned after {stopwatch.ElapsedMilliseconds}ms with an empty buffer; "
                 + $"it should have waited about {ReceiveTimeout.TotalMilliseconds}ms for an arrival.");
         }
 
-        [Fact]
-        public void When_a_receive_drains_a_burst_should_wait_for_the_next_arrival()
+        [Test]
+        public async System.Threading.Tasks.Task When_a_receive_drains_a_burst_should_wait_for_the_next_arrival()
         {
             // Arrange - a burst arrives and is read out in full. How many messages a single receive
             // hands back is the batch size's business, so drain in a loop rather than assume one
@@ -99,7 +96,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
             while (drained < BURST_SIZE)
             {
                 Message[] batch = MessageConsumerSync.Receive(ReceiveTimeout);
-                Assert.DoesNotContain(_noopMessage, batch);
+                await Assert.That(batch).DoesNotContain(_noopMessage);
                 drained += batch.Length;
             }
 
@@ -109,9 +106,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
             stopwatch.Stop();
 
             // Assert - every message has been read out, so the next receive waited for its timeout.
-            Assert.Contains(_noopMessage, received);
-            Assert.True(stopwatch.Elapsed >= MinimumWait,
-                $"Receive returned after {stopwatch.ElapsedMilliseconds}ms having already read out "
+            await Assert.That(received).Contains(_noopMessage);
+            await Assert.That(stopwatch.Elapsed >= MinimumWait).IsTrue().Because($"Receive returned after {stopwatch.ElapsedMilliseconds}ms having already read out "
                 + $"all {drained} message(s); it should have waited about "
                 + $"{ReceiveTimeout.TotalMilliseconds}ms for a new arrival.");
         }

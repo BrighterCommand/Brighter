@@ -7,11 +7,11 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
+
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class SnsMessageProducerExistingTopicMaximumMessageSizeAsyncTests : IAsyncDisposable, IDisposable
 {
     private const int OneMebibyte = 1_048_576;
@@ -44,7 +44,7 @@ public class SnsMessageProducerExistingTopicMaximumMessageSizeAsyncTests : IAsyn
             });
     }
 
-    [Fact]
+    [Test]
     public async Task When_topic_exists_should_apply_maximum_message_size_async()
     {
         //arrange - a topic Brighter created earlier already exists at the SNS default of 256 KiB
@@ -59,7 +59,7 @@ public class SnsMessageProducerExistingTopicMaximumMessageSizeAsyncTests : IAsyn
 
         //assert
         var topicAttributes = await snsClient.GetTopicAttributesAsync(new GetTopicAttributesRequest(existingTopic.TopicArn));
-        Assert.Equal("1048576", topicAttributes.Attributes["MaximumMessageSize"]);
+        await Assert.That(topicAttributes.Attributes["MaximumMessageSize"]).IsEqualTo("1048576");
     }
 
     public void Dispose()

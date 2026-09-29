@@ -3,14 +3,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
 public class TransformLifetimeScopePartialReleaseTests
 {
-    [Fact]
-    public void When_a_transform_release_throws_the_scope_drains_the_rest_and_surfaces_an_aggregate()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_transform_release_throws_the_scope_drains_the_rest_and_surfaces_an_aggregate()
     {
         //arrange — three tracked transforms; the factory throws when releasing the middle one, the same
         //shape as MS DI's synchronous scope Dispose throwing for an IAsyncDisposable-only transform
@@ -28,23 +28,23 @@ public class TransformLifetimeScopePartialReleaseTests
         //act — a single explicit Dispose drains every transform deterministically (it does not abort on the
         //throwing one and leave the rest to the GC-timed finalizer) and surfaces the failure as an
         //AggregateException rather than swallowing it
-        var aggregate = Assert.Throws<AggregateException>(() => scope.Dispose());
+        var aggregate = await Assert.That(() => scope.Dispose()).ThrowsExactly<AggregateException>();
 
         //assert — the drain completed in that one pass: every transform released exactly once, none skipped;
         //and the AggregateException carries the original release failure
-        Assert.Equal(1, factory.ReleaseCount(before));
-        Assert.Equal(1, factory.ReleaseCount(throwing));
-        Assert.Equal(1, factory.ReleaseCount(after));
-        Assert.IsType<InvalidOperationException>(Assert.Single(aggregate.InnerExceptions));
+        await Assert.That(factory.ReleaseCount(before)).IsEqualTo(1);
+        await Assert.That(factory.ReleaseCount(throwing)).IsEqualTo(1);
+        await Assert.That(factory.ReleaseCount(after)).IsEqualTo(1);
+        await Assert.That((await Assert.That(aggregate.InnerExceptions).HasSingleItem())).IsTypeOf<InvalidOperationException>();
 
         //a second Dispose finds an empty list (the first drained it) — no re-release
         scope.Dispose();
-        Assert.Equal(1, factory.ReleaseCount(before));
-        Assert.Equal(1, factory.ReleaseCount(throwing));
-        Assert.Equal(1, factory.ReleaseCount(after));
+        await Assert.That(factory.ReleaseCount(before)).IsEqualTo(1);
+        await Assert.That(factory.ReleaseCount(throwing)).IsEqualTo(1);
+        await Assert.That(factory.ReleaseCount(after)).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_an_async_transform_release_throws_the_scope_drains_the_rest_and_surfaces_an_aggregate()
     {
         //arrange
@@ -60,18 +60,18 @@ public class TransformLifetimeScopePartialReleaseTests
         scope.Add(Lease<IAmAMessageTransformAsync>.Untracked(after));
 
         //act — a single DisposeAsync drains the rest deterministically and surfaces the failure as an aggregate
-        var aggregate = await Assert.ThrowsAsync<AggregateException>(async () => await scope.DisposeAsync());
+        var aggregate = await Assert.That(async () => await scope.DisposeAsync()).ThrowsExactly<AggregateException>();
 
         //assert
-        Assert.Equal(1, factory.ReleaseCount(before));
-        Assert.Equal(1, factory.ReleaseCount(throwing));
-        Assert.Equal(1, factory.ReleaseCount(after));
-        Assert.IsType<InvalidOperationException>(Assert.Single(aggregate.InnerExceptions));
+        await Assert.That(factory.ReleaseCount(before)).IsEqualTo(1);
+        await Assert.That(factory.ReleaseCount(throwing)).IsEqualTo(1);
+        await Assert.That(factory.ReleaseCount(after)).IsEqualTo(1);
+        await Assert.That((await Assert.That(aggregate.InnerExceptions).HasSingleItem())).IsTypeOf<InvalidOperationException>();
 
         await scope.DisposeAsync();
-        Assert.Equal(1, factory.ReleaseCount(before));
-        Assert.Equal(1, factory.ReleaseCount(throwing));
-        Assert.Equal(1, factory.ReleaseCount(after));
+        await Assert.That(factory.ReleaseCount(before)).IsEqualTo(1);
+        await Assert.That(factory.ReleaseCount(throwing)).IsEqualTo(1);
+        await Assert.That(factory.ReleaseCount(after)).IsEqualTo(1);
     }
 
     private sealed class CountingTransform : IAmAMessageTransform

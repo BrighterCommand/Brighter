@@ -23,8 +23,6 @@ THE SOFTWARE. */
 
 using Paramore.Brighter;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -32,25 +30,25 @@ public class SpyCommandProcessorCountTests
 {
     private readonly SpyCommandProcessor _spy = new();
 
-    [Fact]
-    public void Then_call_count_returns_zero_before_any_calls()
+    [Test]
+    public async Task Then_call_count_returns_zero_before_any_calls()
     {
         //Assert
-        _spy.CallCount(CommandType.Send).ShouldBe(0);
+        await Assert.That(_spy.CallCount(CommandType.Send)).IsEqualTo(0);
     }
 
-    [Fact]
-    public void Then_call_count_returns_one_after_single_call()
+    [Test]
+    public async Task Then_call_count_returns_one_after_single_call()
     {
         //Act
         _spy.Send(new TestCommand());
 
         //Assert
-        _spy.CallCount(CommandType.Send).ShouldBe(1);
+        await Assert.That(_spy.CallCount(CommandType.Send)).IsEqualTo(1);
     }
 
-    [Fact]
-    public void Then_call_count_returns_three_after_three_calls()
+    [Test]
+    public async Task Then_call_count_returns_three_after_three_calls()
     {
         //Act
         _spy.Send(new TestCommand());
@@ -58,18 +56,18 @@ public class SpyCommandProcessorCountTests
         _spy.Send(new TestCommand());
 
         //Assert
-        _spy.CallCount(CommandType.Send).ShouldBe(3);
+        await Assert.That(_spy.CallCount(CommandType.Send)).IsEqualTo(3);
     }
 
-    [Fact]
-    public void Then_call_count_returns_zero_for_different_method()
+    [Test]
+    public async Task Then_call_count_returns_zero_for_different_method()
     {
         //Act
         _spy.Send(new TestCommand());
         _spy.Send(new TestCommand());
 
         //Assert
-        _spy.CallCount(CommandType.Publish).ShouldBe(0);
+        await Assert.That(_spy.CallCount(CommandType.Publish)).IsEqualTo(0);
     }
 
     private sealed class TestCommand() : Command(Id.Random());

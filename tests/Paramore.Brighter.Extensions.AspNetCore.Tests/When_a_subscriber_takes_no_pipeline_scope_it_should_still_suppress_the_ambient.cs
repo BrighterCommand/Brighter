@@ -26,7 +26,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // lifetime, which is not a subscriber and suppresses nothing, still lets a nested Post adopt the ambient.
 public class TransientHandlerNestedPostSuppressionTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_subscriber_takes_no_pipeline_scope_it_should_still_suppress_the_ambient()
     {
         // Arrange - a host whose handler pipelines are all Transient (so neither the Send handler nor
@@ -55,10 +55,10 @@ public class TransientHandlerNestedPostSuppressionTests
 
         // Assert - the Send handler's nested Post resolved R: its own pipeline took no scope, and a
         // plain Send is not a subscriber, so nothing suppresses the ambient it asks for
-        Assert.Same(recorder.RequestScopeInstance, recorder.SendNestedInstance);
+        await Assert.That(recorder.SendNestedInstance).IsSameReferenceAs(recorder.RequestScopeInstance);
 
         // Assert - the Publish subscriber's nested Post did not resolve R: even though the subscriber's
         // own pipeline also took no scope, it is still a subscriber, and suppression still applies
-        Assert.NotSame(recorder.RequestScopeInstance, recorder.PublishNestedInstance);
+        await Assert.That(recorder.PublishNestedInstance).IsNotSameReferenceAs(recorder.RequestScopeInstance);
     }
 }

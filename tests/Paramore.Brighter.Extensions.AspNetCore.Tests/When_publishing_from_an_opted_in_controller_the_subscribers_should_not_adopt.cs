@@ -28,7 +28,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // ignores an ambient handed over for an AlwaysNew ask and warns about it exactly once per container.
 public class PublishSubscriberAdoptionTests
 {
-    [Fact]
+    [Test]
     public async Task When_publishing_from_an_opted_in_controller_the_subscribers_should_not_adopt()
     {
         // Arrange - the opted-in host from T6.3 (AC-15), plus this test's own recorder
@@ -57,16 +57,20 @@ public class PublishSubscriberAdoptionTests
         var recorder = factory.Services.GetRequiredService<PublishScopeRecorder>();
         var requestScopeInstance = recorder.RequestScopeInstance;
         var subscriberInstances = recorder.SubscriberInstances.ToArray();
-        Assert.Equal(2, subscriberInstances.Length);
-        Assert.DoesNotContain(subscriberInstances, instance => ReferenceEquals(instance, requestScopeInstance));
-        Assert.NotSame(subscriberInstances[0], subscriberInstances[1]);
-
-        // Assert - both subscriber instances were disposed when PublishAsync completed, and R was not
-        Assert.All(recorder.SubscriberDisposeCountsAfterPublish, disposeCount => Assert.Equal(1, disposeCount));
-        Assert.Equal(0, recorder.RequestScopeDisposeCountAfterPublish);
+        await Assert.That(subscriberInstances.Length).IsEqualTo(2);
+        await Assert.That(subscriberInstances).DoesNotContain(instance => ReferenceEquals(instance, requestScopeInstance));
+        await Assert.That(subscriberInstances[1]).IsNotSameReferenceAs(subscriberInstances[0]);
+        using (Assert.Multiple())
+        {
+            foreach (var disposeCount in recorder.SubscriberDisposeCountsAfterPublish)
+            {
+                await Assert.That(disposeCount).IsEqualTo(1);
+            }
+        }
+        await Assert.That(recorder.RequestScopeDisposeCountAfterPublish).IsEqualTo(0);
     }
 
-    [Fact]
+    [Test]
     public async Task When_an_affinity_ignoring_provider_offers_the_ambient_for_an_always_new_ask_it_should_be_ignored_and_warned_once()
     {
         // Arrange - the same shape of application, except its only IAmAScopeProvider is a hand-rolled one
@@ -91,12 +95,12 @@ public class PublishSubscriberAdoptionTests
         // the provider's own implementation type - the latch is once per (condition, provider type) pair
         // for the whole container
         var warnings = capturingProvider.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        var warning = Assert.Single(warnings);
-        Assert.Contains("AmbientIgnoredForAlwaysNew", warning.Message);
-        Assert.Contains(nameof(AffinityIgnoringScopeProvider), warning.Message);
+        var warning = await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains("AmbientIgnoredForAlwaysNew");
+        await Assert.That(warning.Message).Contains(nameof(AffinityIgnoringScopeProvider));
     }
 
-    [Fact]
+    [Test]
     public async Task When_two_hosts_share_the_same_affinity_ignoring_provider_type_each_should_latch_independently()
     {
         // Arrange - a second host of the same shape, registering the same provider implementation type,
@@ -118,10 +122,13 @@ public class PublishSubscriberAdoptionTests
         // first subscriber to ask; the second subscriber's identical ask is already latched) - not one
         // (which a shared or provider-type-only latch would produce) and not more
         var warningsAfterFirstRound = capturingProvider.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Equal(2, warningsAfterFirstRound.Count);
-        Assert.Contains(warningsAfterFirstRound, w => w.Message.Contains("NoAmbientOffered"));
-        Assert.Contains(warningsAfterFirstRound, w => w.Message.Contains("AmbientIgnoredForAlwaysNew"));
-        Assert.All(warningsAfterFirstRound, w => Assert.Contains(nameof(AffinityIgnoringScopeProvider), w.Message));
+        await Assert.That(warningsAfterFirstRound.Count).IsEqualTo(2);
+        await Assert.That(warningsAfterFirstRound).Contains(w => w.Message.Contains("NoAmbientOffered"));
+        await Assert.That(warningsAfterFirstRound).Contains(w => w.Message.Contains("AmbientIgnoredForAlwaysNew"));
+        foreach (var w in warningsAfterFirstRound)
+{
+    await Assert.That(w.Message).Contains(nameof(AffinityIgnoringScopeProvider));
+}
 
         // Act - repeat both operations
         (await client.PostAsync("/api/orders", content: null)).EnsureSuccessStatusCode();
@@ -129,6 +136,6 @@ public class PublishSubscriberAdoptionTests
 
         // Assert - no further entry
         var warningsAfterSecondRound = capturingProvider.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Equal(2, warningsAfterSecondRound.Count);
+        await Assert.That(warningsAfterSecondRound.Count).IsEqualTo(2);
     }
 }

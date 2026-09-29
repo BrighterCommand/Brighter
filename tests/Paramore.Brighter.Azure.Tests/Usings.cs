@@ -1,1 +1,1 @@
-global using NUnit.Framework;
+// NUnit global using removed during TUnit migration

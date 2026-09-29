@@ -24,8 +24,6 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -50,35 +48,35 @@ public class SpyCommandProcessorCaptureRequestDetailsTests
         _afterCall = DateTime.UtcNow;
     }
 
-    [Fact]
-    public void Then_recorded_call_should_have_correct_type()
+    [Test]
+    public async Task Then_recorded_call_should_have_correct_type()
     {
         //Assert
-        _spy.RecordedCalls.ShouldHaveSingleItem();
-        _spy.RecordedCalls[0].Type.ShouldBe(CommandType.Send);
+        await Assert.That(_spy.RecordedCalls).HasSingleItem();
+        await Assert.That(_spy.RecordedCalls[0].Type).IsEqualTo(CommandType.Send);
     }
 
-    [Fact]
-    public void Then_recorded_call_should_have_exact_request()
+    [Test]
+    public async Task Then_recorded_call_should_have_exact_request()
     {
         //Assert
-        _spy.RecordedCalls[0].Request.ShouldBeSameAs(_command);
+        await Assert.That(_spy.RecordedCalls[0].Request).IsSameReferenceAs(_command);
     }
 
-    [Fact]
-    public void Then_recorded_call_should_have_timestamp_within_range()
+    [Test]
+    public async Task Then_recorded_call_should_have_timestamp_within_range()
     {
         //Assert
         var timestamp = _spy.RecordedCalls[0].Timestamp;
-        timestamp.ShouldBeGreaterThanOrEqualTo(_beforeCall);
-        timestamp.ShouldBeLessThanOrEqualTo(_afterCall);
+        await Assert.That(timestamp).IsGreaterThanOrEqualTo(_beforeCall);
+        await Assert.That(timestamp).IsLessThanOrEqualTo(_afterCall);
     }
 
-    [Fact]
-    public void Then_recorded_call_should_capture_request_context()
+    [Test]
+    public async Task Then_recorded_call_should_capture_request_context()
     {
         //Assert
-        _spy.RecordedCalls[0].Context.ShouldBeSameAs(_context);
+        await Assert.That(_spy.RecordedCalls[0].Context).IsSameReferenceAs(_context);
     }
 
     private sealed class TestCommand() : Command(Id.Random());

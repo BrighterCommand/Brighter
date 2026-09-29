@@ -1,22 +1,19 @@
-﻿using System;
+using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
-
-[Collection("RMQ")]
 public class RmqValidateExistingInfrastructureTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _messageProducer;
     private readonly IAmAMessageConsumerSync _messageConsumer;
     private readonly Message _message;
-        
-    public RmqValidateExistingInfrastructureTests() 
+
+    public RmqValidateExistingInfrastructureTests()
     {
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
         var queueName = new ChannelName(Guid.NewGuid().ToString());
-            
-        _message = new Message(new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND), 
+
+        _message = new Message(new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND),
             new MessageBody("test content")
         );
 
@@ -28,11 +25,11 @@ public class RmqValidateExistingInfrastructureTests : IDisposable
 
         _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate});
         _messageConsumer = new RmqMessageConsumer(
-            connection: rmqConnection, 
-            queueName: queueName, 
-            routingKey: routingKey, 
-            isDurable: true, 
-            highAvailability: false, 
+            connection: rmqConnection,
+            queueName: queueName,
+            routingKey: routingKey,
+            isDurable: true,
+            highAvailability: false,
             makeChannels: OnMissingChannel.Validate);
 
         //This creates the infrastructure we want
@@ -41,9 +38,9 @@ public class RmqValidateExistingInfrastructureTests : IDisposable
             .GetAwaiter()
             .GetResult();
     }
-        
-    [Fact]
-    public void When_infrastructure_exists_can_validate_producer()
+
+    [Test]
+    public async Task When_infrastructure_exists_can_validate_producer()
     {
         var exceptionThrown = false;
         try
@@ -57,7 +54,7 @@ public class RmqValidateExistingInfrastructureTests : IDisposable
             exceptionThrown = true;
         }
 
-        Assert.False(exceptionThrown);
+        await Assert.That(exceptionThrown).IsFalse();
     }
 
     public void Dispose()

@@ -28,12 +28,13 @@ THE SOFTWARE. */
 // </auto-generated>
 
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.MongoDB.Tests.Outbox.Causation;
 
-[Trait("Category", "MongoDB")]
-[Collection("MongoDbOutbox")]
+[Property("Category", "MongoDB")]
+[NotInParallel("MongoDbOutbox")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<global::MongoDB.Driver.IClientSessionHandle>
 {
     private readonly Paramore.Brighter.MongoDb.Tests.Outbox.MongoDbOutboxProvider _outboxProvider = new();

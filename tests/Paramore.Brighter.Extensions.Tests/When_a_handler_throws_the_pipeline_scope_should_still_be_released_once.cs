@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // or one that wrapped the failure would replace the exception the caller observes.
 public class HandlerThrowsPipelineScopeReleasedOnceTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_handler_throws_the_pipeline_scope_should_still_be_released_once()
     {
         // Arrange
@@ -55,14 +55,13 @@ public class HandlerThrowsPipelineScopeReleasedOnceTests
         var commandProcessor = services.BuildServiceProvider().GetRequiredService<IAmACommandProcessor>();
 
         // Act
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => commandProcessor.SendAsync(new ThrowingHandlerCommand()));
+        var exception = await Assert.That(() => commandProcessor.SendAsync(new ThrowingHandlerCommand())).ThrowsExactly<InvalidOperationException>();
 
         // Assert — the caller observes the handler's own exception, unchanged
-        Assert.Equal(ThrowingHandlerCommandHandlerAsync.FailureMessage, exception.Message);
+        await Assert.That(exception.Message).IsEqualTo(ThrowingHandlerCommandHandlerAsync.FailureMessage);
 
         // Assert — the Scoped dependency the handler resolved was disposed exactly once
-        var dependency = Assert.Single(recorder.Instances);
-        Assert.Equal(1, dependency.DisposeCount);
+        var dependency = await Assert.That(recorder.Instances).HasSingleItem();
+        await Assert.That(dependency.DisposeCount).IsEqualTo(1);
     }
 }

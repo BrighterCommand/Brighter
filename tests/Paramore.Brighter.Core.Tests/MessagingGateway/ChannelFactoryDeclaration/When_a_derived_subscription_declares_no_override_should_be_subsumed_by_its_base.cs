@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,14 +25,13 @@ THE SOFTWARE. */
 
 using System.Linq;
 using Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration;
 
 public class ChannelFactoryDeclarationSweepConstructedGenericBaseSubsumptionTests
 {
-    [Fact]
-    public void When_a_derived_subscription_declares_no_override_should_be_subsumed_by_its_base()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_derived_subscription_declares_no_override_should_be_subsumed_by_its_base()
     {
         // Arrange
         // Evident Data: a non-generic subscription that closes a generic base over Command,
@@ -47,10 +47,10 @@ public class ChannelFactoryDeclarationSweepConstructedGenericBaseSubsumptionTest
         // Assert
         // The derived type declares no override of its own, so its value is its base's by
         // construction - subsumption means it gets no entry in its own right
-        Assert.DoesNotContain(result, entry => entry.Subject == derivedType);
+        await Assert.That(result).DoesNotContain(entry => entry.Subject == derivedType);
 
         // The base - reported as the open generic definition, per Subject's discovered identity - is
         // present among the subjects
-        Assert.Contains(result, entry => entry.Subject == baseOpenDefinition);
+        await Assert.That(result).Contains(entry => entry.Subject == baseOpenDefinition);
     }
 }

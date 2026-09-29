@@ -8,7 +8,6 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
@@ -73,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             );
         }
 
-        [Fact]
+        [Test]
         public async Task When_Posting_A_Reply_Message_To_The_Command_Processor_Async()
         {
             //act - post a Reply whose mapper sets a dynamic topic (reply address)
@@ -82,19 +81,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             //assert - message was dispatched to the reply topic, not the producer topic
             var messages = _internalBus.Stream(_myResponse.SendersAddress.Topic).ToArray();
-            Assert.Single(messages);
+            await Assert.That(messages).HasSingleItem();
 
             //assert - message was stored in the outbox
             var outboxMessage = await _outbox.GetAsync(_myResponse.Id, new RequestContext());
-            Assert.NotNull(outboxMessage);
+            await Assert.That(outboxMessage).IsNotNull();
 
             //assert - message topic is the reply address
-            Assert.Equal(_myResponse.SendersAddress.Topic, outboxMessage.Header.Topic);
+            await Assert.That(outboxMessage!.Header.Topic).IsEqualTo(_myResponse.SendersAddress.Topic);
 
             //assert - the ProducerTopic bag entry survives dispatch so an InMemoryOutbox
             //(which holds the message by reference) keeps the producer hint for retries.
             //Wire-format stripping is the transport's responsibility (see MessageHeader.IsLocalHeader).
-            Assert.True(messages[0].Header.Bag.ContainsKey(Message.ProducerTopicHeaderName));
+            await Assert.That(messages[0].Header.Bag.ContainsKey(Message.ProducerTopicHeaderName)).IsTrue();
         }
     }
 }

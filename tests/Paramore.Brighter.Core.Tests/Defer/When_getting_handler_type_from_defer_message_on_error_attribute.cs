@@ -19,51 +19,44 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using Paramore.Brighter.Defer.Attributes;
 using Paramore.Brighter.Defer.Handlers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Defer
 {
     public class When_getting_handler_type_from_defer_message_on_error_attribute
     {
-        [Fact]
-        public void It_should_return_correct_sync_handler_configuration()
+        [Test]
+        public async Task It_should_return_correct_sync_handler_configuration()
         {
             //Arrange
             var attribute = new DeferMessageOnErrorAttribute(step: 1, delayMilliseconds: 5000);
-
             //Act
             var handlerType = attribute.GetHandlerType();
             var initializerParams = attribute.InitializerParams();
-
             //Assert
-            Assert.Equal(typeof(DeferMessageOnErrorHandler<>), handlerType); // Returns the correct handler type
-            Assert.Equal(HandlerTiming.Before, attribute.Timing); // Must wrap subsequent handlers
-            Assert.Equal(1, attribute.Step); // Preserves the specified step
-            Assert.Single(initializerParams); // Has one initializer parameter
-            Assert.Equal(5000, initializerParams[0]); // Delay value flows through
+            await Assert.That(handlerType).IsEqualTo(typeof(DeferMessageOnErrorHandler<>)); // Returns the correct handler type
+            await Assert.That(attribute.Timing).IsEqualTo(HandlerTiming.Before); // Must wrap subsequent handlers
+            await Assert.That(attribute.Step).IsEqualTo(1); // Preserves the specified step
+            await Assert.That(initializerParams).HasSingleItem(); // Has one initializer parameter
+            await Assert.That(initializerParams[0]).IsEqualTo(5000); // Delay value flows through
         }
 
-        [Fact]
-        public void It_should_return_correct_async_handler_configuration()
+        [Test]
+        public async Task It_should_return_correct_async_handler_configuration()
         {
             //Arrange
             var attribute = new DeferMessageOnErrorAsyncAttribute(step: 2, delayMilliseconds: 3000);
-
             //Act
             var handlerType = attribute.GetHandlerType();
             var initializerParams = attribute.InitializerParams();
-
             //Assert
-            Assert.Equal(typeof(DeferMessageOnErrorHandlerAsync<>), handlerType); // Returns the correct async handler type
-            Assert.Equal(HandlerTiming.Before, attribute.Timing); // Must wrap subsequent handlers
-            Assert.Equal(2, attribute.Step); // Preserves the specified step
-            Assert.Single(initializerParams); // Has one initializer parameter
-            Assert.Equal(3000, initializerParams[0]); // Delay value flows through
+            await Assert.That(handlerType).IsEqualTo(typeof(DeferMessageOnErrorHandlerAsync<>)); // Returns the correct async handler type
+            await Assert.That(attribute.Timing).IsEqualTo(HandlerTiming.Before); // Must wrap subsequent handlers
+            await Assert.That(attribute.Step).IsEqualTo(2); // Preserves the specified step
+            await Assert.That(initializerParams).HasSingleItem(); // Has one initializer parameter
+            await Assert.That(initializerParams[0]).IsEqualTo(3000); // Delay value flows through
         }
     }
 }

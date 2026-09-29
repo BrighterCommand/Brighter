@@ -30,8 +30,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
 public class GcpPubSubDeclaredChannelFactoryIsRealTests
 {
-    [Fact]
-    public void When_checking_the_gcp_pubsub_declared_channel_factory_should_be_a_real_channel_factory()
+    [Test]
+    public async System.Threading.Tasks.Task When_checking_the_gcp_pubsub_declared_channel_factory_should_be_a_real_channel_factory()
     {
         // Arrange
         var subscription = new GcpPubSubSubscription<MyCommand>(
@@ -44,7 +44,7 @@ public class GcpPubSubDeclaredChannelFactoryIsRealTests
         var channelFactoryType = subscription.ChannelFactoryType;
 
         // Assert — a genuine channel factory, not the in-memory default a mismatch would fall back to
-        Assert.True(typeof(IAmAChannelFactory).IsAssignableFrom(channelFactoryType));
-        Assert.NotEqual(typeof(InMemoryChannelFactory), channelFactoryType);
+        await Assert.That(typeof(IAmAChannelFactory).IsAssignableFrom(channelFactoryType)).IsTrue();
+        await Assert.That(channelFactoryType).IsNotEqualTo(typeof(InMemoryChannelFactory));
     }
 }

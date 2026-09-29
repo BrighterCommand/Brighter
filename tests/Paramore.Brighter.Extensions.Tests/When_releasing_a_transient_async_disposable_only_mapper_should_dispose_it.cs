@@ -3,14 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class TransientAsyncDisposableMapperReleaseTests
 {
-    [Fact]
-    public void When_releasing_a_transient_async_disposable_only_mapper_should_dispose_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_releasing_a_transient_async_disposable_only_mapper_should_dispose_it()
     {
         //arrange
         var disposals = new MapperDisposalLog();
@@ -23,11 +23,11 @@ public class TransientAsyncDisposableMapperReleaseTests
         mapperFactory.Release(mapper!);
 
         //assert
-        Assert.Equal(1, disposals.Count);
+        await Assert.That(disposals.Count).IsEqualTo(1);
     }
 
-    [Fact]
-    public void When_disposing_a_factory_holding_a_transient_async_disposable_only_mapper_should_dispose_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_disposing_a_factory_holding_a_transient_async_disposable_only_mapper_should_dispose_it()
     {
         //arrange
         var disposals = new MapperDisposalLog();
@@ -39,7 +39,7 @@ public class TransientAsyncDisposableMapperReleaseTests
         mapperFactory.Dispose();
 
         //assert
-        Assert.Equal(1, disposals.Count);
+        await Assert.That(disposals.Count).IsEqualTo(1);
     }
 
     private static IServiceProvider BuildProvider(MapperDisposalLog disposals)

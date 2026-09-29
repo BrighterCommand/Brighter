@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
@@ -33,7 +32,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 /// lazily-created requeue producer, and that disposal works in all cases.
 /// Uses a non-zero delay to exercise the full scheduler path (lesson from Kafka/MQTT).
 /// </summary>
-[Trait("Category", "MSSQL")]
+[Category("MSSQL")]
 public class When_mssql_consumer_creates_producer_should_configure_and_dispose_correctly
 {
     private readonly MsSqlTestHelper _testHelper;
@@ -46,8 +45,8 @@ public class When_mssql_consumer_creates_producer_should_configure_and_dispose_c
         _topicName = $"Producer-Config-Tests-{Guid.NewGuid()}";
     }
 
-    [Fact]
-    public void When_requeuing_with_delay_should_wire_scheduler_to_producer()
+    [Test]
+    public async Task When_requeuing_with_delay_should_wire_scheduler_to_producer()
     {
         // Arrange
         var scheduler = new SpySchedulerSync();
@@ -62,19 +61,19 @@ public class When_mssql_consumer_creates_producer_should_configure_and_dispose_c
             new MessageBody("test scheduler wiring"));
 
         // Act - requeue with non-zero delay to exercise the scheduler path
-        consumer.Requeue(message, TimeSpan.FromSeconds(5));
+        await consumer.RequeueAsync(message, TimeSpan.FromSeconds(5));
 
         // Assert - scheduler was called, proving it was wired through to the producer
-        Assert.True(scheduler.ScheduleCalled);
-        Assert.Equal(message.Body.Value, scheduler.ScheduledMessage?.Body.Value);
-        Assert.Equal(TimeSpan.FromSeconds(5), scheduler.ScheduledDelay);
+        await Assert.That(scheduler.ScheduleCalled).IsTrue();
+        await Assert.That(scheduler.ScheduledMessage?.Body.Value).IsEqualTo(message.Body.Value);
+        await Assert.That(scheduler.ScheduledDelay).IsEqualTo(TimeSpan.FromSeconds(5));
 
         // Cleanup
-        consumer.Dispose();
+        await consumer.DisposeAsync();
     }
 
-    [Fact]
-    public void When_disposing_after_requeue_should_not_throw()
+    [Test]
+    public async Task When_disposing_after_requeue_should_not_throw()
     {
         // Arrange
         var scheduler = new SpySchedulerSync();
@@ -88,15 +87,14 @@ public class When_mssql_consumer_creates_producer_should_configure_and_dispose_c
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),
             new MessageBody("test dispose after requeue"));
 
-        consumer.Requeue(message, TimeSpan.FromSeconds(5));
+        await consumer.RequeueAsync(message, TimeSpan.FromSeconds(5));
 
         // Act & Assert - dispose after producer was created should not throw
-        var exception = Record.Exception(() => consumer.Dispose());
-        Assert.Null(exception);
+        await Assert.That(() => consumer.Dispose()).ThrowsNothing();
     }
 
-    [Fact]
-    public void When_disposing_without_requeue_should_not_throw()
+    [Test]
+    public async Task When_disposing_without_requeue_should_not_throw()
     {
         // Arrange - create consumer but never requeue (producer never created)
         var scheduler = new SpySchedulerSync();
@@ -106,8 +104,7 @@ public class When_mssql_consumer_creates_producer_should_configure_and_dispose_c
             scheduler);
 
         // Act & Assert - dispose without producer creation should not throw
-        var exception = Record.Exception(() => consumer.Dispose());
-        Assert.Null(exception);
+        await Assert.That(() => consumer.Dispose()).ThrowsNothing();
     }
 
     private sealed class SpySchedulerSync : IAmAMessageSchedulerSync

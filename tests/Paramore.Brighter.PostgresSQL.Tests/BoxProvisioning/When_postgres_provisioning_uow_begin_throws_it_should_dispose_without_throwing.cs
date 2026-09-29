@@ -30,11 +30,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkBeginThrowsTests
 {
     // Per ADR 0058 §B.3: the runner declares the UoW with `await using`, so DisposeAsync runs
     // on every exit path — including when BeginAsync itself throws. Postgres-specific subtlety:
@@ -49,34 +48,35 @@ public class PostgreSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
     // the (null) transaction handle, do not touch the lock".
     //
     // The test wires a FakePostgreSqlAdvisoryLock that throws TimeoutException on AcquireAsync.
-    // The whole `await using` block is wrapped in Record.ExceptionAsync. Because `await using`
+    // The whole `await using` block is wrapped in TestExceptionRecorder.CaptureAsync. Because `await using`
     // is sugar for try/finally and C# replaces (not suppresses) the original exception when
     // the finally throws, a clean DisposeAsync surfaces the original TimeoutException — and a
-    // throwing DisposeAsync would surface a different type. So Assert.IsType<TimeoutException>
+    // throwing DisposeAsync would surface a different type. So Xunit.Assert.IsType<TimeoutException>
     // pins both halves of the contract:
     //   1. BeginAsync propagates the AcquireAsync failure unwrapped
     //   2. DisposeAsync ran cleanly (no exception type substitution)
-    // Assert.Null(_advisoryLock.ReleasedKey) pins the third half — DisposeAsync did not
+    // Xunit.Assert.Null(_advisoryLock.ReleasedKey) pins the third half — DisposeAsync did not
     // erroneously call ReleaseAsync on a never-acquired lock. (Note: this test is a regression
     // guard — the current DisposeAsync impl returns `default` when `_transaction is null` and
     // never calls ReleaseAsync, so it satisfies the contract green-from-the-start. The test
     // exists to prevent a future "be helpful and unconditionally release on dispose" mutation
     // from reintroducing the no-release-on-failed-acquire bug.)
-
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(
         releaseResult: true,
         throwOnAcquire: new TimeoutException("forced lock-acquisition failure for spec 0028 §B.3 test"));
 
+    [Before(HookType.Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(HookType.Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_postgres_provisioning_uow_begin_throws_it_should_dispose_without_throwing()
     {
         // Act — capture whatever exception ultimately surfaces from the `await using` scope
-        var thrown = await Record.ExceptionAsync(async () =>
+        var thrown = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             await using var uow = new PostgreSqlProvisioningUnitOfWork(
                 _connection, _advisoryLock, NullLogger.Instance);
@@ -88,9 +88,9 @@ public class PostgreSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
 
         // Assert — the surfaced exception is the BeginAsync TimeoutException; DisposeAsync did
         // not throw (otherwise its exception would have replaced the TimeoutException).
-        Assert.IsType<TimeoutException>(thrown);
+        await Assert.That(thrown).IsTypeOf<TimeoutException>();
         // Assert — DisposeAsync did not call ReleaseAsync; the lock was never acquired, so
         // pg_advisory_unlock must not be issued.
-        Assert.Null(_advisoryLock.ReleasedKey);
+        await Assert.That(_advisoryLock.ReleasedKey).IsNull();
     }
 }

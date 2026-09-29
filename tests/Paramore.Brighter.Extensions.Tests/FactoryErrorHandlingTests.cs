@@ -25,7 +25,6 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -34,8 +33,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class FactoryErrorHandlingTests
 {
-    [Fact]
-    public void Factory_UnregisteredHandler_ReturnsNull()
+    [Test]
+    public async Task Factory_UnregisteredHandler_ReturnsNull()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -53,11 +52,11 @@ public class FactoryErrorHandlingTests
         var handler = ((IAmAHandlerFactorySync)factory).Create(typeof(UnregisteredHandler), lifetime);
 
         // Assert - Should return null for unregistered handler
-        Assert.Null(handler);
+        await Assert.That(handler).IsNull();
     }
 
-    [Fact]
-    public void Factory_NullLifetime_ThrowsConfigurationExceptionForTransient()
+    [Test]
+    public async System.Threading.Tasks.Task Factory_NullLifetime_ThrowsConfigurationExceptionForTransient()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -72,11 +71,11 @@ public class FactoryErrorHandlingTests
 
         // Act & Assert - Transient now requires a pipeline scope handle too (C-6, see
         // ServiceProviderHandlerFactory.CreatePipelineScope), so a null lifetime carries none
-        Assert.Throws<ConfigurationException>(() => ((IAmAHandlerFactorySync)factory).Create(typeof(SimpleHandler), null!));
+        await Assert.That(() => ((IAmAHandlerFactorySync)factory).Create(typeof(SimpleHandler), null!)).ThrowsExactly<ConfigurationException>();
     }
 
-    [Fact]
-    public void Factory_InvalidHandlerType_ReturnsNull()
+    [Test]
+    public async Task Factory_InvalidHandlerType_ReturnsNull()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -93,11 +92,11 @@ public class FactoryErrorHandlingTests
         var result = ((IAmAHandlerFactorySync)factory).Create(typeof(string), lifetime);
 
         // Assert - Should return null for non-handler types
-        Assert.Null(result);
+        await Assert.That(result).IsNull();
     }
 
-    [Fact]
-    public void Factory_MissingBrighterOptions_UsesDefaultTransient()
+    [Test]
+    public async Task Factory_MissingBrighterOptions_UsesDefaultTransient()
     {
         // Arrange - Don't register IBrighterOptions
         var services = new ServiceCollection();
@@ -112,7 +111,7 @@ public class FactoryErrorHandlingTests
         var handler = ((IAmAHandlerFactorySync)factory).Create(typeof(SimpleHandler), lifetime);
 
         // Assert - Should use default Transient lifetime and work
-        Assert.NotNull(handler);
+        await Assert.That(handler).IsNotNull();
     }
 
     private class UnregisteredHandler : RequestHandler<ErrorCommand>

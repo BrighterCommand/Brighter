@@ -30,18 +30,17 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
+[NotInParallel]
 public class RmqSharedConnectionCleanupFailureTests
 {
-    [Theory]
-    [InlineData(false, false, "WaitForConfirms")]
-    [InlineData(false, true, "WaitForConfirms")]
-    [InlineData(true, false, "BasicCancel")]
+    [Test]
+    [Arguments(false, false, "WaitForConfirms")]
+    [Arguments(false, true, "WaitForConfirms")]
+    [Arguments(true, false, "BasicCancel")]
     public async Task When_gateway_cleanup_throws_should_release_its_connection(
         bool disposeConsumer, bool disposeAsync, string failingOperation)
     {
@@ -62,16 +61,16 @@ public class RmqSharedConnectionCleanupFailureTests
             new MessageBody("before cleanup failure"));
         consumer.Purge();
         producer.Send(message);
-        var received = Assert.Single(consumer.Receive(TimeSpan.FromSeconds(5)));
-        Assert.Equal(message.Id, received.Id);
+        var received = await Assert.That(consumer.Receive(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(received.Id).IsEqualTo(message.Id);
         consumer.Acknowledge(received);
         var sharedConnection = pool.GetConnection(factory);
-        Assert.NotNull(sharedConnection);
+        await Assert.That(sharedConnection).IsNotNull();
 
         try
         {
             // Act
-            var error = await Record.ExceptionAsync(async () =>
+            var error = await TestExceptionRecorder.CaptureAsync(async () =>
             {
                 if (disposeConsumer)
                 {
@@ -82,13 +81,13 @@ public class RmqSharedConnectionCleanupFailureTests
             });
 
             // Assert
-            Assert.IsType<InvalidOperationException>(error);
-            Assert.Equal("Injected channel cleanup failure.", error.Message);
-            Assert.True(sharedConnection.IsOpen);
+            await Assert.That(error).IsTypeOf<InvalidOperationException>();
+            await Assert.That(error.Message).IsEqualTo("Injected channel cleanup failure.");
+            await Assert.That(sharedConnection.IsOpen).IsTrue();
             failure = null;
             if (disposeConsumer) producer.Dispose();
             else consumer.Dispose();
-            Assert.False(sharedConnection.IsOpen);
+            await Assert.That(sharedConnection.IsOpen).IsFalse();
         }
         finally
         {

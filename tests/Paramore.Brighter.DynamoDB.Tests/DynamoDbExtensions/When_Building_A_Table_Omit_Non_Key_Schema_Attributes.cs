@@ -5,14 +5,13 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Outbox.DynamoDB;
-using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 {
     public class DynamoDbDropNonKeyAttributesForCreationTests
     {
-        [Fact]
-        public void When_Building_A_Table_Omit_Non_Key_Schema_Attributes()
+        [Test]
+        public async Task When_Building_A_Table_Omit_Non_Key_Schema_Attributes()
         {
             var tableRequestFactory = new DynamoDbTableFactory();
             var builder = new DynamoDbTableBuilder(CreateClient());
@@ -34,14 +33,14 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             var modifiedTableRequest = builder.RemoveNonSchemaAttributes(tableRequest);
 
             //assert
-            Assert.DoesNotContain(modifiedTableRequest.AttributeDefinitions, attr => attr.AttributeName == "StringProperty" && attr.AttributeType == ScalarAttributeType.S);
-            Assert.DoesNotContain(modifiedTableRequest.AttributeDefinitions, attr => attr.AttributeName == "NumberProperty" && attr.AttributeType == ScalarAttributeType.N);
-            Assert.DoesNotContain(modifiedTableRequest.AttributeDefinitions, attr => attr.AttributeName == "ByteArrayProperty" && attr.AttributeType == ScalarAttributeType.B);
-            Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "Id" && attr.AttributeType == ScalarAttributeType.S);
-            Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "RangeKey" && attr.AttributeType == ScalarAttributeType.S);
-            Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "GlobalSecondaryId" && attr.AttributeType == ScalarAttributeType.S);
-            Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "GlobalSecondaryRangeKey" && attr.AttributeType == ScalarAttributeType.S);
-            Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "LocalSecondaryRangeKey" && attr.AttributeType == ScalarAttributeType.S);
+            await Assert.That((modifiedTableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "StringProperty" && attr.AttributeType == ScalarAttributeType.S)).IsFalse();
+            await Assert.That((modifiedTableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "NumberProperty" && attr.AttributeType == ScalarAttributeType.N)).IsFalse();
+            await Assert.That((modifiedTableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "ByteArrayProperty" && attr.AttributeType == ScalarAttributeType.B)).IsFalse();
+            await Assert.That((tableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "Id" && attr.AttributeType == ScalarAttributeType.S)).IsTrue();
+            await Assert.That((tableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "RangeKey" && attr.AttributeType == ScalarAttributeType.S)).IsTrue();
+            await Assert.That((tableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "GlobalSecondaryId" && attr.AttributeType == ScalarAttributeType.S)).IsTrue();
+            await Assert.That((tableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "GlobalSecondaryRangeKey" && attr.AttributeType == ScalarAttributeType.S)).IsTrue();
+            await Assert.That((tableRequest.AttributeDefinitions).Any(attr => attr.AttributeName == "LocalSecondaryRangeKey" && attr.AttributeType == ScalarAttributeType.S)).IsTrue();
         }
 
         private AmazonDynamoDBClient CreateClient()

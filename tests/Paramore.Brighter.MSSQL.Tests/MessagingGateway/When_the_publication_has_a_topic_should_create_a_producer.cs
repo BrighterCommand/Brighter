@@ -24,7 +24,7 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
@@ -40,14 +40,14 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 /// connection, and on <c>Create</c> validating the publication and constructing producers without opening
 /// a connection.
 /// </remarks>
-[Trait("Category", "MSSQL")]
+[Property("Category", "MSSQL")]
 public class MsSqlProducerFactoryPublicationTopicTests
 {
     private readonly RelationalDatabaseConfiguration _configuration =
         new("Server=localhost;Database=test;Trusted_Connection=True;", queueStoreTable: "QueueData");
 
-    [Fact]
-    public void When_the_publication_has_no_topic_should_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_publication_has_no_topic_should_throw()
     {
         // Arrange
         var factory = new MsSqlMessageProducerFactory(
@@ -55,16 +55,16 @@ public class MsSqlProducerFactoryPublicationTopicTests
             [new Publication { RequestType = typeof(MyEvent) }]);
 
         // Act
-        var exception = Assert.Throws<ConfigurationException>(() => factory.Create());
+        var exception = await Assert.That(() => factory.Create()).ThrowsExactly<ConfigurationException>();
 
         // Assert
-        Assert.Contains("Topic is missing from the publication", exception.Message);
+        await Assert.That(exception.Message).Contains("Topic is missing from the publication");
     }
 
     // The control: without it the test above would pass against a factory that threw for every
     // publication, which would say nothing about the missing topic.
-    [Fact]
-    public void When_the_publication_has_a_topic_should_create_a_producer()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_publication_has_a_topic_should_create_a_producer()
     {
         // Arrange
         var factory = new MsSqlMessageProducerFactory(
@@ -82,7 +82,7 @@ public class MsSqlProducerFactoryPublicationTopicTests
         var producers = factory.Create();
 
         // Assert
-        Assert.Single(producers);
-        Assert.Equal(new RoutingKey("test.topic"), producers.Keys.Single().RoutingKey);
+        await Assert.That(producers).HasSingleItem();
+        await Assert.That(producers.Keys.Single().RoutingKey).IsEqualTo(new RoutingKey("test.topic"));
     }
 }

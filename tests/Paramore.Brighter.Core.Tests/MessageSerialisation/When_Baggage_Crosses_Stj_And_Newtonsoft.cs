@@ -3,7 +3,7 @@ using System.Text.Json;
 using Newtonsoft.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -12,8 +12,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 // that write outbox/inbox rows on one stack and consume them on the other.
 public class BaggageStjNewtonsoftParityTests
 {
-    [Fact]
-    public void When_Baggage_Is_Serialised_On_Stj_It_Deserialises_Identically_On_Newtonsoft()
+    [Test]
+    public async Task When_Baggage_Is_Serialised_On_Stj_It_Deserialises_Identically_On_Newtonsoft()
     {
         var original = new Baggage();
         original.Add("user", "alice");
@@ -22,14 +22,14 @@ public class BaggageStjNewtonsoftParityTests
         var stjJson = System.Text.Json.JsonSerializer.Serialize(original, JsonSerialisationOptions.Options);
         var roundTripped = JsonConvert.DeserializeObject<Baggage>(stjJson);
 
-        Assert.NotNull(roundTripped);
+        await Assert.That(roundTripped).IsNotNull();
         var entries = roundTripped!.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        Assert.Equal("alice", entries["user"]);
-        Assert.Equal("acme", entries["tenant"]);
+        await Assert.That(entries["user"]).IsEqualTo("alice");
+        await Assert.That(entries["tenant"]).IsEqualTo("acme");
     }
 
-    [Fact]
-    public void When_Baggage_Is_Serialised_On_Newtonsoft_It_Deserialises_Identically_On_Stj()
+    [Test]
+    public async Task When_Baggage_Is_Serialised_On_Newtonsoft_It_Deserialises_Identically_On_Stj()
     {
         var original = new Baggage();
         original.Add("user", "alice");
@@ -38,14 +38,14 @@ public class BaggageStjNewtonsoftParityTests
         var newtonsoftJson = JsonConvert.SerializeObject(original);
         var roundTripped = System.Text.Json.JsonSerializer.Deserialize<Baggage>(newtonsoftJson, JsonSerialisationOptions.Options);
 
-        Assert.NotNull(roundTripped);
+        await Assert.That(roundTripped).IsNotNull();
         var entries = roundTripped!.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        Assert.Equal("alice", entries["user"]);
-        Assert.Equal("acme", entries["tenant"]);
+        await Assert.That(entries["user"]).IsEqualTo("alice");
+        await Assert.That(entries["tenant"]).IsEqualTo("acme");
     }
 
-    [Fact]
-    public void When_Baggage_Is_Serialised_The_Bytes_Are_Identical_On_Both_Stacks()
+    [Test]
+    public async Task When_Baggage_Is_Serialised_The_Bytes_Are_Identical_On_Both_Stacks()
     {
         var original = new Baggage();
         original.Add("user", "alice");
@@ -54,6 +54,6 @@ public class BaggageStjNewtonsoftParityTests
         var stjJson = System.Text.Json.JsonSerializer.Serialize(original, JsonSerialisationOptions.Options);
         var newtonsoftJson = JsonConvert.SerializeObject(original);
 
-        Assert.Equal(stjJson, newtonsoftJson);
+        await Assert.That(newtonsoftJson).IsEqualTo(stjJson);
     }
 }

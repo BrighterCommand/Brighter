@@ -19,49 +19,30 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class NeitherHandlerInterfaceValidationTests
 {
-    [Fact]
-    public void When_step_implements_neither_handler_interface_should_report_error()
+    [Test]
+    public async Task When_step_implements_neither_handler_interface_should_report_error()
     {
         // Arrange — step handler type that implements neither IHandleRequests nor IHandleRequestsAsync
         // This represents a corrupted or unexpected type in the pipeline registry
-        var description = new HandlerPipelineDescription(
-            requestType: typeof(MyCommand),
-            handlerType: typeof(MyCommandHandler),
-            isAsync: false,
-            beforeSteps:
-            [
-                new PipelineStepDescription(
-                    typeof(RequestHandlerAttribute),
-                    typeof(NeitherSyncNorAsyncStep),
-                    Step: 1,
-                    HandlerTiming.Before)
-            ],
-            afterSteps: []);
-
+        var description = new HandlerPipelineDescription(requestType: typeof(MyCommand), handlerType: typeof(MyCommandHandler), isAsync: false, beforeSteps: [new PipelineStepDescription(typeof(RequestHandlerAttribute), typeof(NeitherSyncNorAsyncStep), Step: 1, HandlerTiming.Before)], afterSteps: []);
         var spec = HandlerPipelineValidationRules.AttributeAsyncConsistency();
-
         // Act
         var satisfied = spec.IsSatisfiedBy(description);
         var collector = new ValidationResultCollector<HandlerPipelineDescription>();
         var results = spec.Accept(collector).Where(r => !r.Success).ToList();
-
         // Assert
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Error, results[0].Error!.Severity);
-        Assert.Contains("implements neither", results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Error);
+        await Assert.That(results[0].Error!.Message).Contains("implements neither");
     }
 }
 

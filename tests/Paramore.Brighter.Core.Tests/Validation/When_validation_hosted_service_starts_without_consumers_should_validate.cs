@@ -30,7 +30,6 @@ using Microsoft.Extensions.Options;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
@@ -54,7 +53,7 @@ public class ValidationHostedServiceTests
             NullLogger<BrighterValidationHostedService>.Instance);
     }
 
-    [Fact]
+    [Test]
     public async Task When_consumer_does_not_own_validation_should_run_validation()
     {
         // Arrange
@@ -69,11 +68,13 @@ public class ValidationHostedServiceTests
         await service.StartAsync(CancellationToken.None);
 
         // Assert — validation should have run; Describe is owned by BrighterDiagnosticHostedService
-        Assert.True(validator.ValidateWasCalled);
-        Assert.False(diagnosticWriter.DescribeWasCalled);
+        await
+        Assert.That(validator.ValidateWasCalled).IsTrue();
+        await
+        Assert.That(diagnosticWriter.DescribeWasCalled).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_consumer_owns_validation_should_be_noop()
     {
         // Arrange
@@ -88,11 +89,13 @@ public class ValidationHostedServiceTests
         await service.StartAsync(CancellationToken.None);
 
         // Assert — neither validation nor diagnostics should have run
-        Assert.False(validator.ValidateWasCalled);
-        Assert.False(diagnosticWriter.DescribeWasCalled);
+        await
+        Assert.That(validator.ValidateWasCalled).IsFalse();
+        await
+        Assert.That(diagnosticWriter.DescribeWasCalled).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_validation_has_errors_should_throw_pipeline_validation_exception()
     {
         // Arrange
@@ -105,11 +108,11 @@ public class ValidationHostedServiceTests
             diagnosticWriter);
 
         // Act & Assert — validation errors should prevent startup
-        await Assert.ThrowsAsync<PipelineValidationException>(
-            () => service.StartAsync(CancellationToken.None));
+        await Assert.That(
+            () => service.StartAsync(CancellationToken.None)).ThrowsExactly<PipelineValidationException>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_validation_has_warnings_only_should_not_throw()
     {
         // Arrange
@@ -125,7 +128,9 @@ public class ValidationHostedServiceTests
         await service.StartAsync(CancellationToken.None);
 
         // Assert — validation ran, but no exception was thrown; Describe is owned by BrighterDiagnosticHostedService
-        Assert.True(validator.ValidateWasCalled);
-        Assert.False(diagnosticWriter.DescribeWasCalled);
+        await
+        Assert.That(validator.ValidateWasCalled).IsTrue();
+        await
+        Assert.That(diagnosticWriter.DescribeWasCalled).IsFalse();
     }
 }

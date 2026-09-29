@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -39,7 +40,6 @@ using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
@@ -154,42 +154,48 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _pumpTask = _performer.Run();
         }
 
-        [Fact]
+        [Test]
         public async Task When_a_seen_message_is_replayed_end_to_end_through_the_internal_bus()
         {
             // --- New message: post it onto the bus through the command processor ---
             _commandProcessor.Post(_command, new RequestContext());
 
             var processed = await WaitForHandlerSignal();
-            Assert.Equal(_command.Id, processed.Id); //the command travelled over the bus, so it is a deserialized copy
-            Assert.Equal(1, ProcessAndForwardHandler.ReceivedCount);
+            await Assert.That(processed.Id).IsEqualTo(_command.Id); //the command travelled over the bus, so it is a deserialized copy
+            await Assert.That(ProcessAndForwardHandler.ReceivedCount).IsEqualTo(1);
 
             // The inbox recorded receipt of the command, stamped with its own id as the causation id. The handler
             // signals us from inside the pipeline, so wait for the surrounding UseInboxHandler to finish writing.
             await WaitForInboxToRecord(_command.Id);
             var inboxCausationId = ((IAmACausationTrackingInbox)_inbox)
                 .GetCausationId(_command.Id, _contextKey, new RequestContext());
-            Assert.Equal(_command.Id.Value, inboxCausationId);
+            await Assert.That(inboxCausationId).IsEqualTo(_command.Id.Value);
 
             // The handler forwarded a downstream event; it is on the bus and recorded in the outbox
             var outgoingMessageId = ProcessAndForwardHandler.OutgoingMessageId!;
             var onBus = _internalBus.Stream(_outgoingRoutingKey).ToArray();
-            Assert.Single(onBus);
-            Assert.Equal(outgoingMessageId.Value, onBus[0].Id.Value);
+            await Assert.That(onBus).HasSingleItem();
+            await Assert.That(onBus[0].Id.Value).IsEqualTo(outgoingMessageId.Value);
 
             // --- Replay: post the SAME command again ---
             _commandProcessor.Post(_command, new RequestContext());
 
             using var cts = new CancellationTokenSource(Timeout);
             await WaitForMessageToBecomeOutstanding(outgoingMessageId, cts.Token);
-            Assert.Equal(1, ProcessAndForwardHandler.ReceivedCount);
+            await Assert.That(ProcessAndForwardHandler.ReceivedCount).IsEqualTo(1);
 
             // Re-dispatch the replayed message to the bus with the same primitive Post uses (no background sweeper needed)
             _commandProcessor.ClearOutbox([outgoingMessageId], new RequestContext());
 
             var afterReplay = _internalBus.Stream(_outgoingRoutingKey).ToArray();
-            Assert.Equal(2, afterReplay.Length);
-            Assert.All(afterReplay, m => Assert.Equal(outgoingMessageId.Value, m.Id.Value));
+            await Assert.That(afterReplay.Length).IsEqualTo(2);
+            using (Assert.Multiple())
+            {
+                foreach (var m in afterReplay)
+                {
+                    await Assert.That(m.Id.Value).IsEqualTo(outgoingMessageId.Value);
+                }
+            }
         }
 
         private async Task<MyCommand> WaitForHandlerSignal()
@@ -201,7 +207,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             }
             catch (OperationCanceledException)
             {
-                throw new Xunit.Sdk.XunitException("Timed out waiting for the handler to process the message off the bus.");
+                throw new TUnit.Assertions.Exceptions.AssertionException("Timed out waiting for the handler to process the message off the bus.");
             }
         }
 
@@ -225,7 +231,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             {
                 //the token is timeout-backed, so this is how the poll loop gives up rather than spinning forever
                 if (cts.Token.IsCancellationRequested)
-                    throw new Xunit.Sdk.XunitException("Timed out waiting for the inbox to record the handled command.");
+                    throw new TUnit.Assertions.Exceptions.AssertionException("Timed out waiting for the inbox to record the handled command.");
 
                 await Task.Delay(10);
             }
@@ -253,7 +259,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             {
                 //the token is timeout-backed, so this is how the poll loop gives up rather than spinning forever
                 if (cancellationToken.IsCancellationRequested)
-                    throw new Xunit.Sdk.XunitException("Timed out waiting for the duplicate to replay the outgoing message.");
+                    throw new TUnit.Assertions.Exceptions.AssertionException("Timed out waiting for the duplicate to replay the outgoing message.");
 
                 await Task.Delay(10);
             }

@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // the publish.
 public class ConcurrentPublishSuppressionTests
 {
-    [Fact]
+    [Test]
     public async Task When_two_subscribers_run_concurrently_suppression_should_propagate_and_not_leak()
     {
         // Arrange - the opted-in host from T6.3, plus this test's own recorder
@@ -58,23 +58,23 @@ public class ConcurrentPublishSuppressionTests
 
         // Assert - both subscribers were in flight simultaneously: neither would have observed the
         // other's arrival at the rendezvous if Publish had run them one at a time
-        Assert.True(recorder.SubscriberOneObservedOverlap);
-        Assert.True(recorder.SubscriberTwoObservedOverlap);
+        await Assert.That(recorder.SubscriberOneObservedOverlap).IsTrue();
+        await Assert.That(recorder.SubscriberTwoObservedOverlap).IsTrue();
 
         // Assert - neither subscriber's own IOrderDbContext is R
-        Assert.NotSame(recorder.RequestScopeInstance, recorder.SubscriberOneInstance);
-        Assert.NotSame(recorder.RequestScopeInstance, recorder.SubscriberTwoInstance);
+        await Assert.That(recorder.SubscriberOneInstance).IsNotSameReferenceAs(recorder.RequestScopeInstance);
+        await Assert.That(recorder.SubscriberTwoInstance).IsNotSameReferenceAs(recorder.RequestScopeInstance);
 
         // Assert - the nested SendAsync issued from inside the first subscriber's own HandleAsync
         // resolved an IOrderDbContext that is not R, not the first subscriber's own, and not the
         // second subscriber's own
-        Assert.NotSame(recorder.RequestScopeInstance, recorder.InnerCommandInstance);
-        Assert.NotSame(recorder.SubscriberOneInstance, recorder.InnerCommandInstance);
-        Assert.NotSame(recorder.SubscriberTwoInstance, recorder.InnerCommandInstance);
+        await Assert.That(recorder.InnerCommandInstance).IsNotSameReferenceAs(recorder.RequestScopeInstance);
+        await Assert.That(recorder.InnerCommandInstance).IsNotSameReferenceAs(recorder.SubscriberOneInstance);
+        await Assert.That(recorder.InnerCommandInstance).IsNotSameReferenceAs(recorder.SubscriberTwoInstance);
 
         // Assert - once the publish completed, a Send and a Post issued from the controller outside
         // any subscriber both resolved from R's scope - the assertions that would fail on a leak
-        Assert.Same(recorder.RequestScopeInstance, recorder.OutsideSendInstance);
-        Assert.Same(recorder.RequestScopeInstance, recorder.OutsidePostInstance);
+        await Assert.That(recorder.OutsideSendInstance).IsSameReferenceAs(recorder.RequestScopeInstance);
+        await Assert.That(recorder.OutsidePostInstance).IsSameReferenceAs(recorder.RequestScopeInstance);
     }
 }

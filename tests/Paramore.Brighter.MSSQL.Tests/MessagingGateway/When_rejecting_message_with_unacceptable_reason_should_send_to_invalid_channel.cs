@@ -26,11 +26,10 @@ using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
-[Trait("Category", "MSSQL")]
+[Category("MSSQL")]
 public class MsSqlMessageConsumerUnacceptableInvalidChannelTests : IDisposable
 {
     private readonly MsSqlMessageProducer _producer;
@@ -68,30 +67,29 @@ public class MsSqlMessageConsumerUnacceptableInvalidChannelTests : IDisposable
             new MessageBody("test content"));
     }
 
-    [Fact]
-    public void When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel()
+    [Test]
+    public async Task When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel()
     {
         // Arrange - send a message and consume it from the source topic
-        _producer.Send(_message);
+        await _producer.SendAsync(_message);
         var receivedMessage = ConsumeMessage(_consumer);
 
         // Act - reject with Unacceptable reason
-        var result = _consumer.Reject(receivedMessage,
+        var result = await _consumer.RejectAsync(receivedMessage,
             new MessageRejectionReason(RejectionReason.Unacceptable, "Bad message format"));
 
         // Assert - reject returns true
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         // Assert - message should appear on invalid message channel
         var invalidMessage = ConsumeMessage(_invalidConsumer);
-        Assert.NotEqual(MessageType.MT_NONE, invalidMessage.Header.MessageType);
-        Assert.Equal(_message.Body.Value, invalidMessage.Body.Value);
-        Assert.Equal(RejectionReason.Unacceptable.ToString(),
-            invalidMessage.Header.Bag["rejectionReason"].ToString());
+        await Assert.That(invalidMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(invalidMessage.Body.Value).IsEqualTo(_message.Body.Value);
+        await Assert.That(invalidMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.Unacceptable.ToString());
 
         // Assert - DLQ should be empty
-        var dlqMessage = _dlqConsumer.Receive(TimeSpan.FromMilliseconds(1000)).First();
-        Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        var dlqMessage = (await _dlqConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).First();
+        await Assert.That(dlqMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 
     private static Message ConsumeMessage(IAmAMessageConsumerSync consumer)

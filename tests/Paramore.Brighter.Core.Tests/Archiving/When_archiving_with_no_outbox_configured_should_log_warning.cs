@@ -4,13 +4,12 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Paramore.Brighter.Core.Tests.Archiving.TestDoubles;
 using Paramore.Brighter.Outbox.Hosting;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Archiving;
 
 public class TimedOutboxArchiverNoOutboxTests
 {
-    [Fact]
+    [Test]
     public async Task When_archiving_with_no_outbox_configured_should_not_throw()
     {
         //Arrange — NullOutbox implements only IAmAnOutbox (neither sync nor async)
@@ -32,8 +31,8 @@ public class TimedOutboxArchiverNoOutboxTests
         await timedArchiver.StopAsync(cts.Token);
 
         //Assert
-        Assert.False(archiver.HasAsyncOutbox(), "Should not have an async outbox");
-        Assert.False(archiver.HasOutbox(), "Should not have a sync outbox");
-        Assert.Empty(archiveProvider.ArchivedMessages);
+        await Assert.That(archiver.HasAsyncOutbox()).IsFalse().Because("Should not have an async outbox");
+        await Assert.That(archiver.HasOutbox()).IsFalse().Because("Should not have a sync outbox");
+        await Assert.That(archiveProvider.ArchivedMessages).IsEmpty();
     }
 }

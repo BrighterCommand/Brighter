@@ -8,7 +8,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -19,7 +19,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// parallel suite for the pool can delay that continuation and make the 30s deadlock guard trip
 /// spuriously. Serialising them removes the contention without weakening what they assert.
 /// </summary>
-[CollectionDefinition(PumpContextDeadlockCollection.Name, DisableParallelization = true)]
+[System.Obsolete]
 public sealed class PumpContextDeadlockCollection
 {
     public const string Name = "PumpContextDeadlock";
@@ -49,20 +49,20 @@ public sealed class PumpContextDeadlockCollection
 /// If the suppression regresses, the enclosing <see cref="BrighterAsyncContext.Run(Func{Task})"/> never
 /// returns and the <c>Join</c> below times out.
 /// </summary>
-[Collection(PumpContextDeadlockCollection.Name)]
+[NotInParallel]
 public class CreateRequestFromReplyMessageOnPumpContextTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
-    [Fact]
-    public void When_creating_a_request_from_a_reply_message_on_the_pump_context_it_should_not_deadlock()
+    [Test]
+    public async System.Threading.Tasks.Task When_creating_a_request_from_a_reply_message_on_the_pump_context_it_should_not_deadlock()
     {
         //arrange
         var probe = BuildMediator(out var mediator);
 
         //act — unwrap a reply into a request on the single-threaded pump; CreateRequestFromMessage disposes
         //the async unwrap pipeline synchronously, releasing the async-disposable mapper on the pump thread
-        RunOnPumpThread(() => BrighterAsyncContext.Run(async () =>
+        await RunOnPumpThread(() => BrighterAsyncContext.Run(async () =>
             {
                 mediator.CreateRequestFromMessage<MinimalCommand>(
                     new Message(), new RequestContext(), out _);
@@ -76,13 +76,13 @@ public class CreateRequestFromReplyMessageOnPumpContextTests
         //The count is 1: HasPipeline resolves the mapper TYPE only (no instance), so the sole transient
         //IAsyncDisposable mapper is the one BuildUnwrapPipeline creates for the actual pipeline, which the
         //`using` disposes on the pump thread.
-        Assert.Equal(1, probe.DisposedCount);
+        await Assert.That(probe.DisposedCount).IsEqualTo(1);
     }
 
     // Hosts the pump on a dedicated thread (not the thread pool) so a genuine deadlock is detected by a
     // Join timeout rather than by pool-thread availability — the whole suite shares the pool, and hosting
     // the blocking pump on it makes the timeout flaky under load.
-    private static void RunOnPumpThread(Action pump, string deadlockMessage)
+    private static async System.Threading.Tasks.Task RunOnPumpThread(Action pump, string deadlockMessage)
     {
         Exception? failure = null;
         var thread = new Thread(() =>
@@ -93,8 +93,8 @@ public class CreateRequestFromReplyMessageOnPumpContextTests
 
         thread.Start();
 
-        Assert.True(thread.Join(Timeout), deadlockMessage);
-        Assert.Null(failure);
+        await Assert.That(thread.Join(Timeout)).IsTrue().Because(deadlockMessage);
+        await Assert.That(failure).IsNull();
     }
 
     private static DisposeProbe BuildMediator(out OutboxProducerMediator<Message, CommittableTransaction> mediator)

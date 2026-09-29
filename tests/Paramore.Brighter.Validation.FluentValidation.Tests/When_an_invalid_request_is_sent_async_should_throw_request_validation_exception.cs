@@ -25,13 +25,12 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Validation.FluentValidation.Tests
 {
     public class InvalidRequestValidationAsyncTests
     {
-        [Fact]
+        [Test]
         public async Task When_an_invalid_request_is_sent_async_should_throw_request_validation_exception()
         {
             //Arrange
@@ -39,12 +38,11 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests
             var command = new GreetingCommand { Name = "", Email = "" };
 
             //Act
-            var exception = await Assert.ThrowsAsync<RequestValidationException>(
-                () => harness.CommandProcessor.SendAsync(command));
+            var exception = await Assert.ThrowsAsync<RequestValidationException>(() => harness.CommandProcessor.SendAsync(command));
 
             //Assert
-            Assert.False(harness.Receipt.Handled);
-            Assert.NotEmpty(exception.Errors);
+            await Assert.That(harness.Receipt.Handled).IsFalse();
+            await Assert.That(exception.Errors).IsNotEmpty();
         }
     }
 }

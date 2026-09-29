@@ -27,13 +27,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.DataAnnotations.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Validation.DataAnnotations.Tests;
 
 public class CancelledValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_validation_is_cancelled_async_should_throw_operation_cancelled()
     {
         //Arrange

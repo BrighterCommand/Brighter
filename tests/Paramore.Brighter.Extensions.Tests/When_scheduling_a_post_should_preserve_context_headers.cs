@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -36,32 +36,32 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.MessageMappers;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection("CommandProcessor")]
+[System.Obsolete]
 public class ScheduledPostContextTests
 {
-    public static TheoryData<bool, bool, string, bool, bool> ContextCases
+    public static IEnumerable<(bool, bool, string, bool, bool)> ContextCases
     {
         get
         {
-            var cases = new TheoryData<bool, bool, string, bool, bool>();
+            var cases = new List<(bool, bool, string, bool, bool)>();
             foreach (var isAsync in new[] { false, true })
                 foreach (var useDateTime in new[] { false, true })
                     foreach (var partitionKey in new[] { "partition-1", "35ac2856-7b11-479c-a2bd-c470365767ec", "2026-09-26T10:00:00Z" })
                         foreach (var typedPartitionKey in new[] { false, true })
-                            cases.Add(isAsync, useDateTime, partitionKey, typedPartitionKey, false);
+                            cases.Add((isAsync, useDateTime, partitionKey, typedPartitionKey, false));
             foreach (var isAsync in new[] { false, true })
                 foreach (var useDateTime in new[] { false, true })
-                    cases.Add(isAsync, useDateTime, "partition-1", true, true);
+                    cases.Add((isAsync, useDateTime, "partition-1", true, true));
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(ContextCases))]
+    [Test]
+    [MethodDataSource(nameof(ContextCases))]
     public async Task When_scheduling_a_post_should_preserve_context_headers(bool isAsync, bool useDateTime, string partitionKey, bool typedPartitionKey, bool cloudEvents)
     {
         //Arrange
@@ -127,33 +127,36 @@ public class ScheduledPostContextTests
 
         ((Dictionary<string, object>)context.Bag[RequestContextBagNames.Headers])["x-attempt"] = 4;
         context.Bag[RequestContextBagNames.PartitionKey] = "changed-after-scheduling";
-        Assert.Single(bus.Stream(topic));
+        await Assert.That(bus.Stream(topic)).HasSingleItem();
         cloudEventProperties["tenant"] = "changed";
         timeProvider.Advance(delay);
 
         //Assert
         var messages = bus.Stream(topic).ToArray();
-        Assert.Equal(2, messages.Length);
-        var immediateMessage = Assert.Single(messages, message => message.Id == immediate.Id);
-        var scheduledMessage = Assert.Single(messages, message => message.Id == scheduled.Id);
-        Assert.Equal(3, immediateMessage.Header.Bag["x-attempt"]);
-        Assert.True(scheduledMessage.Header.Bag.ContainsKey("x-attempt"));
-        Assert.Equal(3, scheduledMessage.Header.Bag["x-attempt"]);
+        await Assert.That(messages.Length).IsEqualTo(2);
+        var immediateMessage = await Assert.That(messages).HasSingleItem(message => message.Id == immediate.Id);
+        var scheduledMessage = await Assert.That(messages).HasSingleItem(message => message.Id == scheduled.Id);
+        await Assert.That(immediateMessage.Header.Bag["x-attempt"]).IsEqualTo(3);
+        await Assert.That(scheduledMessage.Header.Bag.ContainsKey("x-attempt")).IsTrue();
+        await Assert.That(scheduledMessage.Header.Bag["x-attempt"]).IsEqualTo(3);
         foreach (var key in headers.Keys.Where(key => key != "x-attempt"))
         {
             var expected = immediateMessage.Header.Bag[key];
             var actual = scheduledMessage.Header.Bag[key];
-            Assert.IsType(expected.GetType(), actual);
-            Assert.Equal(expected, actual);
+            await Assert.That(actual.GetType()).IsEqualTo(expected.GetType());
+            if (expected is byte[] expectedBytes)
+                await Assert.That((byte[])actual).IsEquivalentTo(expectedBytes, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+            else
+                await Assert.That(actual).IsEqualTo(expected);
         }
-        Assert.Equal(partitionKey, immediateMessage.Header.PartitionKey.Value);
-        Assert.Equal(partitionKey, scheduledMessage.Header.PartitionKey.Value);
+        await Assert.That(immediateMessage.Header.PartitionKey.Value).IsEqualTo(partitionKey);
+        await Assert.That(scheduledMessage.Header.PartitionKey.Value).IsEqualTo(partitionKey);
         if (cloudEvents)
         {
             using var immediateBody = JsonDocument.Parse(immediateMessage.Body.Value);
             using var scheduledBody = JsonDocument.Parse(scheduledMessage.Body.Value);
-            Assert.Equal("tenant-1", immediateBody.RootElement.GetProperty("tenant").GetString());
-            Assert.Equal("tenant-1", scheduledBody.RootElement.GetProperty("tenant").GetString());
+            await Assert.That(immediateBody.RootElement.GetProperty("tenant").GetString()).IsEqualTo("tenant-1");
+            await Assert.That(scheduledBody.RootElement.GetProperty("tenant").GetString()).IsEqualTo("tenant-1");
         }
     }
 }

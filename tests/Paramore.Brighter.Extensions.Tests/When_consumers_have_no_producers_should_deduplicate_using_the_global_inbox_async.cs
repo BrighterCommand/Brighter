@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -31,16 +31,16 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(LoggerCaptureCollection.NAME)]
+[System.Obsolete]
 public class ConsumerGlobalInboxAsyncTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_consumers_have_no_producers_should_deduplicate_using_the_global_inbox_async(bool useOptionsFactory)
     {
         // Arrange
@@ -58,7 +58,7 @@ public class ConsumerGlobalInboxAsyncTests
 
         using var provider = services.BuildServiceProvider();
         var validation = PipelineValidationResult.Combine(provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
-        Assert.Empty(validation.Errors);
+        await Assert.That(validation.Errors).IsEmpty();
         var processor = provider.GetRequiredService<IAmACommandProcessor>();
         var command = new ConsumerGlobalInboxAsyncCommand();
 
@@ -67,7 +67,7 @@ public class ConsumerGlobalInboxAsyncTests
         await processor.SendAsync(command);
 
         // Assert
-        Assert.Equal(1, command.HandleCount);
-        Assert.True(await inbox.ExistsAsync<ConsumerGlobalInboxAsyncCommand>(command.Id, "global-inbox", null));
+        await Assert.That(command.HandleCount).IsEqualTo(1);
+        await Assert.That(await inbox.ExistsAsync<ConsumerGlobalInboxAsyncCommand>(command.Id, "global-inbox", null)).IsTrue();
     }
 }

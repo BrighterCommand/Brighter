@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -30,17 +30,17 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(LoggerCaptureCollection.NAME)]
+[System.Obsolete]
 public class ConsumerGlobalInboxTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_consumers_have_no_producers_should_deduplicate_using_the_global_inbox(bool useOptionsFactory)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async System.Threading.Tasks.Task When_consumers_have_no_producers_should_deduplicate_using_the_global_inbox(bool useOptionsFactory)
     {
         // Arrange
         var inbox = new InMemoryInbox(TimeProvider.System);
@@ -57,7 +57,7 @@ public class ConsumerGlobalInboxTests
 
         using var provider = services.BuildServiceProvider();
         var validation = PipelineValidationResult.Combine(provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
-        Assert.Empty(validation.Errors);
+        await Assert.That(validation.Errors).IsEmpty();
         var processor = provider.GetRequiredService<IAmACommandProcessor>();
         var command = new ConsumerGlobalInboxCommand();
 
@@ -66,7 +66,7 @@ public class ConsumerGlobalInboxTests
         processor.Send(command);
 
         // Assert
-        Assert.Equal(1, command.HandleCount);
-        Assert.True(inbox.Exists<ConsumerGlobalInboxCommand>(command.Id, "global-inbox", null));
+        await Assert.That(command.HandleCount).IsEqualTo(1);
+        await Assert.That(inbox.Exists<ConsumerGlobalInboxCommand>(command.Id, "global-inbox", null)).IsTrue();
     }
 }

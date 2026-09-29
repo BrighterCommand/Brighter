@@ -28,11 +28,11 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.JsonConverters;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(JsonSerialisationCollection.NAME)]
+[System.Obsolete]
 public class When_configuring_json_serialisation : IDisposable
 {
     private readonly JsonSerializerOptions _originalOptions = JsonSerialisationOptions.Options;
@@ -47,8 +47,8 @@ public class When_configuring_json_serialisation : IDisposable
         JsonSerialisationOptions.Options = _originalOptions;
     }
 
-    [Fact]
-    public void Should_preserve_existing_options()
+    [Test]
+    public async Task Should_preserve_existing_options()
     {
         // Arrange
         var converterCountBefore = JsonSerialisationOptions.Options.Converters.Count;
@@ -65,12 +65,12 @@ public class When_configuring_json_serialisation : IDisposable
         });
 
         // Assert — the new setting was applied
-        Assert.Equal(JsonSerialisationOptions.Options.WriteIndented, !writeIndentedBefore);
+        await Assert.That(!writeIndentedBefore).IsEqualTo(JsonSerialisationOptions.Options.WriteIndented);
 
         // Assert — built-in converters were not wiped out
-        Assert.Equal(converterCountBefore, JsonSerialisationOptions.Options.Converters.Count);
+        await Assert.That(JsonSerialisationOptions.Options.Converters.Count).IsEqualTo(converterCountBefore);
 
         // Assert — previously configured settings are still intact
-        Assert.Equal(caseInsensitiveBefore, JsonSerialisationOptions.Options.PropertyNameCaseInsensitive);
+        await Assert.That(JsonSerialisationOptions.Options.PropertyNameCaseInsensitive).IsEqualTo(caseInsensitiveBefore);
     }
 }

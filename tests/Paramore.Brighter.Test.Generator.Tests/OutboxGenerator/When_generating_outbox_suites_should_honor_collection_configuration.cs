@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -32,7 +32,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
@@ -40,19 +40,19 @@ public class OutboxCollectionGenerationTests : IDisposable
 {
     private readonly string _testDirectory = Path.Combine(Path.GetTempPath(), $"OutboxGeneratorTests_{Guid.NewGuid()}");
 
-    [Theory]
-    [InlineData("Sync", false, "SharedOutbox")]
-    [InlineData("Async", false, "SharedOutbox")]
-    [InlineData("Causation", false, "SharedOutbox")]
-    [InlineData("Sync", true, "SharedOutbox")]
-    [InlineData("Async", true, "SharedOutbox")]
-    [InlineData("Causation", true, "SharedOutbox")]
-    [InlineData("Sync", false, null)]
-    [InlineData("Async", false, null)]
-    [InlineData("Causation", false, null)]
-    [InlineData("Sync", true, null)]
-    [InlineData("Async", true, null)]
-    [InlineData("Causation", true, null)]
+    [Test]
+    [Arguments("Sync", false, "SharedOutbox")]
+    [Arguments("Async", false, "SharedOutbox")]
+    [Arguments("Causation", false, "SharedOutbox")]
+    [Arguments("Sync", true, "SharedOutbox")]
+    [Arguments("Async", true, "SharedOutbox")]
+    [Arguments("Causation", true, "SharedOutbox")]
+    [Arguments("Sync", false, null)]
+    [Arguments("Async", false, null)]
+    [Arguments("Causation", false, null)]
+    [Arguments("Sync", true, null)]
+    [Arguments("Async", true, null)]
+    [Arguments("Causation", true, null)]
     public async Task When_generating_outbox_suites_should_honor_collection_configuration(
         string suite, bool usePluralConfiguration, string? collectionName)
     {
@@ -96,33 +96,36 @@ public class OutboxCollectionGenerationTests : IDisposable
         // Assert
         var suiteDirectory = Path.Combine(_testDirectory, "Outbox",
             usePluralConfiguration ? "Text" : string.Empty, "Generated", suite);
-        AssertCollection(suiteDirectory, collectionName);
+        await AssertCollectionAsync(suiteDirectory, collectionName);
         if (usePluralConfiguration)
         {
-            AssertCollection(Path.Combine(_testDirectory, "Outbox", "Binary", "Generated", suite), "BinaryOutbox");
+            await AssertCollectionAsync(Path.Combine(_testDirectory, "Outbox", "Binary", "Generated", suite), "BinaryOutbox");
         }
     }
 
-    private static void AssertCollection(string suiteDirectory, string? collectionName)
+    private static async Task AssertCollectionAsync(string suiteDirectory, string? collectionName)
     {
         var testFiles = Directory.GetFiles(suiteDirectory, "*.cs")
             .Where(file => !Path.GetFileName(file).StartsWith("IAmAnOutboxProvider", StringComparison.Ordinal))
             .ToArray();
-        Assert.NotEmpty(testFiles);
-        Assert.All(testFiles, file =>
+        await Assert.That(testFiles).IsNotEmpty();
+        using (Assert.Multiple())
         {
-            var source = File.ReadAllText(file);
-            if (collectionName == null)
+            foreach (var file in testFiles)
             {
-                Assert.DoesNotContain("[Collection(", source);
+                var source = File.ReadAllText(file);
+                if (collectionName == null)
+                {
+                    await Assert.That(source).DoesNotContain("[NotInParallel(");
+                }
+                else
+                {
+                    await Assert.That(source).Contains($"[NotInParallel(\"{collectionName}\")]");
+                    await Assert.That(source.Split('\n')).HasSingleItem(
+                        line => line.TrimStart().StartsWith("[NotInParallel(", StringComparison.Ordinal));
+                }
             }
-            else
-            {
-                Assert.Contains($"[Collection(\"{collectionName}\")]", source);
-                Assert.Single(source.Split('\n'),
-                    line => line.TrimStart().StartsWith("[Collection(", StringComparison.Ordinal));
-            }
-        });
+        }
     }
 
     public void Dispose()

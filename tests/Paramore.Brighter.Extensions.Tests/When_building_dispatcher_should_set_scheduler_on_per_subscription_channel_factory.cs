@@ -29,14 +29,13 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class PerSubscriptionChannelFactorySchedulerTests
 {
-    [Fact]
-    public void Should_set_scheduler_on_per_subscription_channel_factory()
+    [Test]
+    public async Task Should_set_scheduler_on_per_subscription_channel_factory()
     {
         // Arrange — one subscription uses a per-subscription channel factory
         var bus = new InternalBus();
@@ -81,14 +80,14 @@ public class PerSubscriptionChannelFactorySchedulerTests
         var dispatcher = provider.GetRequiredService<IDispatcher>();
 
         // Assert — both the default and per-subscription factory should have the scheduler
-        Assert.NotNull(dispatcher);
-        Assert.NotNull(defaultFactory.Scheduler);
-        Assert.NotNull(perSubFactory.Scheduler);
-        Assert.IsAssignableFrom<IAmAMessageScheduler>(perSubFactory.Scheduler);
+        await Assert.That(dispatcher).IsNotNull();
+        await Assert.That(defaultFactory.Scheduler).IsNotNull();
+        await Assert.That(perSubFactory.Scheduler).IsNotNull();
+        await Assert.That(perSubFactory.Scheduler).IsAssignableTo<IAmAMessageScheduler>();
     }
 
-    [Fact]
-    public void Should_set_scheduler_on_combined_channel_factory_and_propagate_to_inner_factories()
+    [Test]
+    public async Task Should_set_scheduler_on_combined_channel_factory_and_propagate_to_inner_factories()
     {
         // Arrange — use a CombinedChannelFactory as the default (multi-bus scenario)
         var bus = new InternalBus();
@@ -126,9 +125,9 @@ public class PerSubscriptionChannelFactorySchedulerTests
         var dispatcher = provider.GetRequiredService<IDispatcher>();
 
         // Assert — the inner factory should have the scheduler propagated through CombinedChannelFactory
-        Assert.NotNull(dispatcher);
-        Assert.NotNull(innerFactory.Scheduler);
-        Assert.IsAssignableFrom<IAmAMessageScheduler>(innerFactory.Scheduler);
+        await Assert.That(dispatcher).IsNotNull();
+        await Assert.That(innerFactory.Scheduler).IsNotNull();
+        await Assert.That(innerFactory.Scheduler).IsAssignableTo<IAmAMessageScheduler>();
     }
 
     private class SchedulerAwareChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithScheduler

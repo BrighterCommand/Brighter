@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.Parser;
 
@@ -15,7 +14,7 @@ public class WhenParsingTemplateWithFalseConditionalShouldSkipContent : IDisposa
         Directory.CreateDirectory(_testDirectory);
     }
 
-    [Fact]
+    [Test]
     public async Task When_parsing_template_with_false_conditional_should_skip_content()
     {
         // Arrange
@@ -23,7 +22,7 @@ public class WhenParsingTemplateWithFalseConditionalShouldSkipContent : IDisposa
         var templatePath = Path.Combine(_testDirectory, "false_conditional.liquid");
         var outputPath = Path.Combine(_testDirectory, "false_conditional_output.txt");
         await File.WriteAllTextAsync(templatePath, template);
-        
+
         var model = new { IsEnabled = false };
         var parser = new Generator.Parser();
         var context = new Generator.ParseContext(templatePath, outputPath, model);
@@ -33,9 +32,9 @@ public class WhenParsingTemplateWithFalseConditionalShouldSkipContent : IDisposa
 
         // Assert
         var result = await File.ReadAllTextAsync(outputPath);
-        Assert.Empty(result);
+        await Assert.That(result).IsEmpty();
     }
-    
+
     public void Dispose()
     {
         if (Directory.Exists(_testDirectory))

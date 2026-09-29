@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -34,41 +34,41 @@ using Paramore.Brighter.Policies.Handlers;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy;
 
 public class LegacyPolicyPumpActionTests
 {
-    public static TheoryData<bool, int, bool, string> ActionCases
+    public static IEnumerable<(bool, int, bool, string)> ActionCases
     {
         get
         {
-            var cases = new TheoryData<bool, int, bool, string>();
+            var cases = new List<(bool, int, bool, string)>();
             foreach (var isAsync in new[] { false, true })
                 foreach (var policyCount in new[] { 1, 2, 3 })
                     foreach (var circuitBreaker in new[] { false, true })
                         foreach (var action in new[] { "reject", "defer", "dont-ack", "invalid" })
-                            cases.Add(isAsync, policyCount, circuitBreaker, action);
+                            cases.Add((isAsync, policyCount, circuitBreaker, action));
             return cases;
         }
     }
 
-    public static TheoryData<bool, int, bool> PolicyCases
+    public static IEnumerable<(bool, int, bool)> PolicyCases
     {
         get
         {
-            var cases = new TheoryData<bool, int, bool>();
+            var cases = new List<(bool, int, bool)>();
             foreach (var isAsync in new[] { false, true })
                 foreach (var policyCount in new[] { 1, 2, 3 })
                     foreach (var circuitBreaker in new[] { false, true })
-                        cases.Add(isAsync, policyCount, circuitBreaker);
+                        cases.Add((isAsync, policyCount, circuitBreaker));
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(ActionCases))]
+    [Test]
+    [MethodDataSource(nameof(ActionCases))]
     public async Task When_handling_a_pump_action_should_bypass_legacy_policy_failure_handling(
         bool isAsync, int policyCount, bool circuitBreaker, string action)
     {
@@ -86,15 +86,18 @@ public class LegacyPolicyPumpActionTests
         var (failures, attempts) = await ExecuteAsync(isAsync, policyCount, circuitBreaker, exception);
 
         //Assert
-        Assert.All(failures, failure => Assert.Same(exception, failure));
-        Assert.Equal(circuitBreaker ? 3 : 1, attempts);
-        Assert.Contains(isAsync ? nameof(ResilienceActionHandlerAsync) : nameof(ResilienceActionHandler), exception.StackTrace);
+        foreach (var failure in failures)
+{
+    await Assert.That(failure).IsSameReferenceAs(exception);
+}
+        await Assert.That(attempts).IsEqualTo(circuitBreaker ? 3 : 1);
+        await Assert.That(exception.StackTrace).Contains(isAsync ? nameof(ResilienceActionHandlerAsync) : nameof(ResilienceActionHandler));
         if (exception is DeferMessageAction defer)
-            Assert.Equal(TimeSpan.FromMilliseconds(1234), defer.Delay);
+            await Assert.That(defer.Delay).IsEqualTo(TimeSpan.FromMilliseconds(1234));
     }
 
-    [Theory]
-    [MemberData(nameof(PolicyCases))]
+    [Test]
+    [MethodDataSource(nameof(PolicyCases))]
     public async Task When_handling_an_application_error_should_keep_legacy_policy_behavior(
         bool isAsync, int policyCount, bool circuitBreaker)
     {
@@ -105,14 +108,14 @@ public class LegacyPolicyPumpActionTests
         var (failures, attempts) = await ExecuteAsync(isAsync, policyCount, circuitBreaker, exception);
 
         //Assert
-        Assert.Same(exception, failures[0]);
-        Assert.Equal(circuitBreaker ? 2 : (int)Math.Pow(4, policyCount), attempts);
+        await Assert.That(failures[0]).IsSameReferenceAs(exception);
+        await Assert.That(attempts).IsEqualTo(circuitBreaker ? 2 : (int)Math.Pow(4, policyCount));
         if (circuitBreaker)
-            Assert.IsType<BrokenCircuitException>(failures[2]);
+            await Assert.That(failures[2]).IsTypeOf<BrokenCircuitException>();
     }
 
-    [Theory]
-    [MemberData(nameof(PolicyCases))]
+    [Test]
+    [MethodDataSource(nameof(PolicyCases))]
     public async Task When_handling_cancellation_should_keep_the_configured_legacy_policy_behavior(
         bool isAsync, int policyCount, bool circuitBreaker)
     {
@@ -123,14 +126,14 @@ public class LegacyPolicyPumpActionTests
         var (failures, attempts) = await ExecuteAsync(isAsync, policyCount, circuitBreaker, exception);
 
         //Assert
-        Assert.Same(exception, failures[0]);
-        Assert.Equal(circuitBreaker ? 2 : (int)Math.Pow(4, policyCount), attempts);
+        await Assert.That(failures[0]).IsSameReferenceAs(exception);
+        await Assert.That(attempts).IsEqualTo(circuitBreaker ? 2 : (int)Math.Pow(4, policyCount));
         if (circuitBreaker)
-            Assert.IsType<BrokenCircuitException>(failures[2]);
+            await Assert.That(failures[2]).IsTypeOf<BrokenCircuitException>();
     }
 
-    [Theory]
-    [MemberData(nameof(PolicyCases))]
+    [Test]
+    [MethodDataSource(nameof(PolicyCases))]
     public async Task When_handling_a_successful_request_should_return_it_without_retrying(
         bool isAsync, int policyCount, bool circuitBreaker)
     {
@@ -138,8 +141,9 @@ public class LegacyPolicyPumpActionTests
         var (failures, attempts) = await ExecuteAsync(isAsync, policyCount, circuitBreaker, null);
 
         //Assert
-        Assert.All(failures, Assert.Null);
-        Assert.Equal(circuitBreaker ? 3 : 1, attempts);
+        foreach (var failure in failures)
+            await Assert.That(failure).IsNull();
+        await Assert.That(attempts).IsEqualTo(circuitBreaker ? 3 : 1);
     }
 
     private static async Task<(Exception?[] Failures, int Attempts)> ExecuteAsync(
@@ -178,9 +182,9 @@ public class LegacyPolicyPumpActionTests
             handler.InitializeFromAttributeParams(names);
             handler.SetSuccessor(new ResilienceActionHandlerAsync { Context = context });
             for (var i = 0; i < failures.Length; i++)
-                failures[i] = await Record.ExceptionAsync(async () =>
-                    Assert.Same(request, await handler.HandleAsync(request, cancellation.Token)));
-            Assert.Equal(cancellation.Token, request.CancellationToken);
+                failures[i] = await TestExceptionRecorder.CaptureAsync(async () =>
+                    await Assert.That(await handler.HandleAsync(request, cancellation.Token)).IsSameReferenceAs(request));
+            await Assert.That(request.CancellationToken).IsEqualTo(cancellation.Token);
             return (failures, request.Attempts);
         }
         else
@@ -190,7 +194,9 @@ public class LegacyPolicyPumpActionTests
             handler.InitializeFromAttributeParams(names);
             handler.SetSuccessor(new ResilienceActionHandler { Context = context });
             for (var i = 0; i < failures.Length; i++)
-                failures[i] = Record.Exception(() => Assert.Same(request, handler.Handle(request)));
+#pragma warning disable TUnitAssertions0002 // Synchronous callback: the assertion is executed by GetResult.
+                failures[i] = TestExceptionRecorder.Capture(() => Assert.That(handler.Handle(request)).IsSameReferenceAs(request).GetAwaiter().GetResult());
+#pragma warning restore TUnitAssertions0002
             return (failures, request.Attempts);
         }
     }

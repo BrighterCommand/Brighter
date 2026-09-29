@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.MessagingGatewayGenerator;
 
@@ -23,7 +23,7 @@ public class WhenGeneratingGatewayShouldEmitRejectionMetadataKeysOncePerConfig :
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_gateway_should_emit_rejection_metadata_keys_once_per_config()
     {
         // Arrange
@@ -49,15 +49,15 @@ public class WhenGeneratingGatewayShouldEmitRejectionMetadataKeysOncePerConfig :
 
         // Assert - exactly one RejectionMetadataKeys.cs is emitted (not one per Reactor/Proactor variant)
         var allEmittedFiles = Directory.GetFiles(_testDirectory, "RejectionMetadataKeys.cs", SearchOption.AllDirectories);
-        Assert.Single(allEmittedFiles);
+        await Assert.That(allEmittedFiles).HasSingleItem();
 
         // Assert - file lives in Generated/ sibling of Reactor/ and Proactor/, not inside either variant
         var expectedPath = Path.Combine(_testDirectory, "MessagingGateway", "Test", "Generated", "RejectionMetadataKeys.cs");
-        Assert.True(File.Exists(expectedPath), $"Expected RejectionMetadataKeys.cs at {expectedPath}");
+        await Assert.That(File.Exists(expectedPath)).IsTrue().Because($"Expected RejectionMetadataKeys.cs at {expectedPath}");
 
         // Assert - record is sealed and has the five members in the required order
         var content = await File.ReadAllTextAsync(expectedPath);
-        Assert.Contains("sealed record RejectionMetadataKeys", content);
+        await Assert.That(content).Contains("sealed record RejectionMetadataKeys");
 
         var originalTopicPos = content.IndexOf("string OriginalTopic", StringComparison.Ordinal);
         var originalTypePos = content.IndexOf("string OriginalType", StringComparison.Ordinal);
@@ -65,22 +65,22 @@ public class WhenGeneratingGatewayShouldEmitRejectionMetadataKeysOncePerConfig :
         var rejectionMessagePos = content.IndexOf("string RejectionMessage", StringComparison.Ordinal);
         var rejectionTimestampPos = content.IndexOf("string RejectionTimestamp", StringComparison.Ordinal);
 
-        Assert.True(originalTopicPos >= 0, "OriginalTopic member not found");
-        Assert.True(originalTypePos >= 0, "OriginalType member not found");
-        Assert.True(rejectionReasonPos >= 0, "RejectionReason member not found");
-        Assert.True(rejectionMessagePos >= 0, "RejectionMessage member not found");
-        Assert.True(rejectionTimestampPos >= 0, "RejectionTimestamp member not found");
+        await Assert.That(originalTopicPos >= 0).IsTrue().Because("OriginalTopic member not found");
+        await Assert.That(originalTypePos >= 0).IsTrue().Because("OriginalType member not found");
+        await Assert.That(rejectionReasonPos >= 0).IsTrue().Because("RejectionReason member not found");
+        await Assert.That(rejectionMessagePos >= 0).IsTrue().Because("RejectionMessage member not found");
+        await Assert.That(rejectionTimestampPos >= 0).IsTrue().Because("RejectionTimestamp member not found");
 
-        Assert.True(originalTopicPos < originalTypePos, "OriginalTopic must precede OriginalType");
-        Assert.True(originalTypePos < rejectionReasonPos, "OriginalType must precede RejectionReason");
-        Assert.True(rejectionReasonPos < rejectionMessagePos, "RejectionReason must precede RejectionMessage");
-        Assert.True(rejectionMessagePos < rejectionTimestampPos, "RejectionMessage must precede RejectionTimestamp");
+        await Assert.That(originalTopicPos < originalTypePos).IsTrue().Because("OriginalTopic must precede OriginalType");
+        await Assert.That(originalTypePos < rejectionReasonPos).IsTrue().Because("OriginalType must precede RejectionReason");
+        await Assert.That(rejectionReasonPos < rejectionMessagePos).IsTrue().Because("RejectionReason must precede RejectionMessage");
+        await Assert.That(rejectionMessagePos < rejectionTimestampPos).IsTrue().Because("RejectionMessage must precede RejectionTimestamp");
 
         // Assert - record lives in the parent namespace {{ Namespace }}.MessagingGateway{{ Prefix }}
-        Assert.Contains("namespace MyApp.Tests.MessagingGatewayTest;", content);
+        await Assert.That(content).Contains("namespace MyApp.Tests.MessagingGatewayTest;");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_multiple_gateways_should_emit_one_record_per_configuration()
     {
         // Arrange
@@ -113,19 +113,19 @@ public class WhenGeneratingGatewayShouldEmitRejectionMetadataKeysOncePerConfig :
 
         // Assert - one record emitted per configuration (N=2), not one per variant
         var allEmittedFiles = Directory.GetFiles(_testDirectory, "RejectionMetadataKeys.cs", SearchOption.AllDirectories);
-        Assert.Equal(2, allEmittedFiles.Length);
+        await Assert.That(allEmittedFiles.Length).IsEqualTo(2);
 
         // Assert - each record lives in its own prefixed parent namespace
         var alphaPath = Path.Combine(_testDirectory, "MessagingGateway", "Alpha", "Generated", "RejectionMetadataKeys.cs");
         var betaPath = Path.Combine(_testDirectory, "MessagingGateway", "Beta", "Generated", "RejectionMetadataKeys.cs");
-        Assert.True(File.Exists(alphaPath), $"Expected Alpha RejectionMetadataKeys.cs at {alphaPath}");
-        Assert.True(File.Exists(betaPath), $"Expected Beta RejectionMetadataKeys.cs at {betaPath}");
+        await Assert.That(File.Exists(alphaPath)).IsTrue().Because($"Expected Alpha RejectionMetadataKeys.cs at {alphaPath}");
+        await Assert.That(File.Exists(betaPath)).IsTrue().Because($"Expected Beta RejectionMetadataKeys.cs at {betaPath}");
 
         var alphaContent = await File.ReadAllTextAsync(alphaPath);
-        Assert.Contains("namespace MyApp.Tests.MessagingGateway.Alpha;", alphaContent);
+        await Assert.That(alphaContent).Contains("namespace MyApp.Tests.MessagingGateway.Alpha;");
 
         var betaContent = await File.ReadAllTextAsync(betaPath);
-        Assert.Contains("namespace MyApp.Tests.MessagingGateway.Beta;", betaContent);
+        await Assert.That(betaContent).Contains("namespace MyApp.Tests.MessagingGateway.Beta;");
     }
 
     public void Dispose()

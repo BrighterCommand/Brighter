@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -30,18 +31,17 @@ using Azure.Core.Amqp;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusNativePartitionKeyRoundTripTests
 {
-    [Theory]
-    [InlineData(false, null, "101")]
-    [InlineData(true, null, "101")]
-    [InlineData(false, "session-42", "101")]
-    [InlineData(true, "session-42", "session-42")]
+    [Test]
+    [Arguments(false, null, "101")]
+    [Arguments(true, null, "101")]
+    [Arguments(false, "session-42", "101")]
+    [Arguments(true, "session-42", "session-42")]
     public async Task When_round_tripping_a_message_should_preserve_its_native_partition_key(
         bool removeCloudEventsKey, string? sessionId, string expectedKey)
     {
@@ -70,14 +70,14 @@ public class AzureServiceBusNativePartitionKeyRoundTripTests
         var messages = await consumer.ReceiveAsync(TimeSpan.FromSeconds(1));
 
         // Assert
-        Assert.Equal(sessionId ?? "101", native.PartitionKey);
-        Assert.Equal(sessionId, native.SessionId);
-        var received = Assert.Single(messages);
-        Assert.Equal(expectedKey, received.Header.PartitionKey.Value);
-        Assert.Equal(original.Id, received.Id);
-        Assert.Equal(original.Body.Value, received.Body.Value);
-        Assert.Equal(!removeCloudEventsKey, received.Header.Bag.ContainsKey("cloudEvents:partitionkey"));
+        await Assert.That(native.PartitionKey).IsEqualTo(sessionId ?? "101");
+        await Assert.That(native.SessionId).IsEqualTo(sessionId);
+        var received = await Assert.That(messages).HasSingleItem();
+        await Assert.That(received.Header.PartitionKey.Value).IsEqualTo(expectedKey);
+        await Assert.That(received.Id).IsEqualTo(original.Id);
+        await Assert.That(received.Body.Value).IsEqualTo(original.Body.Value);
+        await Assert.That(received.Header.Bag.ContainsKey("cloudEvents:partitionkey")).IsEqualTo(!removeCloudEventsKey);
         if (!removeCloudEventsKey)
-            Assert.Equal("101", received.Header.Bag["cloudEvents:partitionkey"]);
+            await Assert.That(received.Header.Bag["cloudEvents:partitionkey"]).IsEqualTo("101");
     }
 }

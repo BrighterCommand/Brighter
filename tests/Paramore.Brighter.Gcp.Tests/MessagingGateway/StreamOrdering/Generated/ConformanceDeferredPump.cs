@@ -11,7 +11,8 @@ using Paramore.Brighter.Actions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Polly.Registry;
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering;
 
@@ -179,7 +180,7 @@ public static class ConformanceDeferredPump
     /// So either answer counts, and nothing else does: an unrelated message matches on neither.
     /// </para>
     /// </remarks>
-    public static void AssertIsTheMessageSent(Message sent, Message deadLettered)
+    public static async Task AssertIsTheMessageSent(Message sent, Message deadLettered)
     {
         var sentId = sent.Header.MessageId.Value;
         var deadLetteredId = deadLettered.Header.MessageId.Value;
@@ -187,13 +188,12 @@ public static class ConformanceDeferredPump
         var republishedFrom = deadLettered.Header.Bag.TryGetValue(
             Message.OriginalMessageIdHeaderName, out object? value) ? value?.ToString() : null;
 
-        Assert.True(deadLetteredId == sentId || republishedFrom == sentId,
-            $"the dead-lettered message should be the one that was sent ({sentId}), but it "
+        await Assert.That(deadLetteredId == sentId || republishedFrom == sentId).IsTrue().Because($"the dead-lettered message should be the one that was sent ({sentId}), but it "
             + $"reports id {deadLetteredId}"
             + (string.IsNullOrEmpty(republishedFrom)
                 ? " and carries no " + Message.OriginalMessageIdHeaderName + " header"
                 : $" and was republished from {republishedFrom}"));
 
-        Assert.Equal(sent.Body.Value, deadLettered.Body.Value);
+        await Assert.That(deadLettered.Body.Value).IsEqualTo(sent.Body.Value);
     }
 }

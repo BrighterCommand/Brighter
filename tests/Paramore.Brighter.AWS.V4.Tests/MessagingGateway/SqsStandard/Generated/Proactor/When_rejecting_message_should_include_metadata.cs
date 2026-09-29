@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsStandard.Proactor;
 
-[Trait("Category", "Sqs")]
-[Collection("SqsStandard")]
-public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
+[Property("Category", "Sqs")]
+[NotInParallel("SqsStandard")]
+public class WhenRejectingMessageShouldIncludeMetadataAsync
 {
     private const string REJECTION_DESCRIPTION = "Test rejection with metadata";
 
@@ -33,17 +34,20 @@ public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
         _messageBuilder = new DefaultMessageBuilder();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
+
     public async Task When_rejecting_message_should_include_metadata_async()
     {
         // Arrange
@@ -63,7 +67,7 @@ public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
 
         // Act
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, REJECTION_DESCRIPTION));
 
@@ -80,7 +84,7 @@ public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
             await Task.Delay(500);
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // The message must reach the DLQ (routing, asserted above). The rejection-metadata fields are
         // asserted only when the provider's gateway stamps Brighter metadata; a native-dead-letter
@@ -90,28 +94,26 @@ public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
         if (keys.StampsRejectionMetadata)
         {
             // OriginalTopic
-            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
-            Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic)).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag[keys.OriginalTopic].ToString()).IsEqualTo(_publication.Topic!.Value);
 
             // OriginalType
-            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalType));
-            Assert.Equal(message.Header.MessageType.ToString(), dlqMessage.Header.Bag[keys.OriginalType].ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey(keys.OriginalType)).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag[keys.OriginalType].ToString()).IsEqualTo(message.Header.MessageType.ToString());
 
             // RejectionReason
-            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
-            Assert.Equal(RejectionReason.DeliveryError.ToString(), dlqMessage.Header.Bag[keys.RejectionReason].ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason)).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag[keys.RejectionReason].ToString()).IsEqualTo(RejectionReason.DeliveryError.ToString());
 
             // RejectionMessage
-            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionMessage));
-            Assert.Equal(REJECTION_DESCRIPTION, dlqMessage.Header.Bag[keys.RejectionMessage].ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey(keys.RejectionMessage)).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag[keys.RejectionMessage].ToString()).IsEqualTo(REJECTION_DESCRIPTION);
 
             // RejectionTimestamp — ISO-8601 parseable, within the last minute
-            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionTimestamp));
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey(keys.RejectionTimestamp)).IsTrue();
             var timestampValue = dlqMessage.Header.Bag[keys.RejectionTimestamp].ToString();
-            Assert.True(DateTimeOffset.TryParse(timestampValue, out var parsedTimestamp),
-                "RejectionTimestamp must be parseable ISO-8601");
-            Assert.True(DateTimeOffset.UtcNow - parsedTimestamp < TimeSpan.FromMinutes(1),
-                "RejectionTimestamp must be within the last minute");
+            await Assert.That(DateTimeOffset.TryParse(timestampValue, out var parsedTimestamp)).IsTrue().Because("RejectionTimestamp must be parseable ISO-8601");
+            await Assert.That(DateTimeOffset.UtcNow - parsedTimestamp < TimeSpan.FromMinutes(1)).IsTrue().Because("RejectionTimestamp must be within the last minute");
         }
     }
 }

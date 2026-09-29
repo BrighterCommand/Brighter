@@ -3,6 +3,7 @@ using Paramore.Brighter.Locking.MySql;
 using Paramore.Brighter.MySql;
 
 namespace Paramore.Brighter.MySQL.Tests.Locking;
+[TUnit.Core.InheritsTests]
 
 public class MySqlLockingTest : RelationalDatabaseDistributedLockingAsyncTest
 {

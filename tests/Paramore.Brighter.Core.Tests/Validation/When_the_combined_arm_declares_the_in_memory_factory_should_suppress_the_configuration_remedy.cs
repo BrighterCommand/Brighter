@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class CombinedArmDeclaresInMemoryFactorySuppressesConfigurationRemedyValidationTests
 {
-    [Fact]
-    public void When_the_combined_arm_declares_the_in_memory_factory_should_suppress_the_configuration_remedy()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_combined_arm_declares_the_in_memory_factory_should_suppress_the_configuration_remedy()
     {
         // Arrange — the AC-6/AC-7 combined channel factory, with a plain subscription
         // (D == InMemoryChannelFactory) that no inner factory matches
@@ -48,13 +48,11 @@ public class CombinedArmDeclaresInMemoryFactorySuppressesConfigurationRemedyVali
 
         // Assert — only the subscription-side remedy is offered, listing both inner factories
         // in constructor order; the configuration-side remedy (configure InMemoryChannelFactory) is suppressed
-        var result = Assert.Single(results);
+        var result = await Assert.That(results).HasSingleItem();
         var message = result.Error!.Message;
-        Assert.EndsWith(
-            "— use a subscription type whose ChannelFactoryType is one of: " +
+        await Assert.That(message).EndsWith("— use a subscription type whose ChannelFactoryType is one of: " +
             "Paramore.Brighter.Core.Tests.Validation.TestDoubles.DeclaredChannelFactory, " +
-            "Paramore.Brighter.Core.Tests.Validation.TestDoubles.NonMatchingChannelFactory",
-            message);
-        Assert.DoesNotContain("configure a channel factory of type", message);
+            "Paramore.Brighter.Core.Tests.Validation.TestDoubles.NonMatchingChannelFactory");
+        await Assert.That(message).DoesNotContain("configure a channel factory of type");
     }
 }

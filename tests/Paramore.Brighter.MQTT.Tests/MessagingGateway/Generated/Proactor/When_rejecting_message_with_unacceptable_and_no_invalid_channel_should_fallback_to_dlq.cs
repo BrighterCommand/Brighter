@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "MQTT")]
-[Collection("MqttMessagingGateway")]
-public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallbackToDlqAsync : IAsyncLifetime
+[Property("Category", "MQTT")]
+[NotInParallel("MqttMessagingGateway")]
+public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallbackToDlqAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -31,17 +32,20 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
         _messageBuilder = new DefaultMessageBuilder();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
+
     public async Task When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq_async()
     {
         // Arrange — a dead-letter queue is configured, but no invalid-message channel
@@ -61,7 +65,7 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
 
         // Act
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message — no invalid channel"));
 
@@ -78,15 +82,15 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
             await Task.Delay(500);
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
         // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
         if (keys.StampsRejectionMetadata)
         {
-            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
-            Assert.Equal(RejectionReason.Unacceptable.ToString(), dlqMessage.Header.Bag[keys.RejectionReason].ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason)).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag[keys.RejectionReason].ToString()).IsEqualTo(RejectionReason.Unacceptable.ToString());
         }
     }
 }

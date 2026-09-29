@@ -33,13 +33,13 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ChannelFactoryMismatchThrowOnErrorTrueTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_channel_factory_mismatch_is_validated_with_throw_on_error_true_should_fail_startup()
     {
         // Arrange — a host configured with AddConsumers containing one subscription that declares
@@ -68,17 +68,14 @@ public class ChannelFactoryMismatchThrowOnErrorTrueTests
         var service = new ServiceActivatorHostedService(logger, dispatcher, provider, options);
 
         // Act & Assert — startup fails and Receive is never reached
-        var exception = await Assert.ThrowsAsync<PipelineValidationException>(
-            () => service.StartAsync(CancellationToken.None));
-        Assert.False(dispatcher.ReceiveWasCalled);
+        var exception = await Assert.That(() => service.StartAsync(CancellationToken.None)).ThrowsExactly<PipelineValidationException>();
+        await Assert.That(dispatcher.ReceiveWasCalled).IsFalse();
 
         // Assert — the reported findings include the mismatch Error, with the expected Source and message
         // (a second, unrelated "no handler registered" Error is also expected here — this fixture's
         // local request type has no handler registered — so this checks inclusion, not exclusivity)
-        Assert.NotNull(exception.ValidationResult);
-        Assert.Contains(
-            exception.ValidationResult!.Errors,
-            e => e.Severity == ValidationSeverity.Error
+        await Assert.That(exception.ValidationResult).IsNotNull();
+        await Assert.That(exception.ValidationResult!.Errors).Contains(e => e.Severity == ValidationSeverity.Error
                 && e.Source == "Subscription 'sub-a'"
                 && e.Message.Contains(nameof(ExtensionsDeclaredChannelFactory)));
     }

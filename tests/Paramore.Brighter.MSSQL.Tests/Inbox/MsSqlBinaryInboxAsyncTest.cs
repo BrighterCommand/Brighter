@@ -1,4 +1,5 @@
-﻿namespace Paramore.Brighter.MSSQL.Tests.Inbox;
+namespace Paramore.Brighter.MSSQL.Tests.Inbox;
+[TUnit.Core.InheritsTests]
 
 public class MsSqlBinaryInboxAsyncTest : MsSqlTextInboxAsyncTest
 {

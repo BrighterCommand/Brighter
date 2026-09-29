@@ -26,14 +26,14 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ScopedFactoryDirectCreateResolvesFreshTests
 {
-    [Fact]
-    public void When_a_scoped_mapper_factory_create_is_called_outside_a_pipeline_it_should_resolve_fresh()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_scoped_mapper_factory_create_is_called_outside_a_pipeline_it_should_resolve_fresh()
     {
         //arrange — an FR-22.2-conformant lifetime triple: all three Scoped; no pipeline scope is offered
         //or supplied, so Create is called directly with the defaulted null scope
@@ -45,13 +45,13 @@ public class ScopedFactoryDirectCreateResolvesFreshTests
         var second = factory.Create(typeof(MinimalMapper));
 
         //assert — two distinct instances; a factory-wide Scoped cache would return the same one twice
-        Assert.NotNull(first);
-        Assert.NotNull(second);
-        Assert.NotSame(first!.Instance, second!.Instance);
+        await Assert.That(first).IsNotNull();
+        await Assert.That(second).IsNotNull();
+        await Assert.That(second!.Instance).IsNotSameReferenceAs(first!.Instance);
     }
 
-    [Fact]
-    public void When_a_scoped_mapper_factory_async_create_is_called_outside_a_pipeline_it_should_resolve_fresh()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_scoped_mapper_factory_async_create_is_called_outside_a_pipeline_it_should_resolve_fresh()
     {
         //arrange
         var provider = BuildProvider(services => services.AddScoped<MinimalMapperAsync>());
@@ -62,13 +62,13 @@ public class ScopedFactoryDirectCreateResolvesFreshTests
         var second = factory.Create(typeof(MinimalMapperAsync));
 
         //assert
-        Assert.NotNull(first);
-        Assert.NotNull(second);
-        Assert.NotSame(first!.Instance, second!.Instance);
+        await Assert.That(first).IsNotNull();
+        await Assert.That(second).IsNotNull();
+        await Assert.That(second!.Instance).IsNotSameReferenceAs(first!.Instance);
     }
 
-    [Fact]
-    public void When_a_scoped_transformer_factory_create_is_called_outside_a_pipeline_it_should_resolve_fresh()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_scoped_transformer_factory_create_is_called_outside_a_pipeline_it_should_resolve_fresh()
     {
         //arrange
         var provider = BuildProvider(services => services.AddScoped<TestTransform>());
@@ -79,13 +79,13 @@ public class ScopedFactoryDirectCreateResolvesFreshTests
         var second = factory.Create(typeof(TestTransform));
 
         //assert
-        Assert.NotNull(first);
-        Assert.NotNull(second);
-        Assert.NotSame(first!.Instance, second!.Instance);
+        await Assert.That(first).IsNotNull();
+        await Assert.That(second).IsNotNull();
+        await Assert.That(second!.Instance).IsNotSameReferenceAs(first!.Instance);
     }
 
-    [Fact]
-    public void When_a_scoped_transformer_factory_async_create_is_called_outside_a_pipeline_it_should_resolve_fresh()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_scoped_transformer_factory_async_create_is_called_outside_a_pipeline_it_should_resolve_fresh()
     {
         //arrange
         var provider = BuildProvider(services => services.AddScoped<TestTransform>());
@@ -96,9 +96,9 @@ public class ScopedFactoryDirectCreateResolvesFreshTests
         var second = factory.Create(typeof(TestTransform));
 
         //assert
-        Assert.NotNull(first);
-        Assert.NotNull(second);
-        Assert.NotSame(first!.Instance, second!.Instance);
+        await Assert.That(first).IsNotNull();
+        await Assert.That(second).IsNotNull();
+        await Assert.That(second!.Instance).IsNotSameReferenceAs(first!.Instance);
     }
 
     private static IServiceProvider BuildProvider(Action<IServiceCollection> registerArtefact)

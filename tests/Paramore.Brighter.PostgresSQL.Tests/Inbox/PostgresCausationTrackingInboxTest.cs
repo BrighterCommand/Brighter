@@ -3,6 +3,7 @@ using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.Postgres;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Inbox;
+[TUnit.Core.InheritsTests]
 
 public class PostgresCausationTrackingInboxTest : CausationTrackingInboxBaseTests
 {

@@ -27,22 +27,21 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Monitoring;
 
-[Trait("Category", "Monitoring")]
+[Property("Category", "Monitoring")]
 public class MonitorExceptionMappingTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_mapping_a_thrown_exception_should_preserve_diagnostics_without_reflection_members(bool isAsync)
     {
         //Arrange
         Action throwException = () =>
             throw new InvalidOperationException("Handler failed", new ArgumentException("Invalid request"));
-        var exception = Assert.Throws<InvalidOperationException>(throwException);
+        var exception = await Assert.That(throwException).ThrowsExactly<InvalidOperationException>();
         exception.Data["unsupported"] = typeof(MonitorExceptionMappingTests);
         var monitorEvent = new MonitorEvent("UnitTests", MonitorEventType.ExceptionThrown,
             "TestHandler", "TestHandler, TestAssembly", "{}", DateTime.UtcNow, 10, exception);
@@ -60,20 +59,20 @@ public class MonitorExceptionMappingTests
         //Assert
         using var body = JsonDocument.Parse(message.Body.Value);
         var details = body.RootElement.GetProperty("exception");
-        Assert.Equal(typeof(InvalidOperationException).FullName, details.GetProperty("type").GetString());
-        Assert.Equal(exception.Message, details.GetProperty("message").GetString());
-        Assert.Equal(exception.StackTrace, details.GetProperty("stackTrace").GetString());
-        Assert.Equal(typeof(ArgumentException).FullName, details.GetProperty("innerException").GetProperty("type").GetString());
-        Assert.Equal(exception.InnerException.Message, details.GetProperty("innerException").GetProperty("message").GetString());
-        Assert.False(details.TryGetProperty("targetSite", out _));
-        Assert.False(details.TryGetProperty("data", out _));
-        Assert.Same(exception, monitorEvent.Exception);
-        Assert.IsType<Exception>(restored.Exception);
-        Assert.Equal(exception.Message, restored.Exception.Message);
-        Assert.IsType<Exception>(restored.Exception.InnerException);
-        Assert.Equal(exception.InnerException.Message, restored.Exception.InnerException.Message);
-        Assert.Equal(monitorEvent.Id, restored.Id);
-        Assert.Equal(monitorEvent.EventType, restored.EventType);
-        Assert.Equal(monitorEvent.RequestBody, restored.RequestBody);
+        await Assert.That(details.GetProperty("type").GetString()).IsEqualTo(typeof(InvalidOperationException).FullName);
+        await Assert.That(details.GetProperty("message").GetString()).IsEqualTo(exception.Message);
+        await Assert.That(details.GetProperty("stackTrace").GetString()).IsEqualTo(exception.StackTrace);
+        await Assert.That(details.GetProperty("innerException").GetProperty("type").GetString()).IsEqualTo(typeof(ArgumentException).FullName);
+        await Assert.That(details.GetProperty("innerException").GetProperty("message").GetString()).IsEqualTo(exception.InnerException.Message);
+        await Assert.That(details.TryGetProperty("targetSite", out _)).IsFalse();
+        await Assert.That(details.TryGetProperty("data", out _)).IsFalse();
+        await Assert.That(monitorEvent.Exception).IsSameReferenceAs(exception);
+        await Assert.That(restored.Exception).IsTypeOf<Exception>();
+        await Assert.That(restored.Exception.Message).IsEqualTo(exception.Message);
+        await Assert.That(restored.Exception.InnerException).IsTypeOf<Exception>();
+        await Assert.That(restored.Exception.InnerException.Message).IsEqualTo(exception.InnerException.Message);
+        await Assert.That(restored.Id).IsEqualTo(monitorEvent.Id);
+        await Assert.That(restored.EventType).IsEqualTo(monitorEvent.EventType);
+        await Assert.That(restored.RequestBody).IsEqualTo(monitorEvent.RequestBody);
     }
 }

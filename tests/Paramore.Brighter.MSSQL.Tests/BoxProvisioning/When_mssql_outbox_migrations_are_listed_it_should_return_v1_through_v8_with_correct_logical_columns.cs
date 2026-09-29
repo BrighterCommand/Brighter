@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -45,8 +45,8 @@ public class MsSqlOutboxMigrationsTests
     private static readonly string[] s_v7Added = ["DataRef", "SpecVersion"];
     private static readonly string[] s_v8Added = ["CausationId"];
 
-    [Fact]
-    public void When_mssql_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_correct_logical_columns()
+    [Test]
+    public async System.Threading.Tasks.Task When_mssql_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_correct_logical_columns()
     {
         //Arrange — derive each version's expected LogicalColumns by accumulating the
         //per-version additions from the archaeology (spec README outbox table).
@@ -59,10 +59,10 @@ public class MsSqlOutboxMigrationsTests
         var migrations = new MsSqlOutboxMigrationCatalog().All(config);
 
         //Assert — exactly eight migrations numbered 1..8 in order
-        Assert.Equal(8, migrations.Count);
+        await Assert.That(migrations.Count).IsEqualTo(8);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version.Value);
+            await Assert.That(migrations[i].Version.Value).IsEqualTo(i + 1);
         }
 
         //Assert — LogicalColumns at each version matches the cumulative archaeology
@@ -70,29 +70,23 @@ public class MsSqlOutboxMigrationsTests
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
-            Assert.True(
-                expected.SetEquals(migration.LogicalColumns),
-                $"V{v} LogicalColumns mismatch — " +
-                $"expected: [{string.Join(", ", expected.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-                $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+            await Assert.That(expected.SetEquals(migration.LogicalColumns)).IsTrue();
         }
 
         //Assert — V2..V8 each carry a non-null SourceReference (archaeology pointer);
         //V1 has no single source commit so SourceReference is null.
-        Assert.Null(migrations[0].SourceReference);
+        await Assert.That(migrations[0].SourceReference).IsNull();
         for (var v = 2; v <= 8; v++)
         {
-            Assert.False(
-                string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference),
-                $"V{v} must have a non-empty SourceReference (archaeology pointer)");
+            await Assert.That(string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference)).IsFalse().Because($"V{v} must have a non-empty SourceReference (archaeology pointer)");
         }
 
         //Assert — V8 (Spec 0027, #2541) adds the CausationId column AND its replay index. Its UpScript
         //carries the EXEC-wrapped CREATE INDEX on CausationId — the "index asserted separately" check for AC9.
-        var v8Script = migrations[7].UpScript;
-        Assert.Contains("[CausationId]", v8Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CREATE INDEX", v8Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("idx_outbox_test_CausationId", v8Script, StringComparison.OrdinalIgnoreCase);
+        var v8Script = migrations[7].UpScript.Value;
+        await Assert.That(v8Script).Contains("[CausationId]");
+        await Assert.That(v8Script).Contains("CREATE INDEX");
+        await Assert.That(v8Script).Contains("idx_outbox_test_CausationId");
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

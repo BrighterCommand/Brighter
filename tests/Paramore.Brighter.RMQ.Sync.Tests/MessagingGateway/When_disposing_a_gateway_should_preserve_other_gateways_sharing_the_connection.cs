@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -27,21 +27,20 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
+[NotInParallel]
 public class RmqSharedConnectionDisposalTests
 {
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, false)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, false)]
-    [InlineData(true, true, false)]
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(false, false, true)]
+    [Arguments(false, true, false)]
+    [Arguments(false, true, true)]
+    [Arguments(true, false, false)]
+    [Arguments(true, true, false)]
     public async Task When_disposing_a_gateway_should_preserve_other_gateways_sharing_the_connection(
         bool disposeConsumer, bool connectBeforeDisposing, bool disposeAsync)
     {
@@ -62,8 +61,8 @@ public class RmqSharedConnectionDisposalTests
         var warmup = new Message(new MessageHeader(Id.Random(), routingKey, MessageType.MT_COMMAND),
             new MessageBody("before disposal"));
         producer.Send(warmup);
-        var received = Assert.Single(consumer.Receive(TimeSpan.FromSeconds(5)));
-        Assert.Equal(warmup.Id, received.Id);
+        var received = await Assert.That(consumer.Receive(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(received.Id).IsEqualTo(warmup.Id);
         consumer.Acknowledge(received);
 
         if (connectBeforeDisposing)
@@ -73,8 +72,8 @@ public class RmqSharedConnectionDisposalTests
             else
             {
                 siblingProducer.Send(warmup);
-                received = Assert.Single(consumer.Receive(TimeSpan.FromSeconds(5)));
-                Assert.Equal(warmup.Id, received.Id);
+                received = await Assert.That(consumer.Receive(TimeSpan.FromSeconds(5))).HasSingleItem();
+                await Assert.That(received.Id).IsEqualTo(warmup.Id);
                 consumer.Acknowledge(received);
             }
         }
@@ -82,8 +81,8 @@ public class RmqSharedConnectionDisposalTests
         var factory = new ConnectionFactory { Uri = connection.AmpqUri.Uri };
         var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat);
         var sharedConnection = pool.GetConnection(factory);
-        Assert.NotNull(sharedConnection);
-        Assert.True(sharedConnection.IsOpen);
+        await Assert.That(sharedConnection).IsNotNull();
+        await Assert.That(sharedConnection.IsOpen).IsTrue();
 
         // Act
         if (disposeConsumer)
@@ -96,18 +95,18 @@ public class RmqSharedConnectionDisposalTests
         // Assert
         siblingConsumer.Dispose();
         siblingProducer.Dispose();
-        Assert.True(sharedConnection.IsOpen);
+        await Assert.That(sharedConnection.IsOpen).IsTrue();
         var message = new Message(new MessageHeader(Id.Random(), routingKey, MessageType.MT_COMMAND),
             new MessageBody("after disposal"));
         producer.Send(message);
-        received = Assert.Single(consumer.Receive(TimeSpan.FromSeconds(5)));
-        Assert.Equal(message.Id, received.Id);
-        Assert.Equal(message.Body.Value, received.Body.Value);
+        received = await Assert.That(consumer.Receive(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(received.Id).IsEqualTo(message.Id);
+        await Assert.That(received.Body.Value).IsEqualTo(message.Body.Value);
         consumer.Acknowledge(received);
 
         consumer.Dispose();
-        Assert.True(sharedConnection.IsOpen);
+        await Assert.That(sharedConnection.IsOpen).IsTrue();
         producer.Dispose();
-        Assert.False(sharedConnection.IsOpen);
+        await Assert.That(sharedConnection.IsOpen).IsFalse();
     }
 }

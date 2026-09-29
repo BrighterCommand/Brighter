@@ -29,17 +29,17 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Xml.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.Architecture;
 
 public class DependencyBoundaryTests
 {
     private static readonly string RepoRoot = FindRepoRoot(
-        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!);
+        Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!);
 
-    [Fact]
-    public void When_the_core_assemblys_public_surface_is_inspected_no_member_should_mention_IServiceProvider()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_core_assemblys_public_surface_is_inspected_no_member_should_mention_IServiceProvider()
     {
         // Arrange — AC-22 clause 1: no public interface member in Paramore.Brighter names IServiceProvider
         var coreAssembly = typeof(IAmAScope).Assembly;
@@ -53,11 +53,11 @@ public class DependencyBoundaryTests
             .ToList();
 
         // Assert
-        Assert.Empty(violations);
+        await Assert.That(violations).IsEmpty();
     }
 
-    [Fact]
-    public void When_the_project_files_are_parsed_no_forbidden_package_references_should_appear()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_project_files_are_parsed_no_forbidden_package_references_should_appear()
     {
         // Arrange — AC-22 clause 2: three csproj files have no forbidden references
         var coreProj = XDocument.Load(Path.Combine(RepoRoot, "src", "Paramore.Brighter", "Paramore.Brighter.csproj"));
@@ -84,13 +84,13 @@ public class DependencyBoundaryTests
             .ToList();
 
         // Assert
-        Assert.Empty(coreContainerRefs);
-        Assert.Empty(diAspNetRefs);
-        Assert.Single(saProjectRefs);
+        await Assert.That(coreContainerRefs).IsEmpty();
+        await Assert.That(diAspNetRefs).IsEmpty();
+        await Assert.That(saProjectRefs).HasSingleItem();
     }
 
-    [Fact]
-    public void When_the_core_source_files_are_scanned_no_container_types_should_appear()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_core_source_files_are_scanned_no_container_types_should_appear()
     {
         // Arrange — AC-22 clause 3 (load-bearing): Microsoft.Extensions.DependencyInjection is already
         // on core's compile closure transitively, so clause 2 alone does not prevent container types
@@ -108,7 +108,7 @@ public class DependencyBoundaryTests
             .ToList();
 
         // Assert
-        Assert.Empty(violations);
+        await Assert.That(violations).IsEmpty();
     }
 
     private static bool MentionsServiceProvider(MemberInfo member)

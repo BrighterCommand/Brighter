@@ -7,11 +7,11 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
+
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class SnsMessageProducerCreateTopicWithMaximumMessageSizeAsyncTests : IAsyncDisposable, IDisposable
 {
     private const int OneMebibyte = 1_048_576;
@@ -44,7 +44,7 @@ public class SnsMessageProducerCreateTopicWithMaximumMessageSizeAsyncTests : IAs
             });
     }
 
-    [Fact]
+    [Test]
     public async Task When_creating_a_topic_with_maximum_message_size_async()
     {
         //arrange
@@ -56,7 +56,7 @@ public class SnsMessageProducerCreateTopicWithMaximumMessageSizeAsyncTests : IAs
         var topicAttributes = await snsClient.GetTopicAttributesAsync(new GetTopicAttributesRequest(topicArn));
 
         //assert
-        Assert.Equal("1048576", topicAttributes.Attributes["MaximumMessageSize"]);
+        await Assert.That(topicAttributes.Attributes["MaximumMessageSize"]).IsEqualTo("1048576");
     }
 
     public void Dispose()

@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 
@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 /// but a missing queue table should fail at startup with a sentence that says so, rather than on
 /// the first send with whatever SQL Server says about a missing object.
 /// </summary>
-[Collection("MsSqlQueueProvisioning")]
+[NotInParallel]
 public class MsSqlQueueProvisioningValidateTests : IDisposable
 {
     private readonly string _queueTable = MsSqlQueueProvisioningCreateTests.UniqueQueueTableName();
@@ -47,23 +47,31 @@ public class MsSqlQueueProvisioningValidateTests : IDisposable
             Configuration.DefaultConnectingString, queueStoreTable: _queueTable);
     }
 
-    [Fact]
-    public void When_validating_a_missing_queue_should_throw_a_configuration_exception()
+    [Test]
+    public async System.Threading.Tasks.Task When_validating_a_missing_queue_should_throw_a_configuration_exception()
     {
         //Arrange -- nothing has created _queueTable.
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
         var subscription = Subscription(OnMissingChannel.Validate);
 
         //Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(subscription));
+        Exception? exception = null;
+        try
+        {
+            channelFactory.CreateSyncChannel(subscription);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains(_queueTable, exception!.Message);
+        await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(exception!.Message).Contains(_queueTable);
     }
 
-    [Fact]
-    public void When_validating_an_existing_queue_should_not_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_validating_an_existing_queue_should_not_throw()
     {
         //Arrange -- the control for the fact above: same call, same table name, the only difference
         //being that the table now exists. Without it, a Validate that threw unconditionally would
@@ -74,17 +82,22 @@ public class MsSqlQueueProvisioningValidateTests : IDisposable
         //Act -- a second factory, because a gateway instance remembers that it has provisioned and
         //the claim here is about Validate reaching the database and finding the table.
         var validating = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
-        var exception = Record.Exception(() =>
+        Exception? exception = null;
+        try
         {
             using var channel = validating.CreateSyncChannel(Subscription(OnMissingChannel.Validate));
-        });
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
-    [Fact]
-    public void When_validating_a_queue_too_long_to_have_been_created_here_should_not_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_validating_a_queue_too_long_to_have_been_created_here_should_not_throw()
     {
         //Arrange -- 125 characters. Create refuses that name, because the index derived from it
         //would be 134 and SQL Server's limit is 128; Validate builds no identifier at all, so a
@@ -99,13 +112,18 @@ public class MsSqlQueueProvisioningValidateTests : IDisposable
         try
         {
             //Act
-            var exception = Record.Exception(() =>
+            Exception? exception = null;
+            try
             {
                 using var channel = channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Validate));
-            });
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
 
             //Assert
-            Assert.Null(exception);
+            await Assert.That(exception).IsNull();
         }
         finally
         {

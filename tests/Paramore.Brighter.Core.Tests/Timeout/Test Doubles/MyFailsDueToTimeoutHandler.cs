@@ -23,9 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
@@ -44,28 +42,16 @@ namespace Paramore.Brighter.Core.Tests.Timeout.Test_Doubles
                 //already died
                 return base.Handle(myCommand);
             }
-            try
-            {
-                var delay = Task.Delay(1000, ct).ContinueWith(
-                    x =>
-                    {
-                        // done something I should not do, because I should of been cancel
-                        myCommand.WasCancelled = false;
-                    },
-                    ct);
 
-                Task.WaitAll(new[] { delay });
-            }
-            catch (AggregateException e)
+            if (ct.WaitHandle.WaitOne(1000))
             {
-                foreach (var tce in e.InnerExceptions.OfType<TaskCanceledException>())
-                {
-                    myCommand.WasCancelled = true;
-                    myCommand.TaskCompleted = false;
-                    return base.Handle(myCommand);
-                }
+                myCommand.WasCancelled = true;
+                myCommand.TaskCompleted = false;
+                return base.Handle(myCommand);
             }
 
+            // done something I should not do, because I should of been cancel
+            myCommand.WasCancelled = false;
             myCommand.TaskCompleted = true;
             return base.Handle(myCommand);
         }

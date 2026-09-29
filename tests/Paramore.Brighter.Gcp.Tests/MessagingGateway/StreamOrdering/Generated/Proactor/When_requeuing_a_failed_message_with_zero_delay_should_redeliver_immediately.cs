@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering.Proactor;
 
-[Trait("Category", "GcpPubSubStreamOrdering")]
-[Collection("StreamOrdering")]
-public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediatelyAsync : IAsyncLifetime
+[Property("Category", "GcpPubSubStreamOrdering")]
+[NotInParallel("StreamOrdering")]
+public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediatelyAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -33,17 +34,20 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediatelyA
         _messageAssertion = new DefaultMessageAssertion();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — explicit zero-delay requeue not yet conformant for GCP / StreamOrdering (maintainer sign-off)")]
+    [Test]
+    [Skip("Deferred: #4240 — explicit zero-delay requeue not yet conformant for GCP / StreamOrdering (maintainer sign-off)")]
     public async Task When_requeuing_a_failed_message_with_zero_delay_should_redeliver_immediately_async()
     {
         // Arrange
@@ -62,10 +66,10 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediatelyA
 
         // Act — receive the message and requeue it with an explicit TimeSpan.Zero
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         var requeued = await _channel.RequeueAsync(received, TimeSpan.Zero);
-        Assert.True(requeued);
+        await Assert.That(requeued).IsTrue();
 
         // The window opens when RequeueAsync RETURNS. The call's own duration is a round trip to
         // the broker to issue the instruction — the cost of asking, not a delay applied to the
@@ -86,9 +90,8 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediatelyA
             }
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5),
-            $"Expected redelivery within 5 s of RequeueAsync(M, TimeSpan.Zero) returning; elapsed: {stopwatch.Elapsed}");
-        _messageAssertion.Assert(message, redelivered);
+        await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(stopwatch.Elapsed < TimeSpan.FromSeconds(5)).IsTrue().Because($"Expected redelivery within 5 s of RequeueAsync(M, TimeSpan.Zero) returning; elapsed: {stopwatch.Elapsed}");
+        await _messageAssertion.AssertAsync(message, redelivered);
     }
 }

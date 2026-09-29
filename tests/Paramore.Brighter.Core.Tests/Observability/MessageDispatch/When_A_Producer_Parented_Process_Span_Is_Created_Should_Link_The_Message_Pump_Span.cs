@@ -29,7 +29,7 @@ using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Observability;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 
@@ -49,8 +49,8 @@ public class ProducerParentedProcessSpanLinkObservabilityTests : IDisposable
             .Build();
     }
 
-    [Fact]
-    public void When_a_producer_parented_process_span_is_created_should_link_the_message_pump_span()
+    [Test]
+    public async Task When_a_producer_parented_process_span_is_created_should_link_the_message_pump_span()
     {
         //Arrange
         var message = CreateMessageWithProducerTraceParent();
@@ -68,15 +68,15 @@ public class ProducerParentedProcessSpanLinkObservabilityTests : IDisposable
         _traceProvider.ForceFlush();
 
         //Assert
-        Assert.NotNull(pumpSpan);
-        Assert.NotNull(processSpan);
-        Assert.NotNull(message.Header.TraceParent);
+        await Assert.That(pumpSpan).IsNotNull();
+        await Assert.That(processSpan).IsNotNull();
+        await Assert.That(message.Header.TraceParent).IsNotNull();
 
         // process span descends from the producer trace (parent = producer's traceparent)
-        Assert.Equal(message.Header.TraceParent!.Value, processSpan!.ParentId);
+        await Assert.That(processSpan!.ParentId).IsEqualTo(message.Header.TraceParent!.Value);
 
         // ...and still links the local message pump, so the two are associated without parent/child
-        Assert.Contains(processSpan.Links, link => link.Context == pumpSpan!.Context);
+        await Assert.That((processSpan.Links).Any(link => link.Context == pumpSpan!.Context)).IsTrue();
     }
 
     public void Dispose()

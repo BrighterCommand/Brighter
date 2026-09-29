@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -107,7 +107,7 @@ public static class Configuration
         command.CommandText = ddl;
         command.ExecuteNonQuery();
     }
-    
+
     public static async Task CreateTableAsync(string connectionString, string ddl)
     {
         await using var connection = new SqlConnection(connectionString);
@@ -116,7 +116,7 @@ public static class Configuration
         command.CommandText = ddl;
         await command.ExecuteNonQueryAsync();
     }
-    
+
     public static void DeleteTable(string connectionString, string tableName)
     {
         using var connection = new SqlConnection(connectionString);
@@ -125,7 +125,7 @@ public static class Configuration
         command.CommandText = $"DROP TABLE {tableName}";
         command.ExecuteNonQuery();
     }
-    
+
     public static async Task DeleteTableAsync(string connectionString, string tableName)
     {
         await using var connection = new SqlConnection(connectionString);

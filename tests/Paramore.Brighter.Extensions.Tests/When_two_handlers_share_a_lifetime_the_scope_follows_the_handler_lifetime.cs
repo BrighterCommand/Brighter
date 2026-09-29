@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -18,8 +18,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 // type twice; neither pins whether a scoped *dependency* is shared across two *different* handlers.
 public class HandlerLifetimeCallChainScopeTests
 {
-    [Fact]
-    public void When_two_handlers_share_a_lifetime_the_scoped_lifetime_shares_a_dependency()
+    [Test]
+    public async System.Threading.Tasks.Task When_two_handlers_share_a_lifetime_the_scoped_lifetime_shares_a_dependency()
     {
         //arrange
         var collection = new ServiceCollection();
@@ -37,11 +37,11 @@ public class HandlerLifetimeCallChainScopeTests
         var second = (SecondHandler)((IAmAHandlerFactorySync)factory).Create(typeof(SecondHandler), lifetime)!;
 
         //assert — the scope is the call chain, so the scoped dependency is the same instance for both
-        Assert.Same(first.Dependency, second.Dependency);
+        await Assert.That(second.Dependency).IsSameReferenceAs(first.Dependency);
     }
 
-    [Fact]
-    public void When_two_handlers_share_a_lifetime_the_transient_lifetime_isolates_a_dependency()
+    [Test]
+    public async System.Threading.Tasks.Task When_two_handlers_share_a_lifetime_the_transient_lifetime_isolates_a_dependency()
     {
         //arrange
         var collection = new ServiceCollection();
@@ -59,11 +59,11 @@ public class HandlerLifetimeCallChainScopeTests
         var second = (SecondHandler)((IAmAHandlerFactorySync)factory).Create(typeof(SecondHandler), lifetime)!;
 
         //assert — each transient resolution has its own independent scope, so the dependency differs
-        Assert.NotSame(first.Dependency, second.Dependency);
+        await Assert.That(second.Dependency).IsNotSameReferenceAs(first.Dependency);
     }
 
-    [Fact]
-    public void When_transient_handlers_opt_out_of_scope_isolation_they_share_a_dependency()
+    [Test]
+    public async System.Threading.Tasks.Task When_transient_handlers_opt_out_of_scope_isolation_they_share_a_dependency()
     {
         //arrange — Transient handlers, but IsolateHandlerScope turned off (the pre-#4254 model):
         //the pipeline shares one DI scope, so a scoped dependency is one instance across the chain
@@ -86,13 +86,13 @@ public class HandlerLifetimeCallChainScopeTests
         var second = (SecondHandler)((IAmAHandlerFactorySync)factory).Create(typeof(SecondHandler), lifetime)!;
 
         //assert — the flag reverts to a shared per-pipeline scope, so the dependency is the same instance
-        Assert.Same(first.Dependency, second.Dependency);
+        await Assert.That(second.Dependency).IsSameReferenceAs(first.Dependency);
     }
 
-    [Theory]
-    [InlineData(true)]   // new default — each transient handler isolated in its own scope
-    [InlineData(false)]  // opt-out — the transient handlers share one per-pipeline scope
-    public void When_a_transient_handler_pipeline_is_released_it_disposes_every_scope_it_created(bool isolate)
+    [Test]
+    [Arguments(true)]   // new default — each transient handler isolated in its own scope
+    [Arguments(false)]  // opt-out — the transient handlers share one per-pipeline scope
+    public async System.Threading.Tasks.Task When_a_transient_handler_pipeline_is_released_it_disposes_every_scope_it_created(bool isolate)
     {
         //arrange — count scopes created and disposed so we can tell "restored the old scoping" apart from
         //"restored the old leak": in either mode, releasing the pipeline must dispose exactly what it created
@@ -125,8 +125,8 @@ public class HandlerLifetimeCallChainScopeTests
         //assert — a scope was created (isolate=true makes one per handler, isolate=false shares one), and
         //disposing the pipeline scope handle disposed every one of them, so the opt-out is a lifetime
         //change and not a leak
-        Assert.True(tracker.CreatedCount > 0);
-        Assert.Equal(tracker.CreatedCount, tracker.DisposedCount);
+        await Assert.That(tracker.CreatedCount > 0).IsTrue();
+        await Assert.That(tracker.DisposedCount).IsEqualTo(tracker.CreatedCount);
     }
 
     private sealed class TestCommand : Command

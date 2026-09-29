@@ -34,7 +34,7 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 
@@ -99,16 +99,16 @@ public class ReactorLoopThrowsPumpSpanObservabilityTests
         };
     }
 
-    [Fact]
-    public void When_the_reactor_loop_throws_close_the_pump_span()
+    [Test]
+    public async Task When_the_reactor_loop_throws_close_the_pump_span()
     {
         //Act - the null message forces the pump to throw out of its receive loop
-        var thrown = Assert.Throws<Exception>(() => _messagePump.Run());
+        var thrown = await Assert.That(() => _messagePump.Run()).ThrowsExactly<Exception>();
 
         _traceProvider.ForceFlush();
 
         //Assert - despite the throw, the begin (pump) span must still be ended and exported, not leaked
-        Assert.Contains(_exportedActivities, a =>
-            a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Begin.ToSpanName()}");
+        await Assert.That(_exportedActivities.Any(a =>
+            a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Begin.ToSpanName()}")).IsTrue();
     }
 }

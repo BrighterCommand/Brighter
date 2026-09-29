@@ -27,7 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -42,10 +42,10 @@ namespace Paramore.Brighter.Extensions.Tests;
 // never calls AddBrighter, so the fallback path is forced, with N resolver threads and one Dispose thread
 // released simultaneously via a Barrier to maximise contention between the very first Scoped resolution and
 // a concurrent Dispose.
-[Collection(ScopedArtefactCacheLiveCountCollection.Name)]
+[NotInParallel]
 public class DisposeRacesFirstScopedResolutionTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_resolution_races_dispose_no_artefact_cache_should_be_leaked()
     {
         const int trials = 200;
@@ -92,7 +92,7 @@ public class DisposeRacesFirstScopedResolutionTests
 
         // Assert - every ScopedArtefactCache this scenario constructed, across every trial, was disposed;
         // none survived as an undisposed loser of a resolution racing Dispose
-        Assert.Equal(baseline, ScopedArtefactCache.LiveCount);
+        await Assert.That(ScopedArtefactCache.LiveCount).IsEqualTo(baseline);
     }
 
     private class DisposeRaceHandler : RequestHandler<DisposeRaceCommand>

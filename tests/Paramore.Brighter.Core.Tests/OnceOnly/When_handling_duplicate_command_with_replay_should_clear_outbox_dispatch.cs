@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -32,7 +33,6 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
@@ -91,24 +91,24 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
                 new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
-        [Fact]
-        public void When_handling_duplicate_command_with_replay_should_clear_outbox_dispatch()
+        [Test]
+        public async System.Threading.Tasks.Task When_handling_duplicate_command_with_replay_should_clear_outbox_dispatch()
         {
             //Act
             _commandProcessor.Send(_command, _context);
 
             //Assert — the handler is not re-executed
-            Assert.Equal(0, MyStoredCommandToReplayHandler.ReceivedCount);
+            await Assert.That(MyStoredCommandToReplayHandler.ReceivedCount).IsEqualTo(0);
 
             //Assert — the matching causation's messages are outstanding again
             var outstanding = _outbox.OutstandingMessages(TimeSpan.Zero, _context).Select(m => m.Id.Value).ToArray();
-            Assert.Contains(_firstMatchingMessage, outstanding);
-            Assert.Contains(_secondMatchingMessage, outstanding);
+            await Assert.That(outstanding).Contains(_firstMatchingMessage);
+            await Assert.That(outstanding).Contains(_secondMatchingMessage);
 
             //Assert — the other causation's message is untouched and still dispatched
             var dispatched = _outbox.DispatchedMessages(TimeSpan.FromSeconds(5), _context).Select(m => m.Id.Value).ToArray();
-            Assert.Contains(_nonMatchingMessage, dispatched);
-            Assert.DoesNotContain(_nonMatchingMessage, outstanding);
+            await Assert.That(dispatched).Contains(_nonMatchingMessage);
+            await Assert.That(outstanding).DoesNotContain(_nonMatchingMessage);
         }
 
         private void AddDispatchedMessage(string id, string causationId)

@@ -4,6 +4,7 @@ using Paramore.Brighter.Locking.DynamoDb;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Locking;
 
+[TUnit.Core.InheritsTests]
 public class DynamoDbLockingTest : DistributedLockingAsyncTest
 {
     private readonly string _leaseholderGroupId = Uuid.NewAsString();

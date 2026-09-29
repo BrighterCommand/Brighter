@@ -5,13 +5,13 @@ using FakeItEasy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Paramore.Brighter.MsSql.EntityFrameworkCore;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class MsSqlEntityFrameworkCoreTransactionProviderCommitAsyncTests
 {
-    [Fact]
+    [Test]
     public async Task When_mssql_ef_commit_async_fails_should_propagate_exception()
     {
         // Arrange
@@ -24,7 +24,6 @@ public class MsSqlEntityFrameworkCoreTransactionProviderCommitAsyncTests
         var provider = new MsSqlEntityFrameworkCoreTransactionProvider<DbContext>(context);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => provider.CommitAsync(CancellationToken.None));
+        await Assert.That(() => provider.CommitAsync(CancellationToken.None)).ThrowsExactly<InvalidOperationException>();
     }
 }

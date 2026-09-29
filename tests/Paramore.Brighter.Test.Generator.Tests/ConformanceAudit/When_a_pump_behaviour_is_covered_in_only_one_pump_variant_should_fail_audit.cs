@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
@@ -24,8 +24,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// </remarks>
 public class PumpVariantParityAuditTests
 {
-    [Fact]
-    public void When_a_pump_behaviour_is_covered_in_only_one_pump_variant_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_pump_behaviour_is_covered_in_only_one_pump_variant_should_fail_audit()
     {
         // Arrange — a MessageDispatch tree carrying both pump variants for every required
         // behaviour, except that the requeue-count threshold has lost its Proactor half
@@ -39,19 +39,15 @@ public class PumpVariantParityAuditTests
 
             // Assert — the audit names the behaviour AND the variant that went missing, rather
             // than accepting the surviving Reactor half as coverage
-            Assert.True(
-                result.Violations.Any(v =>
+            await Assert.That(result.Violations.Any(v =>
                     v.Kind == "PumpBehaviourVariantNotCovered"
                     && v.Behaviour == strandedInReactor
-                    && v.Detail.Contains("Proactor", StringComparison.Ordinal)),
-                $"Expected a PumpBehaviourVariantNotCovered violation naming the missing Proactor "
+                    && v.Detail.Contains("Proactor", StringComparison.Ordinal))).IsTrue().Because($"Expected a PumpBehaviourVariantNotCovered violation naming the missing Proactor "
                 + $"half of '{strandedInReactor}' but got:\n"
                 + FormatViolations(result.Violations));
 
             // Assert — the behaviours that kept both halves are not reported
-            Assert.DoesNotContain(
-                result.Violations,
-                v => v.Behaviour != strandedInReactor);
+            await Assert.That(result.Violations).DoesNotContain(v => v.Behaviour != strandedInReactor);
         }
         finally
         {
@@ -102,10 +98,10 @@ public class PumpVariantParityAuditTests
             $$"""
               public class {{"Canary"}}Tests
               {
-                  [Fact]
+                  [Test]
                   public void {{testName}}()
                   {
-                      Assert.True(true);
+                      await Assert.That(true).IsTrue();
                   }
               }
               """);

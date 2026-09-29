@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -25,15 +25,15 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class CommandProcessorBuilderWithoutInboxAsyncTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_building_without_an_inbox_should_allow_duplicate_commands_async(bool useParameterlessOverload)
     {
         // Arrange
@@ -58,6 +58,6 @@ public class CommandProcessorBuilderWithoutInboxAsyncTests
         await processor.SendAsync(command);
 
         // Assert
-        Assert.Equal(2, command.HandleCount);
+        await Assert.That(command.HandleCount).IsEqualTo(2);
     }
 }

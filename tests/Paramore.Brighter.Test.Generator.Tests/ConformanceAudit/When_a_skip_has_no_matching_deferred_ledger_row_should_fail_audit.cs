@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
@@ -26,9 +26,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 public class LedgerSkipCrossCheckAuditTests
 {
     // ── 1. Pure predicate tests on IsValidDeferredCell ────────────────────────
-
-    [Fact]
-    public void When_deferred_cell_has_both_issue_link_and_sign_off_should_be_valid()
+    [Test]
+    public async System.Threading.Tasks.Task When_deferred_cell_has_both_issue_link_and_sign_off_should_be_valid()
     {
         // Arrange
         const string cell = "Deferred -> #4240 (sign-off: @iancooper)";
@@ -37,11 +36,11 @@ public class LedgerSkipCrossCheckAuditTests
         var isValid = LedgerSkipCrossCheckAudit.IsValidDeferredCell(cell);
 
         // Assert
-        Assert.True(isValid, $"Expected '{cell}' to be a valid Deferred cell.");
+        await Assert.That(isValid).IsTrue().Because($"Expected '{cell}' to be a valid Deferred cell.");
     }
 
-    [Fact]
-    public void When_deferred_cell_has_no_issue_link_should_be_invalid()
+    [Test]
+    public async System.Threading.Tasks.Task When_deferred_cell_has_no_issue_link_should_be_invalid()
     {
         // Arrange — sign-off present but no #<digits>
         const string cell = "Deferred (sign-off: @iancooper)";
@@ -50,12 +49,11 @@ public class LedgerSkipCrossCheckAuditTests
         var isValid = LedgerSkipCrossCheckAudit.IsValidDeferredCell(cell);
 
         // Assert
-        Assert.False(isValid,
-            $"Expected '{cell}' (no issue link) to fail the Deferred cell validation.");
+        await Assert.That(isValid).IsFalse().Because($"Expected '{cell}' (no issue link) to fail the Deferred cell validation.");
     }
 
-    [Fact]
-    public void When_deferred_cell_has_no_sign_off_should_be_invalid()
+    [Test]
+    public async System.Threading.Tasks.Task When_deferred_cell_has_no_sign_off_should_be_invalid()
     {
         // Arrange — issue link present but no sign-off token
         const string cell = "Deferred -> #4240";
@@ -64,16 +62,15 @@ public class LedgerSkipCrossCheckAuditTests
         var isValid = LedgerSkipCrossCheckAudit.IsValidDeferredCell(cell);
 
         // Assert
-        Assert.False(isValid,
-            $"Expected '{cell}' (no sign-off) to fail the Deferred cell validation.");
+        await Assert.That(isValid).IsFalse().Because($"Expected '{cell}' (no sign-off) to fail the Deferred cell validation.");
     }
 
     // ── 2. Synthetic-tree canaries ────────────────────────────────────────────
     // Each canary builds a minimal temporary repo, asserts the audit REPORTS the target
     // violation, then cleans up — permanent in-CI proof that the scan is not vacuous.
 
-    [Fact]
-    public void When_skip_has_no_matching_deferred_ledger_row_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_skip_has_no_matching_deferred_ledger_row_should_fail_audit()
     {
         // Arrange — synthetic repo: Skip references issue #9999; ledger only contains #4240
         var repoRoot = BuildSyntheticRepo(
@@ -88,9 +85,7 @@ public class LedgerSkipCrossCheckAuditTests
             var result = LedgerSkipCrossCheckAudit.CrossCheck(repoRoot, ledgerPath);
 
             // Assert — exactly the Direction-1 violation for issue #9999
-            Assert.True(
-                result.Violations.Any(v => v.Kind == "SkipWithoutLedgerRow"),
-                $"Expected a SkipWithoutLedgerRow violation for #9999 but got:\n" +
+            await Assert.That(result.Violations.Any(v => v.Kind == "SkipWithoutLedgerRow")).IsTrue().Because($"Expected a SkipWithoutLedgerRow violation for #9999 but got:\n" +
                 FormatViolations(result.Violations));
         }
         finally
@@ -99,8 +94,8 @@ public class LedgerSkipCrossCheckAuditTests
         }
     }
 
-    [Fact]
-    public void When_deferred_ledger_cell_has_no_issue_link_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_deferred_ledger_cell_has_no_issue_link_should_fail_audit()
     {
         // Arrange — synthetic repo: Deferred cell carries a sign-off but no #<digits>
         var repoRoot = BuildSyntheticRepo(
@@ -115,9 +110,7 @@ public class LedgerSkipCrossCheckAuditTests
             var result = LedgerSkipCrossCheckAudit.CrossCheck(repoRoot, ledgerPath);
 
             // Assert — exactly the Direction-2 violation for a missing issue link
-            Assert.True(
-                result.Violations.Any(v => v.Kind == "LedgerMissingField"),
-                $"Expected a LedgerMissingField violation for a Deferred cell without an issue link but got:\n" +
+            await Assert.That(result.Violations.Any(v => v.Kind == "LedgerMissingField")).IsTrue().Because($"Expected a LedgerMissingField violation for a Deferred cell without an issue link but got:\n" +
                 FormatViolations(result.Violations));
         }
         finally
@@ -126,8 +119,8 @@ public class LedgerSkipCrossCheckAuditTests
         }
     }
 
-    [Fact]
-    public void When_deferred_ledger_cell_has_no_sign_off_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_deferred_ledger_cell_has_no_sign_off_should_fail_audit()
     {
         // Arrange — synthetic repo: Deferred cell has an issue link but no sign-off token
         var repoRoot = BuildSyntheticRepo(
@@ -142,9 +135,7 @@ public class LedgerSkipCrossCheckAuditTests
             var result = LedgerSkipCrossCheckAudit.CrossCheck(repoRoot, ledgerPath);
 
             // Assert — exactly the Direction-2 violation for a missing sign-off
-            Assert.True(
-                result.Violations.Any(v => v.Kind == "LedgerMissingField"),
-                $"Expected a LedgerMissingField violation for a Deferred cell without a sign-off but got:\n" +
+            await Assert.That(result.Violations.Any(v => v.Kind == "LedgerMissingField")).IsTrue().Because($"Expected a LedgerMissingField violation for a Deferred cell without a sign-off but got:\n" +
                 FormatViolations(result.Violations));
         }
         finally
@@ -155,8 +146,8 @@ public class LedgerSkipCrossCheckAuditTests
 
     // ── 3. Live-tree fact ─────────────────────────────────────────────────────
 
-    [Fact]
-    public void When_cross_checking_live_tree_against_ledger_every_skip_should_have_a_matching_ledger_row()
+    [Test]
+    public async System.Threading.Tasks.Task When_cross_checking_live_tree_against_ledger_every_skip_should_have_a_matching_ledger_row()
     {
         // Arrange
         var repoRoot = FindRepoRoot(AppContext.BaseDirectory)
@@ -167,30 +158,25 @@ public class LedgerSkipCrossCheckAuditTests
         var ledgerPath = Path.Combine(repoRoot, "specs",
             "0036-universal-transport-conformance-tests", "conformance-status.md");
 
-        Assert.True(File.Exists(ledgerPath),
-            $"Conformance ledger not found at expected path:\n  {ledgerPath}");
+        await Assert.That(File.Exists(ledgerPath)).IsTrue().Because($"Conformance ledger not found at expected path:\n  {ledgerPath}");
 
         // Act
         var result = LedgerSkipCrossCheckAudit.CrossCheck(repoRoot, ledgerPath);
 
         // Assert — non-vacuity: the parser must have found matrix rows and Deferred cells
-        Assert.True(result.LedgerDataRowsFound > 0,
-            $"The ledger parser found no matrix data rows — either the parser is broken " +
+        await Assert.That(result.LedgerDataRowsFound > 0).IsTrue().Because($"The ledger parser found no matrix data rows — either the parser is broken " +
             $"or the '| Configuration |' header row has moved. Ledger: {ledgerPath}");
 
-        Assert.True(result.DeferredCellsFound > 0,
-            $"The ledger parser found {result.LedgerDataRowsFound} data row(s) but zero " +
+        await Assert.That(result.DeferredCellsFound > 0).IsTrue().Because($"The ledger parser found {result.LedgerDataRowsFound} data row(s) but zero " +
             $"Deferred cells. The real ledger has many Deferred cells — the parser regex " +
             $"is likely wrong, or all deferrals have been resolved (unlikely at this stage).");
 
-        Assert.True(result.DistinctSkipIssueNumbers > 0,
-            $"The tree scan found no 'Deferred: #<n>' Skip markers in the in-tree generated " +
+        await Assert.That(result.DistinctSkipIssueNumbers > 0).IsTrue().Because($"The tree scan found no 'Deferred: #<n>' Skip markers in the in-tree generated " +
             $"or template artifacts. Either the scan paths are wrong or all deferred tests have " +
             $"been promoted — in which case this assertion should be updated.");
 
         // Assert — both directions produce zero violations
-        Assert.True(result.Violations.Count == 0,
-            $"{result.Violations.Count} cross-check violation(s) found " +
+        await Assert.That(result.Violations.Count == 0).IsTrue().Because($"{result.Violations.Count} cross-check violation(s) found " +
             $"(ADR 0067: every Skip must have a matching Deferred ledger row; every Deferred " +
             $"ledger cell must carry an issue link and a sign-off entry):\n" +
             FormatViolations(result.Violations));
@@ -237,7 +223,7 @@ public class LedgerSkipCrossCheckAuditTests
         {
             File.WriteAllText(
                 Path.Combine(generatedDir, "When_a_canary_skip.cs"),
-                string.Join("\n", skipValues.Select(v => $"[Fact(Skip = \"{v}\")]")) + "\n");
+                string.Join("\n", skipValues.Select(v => $"[Test][Skip(\"{v}\")]")) + "\n");
         }
 
         // Empty template directory so the scan doesn't mis-count missing roots

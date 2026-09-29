@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -24,7 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 
@@ -34,11 +34,11 @@ namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 /// on disk that still compiles and still runs, while no longer being anything the configuration
 /// asks for. This audit is what notices.
 /// </summary>
-[Collection(RepositoryTreeAuditCollection.NAME)]
+[ClassDataSource<RepositoryTreeAudit>(Shared = SharedType.PerTestSession)]
 public class GeneratedTreeOrphanAuditTests(RepositoryTreeAudit repository)
 {
-    [Fact]
-    public void When_auditing_the_generated_tree_should_find_no_orphans()
+    [Test]
+    public async System.Threading.Tasks.Task When_auditing_the_generated_tree_should_find_no_orphans()
     {
         // Arrange
         var audit = repository.Audit;
@@ -48,11 +48,10 @@ public class GeneratedTreeOrphanAuditTests(RepositoryTreeAudit repository)
 
         // Assert - an audit that planned nothing would satisfy the emptiness below trivially, so
         // pin that it found work to do before reading its answer
-        Assert.NotEmpty(audit.Expected);
+        await Assert.That(audit.Expected).IsNotEmpty();
 
         // Assert - every file under a Generated/ directory is one the generator would write
-        Assert.True(orphans.Count == 0,
-            "File(s) under a Generated/ directory that the current configuration would not " +
+        await Assert.That(orphans.Count == 0).IsTrue().Because("File(s) under a Generated/ directory that the current configuration would not " +
             "produce. The generator never deletes, so these have to go by hand - confirm the " +
             "configuration is right first, because an orphan says configuration and tree " +
             "disagree, not which of them is wrong:\n" +

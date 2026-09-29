@@ -29,14 +29,13 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class When_building_dispatcher_with_non_scheduler_channel_factory_should_work
 {
-    [Fact]
-    public void Should_build_dispatcher_without_errors()
+    [Test]
+    public async Task Should_build_dispatcher_without_errors()
     {
         // Arrange — configure with a channel factory that does NOT implement IAmAChannelFactoryWithScheduler
         var bus = new InternalBus();
@@ -73,8 +72,8 @@ public class When_building_dispatcher_with_non_scheduler_channel_factory_should_
         var dispatcher = provider.GetRequiredService<IDispatcher>();
 
         // Assert — dispatcher should build successfully; no scheduler-related exceptions thrown
-        Assert.NotNull(dispatcher);
-        Assert.IsNotType<IAmAChannelFactoryWithScheduler>(channelFactory);
+        await Assert.That(dispatcher).IsNotNull();
+        await Assert.That(channelFactory).IsNotTypeOf<IAmAChannelFactoryWithScheduler>();
     }
 
     /// <summary>

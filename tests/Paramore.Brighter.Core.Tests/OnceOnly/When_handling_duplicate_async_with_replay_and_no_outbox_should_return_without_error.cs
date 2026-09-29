@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -30,7 +31,6 @@ using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox.Handlers;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
@@ -70,15 +70,15 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
                 new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
-        [Fact]
+        [Test]
         public async Task When_handling_duplicate_async_with_replay_and_no_outbox_should_return_without_error()
         {
             //Act — a duplicate command with Replay configured but no outbox available
-            var exception = await Record.ExceptionAsync(() => _commandProcessor.SendAsync(_command));
+            var exception = await TestExceptionRecorder.CaptureAsync(() => _commandProcessor.SendAsync(_command));
 
             //Assert — the handler returns without throwing and is not re-executed
-            Assert.Null(exception);
-            Assert.Equal(0, MyStoredCommandToReplayHandlerAsync.ReceivedCount);
+            await Assert.That(exception).IsNull();
+            await Assert.That(MyStoredCommandToReplayHandlerAsync.ReceivedCount).IsEqualTo(0);
         }
     }
 }

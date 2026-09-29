@@ -33,13 +33,12 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ServiceActivatorThrowOnErrorTests
 {
-    [Fact]
+    [Test]
     public async Task When_throw_on_error_false_and_errors_should_log_and_still_receive()
     {
         // Arrange
@@ -66,12 +65,12 @@ public class ServiceActivatorThrowOnErrorTests
         await service.StartAsync(CancellationToken.None);
 
         // Assert — errors logged, Receive was called
-        Assert.True(validator.ValidateWasCalled);
-        Assert.True(dispatcher.ReceiveWasCalled);
-        Assert.Contains(logger.Entries, e => e.LogLevel == LogLevel.Error && e.Message.Contains("misconfigured"));
+        await Assert.That(validator.ValidateWasCalled).IsTrue();
+        await Assert.That(dispatcher.ReceiveWasCalled).IsTrue();
+        await Assert.That((logger.Entries).Any(e => e.LogLevel == LogLevel.Error && e.Message.Contains("misconfigured"))).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_throw_on_error_true_and_errors_should_throw_and_not_receive()
     {
         // Arrange
@@ -97,10 +96,10 @@ public class ServiceActivatorThrowOnErrorTests
         // Act & Assert — should throw, Receive should NOT be called
         await Assert.ThrowsAsync<PipelineValidationException>(
             () => service.StartAsync(CancellationToken.None));
-        Assert.False(dispatcher.ReceiveWasCalled);
+        await Assert.That(dispatcher.ReceiveWasCalled).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_throw_on_error_false_and_no_errors_should_receive_normally()
     {
         // Arrange
@@ -126,12 +125,12 @@ public class ServiceActivatorThrowOnErrorTests
         await service.StartAsync(CancellationToken.None);
 
         // Assert — no errors, Receive called normally
-        Assert.True(validator.ValidateWasCalled);
-        Assert.True(dispatcher.ReceiveWasCalled);
-        Assert.DoesNotContain(logger.Entries, e => e.LogLevel == LogLevel.Error);
+        await Assert.That(validator.ValidateWasCalled).IsTrue();
+        await Assert.That(dispatcher.ReceiveWasCalled).IsTrue();
+        await Assert.That((logger.Entries).Any(e => e.LogLevel == LogLevel.Error)).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_throw_on_error_false_should_still_log_warnings()
     {
         // Arrange
@@ -159,8 +158,8 @@ public class ServiceActivatorThrowOnErrorTests
         await service.StartAsync(CancellationToken.None);
 
         // Assert — both errors and warnings logged
-        Assert.Contains(logger.Entries, e => e.LogLevel == LogLevel.Error && e.Message.Contains("misconfigured"));
-        Assert.Contains(logger.Entries, e => e.LogLevel == LogLevel.Warning && e.Message.Contains("suboptimal"));
-        Assert.True(dispatcher.ReceiveWasCalled);
+        await Assert.That((logger.Entries).Any(e => e.LogLevel == LogLevel.Error && e.Message.Contains("misconfigured"))).IsTrue();
+        await Assert.That((logger.Entries).Any(e => e.LogLevel == LogLevel.Warning && e.Message.Contains("suboptimal"))).IsTrue();
+        await Assert.That(dispatcher.ReceiveWasCalled).IsTrue();
     }
 }

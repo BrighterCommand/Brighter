@@ -27,11 +27,10 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
 using Paramore.Brighter.Sqlite.Tests.BoxProvisioning.Legacy;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class InboxV1ToV3UpgradeTests : IAsyncLifetime
+public class InboxV1ToV3UpgradeTests
 {
     private const string MarkerCommandId = "marker-command-must-survive";
 
@@ -43,7 +42,7 @@ public class InboxV1ToV3UpgradeTests : IAsyncLifetime
     private readonly string _connectionString = Configuration.ConnectionString;
     private readonly string _tableName = $"test_inbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v3()
     {
         //Arrange — seed a V1 inbox (no ContextKey, no history) plus a marker command row.
@@ -66,30 +65,30 @@ public class InboxV1ToV3UpgradeTests : IAsyncLifetime
         var actualColumns = await GetTableColumns();
         foreach (var expected in s_v3ExpectedColumns)
         {
-            Assert.Contains(expected, actualColumns);
+            await Assert.That(actualColumns).Contains(expected);
         }
 
         //Assert — history rows: one synthetic at V1 + one applied at V2 + one applied at V3.
         var rowsByVersion = await GetHistoryRowsByVersion();
-        Assert.Equal(ExpectedMigrationVersions.InboxLatest, rowsByVersion.Count);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(ExpectedMigrationVersions.InboxLatest);
 
-        var syntheticDescription = Assert.Contains(1, rowsByVersion);
-        Assert.StartsWith("bootstrap: detected at V1", syntheticDescription);
+        await Assert.That(rowsByVersion.ContainsKey(1)).IsTrue();
 
-        var appliedDescription = Assert.Contains(2, rowsByVersion);
-        Assert.False(
-            appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal),
-            $"V2 should be an applied migration row, not a synthetic bootstrap row " +
-            $"(description was: '{appliedDescription}')");
+        var syntheticDescription = rowsByVersion[1];
+        await Assert.That(syntheticDescription).StartsWith("bootstrap: detected at V1");
 
-        var appliedV3Description = Assert.Contains(3, rowsByVersion);
-        Assert.False(
-            appliedV3Description.StartsWith("bootstrap:", StringComparison.Ordinal),
-            $"V3 should be an applied migration row, not a synthetic bootstrap row " +
+        await Assert.That(rowsByVersion.ContainsKey(2)).IsTrue();
+
+        var appliedDescription = rowsByVersion[2];
+        await Assert.That(appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
+
+        await Assert.That(rowsByVersion).ContainsKey(3);
+        var appliedV3Description = rowsByVersion[3];
+        await Assert.That(appliedV3Description.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse().Because($"V3 should be an applied migration row, not a synthetic bootstrap row " +
             $"(description was: '{appliedV3Description}')");
 
         //Assert — the seeded marker row survived with NULL ContextKey on the new column.
-        Assert.True(await MarkerRowExistsWithNullContextKey());
+        await Assert.That(await MarkerRowExistsWithNullContextKey()).IsTrue();
     }
 
     private async Task SeedMarkerRow()
@@ -159,8 +158,10 @@ WHERE [CommandId] = @CommandId AND [ContextKey] IS NULL";
         return Convert.ToInt64(await command.ExecuteScalarAsync()) == 1L;
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         try

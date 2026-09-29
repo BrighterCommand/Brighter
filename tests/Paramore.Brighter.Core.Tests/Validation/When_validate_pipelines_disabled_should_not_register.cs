@@ -19,18 +19,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class ValidatePipelinesDisabledTests
 {
     private static IBrighterBuilder CreateBuilder(out ServiceCollection services)
@@ -41,95 +37,75 @@ public class ValidatePipelinesDisabledTests
         return new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
     }
 
-    [Fact]
-    public void When_validate_pipelines_disabled_should_not_register_validator()
+    [Test]
+    public async Task When_validate_pipelines_disabled_should_not_register_validator()
     {
         // Arrange
         var builder = CreateBuilder(out var services);
-
         // Act
         var returnedBuilder = builder.ValidatePipelines(enabled: false);
-
         // Assert — no validator, no hosted service registered
-        Assert.DoesNotContain(services, sd => sd.ServiceType == typeof(IAmAPipelineValidator));
-        Assert.DoesNotContain(services, sd =>
-            sd.ServiceType == typeof(IHostedService)
-            && sd.ImplementationType?.Name == "BrighterValidationHostedService");
-        Assert.Same(builder, returnedBuilder);
+        await Assert.That((services).Any(sd => sd.ServiceType == typeof(IAmAPipelineValidator))).IsFalse();
+        await Assert.That((services).Any(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType?.Name == "BrighterValidationHostedService")).IsFalse();
+        await Assert.That(returnedBuilder).IsSameReferenceAs(builder);
     }
 
-    [Fact]
-    public void When_validate_pipelines_enabled_should_register_validator()
+    [Test]
+    public async Task When_validate_pipelines_enabled_should_register_validator()
     {
         // Arrange
         var builder = CreateBuilder(out var services);
-
         // Act
         builder.ValidatePipelines(enabled: true);
-
         // Assert — validator and hosted service registered (same as default)
-        Assert.Contains(services, sd => sd.ServiceType == typeof(IAmAPipelineValidator));
-        Assert.Contains(services, sd =>
-            sd.ServiceType == typeof(IHostedService)
-            && sd.ImplementationType?.Name == "BrighterValidationHostedService");
+        await Assert.That((services).Any(sd => sd.ServiceType == typeof(IAmAPipelineValidator))).IsTrue();
+        await Assert.That((services).Any(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType?.Name == "BrighterValidationHostedService")).IsTrue();
     }
 
-    [Fact]
-    public void When_validate_pipelines_default_should_register_validator()
+    [Test]
+    public async Task When_validate_pipelines_default_should_register_validator()
     {
         // Arrange
         var builder = CreateBuilder(out var services);
-
         // Act — no arguments, default should be enabled
         builder.ValidatePipelines();
-
         // Assert
-        Assert.Contains(services, sd => sd.ServiceType == typeof(IAmAPipelineValidator));
+        await Assert.That((services).Any(sd => sd.ServiceType == typeof(IAmAPipelineValidator))).IsTrue();
     }
 
-    [Fact]
-    public void When_describe_pipelines_disabled_should_not_register_writer()
+    [Test]
+    public async Task When_describe_pipelines_disabled_should_not_register_writer()
     {
         // Arrange
         var builder = CreateBuilder(out var services);
-
         // Act
         var returnedBuilder = builder.DescribePipelines(enabled: false);
-
         // Assert — no diagnostic writer, no hosted service registered
-        Assert.DoesNotContain(services, sd => sd.ServiceType == typeof(IAmAPipelineDiagnosticWriter));
-        Assert.DoesNotContain(services, sd =>
-            sd.ServiceType == typeof(IHostedService)
-            && sd.ImplementationType?.Name == "BrighterDiagnosticHostedService");
-        Assert.Same(builder, returnedBuilder);
+        await Assert.That((services).Any(sd => sd.ServiceType == typeof(IAmAPipelineDiagnosticWriter))).IsFalse();
+        await Assert.That((services).Any(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType?.Name == "BrighterDiagnosticHostedService")).IsFalse();
+        await Assert.That(returnedBuilder).IsSameReferenceAs(builder);
     }
 
-    [Fact]
-    public void When_describe_pipelines_enabled_should_register_writer()
+    [Test]
+    public async Task When_describe_pipelines_enabled_should_register_writer()
     {
         // Arrange
         var builder = CreateBuilder(out var services);
-
         // Act
         builder.DescribePipelines(enabled: true);
-
         // Assert — diagnostic writer and hosted service registered (same as default)
-        Assert.Contains(services, sd => sd.ServiceType == typeof(IAmAPipelineDiagnosticWriter));
-        Assert.Contains(services, sd =>
-            sd.ServiceType == typeof(IHostedService)
-            && sd.ImplementationType?.Name == "BrighterDiagnosticHostedService");
+        await Assert.That((services).Any(sd => sd.ServiceType == typeof(IAmAPipelineDiagnosticWriter))).IsTrue();
+        await Assert.That((services).Any(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType?.Name == "BrighterDiagnosticHostedService")).IsTrue();
     }
 
-    [Fact]
-    public void When_describe_pipelines_default_should_register_writer()
+    [Test]
+    public async Task When_describe_pipelines_default_should_register_writer()
     {
         // Arrange
         var builder = CreateBuilder(out var services);
-
         // Act — no arguments, default should be enabled
         builder.DescribePipelines();
-
         // Assert
-        Assert.Contains(services, sd => sd.ServiceType == typeof(IAmAPipelineDiagnosticWriter));
+        await Assert.That((services).Any(sd => sd.ServiceType == typeof(IAmAPipelineDiagnosticWriter))).IsTrue();
     }
 }

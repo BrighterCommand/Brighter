@@ -29,16 +29,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests.RelationalConfiguration;
 
 public class ExistingRelationalConfigurationTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_registering_explicit_configuration_first_should_preserve_it(bool useFactory)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_registering_explicit_configuration_first_should_preserve_it(bool useFactory)
     {
         //Arrange
         var outboxConfiguration = new RelationalDatabaseConfiguration("Data Source=:memory:", outBoxTableName: "Outbox");
@@ -64,17 +63,17 @@ public class ExistingRelationalConfigurationTests
             options.TransactionProvider = typeof(SqliteTransactionProvider);
             options.ConnectionProvider = typeof(SqliteConnectionProvider);
         });
-        Assert.Equal(0, factoryCalls);
+        await Assert.That(factoryCalls).IsEqualTo(0);
         using var provider = services.BuildServiceProvider();
 
         //Act
         var configuration = provider.GetRequiredService<IAmARelationalDatabaseConfiguration>();
 
         //Assert
-        Assert.Same(explicitConfiguration, configuration);
-        Assert.Same(explicitConfiguration, Assert.Single(provider.GetServices<IAmARelationalDatabaseConfiguration>()));
-        Assert.Equal(useFactory ? 1 : 0, factoryCalls);
-        Assert.IsType<SqliteTransactionProvider>(provider.GetRequiredService<IAmABoxTransactionProvider>());
-        Assert.IsType<SqliteConnectionProvider>(provider.GetRequiredService<IAmARelationalDbConnectionProvider>());
+        await Assert.That(configuration).IsSameReferenceAs(explicitConfiguration);
+        await Assert.That(await Assert.That(provider.GetServices<IAmARelationalDatabaseConfiguration>()).HasSingleItem()).IsSameReferenceAs(explicitConfiguration);
+        await Assert.That(factoryCalls).IsEqualTo(useFactory ? 1 : 0);
+        await Assert.That(provider.GetRequiredService<IAmABoxTransactionProvider>()).IsTypeOf<SqliteTransactionProvider>();
+        await Assert.That(provider.GetRequiredService<IAmARelationalDbConnectionProvider>()).IsTypeOf<SqliteConnectionProvider>();
     }
 }

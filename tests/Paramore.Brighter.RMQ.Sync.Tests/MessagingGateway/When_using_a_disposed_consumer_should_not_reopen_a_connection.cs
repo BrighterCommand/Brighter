@@ -28,24 +28,23 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
+[NotInParallel]
 public class RmqDisposedConsumerTests
 {
-    [Theory]
-    [InlineData("nack", false)]
-    [InlineData("nack", true)]
-    [InlineData("purge", false)]
-    [InlineData("purge", true)]
-    [InlineData("receive", false)]
-    [InlineData("receive", true)]
-    [InlineData("requeue", false)]
-    [InlineData("requeue", true)]
-    public void When_using_a_disposed_consumer_should_not_reopen_a_connection(
+    [Test]
+    [Arguments("nack", false)]
+    [Arguments("nack", true)]
+    [Arguments("purge", false)]
+    [Arguments("purge", true)]
+    [Arguments("receive", false)]
+    [Arguments("receive", true)]
+    [Arguments("requeue", false)]
+    [Arguments("requeue", true)]
+    public async Task When_using_a_disposed_consumer_should_not_reopen_a_connection(
         string operation, bool connectBeforeDisposing)
     {
         // Arrange
@@ -67,7 +66,7 @@ public class RmqDisposedConsumerTests
         try
         {
             // Act
-            var error = Record.Exception(() =>
+            var error = TestExceptionRecorder.Capture(() =>
             {
                 switch (operation)
                 {
@@ -79,7 +78,7 @@ public class RmqDisposedConsumerTests
             });
 
             // Assert
-            Assert.IsType<ObjectDisposedException>(error);
+            await Assert.That(error).IsTypeOf<ObjectDisposedException>();
         }
         finally
         {

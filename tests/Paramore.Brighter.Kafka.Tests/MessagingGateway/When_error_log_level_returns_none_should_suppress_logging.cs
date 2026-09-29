@@ -4,12 +4,12 @@ using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
+
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Property("Category", "Kafka")]
+[System.Obsolete]
 public class When_error_log_level_returns_none_should_suppress_logging : IDisposable
 {
     private readonly KafkaMessageConsumer _consumer;
@@ -32,8 +32,8 @@ public class When_error_log_level_returns_none_should_suppress_logging : IDispos
         );
     }
 
-    [Fact]
-    public void When_the_error_log_level_returns_none_the_error_is_not_logged()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_error_log_level_returns_none_the_error_is_not_logged()
     {
         using var context = TestCorrelator.CreateContext();
 
@@ -43,7 +43,7 @@ public class When_error_log_level_returns_none_should_suppress_logging : IDispos
         //Assert - no log event is written for the suppressed error
         var matchingEvents = TestCorrelator.GetLogEventsFromCurrentContext()
             .Count(e => e.RenderMessage().Contains("an idle socket non fatal timeout"));
-        Assert.Equal(0, matchingEvents);
+        await Assert.That(matchingEvents).IsEqualTo(0);
     }
 
     public void Dispose()

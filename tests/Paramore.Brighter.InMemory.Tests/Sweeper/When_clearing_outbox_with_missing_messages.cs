@@ -7,20 +7,18 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Sweeper
 {
-    [Trait("Category", "InMemory")]
-    [Collection("CommandProcess")]
+    [Category("InMemory")]
+    [NotInParallel("CommandProcess")]
     public class ClearOutboxMissingMessagesTests
     {
         private const string MyTopic = "MyTopic";
 
-        [Fact]
-        public void When_clearing_outbox_with_missing_messages_should_dispatch_found()
+        [Test]
+        public async Task When_clearing_outbox_with_missing_messages_should_dispatch_found()
         {
-            //Arrange
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
             var internalBus = new InternalBus();
@@ -55,7 +53,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             var context = new RequestContext();
 
-            //Add two messages directly to the outbox
             var message1Id = Guid.NewGuid().ToString();
             var message2Id = Guid.NewGuid().ToString();
             var missingId = Guid.NewGuid().ToString();
@@ -70,25 +67,18 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             outbox.Add(message1, context);
             outbox.Add(message2, context);
 
-            //Delete one message to simulate compaction loss
             outbox.Delete(new Id[] { new(message1Id) }, context);
 
-            //Act — clear with all three IDs including the missing one
             var allIds = new Id[] { new(message1Id), new(message2Id), new(missingId) };
 
-            var exception = Record.Exception(() => mediator.ClearOutbox(allIds, context));
+            await Assert.That(() => mediator.ClearOutbox(allIds, context)).ThrowsNothing();
 
-            //Assert — no exception thrown
-            Assert.Null(exception);
-
-            //The found message should have been dispatched
-            Assert.Single(internalBus.Stream(routingKey));
+            await Assert.That(internalBus.Stream(routingKey).Count()).IsEqualTo(1);
         }
 
-        [Fact]
+        [Test]
         public async Task When_clearing_outbox_async_with_missing_messages_should_dispatch_found()
         {
-            //Arrange
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
             var internalBus = new InternalBus();
@@ -123,7 +113,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             var context = new RequestContext();
 
-            //Add two messages directly to the outbox
             var message1Id = Guid.NewGuid().ToString();
             var message2Id = Guid.NewGuid().ToString();
             var missingId = Guid.NewGuid().ToString();
@@ -138,19 +127,13 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             outbox.Add(message1, context);
             outbox.Add(message2, context);
 
-            //Delete one message to simulate compaction loss
             outbox.Delete(new Id[] { new(message1Id) }, context);
 
-            //Act — clear with all three IDs including the missing one
             var allIds = new Id[] { new(message1Id), new(message2Id), new(missingId) };
 
-            var exception = await Record.ExceptionAsync(() => mediator.ClearOutboxAsync(allIds, context));
+            await Assert.That(async () => await mediator.ClearOutboxAsync(allIds, context)).ThrowsNothing();
 
-            //Assert — no exception thrown
-            Assert.Null(exception);
-
-            //The found message should have been dispatched
-            Assert.Single(internalBus.Stream(routingKey));
+            await Assert.That(internalBus.Stream(routingKey).Count()).IsEqualTo(1);
         }
     }
 }

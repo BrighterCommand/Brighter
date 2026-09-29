@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -26,18 +27,17 @@ using System;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Inbox.Handlers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline;
 
 public class GlobalInboxScopeAttributeTests
 {
-    [Theory]
-    [InlineData(InboxScope.All, true)]
-    [InlineData(InboxScope.Events, true)]
-    [InlineData(InboxScope.All, false)]
-    [InlineData(InboxScope.Events, false)]
-    public void When_configuring_inbox_scope_should_preserve_handler_attributes(InboxScope scope, bool useExplicitInbox)
+    [Test]
+    [Arguments(InboxScope.All, true)]
+    [Arguments(InboxScope.Events, true)]
+    [Arguments(InboxScope.All, false)]
+    [Arguments(InboxScope.Events, false)]
+    public async System.Threading.Tasks.Task When_configuring_inbox_scope_should_preserve_handler_attributes(InboxScope scope, bool useExplicitInbox)
     {
         // Arrange
         var inbox = new InMemoryInbox(TimeProvider.System);
@@ -57,15 +57,14 @@ public class GlobalInboxScopeAttributeTests
         // Act
         pipeline.Handle(request);
         pipeline.Handle(request);
-        var description = Assert.Single(describer.Describe(typeof(MyCommand)));
+        var description = await Assert.That(describer.Describe(typeof(MyCommand))).HasSingleItem();
 
         // Assert
-        Assert.Equal(useExplicitInbox,
-            inbox.Exists<MyCommand>(request.Id, handlerType.FullName!, null));
-        Assert.False(inbox.Exists<MyCommand>(request.Id, "global-inbox", null));
+        await Assert.That(inbox.Exists<MyCommand>(request.Id, handlerType.FullName!, null)).IsEqualTo(useExplicitInbox);
+        await Assert.That(inbox.Exists<MyCommand>(request.Id, "global-inbox", null)).IsFalse();
         if (useExplicitInbox)
-            Assert.Single(description.BeforeSteps);
+            await Assert.That(description.BeforeSteps).HasSingleItem();
         else
-            Assert.Empty(description.BeforeSteps);
+            await Assert.That(description.BeforeSteps).IsEmpty();
     }
 }

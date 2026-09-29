@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -47,7 +47,7 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_reactor_file_should_exist_with_correct_name()
     {
         // Arrange
@@ -60,11 +60,10 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
 
         // Assert — Reactor file exists at the mandated path
         var reactorPath = ReactorOutputPath(configuration);
-        Assert.True(File.Exists(reactorPath),
-            $"Reactor canonical nack-redelivery file not found at {reactorPath}");
+        await Assert.That(File.Exists(reactorPath)).IsTrue().Because($"Reactor canonical nack-redelivery file not found at {reactorPath}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_proactor_file_should_exist_with_correct_name()
     {
         // Arrange
@@ -77,11 +76,10 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
 
         // Assert — Proactor file exists at the mandated path
         var proactorPath = ProactorOutputPath(configuration);
-        Assert.True(File.Exists(proactorPath),
-            $"Proactor canonical nack-redelivery file not found at {proactorPath}");
+        await Assert.That(File.Exists(proactorPath)).IsTrue().Because($"Proactor canonical nack-redelivery file not found at {proactorPath}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_reactor_should_call_nack_on_received_message()
     {
         // Arrange
@@ -94,10 +92,10 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
 
         // Assert — Nack is called on the received message
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("Nack(", content);
+        await Assert.That(content).Contains("Nack(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_proactor_should_call_nack_async_on_received_message()
     {
         // Arrange
@@ -110,10 +108,10 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
 
         // Assert — NackAsync is called on the received message
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("NackAsync(", content);
+        await Assert.That(content).Contains("NackAsync(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_reactor_should_assert_redelivery_inside_bounded_retry_loop()
     {
         // Arrange
@@ -126,12 +124,12 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
 
         // Assert — redelivery assertion sits inside a bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
-        Assert.Contains("500", content);
+        await Assert.That(content).Contains("Stopwatch");
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(30)");
+        await Assert.That(content).Contains("500");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_proactor_should_assert_redelivery_inside_bounded_retry_loop()
     {
         // Arrange
@@ -144,12 +142,12 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
 
         // Assert — redelivery assertion sits inside a bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
-        Assert.Contains("500", content);
+        await Assert.That(content).Contains("Stopwatch");
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(30)");
+        await Assert.That(content).Contains("500");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_reactor_should_contain_two_message_variant()
     {
         // Arrange
@@ -164,10 +162,10 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // queued behind it still arrives. Asserted by the fact's name rather than by a variable
         // name, which is incidental to the behaviour.
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second", content);
+        await Assert.That(content).Contains("When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_proactor_should_contain_two_message_variant()
     {
         // Arrange
@@ -182,13 +180,13 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // queued behind it still arrives. Asserted by the fact's name rather than by a variable
         // name, which is incidental to the behaviour.
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second", content);
+        await Assert.That(content).Contains("When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_pass_reactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange — ledger cell is Pass; the [Test] must carry no Skip argument
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -196,13 +194,13 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact] present; Skip absent (conditional pattern renders nothing when Skip is empty)
+        // Assert — [Test] present; Skip absent (conditional pattern renders nothing when Skip is empty)
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("[Fact]", content);
-        Assert.DoesNotContain("Skip =", content);
+        await Assert.That(content).Contains("[Test]");
+        await Assert.That(content).DoesNotContain("[Skip(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_deferred_reactor_should_emit_skip_on_fact()
     {
         // Arrange — ledger cell is Deferred; the template must conditionally emit Skip
@@ -217,15 +215,15 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact, Skip = "Deferred: #9999 ..."] is emitted
+        // Assert — [Test, Skip = "Deferred: #9999 ..."] is emitted
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("Skip = \"Deferred: #9999", content);
+        await Assert.That(content).Contains("Skip(\"Deferred: #9999");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_pass_proactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange — ledger cell is Pass; the [Test] must carry no Skip argument
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -235,11 +233,11 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
 
         // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("[Fact]", content);
-        Assert.DoesNotContain("Skip =", content);
+        await Assert.That(content).Contains("[Test]");
+        await Assert.That(content).DoesNotContain("[Skip(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_reactor_should_tell_the_following_message_from_the_nacked_one()
     {
         // Arrange
@@ -254,17 +252,17 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // builder makes them the same message, and the nacked message coming back would then be
         // indistinguishable from the one queued behind it.
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
+        await Assert.That(Occurrences(content, "SetMessageId(Id.Random())")).IsEqualTo(DISTINCTLY_BUILT_MESSAGES);
+        await Assert.That(Occurrences(content, ".SetBody(")).IsEqualTo(DISTINCTLY_BUILT_MESSAGES);
 
         // Assert — the arm names BOTH ids it expects to observe after the nack, rather than
         // settling for the weaker claim that a message arrived. It identifies them by id, not by
         // arrival position, so an unordered transport cannot fail a conforming gateway (NFR-4).
-        Assert.Contains("Assert.Contains(nackedMessage.Header.MessageId.Value, observedIds)", content);
-        Assert.Contains("Assert.Contains(theOtherMessage.Header.MessageId.Value, observedIds)", content);
+        await Assert.That(content).Contains("Assert.That(observedIds).Contains(nackedMessage.Header.MessageId.Value)");
+        await Assert.That(content).Contains("Assert.That(observedIds).Contains(theOtherMessage.Header.MessageId.Value)");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_nack_proactor_should_tell_the_following_message_from_the_nacked_one()
     {
         // Arrange
@@ -279,14 +277,14 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // builder makes them the same message, and the nacked message coming back would then be
         // indistinguishable from the one queued behind it.
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
-        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
+        await Assert.That(Occurrences(content, "SetMessageId(Id.Random())")).IsEqualTo(DISTINCTLY_BUILT_MESSAGES);
+        await Assert.That(Occurrences(content, ".SetBody(")).IsEqualTo(DISTINCTLY_BUILT_MESSAGES);
 
         // Assert — the arm names BOTH ids it expects to observe after the nack, rather than
         // settling for the weaker claim that a message arrived. It identifies them by id, not by
         // arrival position, so an unordered transport cannot fail a conforming gateway (NFR-4).
-        Assert.Contains("Assert.Contains(nackedMessage.Header.MessageId.Value, observedIds)", content);
-        Assert.Contains("Assert.Contains(theOtherMessage.Header.MessageId.Value, observedIds)", content);
+        await Assert.That(content).Contains("Assert.That(observedIds).Contains(nackedMessage.Header.MessageId.Value)");
+        await Assert.That(content).Contains("Assert.That(observedIds).Contains(theOtherMessage.Header.MessageId.Value)");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

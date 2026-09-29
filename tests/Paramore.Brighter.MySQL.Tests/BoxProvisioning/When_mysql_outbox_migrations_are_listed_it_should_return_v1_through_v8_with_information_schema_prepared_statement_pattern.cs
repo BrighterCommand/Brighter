@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -47,8 +47,8 @@ public class MySqlOutboxMigrationsTests
     private static readonly string[] s_v7Added = ["DataRef", "SpecVersion"];
     private static readonly string[] s_v8Added = ["CausationId"];
 
-    [Fact]
-    public void When_mysql_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_information_schema_prepared_statement_pattern()
+    [Test]
+    public async System.Threading.Tasks.Task When_mysql_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_information_schema_prepared_statement_pattern()
     {
         //Arrange — derive each version's expected LogicalColumns by accumulating
         //per-version additions from the archaeology (spec README outbox table).
@@ -61,10 +61,10 @@ public class MySqlOutboxMigrationsTests
         var migrations = new MySqlOutboxMigrationCatalog().All(config);
 
         //Assert — exactly eight migrations numbered 1..8 in order.
-        Assert.Equal(8, migrations.Count);
+        await Assert.That(migrations.Count).IsEqualTo(8);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version.Value);
+            await Assert.That(migrations[i].Version.Value).IsEqualTo(i + 1);
         }
 
         //Assert — LogicalColumns at each version match the cumulative archaeology.
@@ -72,11 +72,7 @@ public class MySqlOutboxMigrationsTests
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
-            Assert.True(
-                expected.SetEquals(migration.LogicalColumns),
-                $"V{v} LogicalColumns mismatch — " +
-                $"expected: [{string.Join(", ", expected.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-                $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+            await Assert.That(expected.SetEquals(migration.LogicalColumns)).IsTrue();
         }
 
         //Assert — V2..V8 UpScripts use the MySQL information_schema + prepared-statement
@@ -85,38 +81,36 @@ public class MySqlOutboxMigrationsTests
         //the ALTER only when the column is absent.
         for (var v = 2; v <= 8; v++)
         {
-            var script = migrations[v - 1].UpScript;
-            Assert.Contains("information_schema.columns", script, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("PREPARE stmt FROM @q", script, StringComparison.OrdinalIgnoreCase);
+            var script = migrations[v - 1].UpScript.Value;
+            await Assert.That(script).Contains("information_schema.columns");
+            await Assert.That(script).Contains("PREPARE stmt FROM @q");
         }
 
         //Assert — V1 has no single source commit; V2..V8 each carry archaeology pointers.
-        Assert.Null(migrations[0].SourceReference);
+        await Assert.That(migrations[0].SourceReference).IsNull();
         for (var v = 2; v <= 8; v++)
         {
-            Assert.False(
-                string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference),
-                $"V{v} must have a non-empty SourceReference (archaeology pointer)");
+            await Assert.That(string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference)).IsFalse().Because($"V{v} must have a non-empty SourceReference (archaeology pointer)");
         }
 
         //Assert — V4 PartitionKey on MySQL ships with the cross-backend commit
         //1cdc04b60 / PR #2560 (same as MSSQL/SQLite — distinct from Postgres's
         //cff67fd5e / #3464 which lagged the payload widening). This pins archaeology accuracy.
-        Assert.Equal("1cdc04b60 / #2560", migrations[3].SourceReference);
+        await Assert.That(migrations[3].SourceReference).IsEqualTo("1cdc04b60 / #2560");
 
         //Assert — IdempotencyCheckSql is null for MySQL (only SQLite uses that field per ADR §6).
         for (var v = 1; v <= 8; v++)
         {
-            Assert.Null(migrations[v - 1].IdempotencyCheckSql);
+            await Assert.That(migrations[v - 1].IdempotencyCheckSql).IsNull();
         }
 
         //Assert — V8 (Spec 0027, #2541) adds the CausationId column AND its replay index. Its UpScript
         //carries a CREATE INDEX on the table-scoped idx_CausationId (MySQL lacks CREATE INDEX IF NOT
         //EXISTS, so the index is emitted via the same prepared-statement probe) — the AC9 index check.
-        var v8Script = migrations[7].UpScript;
-        Assert.Contains("CausationId", v8Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CREATE INDEX", v8Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("idx_CausationId", v8Script, StringComparison.OrdinalIgnoreCase);
+        var v8Script = migrations[7].UpScript.Value;
+        await Assert.That(v8Script).Contains("CausationId");
+        await Assert.That(v8Script).Contains("CREATE INDEX");
+        await Assert.That(v8Script).Contains("idx_CausationId");
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

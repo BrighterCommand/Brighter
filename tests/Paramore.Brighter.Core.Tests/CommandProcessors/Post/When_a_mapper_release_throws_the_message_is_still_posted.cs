@@ -7,7 +7,6 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 
@@ -63,13 +62,13 @@ public class CommandProcessorPostMapperReleaseThrowsTests
         );
     }
 
-    [Fact]
-    public void When_a_mapper_release_throws_the_message_is_still_posted()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_mapper_release_throws_the_message_is_still_posted()
     {
         _commandProcessor.Post(_myCommand);
 
         //the message mapped, so the send must complete and reach the transport — a throwing release must not abort it
-        Assert.Single(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).HasSingleItem();
     }
 
     private sealed class ThrowingOnReleaseMessageMapperFactory : IAmAMessageMapperFactory

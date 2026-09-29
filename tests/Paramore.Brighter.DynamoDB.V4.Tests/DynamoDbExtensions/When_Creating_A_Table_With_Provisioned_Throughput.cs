@@ -5,14 +5,13 @@ using Amazon.DynamoDBv2.Model;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Brighter.Outbox.DynamoDB;
-using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.DynamoDbExtensions;
 
 public class DynamoDbDFactoryProvisionedThroughputTests
 {
-    [Fact]
-    public void When_Creating_A_Table_With_Provisioned_Throughput()
+    [Test]
+    public async Task When_Creating_A_Table_With_Provisioned_Throughput()
     {
         //arrange
         var tableRequestFactory = new DynamoDbTableFactory();
@@ -29,10 +28,10 @@ public class DynamoDbDFactoryProvisionedThroughputTests
         CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(provisonedThroughput);
 
         //assert
-        Assert.Equal(10, tableRequest.ProvisionedThroughput.ReadCapacityUnits);
-        Assert.Equal(10, tableRequest.ProvisionedThroughput.WriteCapacityUnits);
-        Assert.Equal(11,tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").ProvisionedThroughput.ReadCapacityUnits);
-        Assert.Equal(11,tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").ProvisionedThroughput.WriteCapacityUnits);
+        await Assert.That(tableRequest.ProvisionedThroughput.ReadCapacityUnits).IsEqualTo(10);
+        await Assert.That(tableRequest.ProvisionedThroughput.WriteCapacityUnits).IsEqualTo(10);
+        await Assert.That(tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").ProvisionedThroughput.ReadCapacityUnits).IsEqualTo(11);
+        await Assert.That(tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").ProvisionedThroughput.WriteCapacityUnits).IsEqualTo(11);
     }
 
     [DynamoDBTable("MyEntity")]

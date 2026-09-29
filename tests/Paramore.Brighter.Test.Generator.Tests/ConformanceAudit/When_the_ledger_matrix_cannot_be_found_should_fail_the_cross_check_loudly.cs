@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
@@ -15,8 +15,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// </summary>
 public class LedgerCrossCheckUnreadableLedgerTests
 {
-    [Fact]
-    public void When_the_ledger_matrix_cannot_be_found_should_fail_the_cross_check_loudly()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_ledger_matrix_cannot_be_found_should_fail_the_cross_check_loudly()
     {
         // Arrange — a ledger with prose but no matrix header at all
         var repoRoot = BuildRepoWithLedger("# Conformance status\n\nNo matrix here.\n");
@@ -24,10 +24,9 @@ public class LedgerCrossCheckUnreadableLedgerTests
         try
         {
             // Act / Assert
-            var exception = Assert.Throws<InvalidOperationException>(
-                () => LedgerSkipCrossCheckAudit.CrossCheck(repoRoot, LedgerPath(repoRoot)));
+            var exception = await Assert.That(() => LedgerSkipCrossCheckAudit.CrossCheck(repoRoot, LedgerPath(repoRoot))).ThrowsExactly<InvalidOperationException>();
 
-            Assert.Contains("Could not find the conformance matrix", exception.Message);
+            await Assert.That(exception.Message).Contains("Could not find the conformance matrix");
         }
         finally
         {
@@ -35,8 +34,8 @@ public class LedgerCrossCheckUnreadableLedgerTests
         }
     }
 
-    [Fact]
-    public void When_the_ledger_matrix_has_no_data_rows_should_fail_the_cross_check_loudly()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_ledger_matrix_has_no_data_rows_should_fail_the_cross_check_loudly()
     {
         // Arrange — the header is present and well formed, but nothing follows it
         var repoRoot = BuildRepoWithLedger(
@@ -45,10 +44,9 @@ public class LedgerCrossCheckUnreadableLedgerTests
         try
         {
             // Act / Assert
-            var exception = Assert.Throws<InvalidOperationException>(
-                () => LedgerSkipCrossCheckAudit.CrossCheck(repoRoot, LedgerPath(repoRoot)));
+            var exception = await Assert.That(() => LedgerSkipCrossCheckAudit.CrossCheck(repoRoot, LedgerPath(repoRoot))).ThrowsExactly<InvalidOperationException>();
 
-            Assert.Contains("holds no data rows", exception.Message);
+            await Assert.That(exception.Message).Contains("holds no data rows");
         }
         finally
         {

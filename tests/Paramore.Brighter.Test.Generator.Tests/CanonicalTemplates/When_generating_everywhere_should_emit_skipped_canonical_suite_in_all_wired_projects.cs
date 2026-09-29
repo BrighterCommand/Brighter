@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Paramore.Brighter.Test.Generator;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -86,52 +86,50 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
         return missing;
     }
 
-    [Fact]
-    public void When_generating_everywhere_should_find_exactly_twenty_wired_configurations()
+    [Test]
+    public async System.Threading.Tasks.Task When_generating_everywhere_should_find_exactly_twenty_wired_configurations()
     {
         // Arrange — resolved in constructor
 
         // Assert — both variants must agree on the configuration count.
-        Assert.Equal(EXPECTED_WIRED_CONFIGURATION_COUNT, _reactorGeneratedDirs.Count);
-        Assert.Equal(EXPECTED_WIRED_CONFIGURATION_COUNT, _proactorGeneratedDirs.Count);
+        await Assert.That(_reactorGeneratedDirs.Count).IsEqualTo(EXPECTED_WIRED_CONFIGURATION_COUNT);
+        await Assert.That(_proactorGeneratedDirs.Count).IsEqualTo(EXPECTED_WIRED_CONFIGURATION_COUNT);
     }
 
-    [Fact]
-    public void When_generating_everywhere_all_wired_reactor_directories_should_contain_canonical_suite()
+    [Test]
+    public async System.Threading.Tasks.Task When_generating_everywhere_all_wired_reactor_directories_should_contain_canonical_suite()
     {
         // Arrange — resolved in constructor
 
         // Assert — every wired Generated/Reactor directory contains the full canonical suite
         var missing = FindMissingCanonicalFiles(_reactorGeneratedDirs, "Reactor");
 
-        Assert.True(missing.Count == 0,
-            $"Canonical Reactor files absent after regeneration — run ./generate-test.sh and rebuild:\n" +
+        await Assert.That(missing.Count == 0).IsTrue().Because($"Canonical Reactor files absent after regeneration — run ./generate-test.sh and rebuild:\n" +
             string.Join("\n", missing));
     }
 
-    [Fact]
-    public void When_generating_everywhere_all_wired_proactor_directories_should_contain_canonical_suite()
+    [Test]
+    public async System.Threading.Tasks.Task When_generating_everywhere_all_wired_proactor_directories_should_contain_canonical_suite()
     {
         // Arrange — resolved in constructor
 
         // Assert — every wired Generated/Proactor directory contains the full canonical suite
         var missing = FindMissingCanonicalFiles(_proactorGeneratedDirs, "Proactor");
 
-        Assert.True(missing.Count == 0,
-            $"Canonical Proactor files absent after regeneration — run ./generate-test.sh and rebuild:\n" +
+        await Assert.That(missing.Count == 0).IsTrue().Because($"Canonical Proactor files absent after regeneration — run ./generate-test.sh and rebuild:\n" +
             string.Join("\n", missing));
     }
 
-    [Fact]
-    public void When_generating_everywhere_all_canonical_reactor_tests_should_match_ledger_skip()
+    [Test]
+    public async System.Threading.Tasks.Task When_generating_everywhere_all_canonical_reactor_tests_should_match_ledger_skip()
     {
-        AssertCanonicalSkipMatchesLedger(_reactorGeneratedDirs, "Reactor");
+        await AssertCanonicalSkipMatchesLedger(_reactorGeneratedDirs, "Reactor");
     }
 
-    [Fact]
-    public void When_generating_everywhere_all_canonical_proactor_tests_should_match_ledger_skip()
+    [Test]
+    public async System.Threading.Tasks.Task When_generating_everywhere_all_canonical_proactor_tests_should_match_ledger_skip()
     {
-        AssertCanonicalSkipMatchesLedger(_proactorGeneratedDirs, "Proactor");
+        await AssertCanonicalSkipMatchesLedger(_proactorGeneratedDirs, "Proactor");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -142,7 +140,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
     /// The expectation is computed from the same conformance ledger the generator reads, so this
     /// gate stays correct as the rollout proves behaviours (ADR 0067 "How master stays green").
     /// </summary>
-    private static void AssertCanonicalSkipMatchesLedger(
+    private static async System.Threading.Tasks.Task AssertCanonicalSkipMatchesLedger(
         IReadOnlyList<string> variantDirs, string variant)
     {
         var ledger = LoadRealLedger();
@@ -160,7 +158,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
 
                 // GetSkip returns a non-empty Deferred string unless the cell is Pass/Fixed.
                 var expectSkip = ledger.GetSkip(ledgerKey, frColumn, templateName).Length > 0;
-                var hasSkip = File.ReadAllText(filePath).Contains("Skip = \"Deferred:");
+                var hasSkip = File.ReadAllText(filePath).Contains("Skip(\"Deferred:");
 
                 if (expectSkip && !hasSkip)
                     violations.Add(
@@ -171,8 +169,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
             }
         }
 
-        Assert.True(violations.Count == 0,
-            $"Canonical {variant} tests' Skip state disagrees with the conformance ledger:\n" +
+        await Assert.That(violations.Count == 0).IsTrue().Because($"Canonical {variant} tests' Skip state disagrees with the conformance ledger:\n" +
             string.Join("\n", violations));
     }
 

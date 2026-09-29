@@ -26,15 +26,14 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles;
-using Xunit;
 using global::FluentValidation;
 
 namespace Paramore.Brighter.Validation.FluentValidation.Tests
 {
     public class ConcurrentValidationTests
     {
-        [Fact]
-        public void When_the_handler_is_used_concurrently_should_validate_each_request()
+        [Test]
+        public async Task When_the_handler_is_used_concurrently_should_validate_each_request()
         {
             //Arrange
             var services = new ServiceCollection();
@@ -49,12 +48,18 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests
                 {
                     var valid = new GreetingCommand { Name = "Ada", Email = "ada@example.com" };
                     var result = handler.Handle(valid);
-                    Assert.Same(valid, result);
+                    if (!ReferenceEquals(result, valid))
+                    {
+                        throw new TUnit.Assertions.Exceptions.AssertionException(
+                            "Expected the handler to return the original request instance.");
+                    }
                 }
                 else
                 {
                     var invalid = new GreetingCommand { Name = "", Email = "" };
-                    Assert.Throws<RequestValidationException>(() => handler.Handle(invalid));
+#pragma warning disable TUnitAssertions0002 // Synchronous callback: the assertion is executed by GetResult.
+                    Assert.That(() => handler.Handle(invalid)).ThrowsExactly<RequestValidationException>().GetAwaiter().GetResult();
+#pragma warning restore TUnitAssertions0002
                 }
             });
         }

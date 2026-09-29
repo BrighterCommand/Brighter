@@ -32,7 +32,7 @@ using Paramore.Brighter.Inbox.Spanner;
 using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Outbox.Spanner;
 using Paramore.Brighter.Validation;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning.Legacy;
 
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning.Legacy;
 /// (raw DDL). The connection string embeds <c>EmulatorDetection.EmulatorOrProduction</c> so both the
 /// DDL connections and the store's internal connections detect the emulator (issue #4162).
 /// </remarks>
-[Trait("Category", "Spanner")]
+[Property("Category", "Spanner")]
 public sealed class SpannerLegacySchemaCausationCompatibilityTests : IDisposable
 {
     private const string CausationId = "causation-A";
@@ -59,8 +59,8 @@ public sealed class SpannerLegacySchemaCausationCompatibilityTests : IDisposable
     }.ConnectionString;
     private readonly List<string> _tablesToDrop = [];
 
-    [Fact]
-    public void When_spanner_outbox_lacks_causation_column_should_still_add_and_retrieve()
+    [Test]
+    public async System.Threading.Tasks.Task When_spanner_outbox_lacks_causation_column_should_still_add_and_retrieve()
     {
         // Arrange — a pre-feature outbox table (V7: every column except CausationId)
         var tableName = NewTableName();
@@ -74,11 +74,11 @@ public sealed class SpannerLegacySchemaCausationCompatibilityTests : IDisposable
         var outstanding = outbox.OutstandingMessages(TimeSpan.Zero, context).Select(m => m.Id).ToArray();
 
         // Assert
-        Assert.Contains(message.Id, outstanding);
+        await Assert.That(outstanding).Contains(message.Id);
     }
 
-    [Fact]
-    public void When_spanner_inbox_lacks_causation_column_should_still_add_and_retrieve()
+    [Test]
+    public async System.Threading.Tasks.Task When_spanner_inbox_lacks_causation_column_should_still_add_and_retrieve()
     {
         // Arrange — a pre-feature inbox table (V2: ContextKey present, no CausationId)
         var tableName = NewTableName();
@@ -94,12 +94,12 @@ public sealed class SpannerLegacySchemaCausationCompatibilityTests : IDisposable
         var retrieved = inbox.Get<MyCommand>(command.Id, contextKey, context);
 
         // Assert
-        Assert.True(exists);
-        Assert.Equal(command.Value, retrieved.Value);
+        await Assert.That(exists).IsTrue();
+        await Assert.That(retrieved.Value).IsEqualTo(command.Value);
     }
 
-    [Fact]
-    public void When_spanner_outbox_lacks_causation_column_should_not_support_causation_tracking()
+    [Test]
+    public async System.Threading.Tasks.Task When_spanner_outbox_lacks_causation_column_should_not_support_causation_tracking()
     {
         // Arrange
         var tableName = NewTableName();
@@ -107,11 +107,11 @@ public sealed class SpannerLegacySchemaCausationCompatibilityTests : IDisposable
         var outbox = (IAmACausationTrackingOutbox)OutboxFor(tableName);
 
         // Act / Assert — the live schema probe must report the column missing
-        Assert.False(outbox.SupportsCausationTracking());
+        await Assert.That(outbox.SupportsCausationTracking()).IsFalse();
     }
 
-    [Fact]
-    public void When_spanner_inbox_lacks_causation_column_should_not_support_causation_tracking()
+    [Test]
+    public async System.Threading.Tasks.Task When_spanner_inbox_lacks_causation_column_should_not_support_causation_tracking()
     {
         // Arrange
         var tableName = NewTableName();
@@ -119,11 +119,11 @@ public sealed class SpannerLegacySchemaCausationCompatibilityTests : IDisposable
         var inbox = (IAmACausationTrackingInbox)InboxFor(tableName);
 
         // Act / Assert
-        Assert.False(inbox.SupportsCausationTracking());
+        await Assert.That(inbox.SupportsCausationTracking()).IsFalse();
     }
 
-    [Fact]
-    public void When_replay_validated_against_legacy_schema_stores_should_be_rejected()
+    [Test]
+    public async Task When_replay_validated_against_legacy_schema_stores_should_be_rejected()
     {
         // Arrange — Replay-configured pipeline against legacy (un-migrated) inbox + outbox
         var inboxTable = NewTableName();
@@ -141,13 +141,19 @@ public sealed class SpannerLegacySchemaCausationCompatibilityTests : IDisposable
 
         // Assert — both stores implement the role but the live schema does not support it,
         // so validation flags the un-migrated schema (locks the opt-in guard end-to-end)
-        Assert.NotEmpty(findings);
-        Assert.All(findings, f => Assert.Equal(ValidationSeverity.Warning, f.Severity));
-        Assert.Contains(findings, f => f.Message.Contains("schema does not support"));
+        await Assert.That(findings).IsNotEmpty();
+        using (Assert.Multiple())
+        {
+            foreach (var f in findings)
+            {
+                await Assert.That(f.Severity).IsEqualTo(ValidationSeverity.Warning);
+            }
+        }
+        await Assert.That(findings).Contains(f => f.Message.Contains("schema does not support"));
     }
 
-    [Fact]
-    public void When_spanner_outbox_has_causation_column_should_still_track_causation()
+    [Test]
+    public async System.Threading.Tasks.Task When_spanner_outbox_has_causation_column_should_still_track_causation()
     {
         // Arrange — regression guard: a CURRENT-builder outbox (CausationId present) must keep tracking
         var tableName = NewTableName();
@@ -165,13 +171,13 @@ public sealed class SpannerLegacySchemaCausationCompatibilityTests : IDisposable
         var outstandingAfterReplay = outbox.OutstandingMessages(TimeSpan.Zero, context).Select(m => m.Id).ToArray();
 
         // Assert — replay can only match because the CausationId was written
-        Assert.True(trackingOutbox.SupportsCausationTracking());
-        Assert.DoesNotContain(message.Id, outstandingAfterDispatch);
-        Assert.Contains(message.Id, outstandingAfterReplay);
+        await Assert.That(trackingOutbox.SupportsCausationTracking()).IsTrue();
+        await Assert.That(outstandingAfterDispatch).DoesNotContain(message.Id);
+        await Assert.That(outstandingAfterReplay).Contains(message.Id);
     }
 
-    [Fact]
-    public void When_spanner_inbox_has_causation_column_should_still_track_causation()
+    [Test]
+    public async System.Threading.Tasks.Task When_spanner_inbox_has_causation_column_should_still_track_causation()
     {
         // Arrange — regression guard: a CURRENT-builder inbox (CausationId present) must keep tracking
         var tableName = NewTableName();
@@ -187,8 +193,8 @@ public sealed class SpannerLegacySchemaCausationCompatibilityTests : IDisposable
         var storedCausationId = trackingInbox.GetCausationId(command.Id, contextKey, context);
 
         // Assert
-        Assert.True(trackingInbox.SupportsCausationTracking());
-        Assert.Equal(CausationId, storedCausationId);
+        await Assert.That(trackingInbox.SupportsCausationTracking()).IsTrue();
+        await Assert.That(storedCausationId).IsEqualTo(CausationId);
     }
 
     private string NewTableName()

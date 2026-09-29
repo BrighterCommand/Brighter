@@ -31,7 +31,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // pipeline scope decision.
 public class AdoptionDecisionCountTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_send_a_publish_and_a_post_run_the_recorder_should_show_five_adoption_decisions()
     {
         // Arrange - a JoinAmbient host, all three lifetimes Scoped, with a provider that never actually
@@ -129,19 +129,19 @@ public class AdoptionDecisionCountTests
         // Assert - exactly five asks were made: the Send's own handler pipeline, each of the three
         // Publish subscribers' own pipelines, and the Post's one transform pipeline (shared by its mapper
         // and its transformer, never asked twice)
-        Assert.Equal(5, recordingProvider.Asks.Count);
+        await Assert.That(recordingProvider.Asks.Count).IsEqualTo(5);
 
         // Assert - the Send's handler pipeline asked to join whatever ambient is available
-        Assert.Equal(ScopeAffinity.JoinAmbient, recordingProvider.Asks[0]);
+        await Assert.That(recordingProvider.Asks[0]).IsEqualTo(ScopeAffinity.JoinAmbient);
 
         // Assert - each Publish subscriber's own pipeline always creates and owns its own scope, never
         // asking to join an ambient, whatever affinity the host otherwise opted into
-        Assert.Equal(ScopeAffinity.AlwaysNew, recordingProvider.Asks[1]);
-        Assert.Equal(ScopeAffinity.AlwaysNew, recordingProvider.Asks[2]);
-        Assert.Equal(ScopeAffinity.AlwaysNew, recordingProvider.Asks[3]);
+        await Assert.That(recordingProvider.Asks[1]).IsEqualTo(ScopeAffinity.AlwaysNew);
+        await Assert.That(recordingProvider.Asks[2]).IsEqualTo(ScopeAffinity.AlwaysNew);
+        await Assert.That(recordingProvider.Asks[3]).IsEqualTo(ScopeAffinity.AlwaysNew);
 
         // Assert - the Post's one transform pipeline asked to join whatever ambient is available, exactly
         // once - not once for its mapper and again for its transformer
-        Assert.Equal(ScopeAffinity.JoinAmbient, recordingProvider.Asks[4]);
+        await Assert.That(recordingProvider.Asks[4]).IsEqualTo(ScopeAffinity.JoinAmbient);
     }
 }

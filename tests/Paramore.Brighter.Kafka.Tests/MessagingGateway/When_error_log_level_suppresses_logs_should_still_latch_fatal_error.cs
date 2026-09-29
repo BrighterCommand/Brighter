@@ -2,12 +2,12 @@ using System;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
+
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Property("Category", "Kafka")]
+[System.Obsolete]
 public class When_error_log_level_suppresses_logs_should_still_latch_fatal_error : IDisposable
 {
     private readonly KafkaMessageConsumer _consumer;
@@ -30,15 +30,23 @@ public class When_error_log_level_suppresses_logs_should_still_latch_fatal_error
         );
     }
 
-    [Fact]
-    public void When_the_error_log_level_suppresses_logging_the_fatal_error_is_still_latched()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_error_log_level_suppresses_logging_the_fatal_error_is_still_latched()
     {
         //Act - even though the hook suppresses the log call, the fatal error must still latch the consumer
         _consumer.HandleError(new Error(ErrorCode.Local_Fatal, "a fatal consumer error", isFatal: true));
-        var exception = Record.Exception(() => _consumer.Receive(TimeSpan.Zero));
+        Exception? exception = null;
+        try
+        {
+            _consumer.Receive(TimeSpan.Zero);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert - the latch fires purely from error.IsFatal, independent of the hook
-        Assert.IsType<ChannelFailureException>(exception);
+        await Assert.That(exception).IsTypeOf<ChannelFailureException>();
     }
 
     public void Dispose()

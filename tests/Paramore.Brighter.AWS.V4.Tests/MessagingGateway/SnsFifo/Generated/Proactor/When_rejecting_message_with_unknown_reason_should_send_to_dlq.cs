@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsFifo.Proactor;
 
-[Trait("Category", "Sns")]
-[Collection("SnsFifo")]
-public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncLifetime
+[Property("Category", "Sns")]
+[NotInParallel("SnsFifo")]
+public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -31,17 +32,20 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
         _messageBuilder = new FifoMessageBuilder();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
+
     public async Task When_rejecting_message_with_unknown_reason_should_send_to_dlq_async()
     {
         // Arrange — both a dead-letter queue and an invalid-message channel are configured
@@ -62,7 +66,7 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
 
         // Act
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.None, "Test unknown rejection reason"));
 
@@ -79,22 +83,22 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
             await Task.Delay(500);
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
         // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
         if (keys.StampsRejectionMetadata)
         {
-            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
-            Assert.Equal(RejectionReason.None.ToString(), dlqMessage.Header.Bag[keys.RejectionReason].ToString());
-            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
-            Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason)).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag[keys.RejectionReason].ToString()).IsEqualTo(RejectionReason.None.ToString());
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic)).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag[keys.OriginalTopic].ToString()).IsEqualTo(_publication.Topic!.Value);
         }
 
         // Assert — nothing reached the invalid-message channel. A single receive rather than a
         // poll loop: the claim is that no message arrives, so polling would wait out the ceiling.
         var invalidMessage = await _messageGatewayProvider.GetMessageFromInvalidChannelAsync(_subscription);
-        Assert.Equal(MessageType.MT_NONE, invalidMessage.Header.MessageType);
+        await Assert.That(invalidMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 }

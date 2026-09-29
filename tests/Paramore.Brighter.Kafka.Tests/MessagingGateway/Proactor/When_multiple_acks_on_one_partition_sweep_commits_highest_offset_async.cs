@@ -28,16 +28,14 @@ using Confluent.Kafka;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
+[Property("Category", "Kafka")]
+[System.Obsolete]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageConsumerSweepCommitsHighestOffsetAsync : IAsyncDisposable, IDisposable
 {
-    private readonly ITestOutputHelper _output;
+
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly string _groupId = Guid.NewGuid().ToString();
@@ -46,9 +44,8 @@ public class KafkaMessageConsumerSweepCommitsHighestOffsetAsync : IAsyncDisposab
     private readonly string _partitionKey = Guid.NewGuid().ToString();
     private readonly FakeTimeProvider _fakeTimeProvider;
 
-    public KafkaMessageConsumerSweepCommitsHighestOffsetAsync(ITestOutputHelper output)
+    public KafkaMessageConsumerSweepCommitsHighestOffsetAsync()
     {
-        _output = output;
 
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
@@ -96,7 +93,7 @@ public class KafkaMessageConsumerSweepCommitsHighestOffsetAsync : IAsyncDisposab
             .CreateAsync(subscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_multiple_acks_on_one_partition_sweep_commits_highest_offset_async()
     {
         //Arrange
@@ -132,8 +129,8 @@ public class KafkaMessageConsumerSweepCommitsHighestOffsetAsync : IAsyncDisposab
         }
 
         //all three acknowledged, none flushed by a batch commit
-        Assert.Equal(3, consumedMessages.Count);
-        Assert.Equal(3, _consumer.StoredOffsets());
+        await Assert.That(consumedMessages.Count).IsEqualTo(3);
+        await Assert.That(_consumer.StoredOffsets()).IsEqualTo(3);
 
         //Act - advance time beyond the sweeper interval so the sweep commits everything it holds
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(31));
@@ -146,12 +143,12 @@ public class KafkaMessageConsumerSweepCommitsHighestOffsetAsync : IAsyncDisposab
             sweepRetries++;
         }
 
-        Assert.Equal(0, _consumer.StoredOffsets());
+        await Assert.That(_consumer.StoredOffsets()).IsEqualTo(0);
 
         //Assert - the committed offset for the partition must be the highest offset acknowledged
         //(3), not an arbitrary lower one from the duplicate entries the sweep handed to Commit
         var committedOffset = GetCommittedOffset();
-        Assert.Equal(3, committedOffset.Value);
+        await Assert.That(committedOffset.Value).IsEqualTo(3);
 
         _consumer.Close();
     }
@@ -196,7 +193,7 @@ public class KafkaMessageConsumerSweepCommitsHighestOffsetAsync : IAsyncDisposab
             catch (ChannelFailureException cfx)
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 await Task.Delay(1000);
             }
         } while (maxTries <= 10);

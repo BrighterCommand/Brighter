@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
 using Neuroglia.AsyncApi.v3;
-using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
 {
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Generate_Receive_Operation_For_Subscription_With_RequestType()
         {
             var subscriptions = new[]
@@ -73,20 +72,20 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, null);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Channels);
-            Assert.True(result.Channels.ContainsKey("order_created"));
-            Assert.Equal("order.created", result.Channels["order_created"].Address);
+            await Assert.That(result.Channels).IsNotNull();
+            await Assert.That(result.Channels.ContainsKey("order_created")).IsTrue();
+            await Assert.That(result.Channels["order_created"].Address).IsEqualTo("order.created");
 
-            Assert.NotNull(result.Operations);
-            Assert.True(result.Operations.ContainsKey("receive_order_created"));
-            Assert.Equal(V3OperationAction.Receive, result.Operations["receive_order_created"].Action);
+            await Assert.That(result.Operations).IsNotNull();
+            await Assert.That(result.Operations.ContainsKey("receive_order_created")).IsTrue();
+            await Assert.That(result.Operations["receive_order_created"].Action).IsEqualTo(V3OperationAction.Receive);
 
-            Assert.NotNull(result.Components?.Messages);
-            Assert.True(result.Components.Messages.ContainsKey("TestEvent"));
-            Assert.Equal("TestEvent", result.Components.Messages["TestEvent"].Name);
+            await Assert.That(result.Components?.Messages).IsNotNull();
+            await Assert.That(result.Components.Messages.ContainsKey("TestEvent")).IsTrue();
+            await Assert.That(result.Components.Messages["TestEvent"].Name).IsEqualTo("TestEvent");
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Generate_Placeholder_Message_When_RequestType_Uses_MapRequestType()
         {
             var subscriptions = new[]
@@ -103,11 +102,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, null);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Components?.Messages);
-            Assert.True(result.Components.Messages.ContainsKey("order_createdMessage"));
+            await Assert.That(result.Components?.Messages).IsNotNull();
+            await Assert.That(result.Components.Messages.ContainsKey("order_createdMessage")).IsTrue();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Skip_Subscription_With_Empty_RoutingKey()
         {
             var subscriptions = new[]
@@ -123,21 +122,21 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, null);
             var result = await generator.GenerateAsync();
 
-            Assert.Empty(result.Channels);
-            Assert.Empty(result.Operations);
+            await Assert.That(result.Channels).IsEmpty();
+            await Assert.That(result.Operations).IsEmpty();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Handle_Null_Subscriptions()
         {
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, null);
             var result = await generator.GenerateAsync();
 
-            Assert.Empty(result.Channels);
-            Assert.Empty(result.Operations);
+            await Assert.That(result.Channels).IsEmpty();
+            await Assert.That(result.Operations).IsEmpty();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Include_Servers_When_Configured()
         {
             _options.Servers = new Dictionary<string, V3ServerDefinition>
@@ -152,12 +151,12 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, null);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Servers);
-            Assert.True(result.Servers.ContainsKey("production"));
-            Assert.Equal("rabbitmq:5672", result.Servers["production"].Host);
+            await Assert.That(result.Servers).IsNotNull();
+            await Assert.That(result.Servers.ContainsKey("production")).IsTrue();
+            await Assert.That(result.Servers["production"].Host).IsEqualTo("rabbitmq:5672");
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Isolate_Servers_From_Options_Mutations()
         {
             _options.Servers = new Dictionary<string, V3ServerDefinition>
@@ -180,10 +179,10 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
 
             // The previously generated document must NOT contain the new key
-            Assert.NotNull(result.Servers);
-            Assert.Single(result.Servers);
-            Assert.True(result.Servers.ContainsKey("production"));
-            Assert.False(result.Servers.ContainsKey("staging"));
+            await Assert.That(result.Servers).IsNotNull();
+            await Assert.That(result.Servers).HasSingleItem();
+            await Assert.That(result.Servers.ContainsKey("production")).IsTrue();
+            await Assert.That(result.Servers.ContainsKey("staging")).IsFalse();
         }
 
         public class TestEvent : Event

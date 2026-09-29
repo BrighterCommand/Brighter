@@ -19,51 +19,32 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Reject.Attributes;
 using Paramore.Brighter.Reject.Handlers;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class SyncHandlerAsyncAttributeValidationTests
 {
-    [Fact]
-    public void When_sync_handler_has_async_attribute_should_report_error()
+    [Test]
+    public async Task When_sync_handler_has_async_attribute_should_report_error()
     {
         // Arrange — sync handler (isAsync: false) with an async step handler type
         // RejectMessageOnErrorHandlerAsync<> extends RequestHandlerAsync<T>, not RequestHandler<T>
-        var description = new HandlerPipelineDescription(
-            requestType: typeof(MyCommand),
-            handlerType: typeof(MyCommandHandler),
-            isAsync: false,
-            beforeSteps:
-            [
-                new PipelineStepDescription(
-                    typeof(RejectMessageOnErrorAsyncAttribute),
-                    typeof(RejectMessageOnErrorHandlerAsync<>),
-                    Step: 1,
-                    HandlerTiming.Before)
-            ],
-            afterSteps: []);
-
+        var description = new HandlerPipelineDescription(requestType: typeof(MyCommand), handlerType: typeof(MyCommandHandler), isAsync: false, beforeSteps: [new PipelineStepDescription(typeof(RejectMessageOnErrorAsyncAttribute), typeof(RejectMessageOnErrorHandlerAsync<>), Step: 1, HandlerTiming.Before)], afterSteps: []);
         var spec = HandlerPipelineValidationRules.AttributeAsyncConsistency();
-
         // Act
         var satisfied = spec.IsSatisfiedBy(description);
         var collector = new ValidationResultCollector<HandlerPipelineDescription>();
         var results = spec.Accept(collector).Where(r => !r.Success).ToList();
-
         // Assert
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Error, results[0].Error!.Severity);
-        Assert.Contains("Sync handler uses async attribute", results[0].Error!.Message);
-        Assert.Contains("RejectMessageOnErrorAsyncAttribute", results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Error);
+        await Assert.That(results[0].Error!.Message).Contains("Sync handler uses async attribute");
+        await Assert.That(results[0].Error!.Message).Contains("RejectMessageOnErrorAsyncAttribute");
     }
 }

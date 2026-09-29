@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -30,19 +31,18 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusCloudEventsPartitionKeyPrecedenceTests
 {
-    [Theory]
-    [InlineData("cloud-partitionkey", "native-partitionkey", "cloud-partitionkey")]
-    [InlineData("cloud-partitionkey", null, "cloud-partitionkey")]
-    [InlineData("cloud-partitionkey", "", "cloud-partitionkey")]
-    [InlineData("", "native-partitionkey", "")]
-    [InlineData(null, "native-partitionkey", "")]
+    [Test]
+    [Arguments("cloud-partitionkey", "native-partitionkey", "cloud-partitionkey")]
+    [Arguments("cloud-partitionkey", null, "cloud-partitionkey")]
+    [Arguments("cloud-partitionkey", "", "cloud-partitionkey")]
+    [Arguments("", "native-partitionkey", "")]
+    [Arguments(null, "native-partitionkey", "")]
     public async Task When_receiving_a_message_should_prefer_its_cloud_events_partition_key(
         string? cloudPartitionKey, string? nativePartitionKey, string expectedPartitionKey)
     {
@@ -63,8 +63,8 @@ public class AzureServiceBusCloudEventsPartitionKeyPrecedenceTests
         var messages = await consumer.ReceiveAsync(TimeSpan.FromSeconds(1));
 
         // Assert
-        var received = Assert.Single(messages);
-        Assert.Equal(expectedPartitionKey, received.Header.PartitionKey.Value);
-        Assert.Equal(cloudPartitionKey, received.Header.Bag["cloudEvents:partitionkey"]);
+        var received = await Assert.That(messages).HasSingleItem();
+        await Assert.That(received.Header.PartitionKey.Value).IsEqualTo(expectedPartitionKey);
+        await Assert.That(received.Header.Bag["cloudEvents:partitionkey"]).IsEqualTo(cloudPartitionKey);
     }
 }

@@ -31,8 +31,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 
 public class GcpPubSubCombinedChannelFactoryRoutingTests
 {
-    [Fact]
-    public void When_matching_a_gcp_pubsub_subscription_against_a_combined_factory_should_select_one_inner_factory()
+    [Test]
+    public async System.Threading.Tasks.Task When_matching_a_gcp_pubsub_subscription_against_a_combined_factory_should_select_one_inner_factory()
     {
         // Arrange — construction only, so no broker connection is made (NFR-3)
         var connection = new GcpMessagingGatewayConnection();
@@ -48,6 +48,6 @@ public class GcpPubSubCombinedChannelFactoryRoutingTests
             .Count(factoryType => factoryType == subscription.ChannelFactoryType);
 
         // Assert
-        Assert.Equal(1, matchingInnerFactories);
+        await Assert.That(matchingInnerFactories).IsEqualTo(1);
     }
 }

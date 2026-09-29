@@ -33,13 +33,13 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class PipelineValidationDisabledTests
 {
-    [Fact]
+    [Test]
     public async Task When_pipeline_validation_is_disabled_should_evaluate_no_rules()
     {
         // Arrange — the AC-16 mismatched configuration, but with pipeline validation disabled.
@@ -68,10 +68,10 @@ public class PipelineValidationDisabledTests
         await service.StartAsync(CancellationToken.None);
 
         // Assert — the host started and reached Receive
-        Assert.True(dispatcher.ReceiveWasCalled);
+        await Assert.That(dispatcher.ReceiveWasCalled).IsTrue();
 
         // Assert — no validation results are produced by any rule: the validator itself was
         // never registered (validation disabled), so there is nothing to evaluate
-        Assert.Null(provider.GetService<IAmAPipelineValidator>());
+        await Assert.That(provider.GetService<IAmAPipelineValidator>()).IsNull();
     }
 }

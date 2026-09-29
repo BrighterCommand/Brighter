@@ -33,23 +33,22 @@ using Amazon.DynamoDBv2.Model;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Outbox.DynamoDB;
-using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox;
 
-[Trait("Category", "DynamoDB")]
-[Collection("DynamoDBOutbox")]
-public class DynamoDbTrippedTopicsTests : IAsyncLifetime
+[Property("Category", "DynamoDB")]
+[NotInParallel("DynamoDBOutbox")]
+public class DynamoDbTrippedTopicsTests
 {
     private readonly string _tableName = $"brighter_tripped_topics_{Guid.NewGuid():N}";
     private readonly FakeTimeProvider _timeProvider = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
     private readonly RequestContext _context = new();
 
-    [Theory]
-    [InlineData(false, 1)]
-    [InlineData(true, 1)]
-    [InlineData(false, 3)]
-    [InlineData(true, 3)]
+    [Test]
+    [Arguments(false, 1)]
+    [Arguments(true, 1)]
+    [Arguments(false, 3)]
+    [Arguments(true, 3)]
     public async Task When_retrieving_outstanding_messages_should_exclude_tripped_topics(bool isAsync, int scanConcurrency)
     {
         //Arrange
@@ -71,22 +70,22 @@ public class DynamoDbTrippedTopicsTests : IAsyncLifetime
         var filtered = await ReadAsync(outbox, isAsync, [new RoutingKey("orders")]);
 
         //Assert
-        AssertIds(filtered, payments, quoted, differentCase);
-        AssertIds(await ReadAsync(outbox, isAsync, [new RoutingKey("orders"), new RoutingKey("orders'archive")]),
+        await AssertIdsAsync(filtered, payments, quoted, differentCase);
+        await AssertIdsAsync(await ReadAsync(outbox, isAsync, [new RoutingKey("orders"), new RoutingKey("orders'archive")]),
             payments, differentCase);
-        AssertIds(await ReadAsync(outbox, isAsync, [new RoutingKey("orders"), new RoutingKey("orders")]),
+        await AssertIdsAsync(await ReadAsync(outbox, isAsync, [new RoutingKey("orders"), new RoutingKey("orders")]),
             payments, quoted, differentCase);
-        Assert.Empty(await ReadAsync(outbox, isAsync,
+        await Assert.That(await ReadAsync(outbox, isAsync,
             [new RoutingKey("orders"), new RoutingKey("payments"), new RoutingKey("orders'archive"), new RoutingKey("Orders")],
-            pageSize: 100));
-        AssertIds(await ReadAsync(outbox, isAsync, null), orders, payments, quoted, differentCase);
-        AssertIds(await ReadAsync(outbox, isAsync, []), orders, payments, quoted, differentCase);
-        AssertIds(await ReadAsync(outbox, isAsync, [new RoutingKey("unknown")]), orders, payments, quoted, differentCase);
+            pageSize: 100)).IsEmpty();
+        await AssertIdsAsync(await ReadAsync(outbox, isAsync, null), orders, payments, quoted, differentCase);
+        await AssertIdsAsync(await ReadAsync(outbox, isAsync, []), orders, payments, quoted, differentCase);
+        await AssertIdsAsync(await ReadAsync(outbox, isAsync, [new RoutingKey("unknown")]), orders, payments, quoted, differentCase);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_querying_a_tripped_topic_should_return_no_messages(bool isAsync)
     {
         //Arrange
@@ -100,18 +99,18 @@ public class DynamoDbTrippedTopicsTests : IAsyncLifetime
         var filtered = await ReadAsync(outbox, isAsync, [new RoutingKey("orders")], args: args);
 
         //Assert
-        Assert.Empty(filtered);
-        AssertIds(await ReadAsync(outbox, isAsync, [new RoutingKey("payments")], args: args), orders);
-        AssertIds(await ReadAsync(outbox, isAsync, [new RoutingKey("Orders")], args: args), orders);
-        AssertIds(await ReadAsync(outbox, isAsync, null, args: args), orders);
-        AssertIds(await ReadAsync(outbox, isAsync, [], args: args), orders);
+        await Assert.That(filtered).IsEmpty();
+        await AssertIdsAsync(await ReadAsync(outbox, isAsync, [new RoutingKey("payments")], args: args), orders);
+        await AssertIdsAsync(await ReadAsync(outbox, isAsync, [new RoutingKey("Orders")], args: args), orders);
+        await AssertIdsAsync(await ReadAsync(outbox, isAsync, null, args: args), orders);
+        await AssertIdsAsync(await ReadAsync(outbox, isAsync, [], args: args), orders);
     }
 
-    [Theory]
-    [InlineData(false, 1)]
-    [InlineData(true, 1)]
-    [InlineData(false, 3)]
-    [InlineData(true, 3)]
+    [Test]
+    [Arguments(false, 1)]
+    [Arguments(true, 1)]
+    [Arguments(false, 3)]
+    [Arguments(true, 3)]
     public async Task When_paging_outstanding_messages_should_continue_after_partial_pages_without_tripped_topics(bool isAsync, int scanConcurrency)
     {
         //Arrange
@@ -128,14 +127,14 @@ public class DynamoDbTrippedTopicsTests : IAsyncLifetime
         for (var pageNumber = 1; pageNumber <= 18 && received.Count < eligible.Length; pageNumber++)
         {
             var page = await ReadAsync(outbox, isAsync, [new RoutingKey("orders")], pageSize: 3, pageNumber: pageNumber);
-            Assert.InRange(page.Length, 0, 3);
+            await Assert.That(page.Length).IsGreaterThanOrEqualTo(0).And.IsLessThanOrEqualTo(3);
 
             received.AddRange(page);
         }
 
         //Assert
-        AssertIds(received, eligible);
-        Assert.Equal(received.Count, received.Select(message => message.Id).Distinct().Count());
+        await AssertIdsAsync(received, eligible);
+        await Assert.That(received.Select(message => message.Id).Distinct().Count()).IsEqualTo(received.Count);
     }
 
     private DynamoDbOutbox CreateOutbox(int scanConcurrency)
@@ -156,10 +155,12 @@ public class DynamoDbTrippedTopicsTests : IAsyncLifetime
         return messages.ToArray();
     }
 
-    private static void AssertIds(IEnumerable<Message> actual, params Message[] expected)
-        => Assert.Equal(expected.Select(message => message.Id.Value).OrderBy(id => id),
-            actual.Select(message => message.Id.Value).OrderBy(id => id));
+    private static async Task AssertIdsAsync(IEnumerable<Message> actual, params Message[] expected)
+        => await Assert.That(actual.Select(message => message.Id.Value).OrderBy(id => id))
+            .IsEquivalentTo(expected.Select(message => message.Id.Value).OrderBy(id => id),
+                TUnit.Assertions.Enums.CollectionOrdering.Matching);
 
+    [Before(HookType.Test)]
     public async Task InitializeAsync()
     {
         var request = new DynamoDbTableFactory().GenerateCreateTableRequest<MessageItem>(
@@ -179,5 +180,6 @@ public class DynamoDbTrippedTopicsTests : IAsyncLifetime
         await builder.EnsureTablesReady([_tableName], TableStatus.ACTIVE);
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync() => await Const.DynamoDbClient.DeleteTableAsync(_tableName);
 }

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,24 +22,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 public class SchemaNameRoundTripTests
 {
-    [Fact]
-    public void When_a_schema_name_is_created_from_a_string_it_should_expose_the_value()
+    [Test]
+    public async Task When_a_schema_name_is_created_from_a_string_it_should_expose_the_value()
     {
         //Arrange
         SchemaName sn = "dbo";
 
         //Act + Assert
-        Assert.Equal("dbo", sn.Value);
+        await Assert.That(sn.Value).IsEqualTo("dbo");
     }
 
-    [Fact]
-    public void When_a_schema_name_is_implicitly_converted_to_string_it_should_yield_the_original()
+    [Test]
+    public async Task When_a_schema_name_is_implicitly_converted_to_string_it_should_yield_the_original()
     {
         //Arrange
         SchemaName sn = "dbo";
@@ -47,33 +47,33 @@ public class SchemaNameRoundTripTests
         string? s = sn;
 
         //Assert
-        Assert.Equal("dbo", s);
+        await Assert.That(s).IsEqualTo("dbo");
     }
 
-    [Fact]
-    public void When_to_string_is_called_on_a_schema_name_it_should_return_the_value()
+    [Test]
+    public async Task When_to_string_is_called_on_a_schema_name_it_should_return_the_value()
     {
         //Arrange
         SchemaName sn = new("dbo");
 
         //Act + Assert
-        Assert.Equal("dbo", sn.ToString());
+        await Assert.That(sn.ToString()).IsEqualTo("dbo");
     }
 
-    [Fact]
-    public void When_two_schema_names_have_the_same_string_they_should_be_equal()
+    [Test]
+    public async Task When_two_schema_names_have_the_same_string_they_should_be_equal()
     {
         //Arrange
         var a = new SchemaName("dbo");
         var b = (SchemaName)"dbo";
 
         //Act + Assert
-        Assert.Equal(a, b);
-        Assert.True(a == b);
+        await Assert.That(b).IsEqualTo(a);
+        await Assert.That(a == b).IsTrue();
     }
 
-    [Fact]
-    public void When_schema_name_is_used_as_nullable_null_should_be_legal()
+    [Test]
+    public async Task When_schema_name_is_used_as_nullable_null_should_be_legal()
     {
         //Arrange — SQLite passes no schema; null is a legitimate value (AC-3, FR-2)
         SchemaName? sn = null;
@@ -82,34 +82,34 @@ public class SchemaNameRoundTripTests
         string? s = sn;
 
         //Assert
-        Assert.Null(sn);
-        Assert.Null(s);
+        await Assert.That(sn).IsNull();
+        await Assert.That(s).IsNull();
     }
 
-    [Fact]
-    public void When_schema_name_is_null_or_empty_is_called_with_null_it_should_return_true()
+    [Test]
+    public async Task When_schema_name_is_null_or_empty_is_called_with_null_it_should_return_true()
     {
         //Act + Assert
-        Assert.True(SchemaName.IsNullOrEmpty(null));
+        await Assert.That(SchemaName.IsNullOrEmpty(null)).IsTrue();
     }
 
-    [Fact]
-    public void When_schema_name_is_null_or_empty_is_called_with_empty_string_it_should_return_true()
+    [Test]
+    public async Task When_schema_name_is_null_or_empty_is_called_with_empty_string_it_should_return_true()
     {
         //Arrange
         var empty = (SchemaName)"";
 
         //Act + Assert
-        Assert.True(SchemaName.IsNullOrEmpty(empty));
+        await Assert.That(SchemaName.IsNullOrEmpty(empty)).IsTrue();
     }
 
-    [Fact]
-    public void When_schema_name_is_null_or_empty_is_called_with_non_empty_string_it_should_return_false()
+    [Test]
+    public async Task When_schema_name_is_null_or_empty_is_called_with_non_empty_string_it_should_return_false()
     {
         //Arrange
         var sn = (SchemaName)"dbo";
 
         //Act + Assert
-        Assert.False(SchemaName.IsNullOrEmpty(sn));
+        await Assert.That(SchemaName.IsNullOrEmpty(sn)).IsFalse();
     }
 }

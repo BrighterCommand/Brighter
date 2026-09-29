@@ -59,7 +59,7 @@ public class FirestoreOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
     public async Task DeleteStoreAsync(IEnumerable<Message> messages)
     {
         var config = Configuration.CreateOutbox();
-        var firestore = new FirestoreConnectionProvider(config).GetFirestoreClient();
+        var firestore = await new FirestoreConnectionProvider(config).GetFirestoreClientAsync();
 
         foreach (var message in messages)
         {

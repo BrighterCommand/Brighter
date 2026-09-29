@@ -2,37 +2,17 @@
 
     <PropertyGroup>
         <TargetFrameworks>net10.0</TargetFrameworks>
+        <OutputType>Exe</OutputType>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="coverlet.collector">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="GitHubActionsTestLogger">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
       <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
       <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
       <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
-      <PackageReference Include="Microsoft.NET.Test.Sdk" />
       <PackageReference Include="OpenTelemetry" />
       <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
-      <PackageReference Include="xunit" />
-      <PackageReference Include="xunit.runner.visualstudio">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="OpenTelemetry" />
-      <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <None Update="xunit.runner.json">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
+      <PackageReference Include="TUnit" />
     </ItemGroup>
 
     <ItemGroup>

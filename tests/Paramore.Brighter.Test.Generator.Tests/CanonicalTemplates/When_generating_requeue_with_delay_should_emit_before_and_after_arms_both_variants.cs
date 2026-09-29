@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -43,7 +43,7 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_requeue_with_delay_reactor_file_should_exist_with_correct_name()
     {
         // Arrange
@@ -56,11 +56,10 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
 
         // Assert — Reactor file exists at the expected path
         var reactorPath = ReactorOutputPath(configuration);
-        Assert.True(File.Exists(reactorPath),
-            $"Reactor canonical requeue-with-delay file not found at {reactorPath}");
+        await Assert.That(File.Exists(reactorPath)).IsTrue().Because($"Reactor canonical requeue-with-delay file not found at {reactorPath}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_requeue_with_delay_proactor_file_should_exist_with_correct_name()
     {
         // Arrange
@@ -73,11 +72,10 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
 
         // Assert — Proactor file exists at the expected path
         var proactorPath = ProactorOutputPath(configuration);
-        Assert.True(File.Exists(proactorPath),
-            $"Proactor canonical requeue-with-delay file not found at {proactorPath}");
+        await Assert.That(File.Exists(proactorPath)).IsTrue().Because($"Proactor canonical requeue-with-delay file not found at {proactorPath}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_requeue_with_delay_reactor_should_pass_positive_timespan_to_requeue()
     {
         // Arrange
@@ -90,11 +88,11 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
 
         // Assert — Requeue is called with a non-null positive TimeSpan
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("TimeSpan.FromSeconds(5)", content);
-        Assert.Contains("Requeue(", content);
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(5)");
+        await Assert.That(content).Contains("Requeue(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_requeue_with_delay_reactor_should_assert_requeue_returns_true()
     {
         // Arrange
@@ -107,10 +105,10 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
 
         // Assert — the return value of Requeue is captured and asserted true
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("Assert.True(", content);
+        await Assert.That(content).Contains(".IsTrue(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_requeue_with_delay_reactor_should_emit_single_before_delay_receive()
     {
         // Arrange
@@ -124,11 +122,11 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Assert — before-D arm: a single Receive asserting MT_NONE (a single receive outside the retry loop;
         // this must NOT be inside the bounded Stopwatch retry loop)
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("MT_NONE", content);
-        Assert.Contains("Receive(", content);
+        await Assert.That(content).Contains("MT_NONE");
+        await Assert.That(content).Contains("Receive(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_requeue_with_delay_reactor_should_use_bounded_retry_loop_for_after_arm()
     {
         // Arrange
@@ -141,12 +139,12 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
 
         // Assert — after-D arm uses the bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
-        Assert.Contains("500", content);
+        await Assert.That(content).Contains("Stopwatch");
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(30)");
+        await Assert.That(content).Contains("500");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_requeue_with_delay_reactor_should_not_reference_scheduler_or_mechanism()
     {
         // Arrange
@@ -159,13 +157,13 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
 
         // Assert — no mechanism assertions
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.DoesNotContain("scheduler", content, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("RedrivePolicy", content, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("ModifyAckDeadline", content, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("ChangeInvisibleDuration", content, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(content).DoesNotContain("scheduler");
+        await Assert.That(content).DoesNotContain("RedrivePolicy");
+        await Assert.That(content).DoesNotContain("ModifyAckDeadline");
+        await Assert.That(content).DoesNotContain("ChangeInvisibleDuration");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_requeue_with_delay_proactor_should_pass_positive_timespan_to_requeue_async()
     {
         // Arrange
@@ -178,11 +176,11 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
 
         // Assert — RequeueAsync is called with a non-null positive TimeSpan
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("TimeSpan.FromSeconds(5)", content);
-        Assert.Contains("RequeueAsync(", content);
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(5)");
+        await Assert.That(content).Contains("RequeueAsync(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_requeue_with_delay_proactor_should_assert_requeue_returns_true()
     {
         // Arrange
@@ -195,10 +193,10 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
 
         // Assert — the return value of RequeueAsync is captured and asserted true
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("Assert.True(", content);
+        await Assert.That(content).Contains(".IsTrue(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_requeue_with_delay_proactor_should_emit_single_before_delay_receive()
     {
         // Arrange
@@ -211,11 +209,11 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
 
         // Assert — before-D arm: a single ReceiveAsync asserting MT_NONE (a single receive outside the retry loop)
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("MT_NONE", content);
-        Assert.Contains("ReceiveAsync(", content);
+        await Assert.That(content).Contains("MT_NONE");
+        await Assert.That(content).Contains("ReceiveAsync(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_requeue_with_delay_proactor_should_use_bounded_retry_loop_for_after_arm()
     {
         // Arrange
@@ -228,12 +226,12 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
 
         // Assert — after-D arm uses the bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
-        Assert.Contains("500", content);
+        await Assert.That(content).Contains("Stopwatch");
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(30)");
+        await Assert.That(content).Contains("500");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_requeue_with_delay_proactor_should_not_reference_scheduler_or_mechanism()
     {
         // Arrange
@@ -246,16 +244,16 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
 
         // Assert — no mechanism assertions
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.DoesNotContain("scheduler", content, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("RedrivePolicy", content, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("ModifyAckDeadline", content, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("ChangeInvisibleDuration", content, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(content).DoesNotContain("scheduler");
+        await Assert.That(content).DoesNotContain("RedrivePolicy");
+        await Assert.That(content).DoesNotContain("ModifyAckDeadline");
+        await Assert.That(content).DoesNotContain("ChangeInvisibleDuration");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_pass_reactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange — ledger cell is Pass; the [Test] must carry no Skip argument
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -263,13 +261,13 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact] present; Skip absent (the conditional pattern renders nothing when Skip is empty)
+        // Assert — [Test] present; Skip absent (the conditional pattern renders nothing when Skip is empty)
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("[Fact]", content);
-        Assert.DoesNotContain("Skip =", content);
+        await Assert.That(content).Contains("[Test]");
+        await Assert.That(content).DoesNotContain("[Skip(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_deferred_reactor_should_emit_skip_on_fact()
     {
         // Arrange — ledger cell is Deferred; the template must conditionally emit Skip
@@ -284,15 +282,15 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact, Skip = "Deferred: #4567 ..."] is emitted
+        // Assert — [Test, Skip = "Deferred: #4567 ..."] is emitted
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("Skip = \"Deferred: #4567", content);
+        await Assert.That(content).Contains("Skip(\"Deferred: #4567");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_pass_proactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange — ledger cell is Pass; the [Test] must carry no Skip argument
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -302,8 +300,8 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
 
         // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("[Fact]", content);
-        Assert.DoesNotContain("Skip =", content);
+        await Assert.That(content).Contains("[Test]");
+        await Assert.That(content).DoesNotContain("[Skip(");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

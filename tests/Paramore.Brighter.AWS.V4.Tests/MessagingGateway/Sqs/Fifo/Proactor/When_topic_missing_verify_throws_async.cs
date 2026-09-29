@@ -3,12 +3,11 @@ using System.Threading.Tasks;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
-[Trait("Category", "AWS")]
+[Category("AWS")]
 public class AwsValidateMissingTopicTestsAsync
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -16,7 +15,7 @@ public class AwsValidateMissingTopicTestsAsync
     private readonly ChannelName _channelName;
 
     public AwsValidateMissingTopicTestsAsync()
-    { 
+    {
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _channelName = new ChannelName(queueName);
         _routingKey = new RoutingKey(_channelName);
@@ -25,7 +24,7 @@ public class AwsValidateMissingTopicTestsAsync
         // Because we don't use channel factory to create the infrastructure - it won't exist
     }
 
-    [Fact]
+    [Test]
     public async Task When_queue_missing_verify_throws_async()
     {
         // arrange

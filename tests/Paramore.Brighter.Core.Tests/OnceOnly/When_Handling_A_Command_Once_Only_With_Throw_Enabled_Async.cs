@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -32,7 +31,6 @@ using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
@@ -41,36 +39,30 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         private readonly MyCommand _command;
         private readonly IAmAnInboxAsync _inbox;
         private readonly IAmACommandProcessor _commandProcessor;
-
         public OnceOnlyAttributeWithThrowExceptionAsyncTests()
         {
             _inbox = new InMemoryInbox(new FakeTimeProvider());
-            
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyStoredCommandToThrowHandlerAsync>();
-
             var container = new ServiceCollection();
             container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
             container.AddTransient<MyStoredCommandToThrowHandlerAsync>();
             container.AddSingleton(_inbox);
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
-
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
-            _command = new MyCommand {Value = "My Test String"};
-            
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+            _command = new MyCommand
+            {
+                Value = "My Test String"
+            };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
-        [Fact]
+        [Test]
         public async Task When_Handling_A_Command_Once_Only_With_Throw_Enabled()
         {
             await _commandProcessor.SendAsync(_command);
-            
-            Exception ex = await Assert.ThrowsAsync<OnceOnlyException>(() => _commandProcessor.SendAsync(_command));
-            
-            Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
+            var ex = await Assert.That(() => _commandProcessor.SendAsync(_command)).ThrowsExactly<OnceOnlyException>();
+            await Assert.That(ex!.Message).IsEqualTo($"A command with id {_command.Id} has already been handled");
         }
     }
 }

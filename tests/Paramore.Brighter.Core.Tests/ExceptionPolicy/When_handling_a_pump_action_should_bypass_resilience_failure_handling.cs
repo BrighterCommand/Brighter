@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -34,43 +34,43 @@ using Polly;
 using Polly.CircuitBreaker;
 using Polly.Registry;
 using Polly.Retry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy;
 
 public class ResiliencePumpActionTests
 {
-    public static TheoryData<bool, bool, bool, bool, string> ActionCases
+    public static IEnumerable<(bool, bool, bool, bool, string)> ActionCases
     {
         get
         {
-            var cases = new TheoryData<bool, bool, bool, bool, string>();
+            var cases = new List<(bool, bool, bool, bool, string)>();
             foreach (var isAsync in new[] { false, true })
                 foreach (var typed in new[] { false, true })
                     foreach (var withContext in new[] { false, true })
                         foreach (var circuitBreaker in new[] { false, true })
                             foreach (var action in new[] { "reject", "defer", "dont-ack", "invalid" })
-                                cases.Add(isAsync, typed, withContext, circuitBreaker, action);
+                                cases.Add((isAsync, typed, withContext, circuitBreaker, action));
             return cases;
         }
     }
 
-    public static TheoryData<bool, bool, bool, bool> PipelineCases
+    public static IEnumerable<(bool, bool, bool, bool)> PipelineCases
     {
         get
         {
-            var cases = new TheoryData<bool, bool, bool, bool>();
+            var cases = new List<(bool, bool, bool, bool)>();
             foreach (var isAsync in new[] { false, true })
                 foreach (var typed in new[] { false, true })
                     foreach (var withContext in new[] { false, true })
                         foreach (var circuitBreaker in new[] { false, true })
-                            cases.Add(isAsync, typed, withContext, circuitBreaker);
+                            cases.Add((isAsync, typed, withContext, circuitBreaker));
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(ActionCases))]
+    [Test]
+    [MethodDataSource(nameof(ActionCases))]
     public async Task When_handling_a_pump_action_should_bypass_resilience_failure_handling(
         bool isAsync, bool typed, bool withContext, bool circuitBreaker, string action)
     {
@@ -88,15 +88,18 @@ public class ResiliencePumpActionTests
         var (failures, attempts) = await ExecuteAsync(isAsync, typed, withContext, circuitBreaker, exception);
 
         //Assert
-        Assert.All(failures, failure => Assert.Same(exception, failure));
-        Assert.Equal(circuitBreaker ? 3 : 1, attempts);
-        Assert.Contains(isAsync ? nameof(ResilienceActionHandlerAsync) : nameof(ResilienceActionHandler), exception.StackTrace);
+        foreach (var failure in failures)
+{
+    await Assert.That(failure).IsSameReferenceAs(exception);
+}
+        await Assert.That(attempts).IsEqualTo(circuitBreaker ? 3 : 1);
+        await Assert.That(exception.StackTrace).Contains(isAsync ? nameof(ResilienceActionHandlerAsync) : nameof(ResilienceActionHandler));
         if (exception is DeferMessageAction defer)
-            Assert.Equal(TimeSpan.FromMilliseconds(1234), defer.Delay);
+            await Assert.That(defer.Delay).IsEqualTo(TimeSpan.FromMilliseconds(1234));
     }
 
-    [Theory]
-    [MemberData(nameof(PipelineCases))]
+    [Test]
+    [MethodDataSource(nameof(PipelineCases))]
     public async Task When_handling_an_application_error_should_keep_resilience_behavior(
         bool isAsync, bool typed, bool withContext, bool circuitBreaker)
     {
@@ -107,14 +110,14 @@ public class ResiliencePumpActionTests
         var (failures, attempts) = await ExecuteAsync(isAsync, typed, withContext, circuitBreaker, exception);
 
         //Assert
-        Assert.Same(exception, failures[0]);
-        Assert.Equal(circuitBreaker ? 2 : 4, attempts);
+        await Assert.That(failures[0]).IsSameReferenceAs(exception);
+        await Assert.That(attempts).IsEqualTo(circuitBreaker ? 2 : 4);
         if (circuitBreaker)
-            Assert.IsType<BrokenCircuitException>(failures[2]);
+            await Assert.That(failures[2]).IsTypeOf<BrokenCircuitException>();
     }
 
-    [Theory]
-    [MemberData(nameof(PipelineCases))]
+    [Test]
+    [MethodDataSource(nameof(PipelineCases))]
     public async Task When_handling_cancellation_should_propagate_without_retrying_or_breaking_the_circuit(
         bool isAsync, bool typed, bool withContext, bool circuitBreaker)
     {
@@ -125,8 +128,11 @@ public class ResiliencePumpActionTests
         var (failures, attempts) = await ExecuteAsync(isAsync, typed, withContext, circuitBreaker, exception);
 
         //Assert
-        Assert.All(failures, failure => Assert.Same(exception, failure));
-        Assert.Equal(circuitBreaker ? 3 : 1, attempts);
+        foreach (var failure in failures)
+{
+    await Assert.That(failure).IsSameReferenceAs(exception);
+}
+        await Assert.That(attempts).IsEqualTo(circuitBreaker ? 3 : 1);
     }
 
     private static async Task<(Exception?[] Failures, int Attempts)> ExecuteAsync(
@@ -152,8 +158,8 @@ public class ResiliencePumpActionTests
                 handler.InitializeFromAttributeParams("pump-actions", typed);
                 handler.SetSuccessor(new ResilienceActionHandlerAsync { Context = context });
                 for (var i = 0; i < failures.Length; i++)
-                    failures[i] = await Record.ExceptionAsync(() => handler.HandleAsync(request, cancellation.Token));
-                Assert.Equal(withContext ? contextCancellation.Token : cancellation.Token, request.CancellationToken);
+                    failures[i] = await TestExceptionRecorder.CaptureAsync(() => handler.HandleAsync(request, cancellation.Token));
+                await Assert.That(request.CancellationToken).IsEqualTo(withContext ? contextCancellation.Token : cancellation.Token);
                 return (failures, request.Attempts);
             }
             else
@@ -163,7 +169,7 @@ public class ResiliencePumpActionTests
                 handler.InitializeFromAttributeParams("pump-actions", typed);
                 handler.SetSuccessor(new ResilienceActionHandler { Context = context });
                 for (var i = 0; i < failures.Length; i++)
-                    failures[i] = Record.Exception(() => handler.Handle(request));
+                    failures[i] = TestExceptionRecorder.Capture(() => handler.Handle(request));
                 return (failures, request.Attempts);
             }
         }

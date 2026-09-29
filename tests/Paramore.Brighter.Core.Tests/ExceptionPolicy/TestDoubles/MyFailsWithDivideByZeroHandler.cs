@@ -30,12 +30,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
 {
     internal sealed class MyFailsWithDivideByZeroHandler : RequestHandler<MyCommand>
     {
-        public static bool ReceivedCommand { get; set; }
-
-        static MyFailsWithDivideByZeroHandler()
-        {
-            ReceivedCommand = false;
-        }
+        public bool ReceivedCommand { get; private set; }
 
         [UsePolicy("MyDivideByZeroPolicy", 1)]
         public override MyCommand Handle(MyCommand myCommand)
@@ -44,9 +39,6 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
             throw new DivideByZeroException();
         }
 
-        public static bool ShouldReceive(MyCommand myCommand)
-        {
-            return ReceivedCommand;
-        }
+        public bool ShouldReceive(MyCommand myCommand) => ReceivedCommand;
     }
 }

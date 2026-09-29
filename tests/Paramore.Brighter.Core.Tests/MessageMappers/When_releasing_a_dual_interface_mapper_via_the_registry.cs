@@ -2,7 +2,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageMappers
 {
@@ -15,9 +14,8 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
         //A mapper resolved from GetAsync is an async-typed lease that can ONLY bind to the async overload -
         //routing it to the sync factory is a compile-time type error, not a silent leak - and each overload
         //routes to its own factory, the two facts below.
-
-        [Fact]
-        public void When_releasing_a_dual_interface_mapper_via_a_sync_lease_it_routes_to_the_sync_factory()
+        [Test]
+        public async System.Threading.Tasks.Task When_releasing_a_dual_interface_mapper_via_a_sync_lease_it_routes_to_the_sync_factory()
         {
             //arrange
             var syncFactory = new RecordingMapperFactory();
@@ -31,12 +29,12 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
             registry.Release(syncLease);
 
             //assert — routed to the sync factory, not the async one
-            Assert.Same(mapper, syncFactory.Released);
-            Assert.Null(asyncFactory.Released);
+            await Assert.That(syncFactory.Released).IsSameReferenceAs(mapper);
+            await Assert.That(asyncFactory.Released).IsNull();
         }
 
-        [Fact]
-        public void When_releasing_a_dual_interface_mapper_via_an_async_lease_it_routes_to_the_async_factory()
+        [Test]
+        public async System.Threading.Tasks.Task When_releasing_a_dual_interface_mapper_via_an_async_lease_it_routes_to_the_async_factory()
         {
             //arrange
             var syncFactory = new RecordingMapperFactory();
@@ -51,8 +49,8 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
             registry.Release(asyncLease);
 
             //assert — routed to the async factory, not the sync one
-            Assert.Same(mapper, asyncFactory.Released);
-            Assert.Null(syncFactory.Released);
+            await Assert.That(asyncFactory.Released).IsSameReferenceAs(mapper);
+            await Assert.That(syncFactory.Released).IsNull();
         }
 
         private sealed class DualRequest : Command

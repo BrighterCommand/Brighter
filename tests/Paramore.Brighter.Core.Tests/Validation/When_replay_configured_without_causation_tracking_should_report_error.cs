@@ -1,17 +1,14 @@
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -34,14 +31,14 @@ using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class ReplayCausationTrackingValidationTests
 {
-    [Fact]
-    public void When_replay_configured_with_inbox_that_does_not_track_causation_should_report_error()
+    [Test]
+    public async System.Threading.Tasks.Task When_replay_configured_with_inbox_that_does_not_track_causation_should_report_error()
     {
         // Arrange — Replay action, but the inbox does not implement IAmACausationTrackingInbox
         var description = ReplayPipeline(OnceOnlyAction.Replay);
@@ -54,12 +51,12 @@ public class ReplayCausationTrackingValidationTests
             description);
 
         // Assert
-        var finding = Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Error, finding.Severity);
+        var finding = await Assert.That(results).HasSingleItem();
+        await Assert.That(finding.Severity).IsEqualTo(ValidationSeverity.Error);
     }
 
-    [Fact]
-    public void When_replay_configured_with_inbox_that_does_not_support_causation_tracking_should_report_warning()
+    [Test]
+    public async System.Threading.Tasks.Task When_replay_configured_with_inbox_that_does_not_support_causation_tracking_should_report_warning()
     {
         // Arrange — inbox implements the role but the live schema does not support it
         var description = ReplayPipeline(OnceOnlyAction.Replay);
@@ -72,12 +69,12 @@ public class ReplayCausationTrackingValidationTests
             description);
 
         // Assert
-        var finding = Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, finding.Severity);
+        var finding = await Assert.That(results).HasSingleItem();
+        await Assert.That(finding.Severity).IsEqualTo(ValidationSeverity.Warning);
     }
 
-    [Fact]
-    public void When_replay_configured_with_no_outbox_should_report_warning()
+    [Test]
+    public async System.Threading.Tasks.Task When_replay_configured_with_no_outbox_should_report_warning()
     {
         // Arrange — Replay with a tracking inbox but no outbox configured (terminal step)
         var description = ReplayPipeline(OnceOnlyAction.Replay);
@@ -89,12 +86,12 @@ public class ReplayCausationTrackingValidationTests
             description);
 
         // Assert
-        var finding = Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, finding.Severity);
+        var finding = await Assert.That(results).HasSingleItem();
+        await Assert.That(finding.Severity).IsEqualTo(ValidationSeverity.Warning);
     }
 
-    [Fact]
-    public void When_replay_configured_with_outbox_that_does_not_track_causation_should_report_error()
+    [Test]
+    public async System.Threading.Tasks.Task When_replay_configured_with_outbox_that_does_not_track_causation_should_report_error()
     {
         // Arrange — outbox does not implement IAmACausationTrackingOutbox
         var description = ReplayPipeline(OnceOnlyAction.Replay);
@@ -107,12 +104,12 @@ public class ReplayCausationTrackingValidationTests
             description);
 
         // Assert
-        var finding = Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Error, finding.Severity);
+        var finding = await Assert.That(results).HasSingleItem();
+        await Assert.That(finding.Severity).IsEqualTo(ValidationSeverity.Error);
     }
 
-    [Fact]
-    public void When_replay_configured_with_outbox_that_does_not_support_causation_tracking_should_report_warning()
+    [Test]
+    public async System.Threading.Tasks.Task When_replay_configured_with_outbox_that_does_not_support_causation_tracking_should_report_warning()
     {
         // Arrange — outbox implements the role but the live schema does not support it
         var description = ReplayPipeline(OnceOnlyAction.Replay);
@@ -125,12 +122,12 @@ public class ReplayCausationTrackingValidationTests
             description);
 
         // Assert
-        var finding = Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, finding.Severity);
+        var finding = await Assert.That(results).HasSingleItem();
+        await Assert.That(finding.Severity).IsEqualTo(ValidationSeverity.Warning);
     }
 
-    [Fact]
-    public void When_replay_configured_with_tracking_inbox_and_outbox_should_report_no_findings()
+    [Test]
+    public async System.Threading.Tasks.Task When_replay_configured_with_tracking_inbox_and_outbox_should_report_no_findings()
     {
         // Arrange — both inbox and outbox track and support causation
         var description = ReplayPipeline(OnceOnlyAction.Replay);
@@ -143,11 +140,11 @@ public class ReplayCausationTrackingValidationTests
             description);
 
         // Assert
-        Assert.Empty(results);
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_non_replay_action_configured_without_causation_tracking_should_report_no_findings()
+    [Test]
+    public async System.Threading.Tasks.Task When_non_replay_action_configured_without_causation_tracking_should_report_no_findings()
     {
         // Arrange — Throw action; causation tracking is irrelevant even with a non-tracking inbox/outbox
         var description = ReplayPipeline(OnceOnlyAction.Throw);
@@ -160,11 +157,11 @@ public class ReplayCausationTrackingValidationTests
             description);
 
         // Assert
-        Assert.Empty(results);
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_replay_configured_on_an_after_step_without_causation_tracking_should_report_error()
+    [Test]
+    public async System.Threading.Tasks.Task When_replay_configured_on_an_after_step_without_causation_tracking_should_report_error()
     {
         // Arrange — the UseInbox Replay step is placed in the After timing, not Before. The rule
         // inspects both Before and After steps, so it must still detect Replay and flag the non-tracking inbox.
@@ -178,12 +175,12 @@ public class ReplayCausationTrackingValidationTests
             description);
 
         // Assert
-        var finding = Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Error, finding.Severity);
+        var finding = await Assert.That(results).HasSingleItem();
+        await Assert.That(finding.Severity).IsEqualTo(ValidationSeverity.Error);
     }
 
-    [Fact]
-    public void When_warn_action_configured_without_causation_tracking_should_report_no_findings()
+    [Test]
+    public async System.Threading.Tasks.Task When_warn_action_configured_without_causation_tracking_should_report_no_findings()
     {
         // Arrange — Warn action; like Throw, causation tracking is irrelevant, so a non-tracking
         // inbox/outbox must produce no findings.
@@ -197,11 +194,11 @@ public class ReplayCausationTrackingValidationTests
             description);
 
         // Assert
-        Assert.Empty(results);
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_replay_configured_and_inbox_support_probe_throws_should_report_warning_not_propagate()
+    [Test]
+    public async System.Threading.Tasks.Task When_replay_configured_and_inbox_support_probe_throws_should_report_warning_not_propagate()
     {
         // Arrange — the inbox tracks causation but its live-schema probe throws (e.g. the store is
         // unreachable at startup). Validation must degrade to a Warning, not let the exception escape.
@@ -215,12 +212,12 @@ public class ReplayCausationTrackingValidationTests
             description);
 
         // Assert
-        var finding = Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, finding.Severity);
+        var finding = await Assert.That(results).HasSingleItem();
+        await Assert.That(finding.Severity).IsEqualTo(ValidationSeverity.Warning);
     }
 
-    [Fact]
-    public void When_replay_configured_and_outbox_support_probe_throws_should_report_warning_not_propagate()
+    [Test]
+    public async System.Threading.Tasks.Task When_replay_configured_and_outbox_support_probe_throws_should_report_warning_not_propagate()
     {
         // Arrange — the outbox tracks causation but its live-schema probe throws (unreachable store).
         var description = ReplayPipeline(OnceOnlyAction.Replay);
@@ -233,8 +230,8 @@ public class ReplayCausationTrackingValidationTests
             description);
 
         // Assert
-        var finding = Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, finding.Severity);
+        var finding = await Assert.That(results).HasSingleItem();
+        await Assert.That(finding.Severity).IsEqualTo(ValidationSeverity.Warning);
     }
 
     private static HandlerPipelineDescription ReplayPipeline(

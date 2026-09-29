@@ -5,16 +5,14 @@ using System.Net.Mime;
 using Confluent.Kafka;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
 public class KafkaHeaderUtf8EncodingTests
 {
-    [Fact]
-    public void When_header_bag_contains_unicode_should_round_trip_correctly()
+    [Test]
+    public async Task When_header_bag_contains_unicode_should_round_trip_correctly()
     {
-        // Arrange — a bag value with non-ASCII characters
         var message = new Message(
             new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
@@ -42,17 +40,14 @@ public class KafkaHeaderUtf8EncodingTests
             }
         };
 
-        // Act
         var readMessage = new KafkaMessageCreator().CreateMessage(consumeResult);
 
-        // Assert — the non-ASCII characters survive the round-trip
-        Assert.Equal(unicodeValue, readMessage.Header.Bag["unicode_key"]);
+        await Assert.That(readMessage.Header.Bag["unicode_key"]).IsEqualTo(unicodeValue);
     }
 
-    [Fact]
-    public void When_standard_headers_round_trip_should_preserve_values()
+    [Test]
+    public async Task When_standard_headers_round_trip_should_preserve_values()
     {
-        // Arrange
         var message = new Message(
             new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
@@ -83,13 +78,11 @@ public class KafkaHeaderUtf8EncodingTests
             }
         };
 
-        // Act
         var readMessage = new KafkaMessageCreator().CreateMessage(consumeResult);
 
-        // Assert — standard Brighter headers round-trip correctly
-        Assert.Equal(message.Header.MessageType, readMessage.Header.MessageType);
-        Assert.Equal(message.Header.Topic, readMessage.Header.Topic);
-        Assert.Equal(message.Header.CorrelationId, readMessage.Header.CorrelationId);
-        Assert.Equal(message.Header.HandledCount, readMessage.Header.HandledCount);
+        await Assert.That(readMessage.Header.MessageType).IsEqualTo(message.Header.MessageType);
+        await Assert.That(readMessage.Header.Topic).IsEqualTo(message.Header.Topic);
+        await Assert.That(readMessage.Header.CorrelationId).IsEqualTo(message.Header.CorrelationId);
+        await Assert.That(readMessage.Header.HandledCount).IsEqualTo(message.Header.HandledCount);
     }
 }

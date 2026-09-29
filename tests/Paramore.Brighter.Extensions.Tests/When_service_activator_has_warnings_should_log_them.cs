@@ -32,13 +32,12 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ServiceActivatorWarningLoggingTests
 {
-    [Fact]
+    [Test]
     public async Task When_service_activator_has_warnings_should_log_them_at_warning_level()
     {
         // Arrange — warnings only, no errors
@@ -61,13 +60,13 @@ public class ServiceActivatorWarningLoggingTests
 
         // Assert — each warning is logged at Warning level with source and message
         var warningEntries = logger.WarningEntries.ToList();
-        Assert.Equal(2, warningEntries.Count);
-        Assert.Contains("HandlerA", warningEntries[0].Message);
-        Assert.Contains("Backstop ordering suboptimal", warningEntries[0].Message);
-        Assert.Contains("HandlerB", warningEntries[1].Message);
-        Assert.Contains("Attribute mismatch suggestion", warningEntries[1].Message);
+        await Assert.That(warningEntries.Count).IsEqualTo(2);
+        await Assert.That(warningEntries[0].Message).Contains("HandlerA");
+        await Assert.That(warningEntries[0].Message).Contains("Backstop ordering suboptimal");
+        await Assert.That(warningEntries[1].Message).Contains("HandlerB");
+        await Assert.That(warningEntries[1].Message).Contains("Attribute mismatch suggestion");
 
         // Assert — Receive was still called (warnings don't prevent startup)
-        Assert.True(dispatcher.ReceiveWasCalled);
+        await Assert.That(dispatcher.ReceiveWasCalled).IsTrue();
     }
 }

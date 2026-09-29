@@ -4,15 +4,15 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
-[Collection(FinalizerTestCollection.Name)]
+[System.Obsolete]
 public class TransformPipelineFinalizerReleaseTests
 {
-    [Fact]
-    public void When_a_pipeline_finalizer_release_throws_it_should_not_escape()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_pipeline_finalizer_release_throws_it_should_not_escape()
     {
         //arrange: a pipeline whose mapper registry throws when the mapper is released. This is the same
         //shape as MS DI's synchronous scope Dispose throwing for an IAsyncDisposable-only mapper. The
@@ -31,11 +31,11 @@ public class TransformPipelineFinalizerReleaseTests
         //>= 1 rather than == 1: the counter is a never-reset static, so a GC that runs the finalizer path
         //under a retry (or a future fact reusing this registry) must not turn "the finalizer ran" into a
         //confusing count mismatch — the load-bearing fact is that it ran at all, not exactly once.
-        Assert.True(ThrowingOnReleaseRegistry.ReleaseAttempts >= 1);
+        await Assert.That(ThrowingOnReleaseRegistry.ReleaseAttempts >= 1).IsTrue();
     }
 
-    [Fact]
-    public void When_an_async_pipeline_finalizer_release_throws_it_should_not_escape()
+    [Test]
+    public async System.Threading.Tasks.Task When_an_async_pipeline_finalizer_release_throws_it_should_not_escape()
     {
         //arrange: the async pipeline's finalizer runs the same synchronous release path and carries the
         //same guard as the sync pipeline. Revert the try/catch in ~TransformPipelineAsync to prove RED.
@@ -47,7 +47,7 @@ public class TransformPipelineFinalizerReleaseTests
         //assert: the async pipeline's finalizer genuinely ran the synchronous release that throws, and it
         //was swallowed rather than escaping ~TransformPipelineAsync. >= 1 for the same never-reset-static
         //robustness reason as the sync fact above.
-        Assert.True(ThrowingOnReleaseRegistryAsync.ReleaseAttempts >= 1);
+        await Assert.That(ThrowingOnReleaseRegistryAsync.ReleaseAttempts >= 1).IsTrue();
     }
 
     private static void CollectAndRunFinalizers()

@@ -6,7 +6,6 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.UnresolvableMapper;
 
@@ -53,17 +52,16 @@ public class MediatorUnresolvableMapperSendTests
         );
     }
 
-    [Fact]
-    public void When_the_registered_mapper_type_is_unresolvable_the_send_throws_a_configuration_error()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_registered_mapper_type_is_unresolvable_the_send_throws_a_configuration_error()
     {
         var context = new InMemoryRequestContextFactory().Create();
 
-        var exception = Assert.Throws<ConfigurationException>(
-            () => _mediator.CreateMessageFromRequest(new MyCommand { Value = "Hello World" }, context));
+        var exception = await Assert.That(() => _mediator.CreateMessageFromRequest(new MyCommand { Value = "Hello World" }, context)).ThrowsExactly<ConfigurationException>();
 
         //the outer is ConfigurationException (our standard), and the inner carries the real failure —
         //the type was found in the registry, but the factory could not build the instance
-        Assert.IsType<InvalidOperationException>(exception.InnerException);
+        await Assert.That(exception.InnerException).IsTypeOf<InvalidOperationException>();
     }
 
     private sealed class NullReturningMapperFactory : IAmAMessageMapperFactory

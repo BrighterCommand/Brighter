@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 /// raw SqlException comes out of channel open with nothing in it naming MakeChannels. These tests
 /// are about the sentence a surprised user meets.
 /// </summary>
-[Collection("MsSqlQueueProvisioning")]
+[NotInParallel]
 public class MsSqlQueueProvisioningPermissionTests : IDisposable
 {
     private readonly string _queueTable = MsSqlQueueProvisioningCreateTests.UniqueQueueTableName();
@@ -80,26 +80,34 @@ public class MsSqlQueueProvisioningPermissionTests : IDisposable
             _readWriteConnectionString, queueStoreTable: _queueTable);
     }
 
-    [Fact]
-    public void When_the_login_cannot_create_the_queue_should_name_the_setting_that_avoids_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_login_cannot_create_the_queue_should_name_the_setting_that_avoids_it()
     {
         //Arrange
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
 
         //Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Create)));
+        Exception? exception = null;
+        try
+        {
+            channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Create));
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert -- the provider's own sentence is kept, because it is the one that says what was
         //denied; what is added is the table and the way out.
-        var configurationException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains(_queueTable, configurationException.Message);
-        Assert.Contains("permission denied", configurationException.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Validate", configurationException.Message);
-        Assert.IsType<SqlException>(configurationException.InnerException);
+        var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configurationException.Message).Contains(_queueTable);
+        await Assert.That(configurationException.Message).Contains("permission denied");
+        await Assert.That(configurationException.Message).Contains("Validate");
+        await Assert.That(configurationException.InnerException).IsTypeOf<SqlException>();
     }
 
-    [Fact]
-    public void When_the_login_cannot_create_the_queue_but_it_exists_should_validate_without_ddl_rights()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_login_cannot_create_the_queue_but_it_exists_should_validate_without_ddl_rights()
     {
         //Arrange -- the control, and the reason the message names Validate rather than apologising:
         //the same login that cannot create the table can check that it is there. Created here as an
@@ -110,13 +118,18 @@ public class MsSqlQueueProvisioningPermissionTests : IDisposable
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
 
         //Act
-        var exception = Record.Exception(() =>
+        Exception? exception = null;
+        try
         {
             using var channel = channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Validate));
-        });
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
     private static MsSqlSubscription<MyCommand> Subscription(OnMissingChannel makeChannels) =>

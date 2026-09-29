@@ -2,14 +2,14 @@ using System;
 using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ScopedMapperDirectReleaseTests
 {
-    [Fact]
-    public void When_releasing_a_scoped_mapper_created_outside_a_pipeline_it_should_dispose_it_and_the_next_resolution_is_fresh()
+    [Test]
+    public async System.Threading.Tasks.Task When_releasing_a_scoped_mapper_created_outside_a_pipeline_it_should_dispose_it_and_the_next_resolution_is_fresh()
     {
         // Arrange — MapperLifetime.Scoped, called directly with no pipeline scope (T1.14, ADR 0070 step 9:
         // the factory-wide Scoped cache no longer serves a direct call — each resolution is isolated in
@@ -31,13 +31,13 @@ public class ScopedMapperDirectReleaseTests
 
         // Assert — releasing the first isolated resolution disposed it immediately, and the second
         // resolution is a fresh, distinct instance rather than a cached one.
-        Assert.Equal(1, disposals.Count);
-        Assert.NotSame(first!.Instance, second!.Instance);
+        await Assert.That(disposals.Count).IsEqualTo(1);
+        await Assert.That(second!.Instance).IsNotSameReferenceAs(first!.Instance);
 
         // The factory disposes only what it still holds outstanding at shutdown — the released first
         // resolution is already gone, so disposing the factory only reclaims the still-live second.
         factory.Dispose();
-        Assert.Equal(2, disposals.Count);
+        await Assert.That(disposals.Count).IsEqualTo(2);
     }
 
     private sealed class MinimalCommand : Command

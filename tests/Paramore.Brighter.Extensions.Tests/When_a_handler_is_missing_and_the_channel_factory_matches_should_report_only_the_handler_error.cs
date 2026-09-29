@@ -28,14 +28,14 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class HandlerMissingWithMatchedChannelFactoryTests
 {
-    [Fact]
-    public void When_a_handler_is_missing_and_the_channel_factory_matches_should_report_only_the_handler_error()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_handler_is_missing_and_the_channel_factory_matches_should_report_only_the_handler_error()
     {
         // Arrange — a subscription whose RequestType has no registered handler and whose channel
         // factory is correctly matched (its own ChannelFactory is exactly the type it declares)
@@ -62,8 +62,8 @@ public class HandlerMissingWithMatchedChannelFactoryTests
 
         // Assert — exactly one Error, from the pre-existing HandlerRegistered rule; the
         // channel-factory compatibility rule contributes no additional finding
-        var error = Assert.Single(result.Errors);
-        Assert.Equal("Subscription 'sub-a'", error.Source);
-        Assert.Contains("No handler registered", error.Message);
+        var error = await Assert.That(result.Errors).HasSingleItem();
+        await Assert.That(error.Source).IsEqualTo("Subscription 'sub-a'");
+        await Assert.That(error.Message).Contains("No handler registered");
     }
 }
