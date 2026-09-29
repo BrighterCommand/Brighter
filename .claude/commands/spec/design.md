@@ -405,6 +405,11 @@ After the sub-agent returns:
    anything: a map that is right for the newest ADR and wrong for all the others is worse than
    no map, because a reader who checks it once and finds it stale will not check it again.
 
+8. **Recommend `/spec:write_release_notes` when this ADR breaks something.** If the ADR you just
+   wrote or amended records, in its `## Consequences`, a change that breaks an existing behaviour
+   or interface, tell the user so and recommend running `/spec:write_release_notes` for this spec.
+   Do **not** run that command yourself — recommend it, and let the user choose when to run it.
+
 ### Step 8: Next Steps
 
 1. Remind user to:

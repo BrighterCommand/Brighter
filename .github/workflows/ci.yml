@@ -102,6 +102,9 @@ jobs:
       - name: Azure Service Bus Creation Race Tests
         run: dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "FullyQualifiedName~AzureServiceBusProducerCreationRaceTests" -c Release --logger GitHubActions --no-restore --no-build
 
+      - name: Azure Configuration Tests
+        run: dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "FullyQualifiedName~Paramore.Brighter.AzureServiceBus.Tests.Configuration." -c Release --logger GitHubActions --no-restore --no-build
+
       - name: Core Tests
         run: |
           dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --logger GitHubActions --no-restore --no-build

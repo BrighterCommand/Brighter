@@ -63,10 +63,11 @@ public class AzureServiceBusSubscriptionConfiguration
     public bool RequireSession { get; set; } = false;
 
     /// <summary>
-    /// A Sql Filter to apply to the subscription
+    /// Gets or sets the SQL filter to apply to the subscription.
     /// </summary>
+    /// <value>The SQL filter expression, or an empty string to use the default rule.</value>
     [Obsolete("Use Rule. SqlFilter is mapped to a SQL rule named 'sqlFilter'.")]
-    public string SqlFilter = string.Empty;
+    public string SqlFilter { get; set; } = string.Empty;
 
     /// <summary>
     /// The rule used to filter messages and optionally apply an action to the subscription.
@@ -84,9 +85,10 @@ public class AzureServiceBusSubscriptionConfiguration
     public CreateRuleOptions? Rule { get; set; }
 
     /// <summary>
-    /// Use a Service Bus Queue instead of a Topic
+    /// Gets or sets whether to use a Service Bus queue instead of a topic.
     /// </summary>
-    public bool UseServiceBusQueue = false;
+    /// <value><see langword="true"/> to use a queue; otherwise, <see langword="false"/>. Defaults to <see langword="false"/>.</value>
+    public bool UseServiceBusQueue { get; set; } = false;
 
     internal CreateRuleOptions? GetRuleOptions()
     {
