@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 
 using System;
+using Azure.Messaging.ServiceBus.Administration;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 
@@ -65,11 +66,39 @@ public class AzureServiceBusSubscriptionConfiguration
     /// Gets or sets the SQL filter to apply to the subscription.
     /// </summary>
     /// <value>The SQL filter expression, or an empty string to use the default rule.</value>
+    [Obsolete("Use Rule. SqlFilter is mapped to a SQL rule named 'sqlFilter'.")]
     public string SqlFilter { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The rule used to filter messages and optionally apply an action to the subscription.
+    /// </summary>
+    /// <remarks>
+    /// With <see cref="OnMissingChannel.Create"/>, the configured rule is created or updated by name,
+    /// and the default catch-all rule is removed after a named rule is established. Other named rules
+    /// are preserved; remove obsolete rules explicitly when changing the configured rule name.
+    /// Null uses <see cref="SqlFilter"/> when specified, or the default rule for a new subscription.
+    /// Existing rules are left unchanged when neither option is specified.
+    /// <see cref="OnMissingChannel.Validate"/> checks subscription existence only;
+    /// <see cref="OnMissingChannel.Assume"/> performs no administration operations.
+    /// </remarks>
+    /// <value>The subscription's <see cref="CreateRuleOptions"/>, or null to use the legacy filter or default behavior.</value>
+    public CreateRuleOptions? Rule { get; set; }
 
     /// <summary>
     /// Gets or sets whether to use a Service Bus queue instead of a topic.
     /// </summary>
     /// <value><see langword="true"/> to use a queue; otherwise, <see langword="false"/>. Defaults to <see langword="false"/>.</value>
     public bool UseServiceBusQueue { get; set; } = false;
+
+    internal CreateRuleOptions? GetRuleOptions()
+    {
+#pragma warning disable CS0618 // Preserve the legacy SQL filter configuration.
+        if (Rule is not null && !string.IsNullOrEmpty(SqlFilter))
+        {
+            throw new ConfigurationException("Specify either Rule or SqlFilter, not both.");
+        }
+
+        return Rule ?? (string.IsNullOrEmpty(SqlFilter) ? null : new CreateRuleOptions("sqlFilter", new SqlRuleFilter(SqlFilter)));
+#pragma warning restore CS0618
+    }
 }

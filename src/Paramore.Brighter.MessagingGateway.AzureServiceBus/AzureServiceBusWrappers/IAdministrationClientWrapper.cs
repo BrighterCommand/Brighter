@@ -61,7 +61,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         Task<bool> SubscriptionExistsAsync(string topicName, string subscriptionName);
 
         /// <summary>
-        /// Create a Subscription.
+        /// Create a subscription, or reconcile its explicitly configured rule if it already exists.
         /// </summary>
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription.</param>
