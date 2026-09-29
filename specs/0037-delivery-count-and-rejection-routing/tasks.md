@@ -700,7 +700,7 @@
     - This test guards R-6; a red points at `MessagePump.DiscardRequeuedMessagesEnabled()`.
   - Depends on: 3.3, 5.6
 
-- [ ] **6.6 CHARACTERISE: GCP budget of 1, 0 or below -1 rejects on the first deferral without requeuing, on both consumers**
+- [!] **6.6 CHARACTERISE: GCP budget of 1, 0 or below -1 rejects on the first deferral without requeuing, on both consumers** <!-- RALPH-FAILED: all 4 files green on arrival; Pull sync+async RED cleanly under both mutations (a) and (b) on the named assertions; Stream RED unprovable — under mutation (a) the requeuing rows HANG (same GCP Stream requeue hang as 6.5 / generated tests Skip'd "Deferred: #4240"), and a hang is not valid RED. No production change; the 4 test files are parked outside the repo pending the user's call. -->
   - **USE COMMAND**: `/test-first when gcp budget is one zero or below minus one should reject on first deferral without requeue`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull" and "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream"
   - Test file: `When_gcp_budget_is_one_zero_or_below_minus_one_should_reject_on_first_deferral.cs` (async: `…_async.cs`)
