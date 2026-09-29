@@ -10,6 +10,23 @@ A later ordinary registration overrides the fallback for single-service resoluti
 
 The deferred `AddProducers(Func<IServiceProvider, ProducersConfiguration>, ...)` overload still requires explicit configuration registration when a provider needs it.
 Non-relational outboxes do not register database configuration.
+### Azure configuration options: rebuild and test when upgrading (#4285)
+
+Six Azure configuration fields are now public read/write properties, so property-based tooling can discover them:
+
+| Type | Members |
+| --- | --- |
+| `AzureServiceBusSubscriptionConfiguration` | `SqlFilter`, `UseServiceBusQueue` |
+| `AzureServiceBusPublication` | `UseServiceBusQueue` (also inherited by `AzureServiceBusPublication<T>`) |
+| `AzureBlobLockingProviderOptions` | `StorageLocationFunc` |
+| `AzureBlobArchiveProviderOptions` | `StorageLocationFunc`, `TagsFunc` |
+
+Names, types, defaults, and post-construction assignment are unchanged. Property-based configuration binding now applies the Service Bus scalar options.
+Delegate-valued Blob options remain configured in code; this change does not make delegates bindable from text configuration.
+
+**Rebuild and test applications and dependent libraries when upgrading.** Ordinary reads, assignments, and object initializers remain source-compatible after recompilation.
+Already compiled code that accesses these fields is not binary-compatible with the new properties; replacing Brighter assemblies without rebuilding is not sufficient.
+Code using field reflection or passing these members by reference needs source changes. Property-based serializers may now encounter delegate values they previously ignored.
 
 ### Scoped lifetime per pipeline (spec 0036, #4256)
 
