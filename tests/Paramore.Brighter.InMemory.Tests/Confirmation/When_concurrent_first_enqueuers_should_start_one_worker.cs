@@ -30,6 +30,7 @@ using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Confirmation;
 
+[Collection(ThreadPoolSaturatingCollection.Name)]
 public class ConcurrentStartGuardTests
 {
     [Fact]

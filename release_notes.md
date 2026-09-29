@@ -2,6 +2,52 @@
 
 ## Master
 
+### Azure Service Bus queue subscription settings (#4269)
+
+Queues created by a consumer now honor `AzureServiceBusSubscriptionConfiguration`, including sessions, delivery count, lock duration, default message lifetime and dead-lettering on expiration. Default consumer-created queues now use the subscription defaults (five deliveries, a three-day lifetime and dead-lettering on expiration) instead of the broker defaults. Existing queues and producer-created queues are unchanged.
+
+For session-enabled queues, provision the queue before producers start, or let the configured consumer create it first. Azure Service Bus does not allow sessions to be enabled on an existing queue.
+
+**Compatibility:** custom `IAdministrationClientWrapper` implementations must add `CreateQueueAsync(string, AzureServiceBusSubscriptionConfiguration)`. The original overload remains available. Calls passing a literal `null` as the second argument must use the `autoDeleteOnIdle` parameter name to select the original overload.
+
+### RabbitMQ shared connection lifetime
+
+Disposing a RabbitMQ producer or consumer now releases only its own use of the pooled connection.
+Other gateways sharing that connection can continue sending and receiving. Both RabbitMQ gateways
+close the connection when its last gateway releases it, including when channel cleanup throws.
+After a reset, disposing an old gateway preserves a replacement held by another gateway and closes
+an unused replacement. Explicit pool reset and removal still close connections immediately.
+
+Dispose every producer and consumer to release its connection reference. An undisposed gateway can
+keep the connection open for the lifetime of the process. Consumer operations after disposal now
+throw `ObjectDisposedException`.
+
+### Relational outbox configuration registration (#4279)
+
+`AddProducers(Action<ProducersConfiguration>, ...)` now registers a relational outbox's database configuration when `IAmARelationalDatabaseConfiguration` is missing.
+The fallback reuses the outbox's configuration instance. Existing explicit registrations and provider lifetimes remain unchanged.
+A later ordinary registration overrides the fallback for single-service resolution; a later `TryAdd` does not.
+
+The deferred `AddProducers(Func<IServiceProvider, ProducersConfiguration>, ...)` overload still requires explicit configuration registration when a provider needs it.
+Non-relational outboxes do not register database configuration.
+### Azure configuration options: rebuild and test when upgrading (#4285)
+
+Six Azure configuration fields are now public read/write properties, so property-based tooling can discover them:
+
+| Type | Members |
+| --- | --- |
+| `AzureServiceBusSubscriptionConfiguration` | `SqlFilter`, `UseServiceBusQueue` |
+| `AzureServiceBusPublication` | `UseServiceBusQueue` (also inherited by `AzureServiceBusPublication<T>`) |
+| `AzureBlobLockingProviderOptions` | `StorageLocationFunc` |
+| `AzureBlobArchiveProviderOptions` | `StorageLocationFunc`, `TagsFunc` |
+
+Names, types, defaults, and post-construction assignment are unchanged. Property-based configuration binding now applies the Service Bus scalar options.
+Delegate-valued Blob options remain configured in code; this change does not make delegates bindable from text configuration.
+
+**Rebuild and test applications and dependent libraries when upgrading.** Ordinary reads, assignments, and object initializers remain source-compatible after recompilation.
+Already compiled code that accesses these fields is not binary-compatible with the new properties; replacing Brighter assemblies without rebuilding is not sufficient.
+Code using field reflection or passing these members by reference needs source changes. Property-based serializers may now encounter delegate values they previously ignored.
+
 ### Scoped lifetime per pipeline (spec 0036, #4256)
 
 `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` now govern a **pipeline-scoped** DI scope: a `Scoped` handler, mapper or transform resolves from one DI scope shared by every `Scoped` participant on that pipeline, and disposed when the pipeline ends. An ASP.NET Core host can additionally opt a pipeline in to **adopting** an ambient request scope instead of creating its own, through a new `Paramore.Brighter.Extensions.AspNetCore` package (`AddBrighterRequestScope(...)`), and `ValidatePipelines()` gained seven new startup checks for common lifetime and scope-registration mistakes. See [docs/guides/lifetimes-and-scoping.md](docs/guides/lifetimes-and-scoping.md) for the full model, decision guide and troubleshooting, and [ADR 0070](docs/adr/0070-per-pipeline-di-scope-for-mapper-and-transform-factories.md) through [ADR 0076](docs/adr/0076-scope-affinity-option-and-write-through.md) for the design.

@@ -57,7 +57,14 @@ public class RmqClassicMessageGatewayProvider
     {
         if (channel != null)
         {
-            channel.Purge();
+            try
+            {
+                channel.Purge();
+            }
+            catch (ObjectDisposedException exception) when (exception.ObjectName == nameof(RmqMessageConsumer))
+            {
+                // The message pump may already have disposed its channel.
+            }
             channel.Dispose();
         }
 
@@ -75,7 +82,14 @@ public class RmqClassicMessageGatewayProvider
     {
         if (channel != null)
         {
-            await channel.PurgeAsync();
+            try
+            {
+                await channel.PurgeAsync();
+            }
+            catch (ObjectDisposedException exception) when (exception.ObjectName == nameof(RmqMessageConsumer))
+            {
+                // The message pump may already have disposed its channel.
+            }
             channel.Dispose();
         }
 

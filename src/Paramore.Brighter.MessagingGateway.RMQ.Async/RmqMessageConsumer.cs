@@ -50,6 +50,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
     private PullConsumer? _consumer;
+    private int _disposed;
     private RmqMessageProducer? _requeueProducer;
     private volatile bool _requeueProducerInitialized;
     private object? _requeueProducerLock;
@@ -171,6 +172,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         var deliveryTag = message.DeliveryTag;
         try
         {
@@ -195,6 +197,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         try
         {
             //Why bind a queue? Because we use purge to initialize a queue for RPC
@@ -246,7 +249,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <returns>Message.</returns>
     public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
     {
-
+        ThrowIfDisposed();
         timeOut ??= TimeSpan.FromMilliseconds(5);
 
         try
@@ -317,6 +320,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="cancellationToken">Cancel the nack operation</param>
     public async Task NackAsync(Message message, CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         var deliveryTag = message.DeliveryTag;
         try
         {
@@ -359,6 +363,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="cancellationToken">Allows the asynchronous operation to be canceled</param>
     public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         try
         {
             await EnsureBrokerAsync(_queueName, cancellationToken: cancellationToken);
@@ -438,6 +443,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     public async Task<bool> RequeueAsync(Message message, TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         timeout ??= TimeSpan.Zero;
 
         try
@@ -516,14 +522,14 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
     private async Task CancelConsumerAsync(CancellationToken cancellationToken)
     {
-        if (_consumer != null && Channel != null)
+        var consumer = _consumer;
+        _consumer = null;
+        if (consumer != null && Channel != null)
         {
-            if (_consumer.IsRunning)
+            if (consumer.IsRunning)
             {
                 await Channel.BasicCancelAsync(_consumerTag, cancellationToken: cancellationToken);
             }
-
-            _consumer = null;
         }
     }
 
@@ -720,18 +726,50 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// </summary>
     public override void Dispose()
     {
-        BrighterAsyncContext.Run(() => CancelConsumerAsync(CancellationToken.None));
-        _requeueProducer?.Dispose();
-        Dispose(true);
-        GC.SuppressFinalize(this);
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+        try
+        {
+            BrighterAsyncContext.Run(() => CancelConsumerAsync(CancellationToken.None));
+        }
+        finally
+        {
+            try
+            {
+                _requeueProducer?.Dispose();
+            }
+            finally
+            {
+                base.Dispose();
+            }
+        }
     }
 
     public override async ValueTask DisposeAsync()
     {
-        await CancelConsumerAsync(CancellationToken.None);
-        if (_requeueProducer != null) await _requeueProducer.DisposeAsync();
-        await base.DisposeAsync();
-        GC.SuppressFinalize(this);
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+        try
+        {
+            await CancelConsumerAsync(CancellationToken.None);
+        }
+        finally
+        {
+            try
+            {
+                if (_requeueProducer != null) await _requeueProducer.DisposeAsync();
+            }
+            finally
+            {
+                await base.DisposeAsync();
+            }
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (Volatile.Read(ref _disposed) != 0)
+            throw new ObjectDisposedException(nameof(RmqMessageConsumer));
     }
 
     ~RmqMessageConsumer()
