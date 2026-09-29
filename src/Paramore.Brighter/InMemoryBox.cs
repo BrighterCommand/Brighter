@@ -120,16 +120,10 @@ namespace Paramore.Brighter
 
         private void RunRemoveExpiredMessages(DateTimeOffset now)
         {
-            if (Monitor.TryEnter(_cleanupRunningLockObject))
+            //Wait for any running cleanup rather than skip; the scan interval means a skipped scan would not be retried
+            lock (_cleanupRunningLockObject)
             {
-                try
-                {
-                    RemoveExpiredMessages(now);
-                }
-                finally
-                {
-                    Monitor.Exit(_cleanupRunningLockObject);
-                }
+                RemoveExpiredMessages(now);
             }
         }
 
@@ -166,16 +160,10 @@ namespace Paramore.Brighter
         
         private void RunCompact(int entriesToRemove)
         {
-            if (Monitor.TryEnter(_cleanupRunningLockObject))
+            //Wait for any running cleanup rather than skip; the compaction cooldown means a skipped compaction would not be retried
+            lock (_cleanupRunningLockObject)
             {
-                try
-                {
-                    Compact(entriesToRemove);
-                }
-                finally
-                {
-                    Monitor.Exit(_cleanupRunningLockObject);
-                }
+                Compact(entriesToRemove);
             }
         }
 
