@@ -159,10 +159,13 @@ All three tests are red today and fail the same way on every run (8/8 runs). Eac
 | `Outbox/When_expiry_is_requested_repeatedly_during_a_cleanup_should_coalesce_into_one_scan` | ❌ 6 † | ❌ 6 | ✅ | ✅ 2 |
 | `Outbox/When_expiry_brings_the_outbox_under_its_limit_before_a_waiting_compaction_should_not_compact` | ✅ ‡ | ❌ 1 | ✅ | ✅ 3 |
 | `Outbox/When_expiry_throws_in_the_same_cleanup_pass_as_a_compaction_should_still_compact` | ❌ 6 | ✅ | ❌ 6 | ✅ 3 |
+| `Outbox/When_expiry_leaves_the_outbox_over_its_limit_before_a_waiting_compaction_should_compact_only_to_target` § | ❌ 8 | ❌ 1 | ✅ | ✅ 2 |
 
 † On master this value depends on timing. Scans that reach the lock while it is held are dropped, but this test releases the lock straight after its reads, so they usually find it free and run. The blocking lock gives 6 every time.
 
 ‡ This test does not fail against master, because master drops the waiting compaction altogether. It pins a fault that the blocking lock introduced (over-trimming from an out-of-date count), not the original bug.
+
+§ A characterisation test added after the `@claude` review on #4482. It pins the `Math.Min(entriesRequested, count - newSize)` cap in `CompactIfStillOverLimit`, which had been in place since `10c28b1`, so the test passed as soon as it was written. It was observed failing (`Expected: 2, Actual: 1`) under the mutation `Compact(entriesRequested)`, and the mutation was then reverted. On master it fails because the compaction is dropped (8). On the blocking lock it fails because compaction over-trims (1).
 
 **Second contributing cause, thread-pool starvation from other tests (test-only fix, `e72f0fa91`):**
 
@@ -175,6 +178,6 @@ All three tests are red today and fail the same way on every run (8/8 runs). Eac
 
 | Suite | Result |
 |---|---|
-| InMemory | 159/159 on net9.0 and net10.0 |
+| InMemory | 160/160 on net9.0 and net10.0 |
 | Core (net9.0, after merging master) | 1498 passed, 7 skipped |
 | 18 cleanup tests, 10 runs with `DOTNET_PROCESSOR_COUNT=2` | green every run |
