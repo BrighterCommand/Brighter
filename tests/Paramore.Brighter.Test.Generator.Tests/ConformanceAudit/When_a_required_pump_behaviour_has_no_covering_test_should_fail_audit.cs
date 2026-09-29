@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
@@ -25,8 +25,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// </remarks>
 public class PumpCoverageAuditTests
 {
-    [Fact]
-    public void When_a_required_pump_behaviour_has_no_covering_test_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_required_pump_behaviour_has_no_covering_test_should_fail_audit()
     {
         // Arrange — a synthetic MessageDispatch tree covering every required pump behaviour
         // except the requeue-count threshold, which is the half the conformance ledger's
@@ -40,10 +40,8 @@ public class PumpCoverageAuditTests
             var result = PumpCoverageAudit.CheckCoverage(repoRoot);
 
             // Assert — the audit names the uncovered behaviour rather than merely failing
-            Assert.True(
-                result.Violations.Any(v =>
-                    v.Kind == "PumpBehaviourNotCovered" && v.Behaviour == omitted),
-                $"Expected a PumpBehaviourNotCovered violation for '{omitted}' but got:\n"
+            await Assert.That(result.Violations.Any(v =>
+                    v.Kind == "PumpBehaviourNotCovered" && v.Behaviour == omitted)).IsTrue().Because($"Expected a PumpBehaviourNotCovered violation for '{omitted}' but got:\n"
                 + FormatViolations(result.Violations));
         }
         finally

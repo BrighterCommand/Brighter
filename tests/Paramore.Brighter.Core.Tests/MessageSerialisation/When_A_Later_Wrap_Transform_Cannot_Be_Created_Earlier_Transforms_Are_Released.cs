@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -25,8 +25,8 @@ public class TransformPipelinePartialWrapBuildReleaseTests
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, _transformerFactory);
     }
 
-    [Fact]
-    public void When_A_Later_Wrap_Transform_Cannot_Be_Created_Earlier_Transforms_Are_Released()
+    [Test]
+    public async System.Threading.Tasks.Task When_A_Later_Wrap_Transform_Cannot_Be_Created_Earlier_Transforms_Are_Released()
     {
         //act
         //the mapper declares two wrap transforms; the factory builds the first but cannot build the second,
@@ -34,11 +34,11 @@ public class TransformPipelinePartialWrapBuildReleaseTests
         var exception = Catch.Exception(() => _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
 
         //assert
-        Assert.IsType<ConfigurationException>(exception);
+        await Assert.That(exception).IsTypeOf<ConfigurationException>();
         //the first transform was created before the second failed; it must be released back to the factory,
         //not leaked, because no pipeline was ever constructed to own it
-        Assert.Single(_transformerFactory.Created);
-        Assert.Equal(_transformerFactory.Created, _transformerFactory.Released);
+        await Assert.That(_transformerFactory.Created).HasSingleItem();
+        await Assert.That(_transformerFactory.Released).IsEquivalentTo(_transformerFactory.Created, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     // a mapper whose MapToMessage declares two wrap transforms of different types (built in step order)

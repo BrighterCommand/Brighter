@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,11 +13,10 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Sweeper
 {
-    [Collection("CommandProcess")]
+    [NotInParallel("CommandProcess")]
     public class SweeperTestsWithCircuitBreaker
     {
         private readonly Message _messageOne;
@@ -62,7 +61,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             // message 1
             var myEvent = new MyEvent() { Value = "MyEvent1" };
             InMemoryMessageProducer messageProducer = new(_internalBus, new Publication { Topic = _routingKeyOne, RequestType = typeof(MyEvent) });
-            
+
             _messageOne = new Message(
                 new MessageHeader(myEvent.Id, _routingKeyOne, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(myEvent, JsonSerialisationOptions.Options))
@@ -71,7 +70,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             // message 2
             var myEvent2 = new MyEvent() { Value = "MyEvent2" };
             InMemoryMessageProducer messageProducerTwo = new(_internalBus, new Publication { Topic = _routingKeyTwo, RequestType = typeof(MyEvent) });
-            
+
             _messageTwo = new Message(
                 new MessageHeader(myEvent2.Id, _routingKeyTwo, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myEvent2, JsonSerialisationOptions.Options))
@@ -111,9 +110,9 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         }
 
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
+        [Test]
+        [Arguments(true)]
+        [Arguments(false)]
         public async Task When_outstanding_in_outbox_with_trippedTopic_sweep_clears_them_async(bool useBulk)
         {
             // Arrange
@@ -127,29 +126,29 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             // Act (clear non tripped)
             await _sweeper.SweepAsync();
             await Task.Delay(1000);
-            Assert.True(_internalBus.Stream(_routingKeyOne).Any());
-            Assert.False(_internalBus.Stream(_routingKeyTwo).Any());
+            await Assert.That(_internalBus.Stream(_routingKeyOne).Any()).IsTrue();
+            await Assert.That(_internalBus.Stream(_routingKeyTwo).Any()).IsFalse();
             var sentMessage = _internalBus.Dequeue(_routingKeyOne);
-            Assert.NotNull(sentMessage);
-            Assert.Equal(_messageOne.Id, sentMessage.Id);
-            Assert.Equal(_messageOne.Header.Topic, sentMessage.Header.Topic);
-            Assert.Equal(_messageOne.Body.Value, sentMessage.Body.Value);
+            await Assert.That(sentMessage).IsNotNull();
+            await Assert.That(sentMessage.Id).IsEqualTo(_messageOne.Id);
+            await Assert.That(sentMessage.Header.Topic).IsEqualTo(_messageOne.Header.Topic);
+            await Assert.That(sentMessage.Body.Value).IsEqualTo(_messageOne.Body.Value);
 
             // Act (clear tripped)
             await _sweeper.SweepAsync();
-            await Task.Delay(1000); 
+            await Task.Delay(1000);
 
             // Assert
             var sentMessage2 = _internalBus.Dequeue(_routingKeyTwo, TimeSpan.FromSeconds(1));
-            Assert.NotNull(sentMessage2);
-            Assert.Equal(_messageTwo.Id, sentMessage2.Id);
-            Assert.Equal(_messageTwo.Header.Topic, sentMessage2.Header.Topic);
-            Assert.Equal(_messageTwo.Body.Value, sentMessage2.Body.Value);
+            await Assert.That(sentMessage2).IsNotNull();
+            await Assert.That(sentMessage2.Id).IsEqualTo(_messageTwo.Id);
+            await Assert.That(sentMessage2.Header.Topic).IsEqualTo(_messageTwo.Header.Topic);
+            await Assert.That(sentMessage2.Body.Value).IsEqualTo(_messageTwo.Body.Value);
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
+        [Test]
+        [Arguments(true)]
+        [Arguments(false)]
         public async Task When_outstanding_in_outbox_and_one_topic_trips_Then_nonTripped_are_cleared_on_second_sweep(bool useBulk)
         {
             // Arrange
@@ -159,31 +158,31 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await _outbox.AddAsync(_failingMessageTwo, context);
             await _outbox.AddAsync(_messageOne, context);
             await _outbox.AddAsync(_messageTwo, context);
-            
+
            _timeProvider.Advance(_timeSinceSent); // advance to pick up messages
 
            // first sweep trips failing topics
             await _sweeper.SweepAsync();
             await Task.Delay(1000); //Give the sweep time to run
-            Assert.False(_internalBus.Stream(_routingKeyOne).Any());
-            Assert.False(_internalBus.Stream(_routingKeyTwo).Any());
+            await Assert.That(_internalBus.Stream(_routingKeyOne).Any()).IsFalse();
+            await Assert.That(_internalBus.Stream(_routingKeyTwo).Any()).IsFalse();
 
             // second sweep skips tripped topics
             await _sweeper.SweepAsync();
             await Task.Delay(1000);
-            Assert.True(_internalBus.Stream(_routingKeyOne).Any());
-            Assert.True(_internalBus.Stream(_routingKeyTwo).Any());
+            await Assert.That(_internalBus.Stream(_routingKeyOne).Any()).IsTrue();
+            await Assert.That(_internalBus.Stream(_routingKeyTwo).Any()).IsTrue();
 
             var sentMessage = _internalBus.Dequeue(_routingKeyOne);
-            Assert.NotNull(sentMessage);
-            Assert.Equal(_messageOne.Id, sentMessage.Id);
-            Assert.Equal(_messageOne.Header.Topic, sentMessage.Header.Topic);
-            Assert.Equal(_messageOne.Body.Value, sentMessage.Body.Value);
+            await Assert.That(sentMessage).IsNotNull();
+            await Assert.That(sentMessage.Id).IsEqualTo(_messageOne.Id);
+            await Assert.That(sentMessage.Header.Topic).IsEqualTo(_messageOne.Header.Topic);
+            await Assert.That(sentMessage.Body.Value).IsEqualTo(_messageOne.Body.Value);
             var sentMessage2 = _internalBus.Dequeue(_routingKeyTwo, TimeSpan.FromSeconds(1));
-            Assert.NotNull(sentMessage2);
-            Assert.Equal(_messageTwo.Id, sentMessage2.Id);
-            Assert.Equal(_messageTwo.Header.Topic, sentMessage2.Header.Topic);
-            Assert.Equal(_messageTwo.Body.Value, sentMessage2.Body.Value);
+            await Assert.That(sentMessage2).IsNotNull();
+            await Assert.That(sentMessage2.Id).IsEqualTo(_messageTwo.Id);
+            await Assert.That(sentMessage2.Header.Topic).IsEqualTo(_messageTwo.Header.Topic);
+            await Assert.That(sentMessage2.Body.Value).IsEqualTo(_messageTwo.Body.Value);
         }
     }
 }

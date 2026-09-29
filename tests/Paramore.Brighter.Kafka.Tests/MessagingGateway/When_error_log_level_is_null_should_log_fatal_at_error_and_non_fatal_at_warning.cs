@@ -4,12 +4,12 @@ using Confluent.Kafka;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
+
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Property("Category", "Kafka")]
+[System.Obsolete]
 public class When_error_log_level_is_null_should_log_fatal_at_error_and_non_fatal_at_warning : IDisposable
 {
     private readonly KafkaMessageConsumer _consumer;
@@ -31,8 +31,8 @@ public class When_error_log_level_is_null_should_log_fatal_at_error_and_non_fata
         );
     }
 
-    [Fact]
-    public void When_no_error_log_level_is_configured_fatal_errors_log_at_error_and_non_fatal_at_warning()
+    [Test]
+    public async System.Threading.Tasks.Task When_no_error_log_level_is_configured_fatal_errors_log_at_error_and_non_fatal_at_warning()
     {
         using var context = TestCorrelator.CreateContext();
 
@@ -44,10 +44,10 @@ public class When_error_log_level_is_null_should_log_fatal_at_error_and_non_fata
         var events = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
 
         var fatalEvent = events.Single(e => e.RenderMessage().Contains("a fatal consumer error"));
-        Assert.Equal(LogEventLevel.Error, fatalEvent.Level);
+        await Assert.That(fatalEvent.Level).IsEqualTo(LogEventLevel.Error);
 
         var nonFatalEvent = events.Single(e => e.RenderMessage().Contains("an idle socket non fatal timeout"));
-        Assert.Equal(LogEventLevel.Warning, nonFatalEvent.Level);
+        await Assert.That(nonFatalEvent.Level).IsEqualTo(LogEventLevel.Warning);
     }
 
     public void Dispose()

@@ -31,7 +31,6 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
@@ -55,8 +54,8 @@ public class CircuitBreakerSpanMetricsTests : IDisposable
         _processor = new BrighterMetricsFromTracesProcessor(_tracer, new DisabledDbMeter(), _messagingMeter);
     }
 
-    [Fact]
-    public void When_ending_a_circuit_breaker_span_should_record_a_circuit_breaker_event()
+    [Test]
+    public async System.Threading.Tasks.Task When_ending_a_circuit_breaker_span_should_record_a_circuit_breaker_event()
     {
         //arrange
         var topic = new RoutingKey("payment.events");
@@ -69,7 +68,7 @@ public class CircuitBreakerSpanMetricsTests : IDisposable
         _processor.OnEnd(span);
 
         //assert
-        Assert.Equal(1, _messagingMeter.AddCircuitBreakerEventCallCount);
+        await Assert.That(_messagingMeter.AddCircuitBreakerEventCallCount).IsEqualTo(1);
     }
 
     public void Dispose()

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -27,16 +27,16 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
-using Xunit;
+
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Property("Category", "RMQ")]
+[System.Obsolete]
 public class RmqInvalidMessageForwardingFailureTests
 {
-    [Fact]
-    public void When_forwarding_to_an_unroutable_invalid_channel_should_preserve_the_original_message()
+    [Test]
+    public async System.Threading.Tasks.Task When_forwarding_to_an_unroutable_invalid_channel_should_preserve_the_original_message()
     {
         //Arrange
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
@@ -87,22 +87,30 @@ public class RmqInvalidMessageForwardingFailureTests
             consumer.Receive(TimeSpan.Zero);
             producer.Send(message);
             var received = consumer.Receive(TimeSpan.FromSeconds(10)).Single();
-            Assert.Equal(message.Id, received.Id);
+            await Assert.That(received.Id).IsEqualTo(message.Id);
 
             administration.QueueUnbind(invalidRoutingKey.Value, connection.Exchange.Name, invalidRoutingKey.Value, null);
 
             //Act
-            var exception = Record.Exception(() => consumer.Reject(received, reason));
+            Exception? exception = null;
+            try
+            {
+                consumer.Reject(received, reason);
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
 
             //Assert
-            Assert.IsType<ChannelFailureException>(exception);
-            Assert.Equal(routingKey, received.Header.Topic);
+            await Assert.That(exception).IsTypeOf<ChannelFailureException>();
+            await Assert.That(received.Header.Topic).IsEqualTo(routingKey);
             consumer.Nack(received);
             var redelivered = consumer.Receive(TimeSpan.FromSeconds(10)).Single();
-            Assert.Equal(message.Id, redelivered.Id);
+            await Assert.That(redelivered.Id).IsEqualTo(message.Id);
             consumer.Acknowledge(redelivered);
-            Assert.Equal(MessageType.MT_NONE, invalidConsumer.Receive(TimeSpan.FromMilliseconds(500)).Single().Header.MessageType);
-            Assert.Equal(MessageType.MT_NONE, deadLetterConsumer.Receive(TimeSpan.FromMilliseconds(500)).Single().Header.MessageType);
+            await Assert.That(invalidConsumer.Receive(TimeSpan.FromMilliseconds(500)).Single().Header.MessageType).IsEqualTo(MessageType.MT_NONE);
+            await Assert.That(deadLetterConsumer.Receive(TimeSpan.FromMilliseconds(500)).Single().Header.MessageType).IsEqualTo(MessageType.MT_NONE);
         }
         finally
         {

@@ -26,7 +26,7 @@ using System;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 {
@@ -76,15 +76,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             _channel.Stop(_routingKey);
         }
 
-        [Fact]
-        public void When_No_Imq_Configured_Reject_Falls_Back_To_Dlq()
+        [Test]
+        public async Task When_No_Imq_Configured_Reject_Falls_Back_To_Dlq()
         {
             // Act
             _messagePump.Run();
 
             // Assert — Reject(Unacceptable) falls back to dead-letter topic when no IMQ configured
-            Assert.Single(_bus.Stream(_deadLetterKey));
-            Assert.Empty(_bus.Stream(_routingKey));
+            await Assert.That(_bus.Stream(_deadLetterKey)).HasSingleItem();
+            await Assert.That(_bus.Stream(_routingKey)).IsEmpty();
         }
     }
 }

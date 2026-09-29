@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,7 +27,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
+
 using AlphaSubscription = Paramore.Brighter.Core.Tests.Validation.TestDoubles.AlphaBus.AlphaSubscription;
 using AlphaChannelFactory = Paramore.Brighter.Core.Tests.Validation.TestDoubles.AlphaBus.ChannelFactory;
 using BetaChannelFactory = Paramore.Brighter.Core.Tests.Validation.TestDoubles.BetaBus.ChannelFactory;
@@ -35,8 +36,8 @@ namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class TwoChannelFactoriesSharingASimpleNameRenderNamespaceQualifiedNamesTests
 {
-    [Fact]
-    public void When_two_channel_factories_share_a_simple_name_should_render_namespace_qualified_names()
+    [Test]
+    public async System.Threading.Tasks.Task When_two_channel_factories_share_a_simple_name_should_render_namespace_qualified_names()
     {
         // Arrange — an AlphaSubscription (declares AlphaBus.ChannelFactory) handed a BetaBus.ChannelFactory:
         // two distinct types both simply named "ChannelFactory"
@@ -53,14 +54,10 @@ public class TwoChannelFactoriesSharingASimpleNameRenderNamespaceQualifiedNamesT
 
         // Assert — both namespace-qualified display names appear in full, and no bare "ChannelFactory"
         // token (one not preceded by '.' and not part of "ChannelFactoryType") appears anywhere
-        var result = Assert.Single(results);
+        var result = await Assert.That(results).HasSingleItem();
         var message = result.Error!.Message;
-        Assert.Contains(
-            "Paramore.Brighter.Core.Tests.Validation.TestDoubles.AlphaBus.ChannelFactory",
-            message);
-        Assert.Contains(
-            "Paramore.Brighter.Core.Tests.Validation.TestDoubles.BetaBus.ChannelFactory",
-            message);
-        Assert.Empty(Regex.Matches(message, @"(?<![.\w])ChannelFactory(?!Type)"));
+        await Assert.That(message).Contains("Paramore.Brighter.Core.Tests.Validation.TestDoubles.AlphaBus.ChannelFactory");
+        await Assert.That(message).Contains("Paramore.Brighter.Core.Tests.Validation.TestDoubles.BetaBus.ChannelFactory");
+        await Assert.That(Regex.Matches(message, @"(?<![.\w])ChannelFactory(?!Type)")).IsEmpty();
     }
 }

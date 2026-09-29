@@ -28,31 +28,30 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.Locking.Azure;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.Configuration;
 
 public class AzureLockLocationConfigurationTests
 {
-    [Fact]
-    public void When_setting_blob_lock_location_as_a_property_should_preserve_defaults_and_allow_replacement()
+    [Test]
+    public async Task When_setting_blob_lock_location_as_a_property_should_preserve_defaults_and_allow_replacement()
     {
         //Arrange
         var options = new AzureBlobLockingProviderOptions(
             new Uri("https://configuration.example.test/locks"), new InMemoryConfigurationTokenCredential());
         var property = typeof(AzureBlobLockingProviderOptions).GetProperty(nameof(options.StorageLocationFunc));
-        Assert.NotNull(property);
-        var defaultLocation = Assert.IsType<Func<string, string>>(property.GetValue(options));
-        Assert.Equal("lock-Orders", defaultLocation("Orders"));
+        await Assert.That(property).IsNotNull();
+        var defaultLocation = await Assert.That(property.GetValue(options)).IsTypeOf<Func<string, string>>();
+        await Assert.That(defaultLocation("Orders")).IsEqualTo("lock-Orders");
         Func<string, string> replacement = resource => $"custom/{resource}";
 
         //Act
         property.SetValue(options, replacement);
 
         //Assert
-        Assert.Same(replacement, options.StorageLocationFunc);
-        Assert.Equal("custom/Orders", options.StorageLocationFunc("Orders"));
+        await Assert.That(options.StorageLocationFunc).IsSameReferenceAs(replacement);
+        await Assert.That(options.StorageLocationFunc("Orders")).IsEqualTo("custom/Orders");
         options.StorageLocationFunc = resource => $"changed/{resource}";
-        Assert.Equal("changed/Orders", options.StorageLocationFunc("Orders"));
+        await Assert.That(options.StorageLocationFunc("Orders")).IsEqualTo("changed/Orders");
     }
 }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -27,11 +27,11 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
-[Trait("Category", "MSSQL")]
+[Property("Category", "MSSQL")]
 public class MsSqlMessageQueueTopicMatchingTests : IDisposable
 {
     private readonly RelationalDatabaseConfiguration _configuration;
@@ -45,11 +45,11 @@ public class MsSqlMessageQueueTopicMatchingTests : IDisposable
         _queue = new MsSqlMessageQueue<string>(_configuration, new MsSqlConnectionProvider(_configuration));
     }
 
-    [Theory]
-    [InlineData("orders")]
-    [InlineData("customer's-orders")]
-    [InlineData("orders' OR 1=1 --")]
-    public void When_counting_ready_messages_should_match_the_literal_topic(string topic)
+    [Test]
+    [Arguments("orders")]
+    [Arguments("customer's-orders")]
+    [Arguments("orders' OR 1=1 --")]
+    public async System.Threading.Tasks.Task When_counting_ready_messages_should_match_the_literal_topic(string topic)
     {
         //Arrange
         var routingKey = new RoutingKey(topic);
@@ -65,10 +65,10 @@ public class MsSqlMessageQueueTopicMatchingTests : IDisposable
         bool isMissingReady = _queue.IsMessageReady(missingTopic);
 
         //Assert
-        Assert.Equal(2, count);
-        Assert.Equal(0, missingCount);
-        Assert.True(isReady);
-        Assert.False(isMissingReady);
+        await Assert.That(count).IsEqualTo(2);
+        await Assert.That(missingCount).IsEqualTo(0);
+        await Assert.That(isReady).IsTrue();
+        await Assert.That(isMissingReady).IsFalse();
     }
 
     public void Dispose() => Configuration.DeleteTable(_configuration.ConnectionString, $"[{_configuration.QueueStoreTable}]");

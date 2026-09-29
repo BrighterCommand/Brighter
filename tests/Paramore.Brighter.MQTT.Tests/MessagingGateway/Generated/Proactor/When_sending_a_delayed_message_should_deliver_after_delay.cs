@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "MQTT")]
-[Collection("MqttMessagingGateway")]
-public class WhenSendingADelayedMessageShouldDeliverAfterDelayAsync : IAsyncLifetime
+[Property("Category", "MQTT")]
+[NotInParallel("MqttMessagingGateway")]
+public class WhenSendingADelayedMessageShouldDeliverAfterDelayAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -33,17 +34,20 @@ public class WhenSendingADelayedMessageShouldDeliverAfterDelayAsync : IAsyncLife
         _messageAssertion = new DefaultMessageAssertion();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
+
     public async Task When_sending_a_delayed_message_should_deliver_after_delay_async()
     {
         // Arrange
@@ -65,7 +69,7 @@ public class WhenSendingADelayedMessageShouldDeliverAfterDelayAsync : IAsyncLife
         // is not observed here, yet long enough to catch a gateway that ignores the delay and delivers
         // immediately. A single receive, not a poll loop: this asserts the message is absent.
         var beforeDelay = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
-        Assert.Equal(MessageType.MT_NONE, beforeDelay.Header.MessageType);
+        await Assert.That(beforeDelay.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
         // Assert — once the delay has elapsed: poll every 500 ms, giving up after 30 s, and
         // wait for the message to arrive
@@ -80,7 +84,7 @@ public class WhenSendingADelayedMessageShouldDeliverAfterDelayAsync : IAsyncLife
             }
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
-        _messageAssertion.Assert(message, received);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await _messageAssertion.AssertAsync(message, received);
     }
 }

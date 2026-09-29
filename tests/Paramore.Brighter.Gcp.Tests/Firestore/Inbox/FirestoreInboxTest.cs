@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Google.Cloud.Firestore.V1;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Firestore;
@@ -6,6 +6,7 @@ using Paramore.Brighter.Inbox.Firestore;
 
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Inbox;
 
+[TUnit.Core.InheritsTests]
 public class FirestoreInboxTest : InboxTests
 {
     private FirestoreInbox? _inbox;
@@ -20,7 +21,7 @@ public class FirestoreInboxTest : InboxTests
     {
         var config = Configuration.CreateInbox();
         var firestore = new FirestoreConnectionProvider(config).GetFirestoreClient();
-        
+
         foreach (var command in CreatedCommands)
         {
             try

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,12 +27,11 @@ using System.Linq;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
-public class RmqMessageProducerDLQTestsAsync : IDisposable, IAsyncDisposable
+[Category("RMQ")]
+public class RmqMessageProducerDLQTestsAsync : IAsyncDisposable
 {
     private readonly IAmAMessageProducerAsync _messageProducer;
     private readonly IAmAMessageConsumerAsync _messageConsumer;
@@ -42,33 +41,33 @@ public class RmqMessageProducerDLQTestsAsync : IDisposable, IAsyncDisposable
     public RmqMessageProducerDLQTestsAsync()
     {
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
-            
+
         _message = new Message(
             new MessageHeader(
-                Guid.NewGuid().ToString(), 
+                Guid.NewGuid().ToString(),
                 routingKey,
                 MessageType.MT_COMMAND,
-                contentType: new ContentType(MediaTypeNames.Text.Plain)), 
+                contentType: new ContentType(MediaTypeNames.Text.Plain)),
             new MessageBody("test content"));
 
         var queueName = new ChannelName(Guid.NewGuid().ToString());
         var deadLetterQueueName = new ChannelName($"{_message.Header.Topic}.DLQ");
         var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
-            
+
         var rmqConnection = new RmqMessagingGatewayConnection
         {
             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
             Exchange = new Exchange("paramore.brighter.exchange"),
             DeadLetterExchange = new Exchange("paramore.brighter.exchange.dlq")
         };
-            
+
         _messageProducer = new RmqMessageProducer(rmqConnection);
 
         _messageConsumer = new RmqMessageConsumer(
-            connection: rmqConnection, 
-            queueName: queueName, 
-            routingKey: routingKey, 
-            isDurable: true, 
+            connection: rmqConnection,
+            queueName: queueName,
+            routingKey: routingKey,
+            isDurable: true,
             highAvailability: false,
             deadLetterQueueName: deadLetterQueueName,
             deadLetterRoutingKey: deadLetterRoutingKey,
@@ -84,27 +83,28 @@ public class RmqMessageProducerDLQTestsAsync : IDisposable, IAsyncDisposable
         );
     }
 
-    [Fact]
+    [Test]
     public async Task When_rejecting_a_message_to_a_dead_letter_queue()
     {
         //create the infrastructure
-        await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(0)); 
-            
+        await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(0));
+
         await _messageProducer.SendAsync(_message);
 
-        var message = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First(); 
-            
+        var message = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First();
+
         //This will push onto the DLQ
         await _messageConsumer.RejectAsync(message);
 
         var dlqMessage = (await _deadLetterConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First();
-            
+
         //assert this is our message
-        Assert.Equal(_message.Id, dlqMessage.Id);
-        Assert.Equal(dlqMessage.Body.Value, message.Body.Value);
+        await Assert.That(dlqMessage.Id).IsEqualTo(_message.Id);
+        await Assert.That(message.Body.Value).IsEqualTo(dlqMessage.Body.Value);
     }
 
-    public void Dispose()
+    [After(HookType.Test)]
+    public async Task Cleanup()
     {
         ((IAmAMessageProducerSync)_messageProducer).Dispose();
     }

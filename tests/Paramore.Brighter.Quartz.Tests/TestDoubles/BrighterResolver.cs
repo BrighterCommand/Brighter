@@ -8,10 +8,13 @@ namespace ParamoreBrighter.Quartz.Tests.TestDoubles;
 
 public class BrighterResolver : PropertySettingJobFactory
 {
-    public static IAmACommandProcessor Processor { get; set; }
+    public const string ProcessorContextKey = "BrighterProcessor";
 
     public override IJob NewJob(TriggerFiredBundle bundle, IScheduler scheduler)
     {
-        return new QuartzBrighterJob(Processor);
+        var processor = scheduler.Context[ProcessorContextKey] as IAmACommandProcessor
+            ?? throw new InvalidOperationException("Quartz scheduler context is missing the Brighter command processor.");
+
+        return new QuartzBrighterJob(processor);
     }
 }

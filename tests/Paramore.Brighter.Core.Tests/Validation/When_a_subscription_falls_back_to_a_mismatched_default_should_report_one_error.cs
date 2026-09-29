@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class SubscriptionFallsBackToMismatchedDefaultValidationTests
 {
-    [Fact]
-    public void When_a_subscription_falls_back_to_a_mismatched_default_should_report_one_error()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_subscription_falls_back_to_a_mismatched_default_should_report_one_error()
     {
         // Arrange — the AC-3 configuration, but sub-a's own ChannelFactory is left null, so it
         // must fall back to the mismatched default
@@ -47,10 +47,10 @@ public class SubscriptionFallsBackToMismatchedDefaultValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — exactly one Error for sub-a
-        Assert.False(satisfied);
-        var result = Assert.Single(results);
-        Assert.NotNull(result.Error);
-        Assert.Equal(ValidationSeverity.Error, result.Error!.Severity);
-        Assert.Equal("Subscription 'sub-a'", result.Error.Source);
+        await Assert.That(satisfied).IsFalse();
+        var result = await Assert.That(results).HasSingleItem();
+        await Assert.That(result.Error).IsNotNull();
+        await Assert.That(result.Error!.Severity).IsEqualTo(ValidationSeverity.Error);
+        await Assert.That(result.Error.Source).IsEqualTo("Subscription 'sub-a'");
     }
 }

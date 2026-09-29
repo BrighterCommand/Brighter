@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 
@@ -50,8 +50,8 @@ public class MsSqlQueueProvisioningAssumeTests
         UnreachableConnectionString,
         queueStoreTable: "QueueThatIsManagedElsewhere");
 
-    [Fact]
-    public void When_the_subscription_assumes_the_queue_exists_should_not_open_a_connection()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_subscription_assumes_the_queue_exists_should_not_open_a_connection()
     {
         //Arrange
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
@@ -63,17 +63,22 @@ public class MsSqlQueueProvisioningAssumeTests
             makeChannels: OnMissingChannel.Assume);
 
         //Act
-        var exception = Record.Exception(() =>
+        Exception? exception = null;
+        try
         {
             using var channel = channelFactory.CreateSyncChannel(subscription);
-        });
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
-    [Fact]
-    public void When_the_subscription_creates_a_missing_queue_against_an_unreachable_server_should_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_subscription_creates_a_missing_queue_against_an_unreachable_server_should_throw()
     {
         //Arrange -- the control for the fact above: the same configuration, the only difference
         //being that this one is allowed to touch the database.
@@ -86,20 +91,25 @@ public class MsSqlQueueProvisioningAssumeTests
             makeChannels: OnMissingChannel.Create);
 
         //Act
-        var exception = Record.Exception(() =>
+        Exception? exception = null;
+        try
         {
             using var channel = channelFactory.CreateSyncChannel(subscription);
-        });
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert -- the type matters as much as the throw: Connect exists to turn a provider error
-        //into a ConfigurationException naming the table, and Assert.NotNull would pass on the raw
+        //into a ConfigurationException naming the table, and Xunit.Assert.NotNull would pass on the raw
         //SqlException that would mean it had not.
-        var configurationException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains("QueueThatIsManagedElsewhere", configurationException.Message);
+        var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configurationException.Message).Contains("QueueThatIsManagedElsewhere");
     }
 
-    [Fact]
-    public void When_the_publication_assumes_the_queue_exists_should_not_open_a_connection()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_publication_assumes_the_queue_exists_should_not_open_a_connection()
     {
         //Arrange
         var publication = new Publication
@@ -110,14 +120,22 @@ public class MsSqlQueueProvisioningAssumeTests
             _configuration, new List<Publication> { publication });
 
         //Act
-        var exception = Record.Exception(() => producerFactory.Create());
+        Exception? exception = null;
+        try
+        {
+            producerFactory.Create();
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
-    [Fact]
-    public void When_the_publication_creates_a_missing_queue_against_an_unreachable_server_should_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_publication_creates_a_missing_queue_against_an_unreachable_server_should_throw()
     {
         //Arrange -- the control for the fact above.
         var publication = new Publication
@@ -128,11 +146,19 @@ public class MsSqlQueueProvisioningAssumeTests
             _configuration, new List<Publication> { publication });
 
         //Act
-        var exception = Record.Exception(() => producerFactory.Create());
+        Exception? exception = null;
+        try
+        {
+            producerFactory.Create();
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        var configurationException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains("QueueThatIsManagedElsewhere", configurationException.Message);
+        var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configurationException.Message).Contains("QueueThatIsManagedElsewhere");
     }
 
     private class MyCommand : Command

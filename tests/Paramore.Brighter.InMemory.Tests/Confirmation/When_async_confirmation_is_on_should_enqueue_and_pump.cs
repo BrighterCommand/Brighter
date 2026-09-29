@@ -26,13 +26,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Confirmation;
 
 public class AsyncConfirmationPumpTests
 {
-    [Fact]
+    [Test]
     public async Task When_async_confirmation_is_on_should_not_write_bus_before_returning()
     {
         // Arrange
@@ -54,18 +53,18 @@ public class AsyncConfirmationPumpTests
         producer.Send(message);
 
         // Assert — bus write is deferred: bus is empty immediately after Send returns
-        Assert.Empty(bus.Stream(new RoutingKey(topic)));
+        await Assert.That(bus.Stream(new RoutingKey(topic))).IsEmpty();
 
         // Wait for the pump to drain and raise the confirmation (max 5s)
         var result = await confirmed.Task.WaitAsync(System.TimeSpan.FromSeconds(5));
 
         // Assert — confirmation eventually arrives and the message is now on the bus
-        Assert.True(result.Success);
-        Assert.Equal(messageId, result.MessageId);
-        Assert.Single(bus.Stream(new RoutingKey(topic)));
+        await Assert.That(result.Success).IsTrue();
+        await Assert.That(result.MessageId).IsEqualTo(messageId);
+        await Assert.That(bus.Stream(new RoutingKey(topic))).HasSingleItem();
     }
 
-    [Fact]
+    [Test]
     public async Task When_async_confirmation_is_on_should_drain_in_fifo_enqueue_order()
     {
         // Arrange — 5 messages enqueued in a known order
@@ -100,8 +99,8 @@ public class AsyncConfirmationPumpTests
 
         // Assert — bus contains all messages in FIFO enqueue order
         var busMessages = bus.Stream(new RoutingKey(topic)).ToList();
-        Assert.Equal(count, busMessages.Count);
+        await Assert.That(busMessages.Count).IsEqualTo(count);
         for (var i = 0; i < count; i++)
-            Assert.Equal(messages[i].Id, busMessages[i].Id);
+            await Assert.That(busMessages[i].Id).IsEqualTo(messages[i].Id);
     }
 }

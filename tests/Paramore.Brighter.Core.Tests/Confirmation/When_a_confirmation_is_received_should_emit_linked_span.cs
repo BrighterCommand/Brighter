@@ -34,11 +34,10 @@ using Paramore.Brighter;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Confirmation
 {
-    [Collection("Observability")]
+    [System.Obsolete]
     public class ConfirmationLinkedSpanTests : IDisposable
     {
         private const string TestSource = "Paramore.Brighter.Tests";
@@ -109,7 +108,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 a.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingOperationType && t.Value == "settle")
                 && a.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && t.Value == messageId.Value));
 
-        [Fact]
+        [Test]
         public async Task When_a_confirmation_succeeds_should_emit_a_span_linked_to_the_publish_span()
         {
             // Arrange: a publish span is current when we send, so the pump captures its context.
@@ -126,14 +125,14 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // Assert: a standalone confirmation span was emitted, linked to the publish span's
             // context, and it is a distinct span — the publish span was not reopened or mutated.
             var confirmation = ConfirmationSpan(message.Id);
-            Assert.NotNull(confirmation);
+            await Assert.That(confirmation).IsNotNull();
             var links = confirmation!.Links.ToArray();
-            Assert.Single(links);
-            Assert.Equal(publishContext, links[0].Context);
-            Assert.NotEqual(publishSpan.SpanId, confirmation.SpanId);
+            await Assert.That(links).HasSingleItem();
+            await Assert.That(links[0].Context).IsEqualTo(publishContext);
+            await Assert.That(confirmation.SpanId).IsNotEqualTo(publishSpan.SpanId);
         }
 
-        [Fact]
+        [Test]
         public async Task When_a_confirmation_fails_should_emit_a_span_linked_to_the_publish_span()
         {
             // Arrange: a failing confirmation must still emit the linked span (symmetric branches).
@@ -149,14 +148,14 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // Assert: the failure-branch confirmation span links to the publish span just as the
             // success branch does, and remains a distinct span.
             var confirmation = ConfirmationSpan(message.Id);
-            Assert.NotNull(confirmation);
+            await Assert.That(confirmation).IsNotNull();
             var links = confirmation!.Links.ToArray();
-            Assert.Single(links);
-            Assert.Equal(publishContext, links[0].Context);
-            Assert.NotEqual(publishSpan.SpanId, confirmation.SpanId);
+            await Assert.That(links).HasSingleItem();
+            await Assert.That(links[0].Context).IsEqualTo(publishContext);
+            await Assert.That(confirmation.SpanId).IsNotEqualTo(publishSpan.SpanId);
         }
 
-        [Fact]
+        [Test]
         public async Task When_the_publish_context_is_absent_should_emit_a_span_with_no_link()
         {
             // Arrange: no publish span is active at send time, so no context is captured.
@@ -170,8 +169,8 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
 
             // Assert: a confirmation span is still emitted, but it degrades to no link (AC-2b).
             var confirmation = ConfirmationSpan(message.Id);
-            Assert.NotNull(confirmation);
-            Assert.Empty(confirmation!.Links);
+            await Assert.That(confirmation).IsNotNull();
+            await Assert.That(confirmation!.Links).IsEmpty();
         }
     }
 }

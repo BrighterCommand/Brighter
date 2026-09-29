@@ -7,7 +7,7 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
@@ -20,8 +20,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     /// </summary>
     public class OutboxProducerMediatorOwnershipTests
     {
-        [Fact]
-        public void When_the_mediator_does_not_own_its_factories_it_does_not_dispose_them()
+        [Test]
+        public async System.Threading.Tasks.Task When_the_mediator_does_not_own_its_factories_it_does_not_dispose_them()
         {
             //arrange — the manual-wiring default: the registry/factories are shared with another owner
             var timeProvider = new FakeTimeProvider();
@@ -48,14 +48,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             mediator.Dispose();
 
             //assert — nothing the mediator does not own is disposed
-            Assert.Equal(0, syncMapperFactory.DisposeCount);
-            Assert.Equal(0, asyncMapperFactory.DisposeCount);
-            Assert.Equal(0, syncTransformerFactory.DisposeCount);
-            Assert.Equal(0, asyncTransformerFactory.DisposeCount);
+            await Assert.That(syncMapperFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(asyncMapperFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(syncTransformerFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(asyncTransformerFactory.DisposeCount).IsEqualTo(0);
         }
 
-        [Fact]
-        public void When_the_mediator_owns_only_the_registry_it_disposes_only_the_registry()
+        [Test]
+        public async System.Threading.Tasks.Task When_the_mediator_owns_only_the_registry_it_disposes_only_the_registry()
         {
             //arrange — the two ownership flags are independent
             var timeProvider = new FakeTimeProvider();
@@ -84,14 +84,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             mediator.Dispose();
 
             //assert — the registry cascade disposes both mapper factories; the transform factories are left alone
-            Assert.Equal(1, syncMapperFactory.DisposeCount);
-            Assert.Equal(1, asyncMapperFactory.DisposeCount);
-            Assert.Equal(0, syncTransformerFactory.DisposeCount);
-            Assert.Equal(0, asyncTransformerFactory.DisposeCount);
+            await Assert.That(syncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncMapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(syncTransformerFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(asyncTransformerFactory.DisposeCount).IsEqualTo(0);
         }
 
-        [Fact]
-        public void When_the_mediator_owns_only_the_transform_factories_it_disposes_only_them()
+        [Test]
+        public async System.Threading.Tasks.Task When_the_mediator_owns_only_the_transform_factories_it_disposes_only_them()
         {
             //arrange
             var timeProvider = new FakeTimeProvider();
@@ -120,10 +120,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             mediator.Dispose();
 
             //assert — the transform factories are disposed; the shared registry (and its mapper factories) left alone
-            Assert.Equal(0, syncMapperFactory.DisposeCount);
-            Assert.Equal(0, asyncMapperFactory.DisposeCount);
-            Assert.Equal(1, syncTransformerFactory.DisposeCount);
-            Assert.Equal(1, asyncTransformerFactory.DisposeCount);
+            await Assert.That(syncMapperFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(asyncMapperFactory.DisposeCount).IsEqualTo(0);
+            await Assert.That(syncTransformerFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(asyncTransformerFactory.DisposeCount).IsEqualTo(1);
         }
 
         private sealed class DisposeCountingMapperFactory : IAmAMessageMapperFactory, IDisposable

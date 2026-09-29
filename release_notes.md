@@ -40,6 +40,12 @@ Delegate-valued Blob options remain configured in code; this change does not mak
 Already compiled code that accesses these fields is not binary-compatible with the new properties; replacing Brighter assemblies without rebuilding is not sufficient.
 Code using field reflection or passing these members by reference needs source changes. Property-based serializers may now encounter delegate values they previously ignored.
 
+### TUnit migration and compression metadata
+
+The repository test suites now use TUnit, including generated tests. Test projects run as executables through Microsoft.Testing.Platform.
+
+`CompressPayloadTransformer.WrapAsync` now matches `Wrap`: compressed `application/gzip`, `application/deflate`, and `application/br` content types omit `charset`. The original content type, including its charset, remains in `originalContentType` and is restored by unwrapping. Consumers that compare compressed content types including `charset` must update those comparisons. Compression algorithms and payload bytes are unchanged.
+
 ### Scoped lifetime per pipeline (spec 0036, #4256)
 
 `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` now govern a **pipeline-scoped** DI scope: a `Scoped` handler, mapper or transform resolves from one DI scope shared by every `Scoped` participant on that pipeline, and disposed when the pipeline ends. An ASP.NET Core host can additionally opt a pipeline in to **adopting** an ambient request scope instead of creating its own, through a new `Paramore.Brighter.Extensions.AspNetCore` package (`AddBrighterRequestScope(...)`), and `ValidatePipelines()` gained seven new startup checks for common lifetime and scope-registration mistakes. See [docs/guides/lifetimes-and-scoping.md](docs/guides/lifetimes-and-scoping.md) for the full model, decision guide and troubleshooting, and [ADR 0070](docs/adr/0070-per-pipeline-di-scope-for-mapper-and-transform-factories.md) through [ADR 0076](docs/adr/0076-scope-affinity-option-and-write-through.md) for the design.

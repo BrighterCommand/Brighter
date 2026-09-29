@@ -33,7 +33,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // falsifier for that.
 public class DefeatedOptInValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_application_registers_its_own_options_before_add_brighter_and_throw_on_error_is_false_the_defeated_opt_in_should_report_one_error_and_resolve_always_new()
     {
         // Arrange - the base host: the application registers its own IBrighterOptions (a conformant
@@ -68,19 +68,19 @@ public class DefeatedOptInValidationTests
         // a fresh IOrderDbContext rather than the controller's own
         response.EnsureSuccessStatusCode();
         var resolvedOptions = factory.Services.GetRequiredService<IBrighterOptions>();
-        Assert.Equal(ScopeAffinity.AlwaysNew, resolvedOptions.DefaultScopeAffinity);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.AlwaysNew);
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.NotSame(recorder.ControllerInstance, recorder.HandlerInstance);
+        await Assert.That(recorder.HandlerInstance).IsNotSameReferenceAs(recorder.ControllerInstance);
 
         // Assert - exactly one Error, naming the affinity the extension registered (JoinAmbient, its own
         // default), that the resolved options were supplied by the application, the remedy, and the guide
-        var errorEntry = Assert.Single(capturingProvider.Entries, e => e.Level == LogLevel.Error);
-        Assert.Contains("JoinAmbient", errorEntry.Message);
-        Assert.Contains("supplied by the application", errorEntry.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", errorEntry.Message);
+        var errorEntry = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level == LogLevel.Error);
+        await Assert.That(errorEntry.Message).Contains("JoinAmbient");
+        await Assert.That(errorEntry.Message).Contains("supplied by the application");
+        await Assert.That(errorEntry.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_throw_on_error_is_true_the_defeated_opt_in_should_fail_startup()
     {
         // Arrange - the same base shape, but throwOnError: true
@@ -100,15 +100,14 @@ public class DefeatedOptInValidationTests
         var hostedService = provider.GetServices<IHostedService>().OfType<BrighterValidationHostedService>().Single();
 
         // Act & Assert - startup fails with the identical message, and no controller action could run
-        var exception = await Assert.ThrowsAsync<PipelineValidationException>(
-            () => hostedService.StartAsync(CancellationToken.None));
+        var exception = await Assert.That(() => hostedService.StartAsync(CancellationToken.None)).ThrowsExactly<PipelineValidationException>();
 
-        Assert.Contains("JoinAmbient", exception.Message);
-        Assert.Contains("supplied by the application", exception.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", exception.Message);
+        await Assert.That(exception.Message).Contains("JoinAmbient");
+        await Assert.That(exception.Message).Contains("supplied by the application");
+        await Assert.That(exception.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_application_registers_its_own_options_after_add_brighter_the_defeated_opt_in_should_still_be_reported()
     {
         // Arrange - the application's registration placed AFTER AddBrighter: a plain AddSingleton that does
@@ -135,13 +134,13 @@ public class DefeatedOptInValidationTests
         await hostedService.StartAsync(CancellationToken.None);
 
         // Assert - the same single Error as the before-ordering
-        var errorEntry = Assert.Single(capturingProvider.Entries, e => e.Level == LogLevel.Error);
-        Assert.Contains("JoinAmbient", errorEntry.Message);
-        Assert.Contains("supplied by the application", errorEntry.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", errorEntry.Message);
+        var errorEntry = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level == LogLevel.Error);
+        await Assert.That(errorEntry.Message).Contains("JoinAmbient");
+        await Assert.That(errorEntry.Message).Contains("supplied by the application");
+        await Assert.That(errorEntry.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_extensions_affinity_matches_the_applications_own_value_the_defeated_opt_in_should_still_be_reported()
     {
         // Arrange - the falsifier: the extension passes AlwaysNew, and the application's own pre-registered
@@ -169,13 +168,13 @@ public class DefeatedOptInValidationTests
         await hostedService.StartAsync(CancellationToken.None);
 
         // Assert - still exactly one Error, naming the override's own AlwaysNew
-        var errorEntry = Assert.Single(capturingProvider.Entries, e => e.Level == LogLevel.Error);
-        Assert.Contains("AlwaysNew", errorEntry.Message);
-        Assert.Contains("supplied by the application", errorEntry.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", errorEntry.Message);
+        var errorEntry = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level == LogLevel.Error);
+        await Assert.That(errorEntry.Message).Contains("AlwaysNew");
+        await Assert.That(errorEntry.Message).Contains("supplied by the application");
+        await Assert.That(errorEntry.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_extension_is_called_before_add_brighter_the_defeated_opt_in_should_still_be_reported()
     {
         // Arrange - the application still registers first, but the extension call is placed before
@@ -201,13 +200,13 @@ public class DefeatedOptInValidationTests
         await hostedService.StartAsync(CancellationToken.None);
 
         // Assert - the same single Error regardless of this ordering
-        var errorEntry = Assert.Single(capturingProvider.Entries, e => e.Level == LogLevel.Error);
-        Assert.Contains("JoinAmbient", errorEntry.Message);
-        Assert.Contains("supplied by the application", errorEntry.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", errorEntry.Message);
+        var errorEntry = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level == LogLevel.Error);
+        await Assert.That(errorEntry.Message).Contains("JoinAmbient");
+        await Assert.That(errorEntry.Message).Contains("supplied by the application");
+        await Assert.That(errorEntry.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_add_brighter_func_is_used_the_defeated_opt_in_should_still_be_reported()
     {
         // Arrange - the AddBrighter(Func<IServiceProvider, BrighterOptions>) entry point
@@ -236,13 +235,13 @@ public class DefeatedOptInValidationTests
         await hostedService.StartAsync(CancellationToken.None);
 
         // Assert
-        var errorEntry = Assert.Single(capturingProvider.Entries, e => e.Level == LogLevel.Error);
-        Assert.Contains("JoinAmbient", errorEntry.Message);
-        Assert.Contains("supplied by the application", errorEntry.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", errorEntry.Message);
+        var errorEntry = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level == LogLevel.Error);
+        await Assert.That(errorEntry.Message).Contains("JoinAmbient");
+        await Assert.That(errorEntry.Message).Contains("supplied by the application");
+        await Assert.That(errorEntry.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_add_consumers_action_alone_is_used_the_defeated_opt_in_should_still_be_reported()
     {
         // Arrange - the AddConsumers(Action<ConsumersOptions>) entry point, alone (no AddBrighter). The
@@ -269,13 +268,13 @@ public class DefeatedOptInValidationTests
         await hostedService.StartAsync(CancellationToken.None);
 
         // Assert
-        var errorEntry = Assert.Single(capturingProvider.Entries, e => e.Level == LogLevel.Error);
-        Assert.Contains("JoinAmbient", errorEntry.Message);
-        Assert.Contains("supplied by the application", errorEntry.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", errorEntry.Message);
+        var errorEntry = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level == LogLevel.Error);
+        await Assert.That(errorEntry.Message).Contains("JoinAmbient");
+        await Assert.That(errorEntry.Message).Contains("supplied by the application");
+        await Assert.That(errorEntry.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_add_consumers_func_alone_is_used_the_defeated_opt_in_should_still_be_reported()
     {
         // Arrange - the AddConsumers(Func<IServiceProvider, ConsumersOptions>) entry point, alone. This
@@ -308,13 +307,13 @@ public class DefeatedOptInValidationTests
         await hostedService.StartAsync(CancellationToken.None);
 
         // Assert
-        var errorEntry = Assert.Single(capturingProvider.Entries, e => e.Level == LogLevel.Error);
-        Assert.Contains("JoinAmbient", errorEntry.Message);
-        Assert.Contains("supplied by the application", errorEntry.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", errorEntry.Message);
+        var errorEntry = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level == LogLevel.Error);
+        await Assert.That(errorEntry.Message).Contains("JoinAmbient");
+        await Assert.That(errorEntry.Message).Contains("supplied by the application");
+        await Assert.That(errorEntry.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_application_does_not_register_its_own_options_the_control_host_should_report_no_finding()
     {
         // Arrange - the control host: identical to the base fact except the application's registration is
@@ -332,12 +331,12 @@ public class DefeatedOptInValidationTests
         // and the handler shares the controller's own instance
         response.EnsureSuccessStatusCode();
         var resolvedOptions = factory.Services.GetRequiredService<IBrighterOptions>();
-        Assert.Equal(ScopeAffinity.JoinAmbient, resolvedOptions.DefaultScopeAffinity);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.JoinAmbient);
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.Same(recorder.ControllerInstance, recorder.HandlerInstance);
+        await Assert.That(recorder.HandlerInstance).IsSameReferenceAs(recorder.ControllerInstance);
 
         // Assert - no finding at all, attributing the Error in every other fact to the defeated
         // registration rather than to the host shape
-        Assert.DoesNotContain(capturingProvider.Entries, e => e.Level >= LogLevel.Warning);
+        await Assert.That(capturingProvider.Entries).DoesNotContain(e => e.Level >= LogLevel.Warning);
     }
 }

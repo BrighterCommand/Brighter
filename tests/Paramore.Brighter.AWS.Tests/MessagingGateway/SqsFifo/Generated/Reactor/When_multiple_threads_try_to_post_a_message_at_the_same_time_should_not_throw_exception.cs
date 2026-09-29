@@ -7,12 +7,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifo.Reactor;
 
-[Trait("Category", "Sqs")]
-[Collection("SqsFifo")]
+[Property("Category", "Sqs")]
+[NotInParallel("SqsFifo")]
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowException : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -31,8 +32,8 @@ public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExce
         _messageGatewayProvider.CleanUp(_producer, null, []);
     }
 
-    [Fact]
-    public void When_multiple_threads_try_to_post_a_message_at_the_same_time_should_not_throw_exception()
+    [Test]
+    public async Task When_multiple_threads_try_to_post_a_message_at_the_same_time_should_not_throw_exception()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -47,6 +48,6 @@ public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExce
         });
 
         // Assert
-        Assert.True(true);
+        await Assert.That(true).IsTrue();
     }
 }

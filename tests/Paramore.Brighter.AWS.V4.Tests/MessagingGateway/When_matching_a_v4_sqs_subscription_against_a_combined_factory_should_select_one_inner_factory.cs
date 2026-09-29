@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,14 +28,13 @@ using Amazon;
 using Amazon.Runtime;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway;
 
 public class V4SqsCombinedChannelFactoryRoutingTests
 {
-    [Fact]
-    public void When_matching_a_v4_sqs_subscription_against_a_combined_factory_should_select_one_inner_factory()
+    [Test]
+    public async System.Threading.Tasks.Task When_matching_a_v4_sqs_subscription_against_a_combined_factory_should_select_one_inner_factory()
     {
         // Arrange — construction only, so no AWS connection is made (NFR-3): the AWSSQS.V4 ChannelFactory
         // and its underlying AWSMessagingGatewayConnection only store credentials/config until a channel
@@ -54,6 +54,6 @@ public class V4SqsCombinedChannelFactoryRoutingTests
             .Count(factoryType => factoryType == subscription.ChannelFactoryType);
 
         // Assert
-        Assert.Equal(1, matchingInnerFactories);
+        await Assert.That(matchingInnerFactories).IsEqualTo(1);
     }
 }

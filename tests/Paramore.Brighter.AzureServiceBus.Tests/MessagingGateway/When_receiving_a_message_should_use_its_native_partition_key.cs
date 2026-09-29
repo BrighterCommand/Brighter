@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -29,24 +30,23 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusNativePartitionKeyReceivingTests
 {
-    [Theory]
-    [InlineData("order-placed", false, false)]
-    [InlineData("order-placed", false, true)]
-    [InlineData("order-placed", true, false)]
-    [InlineData("order-placed", true, true)]
-    [InlineData("customer-42", false, false)]
-    [InlineData("customer-42", true, true)]
-    [InlineData("", false, false)]
-    [InlineData("", true, true)]
-    [InlineData(null, false, false)]
-    [InlineData(null, true, true)]
+    [Test]
+    [Arguments("order-placed", false, false)]
+    [Arguments("order-placed", false, true)]
+    [Arguments("order-placed", true, false)]
+    [Arguments("order-placed", true, true)]
+    [Arguments("customer-42", false, false)]
+    [Arguments("customer-42", true, true)]
+    [Arguments("", false, false)]
+    [Arguments("", true, true)]
+    [Arguments(null, false, false)]
+    [Arguments(null, true, true)]
     public async Task When_receiving_a_message_should_use_its_native_partition_key(
         string? partitionKey, bool useAsync, bool useQueue)
     {
@@ -76,8 +76,8 @@ public class AzureServiceBusNativePartitionKeyReceivingTests
         }
 
         // Assert
-        var received = Assert.Single(messages);
-        Assert.Equal(partitionKey ?? string.Empty, received.Header.PartitionKey.Value);
-        Assert.False(received.Header.Bag.ContainsKey("cloudEvents:partitionkey"));
+        var received = await Assert.That(messages).HasSingleItem();
+        await Assert.That(received.Header.PartitionKey.Value).IsEqualTo(partitionKey ?? string.Empty);
+        await Assert.That(received.Header.Bag.ContainsKey("cloudEvents:partitionkey")).IsFalse();
     }
 }

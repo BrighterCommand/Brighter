@@ -27,7 +27,7 @@ using System.Linq;
 using System.Threading;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 /// This is the test five review rounds asked for and that the code could not have while it lived
 /// in a sample, because no test project references samples/.
 /// </summary>
-[Collection("MsSqlQueueProvisioning")]
+[NotInParallel]
 public class MsSqlQueueProvisioningConcurrencyTests : IDisposable
 {
     private const int ConcurrentStarts = 8;
@@ -58,8 +58,8 @@ public class MsSqlQueueProvisioningConcurrencyTests : IDisposable
             Configuration.DefaultConnectingString, queueStoreTable: _queueTable);
     }
 
-    [Fact]
-    public void When_two_starts_race_to_create_the_queue_should_converge_on_one_table()
+    [Test]
+    public async Task When_two_starts_race_to_create_the_queue_should_converge_on_one_table()
     {
         //Arrange -- separate factories, as separate instances would have, all released together.
         //
@@ -88,7 +88,7 @@ public class MsSqlQueueProvisioningConcurrencyTests : IDisposable
                 //CI as a crashed run with no assertion message rather than as a failed test. Worse,
                 //a thread that died before signalling would leave the other seven parked on the
                 //barrier and Join() would never return, so the run would hang instead of failing.
-                outcomes[index] = Record.Exception(() =>
+                outcomes[index] = TestExceptionRecorder.Capture(() =>
                 {
                     WarmTheConnectionPool();
                     if (!gate.SignalAndWait(GateTimeout))
@@ -110,11 +110,17 @@ public class MsSqlQueueProvisioningConcurrencyTests : IDisposable
         //the method with the remaining threads still parked on the barrier, and `using var gate`
         //would then dispose it under them.
         var joined = threads.Select(thread => thread.Join(JoinTimeout)).ToArray();
-        Assert.All(joined, finished => Assert.True(finished, "A start neither finished nor failed."));
-
+        using (Assert.Multiple())
+        {
+            foreach (var finished in joined)
+            {
+                await Assert.That(finished).IsTrue().Because("A start neither finished nor failed.");
+            }
+        }
         //Assert -- every start succeeds, and there is exactly one table at the end.
-        Assert.All(outcomes, Assert.Null);
-        Assert.True(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable));
+        foreach (var error in outcomes)
+            await Assert.That(error).IsNull();
+        await Assert.That(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable)).IsTrue();
     }
 
     private static void WarmTheConnectionPool()

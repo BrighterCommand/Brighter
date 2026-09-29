@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -29,7 +30,6 @@ using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox.Handlers;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
@@ -62,8 +62,8 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
                 new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
-        [Fact]
-        public void When_handling_new_command_should_set_causation_id_in_context_bag()
+        [Test]
+        public async System.Threading.Tasks.Task When_handling_new_command_should_set_causation_id_in_context_bag()
         {
             //Arrange
             var requestContext = new RequestContext();
@@ -72,17 +72,17 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _commandProcessor.Send(_command, requestContext);
 
             //Assert — the causation id defaults to the command's id and is shared via the context bag
-            Assert.True(requestContext.Bag.ContainsKey(RequestContextBagNames.CausationId));
-            Assert.Equal(_command.Id.Value, requestContext.Bag[RequestContextBagNames.CausationId]);
+            await Assert.That(requestContext.Bag.ContainsKey(RequestContextBagNames.CausationId)).IsTrue();
+            await Assert.That(requestContext.Bag[RequestContextBagNames.CausationId]).IsEqualTo(_command.Id.Value);
 
             //Assert — the inbox entry carries the same causation id
             var storedCausationId = ((IAmACausationTrackingInbox)_inbox)
                 .GetCausationId(_command.Id, _contextKey, requestContext);
-            Assert.Equal(_command.Id.Value, storedCausationId);
+            await Assert.That(storedCausationId).IsEqualTo(_command.Id.Value);
         }
 
-        [Fact]
-        public void When_handling_new_command_with_a_causation_id_already_in_context_should_preserve_it()
+        [Test]
+        public async System.Threading.Tasks.Task When_handling_new_command_with_a_causation_id_already_in_context_should_preserve_it()
         {
             //Arrange — a parent handler earlier in the pipeline has already stamped a causation id into the
             //shared context bag (this is the causation-chaining/linking semantic the feature is named for)
@@ -94,12 +94,12 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _commandProcessor.Send(_command, requestContext);
 
             //Assert — the handler must NOT overwrite the inherited causation id with the command's own id
-            Assert.Equal(parentCausationId, requestContext.Bag[RequestContextBagNames.CausationId]);
+            await Assert.That(requestContext.Bag[RequestContextBagNames.CausationId]).IsEqualTo(parentCausationId);
 
             //Assert — the inbox entry is linked to the parent causation, not the command id
             var storedCausationId = ((IAmACausationTrackingInbox)_inbox)
                 .GetCausationId(_command.Id, _contextKey, requestContext);
-            Assert.Equal(parentCausationId, storedCausationId);
+            await Assert.That(storedCausationId).IsEqualTo(parentCausationId);
         }
     }
 }

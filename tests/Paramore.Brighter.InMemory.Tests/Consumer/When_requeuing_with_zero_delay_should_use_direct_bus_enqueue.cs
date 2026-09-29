@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
@@ -62,38 +61,38 @@ public class InMemoryConsumerRequeueWithZeroDelayTests
         _consumer.Receive();
     }
 
-    [Fact]
-    public void Should_enqueue_message_directly_when_delay_is_zero()
+    [Test]
+    public async Task Should_enqueue_message_directly_when_delay_is_zero()
     {
         // Act
-        _consumer.Requeue(_message, TimeSpan.Zero);
+        await _consumer.RequeueAsync(_message, TimeSpan.Zero);
 
         // Assert - message should be immediately on the bus
         var messagesOnBus = _bus.Stream(_routingKey);
-        Assert.Single(messagesOnBus);
-        Assert.Equal(_message.Id, messagesOnBus.First().Id);
+        await Assert.That(messagesOnBus).HasSingleItem();
+        await Assert.That(messagesOnBus.First().Id).IsEqualTo(_message.Id);
     }
 
-    [Fact]
-    public void Should_enqueue_message_directly_when_delay_is_null()
+    [Test]
+    public async Task Should_enqueue_message_directly_when_delay_is_null()
     {
         // Act
-        _consumer.Requeue(_message, null);
+        await _consumer.RequeueAsync(_message, null);
 
         // Assert - message should be immediately on the bus
         var messagesOnBus = _bus.Stream(_routingKey);
-        Assert.Single(messagesOnBus);
-        Assert.Equal(_message.Id, messagesOnBus.First().Id);
+        await Assert.That(messagesOnBus).HasSingleItem();
+        await Assert.That(messagesOnBus.First().Id).IsEqualTo(_message.Id);
     }
 
-    [Fact]
-    public void Should_not_invoke_scheduler_when_delay_is_zero()
+    [Test]
+    public async Task Should_not_invoke_scheduler_when_delay_is_zero()
     {
         // Act
-        _consumer.Requeue(_message, TimeSpan.Zero);
+        await _consumer.RequeueAsync(_message, TimeSpan.Zero);
 
         // Assert
-        Assert.False(_scheduler.ScheduleCalled, "Scheduler should NOT have been called for zero delay");
+        await Assert.That(_scheduler.ScheduleCalled).IsFalse();
     }
 
     /// <summary>

@@ -23,7 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 
@@ -33,8 +33,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 /// </summary>
 public class SyntheticGatewayConformanceAuditTests
 {
-    [Fact]
-    public void When_auditing_synthetic_gateway_conformance_configuration_should_report_unconfigured_and_doubly_configured_gateways()
+    [Test]
+    public async System.Threading.Tasks.Task When_auditing_synthetic_gateway_conformance_configuration_should_report_unconfigured_and_doubly_configured_gateways()
     {
         // Arrange - gateway A is configured once, B not at all, C twice
         var gatewayNamespaces = new[] { "A", "B", "C" };
@@ -49,12 +49,12 @@ public class SyntheticGatewayConformanceAuditTests
         var audit = GatewayConformanceAudit.Of(gatewayNamespaces, configuredSubjects);
 
         // Assert
-        Assert.Equal(new[] { "B" }, audit.Unconfigured);
-        Assert.Equal(new[] { "C" }, audit.ConfiguredMoreThanOnce);
+        await Assert.That(audit.Unconfigured).IsEquivalentTo(new[] { "B" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        await Assert.That(audit.ConfiguredMoreThanOnce).IsEquivalentTo(new[] { "C" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
-    [Fact]
-    public void When_two_gateway_namespaces_share_a_prefix_should_not_conflate_them()
+    [Test]
+    public async System.Threading.Tasks.Task When_two_gateway_namespaces_share_a_prefix_should_not_conflate_them()
     {
         // Arrange - X and X.V2 are each configured once, with a type in their own namespace. Under
         // a prefix comparison (StartsWith), X.V2's configuration would also name X, making X
@@ -70,12 +70,12 @@ public class SyntheticGatewayConformanceAuditTests
         var audit = GatewayConformanceAudit.Of(gatewayNamespaces, configuredSubjects);
 
         // Assert
-        Assert.Empty(audit.Unconfigured);
-        Assert.Empty(audit.ConfiguredMoreThanOnce);
+        await Assert.That(audit.Unconfigured).IsEmpty();
+        await Assert.That(audit.ConfiguredMoreThanOnce).IsEmpty();
     }
 
-    [Fact]
-    public void When_an_additional_expected_subject_lands_in_an_already_configured_gateways_namespace_should_not_count_as_naming_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_an_additional_expected_subject_lands_in_an_already_configured_gateways_namespace_should_not_count_as_naming_it()
     {
         // Arrange - gateway A is configured once via SubscriptionType, and its
         // AdditionalExpectedSubjects names a second type in the same namespace (the case that key
@@ -91,7 +91,7 @@ public class SyntheticGatewayConformanceAuditTests
         var audit = GatewayConformanceAudit.Of(gatewayNamespaces, configuredSubjects);
 
         // Assert
-        Assert.Empty(audit.Unconfigured);
-        Assert.Empty(audit.ConfiguredMoreThanOnce);
+        await Assert.That(audit.Unconfigured).IsEmpty();
+        await Assert.That(audit.ConfiguredMoreThanOnce).IsEmpty();
     }
 }

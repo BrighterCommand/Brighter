@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -28,17 +28,17 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class SchedulerHandlerRegistrationTests
 {
-    public static TheoryData<bool, bool, bool, int> RegistrationCases
+    public static IEnumerable<(bool, bool, bool, int)> RegistrationCases
     {
         get
         {
-            var cases = new TheoryData<bool, bool, bool, int>();
+            var cases = new List<(bool, bool, bool, int)>();
             foreach (var addConsumers in new[] { false, true })
             {
                 foreach (var explicitScheduler in new[] { false, true })
@@ -46,7 +46,7 @@ public class SchedulerHandlerRegistrationTests
                     foreach (var explicitAssembly in new[] { false, true })
                     {
                         foreach (var scanCount in new[] { 0, 1, 2 })
-                            cases.Add(addConsumers, explicitScheduler, explicitAssembly, scanCount);
+                            cases.Add((addConsumers, explicitScheduler, explicitAssembly, scanCount));
                     }
                 }
             }
@@ -55,9 +55,9 @@ public class SchedulerHandlerRegistrationTests
         }
     }
 
-    [Theory]
-    [MemberData(nameof(RegistrationCases))]
-    public void When_scanning_assemblies_should_register_scheduler_handlers_once(
+    [Test]
+    [MethodDataSource(nameof(RegistrationCases))]
+    public async System.Threading.Tasks.Task When_scanning_assemblies_should_register_scheduler_handlers_once(
         bool addConsumers, bool explicitScheduler, bool explicitAssembly, int scanCount)
     {
         //Arrange
@@ -74,9 +74,7 @@ public class SchedulerHandlerRegistrationTests
         var registry = provider.GetRequiredService<ServiceCollectionSubscriberRegistry>();
 
         //Assert
-        Assert.Equal(typeof(FireSchedulerRequestHandler),
-            Assert.Single(registry.Get(new FireSchedulerRequest(), new RequestContext())));
-        Assert.Equal(typeof(FireSchedulerMessageHandler),
-            Assert.Single(registry.Get(new FireSchedulerMessage(), new RequestContext())));
+        await Assert.That((await Assert.That(registry.Get(new FireSchedulerRequest(), new RequestContext())).HasSingleItem())).IsEqualTo(typeof(FireSchedulerRequestHandler));
+        await Assert.That((await Assert.That(registry.Get(new FireSchedulerMessage(), new RequestContext())).HasSingleItem())).IsEqualTo(typeof(FireSchedulerMessageHandler));
     }
 }

@@ -3,12 +3,11 @@ using System.Diagnostics;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Property("Category", "Kafka")]
+[System.Obsolete]
 public class KafkaConfirmationTopicAndLinkTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly string _topic = Guid.NewGuid().ToString();
@@ -34,7 +33,7 @@ public class KafkaConfirmationTopicAndLinkTestsAsync : IDisposable, IAsyncDispos
             ]).CreateAsync().Result;
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_kafka_confirmation_fires_should_carry_topic_and_link_from_message()
     {
         //Let the topic propagate in the broker
@@ -52,7 +51,7 @@ public class KafkaConfirmationTopicAndLinkTestsAsync : IDisposable, IAsyncDispos
         ActivitySource.AddActivityListener(listener);
 
         using var publishActivity = activitySource.StartActivity("publish");
-        Assert.NotNull(publishActivity); // sampling must be active for the test to be meaningful
+        await Assert.That(publishActivity).IsNotNull(); // sampling must be active for the test to be meaningful
         var capturedContext = publishActivity.Context;
 
         // An oversized body forces the synthetic NotPersisted path. Its delivery report never sets
@@ -78,11 +77,11 @@ public class KafkaConfirmationTopicAndLinkTestsAsync : IDisposable, IAsyncDispos
         // Assert — FR-2 (Kafka) / C-7 / C-8: even on the synthetic NotPersisted path the failed
         // confirmation carries the wire topic from message.Header.Topic and a link to the publish span.
         var confirmation = await raised.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        Assert.False(confirmation.Success);
-        Assert.Equal(message.Header.Topic, confirmation.Topic);
-        Assert.NotNull(confirmation.PublishSpanContext);
-        Assert.Equal(capturedContext.TraceId, confirmation.PublishSpanContext.Value.TraceId);
-        Assert.Equal(capturedContext.SpanId, confirmation.PublishSpanContext.Value.SpanId);
+        await Assert.That(confirmation.Success).IsFalse();
+        await Assert.That(confirmation.Topic).IsEqualTo(message.Header.Topic);
+        await Assert.That(confirmation.PublishSpanContext).IsNotNull();
+        await Assert.That(confirmation.PublishSpanContext.Value.TraceId).IsEqualTo(capturedContext.TraceId);
+        await Assert.That(confirmation.PublishSpanContext.Value.SpanId).IsEqualTo(capturedContext.SpanId);
     }
 
     public void Dispose() => _producerRegistry.Dispose();

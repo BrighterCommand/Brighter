@@ -30,7 +30,7 @@ using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -41,8 +41,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class SingletonArtefactCaptiveDependencyTests
 {
-    [Fact]
-    public void When_a_singleton_artefact_requires_a_scoped_service_validation_should_warn()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_singleton_artefact_requires_a_scoped_service_validation_should_warn()
     {
         // Arrange — a producer-only host with {Transient, Singleton, Transient}, FR-22.2-conformant because
         // Singleton is discarded and the remainder is uniform, and a mapper whose single constructor
@@ -74,15 +74,15 @@ public class SingletonArtefactCaptiveDependencyTests
 
         // Assert — exactly one warning names both the mapper type and IOrderDbContext, and points at the
         // guidance page
-        Assert.True(result.IsValid);
-        var warning = Assert.Single(result.Warnings);
-        Assert.Contains(nameof(CaptiveScopedMapper), warning.Message);
-        Assert.Contains(nameof(IOrderDbContext), warning.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", warning.Message);
+        await Assert.That(result.IsValid).IsTrue();
+        var warning = await Assert.That(result.Warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains(nameof(CaptiveScopedMapper));
+        await Assert.That(warning.Message).Contains(nameof(IOrderDbContext));
+        await Assert.That(warning.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
-    public void When_a_singleton_mapper_requires_only_singleton_and_transient_services_validation_should_not_warn()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_singleton_mapper_requires_only_singleton_and_transient_services_validation_should_not_warn()
     {
         // Arrange — a mapper whose single constructor requires only AddSingleton- and AddTransient-registered
         // services
@@ -112,12 +112,12 @@ public class SingletonArtefactCaptiveDependencyTests
         var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — no Scoped dependency, so no warning
-        Assert.True(result.IsValid);
-        Assert.Empty(result.Warnings);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings).IsEmpty();
     }
 
-    [Fact]
-    public void When_a_singleton_mapper_requires_a_transient_that_itself_requires_a_scoped_service_validation_should_not_warn()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_singleton_mapper_requires_a_transient_that_itself_requires_a_scoped_service_validation_should_not_warn()
     {
         // Arrange — a mapper requiring an AddTransient gateway that itself requires the AddScoped
         // IOrderDbContext — pins C-20(ii)'s direct-parameter-only limit
@@ -147,12 +147,12 @@ public class SingletonArtefactCaptiveDependencyTests
         var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — the captive dependency is transitive (through ITransientGateway), not direct, so no warning
-        Assert.True(result.IsValid);
-        Assert.Empty(result.Warnings);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings).IsEmpty();
     }
 
-    [Fact]
-    public void When_a_singleton_mapper_has_two_constructors_the_widest_should_be_inspected()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_singleton_mapper_has_two_constructors_the_widest_should_be_inspected()
     {
         // Arrange — two public constructors, a wider (ISomeSingletonService, ISomeTransientService,
         // IOrderDbContext) and a narrower (ISomeSingletonService)
@@ -183,14 +183,14 @@ public class SingletonArtefactCaptiveDependencyTests
         var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — D15 selects the widest constructor (most parameters), naming IOrderDbContext
-        Assert.True(result.IsValid);
-        var warning = Assert.Single(result.Warnings);
-        Assert.Contains(nameof(WidestConstructorMapper), warning.Message);
-        Assert.Contains(nameof(IOrderDbContext), warning.Message);
+        await Assert.That(result.IsValid).IsTrue();
+        var warning = await Assert.That(result.Warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains(nameof(WidestConstructorMapper));
+        await Assert.That(warning.Message).Contains(nameof(IOrderDbContext));
     }
 
-    [Fact]
-    public void When_a_singleton_handler_is_decorated_with_use_policy_async_validation_should_not_warn_against_the_decorator()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_singleton_handler_is_decorated_with_use_policy_async_validation_should_not_warn_against_the_decorator()
     {
         // Arrange — a Singleton handler decorated with [UsePolicyAsync], so ExceptionPolicyHandlerAsync<>
         // joins its pipeline, registered exactly as assembly scanning would register it (an open generic
@@ -219,12 +219,12 @@ public class SingletonArtefactCaptiveDependencyTests
         var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — no warning against the decorator: the handler half of the exclusion mechanism
-        Assert.True(result.IsValid);
-        Assert.Empty(result.Warnings);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings).IsEmpty();
     }
 
-    [Fact]
-    public void When_a_singleton_transform_is_brighters_own_claim_check_transformer_validation_should_not_warn()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_singleton_transform_is_brighters_own_claim_check_transformer_validation_should_not_warn()
     {
         // Arrange — {_, _, TransformerLifetime = Singleton} using Brighter's own ClaimCheckTransformer, with
         // IAmAStorageProvider and IAmAStorageProviderAsync registered AddScoped. Registering the transformer
@@ -258,12 +258,12 @@ public class SingletonArtefactCaptiveDependencyTests
 
         // Assert — no warning: the transform half of the exclusion mechanism, via
         // TransformAttribute.GetHandlerType(), which RequestHandlerAttribute never reaches
-        Assert.True(result.IsValid);
-        Assert.Empty(result.Warnings);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings).IsEmpty();
     }
 
-    [Fact]
-    public void When_a_singleton_transform_defined_in_the_test_assembly_is_excluded_by_the_assembly_prefix_rule()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_singleton_transform_defined_in_the_test_assembly_is_excluded_by_the_assembly_prefix_rule()
     {
         // Arrange — {Transient, Transient, Singleton} with a mapper decorated by a [WrapWith] transform
         // defined in this very Paramore.Brighter.Extensions.Tests assembly, requiring the AddScoped
@@ -296,12 +296,12 @@ public class SingletonArtefactCaptiveDependencyTests
         var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — no warning: the assembly-name prefix match excludes it
-        Assert.True(result.IsValid);
-        Assert.Empty(result.Warnings);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings).IsEmpty();
     }
 
-    [Fact]
-    public void When_a_singleton_mapper_defined_in_the_same_assembly_as_an_excluded_transform_validation_should_still_warn()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_singleton_mapper_defined_in_the_same_assembly_as_an_excluded_transform_validation_should_still_warn()
     {
         // Arrange — the same Paramore.Brighter.Extensions.Tests assembly, but a Singleton MAPPER (not a
         // transform) requiring the AddScoped IOrderDbContext — pinning C-20(iv)'s gap as a deliberate
@@ -331,14 +331,14 @@ public class SingletonArtefactCaptiveDependencyTests
         var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — a warning IS reported. Same assembly as the excluded transform, opposite outcome
-        Assert.True(result.IsValid);
-        var warning = Assert.Single(result.Warnings);
-        Assert.Contains(nameof(AsymmetricCaptiveMapper), warning.Message);
-        Assert.Contains(nameof(IOrderDbContext), warning.Message);
+        await Assert.That(result.IsValid).IsTrue();
+        var warning = await Assert.That(result.Warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains(nameof(AsymmetricCaptiveMapper));
+        await Assert.That(warning.Message).Contains(nameof(IOrderDbContext));
     }
 
-    [Fact]
-    public void When_a_singleton_mapper_has_two_equally_wide_constructors_validation_should_not_warn_and_should_not_resolve()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_singleton_mapper_has_two_equally_wide_constructors_validation_should_not_warn_and_should_not_resolve()
     {
         // Arrange — two public constructors of the same parameter count, one taking IOrderDbContext and one
         // not. Not activatable by Microsoft's own container at all
@@ -369,7 +369,7 @@ public class SingletonArtefactCaptiveDependencyTests
         var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — a tie on the widest constructor count means nothing is inspected, so no warning
-        Assert.True(result.IsValid);
-        Assert.Empty(result.Warnings);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings).IsEmpty();
     }
 }

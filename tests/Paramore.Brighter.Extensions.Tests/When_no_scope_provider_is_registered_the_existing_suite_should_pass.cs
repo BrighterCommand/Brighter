@@ -36,7 +36,7 @@ using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -46,10 +46,10 @@ namespace Paramore.Brighter.Extensions.Tests;
 // consumption. Nothing here is a new invariant - each assertion mirrors what an earlier Phase 1/2 task
 // already established for its own flow in isolation - this fact is the regression checkpoint that all
 // five still hold together, with no ambient-scope machinery configured at all.
-[Collection(LoggerCaptureCollection.NAME)]
+[System.Obsolete]
 public class NoScopeProviderRegisteredRegressionTests
 {
-    [Fact]
+    [Test]
     public async Task When_no_scope_provider_is_registered_the_existing_suite_should_pass()
     {
         // Arrange - Send, Publish, Post and DepositPost all share one host. No IAmAScopeProvider is
@@ -125,29 +125,34 @@ public class NoScopeProviderRegisteredRegressionTests
 
         // Act/Assert - Send: one fresh handler pipeline, its Scoped dependency disposed once Send returns
         commandProcessor.Send(new ScopedHandlerCommand());
-        Assert.Single(handlerMarkerRecorder.Markers);
-        Assert.True(handlerMarkerRecorder.Markers[0].IsDisposed);
+        await Assert.That(handlerMarkerRecorder.Markers).HasSingleItem();
+        await Assert.That(handlerMarkerRecorder.Markers[0].IsDisposed).IsTrue();
 
         // Act/Assert - Publish: three subscribers, each its own fresh, disposed pipeline
         await commandProcessor.PublishAsync(new OrderPlaced());
-        Assert.Equal(3, unitOfWorkRecorder.UnitsOfWork.Count);
-        Assert.Equal(3, unitOfWorkRecorder.UnitsOfWork.Distinct().Count());
-        Assert.All(unitOfWorkRecorder.UnitsOfWork, unitOfWork => Assert.True(unitOfWork.IsDisposed));
-
+        await Assert.That(unitOfWorkRecorder.UnitsOfWork.Count).IsEqualTo(3);
+        await Assert.That(unitOfWorkRecorder.UnitsOfWork.Distinct().Count()).IsEqualTo(3);
+        using (Assert.Multiple())
+        {
+            foreach (var unitOfWork in unitOfWorkRecorder.UnitsOfWork)
+            {
+                await Assert.That(unitOfWork.IsDisposed).IsTrue();
+            }
+        }
         // Act/Assert - Post: one fresh, disposed mapper for the transform pipeline, and the message
         // reaches the wire immediately
         commandProcessor.Post(new PostedCommand());
-        Assert.Equal(new[] { "Constructed:1", "Disposed:1" }, constructionOrderRecorder.Events);
-        Assert.Single(internalBus.Stream(routingKey));
+        await Assert.That(constructionOrderRecorder.Events).IsEquivalentTo(new[] { "Constructed:1", "Disposed:1" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        await Assert.That(internalBus.Stream(routingKey)).HasSingleItem();
 
         // Act/Assert - DepositPost: its own fresh, disposed mapper, but the message does not reach the
         // wire until ClearOutbox is called separately
         var depositedId = commandProcessor.DepositPost(new PostedCommand());
-        Assert.Equal(new[] { "Constructed:1", "Disposed:1", "Constructed:2", "Disposed:2" }, constructionOrderRecorder.Events);
-        Assert.Single(internalBus.Stream(routingKey));
+        await Assert.That(constructionOrderRecorder.Events).IsEquivalentTo(new[] { "Constructed:1", "Disposed:1", "Constructed:2", "Disposed:2" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        await Assert.That(internalBus.Stream(routingKey)).HasSingleItem();
 
         commandProcessor.ClearOutbox(new[] { depositedId });
-        Assert.Equal(2, internalBus.Stream(routingKey).Count());
+        await Assert.That(internalBus.Stream(routingKey).Count()).IsEqualTo(2);
 
         // Arrange - consumption: a second, independent host wired through AddConsumers, again with no
         // IAmAScopeProvider registered, driving a real Dispatcher/Performer pump over one message
@@ -207,9 +212,9 @@ public class NoScopeProviderRegisteredRegressionTests
 
         // Assert - consumption completed, resolved and disposed its own fresh Scoped dependency, and
         // logged nothing at Warning or above - FR-24's diagnostics never fire with no provider registered
-        Assert.True(processed, "the consumer did not process the message within the timeout");
-        Assert.Single(consumerUnitOfWorkRecorder.UnitsOfWork);
-        Assert.True(consumerUnitOfWorkRecorder.UnitsOfWork[0].IsDisposed);
-        Assert.DoesNotContain(capturingLoggerProvider.Entries, entry => entry.Level >= LogLevel.Warning);
+        await Assert.That(processed).IsTrue().Because("the consumer did not process the message within the timeout");
+        await Assert.That(consumerUnitOfWorkRecorder.UnitsOfWork).HasSingleItem();
+        await Assert.That(consumerUnitOfWorkRecorder.UnitsOfWork[0].IsDisposed).IsTrue();
+        await Assert.That(capturingLoggerProvider.Entries).DoesNotContain(entry => entry.Level >= LogLevel.Warning);
     }
 }

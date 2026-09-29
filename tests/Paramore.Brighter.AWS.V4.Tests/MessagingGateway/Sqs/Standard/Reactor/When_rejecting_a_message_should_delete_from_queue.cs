@@ -6,13 +6,13 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Reactor;
 
-[Trait("Category", "AWS")]
-public class SqsMessageConsumerRejectTests : IDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class SqsMessageConsumerRejectTests
 {
     private readonly Message _message;
     private readonly IAmAChannelSync _channel;
@@ -30,12 +30,12 @@ public class SqsMessageConsumerRejectTests : IDisposable
         var queueName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
         var channelName = new ChannelName(queueName);
-        
+
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
-            channelType: ChannelType.PointToPoint, 
-            routingKey: routingKey, 
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create,
             queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }));
@@ -55,16 +55,16 @@ public class SqsMessageConsumerRejectTests : IDisposable
 
         _messageProducer =
             new SqsMessageProducer(
-                awsConnection, 
-                new SqsPublication(channelName: channelName,  makeChannels: OnMissingChannel.Create) 
+                awsConnection,
+                new SqsPublication(channelName: channelName,  makeChannels: OnMissingChannel.Create)
                 );
     }
 
-    [Fact]
-    public void When_rejecting_a_message_should_delete_from_queue()
+    [Test]
+    public async Task When_rejecting_a_message_should_delete_from_queue()
     {
         //Arrange
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
         var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
         //Act
@@ -73,13 +73,14 @@ public class SqsMessageConsumerRejectTests : IDisposable
         //Assert - message should be deleted, not requeued
         message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
-        Assert.Equal(MessageType.MT_NONE, message.Header.MessageType);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 
-    public void Dispose()
+    [After(HookType.Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 
     public async ValueTask DisposeAsync()

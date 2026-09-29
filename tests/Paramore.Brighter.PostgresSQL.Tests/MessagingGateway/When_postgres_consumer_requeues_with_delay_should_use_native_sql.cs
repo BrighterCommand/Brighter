@@ -5,11 +5,10 @@ using System.Threading;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 
-[Trait("Category", "PostgresSql")]
+[Category("PostgresSql")]
 public class PostgreSqlMessageConsumerNativeDelayTests : IDisposable
 {
     private readonly Message _message;
@@ -49,8 +48,8 @@ public class PostgreSqlMessageConsumerNativeDelayTests : IDisposable
         _channelFactory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration));
     }
 
-    [Fact]
-    public void When_postgres_consumer_requeues_with_delay_should_use_native_sql()
+    [Test]
+    public async Task When_postgres_consumer_requeues_with_delay_should_use_native_sql()
     {
         // Arrange - send and receive a message
         ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(_message);
@@ -62,17 +61,17 @@ public class PostgreSqlMessageConsumerNativeDelayTests : IDisposable
         bool requeued = channel.Requeue(message, requeueDelay);
 
         // Assert - requeue succeeded
-        Assert.True(requeued);
+        await Assert.That(requeued).IsTrue();
 
         // Assert - message is NOT visible immediately (native SQL sets visible_timeout in the future)
         var immediateReceive = channel.Receive(TimeSpan.FromMilliseconds(500));
-        Assert.Equal(MessageType.MT_NONE, immediateReceive.Header.MessageType);
+        await Assert.That(immediateReceive.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
         // Assert - message becomes visible after the delay elapses
         Thread.Sleep(requeueDelay);
         var delayedReceive = channel.Receive(TimeSpan.FromMilliseconds(2000));
-        Assert.Equal(MessageType.MT_COMMAND, delayedReceive.Header.MessageType);
-        Assert.Equal(message.Body.Value, delayedReceive.Body.Value);
+        await Assert.That(delayedReceive.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+        await Assert.That(delayedReceive.Body.Value).IsEqualTo(message.Body.Value);
 
         // Cleanup
         channel.Acknowledge(delayedReceive);

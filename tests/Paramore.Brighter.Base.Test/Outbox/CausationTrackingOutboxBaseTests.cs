@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
+
 
 namespace Paramore.Brighter.Base.Test.Outbox;
 
@@ -76,8 +76,8 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
         return context;
     }
 
-    [Fact]
-    public void When_replaying_causation_on_outbox_should_clear_dispatch_state()
+    [Test]
+    public async System.Threading.Tasks.Task When_replaying_causation_on_outbox_should_clear_dispatch_state()
     {
         // Arrange
         var contextA = ContextWithCausation(CausationA);
@@ -98,9 +98,9 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
         // all three start dispatched, so none are outstanding
         var outstandingBefore = WaitForOutstandingMessages(contextA,
             ids => !ids.Contains(firstWithA.Id) && !ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
-        Assert.DoesNotContain(firstWithA.Id, outstandingBefore);
-        Assert.DoesNotContain(secondWithA.Id, outstandingBefore);
-        Assert.DoesNotContain(messageWithB.Id, outstandingBefore);
+        await Assert.That(outstandingBefore).DoesNotContain(firstWithA.Id);
+        await Assert.That(outstandingBefore).DoesNotContain(secondWithA.Id);
+        await Assert.That(outstandingBefore).DoesNotContain(messageWithB.Id);
 
         // Act
         TrackingOutbox.ReplayCausation(CausationA, contextA);
@@ -108,14 +108,14 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
         // Assert — the two CausationA messages are outstanding again
         var outstanding = WaitForOutstandingMessages(contextA,
             ids => ids.Contains(firstWithA.Id) && ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
-        Assert.Contains(firstWithA.Id, outstanding);
-        Assert.Contains(secondWithA.Id, outstanding);
+        await Assert.That(outstanding).Contains(firstWithA.Id);
+        await Assert.That(outstanding).Contains(secondWithA.Id);
 
         // Assert — the CausationB message is untouched and still dispatched
-        Assert.DoesNotContain(messageWithB.Id, outstanding);
+        await Assert.That(outstanding).DoesNotContain(messageWithB.Id);
     }
 
-    [Fact]
+    [Test]
     public async Task When_replaying_causation_on_outbox_should_clear_dispatch_state_async()
     {
         // Arrange
@@ -137,9 +137,9 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
         // all three start dispatched, so none are outstanding
         var outstandingBefore = await WaitForOutstandingMessagesAsync(contextA,
             ids => !ids.Contains(firstWithA.Id) && !ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
-        Assert.DoesNotContain(firstWithA.Id, outstandingBefore);
-        Assert.DoesNotContain(secondWithA.Id, outstandingBefore);
-        Assert.DoesNotContain(messageWithB.Id, outstandingBefore);
+        await Assert.That(outstandingBefore).DoesNotContain(firstWithA.Id);
+        await Assert.That(outstandingBefore).DoesNotContain(secondWithA.Id);
+        await Assert.That(outstandingBefore).DoesNotContain(messageWithB.Id);
 
         // Act
         await TrackingOutbox.ReplayCausationAsync(CausationA, contextA);
@@ -147,15 +147,15 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
         // Assert — the two CausationA messages are outstanding again
         var outstanding = await WaitForOutstandingMessagesAsync(contextA,
             ids => ids.Contains(firstWithA.Id) && ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
-        Assert.Contains(firstWithA.Id, outstanding);
-        Assert.Contains(secondWithA.Id, outstanding);
+        await Assert.That(outstanding).Contains(firstWithA.Id);
+        await Assert.That(outstanding).Contains(secondWithA.Id);
 
         // Assert — the CausationB message is untouched and still dispatched
-        Assert.DoesNotContain(messageWithB.Id, outstanding);
+        await Assert.That(outstanding).DoesNotContain(messageWithB.Id);
     }
 
-    [Fact]
-    public void When_replaying_causation_for_messages_deposited_in_bulk_should_clear_dispatch_state()
+    [Test]
+    public async System.Threading.Tasks.Task When_replaying_causation_for_messages_deposited_in_bulk_should_clear_dispatch_state()
     {
         // Arrange — deposit the CausationA messages through the bulk Add(IEnumerable) overload
         var contextA = ContextWithCausation(CausationA);
@@ -175,9 +175,9 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
         // all three start dispatched, so none are outstanding
         var outstandingBefore = WaitForOutstandingMessages(contextA,
             ids => !ids.Contains(firstWithA.Id) && !ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
-        Assert.DoesNotContain(firstWithA.Id, outstandingBefore);
-        Assert.DoesNotContain(secondWithA.Id, outstandingBefore);
-        Assert.DoesNotContain(messageWithB.Id, outstandingBefore);
+        await Assert.That(outstandingBefore).DoesNotContain(firstWithA.Id);
+        await Assert.That(outstandingBefore).DoesNotContain(secondWithA.Id);
+        await Assert.That(outstandingBefore).DoesNotContain(messageWithB.Id);
 
         // Act
         TrackingOutbox.ReplayCausation(CausationA, contextA);
@@ -185,14 +185,14 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
         // Assert — the two bulk-deposited CausationA messages are outstanding again
         var outstanding = WaitForOutstandingMessages(contextA,
             ids => ids.Contains(firstWithA.Id) && ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
-        Assert.Contains(firstWithA.Id, outstanding);
-        Assert.Contains(secondWithA.Id, outstanding);
+        await Assert.That(outstanding).Contains(firstWithA.Id);
+        await Assert.That(outstanding).Contains(secondWithA.Id);
 
         // Assert — the CausationB message is untouched and still dispatched
-        Assert.DoesNotContain(messageWithB.Id, outstanding);
+        await Assert.That(outstanding).DoesNotContain(messageWithB.Id);
     }
 
-    [Fact]
+    [Test]
     public async Task When_replaying_causation_for_messages_deposited_in_bulk_should_clear_dispatch_state_async()
     {
         // Arrange — deposit the CausationA messages through the bulk AddAsync(IEnumerable) overload
@@ -213,9 +213,9 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
         // all three start dispatched, so none are outstanding
         var outstandingBefore = await WaitForOutstandingMessagesAsync(contextA,
             ids => !ids.Contains(firstWithA.Id) && !ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
-        Assert.DoesNotContain(firstWithA.Id, outstandingBefore);
-        Assert.DoesNotContain(secondWithA.Id, outstandingBefore);
-        Assert.DoesNotContain(messageWithB.Id, outstandingBefore);
+        await Assert.That(outstandingBefore).DoesNotContain(firstWithA.Id);
+        await Assert.That(outstandingBefore).DoesNotContain(secondWithA.Id);
+        await Assert.That(outstandingBefore).DoesNotContain(messageWithB.Id);
 
         // Act
         await TrackingOutbox.ReplayCausationAsync(CausationA, contextA);
@@ -223,21 +223,21 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
         // Assert — the two bulk-deposited CausationA messages are outstanding again
         var outstanding = await WaitForOutstandingMessagesAsync(contextA,
             ids => ids.Contains(firstWithA.Id) && ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
-        Assert.Contains(firstWithA.Id, outstanding);
-        Assert.Contains(secondWithA.Id, outstanding);
+        await Assert.That(outstanding).Contains(firstWithA.Id);
+        await Assert.That(outstanding).Contains(secondWithA.Id);
 
         // Assert — the CausationB message is untouched and still dispatched
-        Assert.DoesNotContain(messageWithB.Id, outstanding);
+        await Assert.That(outstanding).DoesNotContain(messageWithB.Id);
     }
 
-    [Fact]
-    public void When_asking_outbox_if_it_supports_causation_tracking_should_be_true()
+    [Test]
+    public async System.Threading.Tasks.Task When_asking_outbox_if_it_supports_causation_tracking_should_be_true()
     {
         // Act
         var supportsCausationTracking = TrackingOutbox.SupportsCausationTracking();
 
         // Assert
-        Assert.True(supportsCausationTracking);
+        await Assert.That(supportsCausationTracking).IsTrue();
     }
 
     private Id[] WaitForOutstandingMessages(RequestContext context, Func<Id[], bool> expectedState)

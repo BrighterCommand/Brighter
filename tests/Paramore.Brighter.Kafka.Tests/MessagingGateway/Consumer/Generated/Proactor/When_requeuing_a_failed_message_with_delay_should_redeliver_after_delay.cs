@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Consumer.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
-public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync : IAsyncLifetime
+[Property("Category", "Kafka")]
+[NotInParallel("Kafka")]
+public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -33,17 +34,20 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync 
         _messageAssertion = new KafkaMessageAssertion();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
+
     public async Task When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay_async()
     {
         // Arrange
@@ -62,17 +66,17 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync 
 
         // Act — receive the message and requeue it with a 5 s delay
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         var requeued = await _channel.RequeueAsync(received, TimeSpan.FromSeconds(5));
-        Assert.True(requeued);
+        await Assert.That(requeued).IsTrue();
 
         // Assert — before-D arm: a single bounded receive, deliberately shorter than the 5 s delay,
         // should yield MT_NONE. The window must be less than the delay so a correctly-delayed message
         // is not observed here, yet long enough to catch a gateway that ignores the delay and redelivers
         // immediately. A single receive, not a poll loop: this asserts the message is absent.
         var beforeDelay = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
-        Assert.Equal(MessageType.MT_NONE, beforeDelay.Header.MessageType);
+        await Assert.That(beforeDelay.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
         // Assert — once the delay has elapsed: poll every 500 ms, giving up after 30 s, and
         // wait for the message to reappear
@@ -87,7 +91,7 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync 
             }
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-        _messageAssertion.Assert(message, redelivered);
+        await Assert.That(redelivered.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await _messageAssertion.AssertAsync(message, redelivered);
     }
 }

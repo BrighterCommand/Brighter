@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -34,40 +34,40 @@ using Paramore.Brighter.Defer.Handlers;
 using Paramore.Brighter.DontAck.Handlers;
 using Paramore.Brighter.Reject.Handlers;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.Backstop;
 
 public class BackstopPumpActionTests
 {
-    public static TheoryData<bool, string> BackstopCases
+    public static IEnumerable<(bool, string)> BackstopCases
     {
         get
         {
-            var cases = new TheoryData<bool, string>();
+            var cases = new List<(bool, string)>();
             foreach (var isAsync in new[] { false, true })
                 foreach (var backstop in new[] { "defer", "reject", "dont-ack" })
-                    cases.Add(isAsync, backstop);
+                    cases.Add((isAsync, backstop));
             return cases;
         }
     }
 
-    public static TheoryData<bool, string, string, bool> ActionCases
+    public static IEnumerable<(bool, string, string, bool)> ActionCases
     {
         get
         {
-            var cases = new TheoryData<bool, string, string, bool>();
+            var cases = new List<(bool, string, string, bool)>();
             foreach (var isAsync in new[] { false, true })
                 foreach (var backstop in new[] { "defer", "reject", "dont-ack" })
                     foreach (var action in new[] { "reject", "defer", "dont-ack", "invalid" })
                         foreach (var aggregate in new[] { false, true })
-                            cases.Add(isAsync, backstop, action, aggregate);
+                            cases.Add((isAsync, backstop, action, aggregate));
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(ActionCases))]
+    [Test]
+    [MethodDataSource(nameof(ActionCases))]
     public async Task When_a_backstop_receives_a_pump_action_should_preserve_it(bool isAsync, string backstop, string action, bool aggregate)
     {
         //Arrange
@@ -83,20 +83,20 @@ public class BackstopPumpActionTests
         var original = aggregate ? new AggregateException(pumpAction) : pumpAction;
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => ExecuteAsync(isAsync, backstop, original));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => ExecuteAsync(isAsync, backstop, original));
 
         //Assert
-        Assert.Same(original, thrown);
-        Assert.Contains(isAsync ? nameof(BackstopActionHandlerAsync) : nameof(BackstopActionHandler), thrown!.StackTrace);
+        await Assert.That(thrown).IsSameReferenceAs(original);
+        await Assert.That(thrown!.StackTrace).Contains(isAsync ? nameof(BackstopActionHandlerAsync) : nameof(BackstopActionHandler));
         if (pumpAction is DeferMessageAction defer)
-            Assert.Equal(TimeSpan.FromMilliseconds(1234), defer.Delay);
+            await Assert.That(defer.Delay).IsEqualTo(TimeSpan.FromMilliseconds(1234));
     }
 
-    public static TheoryData<bool, string, string> ApplicationErrorCases
+    public static IEnumerable<(bool, string, string)> ApplicationErrorCases
     {
         get
         {
-            var cases = new TheoryData<bool, string, string>();
+            var cases = new List<(bool, string, string)>();
             foreach (var isAsync in new[] { false, true })
                 foreach (var backstop in new[] { "defer", "reject", "dont-ack" })
                     foreach (var error in new[]
@@ -104,13 +104,13 @@ public class BackstopPumpActionTests
                         "application", "cancel", "task-cancel", "caller-cancel", "caller-task-cancel",
                         "aggregate", "mixed-aggregate", "empty-aggregate", "nested-aggregate"
                     })
-                        cases.Add(isAsync, backstop, error);
+                        cases.Add((isAsync, backstop, error));
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(ApplicationErrorCases))]
+    [Test]
+    [MethodDataSource(nameof(ApplicationErrorCases))]
     public async Task When_a_backstop_receives_an_application_error_should_wrap_it(bool isAsync, string backstop, string error)
     {
         //Arrange
@@ -130,28 +130,28 @@ public class BackstopPumpActionTests
         var callerToken = error is "caller-cancel" or "caller-task-cancel" ? cancellation.Token : default;
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => ExecuteAsync(isAsync, backstop, original, callerToken));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => ExecuteAsync(isAsync, backstop, original, callerToken));
 
         //Assert
-        Assert.NotNull(thrown);
-        Assert.Same(original, thrown.InnerException);
-        Assert.Equal(original.Message, thrown.Message);
+        await Assert.That(thrown).IsNotNull();
+        await Assert.That(thrown.InnerException).IsSameReferenceAs(original);
+        await Assert.That(thrown.Message).IsEquivalentTo(original.Message);
         switch (backstop)
         {
             case "defer":
-                Assert.Equal(TimeSpan.FromMilliseconds(5000), Assert.IsType<DeferMessageAction>(thrown).Delay);
+                await Assert.That((await Assert.That(thrown).IsTypeOf<DeferMessageAction>()).Delay).IsEqualTo(TimeSpan.FromMilliseconds(5000));
                 break;
             case "reject":
-                Assert.IsType<RejectMessageAction>(thrown);
+                await Assert.That(thrown).IsTypeOf<RejectMessageAction>();
                 break;
             case "dont-ack":
-                Assert.IsType<DontAckAction>(thrown);
+                await Assert.That(thrown).IsTypeOf<DontAckAction>();
                 break;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(BackstopCases))]
+    [Test]
+    [MethodDataSource(nameof(BackstopCases))]
     public async Task When_a_backstop_receives_multiple_pump_actions_should_preserve_the_aggregate(bool isAsync, string backstop)
     {
         //Arrange
@@ -162,16 +162,16 @@ public class BackstopPumpActionTests
             new InvalidMessageAction("invalid"));
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => ExecuteAsync(isAsync, backstop, original));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => ExecuteAsync(isAsync, backstop, original));
 
         //Assert
-        Assert.Same(original, thrown);
-        Assert.Contains(isAsync ? nameof(BackstopActionHandlerAsync) : nameof(BackstopActionHandler), thrown!.StackTrace);
+        await Assert.That(thrown).IsSameReferenceAs(original);
+        await Assert.That(thrown!.StackTrace).Contains(isAsync ? nameof(BackstopActionHandlerAsync) : nameof(BackstopActionHandler));
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_backstops_are_stacked_should_preserve_the_innermost_action(bool isAsync)
     {
         //Arrange
@@ -187,7 +187,7 @@ public class BackstopPumpActionTests
             outer.SetSuccessor(inner);
 
             //Act
-            thrown = await Record.ExceptionAsync(() => outer.HandleAsync(command));
+            thrown = await TestExceptionRecorder.CaptureAsync(() => outer.HandleAsync(command));
         }
         else
         {
@@ -199,29 +199,29 @@ public class BackstopPumpActionTests
             outer.SetSuccessor(inner);
 
             //Act
-            thrown = Record.Exception(() => outer.Handle(command));
+            thrown = TestExceptionRecorder.Capture(() => outer.Handle(command));
         }
 
         //Assert
-        var action = Assert.IsType<DeferMessageAction>(thrown);
-        Assert.Same(original, action.InnerException);
-        Assert.Equal(TimeSpan.FromMilliseconds(1234), action.Delay);
+        var action = await Assert.That(thrown).IsTypeOf<DeferMessageAction>();
+        await Assert.That(action.InnerException).IsSameReferenceAs(original);
+        await Assert.That(action.Delay).IsEqualTo(TimeSpan.FromMilliseconds(1234));
     }
 
-    [Theory]
-    [MemberData(nameof(BackstopCases))]
+    [Test]
+    [MethodDataSource(nameof(BackstopCases))]
     public async Task When_a_backstop_receives_a_successful_request_should_return_it(bool isAsync, string backstop)
     {
         //Arrange / Act
-        var thrown = await Record.ExceptionAsync(() => ExecuteAsync(isAsync, backstop));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => ExecuteAsync(isAsync, backstop));
 
         //Assert
-        Assert.Null(thrown);
+        await Assert.That(thrown).IsNull();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_sending_a_command_with_a_defer_backstop_should_preserve_an_explicit_rejection(bool isAsync)
     {
         //Arrange
@@ -245,10 +245,10 @@ public class BackstopPumpActionTests
                 new PolicyRegistry(), pipelines, new InMemorySchedulerFactory());
 
             //Act
-            thrown = await Record.ExceptionAsync(() => processor.SendAsync(command));
+            thrown = await TestExceptionRecorder.CaptureAsync(() => processor.SendAsync(command));
 
             //Assert
-            Assert.Equal(1, command.Attempts);
+            await Assert.That(command.Attempts).IsEqualTo(1);
         }
         else
         {
@@ -266,12 +266,12 @@ public class BackstopPumpActionTests
                 new PolicyRegistry(), pipelines, new InMemorySchedulerFactory());
 
             //Act
-            thrown = Record.Exception(() => processor.Send(command));
+            thrown = TestExceptionRecorder.Capture(() => processor.Send(command));
 
             //Assert
-            Assert.Equal(1, command.Attempts);
+            await Assert.That(command.Attempts).IsEqualTo(1);
         }
-        Assert.Same(original, thrown);
+        await Assert.That(thrown).IsSameReferenceAs(original);
     }
 
     private static async Task ExecuteAsync(bool isAsync, string backstop, Exception? exception = null,
@@ -292,12 +292,12 @@ public class BackstopPumpActionTests
             handler.SetSuccessor(new BackstopActionHandlerAsync());
             try
             {
-                Assert.Same(command, await handler.HandleAsync(command, cancellationToken));
+                await Assert.That(await handler.HandleAsync(command, cancellationToken)).IsSameReferenceAs(command);
             }
             finally
             {
-                Assert.Equal(1, command.Attempts);
-                Assert.Equal(cancellationToken, command.CancellationToken);
+                await Assert.That(command.Attempts).IsEqualTo(1);
+                await Assert.That(command.CancellationToken).IsEqualTo(cancellationToken);
             }
         }
         else
@@ -315,11 +315,11 @@ public class BackstopPumpActionTests
             handler.SetSuccessor(new BackstopActionHandler());
             try
             {
-                Assert.Same(command, handler.Handle(command));
+                await Assert.That(handler.Handle(command)).IsSameReferenceAs(command);
             }
             finally
             {
-                Assert.Equal(1, command.Attempts);
+                await Assert.That(command.Attempts).IsEqualTo(1);
             }
         }
     }

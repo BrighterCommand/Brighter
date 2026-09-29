@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class DeclaredTypeIsInMemoryFactoryOffersOnlySubscriptionRemedyValidationTests
 {
-    [Fact]
-    public void When_the_declared_type_is_the_in_memory_factory_should_offer_only_the_subscription_remedy()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_declared_type_is_the_in_memory_factory_should_offer_only_the_subscription_remedy()
     {
         // Arrange — the AC-1 configuration: a plain subscription (D == InMemoryChannelFactory)
         // handed a DeclaredChannelFactory
@@ -49,11 +49,9 @@ public class DeclaredTypeIsInMemoryFactoryOffersOnlySubscriptionRemedyValidation
 
         // Assert — only the subscription-side remedy is offered; the configuration-side
         // remedy (which would tell the operator to configure InMemoryChannelFactory) is suppressed
-        var result = Assert.Single(results);
+        var result = await Assert.That(results).HasSingleItem();
         var message = result.Error!.Message;
-        Assert.EndsWith(
-            "— use a subscription type whose ChannelFactoryType is Paramore.Brighter.Core.Tests.Validation.TestDoubles.DeclaredChannelFactory",
-            message);
-        Assert.DoesNotContain("configure a channel factory of type", message);
+        await Assert.That(message).EndsWith("— use a subscription type whose ChannelFactoryType is Paramore.Brighter.Core.Tests.Validation.TestDoubles.DeclaredChannelFactory");
+        await Assert.That(message).DoesNotContain("configure a channel factory of type");
     }
 }

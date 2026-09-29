@@ -26,7 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerText;
 
@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerText;
 // causation id is null. The bulk path names its parameters "@p{i}_CausationId", which did not match the
 // exact-name ("@CausationId") special case in SpannerOutbox.CreateSqlParameter, so it produced an
 // untyped DBNull that the emulator/production rejects. A bulk Add of >1 message therefore threw.
-[Trait("Category", "Spanner")]
+[Property("Category", "Spanner")]
 public class SpannerBulkAddNullCausationTests : IDisposable
 {
     private readonly SpannerTextOutboxProvider _outboxProvider;
@@ -50,8 +50,8 @@ public class SpannerBulkAddNullCausationTests : IDisposable
         _messageBuilder = new DefaultMessageBuilder();
     }
 
-    [Fact]
-    public void When_bulk_adding_messages_with_null_causation_should_not_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_bulk_adding_messages_with_null_causation_should_not_throw()
     {
         // Arrange
         var context = new RequestContext(); // no causation id in the bag -> causation binds as null
@@ -61,14 +61,22 @@ public class SpannerBulkAddNullCausationTests : IDisposable
         var outbox = _outboxProvider.CreateOutbox();
 
         // Act
-        var exception = Record.Exception(() => outbox.Add(messages, context));
+        Exception? exception = null;
+        try
+        {
+            outbox.Add(messages, context);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         // Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
         foreach (var message in messages)
         {
             var stored = outbox.Get(message.Id, context);
-            Assert.Equal(message.Id, stored.Id);
+            await Assert.That(stored.Id).IsEqualTo(message.Id);
         }
     }
 

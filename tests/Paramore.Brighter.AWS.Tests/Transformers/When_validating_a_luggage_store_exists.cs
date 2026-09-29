@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Amazon.S3;
@@ -7,12 +7,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.Transformers.AWS;
 using Paramore.Brighter.Transforms.Storage;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.Transformers;
 
-[Trait("Category", "AWS")] 
-public class S3LuggageStoreExistsTests : IAsyncLifetime
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class S3LuggageStoreExistsTests
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
@@ -25,8 +25,8 @@ public class S3LuggageStoreExistsTests : IAsyncLifetime
         var provider = services.BuildServiceProvider();
         _httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
     }
-    
-    [Fact]
+
+    [Test]
     public async Task When_checking_store_that_exists()
     {
         //arrange
@@ -37,7 +37,7 @@ public class S3LuggageStoreExistsTests : IAsyncLifetime
             ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
         });
-        
+
         await luggageStore.EnsureStoreExistsAsync();
 
         //allow bucket endpoint to come into existence
@@ -47,19 +47,21 @@ public class S3LuggageStoreExistsTests : IAsyncLifetime
         luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
         {
             Strategy = StorageStrategy.Validate,
-            HttpClientFactory = _httpClientFactory, 
+            HttpClientFactory = _httpClientFactory,
             BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
         });
 
-        Assert.NotNull(luggageStore);
+        await Assert.That(luggageStore).IsNotNull();
     }
-    
+
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(HookType.Test)]
     public Task DisposeAsync() => S3TestBucketCleanup.DeleteAsync(_bucketName);
 
-    [Fact]
+    [Test]
     public async Task When_checking_store_that_does_not_exist()
     {
         //act
@@ -77,8 +79,8 @@ public class S3LuggageStoreExistsTests : IAsyncLifetime
 
                  await luggageStore.EnsureStoreExistsAsync();
              });
-         
-         Assert.NotNull(doesNotExist);
-         Assert.True(doesNotExist is InvalidOperationException);
+
+         await Assert.That(doesNotExist).IsNotNull();
+         await Assert.That(doesNotExist is InvalidOperationException).IsTrue();
     }
 }

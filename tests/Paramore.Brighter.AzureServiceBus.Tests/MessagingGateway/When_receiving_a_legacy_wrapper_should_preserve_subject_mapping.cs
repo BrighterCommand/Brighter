@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -26,19 +27,18 @@ using System;
 using System.Collections.Generic;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusLegacyWrapperSubjectTests
 {
-    [Theory]
-    [InlineData(false, null, "")]
-    [InlineData(true, "cloud-subject", "cloud-subject")]
-    [InlineData(true, "", "")]
-    [InlineData(true, null, "")]
-    public void When_receiving_a_legacy_wrapper_should_preserve_subject_mapping(
+    [Test]
+    [Arguments(false, null, "")]
+    [Arguments(true, "cloud-subject", "cloud-subject")]
+    [Arguments(true, "", "")]
+    [Arguments(true, null, "")]
+    public async System.Threading.Tasks.Task When_receiving_a_legacy_wrapper_should_preserve_subject_mapping(
         bool hasSubject, string? subject, string expectedSubject)
     {
         // Arrange
@@ -61,6 +61,6 @@ public class AzureServiceBusLegacyWrapperSubjectTests
         var received = creator.MapToBrighterMessage(brokeredMessage);
 
         // Assert
-        Assert.Equal(expectedSubject, received.Header.Subject);
+        await Assert.That(received.Header.Subject).IsEqualTo(expectedSubject);
     }
 }

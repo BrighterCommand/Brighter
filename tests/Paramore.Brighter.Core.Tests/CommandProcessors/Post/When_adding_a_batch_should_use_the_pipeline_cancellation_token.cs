@@ -1,18 +1,15 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -36,7 +33,7 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Polly;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 
@@ -75,9 +72,9 @@ public class AsyncOutboxResilienceCancellationTests : IDisposable
             timeProvider: _timeProvider);
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
     public async Task When_adding_a_batch_should_use_the_pipeline_cancellation_token(bool useResilienceContext)
     {
         // Arrange
@@ -92,17 +89,17 @@ public class AsyncOutboxResilienceCancellationTests : IDisposable
         await _mediator.EndBatchAddToOutboxAsync(batchId, null, context, _callerCancellation.Token);
 
         // Assert
-        Assert.Equal(ExpectedToken(useResilienceContext), Assert.Single(_outbox.AddTokens));
-        Assert.Equal(message.Id, _outbox.Get(message.Id, context).Id);
-        Assert.Equal(secondMessage.Id, _outbox.Get(secondMessage.Id, context).Id);
-        Assert.Empty(_bus.Stream(_topic));
+        await Assert.That((await Assert.That(_outbox.AddTokens).HasSingleItem())).IsEqualTo(ExpectedToken(useResilienceContext));
+        await Assert.That(_outbox.Get(message.Id, context).Id).IsEqualTo(message.Id);
+        await Assert.That(_outbox.Get(secondMessage.Id, context).Id).IsEqualTo(secondMessage.Id);
+        await Assert.That(_bus.Stream(_topic)).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
+    [Test]
+    [Arguments(false, true)]
+    [Arguments(true, true)]
+    [Arguments(false, false)]
+    [Arguments(true, false)]
     public async Task When_sending_messages_should_use_the_pipeline_cancellation_token(
         bool useBulk, bool useResilienceContext)
     {
@@ -115,15 +112,15 @@ public class AsyncOutboxResilienceCancellationTests : IDisposable
         await DispatchAsync(message, context, useBulk);
 
         // Assert
-        Assert.Equal(ExpectedToken(useResilienceContext), Assert.Single(_producer.SendTokens));
-        Assert.Equal(message.Id, Assert.Single(_bus.Stream(_topic)).Id);
+        await Assert.That((await Assert.That(_producer.SendTokens).HasSingleItem())).IsEqualTo(ExpectedToken(useResilienceContext));
+        await Assert.That((await Assert.That(_bus.Stream(_topic)).HasSingleItem()).Id).IsEqualTo(message.Id);
     }
 
-    [Theory]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
+    [Test]
+    [Arguments(false, true)]
+    [Arguments(true, true)]
+    [Arguments(false, false)]
+    [Arguments(true, false)]
     public async Task When_marking_messages_dispatched_should_use_the_pipeline_cancellation_token(
         bool useBulk, bool useResilienceContext)
     {
@@ -146,15 +143,24 @@ public class AsyncOutboxResilienceCancellationTests : IDisposable
         }
 
         // Assert
-        Assert.Equal(2, _outbox.MarkDispatchedTokens.Count);
-        Assert.All(_outbox.MarkDispatchedTokens, token => Assert.Equal(ExpectedToken(useResilienceContext), token));
-        Assert.Empty(_outbox.OutstandingMessages(TimeSpan.Zero, context));
+        await Assert.That(_outbox.MarkDispatchedTokens.Count).IsEqualTo(2);
+        using (Assert.Multiple())
+        {
+            foreach (var token in _outbox.MarkDispatchedTokens)
+            {
+                await Assert.That(token).IsEqualTo(ExpectedToken(useResilienceContext));
+            }
+        }
+        await Assert.That(_outbox.OutstandingMessages(TimeSpan.Zero, context)).IsEmpty();
         var sentMessages = _bus.Stream(_topic).ToArray();
-        Assert.Equal(messages.Length, sentMessages.Length);
-        Assert.All(messages, expected => Assert.Contains(sentMessages, sent => sent.Id == expected.Id));
+        await Assert.That(sentMessages.Length).IsEqualTo(messages.Length);
+        foreach (var expected in messages)
+{
+    await Assert.That(sentMessages).Contains(sent => sent.Id == expected.Id);
+}
     }
 
-    [Fact]
+    [Test]
     public async Task When_cancelling_during_a_batch_add_should_leave_the_batch_unstored()
     {
         // Arrange
@@ -165,18 +171,18 @@ public class AsyncOutboxResilienceCancellationTests : IDisposable
         _outbox.OnAdding = _resilienceCancellation.Cancel;
 
         // Act
-        await Assert.ThrowsAsync<ChannelFailureException>(() =>
-            _mediator.EndBatchAddToOutboxAsync(batchId, null, context, _callerCancellation.Token));
+        await Assert.That(() =>
+            _mediator.EndBatchAddToOutboxAsync(batchId, null, context, _callerCancellation.Token)).ThrowsExactly<ChannelFailureException>();
 
         // Assert
-        Assert.Single(_outbox.AddTokens);
-        Assert.Empty(_outbox.OutstandingMessages(TimeSpan.Zero, context));
-        Assert.False(_callerCancellation.IsCancellationRequested);
+        await Assert.That(_outbox.AddTokens).HasSingleItem();
+        await Assert.That(_outbox.OutstandingMessages(TimeSpan.Zero, context)).IsEmpty();
+        await Assert.That(_callerCancellation.IsCancellationRequested).IsFalse();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_cancelling_during_send_should_leave_the_message_outstanding(bool useBulk)
     {
         // Arrange
@@ -189,16 +195,16 @@ public class AsyncOutboxResilienceCancellationTests : IDisposable
         await DispatchAsync(message, context, useBulk);
 
         // Assert
-        Assert.Single(_producer.SendTokens);
-        Assert.Empty(_bus.Stream(_topic));
-        Assert.Empty(_outbox.MarkDispatchedTokens);
-        Assert.Equal(message.Id, Assert.Single(_outbox.OutstandingMessages(TimeSpan.Zero, context)).Id);
-        Assert.False(_callerCancellation.IsCancellationRequested);
+        await Assert.That(_producer.SendTokens).HasSingleItem();
+        await Assert.That(_bus.Stream(_topic)).IsEmpty();
+        await Assert.That(_outbox.MarkDispatchedTokens).IsEmpty();
+        await Assert.That((await Assert.That(_outbox.OutstandingMessages(TimeSpan.Zero, context)).HasSingleItem()).Id).IsEqualTo(message.Id);
+        await Assert.That(_callerCancellation.IsCancellationRequested).IsFalse();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_cancelling_during_dispatch_marking_should_leave_the_message_outstanding(bool useBulk)
     {
         // Arrange
@@ -211,15 +217,15 @@ public class AsyncOutboxResilienceCancellationTests : IDisposable
         await DispatchAsync(message, context, useBulk);
 
         // Assert
-        Assert.Single(_outbox.MarkDispatchedTokens);
-        Assert.Equal(message.Id, Assert.Single(_bus.Stream(_topic)).Id);
-        Assert.Equal(message.Id, Assert.Single(_outbox.OutstandingMessages(TimeSpan.Zero, context)).Id);
-        Assert.False(_callerCancellation.IsCancellationRequested);
+        await Assert.That(_outbox.MarkDispatchedTokens).HasSingleItem();
+        await Assert.That((await Assert.That(_bus.Stream(_topic)).HasSingleItem()).Id).IsEqualTo(message.Id);
+        await Assert.That((await Assert.That(_outbox.OutstandingMessages(TimeSpan.Zero, context)).HasSingleItem()).Id).IsEqualTo(message.Id);
+        await Assert.That(_callerCancellation.IsCancellationRequested).IsFalse();
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
     public async Task When_a_batch_add_times_out_should_leave_the_batch_unstored(bool useResilienceContext)
     {
         // Arrange
@@ -231,21 +237,21 @@ public class AsyncOutboxResilienceCancellationTests : IDisposable
         _outbox.OnAdding = () => _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
         // Act
-        await Assert.ThrowsAsync<ChannelFailureException>(() =>
-            _mediator.EndBatchAddToOutboxAsync(batchId, null, context, _callerCancellation.Token));
+        await Assert.That(() =>
+            _mediator.EndBatchAddToOutboxAsync(batchId, null, context, _callerCancellation.Token)).ThrowsExactly<ChannelFailureException>();
 
         // Assert
-        Assert.True(Assert.Single(_outbox.AddTokens).IsCancellationRequested);
-        Assert.Empty(_outbox.OutstandingMessages(TimeSpan.Zero, context));
-        Assert.False(_callerCancellation.IsCancellationRequested);
-        Assert.False(_resilienceCancellation.IsCancellationRequested);
+        await Assert.That((await Assert.That(_outbox.AddTokens).HasSingleItem()).IsCancellationRequested).IsTrue();
+        await Assert.That(_outbox.OutstandingMessages(TimeSpan.Zero, context)).IsEmpty();
+        await Assert.That(_callerCancellation.IsCancellationRequested).IsFalse();
+        await Assert.That(_resilienceCancellation.IsCancellationRequested).IsFalse();
     }
 
-    [Theory]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
+    [Test]
+    [Arguments(false, true)]
+    [Arguments(true, true)]
+    [Arguments(false, false)]
+    [Arguments(true, false)]
     public async Task When_a_send_times_out_should_leave_the_message_outstanding(
         bool useBulk, bool useResilienceContext)
     {
@@ -260,19 +266,19 @@ public class AsyncOutboxResilienceCancellationTests : IDisposable
         await DispatchAsync(message, context, useBulk);
 
         // Assert
-        Assert.True(Assert.Single(_producer.SendTokens).IsCancellationRequested);
-        Assert.Empty(_bus.Stream(_topic));
-        Assert.Empty(_outbox.MarkDispatchedTokens);
-        Assert.Equal(message.Id, Assert.Single(_outbox.OutstandingMessages(TimeSpan.Zero, context)).Id);
-        Assert.False(_callerCancellation.IsCancellationRequested);
-        Assert.False(_resilienceCancellation.IsCancellationRequested);
+        await Assert.That((await Assert.That(_producer.SendTokens).HasSingleItem()).IsCancellationRequested).IsTrue();
+        await Assert.That(_bus.Stream(_topic)).IsEmpty();
+        await Assert.That(_outbox.MarkDispatchedTokens).IsEmpty();
+        await Assert.That((await Assert.That(_outbox.OutstandingMessages(TimeSpan.Zero, context)).HasSingleItem()).Id).IsEqualTo(message.Id);
+        await Assert.That(_callerCancellation.IsCancellationRequested).IsFalse();
+        await Assert.That(_resilienceCancellation.IsCancellationRequested).IsFalse();
     }
 
-    [Theory]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
+    [Test]
+    [Arguments(false, true)]
+    [Arguments(true, true)]
+    [Arguments(false, false)]
+    [Arguments(true, false)]
     public async Task When_dispatch_marking_times_out_should_leave_the_message_outstanding(
         bool useBulk, bool useResilienceContext)
     {
@@ -287,11 +293,11 @@ public class AsyncOutboxResilienceCancellationTests : IDisposable
         await DispatchAsync(message, context, useBulk);
 
         // Assert
-        Assert.True(Assert.Single(_outbox.MarkDispatchedTokens).IsCancellationRequested);
-        Assert.Equal(message.Id, Assert.Single(_bus.Stream(_topic)).Id);
-        Assert.Equal(message.Id, Assert.Single(_outbox.OutstandingMessages(TimeSpan.Zero, context)).Id);
-        Assert.False(_callerCancellation.IsCancellationRequested);
-        Assert.False(_resilienceCancellation.IsCancellationRequested);
+        await Assert.That((await Assert.That(_outbox.MarkDispatchedTokens).HasSingleItem()).IsCancellationRequested).IsTrue();
+        await Assert.That((await Assert.That(_bus.Stream(_topic)).HasSingleItem()).Id).IsEqualTo(message.Id);
+        await Assert.That((await Assert.That(_outbox.OutstandingMessages(TimeSpan.Zero, context)).HasSingleItem()).Id).IsEqualTo(message.Id);
+        await Assert.That(_callerCancellation.IsCancellationRequested).IsFalse();
+        await Assert.That(_resilienceCancellation.IsCancellationRequested).IsFalse();
     }
 
     private void ConfigureTimeout()

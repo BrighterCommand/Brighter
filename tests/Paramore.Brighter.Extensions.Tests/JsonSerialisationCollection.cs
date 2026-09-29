@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -22,11 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[CollectionDefinition(NAME, DisableParallelization = true)]
+[System.Obsolete]
 public class JsonSerialisationCollection
 {
     public const string NAME = "Json serialisation configuration";

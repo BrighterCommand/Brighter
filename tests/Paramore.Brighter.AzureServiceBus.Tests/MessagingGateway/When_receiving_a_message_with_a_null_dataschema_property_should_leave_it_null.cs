@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
@@ -14,7 +13,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 /// escape inside the consumer's receive loop, leaving the message undeliverable with no boundary at
 /// which the failure could be reported.
 /// </summary>
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusNullDataSchemaPropertyTests
 {
     private readonly AzureServiceBusMessageCreator _creator;
@@ -30,8 +29,8 @@ public class AzureServiceBusNullDataSchemaPropertyTests
         _creator = new AzureServiceBusMessageCreator(subscription);
     }
 
-    [Fact]
-    public void When_receiving_a_message_with_a_null_dataschema_property_should_leave_it_null()
+    [Test]
+    public async System.Threading.Tasks.Task When_receiving_a_message_with_a_null_dataschema_property_should_leave_it_null()
     {
         // Arrange — the key is present but its value is null, which is what an AMQP null looks like
         // The CloudEvents keys are written as string literals, not via ASBConstants, deliberately:
@@ -56,6 +55,6 @@ public class AzureServiceBusNullDataSchemaPropertyTests
         var message = _creator.MapToBrighterMessage(received);
 
         // Assert
-        Assert.Null(message.Header.DataSchema);
+        await Assert.That(message.Header.DataSchema).IsNull();
     }
 }

@@ -21,7 +21,6 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.MessagingGateway.MQTT;
-using Xunit;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway;
 
@@ -35,8 +34,8 @@ public class When_mqtt_consumer_factory_scheduler_set_after_construction
         ClientID = "test-client"
     };
 
-    [Fact]
-    public void Should_expose_scheduler_set_after_construction()
+    [Test]
+    public async Task Should_expose_scheduler_set_after_construction()
     {
         // Arrange — factory constructed without a scheduler
         var factory = new MqttMessageConsumerFactory(_configuration);
@@ -46,22 +45,22 @@ public class When_mqtt_consumer_factory_scheduler_set_after_construction
         factory.Scheduler = scheduler;
 
         // Assert — scheduler property reflects the updated value
-        Assert.Same(scheduler, factory.Scheduler);
+        await Assert.That(factory.Scheduler).IsSameReferenceAs(scheduler);
     }
 
-    [Fact]
-    public void Should_use_constructor_scheduler_when_property_not_set()
+    [Test]
+    public async Task Should_use_constructor_scheduler_when_property_not_set()
     {
         // Arrange — factory constructed with a scheduler via constructor
         var scheduler = new StubMessageScheduler();
         var factory = new MqttMessageConsumerFactory(_configuration, scheduler);
 
         // Assert — scheduler property reflects the constructor value
-        Assert.Same(scheduler, factory.Scheduler);
+        await Assert.That(factory.Scheduler).IsSameReferenceAs(scheduler);
     }
 
-    [Fact]
-    public void Should_override_constructor_scheduler_with_property()
+    [Test]
+    public async Task Should_override_constructor_scheduler_with_property()
     {
         // Arrange — factory constructed with one scheduler
         var originalScheduler = new StubMessageScheduler();
@@ -72,8 +71,8 @@ public class When_mqtt_consumer_factory_scheduler_set_after_construction
         factory.Scheduler = overrideScheduler;
 
         // Assert — property reflects the override, not the original
-        Assert.Same(overrideScheduler, factory.Scheduler);
-        Assert.NotSame(originalScheduler, factory.Scheduler);
+        await Assert.That(factory.Scheduler).IsSameReferenceAs(overrideScheduler);
+        await Assert.That(factory.Scheduler).IsNotSameReferenceAs(originalScheduler);
     }
 
     private class StubMessageScheduler : IAmAMessageScheduler;

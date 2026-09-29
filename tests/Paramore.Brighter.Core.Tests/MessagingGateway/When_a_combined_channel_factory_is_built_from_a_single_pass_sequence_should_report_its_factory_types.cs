@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.Core.Tests.MessagingGateway.TestDoubles;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway;
 
 public class CombinedChannelFactoryFactoryTypesTests
 {
-    [Fact]
-    public void When_a_combined_channel_factory_is_built_from_a_single_pass_sequence_should_report_its_factory_types()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_combined_channel_factory_is_built_from_a_single_pass_sequence_should_report_its_factory_types()
     {
         // Arrange — a sequence that throws on a second GetEnumerator() call, so FactoryTypes must
         // be derived from the already-materialised _factories field, not by re-enumerating factories
@@ -45,6 +45,6 @@ public class CombinedChannelFactoryFactoryTypesTests
         var factoryTypes = combinedChannelFactory.FactoryTypes;
 
         // Assert — inner factory types, in constructor order
-        Assert.Equal([typeof(DeclaredChannelFactory), typeof(NonMatchingChannelFactory)], factoryTypes);
+        await Assert.That(factoryTypes).IsEquivalentTo([typeof(DeclaredChannelFactory), typeof(NonMatchingChannelFactory)], TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 }

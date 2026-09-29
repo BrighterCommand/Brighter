@@ -2,14 +2,14 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ScopedMapperPerPipelineTests
 {
-    [Fact]
-    public void When_consuming_two_messages_a_scoped_mapper_should_not_be_reused()
+    [Test]
+    public async System.Threading.Tasks.Task When_consuming_two_messages_a_scoped_mapper_should_not_be_reused()
     {
         //arrange — an FR-22.2-conformant lifetime triple: all three Scoped
         TransformPipelineBuilder.ClearPipelineCache();
@@ -33,8 +33,8 @@ public class ScopedMapperPerPipelineTests
 
         //assert — two distinct mapper instances, the first disposed strictly before the second was
         //constructed (the ordering, not merely the distinctness), and no Brighter-created scope left live
-        Assert.Equal(new[] { "Constructed:1", "Disposed:1", "Constructed:2", "Disposed:2" }, recorder.Events);
-        Assert.Equal(0, scopeTracker.OutstandingCount);
+        await Assert.That(recorder.Events).IsEquivalentTo(new[] { "Constructed:1", "Disposed:1", "Constructed:2", "Disposed:2" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        await Assert.That(scopeTracker.OutstandingCount).IsEqualTo(0);
     }
 
     private static ScopeTracker BuildScopeTracker(ConstructionOrderRecorder recorder, out IServiceProvider trackingProvider)

@@ -8,6 +8,7 @@ using Paramore.Brighter.Inbox.Firestore;
 
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Inbox;
 
+[TUnit.Core.InheritsTests]
 public class FirestoreCausationTrackingInboxTest : CausationTrackingInboxBaseTests
 {
     private readonly List<MyCommand> _createdCommands = [];

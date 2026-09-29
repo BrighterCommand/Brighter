@@ -21,7 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -29,8 +28,8 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 // BrighterSemanticConventions.SourceName. Under xUnit's default class-parallel
 // scheduling both providers can be alive concurrently, so activities emitted by
 // one class' code leak into the other class' in-memory exporter list — and the
-// per-test Assert.Single(_exportedActivities) check then sometimes counts 2.
+// per-test Xunit.Assert.Single(_exportedActivities) check then sometimes counts 2.
 // Serialising both classes through this collection removes the overlap without
 // having to filter exported activities by source-name + tag in every assertion.
-[CollectionDefinition("BoxProvisioningObservability", DisableParallelization = true)]
+[System.Obsolete]
 public class BoxProvisioningObservabilityCollection;

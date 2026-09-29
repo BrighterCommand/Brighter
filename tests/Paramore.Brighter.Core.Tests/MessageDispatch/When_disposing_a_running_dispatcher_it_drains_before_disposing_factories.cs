@@ -7,7 +7,6 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
@@ -69,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Receive();
         }
 
-        [Fact]
+        [Test]
         public async Task When_disposing_a_running_dispatcher_it_drains_the_pumps_before_disposing_factories()
         {
             //give the running pump a moment to come up and start consuming
@@ -78,11 +77,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Dispose();
 
             //the pumps were stopped (End ran) as part of Dispose, not left running under a disposed factory
-            Assert.Equal(DispatcherState.DS_STOPPED, _dispatcher.State);
+            await Assert.That(_dispatcher.State).IsEqualTo(DispatcherState.DS_STOPPED);
 
             //and the owned mapper factory was disposed only after the dispatcher had stopped
-            Assert.Equal(1, _mapperFactory.DisposeCount);
-            Assert.Equal(DispatcherState.DS_STOPPED, _mapperFactory.StateAtDispose);
+            await Assert.That(_mapperFactory.DisposeCount).IsEqualTo(1);
+            await Assert.That(_mapperFactory.StateAtDispose).IsEqualTo(DispatcherState.DS_STOPPED);
         }
 
         public void Dispose()

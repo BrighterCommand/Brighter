@@ -8,13 +8,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "PostgresSql")]
-[Collection("PostgresMessagingGateway")]
-public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLogAsync : IAsyncLifetime
+[Property("Category", "PostgresSql")]
+[NotInParallel("PostgresMessagingGateway")]
+public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLogAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -35,17 +36,20 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
         _messageAssertion = new DefaultMessageAssertion();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
+
     public async Task When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log_async()
     {
         // Arrange — neither a dead-letter queue nor an invalid-message channel is configured
@@ -81,7 +85,7 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
         // id rather than assumed to be the one sent first (NFR-4). The behaviour under test is the
         // same either way.
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         var rejectedMessage = _sentMessages.Single(m => m.Header.MessageId == received.Header.MessageId);
         var theOtherMessage = _sentMessages.Single(m => m.Header.MessageId != rejectedMessage.Header.MessageId);
@@ -89,7 +93,7 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
         var rejected = await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Test rejection with no channels configured"));
 
         // Assert — RejectAsync returns true: the message is removed, not redelivered
-        Assert.True(rejected, "RejectAsync should return true when no channels are configured");
+        await Assert.That(rejected).IsTrue().Because("RejectAsync should return true when no channels are configured");
 
         // Assert — the other message arrives without blocking, and the rejected one does not come
         // back while we wait for it. Identifying by id rather than by arrival position is what
@@ -105,13 +109,13 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
             }
 
             // The rejected message coming back is the one outcome this test exists to forbid.
-            Assert.NotEqual(rejectedMessage.Header.MessageId, next.Header.MessageId);
+            await Assert.That(next.Header.MessageId).IsNotEqualTo(rejectedMessage.Header.MessageId);
 
             receivedOther = next;
             break;
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, receivedOther.Header.MessageType);
-        _messageAssertion.Assert(theOtherMessage, receivedOther);
+        await Assert.That(receivedOther.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await _messageAssertion.AssertAsync(theOtherMessage, receivedOther);
     }
 }

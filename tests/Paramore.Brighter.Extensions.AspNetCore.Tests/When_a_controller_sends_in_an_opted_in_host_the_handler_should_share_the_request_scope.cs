@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // scope rather than creating its own.
 public class ControllerSendSharesRequestScopeTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_controller_sends_in_an_opted_in_host_the_handler_should_share_the_request_scope()
     {
         // Arrange
@@ -49,8 +49,8 @@ public class ControllerSendSharesRequestScopeTests
         // Assert
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.NotNull(recorder.ControllerInstance);
-        Assert.NotNull(recorder.HandlerInstance);
-        Assert.Same(recorder.ControllerInstance, recorder.HandlerInstance);
+        await Assert.That(recorder.ControllerInstance).IsNotNull();
+        await Assert.That(recorder.HandlerInstance).IsNotNull();
+        await Assert.That(recorder.HandlerInstance).IsSameReferenceAs(recorder.ControllerInstance);
     }
 }

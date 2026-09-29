@@ -3,14 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ScopedMapperFirstResolutionRaceTests
 {
-    [Fact]
-    public void When_two_threads_first_resolve_a_scoped_mapper_concurrently_it_should_not_leak_a_scope()
+    [Test]
+    public async System.Threading.Tasks.Task When_two_threads_first_resolve_a_scoped_mapper_concurrently_it_should_not_leak_a_scope()
     {
         // Arrange
         var collection = new ServiceCollection();
@@ -37,16 +37,16 @@ public class ScopedMapperFirstResolutionRaceTests
         //wider than the barrier's own timeout so that if a future fast path ever leaves one thread not blocking
         //at the barrier, this Join outlives the barrier and the workers reach the diagnostic CreatedCount assert
         //rather than both timers expiring together and reporting the generic "resolution deadlocked"
-        foreach (var worker in workers) Assert.True(worker.Join(TimeSpan.FromSeconds(30)), "resolution deadlocked");
+        foreach (var worker in workers) await Assert.That(worker.Join(TimeSpan.FromSeconds(30))).IsTrue().Because("resolution deadlocked");
 
         // both threads created a scope under the race — the precondition the test is proving cleanup for
-        Assert.Equal(2, scopeTracker.CreatedCount);
+        await Assert.That(scopeTracker.CreatedCount).IsEqualTo(2);
 
         // Assert — once the factory is disposed every scope it created has been disposed exactly as many
         // times as it was created. With the non-atomic assignment the loser scope is neither the retained
         // _scope nor in _outstandingScopes, so Dispose() never drains it and DisposedCount stays at 1.
         factory.Dispose();
-        Assert.Equal(scopeTracker.CreatedCount, scopeTracker.DisposedCount);
+        await Assert.That(scopeTracker.DisposedCount).IsEqualTo(scopeTracker.CreatedCount);
     }
 
     private sealed class MinimalCommand : Command

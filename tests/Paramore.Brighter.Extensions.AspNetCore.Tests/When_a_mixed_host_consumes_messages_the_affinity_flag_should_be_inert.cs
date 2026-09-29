@@ -35,7 +35,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -52,41 +52,50 @@ public class MixedHostConsumerAffinityInertTests
 {
     private const int MessageCount = 100;
 
-    [Fact]
+    [Test]
     public async Task When_a_mixed_host_consumes_messages_the_affinity_flag_should_be_inert()
     {
         var result = await ConsumeMessagesAsync(ScopeAffinity.AlwaysNew);
-        AssertConsumptionWasUnaffected(result);
+        await AssertConsumptionWasUnaffected(result);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_host_opts_into_join_ambient_the_consumer_outcome_should_be_unchanged()
     {
         var result = await ConsumeMessagesAsync(ScopeAffinity.JoinAmbient);
-        AssertConsumptionWasUnaffected(result);
+        await AssertConsumptionWasUnaffected(result);
     }
 
-    private static void AssertConsumptionWasUnaffected(ConsumptionResult result)
+    private static async System.Threading.Tasks.Task AssertConsumptionWasUnaffected(ConsumptionResult result)
     {
-        Assert.True(result.AllMessagesProcessed, "not every message was processed within the timeout");
+        await Assert.That(result.AllMessagesProcessed).IsTrue().Because("not every message was processed within the timeout");
 
         // Assert - a hundred distinct, freshly-resolved instances of each pipeline component - the
         // consumer ask carries AlwaysNew whatever the host's affinity says (C-14), so nothing is ever
         // adopted here
-        Assert.Equal(MessageCount, result.Mappers.Distinct().Count());
-        Assert.Equal(MessageCount, result.Transforms.Distinct().Count());
-        Assert.Equal(MessageCount, result.Handlers.Distinct().Count());
+        await Assert.That(result.Mappers.Distinct().Count()).IsEqualTo(MessageCount);
+        await Assert.That(result.Transforms.Distinct().Count()).IsEqualTo(MessageCount);
+        await Assert.That(result.Handlers.Distinct().Count()).IsEqualTo(MessageCount);
 
         // Assert - every instance was disposed at the end of its own pipeline - so is the pipeline
         // scope that produced it, since the container disposes a Scoped instance only when the scope
         // that resolved it closes
-        Assert.All(result.Mappers, mapper => Assert.True(mapper.IsDisposed));
-        Assert.All(result.Transforms, transform => Assert.True(transform.IsDisposed));
-        Assert.All(result.Handlers, handler => Assert.True(handler.IsDisposed));
+        foreach (var mapper in result.Mappers)
+{
+    await Assert.That(mapper.IsDisposed).IsTrue();
+}
+        foreach (var transform in result.Transforms)
+{
+    await Assert.That(transform.IsDisposed).IsTrue();
+}
+        foreach (var handler in result.Handlers)
+{
+    await Assert.That(handler.IsDisposed).IsTrue();
+}
 
         // Assert - nothing was logged at Warning or above; FR-24's diagnostics are JoinAmbient-only and
         // the consumer ask never carries that affinity
-        Assert.DoesNotContain(result.LogEntries, entry => entry.Level >= LogLevel.Warning);
+        await Assert.That(result.LogEntries).DoesNotContain(entry => entry.Level >= LogLevel.Warning);
     }
 
     private static async Task<ConsumptionResult> ConsumeMessagesAsync(ScopeAffinity requestScopeAffinity)

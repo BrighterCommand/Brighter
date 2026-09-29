@@ -28,26 +28,23 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
-    internal class MyCommandHandlerAsync(IAmACommandProcessor? commandProcessor, bool raiseFault = false) : RequestHandlerAsync<MyCommand>
+    internal class MyCommandHandlerAsync(IAmACommandProcessor? commandProcessor, WorkflowExecutionLog executionLog, bool raiseFault = false) : RequestHandlerAsync<MyCommand>
     {
-        public static List<MyCommand> ReceivedCommands { get;  } = [];
-
-
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
         {
             LogCommand(command);
-            if (!raiseFault) 
+            if (!raiseFault)
                 await commandProcessor?.PublishAsync(new MyEvent(command.Value) {CorrelationId = command.CorrelationId}, cancellationToken: cancellationToken);
             else
                  await commandProcessor?.PublishAsync(new MyFault(command.Value) {CorrelationId = command.CorrelationId}, cancellationToken: cancellationToken);
-                 
-            
+
+
             return await base.HandleAsync(command, cancellationToken);
         }
 
         private void LogCommand(MyCommand request)
         {
-            ReceivedCommands.Add(request);
+            executionLog.Commands.Add(request);
         }
     }
 }

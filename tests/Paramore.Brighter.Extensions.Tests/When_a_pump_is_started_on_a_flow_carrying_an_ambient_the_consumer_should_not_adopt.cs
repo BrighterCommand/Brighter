@@ -33,7 +33,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -43,10 +43,10 @@ namespace Paramore.Brighter.Extensions.Tests;
 // default - so without a bracket suppressing adoption inside the pump's own flow, a consumer pipeline
 // would silently adopt whatever ambient happened to be live on the thread that called Receive(), which
 // has nothing to do with the message being consumed (FR-19).
-[Collection(LoggerCaptureCollection.NAME)]
+[System.Obsolete]
 public class ConsumerPumpFlowSuppressionTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_pump_is_started_on_a_flow_carrying_an_ambient_the_consumer_should_not_adopt()
     {
         // Arrange - a JoinAmbient host, all three lifetimes Scoped, with a real ambient established on
@@ -118,20 +118,28 @@ public class ConsumerPumpFlowSuppressionTests
         await dispatcher.End();
         scopeProvider.Clear();
 
-        Assert.True(bothProcessed, "the consumer did not process both messages within the timeout");
+        await Assert.That(bothProcessed).IsTrue().Because("the consumer did not process both messages within the timeout");
 
         // Assert - both consumer pipelines resolved and disposed their own, fresh IUnitOfWork - neither
         // adopted the ambient still live on the flow that started the pump
-        Assert.Equal(2, recorder.UnitsOfWork.Count);
-        Assert.All(recorder.UnitsOfWork, unitOfWork => Assert.NotSame(ambientUnitOfWork, unitOfWork));
-        Assert.All(recorder.UnitsOfWork, unitOfWork => Assert.True(unitOfWork.IsDisposed));
-
+        await Assert.That(recorder.UnitsOfWork.Count).IsEqualTo(2);
+        foreach (var unitOfWork in recorder.UnitsOfWork)
+{
+    await Assert.That(unitOfWork).IsNotSameReferenceAs(ambientUnitOfWork);
+}
+        using (Assert.Multiple())
+        {
+            foreach (var unitOfWork in recorder.UnitsOfWork)
+            {
+                await Assert.That(unitOfWork.IsDisposed).IsTrue();
+            }
+        }
         // Assert - exactly one warning: AsyncLocalScopeProvider ignores affinity and hands back its
         // established ambient even for this AlwaysNew ask, which FR-24.4 requires Brighter to ignore and
         // warn about once, naming the provider's own implementation type (T6.13)
         var warnings = capturingLoggerProvider.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        var warning = Assert.Single(warnings);
-        Assert.Contains("AmbientIgnoredForAlwaysNew", warning.Message);
-        Assert.Contains(nameof(AsyncLocalScopeProvider), warning.Message);
+        var warning = await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains("AmbientIgnoredForAlwaysNew");
+        await Assert.That(warning.Message).Contains(nameof(AsyncLocalScopeProvider));
     }
 }

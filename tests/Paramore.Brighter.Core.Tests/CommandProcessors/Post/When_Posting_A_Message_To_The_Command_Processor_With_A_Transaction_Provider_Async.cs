@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,7 +33,6 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
@@ -47,73 +45,41 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly SpyOutbox _spyOutbox;
         private readonly SpyTransactionProvider _transactionProvider;
         private readonly InternalBus _internalBus = new();
-
         public CommandProcessorPostCommandWithTransactionProviderTestsAsync()
         {
             _myCommand.Value = "Hello World";
-
             var timeProvider = new FakeTimeProvider();
             var routingKey = new RoutingKey(Topic);
-            
-            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication  {Topic = routingKey, RequestType = typeof(MyCommand)});
-
-            _message = new Message(
-                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND),
-                new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-                );
-
-            var messageMapperRegistry = new MessageMapperRegistry(
-                null,
-                new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync())
-            );
+            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
+            _message = new Message(new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options)));
+            var messageMapperRegistry = new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
-
-            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, messageProducer},});
-            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
-                .AddBrighterDefault();
-            
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, messageProducer }, });
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
             var tracer = new BrighterTracer(timeProvider);
-            _spyOutbox = new SpyOutbox() {Tracer = tracer};
+            _spyOutbox = new SpyOutbox()
+            {
+                Tracer = tracer
+            };
             _transactionProvider = new SpyTransactionProvider();
-            
-            IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, SpyTransaction>(
-                producerRegistry, 
-                resiliencePipelineRegistry, 
-                messageMapperRegistry,
-                new EmptyMessageTransformerFactory(),
-                new EmptyMessageTransformerFactoryAsync(),
-                tracer,
-                new FindPublicationByPublicationTopicOrRequestType(),
-                _spyOutbox
-            );
-
+            IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, SpyTransaction>(producerRegistry, resiliencePipelineRegistry, messageMapperRegistry, new EmptyMessageTransformerFactory(), new EmptyMessageTransformerFactoryAsync(), tracer, new FindPublicationByPublicationTopicOrRequestType(), _spyOutbox);
             var scheduler = new InMemorySchedulerFactory();
-            _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(),
-                new DefaultPolicy(),
-                resiliencePipelineRegistry,
-                bus,
-                scheduler,
-                typeof(SpyTransaction)
-            );
+            _commandProcessor = new CommandProcessor(new InMemoryRequestContextFactory(), new DefaultPolicy(), resiliencePipelineRegistry, bus, scheduler, typeof(SpyTransaction));
         }
 
-        [Fact]
+        [Test]
         public async Task When_Posting_A_Message_To_The_Command_Processor_With_A_Transaction_Provider_Configured_Async()
         {
             await _commandProcessor.PostAsync(_myCommand);
-
             //message should not be in the current transaction
-            var transaction = _transactionProvider.GetTransaction();
-            Assert.Null(transaction.Get(_myCommand.Id));
-
+            var transaction = await _transactionProvider.GetTransactionAsync();
+            await Assert.That(transaction.Get(_myCommand.Id)).IsNull();
             //message should have been posted
-            Assert.True(_internalBus.Stream(new RoutingKey(Topic)).Any());
-            
+            await Assert.That(_internalBus.Stream(new RoutingKey(Topic)).Any()).IsTrue();
             //message should be in the outbox
-            var message = _spyOutbox.Get(_myCommand.Id, new RequestContext());
-            Assert.NotNull(message);
-            Assert.Equal(_message, message);
+            var message = await _spyOutbox.GetAsync(_myCommand.Id, new RequestContext());
+            await Assert.That(message).IsNotNull();
+            await Assert.That(message).IsEqualTo(_message);
         }
     }
 }

@@ -30,7 +30,6 @@ using Paramore.Brighter;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Extensions;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Confirmation
 {
@@ -79,7 +78,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             new(new MessageHeader(new Id(Guid.NewGuid().ToString()), wireTopic, MessageType.MT_EVENT),
                 new MessageBody("test"));
 
-        [Fact]
+        [Test]
         public async Task When_a_confirmation_fails_should_trip_the_wire_topic_not_the_publication_topic()
         {
             // Arrange: a message whose wire topic (Header.Topic) differs from the Publication topic.
@@ -92,11 +91,11 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // Assert: the breaker trips on the wire topic, not the Publication topic — exact parity
             // with the non-confirmation send-failure path, which trips on message.Header.Topic.
             var trippedTopics = _circuitBreaker.TrippedTopics.ToList();
-            Assert.Contains(wireTopic, trippedTopics);
-            Assert.DoesNotContain(_publicationTopic, trippedTopics);
+            await Assert.That(trippedTopics).Contains(wireTopic);
+            await Assert.That(trippedTopics).DoesNotContain(_publicationTopic);
         }
 
-        [Fact]
+        [Test]
         public async Task When_a_confirmation_fails_for_a_rewritten_topic_should_trip_the_rewritten_address()
         {
             // Arrange: a reply-style message routed to a dynamic reply address on its header.
@@ -107,10 +106,10 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             await _producer.DisposeAsync();
 
             // Assert: the breaker trips the rewritten wire address carried on the result (AC-3b).
-            Assert.Contains(replyAddress, _circuitBreaker.TrippedTopics);
+            await Assert.That(_circuitBreaker.TrippedTopics).Contains(replyAddress);
         }
 
-        [Fact]
+        [Test]
         public async Task When_a_confirmation_fails_with_an_empty_topic_should_be_a_safe_no_op()
         {
             // Arrange: a message whose wire topic is empty, so the failure carries no usable topic.
@@ -121,7 +120,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             await _producer.DisposeAsync();
 
             // Assert: an empty topic trips nothing — the breaker guard treats it as a safe no-op.
-            Assert.Empty(_circuitBreaker.TrippedTopics);
+            await Assert.That(_circuitBreaker.TrippedTopics).IsEmpty();
         }
     }
 }

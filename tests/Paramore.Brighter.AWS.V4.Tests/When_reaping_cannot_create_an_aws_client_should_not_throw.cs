@@ -4,7 +4,7 @@ using Amazon;
 using Amazon.Runtime;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
+
 
 namespace Paramore.Brighter.AWS.V4.Tests;
 
@@ -14,7 +14,7 @@ namespace Paramore.Brighter.AWS.V4.Tests;
 /// but the work around them — creating the SNS and SQS clients, and draining what it tracked —
 /// is not.
 /// </summary>
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class AwsTestResourceReaperTeardownFailureTests
 {
     private readonly AwsTestResourceReaper _reaper;
@@ -34,17 +34,17 @@ public class AwsTestResourceReaperTeardownFailureTests
         _reaper.TrackQueue("sqs-std-ch-0f8b1c2d3e4f5a6b7c8d9e0f1a2b3c4d");
     }
 
-    [Fact]
+    [Test]
     public async Task When_reaping_cannot_create_an_aws_client_should_not_throw()
     {
         //act
         var exception = await Catch.ExceptionAsync(() => _reaper.ReapAsync());
 
         //assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
-    [Fact]
+    [Test]
     public async Task When_reaping_cannot_create_an_aws_client_should_not_leave_resources_pending()
     {
         //act
@@ -53,7 +53,7 @@ public class AwsTestResourceReaperTeardownFailureTests
         //assert
         // Reaping is a single attempt: a run that could not delete does not leave the names
         // behind for a later call to try again.
-        Assert.Empty(_reaper.PendingTopics);
-        Assert.Empty(_reaper.PendingQueues);
+        await Assert.That(_reaper.PendingTopics).IsEmpty();
+        await Assert.That(_reaper.PendingQueues).IsEmpty();
     }
 }

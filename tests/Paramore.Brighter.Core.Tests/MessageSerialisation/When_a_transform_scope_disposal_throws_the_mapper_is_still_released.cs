@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -21,8 +21,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 /// </summary>
 public class TransformPipelineMapperReleaseOnScopeThrowTests
 {
-    [Fact]
-    public void When_a_sync_pipelines_transform_scope_disposal_throws_the_mapper_is_still_released()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_sync_pipelines_transform_scope_disposal_throws_the_mapper_is_still_released()
     {
         //arrange — a sync pipeline with a transform whose factory Release throws (so InstanceScope.Dispose
         //throws) and a registry that records the mapper release
@@ -36,14 +36,14 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
 
         //act — the transform-scope disposal exception still surfaces to the owner; the scope drains
         //deterministically and reports its release failure as an AggregateException
-        var aggregate = Assert.Throws<AggregateException>(() => pipeline.Dispose());
-        Assert.IsType<InvalidOperationException>(Assert.Single(aggregate.InnerExceptions));
+        var aggregate = await Assert.That(() => pipeline.Dispose()).ThrowsExactly<AggregateException>();
+        await Assert.That((await Assert.That(aggregate.InnerExceptions).HasSingleItem())).IsTypeOf<InvalidOperationException>();
 
         //assert — but the mapper was released anyway (sync Release), not orphaned
-        Assert.True(mapper.WasReleased, "the mapper was orphaned when transform-scope disposal threw");
+        await Assert.That(mapper.WasReleased).IsTrue().Because("the mapper was orphaned when transform-scope disposal threw");
     }
 
-    [Fact]
+    [Test]
     public async Task When_an_async_pipelines_transform_scope_disposal_throws_the_mapper_is_still_released()
     {
         //arrange — the async DisposeAsync path: an async transform whose factory ReleaseAsync throws
@@ -56,15 +56,15 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
             mapperRegistry: new RecordingReleaseRegistryAsync(mapper));
 
         //act
-        var aggregate = await Assert.ThrowsAsync<AggregateException>(async () => await pipeline.DisposeAsync());
-        Assert.IsType<InvalidOperationException>(Assert.Single(aggregate.InnerExceptions));
+        var aggregate = await Assert.That(async () => await pipeline.DisposeAsync()).ThrowsExactly<AggregateException>();
+        await Assert.That((await Assert.That(aggregate.InnerExceptions).HasSingleItem())).IsTypeOf<InvalidOperationException>();
 
         //assert — the mapper was released via ReleaseAsync
-        Assert.True(mapper.WasReleased, "the mapper was orphaned when async transform-scope disposal threw");
+        await Assert.That(mapper.WasReleased).IsTrue().Because("the mapper was orphaned when async transform-scope disposal threw");
     }
 
-    [Fact]
-    public void When_an_async_pipelines_synchronous_disposal_throws_the_mapper_is_still_released()
+    [Test]
+    public async System.Threading.Tasks.Task When_an_async_pipelines_synchronous_disposal_throws_the_mapper_is_still_released()
     {
         //arrange — the async pipeline's synchronous Dispose (the finalizer's fallback path) releases the
         //transform scope through sync Release, which throws here
@@ -77,11 +77,11 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
             mapperRegistry: new RecordingReleaseRegistryAsync(mapper));
 
         //act
-        var aggregate = Assert.Throws<AggregateException>(() => pipeline.Dispose());
-        Assert.IsType<InvalidOperationException>(Assert.Single(aggregate.InnerExceptions));
+        var aggregate = Assert.ThrowsExactly<AggregateException>(() => pipeline.Dispose());
+        await Assert.That((await Assert.That(aggregate.InnerExceptions).HasSingleItem())).IsTypeOf<InvalidOperationException>();
 
         //assert — the mapper was released via sync Release
-        Assert.True(mapper.WasReleased, "the mapper was orphaned when the async pipeline's sync disposal threw");
+        await Assert.That(mapper.WasReleased).IsTrue().Because("the mapper was orphaned when the async pipeline's sync disposal threw");
     }
 
     private sealed class ReleaseProbe

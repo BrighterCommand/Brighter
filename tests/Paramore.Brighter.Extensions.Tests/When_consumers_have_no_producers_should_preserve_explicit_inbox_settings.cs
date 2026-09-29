@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -30,16 +30,16 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ConsumerExplicitInboxTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_consumers_have_no_producers_should_preserve_explicit_inbox_settings(bool useOptionsFactory)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async System.Threading.Tasks.Task When_consumers_have_no_producers_should_preserve_explicit_inbox_settings(bool useOptionsFactory)
     {
         // Arrange
         var inbox = new InMemoryInbox(TimeProvider.System);
@@ -56,7 +56,7 @@ public class ConsumerExplicitInboxTests
 
         using var provider = services.BuildServiceProvider();
         var validation = PipelineValidationResult.Combine(provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
-        Assert.Empty(validation.Errors);
+        await Assert.That(validation.Errors).IsEmpty();
         var processor = provider.GetRequiredService<IAmACommandProcessor>();
         var command = new ConsumerExplicitInboxCommand();
 
@@ -65,8 +65,8 @@ public class ConsumerExplicitInboxTests
         processor.Send(command);
 
         // Assert
-        Assert.Equal(1, command.HandleCount);
-        Assert.True(inbox.Exists<ConsumerExplicitInboxCommand>(command.Id, "explicit-inbox", null));
-        Assert.False(inbox.Exists<ConsumerExplicitInboxCommand>(command.Id, "global-inbox", null));
+        await Assert.That(command.HandleCount).IsEqualTo(1);
+        await Assert.That(inbox.Exists<ConsumerExplicitInboxCommand>(command.Id, "explicit-inbox", null)).IsTrue();
+        await Assert.That(inbox.Exists<ConsumerExplicitInboxCommand>(command.Id, "global-inbox", null)).IsFalse();
     }
 }

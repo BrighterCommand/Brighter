@@ -27,7 +27,6 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -40,8 +39,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class LifetimeConfigurationTests
 {
-    [Fact]
-    public void AddBrighter_WithDefaultLifetimes_RegistersAllAsTransient()
+    [Test]
+    public async Task AddBrighter_WithDefaultLifetimes_RegistersAllAsTransient()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -52,15 +51,15 @@ public class LifetimeConfigurationTests
         // Assert - All components are registered as Transient in DI
         // (Actual handler lifetime is managed by ServiceProviderHandlerFactory at runtime)
         var handlerDescriptor = services.FirstOrDefault(x => x.ServiceType == typeof(TestEventHandler));
-        Assert.NotNull(handlerDescriptor);
-        Assert.Equal(ServiceLifetime.Transient, handlerDescriptor.Lifetime);
+        await Assert.That(handlerDescriptor).IsNotNull();
+        await Assert.That(handlerDescriptor.Lifetime).IsEqualTo(ServiceLifetime.Transient);
 
         var mapperDescriptor = services.FirstOrDefault(x => x.ServiceType == typeof(TestEventMessageMapper));
-        Assert.NotNull(mapperDescriptor);
-        Assert.Equal(ServiceLifetime.Transient, mapperDescriptor.Lifetime);
+        await Assert.That(mapperDescriptor).IsNotNull();
+        await Assert.That(mapperDescriptor.Lifetime).IsEqualTo(ServiceLifetime.Transient);
 
         var transformerDescriptor = services.FirstOrDefault(x => x.ServiceType == typeof(TestTransform));
-        Assert.NotNull(transformerDescriptor);
-        Assert.Equal(ServiceLifetime.Transient, transformerDescriptor.Lifetime);
+        await Assert.That(transformerDescriptor).IsNotNull();
+        await Assert.That(transformerDescriptor.Lifetime).IsEqualTo(ServiceLifetime.Transient);
     }
 }

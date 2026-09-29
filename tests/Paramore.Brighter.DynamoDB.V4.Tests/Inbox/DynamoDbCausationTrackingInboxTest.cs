@@ -3,6 +3,7 @@ using Paramore.Brighter.Inbox.DynamoDB.V4;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.Inbox;
 
+[TUnit.Core.InheritsTests]
 public class DynamoDbCausationTrackingInboxTest : CausationTrackingInboxBaseTests
 {
     private DynamoDbInbox? _inbox;

@@ -26,7 +26,7 @@ using System;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
@@ -77,15 +77,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             _channel.Stop(_routingKey);
         }
 
-        [Fact]
-        public void When_A_Mapping_Failure_Occurs_Proactor_Routes_To_Imq()
+        [Test]
+        public async Task When_A_Mapping_Failure_Occurs_Proactor_Routes_To_Imq()
         {
             // Act
             _messagePump.Run();
 
             // Assert — reject with Unacceptable routes to IMQ; source stream empty (no fall-through ack)
-            Assert.Single(_bus.Stream(_invalidMessageKey));
-            Assert.Empty(_bus.Stream(_routingKey));
+            await Assert.That(_bus.Stream(_invalidMessageKey)).HasSingleItem();
+            await Assert.That(_bus.Stream(_routingKey)).IsEmpty();
         }
     }
 }

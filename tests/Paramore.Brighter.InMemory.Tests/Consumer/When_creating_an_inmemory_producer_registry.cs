@@ -1,24 +1,23 @@
-﻿using System.Linq;
+using System.Linq;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
-public class InMemoryProducerRegistryFactoryTests 
+public class InMemoryProducerRegistryFactoryTests
 {
-    [Fact]
-    public void When_creating_an_inmemory_producer_registry()
+    [Test]
+    public async Task When_creating_an_inmemory_producer_registry()
     {
        // arrange
-       var bus = new InternalBus(); 
+       var bus = new InternalBus();
        var publication = new Publication() { Topic = new RoutingKey("Topic") };
        var inMemoryProducerRegistryFactory = new InMemoryProducerRegistryFactory(bus, [publication], InstrumentationOptions.All);
 
        //act
-       var producerRegistry = inMemoryProducerRegistryFactory.Create();
+       var producerRegistry = await inMemoryProducerRegistryFactory.CreateAsync();
 
        //assert
-       Assert.NotNull(producerRegistry);
-       Assert.Contains(producerRegistry.Producers, p => p.Publication.Topic == publication.Topic); 
+       await Assert.That(producerRegistry).IsNotNull();
+       await Assert.That((producerRegistry.Producers).Any(p => p.Publication.Topic == publication.Topic)).IsTrue();
     }
 }

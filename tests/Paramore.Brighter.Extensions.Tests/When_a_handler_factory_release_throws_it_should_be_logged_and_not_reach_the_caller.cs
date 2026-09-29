@@ -27,7 +27,7 @@ using System.Linq;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Polly.Registry;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -38,11 +38,12 @@ namespace Paramore.Brighter.Extensions.Tests;
 // first-class extension point client code implements directly, per IAmAHandlerFactorySync's own doc
 // comment — not about container-Scoped resolution, which ServiceProviderHandlerFactory.Release no longer
 // participates in after T2.3 (it is a no-op; disposal is driven by the pipeline scope handle).
-[Collection(LoggerCaptureCollection.NAME)]
+[System.Obsolete]
+[NotInParallel(nameof(HandlerFactoryReleaseFailureTests))]
 public class HandlerFactoryReleaseFailureTests
 {
-    [Fact]
-    public void When_a_handler_factory_release_throws_it_should_be_logged_and_not_reach_the_caller()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_handler_factory_release_throws_it_should_be_logged_and_not_reach_the_caller()
     {
         // Arrange — a handler that completes normally; its factory's Release throws
         var recorder = new ReleaseOrderRecorder();
@@ -65,13 +66,13 @@ public class HandlerFactoryReleaseFailureTests
         commandProcessor.Send(new HandlerReleaseThrowsCommand());
 
         // Assert — the handler ran to completion, and the release failure was logged at Error
-        Assert.True(handler.Completed);
-        var releaseFailure = Assert.Single(loggerProvider.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler"));
-        Assert.Equal(LogLevel.Error, releaseFailure.Level);
+        await Assert.That(handler.Completed).IsTrue();
+        var releaseFailure = await Assert.That(loggerProvider.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler")).HasSingleItem();
+        await Assert.That(releaseFailure.Level).IsEqualTo(LogLevel.Error);
     }
 
-    [Fact]
-    public void When_the_handler_itself_throws_the_release_failure_should_not_replace_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_handler_itself_throws_the_release_failure_should_not_replace_it()
     {
         // Arrange — a handler whose Handle throws; its factory's Release also throws
         var recorder = new ReleaseOrderRecorder();
@@ -92,16 +93,16 @@ public class HandlerFactoryReleaseFailureTests
 
         // Act — the caller observes the handler's own exception, not an AggregateException composing it
         // with the release failure, and not the release failure itself
-        var exception = Assert.Throws<InvalidOperationException>(() => commandProcessor.Send(new HandlerReleaseThrowsCommand()));
-        Assert.Equal("Handle failed.", exception.Message);
+        var exception = await Assert.That(() => commandProcessor.Send(new HandlerReleaseThrowsCommand())).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(exception.Message).IsEqualTo("Handle failed.");
 
         // Assert — the release failure appears only in the log, at Error
-        var releaseFailure = Assert.Single(loggerProvider.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler"));
-        Assert.Equal(LogLevel.Error, releaseFailure.Level);
+        var releaseFailure = await Assert.That(loggerProvider.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler")).HasSingleItem();
+        await Assert.That(releaseFailure.Level).IsEqualTo(LogLevel.Error);
     }
 
-    [Fact]
-    public void When_release_throws_for_one_of_three_tracked_handlers_the_others_are_still_released()
+    [Test]
+    public async System.Threading.Tasks.Task When_release_throws_for_one_of_three_tracked_handlers_the_others_are_still_released()
     {
         // Arrange — three tracked handlers, a factory whose Release throws for the first, and a
         // recording IAmAScope handle supplied by that factory's CreatePipelineScope()
@@ -126,20 +127,20 @@ public class HandlerFactoryReleaseFailureTests
         lifetimeScope.Dispose();
 
         // Assert — the other two were still released, and the scope was disposed last, after every release
-        Assert.Contains("Released:First", recorder.Events);
-        Assert.Contains("Released:Second", recorder.Events);
-        Assert.Contains("Released:Third", recorder.Events);
-        Assert.True(pipelineScope.WasDisposed);
-        Assert.Equal("ScopeDisposed", recorder.Events.Last());
+        await Assert.That(recorder.Events).Contains("Released:First");
+        await Assert.That(recorder.Events).Contains("Released:Second");
+        await Assert.That(recorder.Events).Contains("Released:Third");
+        await Assert.That(pipelineScope.WasDisposed).IsTrue();
+        await Assert.That(recorder.Events.Last()).IsEqualTo("ScopeDisposed");
 
         // Assert — exactly one Error record names the failing release
-        var releaseFailure = Assert.Single(loggerProvider.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler"));
-        Assert.Equal(LogLevel.Error, releaseFailure.Level);
-        Assert.Contains("First", releaseFailure.Message);
+        var releaseFailure = await Assert.That(loggerProvider.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler")).HasSingleItem();
+        await Assert.That(releaseFailure.Level).IsEqualTo(LogLevel.Error);
+        await Assert.That(releaseFailure.Message).Contains("First");
     }
 
-    [Fact]
-    public void When_a_second_send_follows_a_release_failure_it_is_logged_and_swallowed_again()
+    [Test]
+    public async Task When_a_second_send_follows_a_release_failure_it_is_logged_and_swallowed_again()
     {
         // Arrange — the same host (one CommandProcessor, one handler factory) across two Sends; every
         // Release throws, regardless of which of the two handler instances it is called for
@@ -166,7 +167,13 @@ public class HandlerFactoryReleaseFailureTests
 
         // Assert — both succeeded, and the failure was not latched: a second, separate Error was logged
         var releaseFailures = loggerProvider.Entries.Where(e => e.EventId.Name == "FailedToReleaseHandler").ToList();
-        Assert.Equal(2, releaseFailures.Count);
-        Assert.All(releaseFailures, e => Assert.Equal(LogLevel.Error, e.Level));
+        await Assert.That(releaseFailures.Count).IsEqualTo(2);
+        using (Assert.Multiple())
+        {
+            foreach (var e in releaseFailures)
+            {
+                await Assert.That(e.Level).IsEqualTo(LogLevel.Error);
+            }
+        }
     }
 }

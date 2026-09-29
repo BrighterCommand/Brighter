@@ -27,7 +27,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -38,8 +38,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class DuplicateScopeProviderValidationTests
 {
-    [Fact]
-    public void When_two_distinct_scope_providers_are_registered_validation_should_report_the_duplicate()
+    [Test]
+    public async System.Threading.Tasks.Task When_two_distinct_scope_providers_are_registered_validation_should_report_the_duplicate()
     {
         // Arrange — two distinct IAmAScopeProvider implementations, each registered with a plain
         // AddSingleton in a stated order, and all three pipeline lifetimes Scoped
@@ -62,20 +62,20 @@ public class DuplicateScopeProviderValidationTests
 
         // Assert — exactly one warning naming both provider types, identifying the last-registered one
         // (ThrowingScopeProvider) as effective, and pointing at the guidance page
-        Assert.True(result.IsValid);
-        var warning = Assert.Single(result.Warnings);
-        Assert.Contains(nameof(AsyncLocalScopeProvider), warning.Message);
-        Assert.Contains(nameof(ThrowingScopeProvider), warning.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", warning.Message);
+        await Assert.That(result.IsValid).IsTrue();
+        var warning = await Assert.That(result.Warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains(nameof(AsyncLocalScopeProvider));
+        await Assert.That(warning.Message).Contains(nameof(ThrowingScopeProvider));
+        await Assert.That(warning.Message).Contains("docs/guides/lifetimes-and-scoping.md");
 
         // Assert — MS DI itself resolves the last-registered provider for the unkeyed service type, so the
         // provider the warning names as effective is the one the container-backed factories will actually ask
         var resolved = provider.GetRequiredService<IAmAScopeProvider>();
-        Assert.IsType<ThrowingScopeProvider>(resolved);
+        await Assert.That(resolved).IsTypeOf<ThrowingScopeProvider>();
     }
 
-    [Fact]
-    public void When_the_same_scope_provider_type_is_registered_twice_validation_should_not_report_a_duplicate()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_same_scope_provider_type_is_registered_twice_validation_should_not_report_a_duplicate()
     {
         // Arrange — the same implementation type registered twice, all three pipeline lifetimes Scoped
         var services = new ServiceCollection();
@@ -96,7 +96,7 @@ public class DuplicateScopeProviderValidationTests
         var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — a repeated registration of the same type is idempotent in effect: no finding at all
-        Assert.True(result.IsValid);
-        Assert.Empty(result.Warnings);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings).IsEmpty();
     }
 }

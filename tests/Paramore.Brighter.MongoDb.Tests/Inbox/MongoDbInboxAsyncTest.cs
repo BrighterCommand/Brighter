@@ -1,9 +1,10 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MongoDb;
 
 namespace Paramore.Brighter.MongoDb.Tests.Inbox;
 
+[TUnit.Core.InheritsTests]
 public class MongoDbInboxAsyncTest : InboxAsyncTest
 {
     private string? _collectionName;
@@ -12,7 +13,7 @@ public class MongoDbInboxAsyncTest : InboxAsyncTest
 
     protected override Task CreateStoreAsync()
     {
-        _collectionName = $"Inbox{Uuid.New():N}"; 
+        _collectionName = $"Inbox{Uuid.New():N}";
         _inbox = new MongoDbInbox(new MongoDbConfiguration(Const.Client, Const.DatabaseName)
         {
             Inbox = new MongoDbCollectionConfiguration
@@ -20,7 +21,7 @@ public class MongoDbInboxAsyncTest : InboxAsyncTest
                 Name = _collectionName
             }
         });
-        
+
         return base.CreateStoreAsync();
     }
 

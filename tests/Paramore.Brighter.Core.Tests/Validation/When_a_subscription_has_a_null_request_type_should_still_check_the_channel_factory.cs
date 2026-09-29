@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class SubscriptionWithNullRequestTypeIsStillCheckedValidationTests
 {
-    [Fact]
-    public void When_a_subscription_has_a_null_request_type_should_still_check_the_channel_factory()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_subscription_has_a_null_request_type_should_still_check_the_channel_factory()
     {
         // Arrange — a datatype-channel subscription: RequestType is null, messages are mapped by
         // getRequestType instead
@@ -49,8 +49,8 @@ public class SubscriptionWithNullRequestTypeIsStillCheckedValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — the rule does not vacuously skip a null-RequestType subscription
-        Assert.Null(subscription.RequestType);
-        Assert.False(satisfied);
-        Assert.Single(results);
+        await Assert.That(subscription.RequestType).IsNull();
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
     }
 }

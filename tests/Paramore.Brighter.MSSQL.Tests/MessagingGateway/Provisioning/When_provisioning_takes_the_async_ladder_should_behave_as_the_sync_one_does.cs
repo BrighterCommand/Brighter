@@ -26,7 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 /// it is the one an application actually takes, and it spent this PR's first draft wrapping the
 /// synchronous body in a completed task.
 /// </summary>
-[Collection("MsSqlQueueProvisioning")]
+[NotInParallel]
 public class MsSqlQueueProvisioningAsyncTests : IDisposable
 {
     private readonly string _queueTable = MsSqlQueueProvisioningCreateTests.UniqueQueueTableName();
@@ -52,7 +52,7 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
             Configuration.DefaultConnectingString, queueStoreTable: _queueTable);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_async_channel_creates_a_missing_queue_should_create_the_table_and_index()
     {
         //Arrange
@@ -62,12 +62,12 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         using var channel = await channelFactory.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Create));
 
         //Assert
-        Assert.NotNull(channel);
-        Assert.True(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable));
-        Assert.True(MsSqlQueueProvisioningCreateTests.TopicIndexExists(_queueTable));
+        await Assert.That(channel).IsNotNull();
+        await Assert.That(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable)).IsTrue();
+        await Assert.That(MsSqlQueueProvisioningCreateTests.TopicIndexExists(_queueTable)).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_async_publication_creates_a_missing_queue_should_create_the_table_and_index()
     {
         //Arrange -- CreateAsync is the path MsSqlProducerRegistryFactory takes, and the one the
@@ -83,27 +83,27 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         var producers = await producerFactory.CreateAsync();
 
         //Assert
-        Assert.Single(producers);
-        Assert.True(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable));
-        Assert.True(MsSqlQueueProvisioningCreateTests.TopicIndexExists(_queueTable));
+        await Assert.That(producers).HasSingleItem();
+        await Assert.That(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable)).IsTrue();
+        await Assert.That(MsSqlQueueProvisioningCreateTests.TopicIndexExists(_queueTable)).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_validating_a_missing_queue_asynchronously_should_throw_a_configuration_exception()
     {
         //Arrange -- nothing has created _queueTable.
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
 
         //Act
-        var exception = await Record.ExceptionAsync(
+        var exception = await TestExceptionRecorder.CaptureAsync(
             () => channelFactory.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Validate)));
 
         //Assert
-        var configurationException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains(_queueTable, configurationException.Message);
+        var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configurationException.Message).Contains(_queueTable);
     }
 
-    [Fact]
+    [Test]
     public async Task When_validating_an_existing_queue_asynchronously_should_not_throw()
     {
         //Arrange -- the control for the fact above, on the async ladder: same call, same name, the
@@ -113,14 +113,14 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
 
         //Act
-        var exception = await Record.ExceptionAsync(
+        var exception = await TestExceptionRecorder.CaptureAsync(
             () => channelFactory.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Validate)));
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_queue_table_name_would_close_the_ddl_bracket_should_throw_before_connecting_asynchronously()
     {
         //Arrange -- the unreachable server again, so that "before connecting" is measured and not
@@ -131,17 +131,17 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
 
         //Act
-        var exception = await Record.ExceptionAsync(
+        var exception = await TestExceptionRecorder.CaptureAsync(
             () => channelFactory.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Create)));
 
         //Assert -- on the message, not the type: ConnectAsync wraps its own failure in a
         //ConfigurationException too, so the type check alone passes with the guard deleted.
-        var configurationException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains("close the bracket", configurationException.Message);
-        Assert.DoesNotContain("provider said", configurationException.Message);
+        var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configurationException.Message).Contains("close the bracket");
+        await Assert.That(configurationException.Message).DoesNotContain("provider said");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_queue_table_name_leaves_no_room_for_the_index_name_should_throw_asynchronously()
     {
         //Arrange -- 120 characters, as on the sync ladder.
@@ -151,15 +151,15 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
 
         //Act
-        var exception = await Record.ExceptionAsync(
+        var exception = await TestExceptionRecorder.CaptureAsync(
             () => channelFactory.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Create)));
 
         //Assert
-        var configurationException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains("119", configurationException.Message);
+        var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configurationException.Message).Contains("119");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_async_subscription_assumes_the_queue_exists_should_not_open_a_connection()
     {
         //Arrange -- the unreachable server is the instrument: reaching it at all would throw.
@@ -169,14 +169,14 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
 
         //Act
-        var exception = await Record.ExceptionAsync(
+        var exception = await TestExceptionRecorder.CaptureAsync(
             () => channelFactory.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Assume)));
 
         //Assert -- paired with the Create fact above it, which throws on the same configuration.
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_async_subscription_creates_against_an_unreachable_server_should_throw()
     {
         //Arrange -- the control for the fact above.
@@ -186,12 +186,12 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
 
         //Act
-        var exception = await Record.ExceptionAsync(
+        var exception = await TestExceptionRecorder.CaptureAsync(
             () => channelFactory.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Create)));
 
         //Assert
-        var configurationException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains("QueueThatIsManagedElsewhere", configurationException.Message);
+        var configurationException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configurationException.Message).Contains("QueueThatIsManagedElsewhere");
     }
 
     private static MsSqlSubscription<MyCommand> Subscription(OnMissingChannel makeChannels) =>

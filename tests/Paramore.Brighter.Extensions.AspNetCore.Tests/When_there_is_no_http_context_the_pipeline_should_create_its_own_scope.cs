@@ -29,7 +29,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // whole container - across the two calls together, exactly one warning, not two and not zero.
 public class NoHttpContextScopeTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_hosted_service_and_a_background_thread_have_no_http_context_they_should_each_get_a_fresh_owned_scope()
     {
         // Arrange - the opted-in host, plus a hosted service that Sends before the host finishes starting,
@@ -82,21 +82,26 @@ public class NoHttpContextScopeTests
         backgroundThread.Join();
 
         // Assert - neither call threw, each resolved and disposed its own, distinct Scoped dependency
-        Assert.Null(backgroundThreadException);
-        Assert.Equal(2, recorder.Markers.Count);
+        await Assert.That(backgroundThreadException).IsNull();
+        await Assert.That(recorder.Markers.Count).IsEqualTo(2);
         var markers = recorder.Markers.ToArray();
-        Assert.NotSame(markers[0], markers[1]);
-        Assert.All(markers, marker => Assert.Equal(1, marker.DisposeCount));
-
+        await Assert.That(markers[1]).IsNotSameReferenceAs(markers[0]);
+        using (Assert.Multiple())
+        {
+            foreach (var marker in markers)
+            {
+                await Assert.That(marker.DisposeCount).IsEqualTo(1);
+            }
+        }
         // Assert - no entry at Error or above from either call
-        Assert.DoesNotContain(capturingProvider.Entries, e => e.Level >= LogLevel.Error);
+        await Assert.That(capturingProvider.Entries).DoesNotContain(e => e.Level >= LogLevel.Error);
 
         // Assert - exactly one warning across both calls, naming the no-ambient-offered condition and the
         // ASP.NET provider's own implementation type - the latch is once per (condition, provider type) pair
         // for the whole container, not once per call
         var warnings = capturingProvider.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        var warning = Assert.Single(warnings);
-        Assert.Contains("NoAmbientOffered", warning.Message);
-        Assert.Contains(nameof(HttpContextScopeProvider), warning.Message);
+        var warning = await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains("NoAmbientOffered");
+        await Assert.That(warning.Message).Contains(nameof(HttpContextScopeProvider));
     }
 }

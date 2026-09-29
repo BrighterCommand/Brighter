@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.MessagingGatewayGenerator;
 
@@ -21,7 +21,7 @@ public class WhenGeneratingProviderInterfaceShouldExposeCanonicalSurface : IDisp
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_provider_interface_should_expose_canonical_surface()
     {
         // Arrange
@@ -53,32 +53,32 @@ public class WhenGeneratingProviderInterfaceShouldExposeCanonicalSurface : IDisp
         // Assert — Reactor interface declares the CreateSubscription signature with nullable routing keys
         var reactorInterface = await File.ReadAllTextAsync(
             Path.Combine(reactorOutput, "IAmAMessageGatewayReactorProvider.cs"));
-        Assert.Contains("RoutingKey? deadLetterRoutingKey = null", reactorInterface);
-        Assert.Contains("RoutingKey? invalidMessageRoutingKey = null", reactorInterface);
-        Assert.DoesNotContain("setupDeadLetterQueue", reactorInterface);
+        await Assert.That(reactorInterface).Contains("RoutingKey? deadLetterRoutingKey = null");
+        await Assert.That(reactorInterface).Contains("RoutingKey? invalidMessageRoutingKey = null");
+        await Assert.That(reactorInterface).DoesNotContain("setupDeadLetterQueue");
 
         // Assert — Reactor interface exposes the invalid-channel read and the metadata keys
-        Assert.Contains("GetMessageFromInvalidChannel", reactorInterface);
-        Assert.Contains("RejectionMetadataKeys RejectionMetadataKeys { get; }", reactorInterface);
+        await Assert.That(reactorInterface).Contains("GetMessageFromInvalidChannel");
+        await Assert.That(reactorInterface).Contains("RejectionMetadataKeys RejectionMetadataKeys { get; }");
 
         // Assert — XML doc states the MT_NONE contract for bounded read members
-        Assert.Contains("MT_NONE", reactorInterface);
+        await Assert.That(reactorInterface).Contains("MT_NONE");
 
         // Assert — Proactor interface declares the CreateSubscription signature with nullable routing keys
         var proactorInterface = await File.ReadAllTextAsync(
             Path.Combine(proactorOutput, "IAmAMessageGatewayProactorProvider.cs"));
-        Assert.Contains("RoutingKey? deadLetterRoutingKey = null", proactorInterface);
-        Assert.Contains("RoutingKey? invalidMessageRoutingKey = null", proactorInterface);
-        Assert.DoesNotContain("setupDeadLetterQueue", proactorInterface);
+        await Assert.That(proactorInterface).Contains("RoutingKey? deadLetterRoutingKey = null");
+        await Assert.That(proactorInterface).Contains("RoutingKey? invalidMessageRoutingKey = null");
+        await Assert.That(proactorInterface).DoesNotContain("setupDeadLetterQueue");
 
         // Assert — Proactor interface exposes the async invalid-channel read and the metadata keys
-        Assert.Contains("GetMessageFromInvalidChannelAsync", proactorInterface);
-        Assert.Contains("Task<Message>", proactorInterface);
-        Assert.Contains("CancellationToken", proactorInterface);
-        Assert.Contains("RejectionMetadataKeys RejectionMetadataKeys { get; }", proactorInterface);
+        await Assert.That(proactorInterface).Contains("GetMessageFromInvalidChannelAsync");
+        await Assert.That(proactorInterface).Contains("Task<Message>");
+        await Assert.That(proactorInterface).Contains("CancellationToken");
+        await Assert.That(proactorInterface).Contains("RejectionMetadataKeys RejectionMetadataKeys { get; }");
 
         // Assert — XML doc states the MT_NONE contract for bounded read members
-        Assert.Contains("MT_NONE", proactorInterface);
+        await Assert.That(proactorInterface).Contains("MT_NONE");
 
     }
 

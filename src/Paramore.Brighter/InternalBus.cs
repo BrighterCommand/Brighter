@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -48,11 +48,15 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
     public void Enqueue(Message message, TimeSpan? timeout = null)
     {
         timeout ??= TimeSpan.FromMilliseconds(-1);
-        
+
         ValidateMillisecondsTimeout(timeout.Value);
-        
+
         var topic = message.Header.Topic;
 
+        // GetOrAdd guarantees we enqueue to the collection that's actually stored in
+        // the dictionary — the previous TryGetValue/TryAdd pair lost messages under
+        // concurrent first-write contention because the losing thread enqueued to its
+        // own dangling BlockingCollection.
         var blockingCollection = _messages.GetOrAdd(topic, _ => boundedCapacity > 0
             ? new BlockingCollection<Message>(boundedCapacity)
             : new BlockingCollection<Message>());
@@ -70,17 +74,17 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
     public Message Dequeue(RoutingKey topic, TimeSpan? timeout = null)
     {
         timeout ??=TimeSpan.FromMilliseconds(-1);
-        
+
         ValidateMillisecondsTimeout(timeout.Value);
-        
+
         var found = _messages.TryGetValue(topic, out var messages);
-        
+
         if (!found || messages is null || !messages.Any())
             return MessageFactory.CreateEmptyMessage(topic);
 
         if (!messages.TryTake(out Message? message, Convert.ToInt32(timeout.Value.TotalMilliseconds), CancellationToken.None))
             message = MessageFactory.CreateEmptyMessage(topic);
-        
+
         return message;
     }
 
@@ -92,10 +96,10 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
     public IEnumerable<Message> Stream(RoutingKey topic)
     {
         _messages.TryGetValue(topic, out var messages);
-        
+
         return messages != null ? messages.ToArray() : [];
-    }   
-    
+    }
+
     private static void ValidateMillisecondsTimeout(TimeSpan timeout)
     {
         if (timeout < TimeSpan.Zero && timeout != TimeSpan.FromMilliseconds(-1))

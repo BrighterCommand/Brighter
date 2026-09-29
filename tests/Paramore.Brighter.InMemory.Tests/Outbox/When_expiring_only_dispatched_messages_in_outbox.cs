@@ -2,17 +2,15 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
 {
-    [Trait("Category", "InMemory")]
+    [Category("InMemory")]
     public class OutboxExpiryDispatchedOnlyTests
     {
-        [Fact]
+        [Test]
         public async Task When_expiring_only_dispatched_messages_in_outbox()
         {
-            //Arrange
             var timeProvider = new FakeTimeProvider();
             var outbox = new InMemoryOutbox(timeProvider)
             {
@@ -37,16 +35,12 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             outbox.Add(dispatchedMessage, context);
             outbox.Add(undispatchedMessage, context);
 
-            //Mark only one message as dispatched
             outbox.MarkDispatched(dispatchedMessageId, context);
 
-            //Advance time past TTL and scan interval so expiry triggers
             timeProvider.Advance(TimeSpan.FromMilliseconds(1000));
 
-            //Act - trigger expiry via a Get operation
             await outbox.GetAsync(dispatchedMessageId, context);
 
-            //Poll until the background expiry sweep completes
             var retries = 0;
             while ((await outbox.GetAsync(dispatchedMessageId, context)).Header.MessageType != MessageType.MT_NONE && retries < 20)
             {
@@ -54,12 +48,11 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                 retries++;
             }
 
-            //Assert - dispatched message should be expired, undispatched should remain
             var dispatchedResult = await outbox.GetAsync(dispatchedMessageId, context);
             var undispatchedResult = await outbox.GetAsync(undispatchedMessageId, context);
 
-            Assert.True(dispatchedResult.IsEmpty, "Dispatched message should be removed by expiry");
-            Assert.False(undispatchedResult.IsEmpty, "Undispatched message should NOT be removed by expiry");
+            await Assert.That(dispatchedResult.IsEmpty).IsTrue();
+            await Assert.That(undispatchedResult.IsEmpty).IsFalse();
         }
     }
 }

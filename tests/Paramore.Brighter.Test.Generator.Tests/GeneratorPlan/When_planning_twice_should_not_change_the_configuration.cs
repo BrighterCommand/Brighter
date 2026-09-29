@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -26,7 +26,7 @@ THE SOFTWARE. */
 using System.Linq;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.GeneratorPlan;
 
@@ -48,8 +48,8 @@ public class GenerationPlanPurityTests
         Outboxes = new() { ["Sample"] = new OutboxConfiguration() },
     };
 
-    [Fact]
-    public void When_planning_twice_should_not_change_the_configuration()
+    [Test]
+    public async System.Threading.Tasks.Task When_planning_twice_should_not_change_the_configuration()
     {
         // Arrange — the multiple-gateway and multiple-outbox forms, whose model prefix is
         // dot-qualified while their destination folder name is not
@@ -62,12 +62,12 @@ public class GenerationPlanPurityTests
             NullLogger<Generators.OutboxGenerator>.Instance).Plan(configuration);
 
         // Assert — the caller's own configuration objects still say what the file said
-        Assert.Equal(string.Empty, configuration.MessagingGateways!["Sample"].Prefix);
-        Assert.Equal(string.Empty, configuration.Outboxes!["Sample"].Prefix);
+        await Assert.That(configuration.MessagingGateways!["Sample"].Prefix).IsEqualTo(string.Empty);
+        await Assert.That(configuration.Outboxes!["Sample"].Prefix).IsEqualTo(string.Empty);
     }
 
-    [Fact]
-    public void When_planning_twice_should_produce_the_same_files_both_times()
+    [Test]
+    public async System.Threading.Tasks.Task When_planning_twice_should_produce_the_same_files_both_times()
     {
         // Arrange
         var configuration = MultipleGatewaysAndOutboxes();
@@ -79,7 +79,7 @@ public class GenerationPlanPurityTests
         var second = gatewayGenerator.Plan(configuration).Select(file => file.DestinationPath).ToArray();
 
         // Assert — and non-vacuously: a plan of nothing would satisfy equality trivially
-        Assert.NotEmpty(first);
-        Assert.Equal(first, second);
+        await Assert.That(first).IsNotEmpty();
+        await Assert.That(second).IsEquivalentTo(first, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 }

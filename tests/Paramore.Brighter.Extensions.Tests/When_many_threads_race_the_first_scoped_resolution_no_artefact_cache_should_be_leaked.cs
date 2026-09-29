@@ -27,7 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// weakening what it asserts, mirroring <c>PumpContextDeadlockCollection</c>'s use of the same pattern for
 /// a different process-wide contention hazard.
 /// </summary>
-[CollectionDefinition(ScopedArtefactCacheLiveCountCollection.Name, DisableParallelization = true)]
+[System.Obsolete]
 public sealed class ScopedArtefactCacheLiveCountCollection
 {
     public const string Name = "ScopedArtefactCacheLiveCount";
@@ -54,10 +54,10 @@ public sealed class ScopedArtefactCacheLiveCountCollection
 // through public surface: a hand-built ServiceCollection that never calls AddBrighter, so the fallback
 // path is forced, with many threads released simultaneously via a Barrier to maximise contention on the
 // very first Scoped resolution.
-[Collection(ScopedArtefactCacheLiveCountCollection.Name)]
+[NotInParallel]
 public class ManyThreadsRaceFirstScopedResolutionTests
 {
-    [Fact]
+    [Test]
     public async Task When_many_threads_race_the_first_scoped_resolution_no_artefact_cache_should_be_leaked()
     {
         const int trials = 8;
@@ -94,7 +94,7 @@ public class ManyThreadsRaceFirstScopedResolutionTests
 
         // Assert - every ScopedArtefactCache this scenario constructed, across every trial, was disposed;
         // none survived as an undisposed loser of the first-resolution race
-        Assert.Equal(baseline, ScopedArtefactCache.LiveCount);
+        await Assert.That(ScopedArtefactCache.LiveCount).IsEqualTo(baseline);
     }
 
     private class RaceHandler : RequestHandler<RaceCommand>

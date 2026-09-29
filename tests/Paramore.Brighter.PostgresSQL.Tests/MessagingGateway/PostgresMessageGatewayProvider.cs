@@ -142,6 +142,7 @@ public class PostgresMessageGatewayProvider
                 makeChannels: makeChannel,
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 invalidMessageRoutingKey: invalidMessageRoutingKey,
+                visibleTimeout: TimeSpan.FromSeconds(1),
                 requeueCount: 3
             );
         }
@@ -152,7 +153,8 @@ public class PostgresMessageGatewayProvider
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: makeChannel,
-            invalidMessageRoutingKey: invalidMessageRoutingKey
+            invalidMessageRoutingKey: invalidMessageRoutingKey,
+            visibleTimeout: TimeSpan.FromSeconds(1)
         );
     }
 

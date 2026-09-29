@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class SubclassInsideCombinedFactoryIsFlaggedValidationTests
 {
-    [Fact]
-    public void When_a_subclass_of_the_declared_type_is_inside_a_combined_factory_should_report_one_error()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_subclass_of_the_declared_type_is_inside_a_combined_factory_should_report_one_error()
     {
         // Arrange — a subclass of the declared type sits inside a combined channel factory
         var defaultChannelFactory = new CombinedChannelFactory([new DerivedChannelFactory()]);
@@ -46,10 +46,10 @@ public class SubclassInsideCombinedFactoryIsFlaggedValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — exactly one Error
-        Assert.False(satisfied);
-        Assert.Single(results);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
 
         // Companion assertion — the composite itself cannot route this subscription either
-        Assert.Throws<ConfigurationException>(() => defaultChannelFactory.CreateSyncChannel(subscription));
+        await Assert.That(() => defaultChannelFactory.CreateSyncChannel(subscription)).ThrowsExactly<ConfigurationException>();
     }
 }

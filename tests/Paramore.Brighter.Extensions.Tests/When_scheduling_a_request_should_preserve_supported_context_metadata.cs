@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -36,22 +36,22 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Scheduler.Events;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(JsonSerialisationCollection.NAME)]
+[System.Obsolete]
 public class ScheduledRequestContextTests
 {
-    [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, false)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, false)]
-    [InlineData(true, false, true)]
-    [InlineData(true, true, false)]
-    [InlineData(true, true, true)]
+    [Test]
+    [Arguments(false, false, false)]
+    [Arguments(false, false, true)]
+    [Arguments(false, true, false)]
+    [Arguments(false, true, true)]
+    [Arguments(true, false, false)]
+    [Arguments(true, false, true)]
+    [Arguments(true, true, false)]
+    [Arguments(true, true, true)]
     public async Task When_scheduling_a_request_should_preserve_supported_context_metadata(bool publish, bool isAsync, bool useDateTime)
     {
         //Arrange
@@ -83,19 +83,19 @@ public class ScheduledRequestContextTests
         headers["x-attempt"] = 4;
         properties["tenant"] = "changed";
         context.Bag["custom-value"] = 99;
-        Assert.Empty(Received(provider, isAsync));
+        await Assert.That(Received(provider, isAsync)).IsEmpty();
         timeProvider.Advance(delay);
 
         //Assert
-        var restored = Assert.Single(Received(provider, isAsync));
-        Assert.NotSame(context, restored);
-        Assert.Equal(3, restored.GetHeaders()!["x-attempt"]);
-        Assert.Equal("tenant-1", restored.GetCloudEventAdditionalProperties()!["tenant"]);
-        Assert.Equal("partition-1", restored.GetPartitionKey().Value);
-        Assert.Equal(causationId, restored.Bag[RequestContextBagNames.CausationId]);
-        Assert.Equal(jobId, restored.GetJobId());
-        Assert.Equal(workflowId, restored.GetWorkflowId());
-        Assert.False(restored.Bag.ContainsKey("custom-value"));
+        var restored = await Assert.That(Received(provider, isAsync)).HasSingleItem();
+        await Assert.That(restored).IsNotSameReferenceAs(context);
+        await Assert.That(restored.GetHeaders()!["x-attempt"]).IsEqualTo(3);
+        await Assert.That(restored.GetCloudEventAdditionalProperties()!["tenant"]).IsEqualTo("tenant-1");
+        await Assert.That(restored.GetPartitionKey().Value).IsEqualTo("partition-1");
+        await Assert.That(restored.Bag[RequestContextBagNames.CausationId]).IsEqualTo(causationId);
+        await Assert.That(restored.GetJobId()).IsEqualTo(jobId);
+        await Assert.That(restored.GetWorkflowId()).IsEqualTo(workflowId);
+        await Assert.That(restored.Bag.ContainsKey("custom-value")).IsFalse();
 
         async Task ScheduleAsync<TRequest>(TRequest request) where TRequest : class, IRequest
         {
@@ -113,9 +113,9 @@ public class ScheduledRequestContextTests
         }
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_firing_a_legacy_scheduled_request_should_handle_it_without_context_data(bool isAsync)
     {
         //Arrange
@@ -133,28 +133,28 @@ public class ScheduledRequestContextTests
         await processor.SendAsync(command);
 
         //Assert
-        var context = Assert.Single(Received(provider, isAsync));
-        Assert.Null(context.GetHeaders());
-        Assert.Equal(PartitionKey.Empty, context.GetPartitionKey());
+        var context = await Assert.That(Received(provider, isAsync)).HasSingleItem();
+        await Assert.That(context.GetHeaders()).IsNull();
+        await Assert.That(context.GetPartitionKey()).IsEqualTo(PartitionKey.Empty);
     }
 
-    public static TheoryData<string, bool, bool> MetadataValueCases
+    public static IEnumerable<(string, bool, bool)> MetadataValueCases
     {
         get
         {
-            var cases = new TheoryData<string, bool, bool>();
+            var cases = new List<(string, bool, bool)>();
             foreach (var name in new[] { "null", "string", "guid-string", "date-string", "char", "bool", "byte", "sbyte",
                          "short", "ushort", "int", "uint", "small-long", "large-long", "ulong", "float", "double",
                          "large-double", "decimal", "guid", "datetime", "offset", "bytes", "timespan", "uri" })
                 foreach (var isAsync in new[] { false, true })
                     foreach (var cloudEvents in new[] { false, true })
-                        cases.Add(name, isAsync, cloudEvents);
+                        cases.Add((name, isAsync, cloudEvents));
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(MetadataValueCases))]
+    [Test]
+    [MethodDataSource(nameof(MetadataValueCases))]
     public async Task When_scheduling_a_request_should_preserve_metadata_value_types(string name, bool isAsync, bool cloudEvents)
     {
         //Arrange
@@ -178,26 +178,29 @@ public class ScheduledRequestContextTests
         timeProvider.Advance(delay);
 
         //Assert
-        var restored = Assert.Single(Received(provider, isAsync));
+        var restored = await Assert.That(Received(provider, isAsync)).HasSingleItem();
         var metadata = cloudEvents ? restored.GetCloudEventAdditionalProperties() : restored.GetHeaders();
-        var actual = Assert.Single(metadata!).Value;
-        Assert.True(metadata!.ContainsKey("ValueKey"));
+        var actual = (await Assert.That(metadata!).HasSingleItem()).Value;
+        await Assert.That(metadata!.ContainsKey("ValueKey")).IsTrue();
         if (expected == null)
         {
-            Assert.Null(actual);
+            await Assert.That(actual).IsNull();
             return;
         }
-        Assert.IsType(expected.GetType(), actual);
-        Assert.Equal(expected, actual);
+        await Assert.That(actual.GetType()).IsEqualTo(expected.GetType());
+        if (expected is byte[] expectedBytes)
+            await Assert.That((byte[])actual).IsEquivalentTo(expectedBytes, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        else
+            await Assert.That(actual).IsEqualTo(expected);
         if (expected is DateTimeOffset offset)
-            Assert.Equal(offset.Offset, ((DateTimeOffset)actual).Offset);
+            await Assert.That(((DateTimeOffset)actual).Offset).IsEqualTo(offset.Offset);
         if (expected is DateTime dateTime)
-            Assert.Equal(dateTime.Kind, ((DateTime)actual).Kind);
+            await Assert.That(((DateTime)actual).Kind).IsEqualTo(dateTime.Kind);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_scheduling_case_insensitive_metadata_should_preserve_key_lookup(bool cloudEvents)
     {
         //Arrange
@@ -213,28 +216,28 @@ public class ScheduledRequestContextTests
         timeProvider.Advance(TimeSpan.FromSeconds(1));
 
         //Assert
-        var restored = Assert.Single(Received(provider, false));
+        var restored = await Assert.That(Received(provider, false)).HasSingleItem();
         var metadata = cloudEvents ? restored.GetCloudEventAdditionalProperties() : restored.GetHeaders();
-        Assert.True(metadata!.TryGetValue("TENANT", out var value));
-        Assert.Equal("tenant-1", value);
-        Assert.Equal("Tenant", Assert.Single(metadata).Key);
+        await Assert.That(metadata!.TryGetValue("TENANT", out var value)).IsTrue();
+        await Assert.That(value).IsEqualTo("tenant-1");
+        await Assert.That((await Assert.That(metadata).HasSingleItem()).Key).IsEqualTo("Tenant");
     }
 
-    public static TheoryData<string, bool, bool> UnsupportedMetadataCases
+    public static IEnumerable<(string, bool, bool)> UnsupportedMetadataCases
     {
         get
         {
-            var cases = new TheoryData<string, bool, bool>();
+            var cases = new List<(string, bool, bool)>();
             foreach (var name in new[] { "delegate", "type", "enum", "object", "array", "cycle", "nan", "infinity" })
                 foreach (var isAsync in new[] { false, true })
                     foreach (var cloudEvents in new[] { false, true })
-                        cases.Add(name, isAsync, cloudEvents);
+                        cases.Add((name, isAsync, cloudEvents));
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(UnsupportedMetadataCases))]
+    [Test]
+    [MethodDataSource(nameof(UnsupportedMetadataCases))]
     public async Task When_scheduling_unsupported_metadata_should_fail_before_scheduling(string name, bool isAsync, bool cloudEvents)
     {
         //Arrange
@@ -261,19 +264,19 @@ public class ScheduledRequestContextTests
 
         //Act
         var exception = isAsync
-            ? await Record.ExceptionAsync(() => processor.SendAsync(TimeSpan.FromSeconds(1), new ScheduledContextEventAsync(), context))
-            : Record.Exception(() => processor.Send(TimeSpan.FromSeconds(1), new ScheduledContextEvent(), context));
+            ? await TestExceptionRecorder.CaptureAsync(() => processor.SendAsync(TimeSpan.FromSeconds(1), new ScheduledContextEventAsync(), context))
+            : TestExceptionRecorder.Capture(() => processor.Send(TimeSpan.FromSeconds(1), new ScheduledContextEvent(), context));
         timeProvider.Advance(TimeSpan.FromSeconds(1));
 
         //Assert
-        Assert.IsType<JsonException>(exception);
-        Assert.Contains("unsupported", exception.Message);
-        Assert.Empty(Received(provider, isAsync));
+        await Assert.That(exception).IsTypeOf<JsonException>();
+        await Assert.That(exception.Message).Contains("unsupported");
+        await Assert.That(Received(provider, isAsync)).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_scheduling_metadata_with_a_culture_comparer_should_fail_before_scheduling(bool cloudEvents)
     {
         //Arrange
@@ -285,20 +288,28 @@ public class ScheduledRequestContextTests
         context.Bag[key] = new Dictionary<string, object>(StringComparer.InvariantCulture) { ["tenant"] = "tenant-1" };
 
         //Act
-        var exception = Record.Exception(() => processor.Send(TimeSpan.FromSeconds(1), new ScheduledContextEvent(), context));
+        Exception? exception = null;
+        try
+        {
+            processor.Send(TimeSpan.FromSeconds(1), new ScheduledContextEvent(), context);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
         timeProvider.Advance(TimeSpan.FromSeconds(1));
 
         //Assert
-        Assert.IsType<JsonException>(exception);
-        Assert.Contains("comparer", exception.Message);
-        Assert.Empty(Received(provider, false));
+        await Assert.That(exception).IsTypeOf<JsonException>();
+        await Assert.That(exception.Message).Contains("comparer");
+        await Assert.That(Received(provider, false)).IsEmpty();
     }
 
-    [Theory]
-    [InlineData("{")]
-    [InlineData("""{"headers":{"caseInsensitive":false,"values":{"tenant":{"type":"unknown","value":"tenant-1"}}}}""")]
-    [InlineData("""{"headers":{"caseInsensitive":false,"values":{"tenant":{"type":"int64","value":"not-a-number"}}}}""")]
-    [InlineData("""{"headers":{"caseInsensitive":true,"values":{"Tenant":null,"TENANT":null}}}""")]
+    [Test]
+    [Arguments("{")]
+    [Arguments("""{"headers":{"caseInsensitive":false,"values":{"tenant":{"type":"unknown","value":"tenant-1"}}}}""")]
+    [Arguments("""{"headers":{"caseInsensitive":false,"values":{"tenant":{"type":"int64","value":"not-a-number"}}}}""")]
+    [Arguments("""{"headers":{"caseInsensitive":true,"values":{"Tenant":null,"TENANT":null}}}""")]
     public async Task When_firing_invalid_context_data_should_fail_without_dispatching_the_request(string contextData)
     {
         //Arrange
@@ -313,11 +324,11 @@ public class ScheduledRequestContextTests
         };
 
         //Act
-        var exception = await Record.ExceptionAsync(() => processor.SendAsync(command));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => processor.SendAsync(command));
 
         //Assert
-        Assert.IsType<JsonException>(exception);
-        Assert.Empty(Received(provider, false));
+        await Assert.That(exception).IsTypeOf<JsonException>();
+        await Assert.That(Received(provider, false)).IsEmpty();
     }
 
     private static object? MetadataValue(string name) => name switch

@@ -29,7 +29,7 @@ using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Observability;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 
@@ -49,8 +49,8 @@ public class MessagePumpLinkObservabilityTests : IDisposable
             .Build();
     }
 
-    [Fact]
-    public void When_a_root_consumer_span_is_created_should_link_the_message_pump_span()
+    [Test]
+    public async Task When_a_root_consumer_span_is_created_should_link_the_message_pump_span()
     {
         //Arrange
         var message = CreateMessageWithoutTraceParent();
@@ -72,17 +72,17 @@ public class MessagePumpLinkObservabilityTests : IDisposable
         _traceProvider.ForceFlush();
 
         //Assert
-        Assert.Null(message.Header.TraceParent);
-        Assert.NotNull(pumpSpan);
-        Assert.NotNull(receiveSpan);
-        Assert.NotNull(processSpan);
+        await Assert.That(message.Header.TraceParent).IsNull();
+        await Assert.That(pumpSpan).IsNotNull();
+        await Assert.That(receiveSpan).IsNotNull();
+        await Assert.That(processSpan).IsNotNull();
 
         // both root spans stay isolated (their own trace) but link back to the pump
-        Assert.NotEqual(pumpSpan!.TraceId, receiveSpan!.TraceId);
-        Assert.NotEqual(pumpSpan.TraceId, processSpan!.TraceId);
+        await Assert.That(receiveSpan!.TraceId).IsNotEqualTo(pumpSpan!.TraceId);
+        await Assert.That(processSpan!.TraceId).IsNotEqualTo(pumpSpan.TraceId);
 
-        Assert.Contains(receiveSpan.Links, link => link.Context == pumpSpan.Context);
-        Assert.Contains(processSpan.Links, link => link.Context == pumpSpan.Context);
+        await Assert.That((receiveSpan.Links).Any(link => link.Context == pumpSpan.Context)).IsTrue();
+        await Assert.That((processSpan.Links).Any(link => link.Context == pumpSpan.Context)).IsTrue();
     }
 
     public void Dispose()

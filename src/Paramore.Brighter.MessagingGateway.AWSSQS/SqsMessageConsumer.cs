@@ -136,7 +136,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over Async
         /// </summary>
         public void Purge() => BrighterAsyncContext.Run(() => PurgeAsync());
-        
+
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
@@ -158,10 +158,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 throw;
             }
         }
-        
+
          /// <summary>
         /// Receives the specified queue name.
-        /// Sync over async 
+        /// Sync over async
         /// </summary>
         /// <param name="timeOut">The timeout. AWS uses whole seconds. Anything greater than 0 uses long-polling.  </param>
         public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
@@ -179,7 +179,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             try
             {
                 client = _clientFactory.CreateSqsClient();
-                
+
                 await EnsureChannelUrl(client, cancellationToken);
                 timeOut ??= TimeSpan.Zero;
 
@@ -232,7 +232,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             return messages;
         }
-        
+
         /// <summary>
         /// Rejects the specified message.
         /// Sync over async
@@ -442,16 +442,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if (_deadLetterProducer?.IsValueCreated == true && _deadLetterProducer.Value is IAsyncDisposable deadLetterAsync)
                 await deadLetterAsync.DisposeAsync();
             else if (_deadLetterProducer?.IsValueCreated == true)
-                _deadLetterProducer.Value?.Dispose();
+                await _deadLetterProducer.Value!.DisposeAsync();
 
             if (_invalidMessageProducer?.IsValueCreated == true && _invalidMessageProducer.Value is IAsyncDisposable invalidAsync)
                 await invalidAsync.DisposeAsync();
             else if (_invalidMessageProducer?.IsValueCreated == true)
-                _invalidMessageProducer.Value?.Dispose();
+                await _invalidMessageProducer.Value!.DisposeAsync();
 
             GC.SuppressFinalize(this);
         }
-        
+
         private SqsMessageProducer? CreateDeadLetterProducer()
         {
             var publication = new SqsPublication(
@@ -568,8 +568,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             //only grab the queue url once
             if (_channelUrl is not null)
                 return;
-            
-            var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);      
+
+            var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
             _channelUrl = urlResponse.QueueUrl;
         }
 
@@ -604,7 +604,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error purging queue {ChannelName}")]
             public static partial void ErrorPurgingQueue(ILogger logger, Exception exception, string channelName);
-            
+
             [LoggerMessage(LogLevel.Debug, "SqsMessageConsumer: Preparing to retrieve next message from queue {Url}")]
             public static partial void RetrievingNextMessage(ILogger logger, string url);
 
@@ -659,4 +659,3 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         }
     }
 }
-

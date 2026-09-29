@@ -1,5 +1,7 @@
 #region Licence
 
+
+
 /* The MIT License (MIT)
 Copyright © 2026 Avtandil Ushikishvili <a.ushikishvili@gmail.com>
 
@@ -21,31 +23,49 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+
+
 #endregion
 
+
+
 using System;
-using Xunit;
+
+
+
+
 
 namespace Paramore.Brighter.AWS.Tests.Transformers;
 
-[Trait("Category", "AWS")]
+
+
+[Property("Category", "AWS")]
+
 public class S3FixtureAsyncCleanupTests
+
 {
-    [Theory]
-    [InlineData(typeof(S3LuggageUploadTests))]
-    [InlineData(typeof(LargeMessagePayloadWrapTests))]
-    [InlineData(typeof(LargeMessagePaylodUnwrapTests))]
-    [InlineData(typeof(S3LuggageStoreExistsTests))]
-    public void When_s3_fixture_finishes_should_support_async_cleanup(Type fixtureType)
+
+    [Test]
+
+    [Arguments(typeof(S3LuggageUploadTests))]
+
+    [Arguments(typeof(LargeMessagePayloadWrapTests))]
+
+    [Arguments(typeof(LargeMessagePaylodUnwrapTests))]
+
+    [Arguments(typeof(S3LuggageStoreExistsTests))]
+
+    public async System.Threading.Tasks.Task When_s3_fixture_finishes_should_support_async_cleanup(Type fixtureType)
+
     {
+
         //Arrange
-        var asyncLifetime = typeof(IAsyncLifetime);
 
-        //Act
-        var supportsAsyncCleanup = asyncLifetime.IsAssignableFrom(fixtureType);
+        var cleanup = fixtureType.GetMethod("DisposeAsync");
+        await Assert.That(cleanup).IsNotNull();
+        await Assert.That(cleanup!.ReturnType).IsEqualTo(typeof(System.Threading.Tasks.Task));
+        await Assert.That(cleanup.GetCustomAttributes(typeof(TUnit.Core.AfterAttribute), inherit: true)).HasSingleItem();
 
-        //Assert
-        Assert.True(supportsAsyncCleanup,
-            $"{fixtureType.Name} must implement IAsyncLifetime so xUnit v2 invokes its async cleanup.");
     }
+
 }

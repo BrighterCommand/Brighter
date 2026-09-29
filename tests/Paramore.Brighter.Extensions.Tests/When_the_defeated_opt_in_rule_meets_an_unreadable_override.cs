@@ -32,7 +32,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -48,10 +48,10 @@ namespace Paramore.Brighter.Extensions.Tests;
 // of failing validation. The unreadable-override Warning and the defeated-opt-in Error are not duplicates
 // of each other - they report two different problems (the override's value can't be read; the opt-in
 // never took effect) that happen to co-occur here.
-[Collection(LoggerCaptureCollection.NAME)]
+[System.Obsolete]
 public class DefeatedOptInMeetsUnreadableOverrideTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_factory_delegate_override_is_also_defeated_validation_should_not_throw_a_null_reference_exception()
     {
         // Arrange - the application registers its own IBrighterOptions ahead of AddBrighter (defeating the
@@ -70,14 +70,14 @@ public class DefeatedOptInMeetsUnreadableOverrideTests
 
         // Act - the defeat is real, so throwOnError:true is expected to fail startup - just not with a
         // NullReferenceException from the unreadable override
-        var exception = await Record.ExceptionAsync(() => hostedService.StartAsync(CancellationToken.None));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => hostedService.StartAsync(CancellationToken.None));
 
         // Assert
-        Assert.IsNotType<NullReferenceException>(exception);
-        Assert.IsType<PipelineValidationException>(exception);
+        await Assert.That(exception).IsNotTypeOf<NullReferenceException>();
+        await Assert.That(exception).IsTypeOf<PipelineValidationException>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_factory_delegate_override_is_also_defeated_both_the_unreadable_override_warning_and_the_defeated_opt_in_error_should_be_reported()
     {
         // Arrange - same shape as above, but throwOnError:false so both findings are logged rather than
@@ -97,13 +97,13 @@ public class DefeatedOptInMeetsUnreadableOverrideTests
         await hostedService.StartAsync(CancellationToken.None);
 
         // Assert - the unreadable-override Warning, naming the factory-delegate shape
-        var warningEntry = Assert.Single(capturingProvider.Entries, e => e.Level == LogLevel.Warning);
-        Assert.Contains("factory delegate", warningEntry.Message);
+        var warningEntry = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level == LogLevel.Warning);
+        await Assert.That(warningEntry.Message).Contains("factory delegate");
 
         // Assert - the defeated-opt-in Error, reported without naming an affinity value it cannot read
-        var errorEntry = Assert.Single(capturingProvider.Entries, e => e.Level == LogLevel.Error);
-        Assert.Contains("supplied by the application", errorEntry.Message);
-        Assert.DoesNotContain(nameof(ScopeAffinity.JoinAmbient), errorEntry.Message);
-        Assert.DoesNotContain(nameof(ScopeAffinity.AlwaysNew), errorEntry.Message);
+        var errorEntry = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level == LogLevel.Error);
+        await Assert.That(errorEntry.Message).Contains("supplied by the application");
+        await Assert.That(errorEntry.Message).DoesNotContain(nameof(ScopeAffinity.JoinAmbient));
+        await Assert.That(errorEntry.Message).DoesNotContain(nameof(ScopeAffinity.AlwaysNew));
     }
 }

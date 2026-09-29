@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
@@ -41,8 +40,8 @@ public class When_mssql_consumer_factory_creates_consumer_should_pass_scheduler
         messagePumpType: MessagePumpType.Reactor
     );
 
-    [Fact]
-    public void Should_create_sync_consumer_when_scheduler_provided()
+    [Test]
+    public async Task Should_create_sync_consumer_when_scheduler_provided()
     {
         // Arrange — factory constructed with a scheduler
         var scheduler = new StubMessageScheduler();
@@ -52,12 +51,12 @@ public class When_mssql_consumer_factory_creates_consumer_should_pass_scheduler
         var consumer = factory.Create(_subscription);
 
         // Assert — consumer is created successfully
-        Assert.NotNull(consumer);
-        Assert.IsType<MsSqlMessageConsumer>(consumer);
+        await Assert.That(consumer).IsNotNull();
+        await Assert.That(consumer).IsTypeOf<MsSqlMessageConsumer>();
     }
 
-    [Fact]
-    public void Should_create_async_consumer_when_scheduler_provided()
+    [Test]
+    public async Task Should_create_async_consumer_when_scheduler_provided()
     {
         // Arrange — factory constructed with a scheduler
         var scheduler = new StubMessageScheduler();
@@ -67,12 +66,12 @@ public class When_mssql_consumer_factory_creates_consumer_should_pass_scheduler
         var consumer = factory.CreateAsync(_subscription);
 
         // Assert — consumer is created successfully
-        Assert.NotNull(consumer);
-        Assert.IsType<MsSqlMessageConsumer>(consumer);
+        await Assert.That(consumer).IsNotNull();
+        await Assert.That(consumer).IsTypeOf<MsSqlMessageConsumer>();
     }
 
-    [Fact]
-    public void Should_create_consumer_without_scheduler_for_backward_compat()
+    [Test]
+    public async Task Should_create_consumer_without_scheduler_for_backward_compat()
     {
         // Arrange — factory constructed without a scheduler (backward compat)
         var factory = new MsSqlMessageConsumerFactory(_configuration);
@@ -81,8 +80,8 @@ public class When_mssql_consumer_factory_creates_consumer_should_pass_scheduler
         var consumer = factory.Create(_subscription);
 
         // Assert — consumer is created successfully without scheduler
-        Assert.NotNull(consumer);
-        Assert.IsType<MsSqlMessageConsumer>(consumer);
+        await Assert.That(consumer).IsNotNull();
+        await Assert.That(consumer).IsTypeOf<MsSqlMessageConsumer>();
     }
 
     private class StubMessageScheduler : IAmAMessageScheduler;

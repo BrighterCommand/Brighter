@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -24,7 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 
@@ -33,11 +33,11 @@ namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 /// regenerated after the generator changes, leaves files the configuration asks for absent from
 /// the tree - and absent tests raise no alarm of their own, because nothing runs to notice.
 /// </summary>
-[Collection(RepositoryTreeAuditCollection.NAME)]
+[ClassDataSource<RepositoryTreeAudit>(Shared = SharedType.PerTestSession)]
 public class GeneratedTreeMissingFileAuditTests(RepositoryTreeAudit repository)
 {
-    [Fact]
-    public void When_auditing_the_generated_tree_should_find_no_missing_files()
+    [Test]
+    public async System.Threading.Tasks.Task When_auditing_the_generated_tree_should_find_no_missing_files()
     {
         // Arrange
         var audit = repository.Audit;
@@ -47,11 +47,10 @@ public class GeneratedTreeMissingFileAuditTests(RepositoryTreeAudit repository)
 
         // Assert - an audit that walked nothing would satisfy the emptiness below trivially, so
         // pin that it found a tree to read before reading its answer
-        Assert.NotEmpty(audit.OnDisk);
+        await Assert.That(audit.OnDisk).IsNotEmpty();
 
         // Assert - every file the generator would write is on disk
-        Assert.True(missing.Count == 0,
-            "File(s) the current configuration would produce that are absent from the tree. " +
+        await Assert.That(missing.Count == 0).IsTrue().Because("File(s) the current configuration would produce that are absent from the tree. " +
             "Run ./generate-test.sh and commit the result:\n" +
             string.Join("\n", missing.Select(file => $"  {file}")));
     }

@@ -2,15 +2,15 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
-[Collection(FinalizerTestCollection.Name)]
+[System.Obsolete]
 public class TransformLifetimeScopeFinalizerReleaseTests
 {
-    [Fact]
-    public void When_a_transform_lifetime_scope_finalizer_release_throws_it_should_not_escape()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_transform_lifetime_scope_finalizer_release_throws_it_should_not_escape()
     {
         //arrange: a lifetime scope tracking a transform whose factory throws on release — the same shape
         //as MS DI's synchronous scope Dispose throwing for an IAsyncDisposable-only transform. The scope
@@ -28,11 +28,11 @@ public class TransformLifetimeScopeFinalizerReleaseTests
         //exception was swallowed instead of escaping ~TransformLifetimeScope and crashing the process.
         //>= 1 rather than == 1: the counter is a never-reset static, so a GC retry or a future fact reusing
         //this factory must not turn "the finalizer ran" into a confusing count mismatch.
-        Assert.True(ThrowingOnReleaseTransformerFactory.ReleaseAttempts >= 1);
+        await Assert.That(ThrowingOnReleaseTransformerFactory.ReleaseAttempts >= 1).IsTrue();
     }
 
-    [Fact]
-    public void When_an_async_transform_lifetime_scope_finalizer_release_throws_it_should_not_escape()
+    [Test]
+    public async System.Threading.Tasks.Task When_an_async_transform_lifetime_scope_finalizer_release_throws_it_should_not_escape()
     {
         //arrange: the async lifetime scope's finalizer runs the same synchronous release path and carries
         //the same guard. Revert the try/catch in ~TransformLifetimeScopeAsync to prove RED.
@@ -44,7 +44,7 @@ public class TransformLifetimeScopeFinalizerReleaseTests
         //assert: the async scope's finalizer genuinely ran the synchronous release that throws, and it was
         //swallowed rather than escaping ~TransformLifetimeScopeAsync. >= 1 for the same never-reset-static
         //robustness reason as the sync fact above.
-        Assert.True(ThrowingOnReleaseTransformerFactoryAsync.ReleaseAttempts >= 1);
+        await Assert.That(ThrowingOnReleaseTransformerFactoryAsync.ReleaseAttempts >= 1).IsTrue();
     }
 
     private static void CollectAndRunFinalizers()

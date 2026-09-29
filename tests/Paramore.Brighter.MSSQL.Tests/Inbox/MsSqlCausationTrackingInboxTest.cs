@@ -1,10 +1,11 @@
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MsSql;
-using Xunit;
+
 
 namespace Paramore.Brighter.MSSQL.Tests.Inbox;
 
-[Trait("Category", "MSSQL")]
+[Property("Category", "MSSQL")]
+[TUnit.Core.InheritsTests]
 public class MsSqlCausationTrackingInboxTest : CausationTrackingInboxBaseTests
 {
     private RelationalDatabaseConfiguration _configuration = null!;

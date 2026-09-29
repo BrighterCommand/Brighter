@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,14 +25,13 @@ THE SOFTWARE. */
 
 using System.Linq;
 using Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration;
 
 public class ChannelFactoryDeclarationSweepDeclaringDerivedSubsumptionTests
 {
-    [Fact]
-    public void When_a_derived_subscription_declares_its_own_override_should_be_reported_in_its_own_right()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_derived_subscription_declares_its_own_override_should_be_reported_in_its_own_right()
     {
         // Arrange
         // Evident Data: a base/derived pair where the derived type declares its own
@@ -46,9 +46,9 @@ public class ChannelFactoryDeclarationSweepDeclaringDerivedSubsumptionTests
 
         // Assert
         // The derived type declares its own override, so it is reported in its own right
-        Assert.Contains(result, entry => entry.Subject == derivedType);
+        await Assert.That(result).Contains(entry => entry.Subject == derivedType);
 
         // The base is reported too - both types stand, neither subsumes the other here
-        Assert.Contains(result, entry => entry.Subject == baseType);
+        await Assert.That(result).Contains(entry => entry.Subject == baseType);
     }
 }

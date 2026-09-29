@@ -32,15 +32,15 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(LoggerCaptureCollection.NAME)]
+[System.Obsolete]
 public class CompletedPipelineScopeDisposalLoggingTests
 {
-    [Fact]
-    public void When_a_completed_transform_pipeline_scope_disposal_throws_the_post_should_still_succeed()
+    [Test]
+    public async Task When_a_completed_transform_pipeline_scope_disposal_throws_the_post_should_still_succeed()
     {
         //arrange — an FR-22.2-conformant lifetime triple: all three Scoped. PoisonedScopeCompletingMapper
         //resolves IPoisonedDependency successfully (tracked by the pipeline scope for disposal) and
@@ -107,21 +107,27 @@ public class CompletedPipelineScopeDisposalLoggingTests
         //one that exercises the other, against the same shared static logger factory (Initializer.Factory)
         //— CategoryName is what tells them apart.
         var disposalFailures = loggerProvider.Entries.Where(IsTransformScopeDisposalFailure).ToList();
-        var disposalFailure = Assert.Single(disposalFailures);
-        Assert.Equal(LogLevel.Error, disposalFailure.Level);
-        Assert.Contains(nameof(PoisonedScopeCompletingCommand), disposalFailure.Message);
+        var disposalFailure = await Assert.That(disposalFailures).HasSingleItem();
+        await Assert.That(disposalFailure.Level).IsEqualTo(LogLevel.Error);
+        await Assert.That(disposalFailure.Message).Contains(nameof(PoisonedScopeCompletingCommand));
 
         //assert — the outer OutboxProducerMediator.ReleasePipeline guard did not also log its own Warning
         //for the same failure: the drain's own catch already swallowed it, so pipeline.Dispose() did not throw
-        Assert.DoesNotContain(loggerProvider.Entries, e => e.EventId.Name == "FailedToReleasePipeline");
+        await Assert.That(loggerProvider.Entries).DoesNotContain(e => e.EventId.Name == "FailedToReleasePipeline");
 
         //act — a second Post is not affected by the first pipeline's release-once guard
         commandProcessor.Post(new PoisonedScopeCompletingCommand());
 
         //assert — the failure is not latched: a second, separate Error was logged for the second Post
         var disposalFailuresAfterSecondPost = loggerProvider.Entries.Where(IsTransformScopeDisposalFailure).ToList();
-        Assert.Equal(2, disposalFailuresAfterSecondPost.Count);
-        Assert.All(disposalFailuresAfterSecondPost, e => Assert.Equal(LogLevel.Error, e.Level));
+        await Assert.That(disposalFailuresAfterSecondPost.Count).IsEqualTo(2);
+        using (Assert.Multiple())
+        {
+            foreach (var e in disposalFailuresAfterSecondPost)
+            {
+                await Assert.That(e.Level).IsEqualTo(LogLevel.Error);
+            }
+        }
     }
 
     private static bool IsTransformScopeDisposalFailure(CapturedLogEntry entry) =>

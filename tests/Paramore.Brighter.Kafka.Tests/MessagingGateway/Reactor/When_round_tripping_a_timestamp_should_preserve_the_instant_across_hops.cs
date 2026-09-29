@@ -1,12 +1,12 @@
 using System;
 using Confluent.Kafka;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
+
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")] //
+[Property("Category", "Kafka")]
+[System.Obsolete] //
 public class KafkaTimeStampRoundTripTests
 {
     //A timestamp deliberately *not* at UTC. If the writer drops the offset the reader cannot recover
@@ -29,26 +29,25 @@ public class KafkaTimeStampRoundTripTests
         );
     }
 
-    [Fact]
-    public void When_round_tripping_a_timestamp_should_preserve_the_instant_across_hops()
+    [Test]
+    public async System.Threading.Tasks.Task When_round_tripping_a_timestamp_should_preserve_the_instant_across_hops()
     {
         //act - first hop: the original send
         Headers firstHopHeaders = _builder.Build(_message);
         Message firstHop = new KafkaMessageCreator().CreateMessage(ConsumeResultFor(firstHopHeaders));
 
         //assert - the instant, and its UTC wall-clock, survive the hop
-        Assert.Equal(s_timeStamp, firstHop.Header.TimeStamp);
-        Assert.Equal(s_timeStamp.ToUniversalTime().DateTime, firstHop.Header.TimeStamp.ToUniversalTime().DateTime);
+        await Assert.That(firstHop.Header.TimeStamp).IsEqualTo(s_timeStamp);
+        await Assert.That(firstHop.Header.TimeStamp.ToUniversalTime().DateTime).IsEqualTo(s_timeStamp.ToUniversalTime().DateTime);
 
         //assert - what we read is anchored to UTC, not re-stamped with the host's offset
-        Assert.Equal(TimeSpan.Zero, firstHop.Header.TimeStamp.Offset);
+        await Assert.That(firstHop.Header.TimeStamp.Offset).IsEqualTo(TimeSpan.Zero);
 
         //act - second hop: re-publishing what we read, as a requeue does
         Headers secondHopHeaders = _builder.Build(firstHop);
 
         //assert - a re-publish is idempotent on the wire, so drift cannot accumulate over hops
-        Assert.Equal(firstHopHeaders.GetLastBytes(HeaderNames.TIMESTAMP),
-            secondHopHeaders.GetLastBytes(HeaderNames.TIMESTAMP));
+        await Assert.That(secondHopHeaders.GetLastBytes(HeaderNames.TIMESTAMP)).IsEquivalentTo(firstHopHeaders.GetLastBytes(HeaderNames.TIMESTAMP), TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     private static ConsumeResult<string, byte[]> ConsumeResultFor(Headers headers)

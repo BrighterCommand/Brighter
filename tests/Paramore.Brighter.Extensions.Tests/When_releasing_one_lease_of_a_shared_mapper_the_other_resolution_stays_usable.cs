@@ -3,14 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class SharedInstanceLeaseReleaseTests
 {
-    [Fact]
-    public void When_releasing_one_lease_of_a_shared_mapper_the_other_resolution_stays_usable()
+    [Test]
+    public async System.Threading.Tasks.Task When_releasing_one_lease_of_a_shared_mapper_the_other_resolution_stays_usable()
     {
         // Arrange — the mapper is registered as a SINGLETON, so the container returns the same reference for
         // every resolution, while MapperLifetime is Transient, so each Create opens its own IServiceScope.
@@ -31,28 +31,28 @@ public class SharedInstanceLeaseReleaseTests
         // Act/Assert — two resolutions of the one shared instance, each with its own scope/lease
         var first = factory.Create(typeof(SharedMapper))!;
         var second = factory.Create(typeof(SharedMapper))!;
-        Assert.Same(first.Instance, second.Instance);
+        await Assert.That(second.Instance).IsSameReferenceAs(first.Instance);
 
         var firstScope = (TrackingScope)first.ReleaseToken!;
         var secondScope = (TrackingScope)second.ReleaseToken!;
-        Assert.NotSame(firstScope, secondScope);
+        await Assert.That(secondScope).IsNotSameReferenceAs(firstScope);
 
         // release the FIRST lease — it disposes exactly the first resolution's scope, and the second
         // resolution's scope stays live and usable (the exact use-after-dispose the old instance keying risked)
         factory.Release(first);
-        Assert.True(firstScope.IsDisposed);
-        Assert.False(secondScope.IsDisposed);
-        Assert.Equal(1, scopeTracker.DisposedCount);
+        await Assert.That(firstScope.IsDisposed).IsTrue();
+        await Assert.That(secondScope.IsDisposed).IsFalse();
+        await Assert.That(scopeTracker.DisposedCount).IsEqualTo(1);
 
         // over-release the SAME (first) lease — an idempotent no-op, not a pop of the second's scope
         factory.Release(first);
-        Assert.False(secondScope.IsDisposed);
-        Assert.Equal(1, scopeTracker.DisposedCount);
+        await Assert.That(secondScope.IsDisposed).IsFalse();
+        await Assert.That(scopeTracker.DisposedCount).IsEqualTo(1);
 
         // releasing the second lease disposes exactly its own scope
         factory.Release(second);
-        Assert.True(secondScope.IsDisposed);
-        Assert.Equal(2, scopeTracker.DisposedCount);
+        await Assert.That(secondScope.IsDisposed).IsTrue();
+        await Assert.That(scopeTracker.DisposedCount).IsEqualTo(2);
     }
 
     private sealed class MinimalCommand : Command

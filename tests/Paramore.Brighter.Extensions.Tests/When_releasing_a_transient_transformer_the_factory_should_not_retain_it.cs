@@ -1,14 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ServiceProviderTransformerFactoryLeakTests
 {
-    [Fact]
-    public void When_releasing_a_transient_transformer_the_factory_should_not_retain_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_releasing_a_transient_transformer_the_factory_should_not_retain_it()
     {
         //arrange
         var collection = new ServiceCollection();
@@ -30,6 +30,6 @@ public class ServiceProviderTransformerFactoryLeakTests
         factory.Dispose();
 
         //assert
-        Assert.Equal(disposeCountAfterRelease, transform.DisposeCount);
+        await Assert.That(transform.DisposeCount).IsEqualTo(disposeCountAfterRelease);
     }
 }

@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -20,27 +21,52 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+
+
 #endregion
 
+
+
 using Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration.TestDoubles;
-using Xunit;
+
+
+
+
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration;
 
+
+
 public class ChannelFactoryDeclarationSoundTests
+
 {
-    [Fact]
-    public void When_a_subscription_declares_a_real_channel_factory_should_report_no_reason()
+
+    [Test]
+
+    public async System.Threading.Tasks.Task When_a_subscription_declares_a_real_channel_factory_should_report_no_reason()
+
     {
+
         // Arrange
+
         // Evident Data: both arguments are written literally, matching what a real reading path hands Check
+
         var subscriptionType = typeof(DefaultChannelFactoryDeclaringSubscription);
+
         var declaredFactoryType = typeof(SoundChannelFactory);
 
+
+
         // Act
+
         var reason = Paramore.Brighter.SubscriptionChannelFactoryDeclaration.Check(subscriptionType, declaredFactoryType);
 
+
+
         // Assert
-        Assert.Null(reason);
+
+        await Assert.That(reason).IsNull();
+
     }
+
 }

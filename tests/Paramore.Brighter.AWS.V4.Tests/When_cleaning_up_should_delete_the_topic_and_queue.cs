@@ -8,7 +8,7 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.MessagingGateway;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
+
 
 namespace Paramore.Brighter.AWS.V4.Tests;
 
@@ -17,9 +17,9 @@ namespace Paramore.Brighter.AWS.V4.Tests;
 /// teardown itself succeeded. These stand real infrastructure up and then go looking for it, so
 /// they need AWS credentials.
 /// </summary>
-[Trait("Category", "AWS")]
-[Trait("LiveAWS", "true")]
-public class MessageGatewayProviderCleanUpTests : IAsyncLifetime
+[Property("Category", "AWS")]
+[Property("LiveAWS", "true")]
+public class MessageGatewayProviderCleanUpTests
 {
     private readonly SnsStandardMessageGatewayProvider _provider = new();
     private readonly AWSMessagingGatewayConnection _connection = GatewayFactory.CreateFactory();
@@ -33,15 +33,17 @@ public class MessageGatewayProviderCleanUpTests : IAsyncLifetime
         _channelName = _provider.GetOrCreateChannelName();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
     /// <summary>
     /// Reaps whatever the test did not. Safe to run after a test that already tore down: reaping
     /// is a single attempt, so the second call finds nothing left to do.
     /// </summary>
+    [After(HookType.Test)]
     public async Task DisposeAsync() => await _provider.CleanUpAsync(null, null, []);
 
-    [Fact]
+    [Test]
     public async Task When_cleaning_up_should_delete_the_topic_and_queue()
     {
         //arrange
@@ -54,7 +56,7 @@ public class MessageGatewayProviderCleanUpTests : IAsyncLifetime
         await AssertTopicAndQueueDeletedAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_teardown_throws_should_still_delete_the_topic_and_queue()
     {
         //arrange
@@ -72,7 +74,7 @@ public class MessageGatewayProviderCleanUpTests : IAsyncLifetime
             // The first assertion only proves CleanUpAsync rethrows what the channel threw — the
             // exception comes from PurgeFailingChannelAsync, not from SQS. The second is the one
             // that carries the requirement: the resources went anyway.
-            Assert.IsType<PurgeQueueInProgressException>(exception);
+            await Assert.That(exception).IsTypeOf<PurgeQueueInProgressException>();
             await AssertTopicAndQueueDeletedAsync();
         }
         finally
@@ -152,8 +154,7 @@ public class MessageGatewayProviderCleanUpTests : IAsyncLifetime
 
             if (DateTimeOffset.UtcNow > deadline)
             {
-                Assert.Fail(
-                    $"Arrange did not create the {what}: {exception.GetType().Name}: {exception.Message}");
+                Assert.Fail("The operation should have completed successfully.");
                 return;
             }
 
@@ -181,7 +182,7 @@ public class MessageGatewayProviderCleanUpTests : IAsyncLifetime
             if (DateTimeOffset.UtcNow > deadline)
             {
                 //assert against whatever we saw last, so a failure reports it
-                Assert.IsType<TException>(exception);
+                await Assert.That(exception).IsTypeOf<TException>();
                 return;
             }
 

@@ -1,15 +1,15 @@
-﻿using System;
+using System;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Threading;
 using Paramore.Test.Helpers.Base;
 using Paramore.Test.Helpers.Extensions;
-using Xunit.Abstractions;
 
 namespace Paramore.Test.Helpers.TestOutput
 {
     /// <summary>
-    /// Class CoreTestOutputHelper. Base class for all xUnit tests.
+    /// Class CoreTestOutputHelper. Provides test output capture and formatting.
     /// </summary>
     public class CoreTestOutputHelper : ICoreTestOutputHelper
     {
@@ -21,17 +21,18 @@ namespace Paramore.Test.Helpers.TestOutput
         /// <summary>
         /// Initializes a new instance of the <see cref="CoreTestOutputHelper"/> class.
         /// </summary>
-        /// <param name="testOutputHelper">The test output helper instance.</param>
-        public CoreTestOutputHelper(ITestClassBase testCase, ITestOutputHelper testOutputHelper)
+        /// <param name="testCase">The test case instance.</param>
+        /// <param name="writer">The <see cref="TextWriter"/> used for test output.</param>
+        public CoreTestOutputHelper(ITestClassBase testCase, TextWriter writer)
         {
             TestCase = testCase;
-            WrappedTestOutputHelper = testOutputHelper ?? throw new ArgumentNullException(nameof(testOutputHelper));
+            WrappedTestOutputHelper = writer ?? throw new ArgumentNullException(nameof(writer));
         }
 
         public ITestClassBase TestCase { get; }
 
         /// <inheritdoc/>
-        public ITestOutputHelper WrappedTestOutputHelper { get; }
+        public TextWriter WrappedTestOutputHelper { get; }
 
         /// <inheritdoc/>
         public DateTime DateTimeStart { get; } = DateTime.UtcNow;

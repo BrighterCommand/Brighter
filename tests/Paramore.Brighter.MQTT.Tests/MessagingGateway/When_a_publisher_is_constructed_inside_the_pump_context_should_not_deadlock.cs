@@ -29,7 +29,7 @@ using MQTTnet;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server;
 using Paramore.Brighter.Tasks;
-using Xunit;
+
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway;
 
@@ -43,8 +43,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway;
 /// there means its blocking connect captures the pump's own context, so the connect's continuation is
 /// posted back to the queue only the (now blocked) pump thread can drain - a permanent deadlock.
 /// </summary>
-[Trait("Category", "MQTT")]
-[Collection("MQTT")]
+[Property("Category", "MQTT")]
+[System.Obsolete]
 public class MqttPublisherPumpContextConstructionTests : IDisposable
 {
     private readonly MqttTestServer? _mqttTestServer;
@@ -58,7 +58,7 @@ public class MqttPublisherPumpContextConstructionTests : IDisposable
             IPAddress.Loopback, serverPort, null, nameof(MqttPublisherPumpContextConstructionTests));
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_publisher_is_constructed_inside_the_pump_context_should_not_deadlock()
     {
         // Arrange - a real broker (an embedded MQTTnet server on a random loopback port, so this
@@ -84,7 +84,7 @@ public class MqttPublisherPumpContextConstructionTests : IDisposable
 
         // Assert - constructing the publisher must complete; today it never does, because the
         // constructor's blocking connect deadlocks against the pump thread it runs on.
-        Assert.Same(construction, completed);
+        await Assert.That(completed).IsSameReferenceAs(construction);
 
         (await construction).Dispose();
     }

@@ -27,7 +27,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -37,11 +37,11 @@ namespace Paramore.Brighter.Extensions.Tests;
 // unhandled disposal error: it should notice the source is unusable, fall back to creating and owning
 // its own scope exactly as if nothing had been offered, and say so once - not on every Send that hits
 // the same stale source, and not confused with either of the other two diagnostics this seam can raise.
-[Collection(LoggerCaptureCollection.NAME)]
+[System.Obsolete]
 public class StaleAmbientDiagnosticTests
 {
-    [Fact]
-    public void When_an_offered_ambient_is_stale_it_should_be_declined_and_reported_once()
+    [Test]
+    public async System.Threading.Tasks.Task When_an_offered_ambient_is_stale_it_should_be_declined_and_reported_once()
     {
         // Arrange - a JoinAmbient host whose registered scope provider will go on offering a resolution
         // source after the scope behind it has already been disposed
@@ -75,18 +75,18 @@ public class StaleAmbientDiagnosticTests
 
         // Assert - neither Send threw, and each resolved and disposed a fresh dependency of its own
         // rather than reaching into the disposed scope
-        Assert.Equal(2, recorder.Markers.Count);
-        Assert.True(recorder.Markers[0].IsDisposed);
-        Assert.True(recorder.Markers[1].IsDisposed);
-        Assert.NotSame(recorder.Markers[0], recorder.Markers[1]);
+        await Assert.That(recorder.Markers.Count).IsEqualTo(2);
+        await Assert.That(recorder.Markers[0].IsDisposed).IsTrue();
+        await Assert.That(recorder.Markers[1].IsDisposed).IsTrue();
+        await Assert.That(recorder.Markers[1]).IsNotSameReferenceAs(recorder.Markers[0]);
 
         // Assert - exactly one warning across both Sends, naming the ambient-unusable condition and the
         // provider's own implementation type, and nothing naming either of the other two conditions
         var warnings = capturingProvider.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        var warning = Assert.Single(warnings);
-        Assert.Contains("AmbientUnusable", warning.Message);
-        Assert.Contains(nameof(AsyncLocalScopeProvider), warning.Message);
-        Assert.DoesNotContain(warnings, w => w.Message.Contains("NoAmbientOffered"));
-        Assert.DoesNotContain(warnings, w => w.Message.Contains("AmbientIgnoredForAlwaysNew"));
+        var warning = await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains("AmbientUnusable");
+        await Assert.That(warning.Message).Contains(nameof(AsyncLocalScopeProvider));
+        await Assert.That(warnings).DoesNotContain(w => w.Message.Contains("NoAmbientOffered"));
+        await Assert.That(warnings).DoesNotContain(w => w.Message.Contains("AmbientIgnoredForAlwaysNew"));
     }
 }

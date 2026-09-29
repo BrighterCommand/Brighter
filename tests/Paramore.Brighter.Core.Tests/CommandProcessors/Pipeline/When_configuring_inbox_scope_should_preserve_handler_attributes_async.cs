@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -27,17 +28,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Inbox.Handlers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline;
 
 public class GlobalInboxScopeAttributeAsyncTests
 {
-    [Theory]
-    [InlineData(InboxScope.All, true)]
-    [InlineData(InboxScope.Events, true)]
-    [InlineData(InboxScope.All, false)]
-    [InlineData(InboxScope.Events, false)]
+    [Test]
+    [Arguments(InboxScope.All, true)]
+    [Arguments(InboxScope.Events, true)]
+    [Arguments(InboxScope.All, false)]
+    [Arguments(InboxScope.Events, false)]
     public async Task When_configuring_inbox_scope_should_preserve_handler_attributes_async(InboxScope scope, bool useExplicitInbox)
     {
         // Arrange
@@ -58,15 +58,14 @@ public class GlobalInboxScopeAttributeAsyncTests
         // Act
         await pipeline.HandleAsync(request);
         await pipeline.HandleAsync(request);
-        var description = Assert.Single(describer.Describe(typeof(MyCommand)));
+        var description = await Assert.That(describer.Describe(typeof(MyCommand))).HasSingleItem();
 
         // Assert
-        Assert.Equal(useExplicitInbox,
-            await inbox.ExistsAsync<MyCommand>(request.Id, handlerType.FullName!, null));
-        Assert.False(await inbox.ExistsAsync<MyCommand>(request.Id, "global-inbox", null));
+        await Assert.That(await inbox.ExistsAsync<MyCommand>(request.Id, handlerType.FullName!, null)).IsEqualTo(useExplicitInbox);
+        await Assert.That(await inbox.ExistsAsync<MyCommand>(request.Id, "global-inbox", null)).IsFalse();
         if (useExplicitInbox)
-            Assert.Single(description.BeforeSteps);
+            await Assert.That(description.BeforeSteps).HasSingleItem();
         else
-            Assert.Empty(description.BeforeSteps);
+            await Assert.That(description.BeforeSteps).IsEmpty();
     }
 }

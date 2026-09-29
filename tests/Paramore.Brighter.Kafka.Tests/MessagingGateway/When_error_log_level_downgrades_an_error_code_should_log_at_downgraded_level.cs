@@ -5,12 +5,12 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
+
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Property("Category", "Kafka")]
+[System.Obsolete]
 public class When_error_log_level_downgrades_an_error_code_should_log_at_downgraded_level : IDisposable
 {
     private readonly KafkaMessageConsumer _consumer;
@@ -33,8 +33,8 @@ public class When_error_log_level_downgrades_an_error_code_should_log_at_downgra
         );
     }
 
-    [Fact]
-    public void When_the_error_log_level_downgrades_an_error_code_it_is_logged_at_that_level()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_error_log_level_downgrades_an_error_code_it_is_logged_at_that_level()
     {
         using var context = TestCorrelator.CreateContext();
 
@@ -44,7 +44,7 @@ public class When_error_log_level_downgrades_an_error_code_should_log_at_downgra
         //Assert - the downgraded error is logged at Debug, not Warning
         var nonFatalEvent = TestCorrelator.GetLogEventsFromCurrentContext()
             .Single(e => e.RenderMessage().Contains("an idle socket non fatal timeout"));
-        Assert.Equal(LogEventLevel.Debug, nonFatalEvent.Level);
+        await Assert.That(nonFatalEvent.Level).IsEqualTo(LogEventLevel.Debug);
     }
 
     public void Dispose()

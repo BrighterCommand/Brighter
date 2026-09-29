@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
@@ -10,34 +9,28 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequestsAsync<MyCommand>? _pipeline;
-
-        public PipelineBuildForAgreementAsyncTests ()
+        public PipelineBuildForAgreementAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand>(router: (request, context) =>
             {
                 var command = request as MyCommand;
                 if (command.Value == "new")
-                    return [typeof(MyCommandHandlerAsync)];
-
-                return [typeof(MyObsoleteCommandHandlerAsync)];
-            },
-                    [typeof(MyCommandHandlerAsync), typeof(MyObsoleteCommandHandlerAsync)]
-            );
+                    return[typeof(MyCommandHandlerAsync)];
+                return[typeof(MyObsoleteCommandHandlerAsync)];
+            }, [typeof(MyCommandHandlerAsync), typeof(MyObsoleteCommandHandlerAsync)]);
             var handlerFactory = new SimpleHandlerFactoryAsync(factoryMethod: _ => new MyCommandHandlerAsync(new Dictionary<string, string>()));
-
             _pipelineBuilder = new PipelineBuilder<MyCommand>(subscriberRegistry: registry, asyncHandlerFactory: handlerFactory);
-            PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
-        [Fact]
-        public void When_Finding_A_Handler_For_A_Command()
+        [Test]
+        public async Task When_Finding_A_Handler_For_A_Command()
         {
-            _pipeline = _pipelineBuilder.BuildAsync(new MyCommand {Value = "new"}, new RequestContext(), true).First();
-
-            Assert.IsType<MyCommandHandlerAsync>(_pipeline);
-            Assert.Equal("MyCommandHandlerAsync|", TracePipeline().ToString());
+            _pipeline = _pipelineBuilder.BuildAsync(new MyCommand { Value = "new" }, new RequestContext(), true).First();
+            await Assert.That(_pipeline).IsTypeOf<MyCommandHandlerAsync>();
+            await Assert.That(TracePipeline().ToString()).IsEqualTo("MyCommandHandlerAsync|");
         }
+
         private PipelineTracer TracePipeline()
         {
             var pipelineTracer = new PipelineTracer();

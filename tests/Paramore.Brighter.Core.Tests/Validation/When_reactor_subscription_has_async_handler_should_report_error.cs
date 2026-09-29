@@ -19,46 +19,32 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class ReactorSubscriptionWithAsyncHandlerValidationTests
 {
-    [Fact]
-    public void When_reactor_subscription_has_async_handler_should_report_error()
+    [Test]
+    public async Task When_reactor_subscription_has_async_handler_should_report_error()
     {
         // Arrange — Reactor subscription with an async handler registered
-        var subscription = new Subscription(
-            subscriptionName: new SubscriptionName("test-sub"),
-            channelName: new ChannelName("test-channel"),
-            routingKey: new RoutingKey("test.routing.key"),
-            requestType: typeof(MyDescribableCommand),
-            messagePumpType: MessagePumpType.Reactor
-        );
-
+        var subscription = new Subscription(subscriptionName: new SubscriptionName("test-sub"), channelName: new ChannelName("test-channel"), routingKey: new RoutingKey("test.routing.key"), requestType: typeof(MyDescribableCommand), messagePumpType: MessagePumpType.Reactor);
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyPublicAsyncHandler));
-
         var spec = ConsumerValidationRules.PumpHandlerMatch(registry);
-
         // Act
         var satisfied = spec.IsSatisfiedBy(subscription);
         var collector = new ValidationResultCollector<Subscription>();
         var results = spec.Accept(collector).ToList();
-
         // Assert
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Error, results[0].Error!.Severity);
-        Assert.Contains("Reactor", results[0].Error!.Message);
-        Assert.Contains("Proactor", results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Error);
+        await Assert.That(results[0].Error!.Message).Contains("Reactor");
+        await Assert.That(results[0].Error!.Message).Contains("Proactor");
     }
 }

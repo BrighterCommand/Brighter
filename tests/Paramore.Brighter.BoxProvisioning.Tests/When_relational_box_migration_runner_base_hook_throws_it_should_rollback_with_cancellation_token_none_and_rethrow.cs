@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -42,25 +41,25 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// abandon the unwind when the caller's token is signalled.
 /// </summary>
 /// <remarks>
-/// Four <c>[Fact]</c>s — one per hook between <c>BeginAsync</c> and <c>CommitAsync</c>
+/// Four <c>[Test]</c>s — one per hook between <c>BeginAsync</c> and <c>CommitAsync</c>
 /// (<c>EnsureHistoryTableAsync</c>, <c>RunFreshPathAsync</c>, <c>RunBootstrapPathAsync</c>,
 /// <c>RunNormalPathAsync</c>) — share an arrange/act/assert helper.
 /// </remarks>
 public class SqlBoxMigrationRunnerHookFailureTests
 {
-    [Fact]
+    [Test]
     public Task When_ensure_history_table_throws_runner_should_rollback_with_cancellation_token_none_and_rethrow()
         => AssertHookFailureRollsBackWithNoneAndRethrows(ThrowFromHook.EnsureHistoryTable);
 
-    [Fact]
+    [Test]
     public Task When_run_fresh_path_throws_runner_should_rollback_with_cancellation_token_none_and_rethrow()
         => AssertHookFailureRollsBackWithNoneAndRethrows(ThrowFromHook.RunFreshPath);
 
-    [Fact]
+    [Test]
     public Task When_run_bootstrap_path_throws_runner_should_rollback_with_cancellation_token_none_and_rethrow()
         => AssertHookFailureRollsBackWithNoneAndRethrows(ThrowFromHook.RunBootstrapPath);
 
-    [Fact]
+    [Test]
     public Task When_run_normal_path_throws_runner_should_rollback_with_cancellation_token_none_and_rethrow()
         => AssertHookFailureRollsBackWithNoneAndRethrows(ThrowFromHook.RunNormalPath);
 
@@ -73,10 +72,10 @@ public class SqlBoxMigrationRunnerHookFailureTests
         // forward it to RollbackAsync. A fresh CancellationTokenSource produces a token
         // whose underlying source is non-null, so it is not equal to CancellationToken.None.
         using var cts = new CancellationTokenSource();
-        Assert.NotEqual(CancellationToken.None, cts.Token);
+        await Assert.That(cts.Token).IsNotEqualTo(CancellationToken.None);
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => runner.MigrateAsync(
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
@@ -86,14 +85,14 @@ public class SqlBoxMigrationRunnerHookFailureTests
         //Assert
         // The original sentinel exception must propagate to the caller — neither swallowed
         // nor wrapped — so callers can pattern-match on the type they actually threw.
-        Assert.IsType<InvalidOperationException>(thrown);
-        Assert.Equal(ThrowingHookTestRunner.SentinelMessage, thrown!.Message);
+        await Assert.That(thrown).IsTypeOf<InvalidOperationException>();
+        await Assert.That(thrown!.Message).IsEqualTo(ThrowingHookTestRunner.SentinelMessage);
 
         // RollbackAsync must have been called (so the unwind ran) AND it must have been
         // called with CancellationToken.None — proving the runner did NOT forward the
         // caller's cts.Token.
-        Assert.NotNull(unitOfWork.RollbackToken);
-        Assert.Equal(CancellationToken.None, unitOfWork.RollbackToken!.Value);
+        await Assert.That(unitOfWork.RollbackToken).IsNotNull();
+        await Assert.That(unitOfWork.RollbackToken!.Value).IsEqualTo(CancellationToken.None);
     }
 
     private enum ThrowFromHook

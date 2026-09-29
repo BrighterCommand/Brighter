@@ -31,14 +31,14 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection(LoggerCaptureCollection.NAME)]
+[System.Obsolete]
 public class InertOptInValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_opt_in_is_inert_and_throw_on_error_is_true_startup_should_fail()
     {
         // Arrange — a producer-only host (AddBrighter alone), JoinAmbient, all three lifetimes left at
@@ -53,19 +53,18 @@ public class InertOptInValidationTests
 
         // Act & Assert — startup fails with a message naming the affinity, all three lifetimes with their
         // values, that the opt-in has no effect, and the guidance page
-        var exception = await Assert.ThrowsAsync<PipelineValidationException>(
-            () => hostedService.StartAsync(CancellationToken.None));
+        var exception = await Assert.That(() => hostedService.StartAsync(CancellationToken.None)).ThrowsExactly<PipelineValidationException>();
 
-        Assert.Contains("JoinAmbient", exception.Message);
-        Assert.Contains("HandlerLifetime", exception.Message);
-        Assert.Contains("MapperLifetime", exception.Message);
-        Assert.Contains("TransformerLifetime", exception.Message);
-        Assert.Contains("Transient", exception.Message);
-        Assert.Contains("no effect", exception.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", exception.Message);
+        await Assert.That(exception.Message).Contains("JoinAmbient");
+        await Assert.That(exception.Message).Contains("HandlerLifetime");
+        await Assert.That(exception.Message).Contains("MapperLifetime");
+        await Assert.That(exception.Message).Contains("TransformerLifetime");
+        await Assert.That(exception.Message).Contains("Transient");
+        await Assert.That(exception.Message).Contains("no effect");
+        await Assert.That(exception.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_opt_in_is_inert_and_throw_on_error_is_false_the_same_message_should_be_logged_as_error()
     {
         // Arrange — the same inert configuration, but throwOnError: false
@@ -82,13 +81,13 @@ public class InertOptInValidationTests
         await hostedService.StartAsync(CancellationToken.None);
 
         // Assert — the identical message is logged at Error instead of thrown
-        var errorEntry = Assert.Single(capturingProvider.Entries, e => e.Level == LogLevel.Error);
-        Assert.Contains("JoinAmbient", errorEntry.Message);
-        Assert.Contains("HandlerLifetime", errorEntry.Message);
-        Assert.Contains("MapperLifetime", errorEntry.Message);
-        Assert.Contains("TransformerLifetime", errorEntry.Message);
-        Assert.Contains("Transient", errorEntry.Message);
-        Assert.Contains("no effect", errorEntry.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", errorEntry.Message);
+        var errorEntry = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level == LogLevel.Error);
+        await Assert.That(errorEntry.Message).Contains("JoinAmbient");
+        await Assert.That(errorEntry.Message).Contains("HandlerLifetime");
+        await Assert.That(errorEntry.Message).Contains("MapperLifetime");
+        await Assert.That(errorEntry.Message).Contains("TransformerLifetime");
+        await Assert.That(errorEntry.Message).Contains("Transient");
+        await Assert.That(errorEntry.Message).Contains("no effect");
+        await Assert.That(errorEntry.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 }

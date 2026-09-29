@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -8,11 +8,10 @@ using Paramore.Brighter.MongoDb.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transformers.MongoGridFS;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDb.Tests.Transformers;
 
-[Trait("Category", "MongoDb")]
+[Category("MongoDb")]
 public class LargeMessagePayloadAsyncUnwrapTests
 {
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
@@ -21,7 +20,6 @@ public class LargeMessagePayloadAsyncUnwrapTests
     public LargeMessagePayloadAsyncUnwrapTests()
     {
         //arrange
-        TransformPipelineBuilder.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(
             null,
@@ -40,7 +38,7 @@ public class LargeMessagePayloadAsyncUnwrapTests
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
     }
 
-    [Fact]
+    [Test]
     public async Task When_unwrapping_a_large_message_async()
     {
         //arrange
@@ -79,7 +77,7 @@ public class LargeMessagePayloadAsyncUnwrapTests
 
         //assert
         //contents should be from storage
-        Assert.Equal(contents, transformedMessage.Value);
-        Assert.False(await _luggageStore.HasClaimAsync(id));
+        await Assert.That(transformedMessage.Value).IsEqualTo(contents);
+        await Assert.That(await _luggageStore.HasClaimAsync(id)).IsFalse();
     }
 }

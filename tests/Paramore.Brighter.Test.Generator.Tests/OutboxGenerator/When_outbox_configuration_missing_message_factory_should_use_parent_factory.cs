@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
@@ -21,7 +20,7 @@ public class WhenOutboxConfigurationMissingMessageFactoryShouldUseParentFactory 
         _logger = factory.CreateLogger<Generators.OutboxGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_outbox_configuration_missing_message_factory_should_use_parent_factory()
     {
         // Arrange
@@ -51,7 +50,7 @@ public class WhenOutboxConfigurationMissingMessageFactoryShouldUseParentFactory 
         var generated = File.ReadAllText(Path.Combine(_testDirectory, "Outbox", "SqlServer",
             "Generated", "Sync", "When_Adding_A_Message_It_Should_Be_Stored_With_All_Properties.cs"));
         // The construction site, not the bare name, which would match a comment or a using
-        Assert.Contains("new TestMessageBuilder()", generated);
+        await Assert.That(generated).Contains("new TestMessageBuilder()");
     }
 
     public void Dispose()

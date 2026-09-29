@@ -23,14 +23,14 @@ THE SOFTWARE. */
 using System;
 using Confluent.Kafka;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
+
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
 public class When_applying_classic_group_protocol_should_map_settings
 {
-    [Fact]
-    public void Should_set_classic_group_protocol()
+    [Test]
+    public async System.Threading.Tasks.Task Should_set_classic_group_protocol()
     {
         // Arrange
         var config = new ConsumerConfig();
@@ -39,11 +39,11 @@ public class When_applying_classic_group_protocol_should_map_settings
         new ClassicGroupProtocol().Apply(config);
 
         // Assert
-        Assert.Equal(GroupProtocol.Classic, config.GroupProtocol.GetValueOrDefault());
+        await Assert.That(config.GroupProtocol.GetValueOrDefault()).IsEqualTo(GroupProtocol.Classic);
     }
 
-    [Fact]
-    public void Should_map_configured_settings()
+    [Test]
+    public async System.Threading.Tasks.Task Should_map_configured_settings()
     {
         // Arrange
         var config = new ConsumerConfig();
@@ -58,13 +58,13 @@ public class When_applying_classic_group_protocol_should_map_settings
         groupProtocol.Apply(config);
 
         // Assert
-        Assert.Equal(30000, config.SessionTimeoutMs.GetValueOrDefault());
-        Assert.Equal(3000, config.HeartbeatIntervalMs.GetValueOrDefault());
-        Assert.Equal(PartitionAssignmentStrategy.CooperativeSticky, config.PartitionAssignmentStrategy.GetValueOrDefault());
+        await Assert.That(config.SessionTimeoutMs.GetValueOrDefault()).IsEqualTo(30000);
+        await Assert.That(config.HeartbeatIntervalMs.GetValueOrDefault()).IsEqualTo(3000);
+        await Assert.That(config.PartitionAssignmentStrategy.GetValueOrDefault()).IsEqualTo(PartitionAssignmentStrategy.CooperativeSticky);
     }
 
-    [Fact]
-    public void Should_leave_unset_settings_at_kafka_defaults()
+    [Test]
+    public async System.Threading.Tasks.Task Should_leave_unset_settings_at_kafka_defaults()
     {
         // Arrange
         var config = new ConsumerConfig();
@@ -73,8 +73,8 @@ public class When_applying_classic_group_protocol_should_map_settings
         new ClassicGroupProtocol().Apply(config);
 
         // Assert — unset properties must not be written, so librdkafka defaults apply
-        Assert.Null(config.SessionTimeoutMs);
-        Assert.Null(config.HeartbeatIntervalMs);
-        Assert.Null(config.PartitionAssignmentStrategy);
+        await Assert.That(config.SessionTimeoutMs).IsNull();
+        await Assert.That(config.HeartbeatIntervalMs).IsNull();
+        await Assert.That(config.PartitionAssignmentStrategy).IsNull();
     }
 }

@@ -6,15 +6,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using MongoDB.Driver;
 using Paramore.Brighter.MongoDb.EntityFramework;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDb.Tests.EntityFramework;
 
-[Trait("Category", "MongoDb")]
-[Trait("Feature", "EntityFramework.TransactionProvider")]
+[Category("MongoDb")]
+[Property("Feature", "EntityFramework.TransactionProvider")]
 public class MongoDbEntityFrameworkTransactionProviderAsyncTest
 {
-    [Fact]
+    [Test]
     public async Task When_Committing_Async_Active_Transaction_Should_Call_CommitAsync()
     {
         // Arrange
@@ -34,7 +33,7 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
             .MustHaveHappenedOnceExactly();
     }
 
-    [Fact]
+    [Test]
     public async Task When_Committing_Async_Null_Transaction_Does_Not_Throw()
     {
         // Arrange
@@ -47,7 +46,7 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
         await provider.CommitAsync(CancellationToken.None);
     }
 
-    [Fact]
+    [Test]
     public async Task When_Rolling_Back_Async_Active_Transaction_Should_Call_RollbackAsync()
     {
         // Arrange
@@ -67,7 +66,7 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
             .MustHaveHappenedOnceExactly();
     }
 
-    [Fact]
+    [Test]
     public async Task When_Rolling_Back_Async_Null_Transaction_Does_Not_Throw()
     {
         // Arrange
@@ -80,7 +79,7 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
         await provider.RollbackAsync(CancellationToken.None);
     }
 
-    [Fact]
+    [Test]
     public async Task When_Rolling_Back_Async_With_Default_CancellationToken()
     {
         // Arrange
@@ -100,7 +99,7 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
             .MustHaveHappenedOnceExactly();
     }
 
-    [Fact]
+    [Test]
     public async Task When_Committing_Async_With_Specific_CancellationToken()
     {
         // Arrange
@@ -122,7 +121,7 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
             .MustHaveHappenedOnceExactly();
     }
 
-    [Fact]
+    [Test]
     public async Task When_Rolling_Back_Async_With_Specific_CancellationToken()
     {
         // Arrange
@@ -144,14 +143,14 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
             .MustHaveHappenedOnceExactly();
     }
 
-    [Fact]
+    [Test]
     public async Task When_Committing_Async_With_Cancelled_Token_Should_Propagate()
     {
         // Arrange
         var context = A.Fake<DbContext>();
         var mockTransaction = A.Fake<IDbContextTransaction>();
         var cts = new CancellationTokenSource();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         A.CallTo(() => context.Database.CurrentTransaction).Returns(mockTransaction);
         A.CallTo(() => mockTransaction.CommitAsync(cts.Token))
@@ -164,14 +163,14 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
             () => provider.CommitAsync(cts.Token));
     }
 
-    [Fact]
+    [Test]
     public async Task When_Rolling_Back_Async_With_Cancelled_Token_Should_Propagate()
     {
         // Arrange
         var context = A.Fake<DbContext>();
         var mockTransaction = A.Fake<IDbContextTransaction>();
         var cts = new CancellationTokenSource();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         A.CallTo(() => context.Database.CurrentTransaction).Returns(mockTransaction);
         A.CallTo(() => mockTransaction.RollbackAsync(cts.Token))
@@ -184,7 +183,7 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
             () => provider.RollbackAsync(cts.Token));
     }
 
-    [Fact]
+    [Test]
     public async Task When_Multiple_Operations_In_Sequence_Should_Maintain_State()
     {
         // Arrange
@@ -207,11 +206,11 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
         var hasTransactionAfter = provider.HasOpenTransaction;
 
         // Assert
-        Assert.True(hasTransactionBefore);
-        Assert.False(hasTransactionAfter);
+        await Assert.That(hasTransactionBefore).IsTrue();
+        await Assert.That(hasTransactionAfter).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_Committing_Async_Then_Checking_HasOpenTransaction()
     {
         // Arrange
@@ -228,15 +227,15 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
         var provider = new MongoDbEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Act
-        Assert.True(provider.HasOpenTransaction);
+        await Assert.That(provider.HasOpenTransaction).IsTrue();
         await provider.CommitAsync(CancellationToken.None);
         var hasTransactionAfterCommit = provider.HasOpenTransaction;
 
         // Assert
-        Assert.False(hasTransactionAfterCommit);
+        await Assert.That(hasTransactionAfterCommit).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_Rolling_Back_Async_Then_Checking_HasOpenTransaction()
     {
         // Arrange
@@ -253,15 +252,15 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
         var provider = new MongoDbEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Act
-        Assert.True(provider.HasOpenTransaction);
+        await Assert.That(provider.HasOpenTransaction).IsTrue();
         await provider.RollbackAsync();
         var hasTransactionAfterRollback = provider.HasOpenTransaction;
 
         // Assert
-        Assert.False(hasTransactionAfterRollback);
+        await Assert.That(hasTransactionAfterRollback).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_Commit_Called_Async_Multiple_Times_Should_Not_Throw()
     {
         // Arrange
@@ -282,7 +281,7 @@ public class MongoDbEntityFrameworkTransactionProviderAsyncTest
         await provider.CommitAsync(CancellationToken.None); // Second commit with null transaction - should not throw
     }
 
-    [Fact]
+    [Test]
     public async Task When_Rollback_Called_Async_Multiple_Times_Should_Not_Throw()
     {
         // Arrange

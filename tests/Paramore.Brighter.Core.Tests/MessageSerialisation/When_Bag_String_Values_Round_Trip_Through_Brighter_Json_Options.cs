@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -14,8 +13,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 // DynamoDB) and reply-message dispatch would regress to the bug this PR fixes.
 public class BagStringValueRoundTripTests
 {
-    [Fact]
-    public void When_Round_Tripping_A_Bag_String_Value_It_Survives_As_String_Not_JsonElement()
+    [Test]
+    public async Task When_Round_Tripping_A_Bag_String_Value_It_Survives_As_String_Not_JsonElement()
     {
         var bag = new Dictionary<string, object>
         {
@@ -26,9 +25,9 @@ public class BagStringValueRoundTripTests
         var json = JsonSerializer.Serialize(bag, JsonSerialisationOptions.Options);
         var roundTripped = JsonSerializer.Deserialize<Dictionary<string, object>>(json, JsonSerialisationOptions.Options);
 
-        Assert.NotNull(roundTripped);
-        Assert.IsType<string>(roundTripped![Message.ProducerTopicHeaderName]);
-        Assert.Equal("the.publication.topic", roundTripped[Message.ProducerTopicHeaderName]);
-        Assert.IsType<string>(roundTripped["customer.header"]);
+        await Assert.That(roundTripped).IsNotNull();
+        await Assert.That(roundTripped![Message.ProducerTopicHeaderName] is string).IsTrue();
+        await Assert.That(roundTripped[Message.ProducerTopicHeaderName]).IsEqualTo("the.publication.topic");
+        await Assert.That(roundTripped["customer.header"] is string).IsTrue();
     }
 }

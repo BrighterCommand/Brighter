@@ -1,3 +1,3 @@
-﻿using Xunit;
+using TUnit.Core;
 
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
+[assembly: NotInParallel]

@@ -28,22 +28,21 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.Configuration;
 
 public class AzurePublicationConfigurationBindingTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_binding_service_bus_publication_options_should_apply_queue_selection(bool genericPublication)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_binding_service_bus_publication_options_should_apply_queue_selection(bool genericPublication)
     {
         //Arrange
         AzureServiceBusPublication publication = genericPublication
             ? new AzureServiceBusPublication<Command>()
             : new AzureServiceBusPublication();
-        Assert.False(publication.UseServiceBusQueue);
+        await Assert.That(publication.UseServiceBusQueue).IsFalse();
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["UseServiceBusQueue"] = "true"
@@ -53,8 +52,8 @@ public class AzurePublicationConfigurationBindingTests
         configuration.Bind(publication);
 
         //Assert
-        Assert.True(publication.UseServiceBusQueue);
+        await Assert.That(publication.UseServiceBusQueue).IsTrue();
         publication.UseServiceBusQueue = false;
-        Assert.False(publication.UseServiceBusQueue);
+        await Assert.That(publication.UseServiceBusQueue).IsFalse();
     }
 }

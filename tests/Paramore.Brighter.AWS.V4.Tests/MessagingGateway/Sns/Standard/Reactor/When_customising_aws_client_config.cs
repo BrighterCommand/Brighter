@@ -6,14 +6,13 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 using System.Collections.Generic;
 using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Standard.Reactor;
 
-[Trait("Category", "AWS")]
-public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
+[Category("AWS")]
+public class CustomisingAwsClientConfigTests : IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelSync _channel;
@@ -33,7 +32,7 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
-            routingKey: routingKey, 
+            routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]));
@@ -59,15 +58,15 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
 
         _messageProducer = new SnsMessageProducer(
             publishAwsConnection,
-            new SnsPublication { Topic = new RoutingKey(topicName), 
+            new SnsPublication { Topic = new RoutingKey(topicName),
                 MakeChannels = OnMissingChannel.Create });
     }
 
-    [Fact]
+    [Test]
     public async Task When_customising_aws_client_config()
     {
         //arrange
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
 
         await Task.Delay(1000);
 
@@ -77,18 +76,19 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         _channel.Acknowledge(message);
 
         //publish_and_subscribe_should_use_custom_http_client_factory
-        Assert.Contains("sync_sub", InterceptingDelegatingHandler.RequestCount);
-        Assert.True((InterceptingDelegatingHandler.RequestCount["sync_sub"]) > (0));
-        
-        Assert.Contains("sync_pub", InterceptingDelegatingHandler.RequestCount);
-        Assert.True((InterceptingDelegatingHandler.RequestCount["sync_pub"]) > (0));
+        await Assert.That(InterceptingDelegatingHandler.RequestCount).ContainsKey("sync_sub");
+        await Assert.That((InterceptingDelegatingHandler.RequestCount["sync_sub"]) > (0)).IsTrue();
+
+        await Assert.That(InterceptingDelegatingHandler.RequestCount).ContainsKey("sync_pub");
+        await Assert.That((InterceptingDelegatingHandler.RequestCount["sync_pub"]) > (0)).IsTrue();
     }
 
-    public void Dispose()
+    [After(HookType.Test)]
+    public async Task Cleanup()
     {
         //Clean up resources that we have created
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 
     public async ValueTask DisposeAsync()

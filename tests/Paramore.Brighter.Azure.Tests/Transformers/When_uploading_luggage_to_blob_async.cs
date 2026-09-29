@@ -5,7 +5,7 @@ using Paramore.Brighter.Transformers.Azure;
 
 namespace Paramore.Brighter.Azure.Tests.Transformers;
 
-public class AzureBlobUploadAsyncTests : IAsyncDisposable 
+public class AzureBlobUploadAsyncTests : IAsyncDisposable
 {
     private readonly BlobContainerClient _client;
     private readonly Uri _bucketUrl;
@@ -18,7 +18,7 @@ public class AzureBlobUploadAsyncTests : IAsyncDisposable
 
         _client = new BlobContainerClient(_bucketUrl, new AzureCliCredential());
     }
-    
+
     [Test]
     public async Task When_uploading_luggage_to_blob_async()
     {
@@ -30,7 +30,7 @@ public class AzureBlobUploadAsyncTests : IAsyncDisposable
         });
 
         await luggageStore.EnsureStoreExistsAsync();
-        
+
         //act
         //Upload the test stream to Azure
         const string testContent = "Well, always know that you shine Brighter";
@@ -44,12 +44,12 @@ public class AzureBlobUploadAsyncTests : IAsyncDisposable
 
         //assert
         //do we have a claim?
-        Assert.That(await luggageStore.HasClaimAsync(claim, CancellationToken.None));
-        
+        await Assert.That(await luggageStore.HasClaimAsync(claim, CancellationToken.None)).IsTrue();
+
         //check for the contents indicated by the claim id on S3
         var result = await luggageStore.RetrieveAsync(claim, CancellationToken.None);
         var resultAsString = await new StreamReader(result).ReadToEndAsync();
-        Assert.Equals(testContent, resultAsString);
+        await Assert.That(resultAsString).IsEqualTo(testContent);
 
         await luggageStore.DeleteAsync(claim, CancellationToken.None);
 

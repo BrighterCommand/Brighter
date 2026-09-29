@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -36,8 +36,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 // and would hand a second Send the same cached instance.
 public class SendHandlerPipelineScopeTeardownTests
 {
-    [Fact]
-    public void When_send_returns_the_handler_pipeline_scope_should_be_torn_down()
+    [Test]
+    public async System.Threading.Tasks.Task When_send_returns_the_handler_pipeline_scope_should_be_torn_down()
     {
         // Arrange
         var recorder = new HandlerMarkerRecorder();
@@ -56,14 +56,14 @@ public class SendHandlerPipelineScopeTeardownTests
         commandProcessor.Send(new ScopedHandlerCommand());
 
         // Assert — by the time Send returns, the Scoped dependency it resolved has already been disposed
-        var firstMarker = Assert.Single(recorder.Markers);
-        Assert.True(firstMarker.IsDisposed);
+        var firstMarker = await Assert.That(recorder.Markers).HasSingleItem();
+        await Assert.That(firstMarker.IsDisposed).IsTrue();
 
         // Act — second Send
         commandProcessor.Send(new ScopedHandlerCommand());
 
         // Assert — the second Send resolved a different instance, not the first Send's disposed one
-        Assert.Equal(2, recorder.Markers.Count);
-        Assert.NotSame(firstMarker, recorder.Markers[1]);
+        await Assert.That(recorder.Markers.Count).IsEqualTo(2);
+        await Assert.That(recorder.Markers[1]).IsNotSameReferenceAs(firstMarker);
     }
 }

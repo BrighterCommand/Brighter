@@ -31,7 +31,7 @@ using Paramore.Brighter.Reject.Handlers;
 using Paramore.Brighter.RequestValidation.Attributes;
 using Paramore.Brighter.RequestValidation.Handlers;
 using Paramore.Brighter.Validation;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
@@ -51,8 +51,8 @@ public class ValidationProviderRegisteredTests
     private static List<ValidationResult> Evaluate(ISpecification<HandlerPipelineDescription> spec)
         => spec.Accept(new ValidationResultCollector<HandlerPipelineDescription>()).Where(r => !r.Success).ToList();
 
-    [Fact]
-    public void When_validation_step_present_and_no_provider_should_report_warning()
+    [Test]
+    public async Task When_validation_step_present_and_no_provider_should_report_warning()
     {
         // Arrange — async handler with a step targeting ValidateRequestHandlerAsync<>, no provider registered
         var description = DescriptionWith(
@@ -65,18 +65,18 @@ public class ValidationProviderRegisteredTests
         var results = Evaluate(spec);
 
         // Assert — one Warning naming the handler/request and the three provider calls
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, results[0].Error!.Severity);
-        Assert.Contains(nameof(MyPublicAsyncHandler), results[0].Error!.Source);
-        Assert.Contains(nameof(MyDescribableCommand), results[0].Error!.Message);
-        Assert.Contains("UseFluentValidation", results[0].Error!.Message);
-        Assert.Contains("UseDataAnnotations", results[0].Error!.Message);
-        Assert.Contains("UseSpecification", results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Warning);
+        await Assert.That(results[0].Error!.Source).Contains(nameof(MyPublicAsyncHandler));
+        await Assert.That(results[0].Error!.Message).Contains(nameof(MyDescribableCommand));
+        await Assert.That(results[0].Error!.Message).Contains("UseFluentValidation");
+        await Assert.That(results[0].Error!.Message).Contains("UseDataAnnotations");
+        await Assert.That(results[0].Error!.Message).Contains("UseSpecification");
     }
 
-    [Fact]
-    public void When_async_validation_step_present_and_async_provider_registered_should_report_no_warning()
+    [Test]
+    public async Task When_async_validation_step_present_and_async_provider_registered_should_report_no_warning()
     {
         // Arrange — async validation step, async provider registered
         var description = DescriptionWith(
@@ -89,12 +89,12 @@ public class ValidationProviderRegisteredTests
         var results = Evaluate(spec);
 
         // Assert
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_async_validation_step_present_and_only_sync_provider_registered_should_report_warning()
+    [Test]
+    public async Task When_async_validation_step_present_and_only_sync_provider_registered_should_report_warning()
     {
         // Arrange — async validation step; only the SYNC provider is registered, so the async step is unbacked.
         // The rule must match the step's modality to the matching flag (no transposition).
@@ -108,12 +108,12 @@ public class ValidationProviderRegisteredTests
         var results = Evaluate(spec);
 
         // Assert
-        Assert.False(satisfied);
-        Assert.Single(results);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
     }
 
-    [Fact]
-    public void When_sync_validation_step_present_and_no_provider_should_report_warning()
+    [Test]
+    public async Task When_sync_validation_step_present_and_no_provider_should_report_warning()
     {
         // Arrange — sync handler with a step targeting ValidateRequestHandler<>, no provider registered
         var description = DescriptionWith(
@@ -126,14 +126,14 @@ public class ValidationProviderRegisteredTests
         var results = Evaluate(spec);
 
         // Assert
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, results[0].Error!.Severity);
-        Assert.Contains(nameof(MyDescribableCommand), results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Warning);
+        await Assert.That(results[0].Error!.Message).Contains(nameof(MyDescribableCommand));
     }
 
-    [Fact]
-    public void When_sync_validation_step_present_and_only_async_provider_registered_should_report_warning()
+    [Test]
+    public async Task When_sync_validation_step_present_and_only_async_provider_registered_should_report_warning()
     {
         // Arrange — sync validation step; only the ASYNC provider is registered, so the sync step is unbacked.
         // The mirror of the async-step/only-sync-provider case — the rule must match modality to the right flag.
@@ -147,13 +147,13 @@ public class ValidationProviderRegisteredTests
         var results = Evaluate(spec);
 
         // Assert
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, results[0].Error!.Severity);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Warning);
     }
 
-    [Fact]
-    public void When_sync_validation_step_present_and_sync_provider_registered_should_report_no_warning()
+    [Test]
+    public async Task When_sync_validation_step_present_and_sync_provider_registered_should_report_no_warning()
     {
         // Arrange — sync validation step, sync provider registered
         var description = DescriptionWith(
@@ -166,12 +166,12 @@ public class ValidationProviderRegisteredTests
         var results = Evaluate(spec);
 
         // Assert
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_no_validation_step_present_should_report_no_warning()
+    [Test]
+    public async Task When_no_validation_step_present_should_report_no_warning()
     {
         // Arrange — a non-validation pipeline step (RejectMessageOnError), no provider registered
         var description = DescriptionWith(
@@ -184,12 +184,12 @@ public class ValidationProviderRegisteredTests
         var results = Evaluate(spec);
 
         // Assert
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_validation_step_present_in_after_steps_and_no_provider_should_report_warning()
+    [Test]
+    public async Task When_validation_step_present_in_after_steps_and_no_provider_should_report_warning()
     {
         // Arrange — the validation step appears as an after-step; the rule scans both before and after steps
         var description = new HandlerPipelineDescription(
@@ -210,8 +210,8 @@ public class ValidationProviderRegisteredTests
         var results = Evaluate(spec);
 
         // Assert — the after-step is detected and warned
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, results[0].Error!.Severity);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Warning);
     }
 }

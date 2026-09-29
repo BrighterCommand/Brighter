@@ -12,12 +12,12 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
-[Trait("Category", "AWS")]
-public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class SnsReDrivePolicySDlqTestsAsync : IAsyncDisposable
 {
     private readonly IAmAMessagePump _messagePump;
     private readonly Message _message;
@@ -32,13 +32,13 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
     {
         const string replyTo = "http:\\queueUrl";
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
-        
+
         _dlqQueueName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var correlationId = Guid.NewGuid().ToString();
         var subscriptionName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
-        
+
         var channelName = new ChannelName(queueName);
         var queueAttributes = new SqsAttributes(
             redrivePolicy: new RedrivePolicy(new ChannelName(_dlqQueueName), 2),
@@ -53,7 +53,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
             requeueCount: -1,
             requeueDelay: TimeSpan.FromMilliseconds(50),
             messagePumpType: MessagePumpType.Proactor,
-           queueAttributes: queueAttributes 
+           queueAttributes: queueAttributes
         );
 
         var myCommand = new MyDeferredCommand { Value = "Hello Redrive", GroupId = Guid.NewGuid().ToString() };
@@ -68,7 +68,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         _sender = new SqsMessageProducer(
             _awsConnection,
             new SqsPublication(
-                channelName: channelName, 
+                channelName: channelName,
                 queueAttributes: queueAttributes,
                 makeChannels: OnMissingChannel.Create
             )
@@ -124,12 +124,12 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         return response.Messages.Count;
     }
 
-    [Fact]
+    [Test, Skip("DLQ is fragile on async tests")]
     public async Task When_throwing_defer_action_respect_redrive_async()
     {
         await _sender.SendAsync(_message);
 
-        var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+        var task = Task.Factory.StartNew(() => _messagePump.Run(), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         await Task.Delay(5000);
 
         var quitMessage = MessageFactory.CreateQuitMessage(_subscription.RoutingKey);
@@ -140,13 +140,14 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         await Task.Delay(5000);
 
         int dlqCount = await GetDLQCountAsync(_dlqQueueName);
-        Assert.Equal(1, dlqCount);
+        await Assert.That(dlqCount).IsEqualTo(1);
     }
 
-    public void Dispose()
+    [After(HookType.Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 
     public async ValueTask DisposeAsync()

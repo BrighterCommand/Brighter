@@ -25,13 +25,13 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
-using Xunit;
+
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 public class RmqMessageProducerDisposeAsyncTests
 {
-    [Fact]
+    [Test]
     public async Task When_disposing_a_producer_asynchronously_should_complete()
     {
         // DisposeAsync previously returned a TaskCompletionSource task that was never completed,

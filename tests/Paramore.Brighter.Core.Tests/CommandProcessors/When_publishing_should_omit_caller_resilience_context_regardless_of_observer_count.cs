@@ -34,47 +34,47 @@ using Paramore.Brighter.Policies.Handlers;
 using Polly;
 using Polly.Registry;
 using Polly.Retry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors;
 
 public class PublishResilienceContextTests
 {
-    public static TheoryData<bool, bool, int, bool> PublishCases
+    public static IEnumerable<(bool, bool, int, bool)> PublishCases
     {
         get
         {
-            var cases = new TheoryData<bool, bool, int, bool>();
+            var cases = new List<(bool, bool, int, bool)>();
             foreach (var isAsync in new[] { false, true })
                 foreach (var typed in new[] { false, true })
                     foreach (var observerCount in new[] { 1, 2 })
                         foreach (var withContext in new[] { false, true })
-                            cases.Add(isAsync, typed, observerCount, withContext);
+                            cases.Add((isAsync, typed, observerCount, withContext));
             return cases;
         }
     }
 
-    public static TheoryData<bool, bool, bool> SendCases
+    public static IEnumerable<(bool, bool, bool)> SendCases
     {
         get
         {
-            var cases = new TheoryData<bool, bool, bool>();
+            var cases = new List<(bool, bool, bool)>();
             foreach (var isAsync in new[] { false, true })
                 foreach (var typed in new[] { false, true })
                     foreach (var withContext in new[] { false, true })
-                        cases.Add(isAsync, typed, withContext);
+                        cases.Add((isAsync, typed, withContext));
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(PublishCases))]
+    [Test]
+    [MethodDataSource(nameof(PublishCases))]
     public Task When_publishing_should_omit_caller_resilience_context_regardless_of_observer_count(
         bool isAsync, bool typed, int observerCount, bool withContext)
         => AssertDispatchAsync(isAsync, typed, observerCount, withContext, publish: true);
 
-    [Theory]
-    [MemberData(nameof(SendCases))]
+    [Test]
+    [MethodDataSource(nameof(SendCases))]
     public Task When_sending_should_preserve_caller_resilience_context(
         bool isAsync, bool typed, bool withContext)
         => AssertDispatchAsync(isAsync, typed, observerCount: 1, withContext, publish: false);
@@ -187,51 +187,61 @@ public class PublishResilienceContextTests
             var expectedExecutionToken = usesSuppliedContext
                 ? contextCancellation.Token
                 : isAsync ? methodCancellation.Token : CancellationToken.None;
-            Assert.Equal(observerCount, retryObservations.Count);
-            Assert.All(retryObservations, observation =>
+            await Assert.That(retryObservations.Count).IsEqualTo(observerCount);
+            using (Assert.Multiple())
             {
-                Assert.Equal(usesSuppliedContext, observation.UsesSuppliedContext);
-                Assert.Equal(usesSuppliedContext ? "caller-operation" : null, observation.OperationKey);
-                Assert.Equal(usesSuppliedContext ? "caller-value" : null, observation.Property);
-                Assert.Equal(expectedExecutionToken, observation.Token);
-            });
-
-            Assert.Equal(observerCount * 2, observations.Count);
+                foreach (var observation in retryObservations)
+                {
+                    await Assert.That(observation.UsesSuppliedContext).IsEqualTo(usesSuppliedContext);
+                    await Assert.That(observation.OperationKey).IsEqualTo(usesSuppliedContext ? "caller-operation" : null);
+                    await Assert.That(observation.Property).IsEqualTo(usesSuppliedContext ? "caller-value" : null);
+                    await Assert.That(observation.Token).IsEqualTo(expectedExecutionToken);
+                }
+            }
+            await Assert.That(observations.Count).IsEqualTo(observerCount * 2);
             var observers = observations.GroupBy(observation => observation.Handler).ToArray();
-            Assert.Equal(observerCount, observers.Length);
-            Assert.All(observers, observer => Assert.Equal(new[] { 1, 2 }, observer.Select(item => item.Attempt)));
-            Assert.All(observations, observation =>
+            await Assert.That(observers.Length).IsEqualTo(observerCount);
+            using (Assert.Multiple())
             {
-                Assert.Same(usesSuppliedContext ? supplied : null, observation.ResilienceContext);
-                Assert.True(observation.CallerIntact);
-                Assert.Equal("original-value", observation.Input);
-                Assert.Same(pipelines, observation.Context.ResiliencePipeline);
-                if (isAsync)
-                    Assert.Equal(expectedExecutionToken, observation.Token);
-                if (!publish)
-                    Assert.Same(caller, observation.Context);
-                if (observerCount == 1)
-                    Assert.Same(caller.Destination, observation.Destination);
-            });
-
+                foreach (var observer in observers)
+                {
+                    await Assert.That(observer.Select(item => item.Attempt)).IsEquivalentTo(new[] { 1, 2 }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+                }
+            }
+            using (Assert.Multiple())
+            {
+                foreach (var observation in observations)
+                {
+                    await Assert.That(observation.ResilienceContext).IsSameReferenceAs(usesSuppliedContext ? supplied : null);
+                    await Assert.That(observation.CallerIntact).IsTrue();
+                    await Assert.That(observation.Input).IsEqualTo("original-value");
+                    await Assert.That(observation.Context.ResiliencePipeline).IsSameReferenceAs(pipelines);
+                    if (isAsync)
+                        await Assert.That(observation.Token).IsEqualTo(expectedExecutionToken);
+                    if (!publish)
+                        await Assert.That(observation.Context).IsSameReferenceAs(caller);
+                    if (observerCount == 1)
+                        await Assert.That(observation.Destination).IsSameReferenceAs(caller.Destination);
+                }
+            }
             if (observerCount == 1)
             {
-                Assert.Equal("handled", caller.Bag[firstHandler.Name]);
+                await Assert.That(caller.Bag[firstHandler.Name]).IsEqualTo("handled");
             }
             else
             {
-                Assert.DoesNotContain(firstHandler.Name, caller.Bag.Keys);
-                Assert.DoesNotContain(HandlerType(isAsync, !typed).Name, caller.Bag.Keys);
-                Assert.NotSame(observers[0].First().Context.Bag, observers[1].First().Context.Bag);
+                await Assert.That(caller.Bag.Keys).DoesNotContain(firstHandler.Name);
+                await Assert.That(caller.Bag.Keys).DoesNotContain(HandlerType(isAsync, !typed).Name);
+                await Assert.That(observers[1].First().Context.Bag).IsNotSameReferenceAs(observers[0].First().Context.Bag);
             }
 
-            Assert.Same(supplied, caller.ResilienceContext);
-            Assert.Equal("original-value", caller.Bag["input"]);
+            await Assert.That(caller.ResilienceContext).IsSameReferenceAs(supplied);
+            await Assert.That(caller.Bag["input"]).IsEqualTo("original-value");
             if (supplied != null)
             {
-                Assert.Equal("caller-operation", supplied.OperationKey);
-                Assert.Equal("caller-value", supplied.Properties.GetValue(propertyKey, ""));
-                Assert.Equal(contextCancellation.Token, supplied.CancellationToken);
+                await Assert.That(supplied.OperationKey).IsEqualTo("caller-operation");
+                await Assert.That(supplied.Properties.GetValue(propertyKey, "")).IsEqualTo("caller-value");
+                await Assert.That(supplied.CancellationToken).IsEqualTo(contextCancellation.Token);
             }
         }
         finally

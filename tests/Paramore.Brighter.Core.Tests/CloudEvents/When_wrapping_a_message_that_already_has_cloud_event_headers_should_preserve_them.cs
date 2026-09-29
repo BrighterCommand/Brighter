@@ -4,7 +4,7 @@ using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transforms.Attributes;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CloudEvents;
 
@@ -31,8 +31,8 @@ public class When_wrapping_a_message_that_already_has_cloud_event_headers_should
             new MessageBody("{\"orderId\": 123}"));
     }
 
-    [Fact]
-    public void When_no_attribute_and_no_publication_should_preserve_mapper_headers()
+    [Test]
+    public async Task When_no_attribute_and_no_publication_should_preserve_mapper_headers()
     {
         //Arrange - a message with cloud event headers already set (e.g. by a message mapper)
         var message = CreateMessageWithMapperHeaders();
@@ -44,14 +44,14 @@ public class When_wrapping_a_message_that_already_has_cloud_event_headers_should
         var wrapped = _transformer.Wrap(message, publication);
 
         //Assert - existing header values should be preserved, not overwritten
-        Assert.Equal(_mapperSource, wrapped.Header.Source);
-        Assert.Equal(_mapperType, wrapped.Header.Type);
-        Assert.Equal(_mapperDataSchema, wrapped.Header.DataSchema);
-        Assert.Equal(_mapperSubject, wrapped.Header.Subject);
+        await Assert.That(wrapped.Header.Source).IsEqualTo(_mapperSource);
+        await Assert.That(wrapped.Header.Type).IsEqualTo(_mapperType);
+        await Assert.That(wrapped.Header.DataSchema).IsEqualTo(_mapperDataSchema);
+        await Assert.That(wrapped.Header.Subject).IsEqualTo(_mapperSubject);
     }
 
-    [Fact]
-    public void When_attribute_is_set_should_override_mapper_headers()
+    [Test]
+    public async Task When_attribute_is_set_should_override_mapper_headers()
     {
         //Arrange
         var message = CreateMessageWithMapperHeaders();
@@ -75,15 +75,15 @@ public class When_wrapping_a_message_that_already_has_cloud_event_headers_should
         var wrapped = _transformer.Wrap(message, publication);
 
         //Assert - attribute wins over both mapper and publication
-        Assert.Equal(attrSource, wrapped.Header.Source.ToString());
-        Assert.Equal(attrType, wrapped.Header.Type);
-        Assert.Equal(new ContentType(attrDataContentType), wrapped.Header.ContentType);
-        Assert.Equal(attrDataSchema, wrapped.Header.DataSchema!.ToString());
-        Assert.Equal(attrSubject, wrapped.Header.Subject);
+        await Assert.That(wrapped.Header.Source.ToString()).IsEqualTo(attrSource);
+        await Assert.That(wrapped.Header.Type).IsEqualTo(attrType);
+        await Assert.That(wrapped.Header.ContentType).IsEqualTo(new ContentType(attrDataContentType));
+        await Assert.That(wrapped.Header.DataSchema!.ToString()).IsEqualTo(attrDataSchema);
+        await Assert.That(wrapped.Header.Subject).IsEqualTo(attrSubject);
     }
 
-    [Fact]
-    public void When_mapper_sets_headers_and_publication_also_sets_them_mapper_should_win()
+    [Test]
+    public async Task When_mapper_sets_headers_and_publication_also_sets_them_mapper_should_win()
     {
         //Arrange - mapper set headers, publication has different values
         var message = CreateMessageWithMapperHeaders();
@@ -100,14 +100,14 @@ public class When_wrapping_a_message_that_already_has_cloud_event_headers_should
         var wrapped = _transformer.Wrap(message, publication);
 
         //Assert - mapper values win over publication
-        Assert.Equal(_mapperSource, wrapped.Header.Source);
-        Assert.Equal(_mapperType, wrapped.Header.Type);
-        Assert.Equal(_mapperDataSchema, wrapped.Header.DataSchema);
-        Assert.Equal(_mapperSubject, wrapped.Header.Subject);
+        await Assert.That(wrapped.Header.Source).IsEqualTo(_mapperSource);
+        await Assert.That(wrapped.Header.Type).IsEqualTo(_mapperType);
+        await Assert.That(wrapped.Header.DataSchema).IsEqualTo(_mapperDataSchema);
+        await Assert.That(wrapped.Header.Subject).IsEqualTo(_mapperSubject);
     }
 
-    [Fact]
-    public void When_mapper_leaves_defaults_publication_should_provide_values()
+    [Test]
+    public async Task When_mapper_leaves_defaults_publication_should_provide_values()
     {
         //Arrange - message with default headers (mapper did not set cloud event properties)
         var message = new Message(
@@ -131,14 +131,14 @@ public class When_wrapping_a_message_that_already_has_cloud_event_headers_should
         var wrapped = _transformer.Wrap(message, publication);
 
         //Assert - publication values are used as fallback when message has defaults
-        Assert.Equal(publicationSource, wrapped.Header.Source);
-        Assert.Equal(publicationType, wrapped.Header.Type);
-        Assert.Equal(publicationDataSchema, wrapped.Header.DataSchema);
-        Assert.Equal(publicationSubject, wrapped.Header.Subject);
+        await Assert.That(wrapped.Header.Source).IsEqualTo(publicationSource);
+        await Assert.That(wrapped.Header.Type).IsEqualTo(publicationType);
+        await Assert.That(wrapped.Header.DataSchema).IsEqualTo(publicationDataSchema);
+        await Assert.That(wrapped.Header.Subject).IsEqualTo(publicationSubject);
     }
 
-    [Fact]
-    public void When_mapper_sets_relative_uri_source_should_preserve_it()
+    [Test]
+    public async Task When_mapper_sets_relative_uri_source_should_preserve_it()
     {
         //Arrange - CloudEvents spec allows relative URI-references for source
         var relativeSource = new Uri("/my-service/orders", UriKind.Relative);
@@ -156,11 +156,11 @@ public class When_wrapping_a_message_that_already_has_cloud_event_headers_should
         var wrapped = _transformer.Wrap(message, publication);
 
         //Assert
-        Assert.Equal(relativeSource, wrapped.Header.Source);
+        await Assert.That(wrapped.Header.Source).IsEqualTo(relativeSource);
     }
 
-    [Fact]
-    public void When_wrapping_as_json_format_should_preserve_mapper_headers_in_body()
+    [Test]
+    public async Task When_wrapping_as_json_format_should_preserve_mapper_headers_in_body()
     {
         //Arrange
         var message = CreateMessageWithMapperHeaders();
@@ -175,16 +175,16 @@ public class When_wrapping_a_message_that_already_has_cloud_event_headers_should
 
         //Assert - the CloudEvent JSON body should contain the mapper's values
         var json = JsonSerializer.Deserialize<CloudEventsTransformer.JsonEvent>(wrapped.Body.Bytes, JsonSerialisationOptions.Options);
-        Assert.NotNull(json);
-        Assert.Equal(_mapperSource, json.Source);
-        Assert.Equal(_mapperType, json.Type);
-        Assert.Equal(MediaTypeNames.Application.Json, json.DataContentType);
-        Assert.Equal(_mapperDataSchema, json.DataSchema);
-        Assert.Equal(_mapperSubject, json.Subject);
+        await Assert.That(json).IsNotNull();
+        await Assert.That(json.Source).IsEqualTo(_mapperSource);
+        await Assert.That(json.Type).IsEqualTo(_mapperType);
+        await Assert.That(json.DataContentType).IsEqualTo(MediaTypeNames.Application.Json);
+        await Assert.That(json.DataSchema).IsEqualTo(_mapperDataSchema);
+        await Assert.That(json.Subject).IsEqualTo(_mapperSubject);
     }
 
-    [Fact]
-    public void When_attribute_has_default_data_content_type_should_not_override_mapper_content_type()
+    [Test]
+    public async Task When_attribute_has_default_data_content_type_should_not_override_mapper_content_type()
     {
         //Arrange - mapper sets XML content type; attribute uses [CloudEvents(0)] with no explicit DataContentType
         var xmlContentType = new ContentType(MediaTypeNames.Text.Xml);
@@ -211,11 +211,11 @@ public class When_wrapping_a_message_that_already_has_cloud_event_headers_should
         var wrapped = _transformer.Wrap(message, publication);
 
         //Assert - mapper's XML content type should be preserved, not overwritten with application/json
-        Assert.Equal(xmlContentType, wrapped.Header.ContentType);
+        await Assert.That(wrapped.Header.ContentType).IsEqualTo(xmlContentType);
     }
 
-    [Fact]
-    public void When_attribute_sets_data_content_type_should_override_mapper_content_type()
+    [Test]
+    public async Task When_attribute_sets_data_content_type_should_override_mapper_content_type()
     {
         //Arrange - mapper sets XML, attribute explicitly sets JSON → attribute wins
         var mapperContentType = new ContentType(MediaTypeNames.Text.Xml);
@@ -238,11 +238,11 @@ public class When_wrapping_a_message_that_already_has_cloud_event_headers_should
         var wrapped = _transformer.Wrap(message, publication);
 
         //Assert - attribute's DataContentType wins over mapper's XML
-        Assert.Equal(new ContentType(attrDataContentType), wrapped.Header.ContentType);
+        await Assert.That(wrapped.Header.ContentType).IsEqualTo(new ContentType(attrDataContentType));
     }
 
-    [Fact]
-    public void When_mapper_sets_source_to_default_uri_publication_wins_sentinel_collision()
+    [Test]
+    public async Task When_mapper_sets_source_to_default_uri_publication_wins_sentinel_collision()
     {
         //Arrange - mapper explicitly sets Source to the same URI as DefaultSource (http://goparamore.io).
         // This is a known trade-off: we use the default URI as a sentinel for "mapper didn't set it,"
@@ -267,6 +267,6 @@ public class When_wrapping_a_message_that_already_has_cloud_event_headers_should
         var wrapped = _transformer.Wrap(message, publication);
 
         //Assert - publication wins because the mapper's value matches the sentinel
-        Assert.Equal(publicationSource, wrapped.Header.Source);
+        await Assert.That(wrapped.Header.Source).IsEqualTo(publicationSource);
     }
 }

@@ -29,17 +29,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class SingletonLifetimeDiscardedFromConsistencyRuleTests
 {
-    [Theory]
-    [InlineData(ServiceLifetime.Scoped, ServiceLifetime.Singleton, ServiceLifetime.Scoped)]
-    [InlineData(ServiceLifetime.Singleton, ServiceLifetime.Singleton, ServiceLifetime.Singleton)]
-    [InlineData(ServiceLifetime.Transient, ServiceLifetime.Singleton, ServiceLifetime.Transient)]
-    [InlineData(ServiceLifetime.Transient, ServiceLifetime.Transient, ServiceLifetime.Transient)]
+    [Test]
+    [Arguments(ServiceLifetime.Scoped, ServiceLifetime.Singleton, ServiceLifetime.Scoped)]
+    [Arguments(ServiceLifetime.Singleton, ServiceLifetime.Singleton, ServiceLifetime.Singleton)]
+    [Arguments(ServiceLifetime.Transient, ServiceLifetime.Singleton, ServiceLifetime.Transient)]
+    [Arguments(ServiceLifetime.Transient, ServiceLifetime.Transient, ServiceLifetime.Transient)]
     public async Task When_a_singleton_lifetime_is_present_the_remainder_should_not_be_compared_against_it(
         ServiceLifetime handlerLifetime, ServiceLifetime mapperLifetime, ServiceLifetime transformerLifetime)
     {
@@ -65,7 +65,7 @@ public class SingletonLifetimeDiscardedFromConsistencyRuleTests
         await hostedService.StartAsync(CancellationToken.None);
     }
 
-    [Fact]
+    [Test]
     public async Task When_discarding_singleton_leaves_a_mixed_remainder_startup_should_fail()
     {
         // Arrange — Mapper is Singleton and is discarded, leaving {Scoped, Transient} — still mixed.
@@ -86,15 +86,14 @@ public class SingletonLifetimeDiscardedFromConsistencyRuleTests
         var hostedService = provider.GetServices<IHostedService>().OfType<BrighterValidationHostedService>().Single();
 
         // Act & Assert — discarding Singleton still leaves a mixed remainder, so the consistency error fires
-        var exception = await Assert.ThrowsAsync<PipelineValidationException>(
-            () => hostedService.StartAsync(CancellationToken.None));
+        var exception = await Assert.That(() => hostedService.StartAsync(CancellationToken.None)).ThrowsExactly<PipelineValidationException>();
 
-        Assert.Contains("HandlerLifetime", exception.Message);
-        Assert.Contains("MapperLifetime", exception.Message);
-        Assert.Contains("TransformerLifetime", exception.Message);
-        Assert.Contains("Scoped", exception.Message);
-        Assert.Contains("Transient", exception.Message);
-        Assert.Contains("do not share", exception.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", exception.Message);
+        await Assert.That(exception.Message).Contains("HandlerLifetime");
+        await Assert.That(exception.Message).Contains("MapperLifetime");
+        await Assert.That(exception.Message).Contains("TransformerLifetime");
+        await Assert.That(exception.Message).Contains("Scoped");
+        await Assert.That(exception.Message).Contains("Transient");
+        await Assert.That(exception.Message).Contains("do not share");
+        await Assert.That(exception.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 }

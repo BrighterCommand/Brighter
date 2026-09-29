@@ -28,12 +28,13 @@ THE SOFTWARE. */
 // </auto-generated>
 
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.Outbox.Causation;
 
-[Trait("Category", "DynamoDB")]
-[Collection("DynamoDBOutbox")]
+[Property("Category", "DynamoDB")]
+[NotInParallel("DynamoDBOutbox")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<Amazon.DynamoDBv2.Model.TransactWriteItemsRequest>
 {
     private readonly Paramore.Brighter.DynamoDB.V4.Tests.Outbox.DynamoDBOutboxProvider _outboxProvider = new();

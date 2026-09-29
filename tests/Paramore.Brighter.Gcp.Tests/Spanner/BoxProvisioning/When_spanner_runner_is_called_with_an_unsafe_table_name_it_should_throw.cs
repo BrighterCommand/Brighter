@@ -25,7 +25,6 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Spanner;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
@@ -42,13 +41,13 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 // required because the rejection happens at MigrateAsync's entry, before SpannerConnection
 // is opened. Connection string is "Data Source=ignored;".
 
-[Trait("Category", "Spanner")]
+[Property("Category", "Spanner")]
 public class SpannerRunnerUnsafeIdentifierTests
 {
-    [Theory]
-    [InlineData("O'Brien")]    // single quote — would break inlined predicates in information_schema probe
-    [InlineData("1Outbox")]    // leading digit — invalid as bare identifier
-    [InlineData("my-outbox")]  // hyphen — would need backtick-quoting to be legal
+    [Test]
+    [Arguments("O'Brien")]    // single quote — would break inlined predicates in information_schema probe
+    [Arguments("1Outbox")]    // leading digit — invalid as bare identifier
+    [Arguments("my-outbox")]  // hyphen — would need backtick-quoting to be legal
     public async Task When_spanner_runner_migrates_an_outbox_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
@@ -59,13 +58,13 @@ public class SpannerRunnerUnsafeIdentifierTests
         //Act + Assert
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => runner.MigrateAsync(
             unsafeTable, schemaName: null, BoxType.Outbox, tableState));
-        Assert.Contains(unsafeTable, ex.Message);
+        await Assert.That(ex.Message).Contains(unsafeTable);
     }
 
-    [Theory]
-    [InlineData("O'Brien")]
-    [InlineData("1Inbox")]
-    [InlineData("my-inbox")]
+    [Test]
+    [Arguments("O'Brien")]
+    [Arguments("1Inbox")]
+    [Arguments("my-inbox")]
     public async Task When_spanner_runner_migrates_an_inbox_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
@@ -76,6 +75,6 @@ public class SpannerRunnerUnsafeIdentifierTests
         //Act + Assert
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => runner.MigrateAsync(
             unsafeTable, schemaName: null, BoxType.Inbox, tableState));
-        Assert.Contains(unsafeTable, ex.Message);
+        await Assert.That(ex.Message).Contains(unsafeTable);
     }
 }

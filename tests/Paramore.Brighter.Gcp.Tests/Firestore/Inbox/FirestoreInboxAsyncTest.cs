@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Google.Cloud.Firestore.V1;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Firestore;
@@ -6,6 +6,7 @@ using Paramore.Brighter.Inbox.Firestore;
 
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Inbox;
 
+[TUnit.Core.InheritsTests]
 public class FirestoreInboxAsyncTest : InboxAsyncTest
 {
     private FirestoreInbox? _inbox;
@@ -22,9 +23,9 @@ public class FirestoreInboxAsyncTest : InboxAsyncTest
         var config = Configuration.CreateInbox();
         var firestore = await new FirestoreConnectionProvider(config)
             .GetFirestoreClientAsync();
-        
+
         foreach (var command in CreatedCommands)
-        { 
+        {
             try
             {
                 await firestore.DeleteDocumentAsync(new DeleteDocumentRequest
@@ -32,7 +33,7 @@ public class FirestoreInboxAsyncTest : InboxAsyncTest
                     Name = config.GetDocumentName(config.Inbox!.Name, command.Id)
                 });
             }
-            catch 
+            catch
             {
                 // Ignoring any error during delete, it's not important at this point
             }

@@ -31,19 +31,19 @@ using System.Linq;
 using System.Threading.Tasks;
 using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.Outbox.Spanner;
-using Xunit;
+using TUnit.Assertions.Enums;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner;
 
-[Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
+[Property("Category", "Spanner")]
+[NotInParallel("SpannerBoxProvisioning")]
 public class SpannerOutstandingMessagesTrippedTopicsTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_retrieving_outstanding_messages_should_exclude_tripped_topics(bool binaryPayload, bool isAsync)
     {
         //Arrange
@@ -71,22 +71,25 @@ public class SpannerOutstandingMessagesTrippedTopicsTests
             var messages = await ReadOutstandingAsync([orders.Header.Topic]);
 
             //Assert
-            Assert.Equal(new[] { payments.Id, shipments.Id }, messages.Select(message => message.Id));
-            Assert.Equal(new[] { orders.Id, payments.Id, shipments.Id },
-                (await ReadOutstandingAsync(null)).Select(message => message.Id));
-            Assert.Equal(new[] { orders.Id, payments.Id, shipments.Id },
-                (await ReadOutstandingAsync([])).Select(message => message.Id));
-            Assert.Equal(new[] { orders.Id, payments.Id, shipments.Id },
-                (await ReadOutstandingAsync([new RoutingKey("unknown")])).Select(message => message.Id));
-            Assert.Equal(new[] { payments.Id },
-                (await ReadOutstandingAsync([orders.Header.Topic, shipments.Header.Topic])).Select(message => message.Id));
-            Assert.Empty(await ReadOutstandingAsync([orders.Header.Topic, payments.Header.Topic, shipments.Header.Topic]));
+            await Assert.That(messages.Select(message => message.Id))
+                .IsEquivalentTo(new[] { payments.Id, shipments.Id }, CollectionOrdering.Matching);
+            await Assert.That((await ReadOutstandingAsync(null)).Select(message => message.Id))
+                .IsEquivalentTo(new[] { orders.Id, payments.Id, shipments.Id }, CollectionOrdering.Matching);
+            await Assert.That((await ReadOutstandingAsync([])).Select(message => message.Id))
+                .IsEquivalentTo(new[] { orders.Id, payments.Id, shipments.Id }, CollectionOrdering.Matching);
+            await Assert.That((await ReadOutstandingAsync([new RoutingKey("unknown")])).Select(message => message.Id))
+                .IsEquivalentTo(new[] { orders.Id, payments.Id, shipments.Id }, CollectionOrdering.Matching);
+            await Assert.That((await ReadOutstandingAsync([orders.Header.Topic, shipments.Header.Topic])).Select(message => message.Id))
+                .IsEquivalentTo(new[] { payments.Id }, CollectionOrdering.Matching);
+            await Assert.That(await ReadOutstandingAsync([orders.Header.Topic, payments.Header.Topic, shipments.Header.Topic])).IsEmpty();
 
-            Assert.Equal(payments.Id, Assert.Single(await ReadOutstandingAsync([orders.Header.Topic], 1, 1)).Id);
-            Assert.Equal(shipments.Id, Assert.Single(await ReadOutstandingAsync([orders.Header.Topic], 1, 2)).Id);
-            Assert.Empty(await ReadOutstandingAsync([orders.Header.Topic], 1, 3));
-            Assert.Equal(new[] { orders.Id, payments.Id, shipments.Id },
-                (await ReadOutstandingAsync(null)).Select(message => message.Id));
+            var firstPage = await Assert.That(await ReadOutstandingAsync([orders.Header.Topic], 1, 1)).HasSingleItem();
+            var secondPage = await Assert.That(await ReadOutstandingAsync([orders.Header.Topic], 1, 2)).HasSingleItem();
+            await Assert.That(firstPage.Id).IsEqualTo(payments.Id);
+            await Assert.That(secondPage.Id).IsEqualTo(shipments.Id);
+            await Assert.That(await ReadOutstandingAsync([orders.Header.Topic], 1, 3)).IsEmpty();
+            await Assert.That((await ReadOutstandingAsync(null)).Select(message => message.Id))
+                .IsEquivalentTo(new[] { orders.Id, payments.Id, shipments.Id }, CollectionOrdering.Matching);
 
             async Task<Message[]> ReadOutstandingAsync(IEnumerable<RoutingKey>? trippedTopics, int pageSize = 100, int pageNumber = 1)
             {

@@ -30,21 +30,20 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
+[NotInParallel]
 public class RmqSharedConnectionCleanupFailureTests
 {
-    [Theory]
-    [InlineData(false, false, "CloseAsync")]
-    [InlineData(false, true, "CloseAsync")]
-    [InlineData(false, false, "DisposeAsync")]
-    [InlineData(false, true, "DisposeAsync")]
-    [InlineData(true, false, "BasicCancelAsync")]
-    [InlineData(true, true, "BasicCancelAsync")]
+    [Test]
+    [Arguments(false, false, "CloseAsync")]
+    [Arguments(false, true, "CloseAsync")]
+    [Arguments(false, false, "DisposeAsync")]
+    [Arguments(false, true, "DisposeAsync")]
+    [Arguments(true, false, "BasicCancelAsync")]
+    [Arguments(true, true, "BasicCancelAsync")]
     public async Task When_gateway_cleanup_throws_should_release_its_connection(
         bool disposeConsumer, bool disposeAsync, string failingOperation)
     {
@@ -65,16 +64,16 @@ public class RmqSharedConnectionCleanupFailureTests
             new MessageBody("before cleanup failure"));
         await consumer.PurgeAsync();
         await producer.SendAsync(message);
-        var received = Assert.Single(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5)));
-        Assert.Equal(message.Id, received.Id);
+        var received = await Assert.That(await consumer.ReceiveAsync(TimeSpan.FromSeconds(5))).HasSingleItem();
+        await Assert.That(received.Id).IsEqualTo(message.Id);
         await consumer.AcknowledgeAsync(received);
         var sharedConnection = await pool.GetConnectionAsync(factory);
-        Assert.NotNull(sharedConnection);
+        await Assert.That(sharedConnection).IsNotNull();
 
         try
         {
             // Act
-            var error = await Record.ExceptionAsync(async () =>
+            var error = await TestExceptionRecorder.CaptureAsync(async () =>
             {
                 if (disposeConsumer)
                 {
@@ -86,13 +85,13 @@ public class RmqSharedConnectionCleanupFailureTests
             });
 
             // Assert
-            Assert.IsType<InvalidOperationException>(error);
-            Assert.Equal("Injected channel cleanup failure.", error.Message);
-            Assert.True(sharedConnection.IsOpen);
+            await Assert.That(error).IsTypeOf<InvalidOperationException>();
+            await Assert.That(error.Message).IsEqualTo("Injected channel cleanup failure.");
+            await Assert.That(sharedConnection.IsOpen).IsTrue();
             failure = null;
             if (disposeConsumer) await producer.DisposeAsync();
             else await consumer.DisposeAsync();
-            Assert.False(sharedConnection.IsOpen);
+            await Assert.That(sharedConnection.IsOpen).IsFalse();
         }
         finally
         {

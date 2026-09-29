@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,36 +22,35 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 public class BoxTableNameIsNullOrEmptyTests
 {
-    [Fact]
-    public void When_box_table_name_is_null_or_empty_is_called_with_null_it_should_return_true()
+    [Test]
+    public async Task When_box_table_name_is_null_or_empty_is_called_with_null_it_should_return_true()
     {
         //Act + Assert
-        Assert.True(BoxTableName.IsNullOrEmpty(null));
+        await Assert.That(BoxTableName.IsNullOrEmpty(null)).IsTrue();
     }
 
-    [Fact]
-    public void When_box_table_name_is_null_or_empty_is_called_with_empty_string_it_should_return_true()
+    [Test]
+    public async Task When_box_table_name_is_null_or_empty_is_called_with_empty_string_it_should_return_true()
     {
         //Arrange
         var empty = (BoxTableName)"";
 
         //Act + Assert
-        Assert.True(BoxTableName.IsNullOrEmpty(empty));
+        await Assert.That(BoxTableName.IsNullOrEmpty(empty)).IsTrue();
     }
 
-    [Fact]
-    public void When_box_table_name_is_null_or_empty_is_called_with_non_empty_string_it_should_return_false()
+    [Test]
+    public async Task When_box_table_name_is_null_or_empty_is_called_with_non_empty_string_it_should_return_false()
     {
         //Arrange
         var tableName = (BoxTableName)"Outbox";
 
         //Act + Assert
-        Assert.False(BoxTableName.IsNullOrEmpty(tableName));
+        await Assert.That(BoxTableName.IsNullOrEmpty(tableName)).IsFalse();
     }
 }

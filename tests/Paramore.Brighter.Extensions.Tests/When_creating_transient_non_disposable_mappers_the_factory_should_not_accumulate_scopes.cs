@@ -3,14 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class TransientMapperScopeAccumulationTests
 {
-    [Fact]
-    public void When_creating_transient_non_disposable_mappers_the_factory_should_not_accumulate_scopes()
+    [Test]
+    public async System.Threading.Tasks.Task When_creating_transient_non_disposable_mappers_the_factory_should_not_accumulate_scopes()
     {
         // Arrange
         const int messageCount = 10;
@@ -37,11 +37,11 @@ public class TransientMapperScopeAccumulationTests
 
         // Assert — all N scopes disposed before factory.Dispose() is ever called, so nothing is
         // retained from one message to the next
-        Assert.Equal(messageCount, disposedAfterCreates);
+        await Assert.That(disposedAfterCreates).IsEqualTo(messageCount);
     }
 
-    [Fact]
-    public void When_creating_a_transient_mapper_the_scope_should_survive_until_release()
+    [Test]
+    public async System.Threading.Tasks.Task When_creating_a_transient_mapper_the_scope_should_survive_until_release()
     {
         // Arrange
         var collection = new ServiceCollection();
@@ -62,8 +62,8 @@ public class TransientMapperScopeAccumulationTests
         factory.Release(mapper!);
 
         // Assert
-        Assert.Equal(0, disposedBeforeRelease);
-        Assert.Equal(1, scopeTracker.DisposedCount);
+        await Assert.That(disposedBeforeRelease).IsEqualTo(0);
+        await Assert.That(scopeTracker.DisposedCount).IsEqualTo(1);
     }
 
     private sealed class MinimalCommand : Command

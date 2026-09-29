@@ -26,11 +26,10 @@ using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 
-[Trait("Category", "PostgresSql")]
+[Category("PostgresSql")]
 public class PostgresMessageConsumerUnacceptableFallbackDlqTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _producer;
@@ -78,8 +77,8 @@ public class PostgresMessageConsumerUnacceptableFallbackDlqTests : IDisposable
             new MessageBody("test content"));
     }
 
-    [Fact]
-    public void When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq()
+    [Test]
+    public async Task When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq()
     {
         // Arrange - send a message and consume it
         _producer.Send(_message);
@@ -90,16 +89,16 @@ public class PostgresMessageConsumerUnacceptableFallbackDlqTests : IDisposable
             new MessageRejectionReason(RejectionReason.Unacceptable, "Bad message format"));
 
         // Assert - reject returns true
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         // Assert - message should appear on DLQ (fallback)
         var dlqMessage = ConsumeMessage(_dlqConsumer);
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
-        Assert.Equal(_message.Body.Value, dlqMessage.Body.Value);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(dlqMessage.Body.Value).IsEqualTo(_message.Body.Value);
 
         // Assert - source message is deleted
         var sourceMessage = ConsumeMessage(_consumer);
-        Assert.Equal(MessageType.MT_NONE, sourceMessage.Header.MessageType);
+        await Assert.That(sourceMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 
     private static Message ConsumeMessage(IAmAMessageConsumerSync consumer)

@@ -19,9 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -32,7 +30,6 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Testing;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
@@ -41,8 +38,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         private const string Topic = "MyCommand";
         private const string ChannelName = "myChannel";
         private readonly RoutingKey _routingKey = new(Topic);
-
-        [Fact]
+        [Test]
         public async Task When_a_command_handler_throws_a_defer_message_with_delay_Then_message_is_requeued_with_that_delay()
         {
             //Arrange
@@ -50,59 +46,40 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             var timeProvider = new FakeTimeProvider();
             var consumer = new InMemoryMessageConsumer(_routingKey, bus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000));
             var spyChannel = new SpyChannelAsync(new ChannelName(ChannelName), _routingKey, consumer);
-
             var commandProcessor = new SpyRequeueWithDelayCommandProcessor(delayMilliseconds: 5000);
-
-            var messageMapperRegistry = new MessageMapperRegistry(
-                null,
-                new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
+            var messageMapperRegistry = new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
-
-            var messagePump = new ServiceActivator.Proactor(
-                commandProcessor,
-                (message) => typeof(MyCommand),
-                messageMapperRegistry,
-                null,
-                new InMemoryRequestContextFactory(),
-                spyChannel)
+            var messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyCommand), messageMapperRegistry, null, new InMemoryRequestContextFactory(), spyChannel)
             {
                 Channel = spyChannel,
                 TimeOut = TimeSpan.FromMilliseconds(5000),
                 RequeueCount = 5,
                 RequeueDelay = TimeSpan.FromMilliseconds(100) // Subscription default — should NOT be used when DeferMessageAction has a delay
             };
-
-            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null, InstrumentationOptions.All)
-                .BuildWrapPipeline<MyCommand>()
-                .WrapAsync(new MyCommand(), new RequestContext(), new Publication { Topic = _routingKey })
-                .Result;
+            var msg = await new TransformPipelineBuilderAsync(messageMapperRegistry, null, InstrumentationOptions.All).BuildWrapPipeline<MyCommand>().WrapAsync(new MyCommand(), new RequestContext(), new Publication { Topic = _routingKey });
             bus.Enqueue(msg);
-
             //Act
-            var task = Task.Factory.StartNew(() => messagePump.Run(), TaskCreationOptions.LongRunning);
+            var task = Task.Factory.StartNew(() => messagePump.Run(), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             await Task.Delay(1000);
-
             timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
-
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             spyChannel.Enqueue(quitMessage);
-
             await Task.WhenAll(task);
-
             //Assert
-            Assert.NotEmpty(spyChannel.RequeueDelays); // At least one requeue occurred
-            Assert.Equal(TimeSpan.FromMilliseconds(5000), spyChannel.RequeueDelays[0]); // Delay from DeferMessageAction, not subscription RequeueDelay (100ms)
+            await Assert.That(spyChannel.RequeueDelays).IsNotEmpty(); // At least one requeue occurred
+            await Assert.That(spyChannel.RequeueDelays[0]).IsEqualTo(TimeSpan.FromMilliseconds(5000)); // Delay from DeferMessageAction, not subscription RequeueDelay (100ms)
         }
 
         /// <summary>
         /// Spy channel that captures the delay passed to RequeueAsync for test verification.
         /// </summary>
-        private class SpyChannelAsync : Brighter.ChannelAsync
+        private class SpyChannelAsync : Paramore.Brighter.ChannelAsync, Paramore.Brighter.IAmAChannelAsync, Paramore.Brighter.IAmAChannel, System.IDisposable, System.IAsyncDisposable
         {
             public List<TimeSpan?> RequeueDelays { get; } = [];
 
-            public SpyChannelAsync(ChannelName channelName, RoutingKey routingKey, IAmAMessageConsumerAsync consumer)
-                : base(channelName, routingKey, consumer) { }
+            public SpyChannelAsync(ChannelName channelName, RoutingKey routingKey, IAmAMessageConsumerAsync consumer) : base(channelName, routingKey, consumer)
+            {
+            }
 
             public override Task<bool> RequeueAsync(Message message, TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
             {

@@ -2,17 +2,14 @@
 
 /* The MIT License (MIT)
 Copyright © 2026 Avtandil Ushikishvili <a.ushikishvili@gmail.com>
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -31,17 +28,17 @@ using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
+
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusProducerCreationRaceTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_another_caller_creates_the_destination_should_send_and_cache_its_availability(
         bool useQueue, bool useAsync)
     {
@@ -57,17 +54,17 @@ public class AzureServiceBusProducerCreationRaceTests
         await SendAsync(producer, second, useAsync);
 
         //Assert
-        Assert.Equal(2, sender.SentMessages.Count);
-        Assert.Equal(first.Id.Value, sender.SentMessages[0].MessageId);
-        Assert.Equal(second.Id.Value, sender.SentMessages[1].MessageId);
-        Assert.Equal(1, administration.ExistsCount);
-        Assert.Equal(1, administration.CreateCount);
-        Assert.Equal(0, administration.ResetCount);
+        await Assert.That(sender.SentMessages.Count).IsEqualTo(2);
+        await Assert.That(sender.SentMessages[0].MessageId).IsEqualTo(first.Id.Value);
+        await Assert.That(sender.SentMessages[1].MessageId).IsEqualTo(second.Id.Value);
+        await Assert.That(administration.ExistsCount).IsEqualTo(1);
+        await Assert.That(administration.CreateCount).IsEqualTo(1);
+        await Assert.That(administration.ResetCount).IsEqualTo(0);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_two_producers_race_to_create_the_destination_should_send_both_messages(bool useQueue)
     {
         //Arrange
@@ -84,11 +81,11 @@ public class AzureServiceBusProducerCreationRaceTests
             .WaitAsync(TimeSpan.FromSeconds(15));
 
         //Assert
-        Assert.Equal(first.Id.Value, Assert.Single(firstSender.SentMessages).MessageId);
-        Assert.Equal(second.Id.Value, Assert.Single(secondSender.SentMessages).MessageId);
-        Assert.Equal(2, administration.ExistsCount);
-        Assert.Equal(2, administration.CreateCount);
-        Assert.Equal(0, administration.ResetCount);
+        await Assert.That((await Assert.That(firstSender.SentMessages).HasSingleItem()).MessageId).IsEqualTo(first.Id.Value);
+        await Assert.That((await Assert.That(secondSender.SentMessages).HasSingleItem()).MessageId).IsEqualTo(second.Id.Value);
+        await Assert.That(administration.ExistsCount).IsEqualTo(2);
+        await Assert.That(administration.CreateCount).IsEqualTo(2);
+        await Assert.That(administration.ResetCount).IsEqualTo(0);
     }
 
     public static IEnumerable<object[]> AdministrationFailures()
@@ -100,8 +97,8 @@ public class AzureServiceBusProducerCreationRaceTests
             yield return [useQueue, useAsync, duringCreation, failureKind];
     }
 
-    [Theory]
-    [MemberData(nameof(AdministrationFailures))]
+    [Test]
+    [MethodDataSource(nameof(AdministrationFailures))]
     public async Task When_administration_fails_should_propagate_the_error_and_allow_a_later_retry(
         bool useQueue, bool useAsync, bool duringCreation, int failureKind)
     {
@@ -123,13 +120,13 @@ public class AzureServiceBusProducerCreationRaceTests
         var message = CreateMessage();
 
         //Act
-        var actual = await Record.ExceptionAsync(() => SendAsync(producer, message, useAsync));
+        var actual = await TestExceptionRecorder.CaptureAsync(() => SendAsync(producer, message, useAsync));
 
         //Assert
-        Assert.Same(expected, actual);
-        Assert.Empty(sender.SentMessages);
-        Assert.Equal(1, administration.ResetCount);
-        Assert.Equal(duringCreation ? 1 : 0, administration.CreateCount);
+        await Assert.That(actual).IsSameReferenceAs(expected);
+        await Assert.That(sender.SentMessages).IsEmpty();
+        await Assert.That(administration.ResetCount).IsEqualTo(1);
+        await Assert.That(administration.CreateCount).IsEqualTo(duringCreation ? 1 : 0);
 
         //Act
         administration.ExistsException = null;
@@ -137,16 +134,16 @@ public class AzureServiceBusProducerCreationRaceTests
         await SendAsync(producer, message, useAsync);
 
         //Assert
-        Assert.Equal(message.Id.Value, Assert.Single(sender.SentMessages).MessageId);
-        Assert.Equal(2, administration.ExistsCount);
-        Assert.Equal(duringCreation ? 2 : 1, administration.CreateCount);
+        await Assert.That((await Assert.That(sender.SentMessages).HasSingleItem()).MessageId).IsEqualTo(message.Id.Value);
+        await Assert.That(administration.ExistsCount).IsEqualTo(2);
+        await Assert.That(administration.CreateCount).IsEqualTo(duringCreation ? 2 : 1);
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_an_existence_check_reports_already_exists_should_not_treat_it_as_a_successful_create(
         bool useQueue, bool useAsync)
     {
@@ -158,24 +155,24 @@ public class AzureServiceBusProducerCreationRaceTests
         using var producer = CreateProducer(useQueue, administration, sender);
 
         //Act
-        var actual = await Record.ExceptionAsync(() => SendAsync(producer, CreateMessage(), useAsync));
+        var actual = await TestExceptionRecorder.CaptureAsync(() => SendAsync(producer, CreateMessage(), useAsync));
 
         //Assert
-        Assert.Same(expected, actual);
-        Assert.Empty(sender.SentMessages);
-        Assert.Equal(0, administration.CreateCount);
-        Assert.Equal(1, administration.ResetCount);
+        await Assert.That(actual).IsSameReferenceAs(expected);
+        await Assert.That(sender.SentMessages).IsEmpty();
+        await Assert.That(administration.CreateCount).IsEqualTo(0);
+        await Assert.That(administration.ResetCount).IsEqualTo(1);
     }
 
-    [Theory]
-    [InlineData(false, false, OnMissingChannel.Assume)]
-    [InlineData(false, true, OnMissingChannel.Assume)]
-    [InlineData(true, false, OnMissingChannel.Assume)]
-    [InlineData(true, true, OnMissingChannel.Assume)]
-    [InlineData(false, false, OnMissingChannel.Validate)]
-    [InlineData(false, true, OnMissingChannel.Validate)]
-    [InlineData(true, false, OnMissingChannel.Validate)]
-    [InlineData(true, true, OnMissingChannel.Validate)]
+    [Test]
+    [Arguments(false, false, OnMissingChannel.Assume)]
+    [Arguments(false, true, OnMissingChannel.Assume)]
+    [Arguments(true, false, OnMissingChannel.Assume)]
+    [Arguments(true, true, OnMissingChannel.Assume)]
+    [Arguments(false, false, OnMissingChannel.Validate)]
+    [Arguments(false, true, OnMissingChannel.Validate)]
+    [Arguments(true, false, OnMissingChannel.Validate)]
+    [Arguments(true, true, OnMissingChannel.Validate)]
     public async Task When_creation_is_not_requested_should_preserve_the_missing_channel_policy(
         bool useQueue, bool useAsync, OnMissingChannel mode)
     {
@@ -186,23 +183,23 @@ public class AzureServiceBusProducerCreationRaceTests
         var message = CreateMessage();
 
         //Act
-        var exception = await Record.ExceptionAsync(() => SendAsync(producer, message, useAsync));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => SendAsync(producer, message, useAsync));
 
         //Assert
-        Assert.Equal(0, administration.CreateCount);
+        await Assert.That(administration.CreateCount).IsEqualTo(0);
         if (mode == OnMissingChannel.Assume)
         {
-            Assert.Null(exception);
-            Assert.Equal(message.Id.Value, Assert.Single(sender.SentMessages).MessageId);
-            Assert.Equal(0, administration.ExistsCount);
-            Assert.Equal(0, administration.ResetCount);
+            await Assert.That(exception).IsNull();
+            await Assert.That((await Assert.That(sender.SentMessages).HasSingleItem()).MessageId).IsEqualTo(message.Id.Value);
+            await Assert.That(administration.ExistsCount).IsEqualTo(0);
+            await Assert.That(administration.ResetCount).IsEqualTo(0);
         }
         else
         {
-            Assert.IsType<ChannelFailureException>(exception);
-            Assert.Empty(sender.SentMessages);
-            Assert.Equal(1, administration.ExistsCount);
-            Assert.Equal(1, administration.ResetCount);
+            await Assert.That(exception).IsTypeOf<ChannelFailureException>();
+            await Assert.That(sender.SentMessages).IsEmpty();
+            await Assert.That(administration.ExistsCount).IsEqualTo(1);
+            await Assert.That(administration.ResetCount).IsEqualTo(1);
         }
     }
 

@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // deliberately, since there the transform pipeline's scope is Brighter-owned, not borrowed.
 public class PostAndSendShareScopedDependencyTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_post_and_a_send_run_in_one_request_the_mapper_and_handler_should_share_a_scoped_dependency()
     {
         // Arrange
@@ -49,13 +49,13 @@ public class PostAndSendShareScopedDependencyTests
         // Assert
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<SharedDependencyRecorder>();
-        Assert.NotNull(recorder.MapperMarker);
-        Assert.NotNull(recorder.HandlerMarker);
+        await Assert.That(recorder.MapperMarker).IsNotNull();
+        await Assert.That(recorder.HandlerMarker).IsNotNull();
         // the Post's mapper and the Send's handler resolved the same Scoped IMarker from the request scope
-        Assert.Same(recorder.MapperMarker, recorder.HandlerMarker);
+        await Assert.That(recorder.HandlerMarker).IsSameReferenceAs(recorder.MapperMarker);
         // neither was disposed while still inside the controller action
-        Assert.Equal(0, recorder.DisposeCountAfterAction);
+        await Assert.That(recorder.DisposeCountAfterAction).IsEqualTo(0);
         // ASP.NET disposes the request scope, and the shared IMarker with it, exactly once, once the whole HTTP request has completed
-        Assert.Equal(1, recorder.MapperMarker!.DisposeCount);
+        await Assert.That(recorder.MapperMarker!.DisposeCount).IsEqualTo(1);
     }
 }

@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // that captures log output for assertion, plus every test that deliberately logs at Warning or above
 // (the inbox dedup tests), belongs in this collection so none of them race the shared static against
 // each other.
-[CollectionDefinition(NAME, DisableParallelization = true)]
+[System.Obsolete]
 public class LoggerCaptureCollection
 {
     public const string NAME = "Brighter logger capture";

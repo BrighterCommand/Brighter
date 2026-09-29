@@ -31,7 +31,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -42,8 +42,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 // is not redundant with the Send branch.
 public class AmbientQueryThrowsUnwrappedTests
 {
-    [Fact]
-    public void When_the_ambient_query_throws_the_caller_should_see_it_unwrapped()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_ambient_query_throws_the_caller_should_see_it_unwrapped()
     {
         // Arrange — a ScopeTracker shared by both factories so "no pipeline scope is leaked" is
         // falsifiable, not just "the call did not throw"
@@ -94,17 +94,17 @@ public class AmbientQueryThrowsUnwrappedTests
 
         // Act & Assert — Send: the caller observes the ambient source's own exception unwrapped, not a
         // ConfigurationException, and no pipeline scope was created
-        var sendException = Assert.Throws<InvalidOperationException>(() =>
-            commandProcessor.Send(new AmbientThrowsCommand()));
-        Assert.Equal("the ambient source's own fault", sendException.Message);
-        Assert.Equal(0, scopeTracker.CreatedCount);
+        var sendException = await Assert.That(() =>
+            commandProcessor.Send(new AmbientThrowsCommand())).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(sendException.Message).IsEqualTo("the ambient source's own fault");
+        await Assert.That(scopeTracker.CreatedCount).IsEqualTo(0);
 
         // Act & Assert — Post, in the same host: the same exception, unwrapped, and still no pipeline
         // scope leaked
-        var postException = Assert.Throws<InvalidOperationException>(() =>
-            commandProcessor.Post(new AmbientThrowsPostCommand()));
-        Assert.Equal("the ambient source's own fault", postException.Message);
-        Assert.Equal(0, scopeTracker.CreatedCount);
+        var postException = await Assert.That(() =>
+            commandProcessor.Post(new AmbientThrowsPostCommand())).ThrowsExactly<InvalidOperationException>();
+        await Assert.That(postException.Message).IsEqualTo("the ambient source's own fault");
+        await Assert.That(scopeTracker.CreatedCount).IsEqualTo(0);
     }
 
     private static ScopeTracker BuildScopeTracker(out IServiceProvider trackingProvider)

@@ -13,16 +13,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             LogCommand(command);
             return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
-        
+
         public  bool ShouldReceive(MyCommand expectedCommand)
         {
             return (_command != null) && (expectedCommand.Id == _command.Id);
         }
-        
+
         private void LogCommand(MyCommand request)
         {
             _command = request;
-            receivedMessages.Add(nameof(MyCommandHandlerAsync), request.Id);
+            receivedMessages[nameof(MyCommandHandlerAsync)] = request.Id;
         }
     }
 }

@@ -26,7 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Text;
 
@@ -54,8 +54,8 @@ public class WhenRetrievingDispatchedMessagesWithPageSizeSmallerThanTotalRowsItS
         _messageFactory = new DefaultMessageFactory();
     }
 
-    [Fact]
-    public void When_Page_Size_Is_Smaller_Than_Total_Row_Count_Dispatched_Messages_Should_Still_Be_Returned()
+    [Test]
+    public async Task When_Page_Size_Is_Smaller_Than_Total_Row_Count_Dispatched_Messages_Should_Still_Be_Returned()
     {
         // Arrange
         const int pageSize = 5;
@@ -93,8 +93,8 @@ public class WhenRetrievingDispatchedMessagesWithPageSizeSmallerThanTotalRowsItS
 
         // Assert — both eligible dispatched messages must be returned regardless of how many
         // undispatched rows exist in the table
-        Assert.Contains(dispatchedOld1.Id, results.Select(m => m.Id));
-        Assert.Contains(dispatchedOld2.Id, results.Select(m => m.Id));
+        await Assert.That(results.Select(m => m.Id)).Contains(dispatchedOld1.Id);
+        await Assert.That(results.Select(m => m.Id)).Contains(dispatchedOld2.Id);
     }
 
     public void Dispose()

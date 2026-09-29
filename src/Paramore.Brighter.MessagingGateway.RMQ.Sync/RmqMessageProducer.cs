@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private readonly InstrumentationOptions _instrumentationOptions;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
 
-        static readonly object s_lock = new();
+        private readonly object _sendLock = new();
         private RmqPublication _publication;
         private readonly ConcurrentDictionary<ulong, PendingConfirmation> _pendingConfirmations = new ConcurrentDictionary<ulong, PendingConfirmation>();
         private bool _confirmsSelected;
@@ -151,7 +151,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             try
             {
-                lock (s_lock)
+                lock (_sendLock)
                 {
                     EnsureBroker(makeExchange: _publication.MakeChannels);
                     //NOTE: EnsureBroker will create a channel if one does not exist

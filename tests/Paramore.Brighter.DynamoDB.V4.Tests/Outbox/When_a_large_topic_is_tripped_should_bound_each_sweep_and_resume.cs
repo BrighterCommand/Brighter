@@ -32,7 +32,6 @@ using Amazon.Runtime;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.V4.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB.V4;
-using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.Outbox;
 
@@ -55,11 +54,11 @@ public class DynamoDbTrippedTopicScanProgressTests : IDisposable
             });
     }
 
-    [Theory]
-    [InlineData(false, 1)]
-    [InlineData(true, 1)]
-    [InlineData(false, 3)]
-    [InlineData(true, 3)]
+    [Test]
+    [Arguments(false, 1)]
+    [Arguments(true, 1)]
+    [Arguments(false, 3)]
+    [Arguments(true, 3)]
     public async Task When_a_large_topic_is_tripped_should_bound_each_sweep_and_resume(bool isAsync, int concurrency)
     {
         //Arrange
@@ -74,20 +73,21 @@ public class DynamoDbTrippedTopicScanProgressTests : IDisposable
         var second = await ReadAsync(outbox, isAsync, concurrency * 10);
 
         //Assert
-        Assert.Empty(first);
-        Assert.Empty(second);
-        Assert.Equal(concurrency * 2, _http.Requests.Count);
+        await Assert.That(first).IsEmpty();
+        await Assert.That(second).IsEmpty();
+        await Assert.That(_http.Requests.Count).IsEqualTo(concurrency * 2);
         for (var segment = 0; segment < concurrency; segment++)
         {
-            Assert.Equal(new[] { 0, 10 }, _http.Requests.Where(request => request.Segment == segment).Select(request => request.Start));
+            await Assert.That(_http.Requests.Where(request => request.Segment == segment).Select(request => request.Start))
+                .IsEquivalentTo(new[] { 0, 10 }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
         }
     }
 
-    [Theory]
-    [InlineData(false, 1)]
-    [InlineData(true, 1)]
-    [InlineData(false, 3)]
-    [InlineData(true, 3)]
+    [Test]
+    [Arguments(false, 1)]
+    [Arguments(true, 1)]
+    [Arguments(false, 3)]
+    [Arguments(true, 3)]
     public async Task When_healthy_messages_follow_a_tripped_backlog_should_reach_them_on_later_sweeps(bool isAsync, int concurrency)
     {
         //Arrange
@@ -98,23 +98,29 @@ public class DynamoDbTrippedTopicScanProgressTests : IDisposable
         }
 
         //Act
-        Assert.Empty(await ReadAsync(outbox, isAsync, concurrency * 2));
-        Assert.Empty(await ReadAsync(outbox, isAsync, concurrency * 2));
+        await Assert.That(await ReadAsync(outbox, isAsync, concurrency * 2)).IsEmpty();
+        await Assert.That(await ReadAsync(outbox, isAsync, concurrency * 2)).IsEmpty();
         var healthy = await ReadAsync(outbox, isAsync, concurrency * 2);
         var reset = (await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext(), pageSize: concurrency * 2)).ToArray();
 
         //Assert
-        Assert.Equal(concurrency * 2, healthy.Length);
-        Assert.All(healthy, message => Assert.Equal("payments", message.Header.Topic.Value));
-        Assert.Equal(healthy.Length, healthy.Select(message => message.Id).Distinct().Count());
-        Assert.Equal(concurrency * 2, reset.Length);
-        Assert.All(reset, message => Assert.Equal("orders", message.Header.Topic.Value));
-        Assert.Equal(concurrency * 4, _http.Requests.Count);
+        await Assert.That(healthy.Length).IsEqualTo(concurrency * 2);
+        foreach (var message in healthy)
+        {
+            await Assert.That(message.Header.Topic.Value).IsEqualTo("payments");
+        }
+        await Assert.That(healthy.Select(message => message.Id).Distinct().Count()).IsEqualTo(healthy.Length);
+        await Assert.That(reset.Length).IsEqualTo(concurrency * 2);
+        foreach (var message in reset)
+        {
+            await Assert.That(message.Header.Topic.Value).IsEqualTo("orders");
+        }
+        await Assert.That(_http.Requests.Count).IsEqualTo(concurrency * 4);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_one_segment_fails_should_not_skip_other_segments_messages_on_retry(bool cancel)
     {
         //Arrange
@@ -130,11 +136,11 @@ public class DynamoDbTrippedTopicScanProgressTests : IDisposable
         var operation = ReadAsync(outbox, true, 3);
         if (cancel)
         {
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation);
+            await Assert.That(() => operation).Throws<OperationCanceledException>();
         }
         else
         {
-            await Assert.ThrowsAsync<InvalidOperationException>(() => operation);
+            await Assert.That(() => operation).ThrowsExactly<InvalidOperationException>();
         }
         _http.CancelSegment = null;
         _http.FailSegment = null;
@@ -142,8 +148,12 @@ public class DynamoDbTrippedTopicScanProgressTests : IDisposable
         var retried = await ReadAsync(outbox, true, 3);
 
         //Assert
-        Assert.Equal(new[] { "0-0", "1-0", "2-0" }, retried.Select(message => message.Id.Value).OrderBy(id => id));
-        Assert.All(_http.Requests, request => Assert.Equal(0, request.Start));
+        await Assert.That(retried.Select(message => message.Id.Value).OrderBy(id => id))
+            .IsEquivalentTo(new[] { "0-0", "1-0", "2-0" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+        foreach (var request in _http.Requests)
+        {
+            await Assert.That(request.Start).IsEqualTo(0);
+        }
     }
 
     private static async Task<Message[]> ReadAsync(DynamoDbOutbox outbox, bool isAsync, int pageSize)

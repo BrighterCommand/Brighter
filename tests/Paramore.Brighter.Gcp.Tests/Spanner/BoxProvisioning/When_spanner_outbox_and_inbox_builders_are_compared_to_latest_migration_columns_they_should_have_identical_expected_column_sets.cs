@@ -28,7 +28,7 @@ using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.BoxProvisioning.Tests.Drift;
 using Paramore.Brighter.Inbox.Spanner;
 using Paramore.Brighter.Outbox.Spanner;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
@@ -51,13 +51,13 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 // `CreatedID` column, but Spanner's PRIMARY KEY clause lives OUTSIDE the column body (Spanner
 // declares the PK after the closing paren) so the column set is the logical model exactly.
 
-[Trait("Category", "Spanner")]
+[Property("Category", "Spanner")]
 public class SpannerOutboxBuilderDriftTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_spanner_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_spanner_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
         bool binaryMessagePayload)
     {
         // Arrange — drive the builder DDL and the V_latest LogicalColumns from the same config so
@@ -81,14 +81,11 @@ public class SpannerOutboxBuilderDriftTests
             StringComparer.OrdinalIgnoreCase);
 
         // Assert
-        Assert.True(
-            builderColumns.SetEquals(migrationColumns),
-            $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-            $"V_latest LogicalColumns: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+        await Assert.That(builderColumns.SetEquals(migrationColumns)).IsTrue();
     }
 
-    [Fact]
-    public void When_spanner_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index()
+    [Test]
+    public async System.Threading.Tasks.Task When_spanner_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index()
     {
         // The drift test above compares columns only; the new CausationId replay index (Spec 0027,
         // #2541) is asserted separately here per AC9. Spanner has no inline secondary index, so the
@@ -97,17 +94,17 @@ public class SpannerOutboxBuilderDriftTests
         const string tableName = "outbox_test";
         var indexDdl = SpannerOutboxBuilder.GetCausationIndexDDL(tableName);
 
-        Assert.Contains("CREATE INDEX IF NOT EXISTS", indexDdl, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains($"idx_{tableName}_CausationId", indexDdl, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("`CausationId`", indexDdl, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(indexDdl).Contains("CREATE INDEX IF NOT EXISTS");
+        await Assert.That(indexDdl).Contains($"idx_{tableName}_CausationId");
+        await Assert.That(indexDdl).Contains("`CausationId`");
     }
 }
 
-[Trait("Category", "Spanner")]
+[Property("Category", "Spanner")]
 public class SpannerInboxBuilderDriftTests
 {
-    [Fact]
-    public void When_spanner_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
+    [Test]
+    public async Task When_spanner_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
     {
         // Arrange — Spanner inbox is fresh-install-only at V3-equivalent: the builder ships
         // CommandId + CommandType + CommandBody + Timestamp + ContextKey + CausationId, which
@@ -129,9 +126,6 @@ public class SpannerInboxBuilderDriftTests
             StringComparer.OrdinalIgnoreCase);
 
         // Assert
-        Assert.True(
-            builderColumns.SetEquals(migrationColumns),
-            $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-            $"V_latest LogicalColumns: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+        await Assert.That(builderColumns.SetEquals(migrationColumns)).IsTrue();
     }
 }

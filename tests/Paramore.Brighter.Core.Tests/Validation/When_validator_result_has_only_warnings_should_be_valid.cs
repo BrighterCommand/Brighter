@@ -19,35 +19,27 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class PipelineValidatorIsValidWithWarningsTests
 {
-    [Fact]
-    public void When_validator_result_has_only_warnings_should_be_valid()
+    [Test]
+    public async Task When_validator_result_has_only_warnings_should_be_valid()
     {
         // Arrange — handler with misordered backstop/resilience produces only a warning
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyMisorderedBackstopHandler));
         var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
-        PipelineBuilder<IRequest>.ClearPipelineCache();
-
         // No publications or subscriptions — only handler path runs
         var validator = new PipelineValidator(pipelineBuilder);
-
         // Act
         var result = validator.Validate();
-
         // Assert — warnings present but IsValid is still true
-        Assert.NotEmpty(result.Warnings);
-        Assert.Empty(result.Errors);
-        Assert.True(result.IsValid);
+        await Assert.That(result.Warnings).IsNotEmpty();
+        await Assert.That(result.Errors).IsEmpty();
+        await Assert.That(result.IsValid).IsTrue();
     }
 }

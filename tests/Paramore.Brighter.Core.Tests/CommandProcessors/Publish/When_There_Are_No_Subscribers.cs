@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,13 +21,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Collections.Generic;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 {
@@ -37,23 +35,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
         private readonly MyEvent _myEvent = new MyEvent();
         private Exception _exception;
-
         public CommandProcessorNoMatchingSubcribersTests()
         {
             var registry = new SubscriberRegistry();
             var handlerFactory = new SimpleHandlerFactorySync(_ => new MyEventHandler(_receivedMessages));
-
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
-            PipelineBuilder<MyEvent>.ClearPipelineCache();
         }
 
-        [Fact]
-        public void When_There_Are_No_Subscribers()
+        [Test]
+        public async Task When_There_Are_No_Subscribers()
         {
             _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));
-
             //_should_not_throw_an_exception
-            Assert.Null(_exception);
+            await Assert.That(_exception).IsNull();
         }
     }
 }

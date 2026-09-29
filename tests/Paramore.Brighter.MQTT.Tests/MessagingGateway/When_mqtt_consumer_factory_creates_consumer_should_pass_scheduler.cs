@@ -1,5 +1,4 @@
 using Paramore.Brighter.MessagingGateway.MQTT;
-using Xunit;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway;
 
@@ -13,8 +12,8 @@ public class When_mqtt_consumer_factory_creates_consumer_should_pass_scheduler
         ClientID = "test-client"
     };
 
-    [Fact]
-    public void Should_create_sync_consumer_when_scheduler_provided()
+    [Test]
+    public async Task Should_create_sync_consumer_when_scheduler_provided()
     {
         // Arrange
         var scheduler = new StubMessageScheduler();
@@ -30,12 +29,12 @@ public class When_mqtt_consumer_factory_creates_consumer_should_pass_scheduler
         ));
 
         // Assert
-        Assert.NotNull(consumer);
-        Assert.IsType<MqttMessageConsumer>(consumer);
+        await Assert.That(consumer).IsNotNull();
+        await Assert.That(consumer).IsTypeOf<MqttMessageConsumer>();
     }
 
-    [Fact]
-    public void Should_create_async_consumer_when_scheduler_provided()
+    [Test]
+    public async Task Should_create_async_consumer_when_scheduler_provided()
     {
         // Arrange
         var scheduler = new StubMessageScheduler();
@@ -51,12 +50,12 @@ public class When_mqtt_consumer_factory_creates_consumer_should_pass_scheduler
         ));
 
         // Assert
-        Assert.NotNull(consumer);
-        Assert.IsType<MqttMessageConsumer>(consumer);
+        await Assert.That(consumer).IsNotNull();
+        await Assert.That(consumer).IsTypeOf<MqttMessageConsumer>();
     }
 
-    [Fact]
-    public void Should_create_consumer_without_scheduler_for_backward_compat()
+    [Test]
+    public async Task Should_create_consumer_without_scheduler_for_backward_compat()
     {
         // Arrange
         var factory = new MqttMessageConsumerFactory(_configuration);
@@ -71,8 +70,8 @@ public class When_mqtt_consumer_factory_creates_consumer_should_pass_scheduler
         ));
 
         // Assert
-        Assert.NotNull(consumer);
-        Assert.IsType<MqttMessageConsumer>(consumer);
+        await Assert.That(consumer).IsNotNull();
+        await Assert.That(consumer).IsTypeOf<MqttMessageConsumer>();
     }
 
     private class StubMessageScheduler : IAmAMessageScheduler;

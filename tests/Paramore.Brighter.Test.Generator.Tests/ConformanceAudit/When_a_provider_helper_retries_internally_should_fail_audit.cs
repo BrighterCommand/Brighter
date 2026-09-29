@@ -3,7 +3,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
@@ -31,8 +31,8 @@ public class DeadLetterPollContractAuditTests : IDisposable
         Directory.CreateDirectory(_testDirectory);
     }
 
-    [Fact]
-    public void When_a_provider_helper_retries_internally_should_fail_audit()
+    [Test]
+    public async Task When_a_provider_helper_retries_internally_should_fail_audit()
     {
         // Arrange — a helper shaped the way every provider in the tree was shaped before this
         // contract existed: its own bounded loop, with a sleep between attempts
@@ -61,14 +61,20 @@ public class DeadLetterPollContractAuditTests : IDisposable
         var result = DeadLetterPollContractAudit.Audit(_testDirectory);
 
         // Assert — both faults are named, so the report says what to remove
-        Assert.Equal(1, result.HelpersScanned);
-        Assert.Contains(result.Violations, v => v.Kind == "InternalRetryLoop");
-        Assert.Contains(result.Violations, v => v.Kind == "InternalPollBackoff");
-        Assert.All(result.Violations, v => Assert.Equal("GetMessageFromDeadLetterQueue", v.Helper));
+        await Assert.That(result.HelpersScanned).IsEqualTo(1);
+        await Assert.That(result.Violations).Contains(v => v.Kind == "InternalRetryLoop");
+        await Assert.That(result.Violations).Contains(v => v.Kind == "InternalPollBackoff");
+        using (Assert.Multiple())
+        {
+            foreach (var v in result.Violations)
+            {
+                await Assert.That(v.Helper).IsEqualTo("GetMessageFromDeadLetterQueue");
+            }
+        }
     }
 
-    [Fact]
-    public void When_a_provider_helper_makes_a_single_bounded_receive_should_pass_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_provider_helper_makes_a_single_bounded_receive_should_pass_audit()
     {
         // Arrange — the shape the contract asks for: one bounded receive, no loop, no sleep.
         // The `while` and the `Task.Delay` in the doc comment are the point of this fixture: a scan
@@ -96,9 +102,8 @@ public class DeadLetterPollContractAuditTests : IDisposable
         var result = DeadLetterPollContractAudit.Audit(_testDirectory);
 
         // Assert — scanned, and cleared
-        Assert.Equal(1, result.HelpersScanned);
-        Assert.True(result.Violations.Count == 0,
-            "a single bounded receive is the shape the contract asks for, but the audit reported: "
+        await Assert.That(result.HelpersScanned).IsEqualTo(1);
+        await Assert.That(result.Violations.Count == 0).IsTrue().Because("a single bounded receive is the shape the contract asks for, but the audit reported: "
             + string.Join("; ", result.Violations.Select(v => $"{v.Kind} — {v.Detail}")));
     }
 

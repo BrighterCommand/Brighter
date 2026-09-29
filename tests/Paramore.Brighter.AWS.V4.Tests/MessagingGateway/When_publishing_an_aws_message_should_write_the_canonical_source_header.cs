@@ -27,22 +27,22 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class AwsCloudEventSourceWriterTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_publishing_an_aws_message_should_write_the_canonical_source_header(bool useSns)
     {
         //Arrange
@@ -89,14 +89,15 @@ public class AwsCloudEventSourceWriterTests
             }, timeout.Token);
 
             //Assert
-            Assert.False(string.IsNullOrEmpty(messageId));
-            Assert.NotNull(response.Messages);
-            var received = Assert.Single(response.Messages);
-            Assert.Equal(message.Body.Value, received.Body);
+            await Assert.That(string.IsNullOrEmpty(messageId)).IsFalse();
+            await Assert.That(response.Messages).IsNotNull();
+            await Assert.That(response.Messages).HasSingleItem();
+            var received = response.Messages.Single();
+            await Assert.That(received.Body).IsEqualTo(message.Body.Value);
             using var headers = JsonDocument.Parse(received.MessageAttributes["cloudeventheaders"].StringValue);
-            Assert.True(headers.RootElement.TryGetProperty("source", out var actualSource));
-            Assert.Equal(source.ToString(), actualSource.GetString());
-            Assert.False(headers.RootElement.TryGetProperty("souce", out _));
+            await Assert.That(headers.RootElement.TryGetProperty("source", out var actualSource)).IsTrue();
+            await Assert.That(actualSource.GetString()).IsEqualTo(source.ToString());
+            await Assert.That(headers.RootElement.TryGetProperty("souce", out _)).IsFalse();
         }
         finally
         {

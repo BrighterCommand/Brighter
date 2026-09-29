@@ -26,11 +26,12 @@ using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox;
 
-[Trait("Category", "InMemory")]
+[Property("Category", "InMemory")]
+[TUnit.Core.InheritsTests]
 public class InMemoryCausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<CommittableTransaction>
 {
     private readonly InMemoryOutbox _outbox = new(new FakeTimeProvider()) { Tracer = new BrighterTracer() };

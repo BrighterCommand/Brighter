@@ -1,21 +1,20 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.InMemory.Tests.Data;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Inbox
 {
-    [Trait("Category", "InMemory")]
+    [Category("InMemory")]
     public class InboxEntryTimeToLiveTests
     {
-        [Fact]
+        [Test]
         public async Task When_expiring_a_cache_entry_no_longer_there()
         {
             //Arrange
             const string contextKey = "Inbox_Cache_Expiry_Tests";
-            
+
             var timeProvider = new FakeTimeProvider();
             var inbox = new InMemoryInbox(timeProvider)
             {
@@ -24,13 +23,13 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
                 ExpirationScanInterval = TimeSpan.FromMilliseconds(100)
             };
 
-            var command = new SimpleCommand();            
-            
+            var command = new SimpleCommand();
+
             //Act
             await inbox.AddAsync(command, contextKey, null);
-            
+
             timeProvider.Advance(TimeSpan.FromSeconds(1));
-            
+
             //Trigger a cache clean
             SimpleCommand foundCommand = null;
             try
@@ -43,20 +42,20 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             }
 
             await Task.Delay(500); //Give the sweep time to run
-            
+
             var afterExpiryExists = await inbox.ExistsAsync<SimpleCommand>(command.Id, contextKey, null);
-            
+
             //Assert
-            Assert.NotNull(foundCommand);
-            Assert.False(afterExpiryExists);
+            await Assert.That(foundCommand).IsNotNull();
+            await Assert.That(afterExpiryExists).IsFalse();
         }
 
-        [Fact]
+        [Test]
         public async Task When_expiring_some_but_not_all()
         {
             //Arrange
             const string contextKey = "Inbox_Cache_Expiry_Tests";
-            
+
             var timeProvider = new FakeTimeProvider();
             var inbox = new InMemoryInbox(timeProvider)
             {
@@ -66,12 +65,12 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             };
 
             //Act
-            var earlyCommands = new[] {new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};            
+            var earlyCommands = new[] {new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};
             foreach (var command in earlyCommands)
             {
                 await inbox.AddAsync(command, contextKey, null);
             }
-            
+
             //expire these and allow another expiration to run
             timeProvider.Advance(TimeSpan.FromSeconds(5));
 
@@ -91,9 +90,9 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             {
                 await inbox.AddAsync(command, contextKey, null);
             }
-            
+
             //Assert
-            Assert.Equal(3, inbox.EntryCount);
+            await Assert.That(inbox.EntryCount).IsEqualTo(3);
 
         }
     }

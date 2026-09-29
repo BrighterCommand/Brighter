@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,7 +27,6 @@ using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 /// direct SQL queue send rather than creating a producer. This preserves existing behavior
 /// and ensures immediate requeue without scheduler overhead.
 /// </summary>
-[Trait("Category", "MSSQL")]
+[Category("MSSQL")]
 public class When_mssql_consumer_requeues_with_zero_delay_should_use_direct_queue : IDisposable
 {
     private readonly MsSqlMessageConsumer _consumer;
@@ -63,46 +62,46 @@ public class When_mssql_consumer_requeues_with_zero_delay_should_use_direct_queu
         _consumer = new MsSqlMessageConsumer(testHelper.QueueConfiguration, _topicName);
     }
 
-    [Fact]
-    public void When_requeuing_with_zero_delay_should_send_directly_to_queue()
+    [Test]
+    public async Task When_requeuing_with_zero_delay_should_send_directly_to_queue()
     {
         // Arrange - send and receive a message so it's in the queue
-        _producer.Send(_message);
-        var received = _consumer.Receive(TimeSpan.FromMilliseconds(2000));
-        Assert.NotEmpty(received);
-        Assert.Equal(MessageType.MT_COMMAND, received[0].Header.MessageType);
+        await _producer.SendAsync(_message);
+        var received = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
+        await Assert.That(received).IsNotEmpty();
+        await Assert.That(received[0].Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
 
         // Act - requeue with zero delay (should use direct queue send)
-        var result = _consumer.Requeue(received[0], TimeSpan.Zero);
+        var result = await _consumer.RequeueAsync(received[0], TimeSpan.Zero);
 
         // Assert - returns true
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         // Assert - message is immediately available in queue (direct send, not scheduled)
-        var requeued = _consumer.Receive(TimeSpan.FromMilliseconds(2000));
-        Assert.NotEmpty(requeued);
-        Assert.Equal(_message.Body.Value, requeued[0].Body.Value);
+        var requeued = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
+        await Assert.That(requeued).IsNotEmpty();
+        await Assert.That(requeued[0].Body.Value).IsEqualTo(_message.Body.Value);
     }
 
-    [Fact]
-    public void When_requeuing_with_null_delay_should_send_directly_to_queue()
+    [Test]
+    public async Task When_requeuing_with_null_delay_should_send_directly_to_queue()
     {
         // Arrange - send and receive a message
-        _producer.Send(_message);
-        var received = _consumer.Receive(TimeSpan.FromMilliseconds(2000));
-        Assert.NotEmpty(received);
-        Assert.Equal(MessageType.MT_COMMAND, received[0].Header.MessageType);
+        await _producer.SendAsync(_message);
+        var received = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
+        await Assert.That(received).IsNotEmpty();
+        await Assert.That(received[0].Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
 
         // Act - requeue with null delay (should default to zero and use direct queue)
-        var result = _consumer.Requeue(received[0]);
+        var result = await _consumer.RequeueAsync(received[0]);
 
         // Assert - returns true
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         // Assert - message is immediately available
-        var requeued = _consumer.Receive(TimeSpan.FromMilliseconds(2000));
-        Assert.NotEmpty(requeued);
-        Assert.Equal(_message.Body.Value, requeued[0].Body.Value);
+        var requeued = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
+        await Assert.That(requeued).IsNotEmpty();
+        await Assert.That(requeued[0].Body.Value).IsEqualTo(_message.Body.Value);
     }
 
     public void Dispose()

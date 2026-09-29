@@ -1,4 +1,5 @@
-﻿#region Licence
+#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -32,32 +33,31 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessageMappers;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
-
+using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.MessageDispatch;
 
 public class MessagePumpRequestRoutingTests
 {
-    public static TheoryData<MessagePumpType, MessageType, bool> RoutingCases
+    public static IEnumerable<(MessagePumpType, MessageType, bool)> RoutingCases
     {
         get
         {
-            var cases = new TheoryData<MessagePumpType, MessageType, bool>();
+            var cases = new List<(MessagePumpType, MessageType, bool)>();
             foreach (var pumpType in new[] { MessagePumpType.Reactor, MessagePumpType.Proactor })
             {
                 foreach (var messageType in new[] { MessageType.MT_COMMAND, MessageType.MT_EVENT, MessageType.MT_DOCUMENT })
                 {
-                    cases.Add(pumpType, messageType, false);
-                    cases.Add(pumpType, messageType, true);
+                    cases.Add((pumpType, messageType, false));
+                    cases.Add((pumpType, messageType, true));
                 }
             }
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(RoutingCases))]
-    public void When_mapped_event_has_multiple_handlers_should_publish_to_all_handlers(
+    [Test]
+    [MethodDataSource(nameof(RoutingCases))]
+    public async Task When_mapped_event_has_multiple_handlers_should_publish_to_all_handlers(
         MessagePumpType pumpType, MessageType messageType, bool implementsInterface)
     {
         // Arrange
@@ -69,14 +69,20 @@ public class MessagePumpRequestRoutingTests
             : Run(new RoutingEvent { Id = requestId }, pumpType, messageType, 2);
 
         // Assert
-        Assert.Equal(2, result.Handled.Length);
-        Assert.All(result.Handled, request => Assert.Equal(requestId, request.Id));
-        Assert.Empty(result.Rejected);
+        await Assert.That(result.Handled.Length).IsEqualTo(2);
+        using (Assert.Multiple())
+        {
+            foreach (var request in result.Handled)
+            {
+                await Assert.That(request.Id).IsEqualTo(requestId);
+            }
+        }
+        await Assert.That(result.Rejected).IsEmpty();
     }
 
-    [Theory]
-    [MemberData(nameof(RoutingCases))]
-    public void When_mapped_command_has_multiple_handlers_should_not_publish_it(
+    [Test]
+    [MethodDataSource(nameof(RoutingCases))]
+    public async System.Threading.Tasks.Task When_mapped_command_has_multiple_handlers_should_not_publish_it(
         MessagePumpType pumpType, MessageType messageType, bool implementsInterface)
     {
         // Arrange
@@ -88,13 +94,13 @@ public class MessagePumpRequestRoutingTests
             : Run(new RoutingCommand { Id = requestId }, pumpType, messageType, 2);
 
         // Assert
-        Assert.Empty(result.Handled);
-        Assert.Empty(result.Rejected);
+        await Assert.That(result.Handled).IsEmpty();
+        await Assert.That(result.Rejected).IsEmpty();
     }
 
-    [Theory]
-    [MemberData(nameof(RoutingCases))]
-    public void When_mapped_command_has_one_handler_should_dispatch_to_it(
+    [Test]
+    [MethodDataSource(nameof(RoutingCases))]
+    public async System.Threading.Tasks.Task When_mapped_command_has_one_handler_should_dispatch_to_it(
         MessagePumpType pumpType, MessageType messageType, bool implementsInterface)
     {
         // Arrange
@@ -106,14 +112,14 @@ public class MessagePumpRequestRoutingTests
             : Run(new RoutingCommand { Id = requestId }, pumpType, messageType, 1);
 
         // Assert
-        Assert.Equal(requestId, Assert.Single(result.Handled).Id);
-        Assert.Empty(result.Rejected);
+        await Assert.That((await Assert.That(result.Handled).HasSingleItem()).Id).IsEqualTo(requestId);
+        await Assert.That(result.Rejected).IsEmpty();
     }
 
-    [Theory]
-    [InlineData(MessagePumpType.Reactor)]
-    [InlineData(MessagePumpType.Proactor)]
-    public void When_mapper_returns_bare_request_should_reject_as_unacceptable(MessagePumpType pumpType)
+    [Test]
+    [Arguments(MessagePumpType.Reactor)]
+    [Arguments(MessagePumpType.Proactor)]
+    public async System.Threading.Tasks.Task When_mapper_returns_bare_request_should_reject_as_unacceptable(MessagePumpType pumpType)
     {
         // Arrange
         var request = new RoutingBareRequest();
@@ -122,11 +128,11 @@ public class MessagePumpRequestRoutingTests
         var result = Run(request, pumpType, MessageType.MT_EVENT, 1);
 
         // Assert
-        Assert.Empty(result.Handled);
-        var rejected = Assert.Single(result.Rejected);
-        Assert.Equal(request.Id, rejected.Id);
-        Assert.Contains("ICommand", rejected.Header.Bag[Message.RejectionReasonHeaderName].ToString());
-        Assert.Contains("IEvent", rejected.Header.Bag[Message.RejectionReasonHeaderName].ToString());
+        await Assert.That(result.Handled).IsEmpty();
+        var rejected = await Assert.That(result.Rejected).HasSingleItem();
+        await Assert.That(rejected.Id).IsEqualTo(request.Id);
+        await Assert.That(rejected.Header.Bag[Message.RejectionReasonHeaderName].ToString()).Contains("ICommand");
+        await Assert.That(rejected.Header.Bag[Message.RejectionReasonHeaderName].ToString()).Contains("IEvent");
     }
 
     private static (IRequest[] Handled, Message[] Rejected) Run<TRequest>(

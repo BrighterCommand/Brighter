@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -9,7 +9,6 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 {
@@ -17,7 +16,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
     {
         private readonly RoutingKey _commandTopic = new("MyCommand");
         private readonly RoutingKey _eventTopic = new("MyEvent");
-
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
         private readonly MyCommand _myCommandTwo = new();
@@ -27,127 +25,75 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         private readonly Message _messageThree;
         private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _bus = new();
-
         public CommandProcessorBulkDepositPostTests()
         {
             _myCommand.Value = "Hello World";
             _myCommandTwo.Value = "Hello World Two";
             _myEvent.Data = 3;
-
             var timeProvider = new FakeTimeProvider();
-            InMemoryMessageProducer commandMessageProducer = new(_bus, new Publication 
-            { 
-                Topic = new RoutingKey(_commandTopic), 
-                RequestType = typeof(MyCommand) 
-            });
-
-            InMemoryMessageProducer eventMessageProducer = new(_bus, new Publication 
-            { 
-                Topic = new RoutingKey(_eventTopic), 
-                RequestType = typeof(MyEvent) 
-            });
-            
-            _message = new Message(
-                new MessageHeader(_myCommand.Id, _commandTopic, MessageType.MT_COMMAND),
-                new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-                );
-            
-            _messageTwo = new Message(
-                new MessageHeader(_myCommandTwo.Id, _commandTopic, MessageType.MT_COMMAND),
-                new MessageBody(JsonSerializer.Serialize(_myCommandTwo, JsonSerialisationOptions.Options))
-            );
-            
-            _messageThree = new Message(
-                new MessageHeader(_myEvent.Id, _eventTopic, MessageType.MT_EVENT),
-                new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
-            );
-
+            InMemoryMessageProducer commandMessageProducer = new(_bus, new Publication { Topic = new RoutingKey(_commandTopic), RequestType = typeof(MyCommand) });
+            InMemoryMessageProducer eventMessageProducer = new(_bus, new Publication { Topic = new RoutingKey(_eventTopic), RequestType = typeof(MyEvent) });
+            _message = new Message(new MessageHeader(_myCommand.Id, _commandTopic, MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options)));
+            _messageTwo = new Message(new MessageHeader(_myCommandTwo.Id, _commandTopic, MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(_myCommandTwo, JsonSerialisationOptions.Options)));
+            _messageThree = new Message(new MessageHeader(_myEvent.Id, _eventTopic, MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options)));
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
             {
                 if (type == typeof(MyCommandMessageMapper))
                     return new MyCommandMessageMapper();
                 else if (type == typeof(MyEventMessageMapper))
                     return new MyEventMessageMapper();
-                
                 throw new ConfigurationException($"No command or event mappers registered for {type.Name}");
             }), null);
-            
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-
-            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
-            {
-                { _commandTopic, commandMessageProducer },
-                { _eventTopic, eventMessageProducer}
-            });
-            
-            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
-                .AddBrighterDefault();
-
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _commandTopic, commandMessageProducer }, { _eventTopic, eventMessageProducer } });
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
             var tracer = new BrighterTracer();
-            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            
-            IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
-                resiliencePipelineRegistry,
-                messageMapperRegistry,
-                new EmptyMessageTransformerFactory(),
-                new EmptyMessageTransformerFactoryAsync(),
-                tracer,
-                new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox
-            );
-
-            _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(),
-                new DefaultPolicy(),
-                resiliencePipelineRegistry,
-                bus,
-                new InMemorySchedulerFactory()
-            );
+            _outbox = new InMemoryOutbox(timeProvider)
+            {
+                Tracer = tracer
+            };
+            IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(producerRegistry, resiliencePipelineRegistry, messageMapperRegistry, new EmptyMessageTransformerFactory(), new EmptyMessageTransformerFactoryAsync(), tracer, new FindPublicationByPublicationTopicOrRequestType(), _outbox);
+            _commandProcessor = new CommandProcessor(new InMemoryRequestContextFactory(), new DefaultPolicy(), resiliencePipelineRegistry, bus, new InMemorySchedulerFactory());
         }
 
-
-        [Fact]
-        public void When_depositing_messages_in_the_outbox()
+        [Test]
+        public async Task When_depositing_messages_in_the_outbox()
         {
             //act
-            var requests = new List<IRequest> {_myCommand, _myCommandTwo, _myEvent } ;
+            var requests = new List<IRequest>
+            {
+                _myCommand,
+                _myCommandTwo,
+                _myEvent
+            };
             _commandProcessor.DepositPost(requests);
             var context = new RequestContext();
-            
             //assert
-            
             //message should not be posted
-            Assert.False(_bus.Stream(_commandTopic).Any());
-            Assert.False(_bus.Stream(_eventTopic).Any());
-
+            await Assert.That(_bus.Stream(_commandTopic).Any()).IsFalse();
+            await Assert.That(_bus.Stream(_eventTopic).Any()).IsFalse();
             //message should correspond to the command
-            var depositedPost = _outbox.Get(_message.Id, context);
-            Assert.Equal(_message.Id, depositedPost.Id);
-            Assert.Equal(_message.Body.Value, depositedPost.Body.Value);
-            Assert.Equal(_message.Header.Topic, depositedPost.Header.Topic);
-            Assert.Equal(_message.Header.MessageType, depositedPost.Header.MessageType);
-
-            var depositedPost2 = _outbox.Get(_messageTwo.Id, context);
-            Assert.Equal(_messageTwo.Id, depositedPost2.Id);
-            Assert.Equal(_messageTwo.Body.Value, depositedPost2.Body.Value);
-            Assert.Equal(_messageTwo.Header.Topic, depositedPost2.Header.Topic);
-            Assert.Equal(_messageTwo.Header.MessageType, depositedPost2.Header.MessageType);
-
-            var depositedPost3 = _outbox
-                .OutstandingMessages(TimeSpan.Zero, context)
-                .SingleOrDefault(msg => msg.Id == _messageThree.Id);
+            var depositedPost = await _outbox.GetAsync(_message.Id, context);
+            await Assert.That(depositedPost.Id).IsEqualTo(_message.Id);
+            await Assert.That(depositedPost.Body.Value).IsEqualTo(_message.Body.Value);
+            await Assert.That(depositedPost.Header.Topic).IsEqualTo(_message.Header.Topic);
+            await Assert.That(depositedPost.Header.MessageType).IsEqualTo(_message.Header.MessageType);
+            var depositedPost2 = await _outbox.GetAsync(_messageTwo.Id, context);
+            await Assert.That(depositedPost2.Id).IsEqualTo(_messageTwo.Id);
+            await Assert.That(depositedPost2.Body.Value).IsEqualTo(_messageTwo.Body.Value);
+            await Assert.That(depositedPost2.Header.Topic).IsEqualTo(_messageTwo.Header.Topic);
+            await Assert.That(depositedPost2.Header.MessageType).IsEqualTo(_messageTwo.Header.MessageType);
+            var depositedPost3 = (await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context)).SingleOrDefault(msg => msg.Id == _messageThree.Id);
             //message should correspond to the command
-            Assert.NotNull(depositedPost3);
-            Assert.Equal(_messageThree.Id, depositedPost3.Id);
-            Assert.Equal(_messageThree.Body.Value, depositedPost3.Body.Value);
-            Assert.Equal(_messageThree.Header.Topic, depositedPost3.Header.Topic);
-            Assert.Equal(_messageThree.Header.MessageType, depositedPost3.Header.MessageType);
-
+            await Assert.That(depositedPost3).IsNotNull();
+            await Assert.That(depositedPost3.Id).IsEqualTo(_messageThree.Id);
+            await Assert.That(depositedPost3.Body.Value).IsEqualTo(_messageThree.Body.Value);
+            await Assert.That(depositedPost3.Header.Topic).IsEqualTo(_messageThree.Header.Topic);
+            await Assert.That(depositedPost3.Header.MessageType).IsEqualTo(_messageThree.Header.MessageType);
             //message should be marked as outstanding if not sent
-            var outstandingMessages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
-            Assert.Equal(3, outstandingMessages.Count());
+            var outstandingMessages = await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
+            await Assert.That(outstandingMessages.Count()).IsEqualTo(3);
         }
     }
 }

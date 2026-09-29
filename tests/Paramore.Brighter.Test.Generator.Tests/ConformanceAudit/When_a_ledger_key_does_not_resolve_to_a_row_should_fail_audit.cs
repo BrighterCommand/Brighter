@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
@@ -54,8 +54,8 @@ public class LedgerResolutionAuditTests
 
     // ── 1. Synthetic cases ────────────────────────────────────────────────────
 
-    [Fact]
-    public void When_a_ledger_key_does_not_resolve_to_a_row_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_ledger_key_does_not_resolve_to_a_row_should_fail_audit()
     {
         // Arrange — the configuration cites a row the ledger does not have, as a misspelling or a
         // renamed row would. GetSkip returns empty for every column, so nothing is skipped and
@@ -69,13 +69,13 @@ public class LedgerResolutionAuditTests
         var result = LedgerSkipCrossCheckAudit.CheckLedgerResolution(tree.RepoRoot, tree.LedgerPath);
 
         // Assert
-        var violation = Assert.Single(result.Violations);
-        Assert.Equal("UnresolvedLedgerKey", violation.Kind);
-        Assert.Contains("Canary / CanaryGatway", violation.Detail);
+        var violation = await Assert.That(result.Violations).HasSingleItem();
+        await Assert.That(violation.Kind).IsEqualTo("UnresolvedLedgerKey");
+        await Assert.That(violation.Detail).Contains("Canary / CanaryGatway");
     }
 
-    [Fact]
-    public void When_a_canonical_fr_column_is_absent_from_the_matrix_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_canonical_fr_column_is_absent_from_the_matrix_should_fail_audit()
     {
         // Arrange — the Nack-redelivers column (FR-16) has gone from the conformance ledger's
         // header, so every FR-16 cell resolves to nothing
@@ -90,13 +90,13 @@ public class LedgerResolutionAuditTests
         var result = LedgerSkipCrossCheckAudit.CheckLedgerResolution(tree.RepoRoot, tree.LedgerPath);
 
         // Assert
-        var violation = Assert.Single(result.Violations);
-        Assert.Equal("MissingFrColumn", violation.Kind);
-        Assert.Contains("FR-16", violation.Detail);
+        var violation = await Assert.That(result.Violations).HasSingleItem();
+        await Assert.That(violation.Kind).IsEqualTo("MissingFrColumn");
+        await Assert.That(violation.Detail).Contains("FR-16");
     }
 
-    [Fact]
-    public void When_a_cell_carries_an_unrecognised_value_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_cell_carries_an_unrecognised_value_should_fail_audit()
     {
         // Arrange — a hand-typed cell that is none of Pass, Fixed, Unknown or "Deferred ->".
         // ComputeSkip falls through to the empty string, so the behaviour silently runs.
@@ -109,13 +109,13 @@ public class LedgerResolutionAuditTests
         var result = LedgerSkipCrossCheckAudit.CheckLedgerResolution(tree.RepoRoot, tree.LedgerPath);
 
         // Assert
-        var violation = Assert.Single(result.Violations);
-        Assert.Equal("UnrecognisedCellValue", violation.Kind);
-        Assert.Contains("probably fine", violation.Detail);
+        var violation = await Assert.That(result.Violations).HasSingleItem();
+        await Assert.That(violation.Kind).IsEqualTo("UnrecognisedCellValue");
+        await Assert.That(violation.Detail).Contains("probably fine");
     }
 
-    [Fact]
-    public void When_a_wired_gateway_declares_no_ledger_key_should_fail_audit()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_wired_gateway_declares_no_ledger_key_should_fail_audit()
     {
         // Arrange — a configuration with no LedgerKey at all drops out of the cell-agreement audit
         // entirely, taking its whole canonical suite with it and leaving no trace
@@ -128,13 +128,13 @@ public class LedgerResolutionAuditTests
         var result = LedgerSkipCrossCheckAudit.CheckLedgerResolution(tree.RepoRoot, tree.LedgerPath);
 
         // Assert
-        var violation = Assert.Single(result.Violations);
-        Assert.Equal("MissingLedgerKey", violation.Kind);
-        Assert.Equal(0, result.ConfigurationsResolved);
+        var violation = await Assert.That(result.Violations).HasSingleItem();
+        await Assert.That(violation.Kind).IsEqualTo("MissingLedgerKey");
+        await Assert.That(result.ConfigurationsResolved).IsEqualTo(0);
     }
 
-    [Fact]
-    public void When_every_declared_key_resolves_should_report_no_violation()
+    [Test]
+    public async System.Threading.Tasks.Task When_every_declared_key_resolves_should_report_no_violation()
     {
         // Arrange — the configuration cites the row the ledger actually has
         using var tree = SyntheticLedgerTree.Create(
@@ -146,15 +146,15 @@ public class LedgerResolutionAuditTests
         var result = LedgerSkipCrossCheckAudit.CheckLedgerResolution(tree.RepoRoot, tree.LedgerPath);
 
         // Assert — and the run was not vacuous: it resolved the configuration and read its cells
-        Assert.Empty(result.Violations);
-        Assert.Equal(1, result.ConfigurationsResolved);
-        Assert.Equal(CanonicalBehaviours.TEMPLATE_FR_COLUMNS.Values.Distinct().Count(), result.CellsChecked);
+        await Assert.That(result.Violations).IsEmpty();
+        await Assert.That(result.ConfigurationsResolved).IsEqualTo(1);
+        await Assert.That(result.CellsChecked).IsEqualTo(CanonicalBehaviours.TEMPLATE_FR_COLUMNS.Values.Distinct().Count());
     }
 
     // ── 2. Live-tree fact ─────────────────────────────────────────────────────
 
-    [Fact]
-    public void When_checking_the_real_tree_every_declared_ledger_key_should_resolve_to_a_parseable_row()
+    [Test]
+    public async System.Threading.Tasks.Task When_checking_the_real_tree_every_declared_ledger_key_should_resolve_to_a_parseable_row()
     {
         // Arrange
         var repoRoot = FindRepoRoot(AppContext.BaseDirectory)
@@ -167,10 +167,9 @@ public class LedgerResolutionAuditTests
 
         // Assert — every wired configuration is accounted for, so the cell-agreement audit that
         // shares this lookup cannot be silently checking fewer than it appears to
-        Assert.Equal(EXPECTED_WIRED_CONFIGURATION_COUNT, result.ConfigurationsResolved);
+        await Assert.That(result.ConfigurationsResolved).IsEqualTo(EXPECTED_WIRED_CONFIGURATION_COUNT);
 
-        Assert.True(result.Violations.Count == 0,
-            "Configuration(s) whose ledger lookup fails open — the lookup returns \"no Skip\" for " +
+        await Assert.That(result.Violations.Count == 0).IsTrue().Because("Configuration(s) whose ledger lookup fails open — the lookup returns \"no Skip\" for " +
             "an absent row, an absent column or an unrecognised cell, so these would run unskipped " +
             "with nothing reporting it:\n" +
             string.Join("\n", result.Violations.Select(v => $"  [{v.Kind}] {v.Detail}")));

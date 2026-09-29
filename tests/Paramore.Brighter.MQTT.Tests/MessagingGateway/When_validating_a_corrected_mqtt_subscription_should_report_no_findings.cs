@@ -26,15 +26,15 @@ using System.Linq;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.MQTT.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway;
 
-[Trait("Category", "MQTT")]
+[Property("Category", "MQTT")]
 public class MqttCorrectedSubscriptionValidationTests
 {
-    [Fact]
-    public void When_validating_a_corrected_mqtt_subscription_should_report_no_findings()
+    [Test]
+    public async System.Threading.Tasks.Task When_validating_a_corrected_mqtt_subscription_should_report_no_findings()
     {
         // Arrange — construction only, so no broker connection is made (NFR-3): the MQTT ChannelFactory
         // wraps a consumer factory that only dials the broker when Create/CreateAsync is called
@@ -61,7 +61,7 @@ public class MqttCorrectedSubscriptionValidationTests
         var results = spec.Accept(collector).ToList();
 
         // Assert — no findings: the corrected declared type matches the real MQTT channel factory
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 }

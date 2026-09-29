@@ -42,7 +42,7 @@ public class Baggage : IEnumerable<KeyValuePair<string, string?>>
 {
     private readonly Dictionary<string, string> _entries = new();
     private const int MaxKeyValuePairs = 32;
-    private static readonly Regex KeyRegex = new("^[a-zA-Z0-9][a-zA-Z0-9_\\-*/]{0,255}$", RegexOptions.Compiled);
+    private static readonly Regex KeyRegex = new("^[a-zA-Z0-9][a-zA-Z0-9_.\\-*/]{0,255}$", RegexOptions.Compiled);
     private static readonly Regex ValueRegex = new("^[\\x20-\\x2b\\x2d-\\x3c\\x3e-\\x7e]{0,255}[\\x21-\\x2b\\x2d-\\x3c\\x3e-\\x7e]$", RegexOptions.Compiled);
     public static Baggage Empty { get; } = new Baggage();
 
@@ -54,29 +54,29 @@ public class Baggage : IEnumerable<KeyValuePair<string, string?>>
     /// <exception cref="ArgumentException">Thrown when key or value is null, empty, or doesn't match the required format.</exception>
     /// <exception cref="InvalidOperationException">Thrown when attempting to add more than the maximum allowed entries.</exception>
     /// <remarks>
-    /// Keys must be lowercase alphanumeric strings and may contain '_', '-', '*', '/' characters.
+    /// Keys must be lowercase alphanumeric strings and may contain '_', '-', '.', '*', '/' characters.
     /// Values must contain only ASCII characters specified in the W3C trace-context specification.
     /// </remarks>
     public void Add(string key, string value)
     {
         if (string.IsNullOrEmpty(key))
             throw new ArgumentException("Key cannot be null or empty", nameof(key));
-            
+
         if (string.IsNullOrEmpty(value))
             throw new ArgumentException("Value cannot be null or empty", nameof(value));
-            
+
         if (!KeyRegex.IsMatch(key))
             throw new ArgumentException("Invalid key format", nameof(key));
-            
+
         if (!ValueRegex.IsMatch(value))
             throw new ArgumentException("Invalid value format", nameof(value));
-            
+
         if (_entries.Count >= MaxKeyValuePairs)
             throw new InvalidOperationException($"TraceState cannot contain more than {MaxKeyValuePairs} entries");
 
         _entries[key] = value;
     }
-    
+
     /// <summary>
     /// Returns an enumerator that iterates through the trace state entries.
     /// </summary>
@@ -139,5 +139,33 @@ public class Baggage : IEnumerable<KeyValuePair<string, string?>>
         baggage.LoadBaggage(baggageString);
         return baggage;
     }
-}
 
+    /// <summary>
+    /// Two Baggage instances are equal when they contain the same set of key-value
+    /// pairs. W3C baggage is an unordered set, so iteration order is not significant.
+    /// </summary>
+    public bool Equals(Baggage? other)
+    {
+        if (other is null) return false;
+        if (ReferenceEquals(this, other)) return true;
+        if (_entries.Count != other._entries.Count) return false;
+
+        foreach (var kvp in _entries)
+        {
+            if (!other._entries.TryGetValue(kvp.Key, out var otherValue)) return false;
+            if (!string.Equals(kvp.Value, otherValue, StringComparison.Ordinal)) return false;
+        }
+
+        return true;
+    }
+
+    public override bool Equals(object? obj) => obj is Baggage other && Equals(other);
+
+    public override int GetHashCode()
+    {
+        var hash = 0;
+        foreach (var kvp in _entries)
+            hash ^= HashCode.Combine(kvp.Key, kvp.Value);
+        return hash;
+    }
+}

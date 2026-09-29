@@ -4,14 +4,14 @@ using FakeItEasy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Paramore.Brighter.MySql.EntityFrameworkCore;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class MySqlEntityFrameworkTransactionProviderRollbackTests
 {
-    [Fact]
-    public void When_mysql_ef_rollback_fails_should_propagate_exception()
+    [Test]
+    public async System.Threading.Tasks.Task When_mysql_ef_rollback_fails_should_propagate_exception()
     {
         // Arrange
         var context = A.Fake<DbContext>();
@@ -23,7 +23,7 @@ public class MySqlEntityFrameworkTransactionProviderRollbackTests
         var provider = new MySqlEntityFrameworkTransactionProvider<DbContext>(context);
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => provider.Rollback());
+        await Assert.That(() => provider.Rollback()).ThrowsExactly<InvalidOperationException>();
     }
 }
 #endif

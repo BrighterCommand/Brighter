@@ -2,14 +2,14 @@ using System.Linq;
 using Paramore.Brighter.CircuitBreaker;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker
 {
     public class OutboxCircuitBreakerReTripLoggingTests
     {
-        [Fact]
-        public void When_an_already_tripped_topic_fails_again_should_log_debug()
+        [Test]
+        public async System.Threading.Tasks.Task When_an_already_tripped_topic_fails_again_should_log_debug()
         {
             using (TestCorrelator.CreateContext())
             {
@@ -26,9 +26,9 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
 
                 // Only the fresh trip logs a Warning - the re-trip must not add a second one
                 var warnings = logEvents.Where(e => e.Level == LogEventLevel.Warning).ToList();
-                Assert.Single(warnings);
+                await Assert.That(warnings).HasSingleItem();
 
-                Assert.Contains(logEvents, e =>
+                await Assert.That(logEvents).Contains(e =>
                     e.Level == LogEventLevel.Debug &&
                     e.MessageTemplate.Text == "Circuit breaker re-tripped for topic {Topic}; cooldown extended to {CooldownCount} cycle(s)" &&
                     e.Properties["Topic"].ToString() == "\"already.tripped.topic\"" &&

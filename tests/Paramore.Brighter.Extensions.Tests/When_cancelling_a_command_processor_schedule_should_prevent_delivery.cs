@@ -34,18 +34,18 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.MessageMappers;
 using Paramore.Brighter.Observability;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-[Collection("CommandProcessor")]
+[System.Obsolete]
 public class ScheduledRequestControlTests
 {
-    public static TheoryData<RequestSchedulerType, bool, bool, Type> ControlCases
+    public static IEnumerable<(RequestSchedulerType, bool, bool, Type)> ControlCases
     {
         get
         {
-            var cases = new TheoryData<RequestSchedulerType, bool, bool, Type>();
+            var cases = new List<(RequestSchedulerType, bool, bool, Type)>();
             foreach (var operation in new[] { RequestSchedulerType.Send, RequestSchedulerType.Publish, RequestSchedulerType.Post })
                 foreach (var isAsync in new[] { false, true })
                     foreach (var useDateTime in new[] { false, true })
@@ -54,13 +54,13 @@ public class ScheduledRequestControlTests
                                      typeof(IAmARequestSchedulerSync), typeof(IAmARequestSchedulerAsync),
                                      typeof(IAmAMessageSchedulerSync), typeof(IAmAMessageSchedulerAsync)
                                  })
-                            cases.Add(operation, isAsync, useDateTime, schedulerType);
+                            cases.Add((operation, isAsync, useDateTime, schedulerType));
             return cases;
         }
     }
 
-    [Theory]
-    [MemberData(nameof(ControlCases))]
+    [Test]
+    [MethodDataSource(nameof(ControlCases))]
     public async Task When_cancelling_a_command_processor_schedule_should_prevent_delivery(
         RequestSchedulerType operation, bool isAsync, bool useDateTime, Type schedulerType)
     {
@@ -69,20 +69,20 @@ public class ScheduledRequestControlTests
         var delay = TimeSpan.FromSeconds(10);
         var cancelled = await setup.Schedule(operation, isAsync, useDateTime, delay);
         var control = await setup.Schedule(operation, isAsync, useDateTime, delay);
-        Assert.Empty(setup.Delivered);
+        await Assert.That(setup.Delivered).IsEmpty();
 
         //Act
         await setup.Cancel(cancelled.SchedulerId, schedulerType);
         setup.Clock.Advance(delay);
 
         //Assert
-        Assert.Equal(control.RequestId, Assert.Single(setup.Delivered));
+        await Assert.That((await Assert.That(setup.Delivered).HasSingleItem())).IsEqualTo(control.RequestId);
         setup.Clock.Advance(delay);
-        Assert.Equal(control.RequestId, Assert.Single(setup.Delivered));
+        await Assert.That((await Assert.That(setup.Delivered).HasSingleItem())).IsEqualTo(control.RequestId);
     }
 
-    [Theory]
-    [MemberData(nameof(ControlCases))]
+    [Test]
+    [MethodDataSource(nameof(ControlCases))]
     public async Task When_rescheduling_a_command_processor_schedule_should_move_delivery(
         RequestSchedulerType operation, bool isAsync, bool useDateTime, Type schedulerType)
     {
@@ -96,20 +96,20 @@ public class ScheduledRequestControlTests
             scheduled.SchedulerId, schedulerType, useDateTime, TimeSpan.FromSeconds(20));
 
         //Assert
-        Assert.True(rescheduled);
+        await Assert.That(rescheduled).IsTrue();
         setup.Clock.Advance(TimeSpan.FromSeconds(5));
-        Assert.Empty(setup.Delivered);
+        await Assert.That(setup.Delivered).IsEmpty();
         setup.Clock.Advance(TimeSpan.FromSeconds(14));
-        Assert.Empty(setup.Delivered);
+        await Assert.That(setup.Delivered).IsEmpty();
         setup.Clock.Advance(TimeSpan.FromSeconds(1));
-        Assert.Equal(scheduled.RequestId, Assert.Single(setup.Delivered));
-        Assert.False(await setup.Reschedule(
-            scheduled.SchedulerId, schedulerType, useDateTime, TimeSpan.FromSeconds(20)));
+        await Assert.That((await Assert.That(setup.Delivered).HasSingleItem())).IsEqualTo(scheduled.RequestId);
+        await Assert.That(await setup.Reschedule(
+            scheduled.SchedulerId, schedulerType, useDateTime, TimeSpan.FromSeconds(20))).IsFalse();
         setup.Clock.Advance(TimeSpan.FromSeconds(20));
-        Assert.Equal(scheduled.RequestId, Assert.Single(setup.Delivered));
+        await Assert.That((await Assert.That(setup.Delivered).HasSingleItem())).IsEqualTo(scheduled.RequestId);
     }
 
-    [Fact]
+    [Test]
     public async Task When_scheduling_duplicate_ids_across_factory_calls_should_reject_the_second_request()
     {
         //Arrange
@@ -122,16 +122,16 @@ public class ScheduledRequestControlTests
         var first = await setup.Schedule(RequestSchedulerType.Send, false, false, TimeSpan.FromSeconds(10));
 
         //Act
-        var exception = await Record.ExceptionAsync(() =>
+        var exception = await TestExceptionRecorder.CaptureAsync(() =>
             setup.Schedule(RequestSchedulerType.Send, true, false, TimeSpan.FromSeconds(10)));
 
         //Assert
-        Assert.IsType<InvalidOperationException>(exception);
+        await Assert.That(exception).IsTypeOf<InvalidOperationException>();
         setup.Clock.Advance(TimeSpan.FromSeconds(10));
-        Assert.Equal(first.RequestId, Assert.Single(setup.Delivered));
+        await Assert.That((await Assert.That(setup.Delivered).HasSingleItem())).IsEqualTo(first.RequestId);
     }
 
-    [Fact]
+    [Test]
     public async Task When_overwriting_across_factory_calls_should_deliver_only_the_replacement()
     {
         //Arrange
@@ -147,18 +147,18 @@ public class ScheduledRequestControlTests
         var replacement = await setup.Schedule(RequestSchedulerType.Send, true, false, TimeSpan.FromSeconds(20));
 
         //Assert
-        Assert.Equal(first.SchedulerId, replacement.SchedulerId);
+        await Assert.That(replacement.SchedulerId).IsEqualTo(first.SchedulerId);
         setup.Clock.Advance(TimeSpan.FromSeconds(10));
-        Assert.Empty(setup.Delivered);
+        await Assert.That(setup.Delivered).IsEmpty();
         setup.Clock.Advance(TimeSpan.FromSeconds(10));
-        Assert.Equal(replacement.RequestId, Assert.Single(setup.Delivered));
+        await Assert.That((await Assert.That(setup.Delivered).HasSingleItem())).IsEqualTo(replacement.RequestId);
         setup.Clock.Advance(TimeSpan.FromSeconds(20));
-        Assert.Equal(replacement.RequestId, Assert.Single(setup.Delivered));
+        await Assert.That((await Assert.That(setup.Delivered).HasSingleItem())).IsEqualTo(replacement.RequestId);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_cancelling_should_leave_another_processors_schedule_untouched(bool shareFactory)
     {
         //Arrange
@@ -176,18 +176,18 @@ public class ScheduledRequestControlTests
         });
         var cancelled = await first.Schedule(RequestSchedulerType.Send, false, false, TimeSpan.FromSeconds(10));
         var remaining = await second.Schedule(RequestSchedulerType.Send, false, false, TimeSpan.FromSeconds(10));
-        Assert.Equal(cancelled.SchedulerId, remaining.SchedulerId);
+        await Assert.That(remaining.SchedulerId).IsEqualTo(cancelled.SchedulerId);
 
         //Act
         await first.Cancel(cancelled.SchedulerId, typeof(IAmARequestSchedulerAsync));
         clock.Advance(TimeSpan.FromSeconds(10));
 
         //Assert
-        Assert.Empty(first.Delivered);
-        Assert.Equal(remaining.RequestId, Assert.Single(second.Delivered));
+        await Assert.That(first.Delivered).IsEmpty();
+        await Assert.That((await Assert.That(second.Delivered).HasSingleItem())).IsEqualTo(remaining.RequestId);
     }
 
-    [Fact]
+    [Test]
     public async Task When_using_another_factory_should_not_control_the_original_schedule()
     {
         //Arrange
@@ -204,17 +204,17 @@ public class ScheduledRequestControlTests
             scheduled.SchedulerId, typeof(IAmARequestSchedulerAsync), false, TimeSpan.FromSeconds(20));
 
         //Assert
-        Assert.False(changedByOtherFactory);
-        Assert.True(changedByOriginalFactory);
+        await Assert.That(changedByOtherFactory).IsFalse();
+        await Assert.That(changedByOriginalFactory).IsTrue();
         setup.Clock.Advance(TimeSpan.FromSeconds(10));
-        Assert.Empty(setup.Delivered);
+        await Assert.That(setup.Delivered).IsEmpty();
         setup.Clock.Advance(TimeSpan.FromSeconds(10));
-        Assert.Equal(scheduled.RequestId, Assert.Single(setup.Delivered));
+        await Assert.That((await Assert.That(setup.Delivered).HasSingleItem())).IsEqualTo(scheduled.RequestId);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_disposing_a_registered_scheduler_should_cancel_its_pending_requests(bool isAsync)
     {
         //Arrange
@@ -236,12 +236,12 @@ public class ScheduledRequestControlTests
         setup.Clock.Advance(TimeSpan.FromSeconds(10));
 
         //Assert
-        Assert.Empty(setup.Delivered);
-        Assert.False(await setup.Reschedule(
-            scheduled.SchedulerId, typeof(IAmARequestSchedulerAsync), false, TimeSpan.FromSeconds(20)));
+        await Assert.That(setup.Delivered).IsEmpty();
+        await Assert.That(await setup.Reschedule(
+            scheduled.SchedulerId, typeof(IAmARequestSchedulerAsync), false, TimeSpan.FromSeconds(20))).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_scheduling_concurrently_should_allow_each_request_to_be_cancelled()
     {
         //Arrange
@@ -262,8 +262,8 @@ public class ScheduledRequestControlTests
         setup.Clock.Advance(TimeSpan.FromSeconds(10));
 
         //Assert
-        Assert.Equal(schedules.Length, schedules.Select(scheduled => scheduled.SchedulerId).Distinct().Count());
-        Assert.Equal(control.RequestId, Assert.Single(setup.Delivered));
+        await Assert.That(schedules.Select(scheduled => scheduled.SchedulerId).Distinct().Count()).IsEqualTo(schedules.Length);
+        await Assert.That((await Assert.That(setup.Delivered).HasSingleItem())).IsEqualTo(control.RequestId);
     }
 
     private sealed class SchedulingSetup : IAsyncDisposable

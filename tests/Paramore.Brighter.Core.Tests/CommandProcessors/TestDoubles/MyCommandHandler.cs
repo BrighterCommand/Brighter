@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         private void LogCommand(MyCommand request)
         {
             _command = request;
-            receivedMessages.Add(nameof(MyCommandHandler), request.Id);
+            receivedMessages[nameof(MyCommandHandler)] = request.Id;
         }
     }
 }

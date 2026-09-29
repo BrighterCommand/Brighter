@@ -7,7 +7,6 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
@@ -20,28 +19,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         private readonly IAmAMessagePump _messagePump;
         private readonly ChannelAsync _channel;
         private readonly SpyDontAckCommandProcessor _commandProcessor;
-
         public MessagePumpCommandDontAckActionNackTestsAsync()
         {
             _commandProcessor = new SpyDontAckCommandProcessor();
-            _channel = new ChannelAsync(
-                new(ChannelName),
-                _routingKey,
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
-            );
-
-            var messageMapperRegistry = new MessageMapperRegistry(
-                null,
-                new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
+            _channel = new ChannelAsync(new(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
+            var messageMapperRegistry = new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
-
-            _messagePump = new ServiceActivator.Proactor(
-                _commandProcessor,
-                (message) => typeof(MyCommand),
-                messageMapperRegistry,
-                new EmptyMessageTransformerFactoryAsync(),
-                new InMemoryRequestContextFactory(),
-                _channel)
+            _messagePump = new ServiceActivator.Proactor(_commandProcessor, (message) => typeof(MyCommand), messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel)
             {
                 Channel = _channel,
                 TimeOut = TimeSpan.FromMilliseconds(5000),
@@ -49,40 +33,30 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 UnacceptableMessageLimit = -1,
                 DontAckDelay = TimeSpan.FromMilliseconds(100)
             };
-
             // Arrange: enqueue one command message to the bus (not channel)
             // so InMemoryMessageConsumer.Receive locks it in _lockedMessages,
             // enabling nack to re-enqueue it back to the bus
-            var message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND),
-                new MessageBody(JsonSerializer.Serialize(new MyCommand(), JsonSerialisationOptions.Options))
-            );
+            var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(new MyCommand(), JsonSerialisationOptions.Options)));
             _bus.Enqueue(message);
         }
 
-        [Fact]
+        [Test]
         public async Task When_A_Handler_Throws_DontAck_Action_Should_Nack_The_Message_Async()
         {
             // Act: run pump in background
-            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-
+            var task = Task.Factory.StartNew(() => _messagePump.Run(), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             // Wait for handler to process the message (DontAckAction thrown)
-            var handled = _commandProcessor.WaitForHandle(5000);
-            Assert.True(handled, "Handler should have been called");
-
+            var handled = await _commandProcessor.WaitForHandleAsync(5000);
+            await Assert.That(handled).IsTrue();
             // Send quit to stop the pump after DontAckAction processing
             _channel.Enqueue(MessageFactory.CreateQuitMessage(_routingKey));
-
             await Task.WhenAll(task);
-
             // Assert: handler was called
-            Assert.True(_commandProcessor.SendCount >= 1);
-
+            await Assert.That(_commandProcessor.SendCount >= 1).IsTrue();
             // Assert: pump continued running and processed the quit message
-            Assert.Equal(MessagePumpStatus.MP_STOPPED, _messagePump.Status);
-
+            await Assert.That(_messagePump.Status).IsEqualTo(MessagePumpStatus.MP_STOPPED);
             // Assert: message was nacked (re-enqueued to bus, available for redelivery)
-            Assert.NotEmpty(_bus.Stream(_routingKey));
+            await Assert.That(_bus.Stream(_routingKey)).IsNotEmpty();
         }
     }
 }

@@ -24,21 +24,20 @@ THE SOFTWARE. */
 
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Validation.FluentValidation.Tests
 {
     public class NullRequestValidationTests
     {
-        [Fact]
-        public void When_a_null_request_is_validated_should_throw_argument_null()
+        [Test]
+        public async System.Threading.Tasks.Task When_a_null_request_is_validated_should_throw_argument_null()
         {
             //Arrange
             var emptyProvider = new ServiceCollection().BuildServiceProvider();
             var handler = new FluentValidationRequestHandler<GreetingCommand>(emptyProvider);
 
             //Act //Assert
-            Assert.Throws<System.ArgumentNullException>(() => handler.Handle(null!));
+            await Assert.That(() => handler.Handle(null!)).ThrowsExactly<System.ArgumentNullException>();
         }
     }
 }

@@ -28,7 +28,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // error, silently.
 public class DepositTransactionSharesOutboxWriteTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_handler_deposits_in_an_opted_in_request_the_outbox_write_should_join_the_caller_transaction()
     {
         // Arrange
@@ -57,18 +57,18 @@ public class DepositTransactionSharesOutboxWriteTests
         // Assert - the request completed, and the handler resolved the controller's own DbContext
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<DepositTransactionRecorder>();
-        Assert.True(recorder.HandlerSharesControllerDbContext);
+        await Assert.That(recorder.HandlerSharesControllerDbContext).IsTrue();
 
         // Assert - before the commit, the controller's own connection could already see both writes
-        Assert.True(recorder.EntityVisibleMidTransaction);
-        Assert.True(recorder.OutboxRowVisibleMidTransaction);
+        await Assert.That(recorder.EntityVisibleMidTransaction).IsTrue();
+        await Assert.That(recorder.OutboxRowVisibleMidTransaction).IsTrue();
 
         // Assert - after the commit, both writes are durably present
-        Assert.Equal(1, CountRows(factory.ConnectionString, "DepositedEntities"));
-        Assert.Equal(1, CountRows(factory.OutboxConnectionString, DepositTransactionWebApplicationFactory.OutboxTableName));
+        await Assert.That(CountRows(factory.ConnectionString, "DepositedEntities")).IsEqualTo(1);
+        await Assert.That(CountRows(factory.OutboxConnectionString, DepositTransactionWebApplicationFactory.OutboxTableName)).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_controller_rolls_back_neither_the_entity_nor_the_outbox_row_should_be_present()
     {
         // Arrange
@@ -81,15 +81,15 @@ public class DepositTransactionSharesOutboxWriteTests
         // Assert - the request completed, and the handler resolved the controller's own DbContext
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<DepositTransactionRecorder>();
-        Assert.True(recorder.HandlerSharesControllerDbContext);
+        await Assert.That(recorder.HandlerSharesControllerDbContext).IsTrue();
 
         // Assert - the rollback undid both writes together, proving one shared transaction rather than
         // merely one shared instance
-        Assert.Equal(0, CountRows(factory.ConnectionString, "DepositedEntities"));
-        Assert.Equal(0, CountRows(factory.OutboxConnectionString, DepositTransactionWebApplicationFactory.OutboxTableName));
+        await Assert.That(CountRows(factory.ConnectionString, "DepositedEntities")).IsEqualTo(0);
+        await Assert.That(CountRows(factory.OutboxConnectionString, DepositTransactionWebApplicationFactory.OutboxTableName)).IsEqualTo(0);
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_host_uses_always_new_the_handlers_outbox_write_should_not_roll_back_with_the_controllers()
     {
         // Arrange - the negative control: the extension's own affinity argument is AlwaysNew, never
@@ -103,17 +103,17 @@ public class DepositTransactionSharesOutboxWriteTests
         // Assert - the handler resolved its own, distinct DbContext, not the controller's
         response.EnsureSuccessStatusCode();
         var recorder = factory.Services.GetRequiredService<DepositTransactionRecorder>();
-        Assert.False(recorder.HandlerSharesControllerDbContext);
+        await Assert.That(recorder.HandlerSharesControllerDbContext).IsFalse();
 
         // Assert - the controller's own entity write rolled back, but the handler's unrelated outbox
         // write, made outside that transaction, survives
-        Assert.Equal(0, CountRows(factory.ConnectionString, "DepositedEntities"));
-        Assert.Equal(1, CountRows(factory.OutboxConnectionString, DepositTransactionWebApplicationFactory.OutboxTableName));
+        await Assert.That(CountRows(factory.ConnectionString, "DepositedEntities")).IsEqualTo(0);
+        await Assert.That(CountRows(factory.OutboxConnectionString, DepositTransactionWebApplicationFactory.OutboxTableName)).IsEqualTo(1);
 
         // Assert - none of this was reported as a warning or an error; C-21's silence is present
         // behaviour, not something an implementation could satisfy merely by logging it
         var loggerProvider = factory.Services.GetRequiredService<CapturingLoggerProvider>();
-        Assert.DoesNotContain(loggerProvider.Entries, entry => entry.Level >= LogLevel.Warning);
+        await Assert.That(loggerProvider.Entries).DoesNotContain(entry => entry.Level >= LogLevel.Warning);
     }
 
     private static int CountRows(string connectionString, string tableName)

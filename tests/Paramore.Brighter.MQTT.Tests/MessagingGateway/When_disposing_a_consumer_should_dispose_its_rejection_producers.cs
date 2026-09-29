@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -31,7 +31,7 @@ using MQTTnet;
 using MQTTnet.Client;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server;
-using Xunit;
+
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway;
 
@@ -54,8 +54,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway;
 /// it - on every consumer that never rejected anything.
 /// </para>
 /// </remarks>
-[Trait("Category", "MQTT")]
-[Collection("MQTT")]
+[Property("Category", "MQTT")]
+[System.Obsolete]
 public class MqttConsumerRejectionProducerDisposalTests : IDisposable
 {
     private readonly MqttTestServer? _mqttTestServer;
@@ -108,7 +108,7 @@ public class MqttConsumerRejectionProducerDisposalTests : IDisposable
     }
 
     /// <summary>Forces both lazy producers, as a rejection would, and returns their clients.</summary>
-    private static (IMqttClient DeadLetter, IMqttClient Invalid) ConnectRejectionProducers(
+    private static async Task<(IMqttClient DeadLetter, IMqttClient Invalid)> ConnectRejectionProducers(
         MqttMessageConsumer consumer)
     {
         var deadLetter = LazyProducer(consumer, "_deadLetterProducer")!.Value;
@@ -116,12 +116,12 @@ public class MqttConsumerRejectionProducerDisposalTests : IDisposable
 
         // Non-vacuity: if the producers could not be built, "disconnected after Dispose" would
         // hold for a reason that has nothing to do with disposal.
-        Assert.NotNull(deadLetter);
-        Assert.NotNull(invalid);
+        await Assert.That(deadLetter).IsNotNull();
+        await Assert.That(invalid).IsNotNull();
 
         var clients = (ClientOf(deadLetter!), ClientOf(invalid!));
-        Assert.True(clients.Item1.IsConnected);
-        Assert.True(clients.Item2.IsConnected);
+        await Assert.That(clients.Item1.IsConnected).IsTrue();
+        await Assert.That(clients.Item2.IsConnected).IsTrue();
         return clients;
     }
 
@@ -139,38 +139,38 @@ public class MqttConsumerRejectionProducerDisposalTests : IDisposable
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_disposing_a_consumer_should_dispose_its_rejection_producers()
     {
         //Arrange
         var consumer = AConsumerWithRejectionRoutes();
-        var (deadLetterClient, invalidClient) = ConnectRejectionProducers(consumer);
+        var (deadLetterClient, invalidClient) = await ConnectRejectionProducers(consumer);
 
         //Act
         consumer.Dispose();
 
         //Assert
-        Assert.True(await IsDisposed(deadLetterClient));
-        Assert.True(await IsDisposed(invalidClient));
+        await Assert.That(await IsDisposed(deadLetterClient)).IsTrue();
+        await Assert.That(await IsDisposed(invalidClient)).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_disposing_a_consumer_asynchronously_should_dispose_its_rejection_producers()
     {
         //Arrange
         var consumer = AConsumerWithRejectionRoutes();
-        var (deadLetterClient, invalidClient) = ConnectRejectionProducers(consumer);
+        var (deadLetterClient, invalidClient) = await ConnectRejectionProducers(consumer);
 
         //Act
         await consumer.DisposeAsync();
 
         //Assert
-        Assert.True(await IsDisposed(deadLetterClient));
-        Assert.True(await IsDisposed(invalidClient));
+        await Assert.That(await IsDisposed(deadLetterClient)).IsTrue();
+        await Assert.That(await IsDisposed(invalidClient)).IsTrue();
     }
 
-    [Fact]
-    public void When_disposing_a_consumer_that_never_rejected_should_not_create_its_rejection_producers()
+    [Test]
+    public async System.Threading.Tasks.Task When_disposing_a_consumer_that_never_rejected_should_not_create_its_rejection_producers()
     {
         //Arrange
         var consumer = AConsumerWithRejectionRoutes();
@@ -179,11 +179,11 @@ public class MqttConsumerRejectionProducerDisposalTests : IDisposable
         consumer.Dispose();
 
         //Assert - disposal must not open a connection in order to close it
-        Assert.False(LazyProducer(consumer, "_deadLetterProducer")!.IsValueCreated);
-        Assert.False(LazyProducer(consumer, "_invalidMessageProducer")!.IsValueCreated);
+        await Assert.That(LazyProducer(consumer, "_deadLetterProducer")!.IsValueCreated).IsFalse();
+        await Assert.That(LazyProducer(consumer, "_invalidMessageProducer")!.IsValueCreated).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_disposing_a_consumer_that_never_rejected_asynchronously_should_not_create_its_rejection_producers()
     {
         //Arrange
@@ -193,8 +193,8 @@ public class MqttConsumerRejectionProducerDisposalTests : IDisposable
         await consumer.DisposeAsync();
 
         //Assert
-        Assert.False(LazyProducer(consumer, "_deadLetterProducer")!.IsValueCreated);
-        Assert.False(LazyProducer(consumer, "_invalidMessageProducer")!.IsValueCreated);
+        await Assert.That(LazyProducer(consumer, "_deadLetterProducer")!.IsValueCreated).IsFalse();
+        await Assert.That(LazyProducer(consumer, "_invalidMessageProducer")!.IsValueCreated).IsFalse();
     }
 
     public void Dispose() => _mqttTestServer?.Dispose();

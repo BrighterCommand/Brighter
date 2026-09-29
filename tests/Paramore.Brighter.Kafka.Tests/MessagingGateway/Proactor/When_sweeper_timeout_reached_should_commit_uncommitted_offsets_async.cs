@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Rafael Andrade
 
@@ -27,29 +27,25 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
-public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsyncDisposable, IDisposable
+[Category("Kafka")]
+public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsyncDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
-    private readonly IAmAProducerRegistry _producerRegistry;
-    private readonly KafkaMessageConsumer _consumer;
+    private IAmAProducerRegistry _producerRegistry;
+    private KafkaMessageConsumer _consumer;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
-    private readonly FakeTimeProvider _fakeTimeProvider;
+    private FakeTimeProvider _fakeTimeProvider;
 
-    public WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync(ITestOutputHelper output)
+    [Before(HookType.Test)]
+    public async Task Setup()
     {
         var groupId = Uuid.New().ToString("N");
-        _output = output;
-        
-        _producerRegistry = new KafkaProducerRegistryFactory(
+
+        _producerRegistry = await new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
                 Name = "Kafka Producer Send Test",
@@ -67,7 +63,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsy
                 RequestTimeoutMs = 2000,
                 MakeChannels = OnMissingChannel.Create
             }
-            ]).CreateAsync().Result;
+            ]).CreateAsync();
 
         // Create a fake time provider to control time in the test
         _fakeTimeProvider = new FakeTimeProvider();
@@ -80,8 +76,8 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsy
             commitBatchSize: 20,  //Large commit batch size to ensure sweeper is triggered
             sweepUncommittedOffsetsInterval: TimeSpan.FromSeconds(30),
             messagePumpType: MessagePumpType.Proactor,
-            numOfPartitions: 1, 
-            replicationFactor: 1, 
+            numOfPartitions: 1,
+            replicationFactor: 1,
             makeChannels: OnMissingChannel.Create) { TimeProvider = _fakeTimeProvider };
 
         _consumer = (KafkaMessageConsumer) new KafkaMessageConsumerFactory(
@@ -93,16 +89,16 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsy
             .CreateAsync(subscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_sweeper_timeout_reached_should_commit_uncommitted_offsets_async()
     {
         //Arrange
         //allow time for topic to propagate
         await Task.Delay(1000);
-        
+
         var routingKey = new RoutingKey(_topic);
         var producerAsync = _producerRegistry.LookupAsyncBy(routingKey);
-            
+
         //send 5 messages to Kafka (less than the batch size of 20)
         var sentMessages = new string[5];
         for (int i = 0; i < 5; i++)
@@ -114,7 +110,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsy
                 new MessageBody($"test content [{_queueName}]")));
             sentMessages[i] = msgId;
         }
-        
+
         //We should not need to flush, as the async does not queue work - but in case this changes
         ((KafkaMessageProducer)producerAsync).Flush();
 
@@ -128,8 +124,8 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsy
         }
 
         //Assert - messages consumed and acknowledged but not yet committed
-        Assert.Equal(5, consumedMessages.Count);
-        Assert.Equal(5, _consumer.StoredOffsets());
+        await Assert.That(consumedMessages.Count).IsEqualTo(5);
+        await Assert.That(_consumer.StoredOffsets()).IsEqualTo(5);
 
         //Act - Advance time beyond the sweeper interval (30 seconds)
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(31));
@@ -138,7 +134,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsy
         await Task.Delay(2000);
 
         //Assert - Sweeper should have committed the offsets
-        Assert.Equal(0, _consumer.StoredOffsets());
+        await Assert.That(_consumer.StoredOffsets()).IsEqualTo(0);
 
         _consumer.Close();
     }
@@ -160,7 +156,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsy
                     await _consumer.AcknowledgeAsync(messages[0]);
                     return messages[0];
                 }
-                
+
                 //wait before retry
                 await Task.Delay(1000);
 
@@ -168,7 +164,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsy
             catch (ChannelFailureException cfx)
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 await Task.Delay(1000);
             }
         } while (maxTries <= 10);
@@ -176,10 +172,11 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsy
         return messages[0];
     }
 
-    public void Dispose()
+    [After(HookType.Test)]
+    public async Task Cleanup()
     {
         _producerRegistry?.Dispose();
-        _consumer.Dispose();
+        await _consumer.DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()

@@ -28,12 +28,13 @@ THE SOFTWARE. */
 // </auto-generated>
 
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Text.Causation;
 
-[Trait("Category", "PostgresSql")]
-[Collection("PostgresTextOutbox")]
+[Property("Category", "PostgresSql")]
+[NotInParallel("PostgresTextOutbox")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<System.Data.Common.DbTransaction>
 {
     private readonly PostgresTextOutboxProvider _outboxProvider = new();

@@ -2,11 +2,12 @@ using Google.Api.Gax;
 using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.Spanner;
-using Xunit;
+
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.Inbox;
 
-[Trait("Category", "Spanner")]
+[Property("Category", "Spanner")]
+[TUnit.Core.InheritsTests]
 public class SpannerCausationTrackingInboxTest : CausationTrackingInboxBaseTests
 {
     private RelationalDatabaseConfiguration _configuration = null!;

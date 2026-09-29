@@ -1,6 +1,5 @@
 using System;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
@@ -10,11 +9,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 /// So a <c>dataschema</c> must go onto the wire as a string, exactly as <c>source</c> already does —
 /// otherwise publishing a message with a relative dataschema fails inside the SDK at send time.
 /// </summary>
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusRelativeDataSchemaPublishTests
 {
-    [Fact]
-    public void When_publishing_a_message_with_a_relative_dataschema_should_write_it_as_a_string()
+    [Test]
+    public async System.Threading.Tasks.Task When_publishing_a_message_with_a_relative_dataschema_should_write_it_as_a_string()
     {
         // Arrange — the relative dataschema is the only data that decides this test
         var relativeDataSchema = new Uri("/schemas/v1", UriKind.Relative);
@@ -35,7 +34,7 @@ public class AzureServiceBusRelativeDataSchemaPublishTests
         // these are wire-format attribute names, so a change to a constant's *value* must fail a test
         // rather than silently rename an on-wire attribute. (ASBConstants is internal in any case.)
         var written = asbMessage.ApplicationProperties["cloudEvents:schema"];
-        Assert.IsType<string>(written);
-        Assert.Equal(relativeDataSchema.ToString(), written);
+        await Assert.That(written).IsTypeOf<string>();
+        await Assert.That(written).IsEqualTo(relativeDataSchema.ToString());
     }
 }

@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,14 +26,13 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway.ChannelFactoryDeclaration;
 
 public class ChannelFactoryDeclarationSweepThrowingReadTests
 {
-    [Fact]
-    public void When_reading_a_channel_factory_type_throws_should_report_a_reason_naming_the_exception()
+    [Test]
+    public async System.Threading.Tasks.Task When_reading_a_channel_factory_type_throws_should_report_a_reason_naming_the_exception()
     {
         // Arrange
         // Evident Data: a double whose ChannelFactoryType getter throws unconditionally - reading it
@@ -47,13 +47,13 @@ public class ChannelFactoryDeclarationSweepThrowingReadTests
         // The throwing type is reported with a non-null reason naming the type, the exception type
         // and its message - a fault, not a skip
         var throwingEntry = result.Single(entry => entry.Subject == throwingType);
-        Assert.NotNull(throwingEntry.Reason);
-        Assert.Contains(throwingType.FullName!, throwingEntry.Reason);
-        Assert.Contains(typeof(InvalidOperationException).FullName!, throwingEntry.Reason);
-        Assert.Contains("Deliberately unreadable ChannelFactoryType.", throwingEntry.Reason);
+        await Assert.That(throwingEntry.Reason).IsNotNull();
+        await Assert.That(throwingEntry.Reason).Contains(throwingType.FullName!);
+        await Assert.That(throwingEntry.Reason).Contains(typeof(InvalidOperationException).FullName!);
+        await Assert.That(throwingEntry.Reason).Contains("Deliberately unreadable ChannelFactoryType.");
 
         // The rest of the sweep still completes - a sound subject elsewhere in the same assembly is
         // still reported, in the same run
-        Assert.Contains(result, entry => entry.Subject == soundType && entry.Reason is null);
+        await Assert.That(result).Contains(entry => entry.Subject == soundType && entry.Reason is null);
     }
 }

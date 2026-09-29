@@ -182,7 +182,18 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             if (Connection.Name is null)
                 throw new InvalidOperationException("RMQMessagingGateway: Connection must have a name");
 
-            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnection(_connectionFactory);
+            lock (_connectionLock)
+            {
+                try
+                {
+                    Channel?.Dispose();
+                }
+                finally
+                {
+                    Channel = null;
+                    ReleaseConnection();
+                }
+            }
         }
 
         ~RmqMessageGateway()
@@ -245,4 +256,3 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         }
     }
 }
-

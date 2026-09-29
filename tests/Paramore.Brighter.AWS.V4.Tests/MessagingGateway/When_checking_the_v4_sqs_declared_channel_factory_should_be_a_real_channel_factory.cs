@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -20,30 +21,58 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+
+
 #endregion
 
+
+
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
+
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
+
+
+
+
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway;
 
+
+
 public class V4SqsDeclaredChannelFactoryIsRealTests
+
 {
-    [Fact]
-    public void When_checking_the_v4_sqs_declared_channel_factory_should_be_a_real_channel_factory()
+
+    [Test]
+
+    public async System.Threading.Tasks.Task When_checking_the_v4_sqs_declared_channel_factory_should_be_a_real_channel_factory()
+
     {
+
         // Arrange
+
         var subscription = new SqsSubscription<MyCommand>(
+
             subscriptionName: new SubscriptionName("t"),
+
             channelName: new ChannelName("t"),
+
             routingKey: new RoutingKey("t"));
 
+
+
         // Act
+
         var channelFactoryType = subscription.ChannelFactoryType;
 
+
+
         // Assert — a genuine channel factory, not the in-memory default a mismatch would fall back to
-        Assert.True(typeof(IAmAChannelFactory).IsAssignableFrom(channelFactoryType));
-        Assert.NotEqual(typeof(InMemoryChannelFactory), channelFactoryType);
+
+        await Assert.That(typeof(IAmAChannelFactory).IsAssignableFrom(channelFactoryType)).IsTrue();
+
+        await Assert.That(channelFactoryType).IsNotEqualTo(typeof(InMemoryChannelFactory));
+
     }
+
 }

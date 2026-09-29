@@ -23,6 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+
+using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -30,14 +32,13 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ValidatePipelinesWithConsumersTests
 {
-    [Fact]
-    public void When_validate_pipelines_with_consumers_should_detect_missing_handler()
+    [Test]
+    public async Task When_validate_pipelines_with_consumers_should_detect_missing_handler()
     {
         // Arrange — set up a subscription for a request type with no handler registered
         var services = new ServiceCollection();
@@ -61,12 +62,12 @@ public class ValidatePipelinesWithConsumersTests
         var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — should detect the subscription has no handler registered
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Message.Contains("No handler registered"));
+        await Assert.That(result.IsValid).IsFalse();
+        await Assert.That((result.Errors).Any(e => e.Message.Contains("No handler registered"))).IsTrue();
     }
 
-    [Fact]
-    public void When_add_consumers_should_register_consumer_validation_specs()
+    [Test]
+    public async Task When_add_consumers_should_register_consumer_validation_specs()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -79,11 +80,11 @@ public class ValidatePipelinesWithConsumersTests
 
         // Assert — AddConsumers should register 5 consumer validation specs, including the
         // channel-factory compatibility rule (AC-16, FR-6)
-        Assert.Equal(5, specs.Count);
+        await Assert.That(specs.Count).IsEqualTo(5);
     }
 
-    [Fact]
-    public void When_add_consumers_without_validate_pipelines_the_unwrap_transform_spec_is_inert()
+    [Test]
+    public async Task When_add_consumers_without_validate_pipelines_the_unwrap_transform_spec_is_inert()
     {
         // Arrange — AddConsumers WITHOUT ValidatePipelines: the transformer-resolvability probe is never
         // registered, so the unwrap-transform spec must be inert (yield nothing) and must not throw when
@@ -107,7 +108,7 @@ public class ValidatePipelinesWithConsumersTests
 
         // Assert — no unwrap-transform finding is produced (the spec is inert without a probe); only the
         // pre-existing "no handler registered" Error appears
-        Assert.DoesNotContain(findings, r => r.Error!.Message.Contains("unwrap transform"));
+        await Assert.That((findings).Any(r => r.Error!.Message.Contains("unwrap transform"))).IsFalse();
     }
 
     private class UnhandledEvent : Event

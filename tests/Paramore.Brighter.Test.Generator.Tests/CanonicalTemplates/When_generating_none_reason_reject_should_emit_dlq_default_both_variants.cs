@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -44,7 +44,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         _logger = factory.CreateLogger<Generators.MessagingGatewayGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_none_reason_reject_reactor_file_should_exist_with_correct_name()
     {
         // Arrange
@@ -57,11 +57,10 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
 
         // Assert — Reactor file exists at the mandated path
         var reactorPath = ReactorOutputPath(configuration);
-        Assert.True(File.Exists(reactorPath),
-            $"Reactor canonical None-reason reject file not found at {reactorPath}");
+        await Assert.That(File.Exists(reactorPath)).IsTrue().Because($"Reactor canonical None-reason reject file not found at {reactorPath}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_none_reason_reject_proactor_file_should_exist_with_correct_name()
     {
         // Arrange
@@ -74,11 +73,10 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
 
         // Assert — Proactor file exists at the mandated path
         var proactorPath = ProactorOutputPath(configuration);
-        Assert.True(File.Exists(proactorPath),
-            $"Proactor canonical None-reason reject file not found at {proactorPath}");
+        await Assert.That(File.Exists(proactorPath)).IsTrue().Because($"Proactor canonical None-reason reject file not found at {proactorPath}");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_none_reason_reject_reactor_should_create_subscription_with_both_routing_keys()
     {
         // Arrange
@@ -91,11 +89,11 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
 
         // Assert — subscription must name both deadLetterRoutingKey and invalidMessageRoutingKey
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("deadLetterRoutingKey:", content);
-        Assert.Contains("invalidMessageRoutingKey:", content);
+        await Assert.That(content).Contains("deadLetterRoutingKey:");
+        await Assert.That(content).Contains("invalidMessageRoutingKey:");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_none_reason_reject_proactor_should_create_subscription_with_both_routing_keys()
     {
         // Arrange
@@ -108,11 +106,11 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
 
         // Assert — subscription must name both deadLetterRoutingKey and invalidMessageRoutingKey
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("deadLetterRoutingKey:", content);
-        Assert.Contains("invalidMessageRoutingKey:", content);
+        await Assert.That(content).Contains("deadLetterRoutingKey:");
+        await Assert.That(content).Contains("invalidMessageRoutingKey:");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_none_reason_reject_reactor_should_reject_with_none_reason()
     {
         // Arrange
@@ -125,11 +123,11 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
 
         // Assert — Reject is called with RejectionReason.None
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("Reject(", content);
-        Assert.Contains("RejectionReason.None", content);
+        await Assert.That(content).Contains("Reject(");
+        await Assert.That(content).Contains("RejectionReason.None");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_none_reason_reject_proactor_should_reject_with_none_reason()
     {
         // Arrange
@@ -142,11 +140,11 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
 
         // Assert — RejectAsync is called with RejectionReason.None
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("RejectAsync(", content);
-        Assert.Contains("RejectionReason.None", content);
+        await Assert.That(content).Contains("RejectAsync(");
+        await Assert.That(content).Contains("RejectionReason.None");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_none_reason_reject_reactor_should_poll_dlq_inside_bounded_retry_loop()
     {
         // Arrange
@@ -159,13 +157,13 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
 
         // Assert — DLQ arrival polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("GetMessageFromDeadLetterQueue", content);
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(60)", content);
-        Assert.Contains("500", content);
+        await Assert.That(content).Contains("GetMessageFromDeadLetterQueue");
+        await Assert.That(content).Contains("Stopwatch");
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(60)");
+        await Assert.That(content).Contains("500");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_none_reason_reject_proactor_should_poll_dlq_inside_bounded_retry_loop()
     {
         // Arrange
@@ -178,13 +176,13 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
 
         // Assert — DLQ arrival polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
-        Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(60)", content);
-        Assert.Contains("500", content);
+        await Assert.That(content).Contains("GetMessageFromDeadLetterQueueAsync");
+        await Assert.That(content).Contains("Stopwatch");
+        await Assert.That(content).Contains("TimeSpan.FromSeconds(60)");
+        await Assert.That(content).Contains("500");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_none_reason_reject_reactor_should_assert_none_reason_and_original_topic_on_dlq()
     {
         // Arrange
@@ -197,13 +195,13 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
 
         // Assert — rejection reason "None" and original-topic assertion on DLQ message
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("keys.RejectionReason", content);
-        Assert.Contains("RejectionReason.None.ToString()", content);
-        Assert.Contains("keys.OriginalTopic", content);
-        Assert.Contains("_publication.Topic!.Value", content);
+        await Assert.That(content).Contains("keys.RejectionReason");
+        await Assert.That(content).Contains("RejectionReason.None.ToString()");
+        await Assert.That(content).Contains("keys.OriginalTopic");
+        await Assert.That(content).Contains("_publication.Topic!.Value");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_none_reason_reject_proactor_should_assert_none_reason_and_original_topic_on_dlq()
     {
         // Arrange
@@ -216,13 +214,13 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
 
         // Assert — rejection reason "None" and original-topic assertion on DLQ message
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("keys.RejectionReason", content);
-        Assert.Contains("RejectionReason.None.ToString()", content);
-        Assert.Contains("keys.OriginalTopic", content);
-        Assert.Contains("_publication.Topic!.Value", content);
+        await Assert.That(content).Contains("keys.RejectionReason");
+        await Assert.That(content).Contains("RejectionReason.None.ToString()");
+        await Assert.That(content).Contains("keys.OriginalTopic");
+        await Assert.That(content).Contains("_publication.Topic!.Value");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_none_reason_reject_reactor_should_assert_invalid_channel_absence_via_single_bounded_receive()
     {
         // Arrange
@@ -236,11 +234,11 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Assert — invalid-channel absence: single bounded GetMessageFromInvalidChannel call
         // asserting MT_NONE (a single receive outside the retry loop)
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("GetMessageFromInvalidChannel", content);
-        Assert.Contains("MT_NONE", content);
+        await Assert.That(content).Contains("GetMessageFromInvalidChannel");
+        await Assert.That(content).Contains("MT_NONE");
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_none_reason_reject_proactor_should_assert_invalid_channel_absence_via_single_bounded_receive()
     {
         // Arrange
@@ -254,14 +252,14 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Assert — invalid-channel absence: single bounded GetMessageFromInvalidChannelAsync call
         // asserting MT_NONE (a single receive outside the retry loop)
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("GetMessageFromInvalidChannelAsync", content);
-        Assert.Contains("MT_NONE", content);
+        await Assert.That(content).Contains("GetMessageFromInvalidChannelAsync");
+        await Assert.That(content).Contains("MT_NONE");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_pass_reactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange — ledger cell is Pass; the [Test] must carry no Skip argument
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -269,13 +267,13 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact] present; Skip absent (conditional pattern renders nothing when Skip is empty)
+        // Assert — [Test] present; Skip absent (conditional pattern renders nothing when Skip is empty)
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("[Fact]", content);
-        Assert.DoesNotContain("Skip =", content);
+        await Assert.That(content).Contains("[Test]");
+        await Assert.That(content).DoesNotContain("[Skip(");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_deferred_reactor_should_emit_skip_on_fact()
     {
         // Arrange — ledger cell is Deferred; the template must conditionally emit Skip
@@ -290,15 +288,15 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — [Fact, Skip = "Deferred: #4240 ..."] is emitted
+        // Assert — [Test, Skip = "Deferred: #4240 ..."] is emitted
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("Skip = \"Deferred: #4240", content);
+        await Assert.That(content).Contains("Skip(\"Deferred: #4240");
     }
 
-    [Fact]
+    [Test]
     public async Task When_ledger_is_pass_proactor_should_emit_fact_without_skip()
     {
-        // Arrange — ledger cell is Pass; the [Fact] must carry no Skip argument
+        // Arrange — ledger cell is Pass; the [Test] must carry no Skip argument
         var ledger = PassLedger();
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
@@ -308,8 +306,8 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
 
         // Assert
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("[Fact]", content);
-        Assert.DoesNotContain("Skip =", content);
+        await Assert.That(content).Contains("[Test]");
+        await Assert.That(content).DoesNotContain("[Skip(");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

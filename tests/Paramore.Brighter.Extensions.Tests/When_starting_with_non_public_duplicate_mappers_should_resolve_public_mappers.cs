@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -27,16 +27,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class MapperScanStartupTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_starting_with_non_public_duplicate_mappers_should_resolve_public_mappers(bool addConsumers)
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async System.Threading.Tasks.Task When_starting_with_non_public_duplicate_mappers_should_resolve_public_mappers(bool addConsumers)
     {
         //Arrange
         var services = new ServiceCollection();
@@ -55,15 +55,15 @@ public class MapperScanStartupTests
         try
         {
             //Assert
-            Assert.NotNull(provider.GetRequiredService<IAmACommandProcessor>());
-            Assert.NotNull(mapper);
-            Assert.NotNull(asyncMapper);
-            Assert.NotNull(nestedMapper);
-            Assert.NotNull(nestedAsyncMapper);
-            Assert.IsType<PublicScanMessageMapper>(mapper.Instance);
-            Assert.IsType<PublicScanMessageMapper>(asyncMapper.Instance);
-            Assert.IsType<NestedScanMessageMappers.PublicMapper>(nestedMapper.Instance);
-            Assert.IsType<NestedScanMessageMappers.PublicMapper>(nestedAsyncMapper.Instance);
+            await Assert.That(provider.GetRequiredService<IAmACommandProcessor>()).IsNotNull();
+            await Assert.That(mapper).IsNotNull();
+            await Assert.That(asyncMapper).IsNotNull();
+            await Assert.That(nestedMapper).IsNotNull();
+            await Assert.That(nestedAsyncMapper).IsNotNull();
+            await Assert.That(mapper.Instance).IsTypeOf<PublicScanMessageMapper>();
+            await Assert.That(asyncMapper.Instance).IsTypeOf<PublicScanMessageMapper>();
+            await Assert.That(nestedMapper.Instance).IsTypeOf<NestedScanMessageMappers.PublicMapper>();
+            await Assert.That(nestedAsyncMapper.Instance).IsTypeOf<NestedScanMessageMappers.PublicMapper>();
         }
         finally
         {

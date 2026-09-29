@@ -19,47 +19,35 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class InternalHandlerValidationTests
 {
-    [Fact]
-    public void When_handler_type_is_not_public_should_report_visibility_error()
+    [Test]
+    public async Task When_handler_type_is_not_public_should_report_visibility_error()
     {
         // Arrange — an internal handler type is not visible to the pipeline builder
-        var description = new HandlerPipelineDescription(
-            requestType: typeof(MyCommand),
-            handlerType: typeof(InternalTestHandler),
-            isAsync: false,
-            beforeSteps: [],
-            afterSteps: []);
-
+        var description = new HandlerPipelineDescription(requestType: typeof(MyCommand), handlerType: typeof(InternalTestHandler), isAsync: false, beforeSteps: [], afterSteps: []);
         var spec = HandlerPipelineValidationRules.HandlerTypeVisibility();
-
         // Act
         var satisfied = spec.IsSatisfiedBy(description);
         var collector = new ValidationResultCollector<HandlerPipelineDescription>();
         var results = spec.Accept(collector).ToList();
-
         // Assert
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Error, results[0].Error!.Severity);
-        Assert.Contains("not public", results[0].Error!.Message);
-        Assert.Contains(nameof(InternalTestHandler), results[0].Error!.Source);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Error);
+        await Assert.That(results[0].Error!.Message).Contains("not public");
+        await Assert.That(results[0].Error!.Source).Contains(nameof(InternalTestHandler));
     }
 }
 
 /// <summary>Internal handler type for testing visibility validation.</summary>
-internal class InternalTestHandler : RequestHandler<MyCommand>
+internal class InternalTestHandler : Paramore.Brighter.RequestHandler<Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand>, Paramore.Brighter.IHandleRequests<Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand>, Paramore.Brighter.IHandleRequests
 {
     public override MyCommand Handle(MyCommand command) => base.Handle(command);
 }

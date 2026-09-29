@@ -27,7 +27,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // identical reason.
 public class RepeatedRequestScopeOptInValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_the_extension_is_called_always_new_then_join_ambient_the_last_call_should_win_and_be_reported()
     {
         // Arrange - the base host: AlwaysNew first, then JoinAmbient, around a single AddBrighter call, all
@@ -57,20 +57,20 @@ public class RepeatedRequestScopeOptInValidationTests
         // resolved the controller's own Scoped instance, so the affinity and the provider agree
         response.EnsureSuccessStatusCode();
         var resolvedOptions = factory.Services.GetRequiredService<IBrighterOptions>();
-        Assert.Equal(ScopeAffinity.JoinAmbient, resolvedOptions.DefaultScopeAffinity);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.JoinAmbient);
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.Same(recorder.ControllerInstance, recorder.HandlerInstance);
+        await Assert.That(recorder.HandlerInstance).IsSameReferenceAs(recorder.ControllerInstance);
 
         // Assert - exactly one Warning naming both values and identifying JoinAmbient as effective, and no
         // duplicate-provider finding alongside it (both calls register the same provider implementation
         // type, which that rule excludes)
-        var warning = Assert.Single(capturingProvider.Entries, e => e.Level >= LogLevel.Warning);
-        Assert.Contains("AlwaysNew", warning.Message);
-        Assert.Contains("JoinAmbient", warning.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", warning.Message);
+        var warning = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level >= LogLevel.Warning);
+        await Assert.That(warning.Message).Contains("AlwaysNew");
+        await Assert.That(warning.Message).Contains("JoinAmbient");
+        await Assert.That(warning.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_extension_is_called_join_ambient_then_always_new_the_last_call_should_still_win()
     {
         // Arrange - the reversed order: JoinAmbient first, then AlwaysNew - pins "last call wins", not "the
@@ -86,18 +86,18 @@ public class RepeatedRequestScopeOptInValidationTests
         // Assert - the last call's affinity, AlwaysNew, is effective, and nothing adopts
         response.EnsureSuccessStatusCode();
         var resolvedOptions = factory.Services.GetRequiredService<IBrighterOptions>();
-        Assert.Equal(ScopeAffinity.AlwaysNew, resolvedOptions.DefaultScopeAffinity);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.AlwaysNew);
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.NotSame(recorder.ControllerInstance, recorder.HandlerInstance);
+        await Assert.That(recorder.HandlerInstance).IsNotSameReferenceAs(recorder.ControllerInstance);
 
         // Assert - the same single Warning, naming both values regardless of which was registered last
-        var warning = Assert.Single(capturingProvider.Entries, e => e.Level >= LogLevel.Warning);
-        Assert.Contains("AlwaysNew", warning.Message);
-        Assert.Contains("JoinAmbient", warning.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", warning.Message);
+        var warning = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level >= LogLevel.Warning);
+        await Assert.That(warning.Message).Contains("AlwaysNew");
+        await Assert.That(warning.Message).Contains("JoinAmbient");
+        await Assert.That(warning.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_extension_is_called_twice_with_the_same_affinity_no_finding_should_be_reported()
     {
         // Arrange - the control: both calls pass JoinAmbient. A repeated identical opt-in is idempotent in
@@ -113,12 +113,12 @@ public class RepeatedRequestScopeOptInValidationTests
         // Assert - the repeated affinity is effective and the handler adopted the controller's instance
         response.EnsureSuccessStatusCode();
         var resolvedOptions = factory.Services.GetRequiredService<IBrighterOptions>();
-        Assert.Equal(ScopeAffinity.JoinAmbient, resolvedOptions.DefaultScopeAffinity);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.JoinAmbient);
         var recorder = factory.Services.GetRequiredService<OrderDbContextRecorder>();
-        Assert.Same(recorder.ControllerInstance, recorder.HandlerInstance);
+        await Assert.That(recorder.HandlerInstance).IsSameReferenceAs(recorder.ControllerInstance);
 
         // Assert - no finding at all, attributing the Warning in the two facts above to the differing
         // affinities rather than to the host shape
-        Assert.DoesNotContain(capturingProvider.Entries, e => e.Level >= LogLevel.Warning);
+        await Assert.That(capturingProvider.Entries).DoesNotContain(e => e.Level >= LogLevel.Warning);
     }
 }

@@ -28,12 +28,13 @@ THE SOFTWARE. */
 // </auto-generated>
 
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerBinary.Causation;
 
-[Trait("Category", "Spanner")]
-[Collection("SpannerBinaryOutbox")]
+[Property("Category", "Spanner")]
+[NotInParallel("SpannerBinaryOutbox")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<System.Data.Common.DbTransaction>
 {
     private readonly SpannerBinaryOutboxProvider _outboxProvider = new();

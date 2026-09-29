@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,12 +26,11 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
-public class RmqMessageProducerQueueLengthTestsAsync : IDisposable, IAsyncDisposable
+[Category("RMQ")]
+public class RmqMessageProducerQueueLengthTestsAsync : IAsyncDisposable
 {
     private readonly IAmAMessageProducerAsync _messageProducer;
     private readonly IAmAMessageConsumerAsync _messageConsumer;
@@ -42,15 +41,15 @@ public class RmqMessageProducerQueueLengthTestsAsync : IDisposable, IAsyncDispos
     public RmqMessageProducerQueueLengthTestsAsync()
     {
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
-            
+
         _messageOne = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
-                MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey,
+                MessageType.MT_COMMAND),
             new MessageBody("test content"));
-           
+
         _messageTwo = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
-                MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey,
+                MessageType.MT_COMMAND),
             new MessageBody("test content"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -58,28 +57,28 @@ public class RmqMessageProducerQueueLengthTestsAsync : IDisposable, IAsyncDispos
             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
             Exchange = new Exchange("paramore.brighter.exchange"),
         };
-            
+
         _messageProducer = new RmqMessageProducer(rmqConnection);
 
         _messageConsumer = new RmqMessageConsumer(
-            connection: rmqConnection, 
-            queueName: _queueName, 
-            routingKey: routingKey, 
-            isDurable: true, 
+            connection: rmqConnection,
+            queueName: _queueName,
+            routingKey: routingKey,
+            isDurable: true,
             highAvailability: false,
             batchSize: 5,
             maxQueueLength: 1,
             makeChannels:OnMissingChannel.Create
         );
-             
+
     }
 
-    [Fact]
+    [Test]
     public async Task When_rejecting_a_message_due_to_queue_length()
     {
         //create the infrastructure
-        await _messageConsumer.ReceiveAsync(TimeSpan.Zero); 
-            
+        await _messageConsumer.ReceiveAsync(TimeSpan.Zero);
+
         await _messageProducer.SendAsync(_messageOne);
         await _messageProducer.SendAsync(_messageTwo);
 
@@ -87,23 +86,24 @@ public class RmqMessageProducerQueueLengthTestsAsync : IDisposable, IAsyncDispos
         var messages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
         var message = messages.First();
         await _messageConsumer.AcknowledgeAsync(message);
-            
+
         //should be the first message
-            
+
         //try to grab the next message
         var nextMessages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
         message = nextMessages.First();
-        Assert.Equal(MessageType.MT_NONE, message.Header.MessageType);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
     }
 
-    public void Dispose()
+    [After(HookType.Test)]
+    public async Task Cleanup()
     {
         ((IAmAMessageProducerSync)_messageProducer).Dispose();
     }
 
     public async ValueTask DisposeAsync()
     {
-        await _messageProducer.DisposeAsync(); 
+        await _messageProducer.DisposeAsync();
     }
 }

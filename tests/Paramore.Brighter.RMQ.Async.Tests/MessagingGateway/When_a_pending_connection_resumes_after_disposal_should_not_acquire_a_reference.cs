@@ -30,15 +30,14 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
+[NotInParallel]
 public class RmqConsumerConnectionDisposalRaceTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_pending_connection_resumes_after_disposal_should_not_acquire_a_reference()
     {
         // Arrange
@@ -54,7 +53,7 @@ public class RmqConsumerConnectionDisposalRaceTests
         await peer.SendAsync(new Message(
             new MessageHeader(Id.Random(), routingKey, MessageType.MT_COMMAND), new MessageBody("peer")));
         var sharedConnection = await pool.GetConnectionAsync(factory);
-        Assert.NotNull(sharedConnection);
+        await Assert.That(sharedConnection).IsNotNull();
         var connecting = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var resume = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var consumer = new PausedConnectionRmqConsumer(
@@ -68,19 +67,19 @@ public class RmqConsumerConnectionDisposalRaceTests
             // Act
             await consumer.DisposeAsync();
             resume.TrySetResult(true);
-            var error = await Record.ExceptionAsync(() => operation.WaitAsync(TimeSpan.FromSeconds(5)));
+            var error = await TestExceptionRecorder.CaptureAsync(() => operation.WaitAsync(TimeSpan.FromSeconds(5)));
 
             // Assert
-            Assert.NotNull(error);
-            Assert.IsType<ObjectDisposedException>(error.GetBaseException());
-            Assert.True(sharedConnection.IsOpen);
+            await Assert.That(error).IsNotNull();
+            await Assert.That(error.GetBaseException()).IsTypeOf<ObjectDisposedException>();
+            await Assert.That(sharedConnection.IsOpen).IsTrue();
             await peer.DisposeAsync();
-            Assert.False(sharedConnection.IsOpen);
+            await Assert.That(sharedConnection.IsOpen).IsFalse();
         }
         finally
         {
             resume.TrySetResult(true);
-            await Record.ExceptionAsync(() => operation.WaitAsync(TimeSpan.FromSeconds(5)));
+            await TestExceptionRecorder.CaptureAsync(() => operation.WaitAsync(TimeSpan.FromSeconds(5)));
             await pool.RemoveConnectionAsync(factory);
         }
     }

@@ -19,20 +19,16 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class ValidPublicationValidationTests
 {
-    [Fact]
-    public void When_publication_valid_should_report_no_findings()
+    [Test]
+    public async Task When_publication_valid_should_report_no_findings()
     {
         // Arrange — publication with a valid RequestType that implements IRequest
         var publication = new Publication
@@ -40,22 +36,14 @@ public class ValidPublicationValidationTests
             Topic = new RoutingKey("test.topic"),
             RequestType = typeof(MyCommand)
         };
-
         var requestTypeSet = ProducerValidationRules.PublicationRequestTypeSet();
         var implementsIRequest = ProducerValidationRules.PublicationRequestTypeImplementsIRequest();
-
         // Act
-        var allSatisfied = requestTypeSet.IsSatisfiedBy(publication)
-            && implementsIRequest.IsSatisfiedBy(publication);
-
+        var allSatisfied = requestTypeSet.IsSatisfiedBy(publication) && implementsIRequest.IsSatisfiedBy(publication);
         var collector = new ValidationResultCollector<Publication>();
-        var allFailures = requestTypeSet.Accept(collector)
-            .Concat(implementsIRequest.Accept(collector))
-            .Where(r => !r.Success)
-            .ToList();
-
+        var allFailures = requestTypeSet.Accept(collector).Concat(implementsIRequest.Accept(collector)).Where(r => !r.Success).ToList();
         // Assert
-        Assert.True(allSatisfied);
-        Assert.Empty(allFailures);
+        await Assert.That(allSatisfied).IsTrue();
+        await Assert.That(allFailures).IsEmpty();
     }
 }

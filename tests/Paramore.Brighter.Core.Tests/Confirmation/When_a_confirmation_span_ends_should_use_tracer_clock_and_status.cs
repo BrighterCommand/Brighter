@@ -36,11 +36,10 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Confirmation
 {
-    [Collection("Observability")]
+    [System.Obsolete]
     public class ConfirmationSpanEndTests : IDisposable
     {
         private const string TestSource = "Paramore.Brighter.Tests";
@@ -106,7 +105,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             a.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingOperationType && t.Value == "settle")
             && a.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && t.Value == _message.Id.Value));
 
-        [Fact]
+        [Test]
         public async Task When_a_confirmation_span_ends_should_use_tracer_clock_and_status()
         {
             // Arrange: outstanding message; the fake clock is never advanced during the callback.
@@ -120,15 +119,14 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // Assert: the span is closed via the tracer, so a successful confirmation carries Ok status
             // (it would be left Unset if disposed directly).
             var confirmation = ConfirmationSpan();
-            Assert.NotNull(confirmation);
-            Assert.Equal(ActivityStatusCode.Ok, confirmation!.Status);
+            await Assert.That(confirmation).IsNotNull();
+            await Assert.That(confirmation!.Status).IsEqualTo(ActivityStatusCode.Ok);
 
             // Assert: the end time comes from the tracer's TimeProvider, not the wall clock — with the
             // fake clock unmoved the start and end coincide, giving a near-zero duration. (Disposing the
             // Activity directly would stamp the end from the real clock, yielding a ~decades-long duration
             // against the fake 2000-epoch start.)
-            Assert.True(confirmation.Duration < TimeSpan.FromSeconds(1),
-                $"expected a near-zero duration from the fake clock, but was {confirmation.Duration}");
+            await Assert.That(confirmation.Duration < TimeSpan.FromSeconds(1)).IsTrue().Because($"expected a near-zero duration from the fake clock, but was {confirmation.Duration}");
         }
     }
 }

@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.Specification.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Validation.Specification.Tests;
 
 public class MissingSpecificationTests
 {
-    [Fact]
-    public void When_no_specification_is_registered_should_throw_configuration_exception()
+    [Test]
+    public async System.Threading.Tasks.Task When_no_specification_is_registered_should_throw_configuration_exception()
     {
         //Arrange
         var emptyProvider = new ServiceCollection().BuildServiceProvider();
@@ -39,6 +38,6 @@ public class MissingSpecificationTests
         var request = new PlaceOrder { Sku = "SKU-1", Quantity = 5 };
 
         //Act //Assert
-        Assert.Throws<ConfigurationException>(() => handler.Handle(request));
+        await Assert.That(() => handler.Handle(request)).ThrowsExactly<ConfigurationException>();
     }
 }

@@ -7,7 +7,7 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
+
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
@@ -57,16 +57,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             );
         }
 
-        [Fact]
-        public void When_posting_a_message_should_release_every_mapper_it_creates()
+        [Test]
+        public async System.Threading.Tasks.Task When_posting_a_message_should_release_every_mapper_it_creates()
         {
             //act
             _commandProcessor.Post(_myCommand);
 
             //assert — no GC is forced: release must be deterministic, driven by the mediator
             //disposing the pipeline it built, not by the ~TransformPipeline finalizer
-            Assert.True(_mapperFactory.CreateCount > 0);
-            Assert.Equal(_mapperFactory.CreateCount, _mapperFactory.ReleaseCount);
+            await Assert.That(_mapperFactory.CreateCount > 0).IsTrue();
+            await Assert.That(_mapperFactory.ReleaseCount).IsEqualTo(_mapperFactory.CreateCount);
         }
 
         // Counts mappers handed out against mappers handed back. A mapper the mediator creates but

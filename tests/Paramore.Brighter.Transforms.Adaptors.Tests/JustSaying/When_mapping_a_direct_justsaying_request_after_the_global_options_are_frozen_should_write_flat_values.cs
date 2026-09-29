@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transformers.JustSaying;
 using Paramore.Brighter.Transformers.JustSaying.JsonConverters;
-using Xunit;
+
 
 namespace Paramore.Brighter.Transforms.Adaptors.Tests.JustSaying;
 
@@ -47,8 +47,8 @@ public class JustSayingFrozenGlobalOptionsTests : IDisposable
         JsonSerialisationOptions.Options = applicationOptions;
     }
 
-    [Fact]
-    public void When_mapping_a_direct_justsaying_request_after_the_global_options_are_frozen_should_write_flat_values()
+    [Test]
+    public async System.Threading.Tasks.Task When_mapping_a_direct_justsaying_request_after_the_global_options_are_frozen_should_write_flat_values()
     {
         //Arrange
         var mapper = new JustSayingMessageMapper<DirectJustSayingRequest>();
@@ -66,16 +66,16 @@ public class JustSayingFrozenGlobalOptionsTests : IDisposable
         var doc = JsonNode.Parse(message.Body.Bytes, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
 
         var tenantNode = doc![nameof(IJustSayingRequest.Tenant)];
-        Assert.IsAssignableFrom<JsonValue>(tenantNode);
-        Assert.Equal(TenantValue, tenantNode!.GetValue<string>());
+        await Assert.That(tenantNode).IsAssignableTo<JsonValue>();
+        await Assert.That(tenantNode!.GetValue<string>()).IsEqualTo(TenantValue);
 
         var sourceIpNode = doc[nameof(IJustSayingRequest.SourceIp)];
-        Assert.IsAssignableFrom<JsonValue>(sourceIpNode);
-        Assert.Equal(SourceIpValue, sourceIpNode!.GetValue<string>());
+        await Assert.That(sourceIpNode).IsAssignableTo<JsonValue>();
+        await Assert.That(sourceIpNode!.GetValue<string>()).IsEqualTo(SourceIpValue);
     }
 
-    [Fact]
-    public void When_mapping_a_justsaying_payload_to_a_request_after_the_global_options_are_frozen_should_read_flat_values()
+    [Test]
+    public async System.Threading.Tasks.Task When_mapping_a_justsaying_payload_to_a_request_after_the_global_options_are_frozen_should_read_flat_values()
     {
         //Arrange
         var mapper = new JustSayingMessageMapper<DirectJustSayingRequest>();
@@ -88,12 +88,12 @@ public class JustSayingFrozenGlobalOptionsTests : IDisposable
         var request = mapper.MapToRequest(message);
 
         //Assert
-        Assert.Equal(TenantValue, request.Tenant?.Value);
-        Assert.Equal(SourceIpValue, request.SourceIp?.ToString());
+        await Assert.That(request.Tenant?.Value).IsEqualTo(TenantValue);
+        await Assert.That(request.SourceIp?.ToString()).IsEqualTo(SourceIpValue);
     }
 
-    [Fact]
-    public void When_wrapping_a_message_mapped_after_the_global_options_are_frozen_should_keep_the_tenant_on_the_request()
+    [Test]
+    public async System.Threading.Tasks.Task When_wrapping_a_message_mapped_after_the_global_options_are_frozen_should_keep_the_tenant_on_the_request()
     {
         //Arrange
         var mapper = new JustSayingMessageMapper<DirectJustSayingRequest>();
@@ -115,7 +115,7 @@ public class JustSayingFrozenGlobalOptionsTests : IDisposable
 
         //Assert
         var doc = JsonNode.Parse(wrapped.Body.Bytes, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
-        Assert.Equal(TenantValue, doc![nameof(IJustSayingRequest.Tenant)]?.GetValue<string>());
+        await Assert.That(doc![nameof(IJustSayingRequest.Tenant)]?.GetValue<string>()).IsEqualTo(TenantValue);
     }
 
     public void Dispose() => JsonSerialisationOptions.Options = _originalOptions;

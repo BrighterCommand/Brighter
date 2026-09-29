@@ -28,7 +28,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -44,7 +43,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class SqlBoxProvisionerIdentifierValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_outbox_table_name_is_unsafe_it_should_throw_before_creating_a_connection()
     {
         //Arrange
@@ -52,14 +51,14 @@ public class SqlBoxProvisionerIdentifierValidationTests
             new IdentifierProbeConfiguration(outBoxTableName: "Outbox; DROP TABLE x", schemaName: "dbo"));
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => provisioner.ProvisionAsync());
 
         //Assert
-        Assert.IsType<ConfigurationException>(thrown);
-        Assert.False(provisioner.CreateConnectionCalled);
+        await Assert.That(thrown).IsTypeOf<ConfigurationException>();
+        await Assert.That(provisioner.CreateConnectionCalled).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_schema_name_is_unsafe_it_should_throw_before_creating_a_connection()
     {
         //Arrange
@@ -67,14 +66,14 @@ public class SqlBoxProvisionerIdentifierValidationTests
             new IdentifierProbeConfiguration(outBoxTableName: "Outbox", schemaName: "dbo; --"));
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => provisioner.ProvisionAsync());
 
         //Assert
-        Assert.IsType<ConfigurationException>(thrown);
-        Assert.False(provisioner.CreateConnectionCalled);
+        await Assert.That(thrown).IsTypeOf<ConfigurationException>();
+        await Assert.That(provisioner.CreateConnectionCalled).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task When_schema_name_is_null_it_should_not_throw_for_identifier_validation()
     {
         //Arrange: SQLite has no schema concept — null SchemaName must pass identifier
@@ -84,12 +83,12 @@ public class SqlBoxProvisionerIdentifierValidationTests
             new IdentifierProbeConfiguration(outBoxTableName: "Outbox", schemaName: null));
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => provisioner.ProvisionAsync());
 
         //Assert: not a ConfigurationException — provisioner gets past the identifier guard
         //        and reaches CreateConnection, which throws NotSupportedException.
-        Assert.IsNotType<ConfigurationException>(thrown);
-        Assert.True(provisioner.CreateConnectionCalled);
+        await Assert.That(thrown).IsNotTypeOf<ConfigurationException>();
+        await Assert.That(provisioner.CreateConnectionCalled).IsTrue();
     }
 
     /// <summary>

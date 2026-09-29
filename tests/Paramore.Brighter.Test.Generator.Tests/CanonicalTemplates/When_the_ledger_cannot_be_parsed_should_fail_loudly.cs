@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -26,7 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using Paramore.Brighter.Test.Generator;
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
@@ -64,34 +64,34 @@ public class LedgerParseFailureTests : IDisposable
         return path;
     }
 
-    [Fact]
-    public void When_the_matrix_header_cannot_be_found_should_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_matrix_header_cannot_be_found_should_throw()
     {
         // Arrange - a ledger whose matrix header has been reformatted past recognition
         var path = ALedgerContaining(
             "# Conformance status\n\n| Configuration | Something | Else |\n|---|---|---|\n| Redis | Pass | Pass |\n");
 
         // Act / Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => new ConformanceLedger(path));
+        var exception = await Assert.That(() => new ConformanceLedger(path)).ThrowsExactly<InvalidOperationException>();
 
-        Assert.Contains("conformance matrix", exception.Message);
+        await Assert.That(exception.Message).Contains("conformance matrix");
     }
 
-    [Fact]
-    public void When_the_matrix_holds_no_rows_should_throw()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_matrix_holds_no_rows_should_throw()
     {
         // Arrange - a header the parser recognises, with nothing under it
         var path = ALedgerContaining(
             "# Conformance status\n\n| Configuration | FR-2 | FR-4 |\n|---|---|---|\n\nSome prose.\n");
 
         // Act / Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => new ConformanceLedger(path));
+        var exception = await Assert.That(() => new ConformanceLedger(path)).ThrowsExactly<InvalidOperationException>();
 
-        Assert.Contains("no data rows", exception.Message);
+        await Assert.That(exception.Message).Contains("no data rows");
     }
 
-    [Fact]
-    public void When_a_column_name_only_appears_as_a_substring_should_not_match_the_header()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_column_name_only_appears_as_a_substring_should_not_match_the_header()
     {
         // Arrange - the conformance ledger's FR-22 column contains "FR-2" as a substring. A
         // header carrying FR-22 and FR-4 but no FR-2 column is not the matrix, and matching it
@@ -100,13 +100,13 @@ public class LedgerParseFailureTests : IDisposable
             "# Conformance status\n\n| Configuration | FR-22 | FR-4 |\n|---|---|---|\n| Redis | Pass | Pass |\n");
 
         // Act / Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => new ConformanceLedger(path));
+        var exception = await Assert.That(() => new ConformanceLedger(path)).ThrowsExactly<InvalidOperationException>();
 
-        Assert.Contains("conformance matrix", exception.Message);
+        await Assert.That(exception.Message).Contains("conformance matrix");
     }
 
-    [Fact]
-    public void When_the_ledger_is_well_formed_should_parse_it()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_ledger_is_well_formed_should_parse_it()
     {
         // Arrange - guards against "make it throw" being satisfied by throwing unconditionally
         var path = ALedgerContaining(
@@ -116,7 +116,7 @@ public class LedgerParseFailureTests : IDisposable
         var ledger = new ConformanceLedger(path);
 
         // Assert
-        Assert.True(ledger.HasRow("Redis / X"));
+        await Assert.That(ledger.HasRow("Redis / X")).IsTrue();
     }
 
     public void Dispose()

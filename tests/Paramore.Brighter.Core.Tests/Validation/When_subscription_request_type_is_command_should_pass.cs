@@ -19,40 +19,27 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class SubscriptionRequestTypeIsCommandValidationTests
 {
-    [Fact]
-    public void When_subscription_request_type_is_command_should_pass()
+    [Test]
+    public async Task When_subscription_request_type_is_command_should_pass()
     {
         // Arrange — subscription with a RequestType that implements ICommand
-        var subscription = new Subscription(
-            subscriptionName: new SubscriptionName("test-sub"),
-            channelName: new ChannelName("test-channel"),
-            routingKey: new RoutingKey("test.routing.key"),
-            requestType: typeof(MyDescribableCommand),
-            messagePumpType: MessagePumpType.Reactor
-        );
-
+        var subscription = new Subscription(subscriptionName: new SubscriptionName("test-sub"), channelName: new ChannelName("test-channel"), routingKey: new RoutingKey("test.routing.key"), requestType: typeof(MyDescribableCommand), messagePumpType: MessagePumpType.Reactor);
         var spec = ConsumerValidationRules.RequestTypeSubtype();
-
         // Act
         var satisfied = spec.IsSatisfiedBy(subscription);
         var collector = new ValidationResultCollector<Subscription>();
         var results = spec.Accept(collector).ToList();
-
         // Assert
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 }

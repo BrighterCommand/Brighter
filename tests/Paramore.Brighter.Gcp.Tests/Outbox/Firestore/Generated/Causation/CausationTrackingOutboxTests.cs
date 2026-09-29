@@ -28,12 +28,13 @@ THE SOFTWARE. */
 // </auto-generated>
 
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.Gcp.Tests.Outbox.Firestore.Causation;
 
-[Trait("Category", "Firestore")]
-[Collection("FirestoreOutbox")]
+[Property("Category", "Firestore")]
+[NotInParallel("FirestoreOutbox")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<Paramore.Brighter.Firestore.FirestoreTransaction>
 {
     private readonly FirestoreOutboxProvider _outboxProvider = new();

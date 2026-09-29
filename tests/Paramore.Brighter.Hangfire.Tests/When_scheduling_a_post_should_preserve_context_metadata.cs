@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -37,17 +37,18 @@ using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
 using Polly.Registry;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Hangfire.Tests;
 
-[Collection("Scheduler")]
+[System.Obsolete]
 public class HangfireScheduledPostContextTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
     public async Task When_scheduling_a_post_should_preserve_context_metadata(bool isAsync, bool useDateTime)
     {
         //Arrange
@@ -96,21 +97,20 @@ public class HangfireScheduledPostContextTests
         }
         headers["x-attempt"] = 4;
         properties["tenant"] = "changed";
-        BrighterActivator.Processor = processor;
         using (var server = new BackgroundJobServer(new BackgroundJobServerOptions
-            { WorkerCount = 1, SchedulePollingInterval = TimeSpan.FromMilliseconds(50), Activator = new BrighterActivator() }, storage))
+            { WorkerCount = 1, SchedulePollingInterval = TimeSpan.FromMilliseconds(50), Activator = new BrighterActivator(processor) }, storage))
         {
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             while (!bus.Stream(topic).Any())
                 await Task.Delay(TimeSpan.FromMilliseconds(20), timeout.Token);
 
             //Assert
-            var message = Assert.Single(bus.Stream(topic));
-            Assert.Equal(request.Id, message.Id);
-            Assert.Equal(3, message.Header.Bag["x-attempt"]);
-            Assert.Equal("partition-1", message.Header.PartitionKey.Value);
+            var message = await Assert.That(bus.Stream(topic)).HasSingleItem();
+            await Assert.That(message.Id).IsEqualTo(request.Id);
+            await Assert.That(message.Header.Bag["x-attempt"]).IsEqualTo(3);
+            await Assert.That(message.Header.PartitionKey.Value).IsEqualTo("partition-1");
             using var json = JsonDocument.Parse(message.Body.Value);
-            Assert.Equal("tenant-1", json.RootElement.GetProperty("tenant").GetString());
+            await Assert.That(json.RootElement.GetProperty("tenant").GetString()).IsEqualTo("tenant-1");
         }
     }
 }

@@ -7,11 +7,11 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
+
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class SqsMessageProducerCreateQueueWithMaximumMessageSizeAsyncTests : IAsyncDisposable, IDisposable
 {
     private const int OneMebibyte = 1_048_576;
@@ -44,7 +44,7 @@ public class SqsMessageProducerCreateQueueWithMaximumMessageSizeAsyncTests : IAs
             });
     }
 
-    [Fact]
+    [Test]
     public async Task When_creating_a_queue_with_maximum_message_size_async()
     {
         //arrange
@@ -57,7 +57,7 @@ public class SqsMessageProducerCreateQueueWithMaximumMessageSizeAsyncTests : IAs
             new GetQueueAttributesRequest { QueueUrl = queueUrl, AttributeNames = [QueueAttributeName.MaximumMessageSize] });
 
         //assert
-        Assert.Equal("1048576", queueAttributes.Attributes[QueueAttributeName.MaximumMessageSize]);
+        await Assert.That(queueAttributes.Attributes[QueueAttributeName.MaximumMessageSize]).IsEqualTo("1048576");
     }
 
     public void Dispose()

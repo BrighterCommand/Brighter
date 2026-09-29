@@ -25,15 +25,15 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles;
-using Xunit;
 using global::FluentValidation;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.FluentValidation.Tests
 {
     public class ValidatorExceptionPropagationTests
     {
-        [Fact]
-        public void When_the_validator_throws_should_propagate_the_exception()
+        [Test]
+        public async Task When_the_validator_throws_should_propagate_the_exception()
         {
             //Arrange
             var services = new ServiceCollection();
@@ -42,10 +42,10 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests
             var command = new GreetingCommand { Name = "Ada", Email = "ada@example.com" };
 
             //Act
-            var exception = Assert.Throws<InvalidOperationException>(() => handler.Handle(command));
+            var exception = await Assert.That(() => handler.Handle(command)).ThrowsExactly<InvalidOperationException>();
 
             //Assert
-            Assert.Equal(ThrowingValidator.FailureMessage, exception.Message);
+            await Assert.That(exception.Message).IsEqualTo(ThrowingValidator.FailureMessage);
         }
     }
 }

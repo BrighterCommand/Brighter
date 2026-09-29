@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
@@ -13,7 +12,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 /// <c>http://goparamore.io</c> value — which is the documented default for <c>Source</c>, not for
 /// <c>DataSchema</c> — and then re-published that invention on every requeue.
 /// </summary>
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusAbsentDataSchemaTests
 {
     private readonly AzureServiceBusMessageCreator _creator;
@@ -29,8 +28,8 @@ public class AzureServiceBusAbsentDataSchemaTests
         _creator = new AzureServiceBusMessageCreator(subscription);
     }
 
-    [Fact]
-    public void When_receiving_a_message_with_no_dataschema_should_leave_it_null()
+    [Test]
+    public async System.Threading.Tasks.Task When_receiving_a_message_with_no_dataschema_should_leave_it_null()
     {
         // Arrange — the absence of a "cloudEvents:schema" property is what decides this test
         var received = new BrokeredMessage
@@ -51,6 +50,6 @@ public class AzureServiceBusAbsentDataSchemaTests
         var message = _creator.MapToBrighterMessage(received);
 
         // Assert
-        Assert.Null(message.Header.DataSchema);
+        await Assert.That(message.Header.DataSchema).IsNull();
     }
 }

@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
 using Neuroglia.AsyncApi.v3;
-using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
 {
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Dedup_Duplicate_Subscriptions_On_The_Same_Topic()
         {
             // Two subscriptions for the same routing key collapse into one channel + one
@@ -82,21 +81,21 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, null);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Channels);
-            Assert.Single(result.Channels);
-            Assert.True(result.Channels.ContainsKey("shared_topic"));
+            await Assert.That(result.Channels).IsNotNull();
+            await Assert.That(result.Channels).HasSingleItem();
+            await Assert.That(result.Channels.ContainsKey("shared_topic")).IsTrue();
 
-            Assert.NotNull(result.Operations);
-            Assert.Single(result.Operations);
-            Assert.True(result.Operations.ContainsKey("receive_shared_topic"));
+            await Assert.That(result.Operations).IsNotNull();
+            await Assert.That(result.Operations).HasSingleItem();
+            await Assert.That(result.Operations.ContainsKey("receive_shared_topic")).IsTrue();
 
             // Only one message component
-            Assert.NotNull(result.Components?.Messages);
-            Assert.Single(result.Components.Messages);
-            Assert.True(result.Components.Messages.ContainsKey("SharedEvent"));
+            await Assert.That(result.Components?.Messages).IsNotNull();
+            await Assert.That(result.Components.Messages).HasSingleItem();
+            await Assert.That(result.Components.Messages.ContainsKey("SharedEvent")).IsTrue();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Produce_One_Channel_With_Receive_And_Send_For_Same_Topic()
         {
             var subscriptions = new[]
@@ -117,16 +116,16 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, publications);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Channels);
-            Assert.Single(result.Channels);
+            await Assert.That(result.Channels).IsNotNull();
+            await Assert.That(result.Channels).HasSingleItem();
 
-            Assert.NotNull(result.Operations);
-            Assert.Equal(2, result.Operations.Count);
-            Assert.True(result.Operations.ContainsKey("receive_shared_topic"));
-            Assert.True(result.Operations.ContainsKey("send_shared_topic"));
+            await Assert.That(result.Operations).IsNotNull();
+            await Assert.That(result.Operations.Count).IsEqualTo(2);
+            await Assert.That(result.Operations.ContainsKey("receive_shared_topic")).IsTrue();
+            await Assert.That(result.Operations.ContainsKey("send_shared_topic")).IsTrue();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Produce_One_Message_Component_For_Same_Type_Across_Multiple_Subscriptions()
         {
             var subscriptions = new[]
@@ -148,11 +147,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, null);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Components?.Messages);
-            Assert.Single(result.Components.Messages);
+            await Assert.That(result.Components?.Messages).IsNotNull();
+            await Assert.That(result.Components.Messages).HasSingleItem();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Dedup_Producer_Registry_Over_Supplemental_Publications()
         {
             // Both producer registry and supplemental declare the same (topic, action). The
@@ -173,9 +172,9 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, allPubs);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Operations);
-            Assert.Single(result.Operations);
-            Assert.True(result.Operations.ContainsKey("send_dedup_topic"));
+            await Assert.That(result.Operations).IsNotNull();
+            await Assert.That(result.Operations).HasSingleItem();
+            await Assert.That(result.Operations.ContainsKey("send_dedup_topic")).IsTrue();
         }
 
         public class SharedEvent : Event

@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Core;
+using TUnit.Assertions;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsStandard.Proactor;
 
-[Trait("Category", "Sns")]
-[Collection("Sns")]
-public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncLifetime
+[Property("Category", "Sns")]
+[NotInParallel("Sns")]
+public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -31,17 +32,20 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncL
         _messageBuilder = new DefaultMessageBuilder();
     }
 
+    [Before(HookType.Test)]
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
+
     public async Task When_rejecting_message_with_delivery_error_should_send_to_dlq_async()
     {
         // Arrange
@@ -61,7 +65,7 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncL
 
         // Act
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
 
@@ -78,16 +82,16 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncL
             await Task.Delay(500);
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
         // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
         if (keys.StampsRejectionMetadata)
         {
-            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
-            Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
-            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic)).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag[keys.OriginalTopic].ToString()).IsEqualTo(_publication.Topic!.Value);
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason)).IsTrue();
         }
     }
 }

@@ -26,14 +26,14 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 
 public class PostgresCombinedChannelFactoryRoutingTests
 {
-    [Fact]
-    public void When_matching_a_postgres_subscription_against_a_combined_factory_should_select_one_inner_factory()
+    [Test]
+    public async System.Threading.Tasks.Task When_matching_a_postgres_subscription_against_a_combined_factory_should_select_one_inner_factory()
     {
         // Arrange — construction only, so no database connection is made (NFR-3)
         var configuration = new RelationalDatabaseConfiguration("Host=localhost;Database=test");
@@ -50,6 +50,6 @@ public class PostgresCombinedChannelFactoryRoutingTests
             .Count(factoryType => factoryType == subscription.ChannelFactoryType);
 
         // Assert
-        Assert.Equal(1, matchingInnerFactories);
+        await Assert.That(matchingInnerFactories).IsEqualTo(1);
     }
 }

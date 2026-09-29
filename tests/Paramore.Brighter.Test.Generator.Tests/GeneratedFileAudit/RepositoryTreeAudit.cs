@@ -23,7 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
+
 
 namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 
@@ -46,8 +46,8 @@ public sealed class RepositoryTreeAudit
 /// <summary>
 /// Groups the tests that read the repository's own audit, so that they share one.
 /// </summary>
-[CollectionDefinition(NAME)]
-public sealed class RepositoryTreeAuditCollection : ICollectionFixture<RepositoryTreeAudit>
+[System.Obsolete]
+public sealed class RepositoryTreeAuditCollection
 {
     /// <summary>
     /// The collection name the tests sharing the audit are attributed with.

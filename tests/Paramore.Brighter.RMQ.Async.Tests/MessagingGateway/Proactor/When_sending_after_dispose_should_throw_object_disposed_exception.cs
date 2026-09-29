@@ -26,38 +26,28 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
+[Category("RMQ")]
 public class RmqMessageProducerDisposedSendTests
 {
-    [Fact]
-    public void When_sending_after_dispose_should_throw_object_disposed_exception()
+    [Test]
+    public async Task When_sending_after_dispose_should_throw_object_disposed_exception()
     {
-        // Arrange
         var messageProducer = CreateMessageProducer();
         messageProducer.Dispose();
 
-        // Act
-        var exception = Record.Exception(() => messageProducer.Send(CreateMessage()));
-
-        // Assert
-        Assert.IsType<ObjectDisposedException>(exception);
+        await Assert.That(() => messageProducer.Send(CreateMessage())).ThrowsExactly<ObjectDisposedException>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_sending_async_after_dispose_should_throw_object_disposed_exception()
     {
-        // Arrange
         var messageProducer = CreateMessageProducer();
         await messageProducer.DisposeAsync();
 
-        // Act
-        var exception = await Record.ExceptionAsync(async () => await messageProducer.SendAsync(CreateMessage()));
-
-        // Assert
-        Assert.IsType<ObjectDisposedException>(exception);
+        await Assert.That(async () => await messageProducer.SendAsync(CreateMessage())).ThrowsExactly<ObjectDisposedException>();
     }
 
     private static RmqMessageProducer CreateMessageProducer()

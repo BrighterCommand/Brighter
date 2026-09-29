@@ -30,7 +30,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -39,10 +39,10 @@ namespace Paramore.Brighter.Extensions.Tests;
 // value off, so a conflicting repeat carrying it would go unreported. This rule reports the registration
 // shape itself - readable - rather than the value, which isn't, and it is a Warning because nothing about
 // such a host is broken: what's lost is a diagnostic, not the opt-in.
-[Collection(LoggerCaptureCollection.NAME)]
+[System.Obsolete]
 public class UnreadableOverrideValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_an_override_is_registered_by_factory_delegate_validation_should_report_the_shape_and_still_apply_it()
     {
         // Arrange - a factory-delegate registration, the shape a third-party opt-in package can write
@@ -68,18 +68,18 @@ public class UnreadableOverrideValidationTests
         // Assert - the override's own affinity is still the effective one; the finding is about
         // reportability, not a lost opt-in
         var resolvedOptions = provider.GetRequiredService<IBrighterOptions>();
-        Assert.Equal(ScopeAffinity.JoinAmbient, resolvedOptions.DefaultScopeAffinity);
+        await Assert.That(resolvedOptions.DefaultScopeAffinity).IsEqualTo(ScopeAffinity.JoinAmbient);
 
         // Assert - exactly one Warning, naming the registration shape, the unreadability, the remedy and
         // the guidance page
-        var warning = Assert.Single(capturingProvider.Entries, e => e.Level == LogLevel.Warning);
-        Assert.Contains("factory delegate", warning.Message);
-        Assert.Contains("cannot be read", warning.Message);
-        Assert.Contains("constructed instance", warning.Message);
-        Assert.Contains("docs/guides/lifetimes-and-scoping.md", warning.Message);
+        var warning = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level == LogLevel.Warning);
+        await Assert.That(warning.Message).Contains("factory delegate");
+        await Assert.That(warning.Message).Contains("cannot be read");
+        await Assert.That(warning.Message).Contains("constructed instance");
+        await Assert.That(warning.Message).Contains("docs/guides/lifetimes-and-scoping.md");
     }
 
-    [Fact]
+    [Test]
     public async Task When_two_overrides_are_registered_one_by_instance_and_one_by_factory_delegate_only_the_unreadable_override_warning_should_be_reported()
     {
         // Arrange - two overrides carrying different affinities, one a constructed instance, one a
@@ -106,11 +106,11 @@ public class UnreadableOverrideValidationTests
 
         // Assert - exactly one Warning overall: the unreadable-override one, not FR-17's repeated-opt-in
         // one
-        var warning = Assert.Single(capturingProvider.Entries, e => e.Level == LogLevel.Warning);
-        Assert.Contains("factory delegate", warning.Message);
+        var warning = await Assert.That(capturingProvider.Entries).HasSingleItem(e => e.Level == LogLevel.Warning);
+        await Assert.That(warning.Message).Contains("factory delegate");
     }
 
-    [Fact]
+    [Test]
     public async Task When_the_override_is_registered_as_a_constructed_instance_no_finding_should_be_reported()
     {
         // Arrange - the control: registered as a constructed instance, as AddBrighterRequestScope itself
@@ -135,6 +135,6 @@ public class UnreadableOverrideValidationTests
         await hostedService.StartAsync(CancellationToken.None);
 
         // Assert - no finding at all
-        Assert.DoesNotContain(capturingProvider.Entries, e => e.Level >= LogLevel.Warning);
+        await Assert.That(capturingProvider.Entries).DoesNotContain(e => e.Level >= LogLevel.Warning);
     }
 }

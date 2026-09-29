@@ -28,7 +28,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
+
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -41,8 +41,8 @@ public class ValidationMessageGuidancePageTests
 {
     private const string GuidancePage = "docs/guides/lifetimes-and-scoping.md";
 
-    [Fact]
-    public void When_the_opt_in_is_inert_the_error_should_name_the_guidance_page()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_opt_in_is_inert_the_error_should_name_the_guidance_page()
     {
         // Arrange — JoinAmbient with all three lifetimes left at the Transient default: the opt-in has no effect
         var services = new ServiceCollection();
@@ -54,13 +54,13 @@ public class ValidationMessageGuidancePageTests
         var result = Validate(provider);
 
         // Assert — exactly one Error, naming the guidance page
-        Assert.Empty(result.Warnings);
-        var error = Assert.Single(result.Errors);
-        Assert.Contains(GuidancePage, error.Message);
+        await Assert.That(result.Warnings).IsEmpty();
+        var error = await Assert.That(result.Errors).HasSingleItem();
+        await Assert.That(error.Message).Contains(GuidancePage);
     }
 
-    [Fact]
-    public void When_transient_and_scoped_are_mixed_the_error_should_name_the_guidance_page()
+    [Test]
+    public async System.Threading.Tasks.Task When_transient_and_scoped_are_mixed_the_error_should_name_the_guidance_page()
     {
         // Arrange — Handler and Transformer Scoped, Mapper Transient: a mixed pair cannot share a
         // pipeline-scoped dependency
@@ -78,13 +78,13 @@ public class ValidationMessageGuidancePageTests
         var result = Validate(provider);
 
         // Assert — exactly one Error, naming the guidance page
-        Assert.Empty(result.Warnings);
-        var error = Assert.Single(result.Errors);
-        Assert.Contains(GuidancePage, error.Message);
+        await Assert.That(result.Warnings).IsEmpty();
+        var error = await Assert.That(result.Errors).HasSingleItem();
+        await Assert.That(error.Message).Contains(GuidancePage);
     }
 
-    [Fact]
-    public void When_a_singleton_artefact_has_a_captive_dependency_the_warning_should_name_the_guidance_page()
+    [Test]
+    public async System.Threading.Tasks.Task When_a_singleton_artefact_has_a_captive_dependency_the_warning_should_name_the_guidance_page()
     {
         // Arrange — a Singleton mapper whose only constructor parameter is registered Scoped
         var services = new ServiceCollection();
@@ -108,13 +108,13 @@ public class ValidationMessageGuidancePageTests
         var result = Validate(provider);
 
         // Assert — exactly one Warning, naming the guidance page
-        Assert.Empty(result.Errors);
-        var warning = Assert.Single(result.Warnings);
-        Assert.Contains(GuidancePage, warning.Message);
+        await Assert.That(result.Errors).IsEmpty();
+        var warning = await Assert.That(result.Warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains(GuidancePage);
     }
 
-    [Fact]
-    public void When_the_application_registers_its_own_options_the_defeated_opt_in_error_should_name_the_guidance_page()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_application_registers_its_own_options_the_defeated_opt_in_error_should_name_the_guidance_page()
     {
         // Arrange — the application registers IBrighterOptions itself, before AddBrighter, so
         // AddBrighterRequestScope's write-through never runs (D18)
@@ -139,13 +139,13 @@ public class ValidationMessageGuidancePageTests
         var result = Validate(provider);
 
         // Assert — exactly one Error, naming the guidance page
-        Assert.Empty(result.Warnings);
-        var error = Assert.Single(result.Errors);
-        Assert.Contains(GuidancePage, error.Message);
+        await Assert.That(result.Warnings).IsEmpty();
+        var error = await Assert.That(result.Errors).HasSingleItem();
+        await Assert.That(error.Message).Contains(GuidancePage);
     }
 
-    [Fact]
-    public void When_two_distinct_scope_providers_are_registered_the_warning_should_name_the_guidance_page()
+    [Test]
+    public async System.Threading.Tasks.Task When_two_distinct_scope_providers_are_registered_the_warning_should_name_the_guidance_page()
     {
         // Arrange — two distinct IAmAScopeProvider implementations registered unkeyed
         var services = new ServiceCollection();
@@ -164,13 +164,13 @@ public class ValidationMessageGuidancePageTests
         var result = Validate(provider);
 
         // Assert — exactly one Warning, naming the guidance page
-        Assert.Empty(result.Errors);
-        var warning = Assert.Single(result.Warnings);
-        Assert.Contains(GuidancePage, warning.Message);
+        await Assert.That(result.Errors).IsEmpty();
+        var warning = await Assert.That(result.Warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains(GuidancePage);
     }
 
-    [Fact]
-    public void When_the_opt_in_is_repeated_with_different_affinities_the_warning_should_name_the_guidance_page()
+    [Test]
+    public async System.Threading.Tasks.Task When_the_opt_in_is_repeated_with_different_affinities_the_warning_should_name_the_guidance_page()
     {
         // Arrange — two constructed ScopeAffinityOverride instances carrying different affinities
         var services = new ServiceCollection();
@@ -189,13 +189,13 @@ public class ValidationMessageGuidancePageTests
         var result = Validate(provider);
 
         // Assert — exactly one Warning, naming the guidance page
-        Assert.Empty(result.Errors);
-        var warning = Assert.Single(result.Warnings);
-        Assert.Contains(GuidancePage, warning.Message);
+        await Assert.That(result.Errors).IsEmpty();
+        var warning = await Assert.That(result.Warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains(GuidancePage);
     }
 
-    [Fact]
-    public void When_an_override_is_registered_by_factory_delegate_the_warning_should_name_the_guidance_page()
+    [Test]
+    public async System.Threading.Tasks.Task When_an_override_is_registered_by_factory_delegate_the_warning_should_name_the_guidance_page()
     {
         // Arrange — an affinity override registered by factory delegate, so RepeatedOptIn cannot read a
         // value off it
@@ -214,9 +214,9 @@ public class ValidationMessageGuidancePageTests
         var result = Validate(provider);
 
         // Assert — exactly one Warning, naming the guidance page
-        Assert.Empty(result.Errors);
-        var warning = Assert.Single(result.Warnings);
-        Assert.Contains(GuidancePage, warning.Message);
+        await Assert.That(result.Errors).IsEmpty();
+        var warning = await Assert.That(result.Warnings).HasSingleItem();
+        await Assert.That(warning.Message).Contains(GuidancePage);
     }
 
     private static PipelineValidationResult Validate(IServiceProvider provider)

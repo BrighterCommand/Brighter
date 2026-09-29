@@ -5,14 +5,13 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 
 // These tests validate gateway configuration plumbing (ConnectionFactory.Ssl setup) and are
 // intentionally hand-written rather than generator-based. See ADR 0035 (Generated Tests).
-[Trait("Category", "RMQ")]
-[Trait("Category", "MutualTLS")]
+[Category("RMQ")]
+[Category("MutualTLS")]
 public class RmqMutualTlsConnectionConfigurationTests : IDisposable
 {
     private readonly string _tempCertPath;
@@ -44,8 +43,8 @@ public class RmqMutualTlsConnectionConfigurationTests : IDisposable
             File.Delete(_tempCertPath);
     }
 
-    [Fact]
-    public void When_certificate_is_configured_ssl_is_enabled()
+    [Test]
+    public async Task When_certificate_is_configured_ssl_is_enabled()
     {
         // Arrange
         var connection = new RmqMessagingGatewayConnection
@@ -60,16 +59,16 @@ public class RmqMutualTlsConnectionConfigurationTests : IDisposable
         var factory = gateway.GetConnectionFactory();
 
         // Assert - SSL should be enabled
-        Assert.NotNull(factory.Ssl);
-        Assert.True(factory.Ssl.Enabled);
-        Assert.Equal("localhost", factory.Ssl.ServerName);
-        Assert.NotNull(factory.Ssl.Certs);
-        Assert.Single(factory.Ssl.Certs);
-        Assert.Same(_testCertificate, factory.Ssl.Certs[0]);
+        await Assert.That(factory.Ssl).IsNotNull();
+        await Assert.That(factory.Ssl.Enabled).IsTrue();
+        await Assert.That(factory.Ssl.ServerName).IsEqualTo("localhost");
+        await Assert.That(factory.Ssl.Certs).IsNotNull();
+        await Assert.That(factory.Ssl.Certs!.Count).IsEqualTo(1);
+        await Assert.That(factory.Ssl.Certs[0]).IsSameReferenceAs(_testCertificate);
     }
 
-    [Fact]
-    public void When_no_certificate_is_configured_ssl_is_not_configured()
+    [Test]
+    public async Task When_no_certificate_is_configured_ssl_is_not_configured()
     {
         // Arrange - no certificate configured
         var connection = new RmqMessagingGatewayConnection
@@ -83,12 +82,12 @@ public class RmqMutualTlsConnectionConfigurationTests : IDisposable
         var factory = gateway.GetConnectionFactory();
 
         // Assert - SSL should not be enabled (backwards compatibility)
-        Assert.NotNull(factory.Ssl);
-        Assert.False(factory.Ssl.Enabled);
+        await Assert.That(factory.Ssl).IsNotNull();
+        await Assert.That(factory.Ssl.Enabled).IsFalse();
     }
 
-    [Fact]
-    public void When_certificate_object_and_path_both_set_object_takes_precedence()
+    [Test]
+    public async Task When_certificate_object_and_path_both_set_object_takes_precedence()
     {
         // Arrange - both certificate object and path set
         var connection = new RmqMessagingGatewayConnection
@@ -104,12 +103,12 @@ public class RmqMutualTlsConnectionConfigurationTests : IDisposable
         var factory = gateway.GetConnectionFactory();
 
         // Assert - Should use the certificate object, not load from path
-        Assert.True(factory.Ssl.Enabled);
-        Assert.Same(_testCertificate, factory.Ssl.Certs[0]);
+        await Assert.That(factory.Ssl.Enabled).IsTrue();
+        await Assert.That(factory.Ssl.Certs[0]).IsSameReferenceAs(_testCertificate);
     }
 
-    [Fact]
-    public void When_certificate_path_is_provided_certificate_is_loaded()
+    [Test]
+    public async Task When_certificate_path_is_provided_certificate_is_loaded()
     {
         // Arrange
         var connection = new RmqMessagingGatewayConnection
@@ -125,13 +124,13 @@ public class RmqMutualTlsConnectionConfigurationTests : IDisposable
         var factory = gateway.GetConnectionFactory();
 
         // Assert - Certificate should be loaded from file
-        Assert.True(factory.Ssl.Enabled);
-        Assert.Single(factory.Ssl.Certs);
-        Assert.NotNull(factory.Ssl.Certs[0]);
+        await Assert.That(factory.Ssl.Enabled).IsTrue();
+        await Assert.That(factory.Ssl.Certs!.Count).IsEqualTo(1);
+        await Assert.That(factory.Ssl.Certs[0]).IsNotNull();
     }
 
-    [Fact]
-    public void When_certificate_file_does_not_exist_throws_file_not_found()
+    [Test]
+    public async Task When_certificate_file_does_not_exist_throws_file_not_found()
     {
         // Arrange
         var connection = new RmqMessagingGatewayConnection
@@ -142,16 +141,16 @@ public class RmqMutualTlsConnectionConfigurationTests : IDisposable
         };
 
         // Act & Assert
-        var ex = Assert.Throws<FileNotFoundException>(() => new TestableRmqMessageConsumer(connection));
-        Assert.Contains("Client certificate file not found", ex.Message);
+        var ex = await Assert.That(() => new TestableRmqMessageConsumer(connection)).ThrowsExactly<FileNotFoundException>();
+        await Assert.That(ex.Message).Contains("Client certificate file not found");
     }
 
-    [Fact]
-    public void When_certificate_file_is_invalid_throws_invalid_operation()
+    [Test]
+    public async Task When_certificate_file_is_invalid_throws_invalid_operation()
     {
         // Arrange - create a temp file with invalid certificate data
         var invalidCertPath = Path.Combine(Path.GetTempPath(), $"invalid-cert-{Guid.NewGuid()}.pfx");
-        File.WriteAllText(invalidCertPath, "not a valid certificate");
+        await File.WriteAllTextAsync(invalidCertPath, "not a valid certificate");
 
         try
         {
@@ -163,9 +162,9 @@ public class RmqMutualTlsConnectionConfigurationTests : IDisposable
             };
 
             // Act & Assert
-            var ex = Assert.Throws<InvalidOperationException>(() => new TestableRmqMessageConsumer(connection));
-            Assert.Contains("Failed to load client certificate", ex.Message);
-            Assert.Contains("valid .pfx (PKCS#12) certificate", ex.Message);
+            var ex = await Assert.That(() => new TestableRmqMessageConsumer(connection)).ThrowsExactly<InvalidOperationException>();
+            await Assert.That(ex.Message).Contains("Failed to load client certificate");
+            await Assert.That(ex.Message).Contains("valid .pfx (PKCS#12) certificate");
         }
         finally
         {
@@ -174,8 +173,8 @@ public class RmqMutualTlsConnectionConfigurationTests : IDisposable
         }
     }
 
-    [Fact]
-    public void When_certificate_configuration_is_optional_backwards_compatibility_is_maintained()
+    [Test]
+    public async Task When_certificate_configuration_is_optional_backwards_compatibility_is_maintained()
     {
         // Arrange - existing code that doesn't use certificates
         var connection = new RmqMessagingGatewayConnection
@@ -187,7 +186,7 @@ public class RmqMutualTlsConnectionConfigurationTests : IDisposable
         // Act & Assert - Should not throw, gateway should initialize normally
         var gateway = new TestableRmqMessageConsumer(connection);
         var factory = gateway.GetConnectionFactory();
-        Assert.NotNull(factory);
+        await Assert.That(factory).IsNotNull();
     }
 
     // Test double to expose ConnectionFactory for verification
