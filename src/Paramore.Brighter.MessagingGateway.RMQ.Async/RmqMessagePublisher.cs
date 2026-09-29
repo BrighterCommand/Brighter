@@ -138,13 +138,13 @@ internal sealed partial class RmqMessagePublisher
 
         AddUserDefinedHeaders(message, headers);
 
-        AddDeliveryHeaders(TimeSpan.Zero, deliveryTag, headers);
+        AddDeliveryHeaders(timeOut, deliveryTag, headers);
 
         AddOriginalMessageIdOnRepublish(message, headers);
 
-        // To send it to the right queue use the default (empty) exchange
+        // Immediate retries use the default exchange; delayed retries use queue-specific bindings.
         await _channel.BasicPublishAsync(
-            string.Empty,
+            timeOut > TimeSpan.Zero ? RmqDelayedRequeue.ExchangeName(_connection) : string.Empty,
             queueName.Value,
             false,
             CreateBasicProperties(

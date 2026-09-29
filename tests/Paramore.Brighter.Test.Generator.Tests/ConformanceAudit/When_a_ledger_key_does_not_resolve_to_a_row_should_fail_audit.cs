@@ -178,7 +178,7 @@ public class LedgerResolutionAuditTests
 
     // Every wired configuration the ledger is expected to carry a row for. Kept in step with
     // When_generating_everywhere_should_emit_skipped_canonical_suite_in_all_wired_projects.
-    private const int EXPECTED_WIRED_CONFIGURATION_COUNT = 24;
+    private const int EXPECTED_WIRED_CONFIGURATION_COUNT = 27;
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

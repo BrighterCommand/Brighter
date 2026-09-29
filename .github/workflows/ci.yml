@@ -286,7 +286,7 @@ jobs:
             9.0.x
             10.0.x
       - name: RMQ Async Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS&Category!=RMQNativeDelay" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
   rabbitmq-sync-ci:
     runs-on: ubuntu-latest
@@ -314,7 +314,32 @@ jobs:
             9.0.x
             10.0.x
       - name: RMQ Sync Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS&Category!=RMQNativeDelay" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+
+  rabbitmq-native-delay-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+      - name: Start RabbitMQ with the delayed-message plugin
+        run: docker compose -f docker-compose-rmq-native-delay.yaml up --build -d --wait
+      - name: Native delay transport tests
+        run: |
+          dotnet test tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Category=RMQNativeDelay" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
+          dotnet test tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Category=RMQNativeDelay" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
+      - name: Broker logs
+        if: failure()
+        run: docker compose -f docker-compose-rmq-native-delay.yaml logs
+      - name: Stop broker
+        if: always()
+        run: docker compose -f docker-compose-rmq-native-delay.yaml down -v
 
   kafka-ci:
     runs-on: ubuntu-latest
