@@ -50,11 +50,11 @@ public class ReadCostAfterManySweepsTests
         //Arrange
         var afterFew = StateAfter(FewSweeps);
         var afterMany = StateAfter(ManySweeps);
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         using var gaugeAfterFew = new GaugeReader(afterFew, breaker);
         using var gaugeAfterMany = new GaugeReader(afterMany, breaker);
-        var checkAfterFew = new OutboxSweeperInvestigateHealthCheck(afterFew, new TimedOutboxSweeperOptions(), () => breaker, 3);
-        var checkAfterMany = new OutboxSweeperInvestigateHealthCheck(afterMany, new TimedOutboxSweeperOptions(), () => breaker, 3);
+        var checkAfterFew = new OutboxSweeperInvestigateHealthCheck(state: afterFew, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => breaker, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
+        var checkAfterMany = new OutboxSweeperInvestigateHealthCheck(state: afterMany, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => breaker, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         var gaugeBytesAfterFew = BytesPerRead(gaugeAfterFew.Observe);
@@ -105,7 +105,7 @@ public class ReadCostAfterManySweepsTests
         public GaugeReader(OutboxSweeperState state, IAmAnOutboxCircuitBreaker breaker)
         {
             var meterFactory = _services.GetRequiredService<IMeterFactory>();
-            _meter = new SweeperMeter(meterFactory, state, () => breaker);
+            _meter = new SweeperMeter(meterFactory: meterFactory, state: state, findCircuitBreaker: () => breaker, loggerFactory: Initializer.TestLoggerFactory);
             _listener.InstrumentPublished = (instrument, listener) =>
             {
                 if (instrument.IsObservable && ReferenceEquals(instrument.Meter.Scope, meterFactory))

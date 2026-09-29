@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
@@ -57,7 +59,7 @@ public class AzureServiceBusLegacyWrapperPartitionKeyTests
             subscriptionName: new SubscriptionName("orders-subscription"),
             channelName: new ChannelName("orders-channel"),
             routingKey: new RoutingKey("orders"));
-        var creator = new AzureServiceBusMessageCreator(subscription);
+        var creator = new AzureServiceBusMessageCreator(subscription, loggerFactory: NullLoggerFactory.Instance);
 
         // Act
         var received = creator.MapToBrighterMessage(brokeredMessage);

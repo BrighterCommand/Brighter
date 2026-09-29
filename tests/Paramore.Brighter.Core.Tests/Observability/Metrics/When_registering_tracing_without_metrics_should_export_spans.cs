@@ -42,7 +42,7 @@ public class TracingWithoutMetricsTests
     {
         //Arrange
         var spans = new List<Activity>();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddOpenTelemetry()
             .WithTracing(tracing => tracing.AddBrighterInstrumentation().AddInMemoryExporter(spans));
         using var provider = services.BuildServiceProvider();

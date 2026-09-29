@@ -2,6 +2,7 @@ using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.MsSql;
@@ -26,13 +27,15 @@ public static class MsSqlBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<MsSqlOutboxMigrationCatalog>();
                 var runner = new MsSqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MsSqlOutboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<MsSqlPayloadModeValidator>(),
                     configuration,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;
@@ -65,13 +68,15 @@ public static class MsSqlBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<MsSqlOutboxMigrationCatalog>();
                 var runner = new MsSqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MsSqlOutboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<MsSqlPayloadModeValidator>(),
                     dbConfig,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;
@@ -92,13 +97,15 @@ public static class MsSqlBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<MsSqlInboxMigrationCatalog>();
                 var runner = new MsSqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MsSqlInboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<MsSqlPayloadModeValidator>(),
                     configuration,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;
@@ -131,13 +138,15 @@ public static class MsSqlBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<MsSqlInboxMigrationCatalog>();
                 var runner = new MsSqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MsSqlInboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<MsSqlPayloadModeValidator>(),
                     dbConfig,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;

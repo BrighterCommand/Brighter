@@ -34,7 +34,6 @@ namespace Paramore.Brighter.Extensions.Tests.TestDoubles;
 /// </summary>
 public sealed class InMemoryLogCapture : IDisposable
 {
-    private readonly ILoggerFactory _previousFactory = ApplicationLogging.LoggerFactory;
     private readonly CapturingLoggerProvider _provider = new();
     private readonly ILoggerFactory _factory;
 
@@ -44,7 +43,6 @@ public sealed class InMemoryLogCapture : IDisposable
     public InMemoryLogCapture()
     {
         _factory = LoggerFactory.Create(builder => builder.AddProvider(_provider));
-        ApplicationLogging.LoggerFactory = _factory;
     }
 
     /// <summary>
@@ -52,12 +50,13 @@ public sealed class InMemoryLogCapture : IDisposable
     /// </summary>
     public IReadOnlyCollection<CapturedLogEntry> Entries => _provider.Entries;
 
+    public ILoggerFactory Factory => _factory;
+
     /// <summary>
     /// Restores the previous application factory and disposes the capture's factory.
     /// </summary>
     public void Dispose()
     {
-        ApplicationLogging.LoggerFactory = _previousFactory;
         _factory.Dispose();
     }
 }

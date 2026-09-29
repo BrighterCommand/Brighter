@@ -37,7 +37,7 @@ public class When_kafka_channel_factory_forwards_scheduler_to_consumers
     public void Should_forward_scheduler_to_consumer_factory()
     {
         // Arrange — channel factory wrapping a consumer factory, no scheduler initially
-        var consumerFactory = new KafkaMessageConsumerFactory(_configuration);
+        var consumerFactory = new KafkaMessageConsumerFactory(_configuration, loggerFactory: Initializer.TestLoggerFactory);
         var channelFactory = new ChannelFactory(consumerFactory);
         var scheduler = new StubMessageScheduler();
 
@@ -53,7 +53,7 @@ public class When_kafka_channel_factory_forwards_scheduler_to_consumers
     {
         // Arrange — consumer factory has a scheduler from construction
         var scheduler = new StubMessageScheduler();
-        var consumerFactory = new KafkaMessageConsumerFactory(_configuration, scheduler);
+        var consumerFactory = new KafkaMessageConsumerFactory(_configuration, Initializer.TestLoggerFactory, scheduler);
         var channelFactory = new ChannelFactory(consumerFactory);
 
         // Assert — channel factory reads from the consumer factory

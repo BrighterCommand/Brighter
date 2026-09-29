@@ -21,11 +21,13 @@ public class GcpPubSubMessageProducerFactory : GcpPubSubMessageGateway, IAmAMess
     /// Initializes a new instance of the <see cref="GcpPubSubMessageProducerFactory"/> class.
     /// </summary>
     /// <param name="connection">The connection details for the Google Cloud Pub/Sub gateway.</param>
-    /// <param name="publications">A collection of Google Cloud Pub/Sub specific publication configurations.</param>
+    /// <param name="loggerFactory">The application-owned logger factory.</param>
+/// <param name="publications">A collection of Google Cloud Pub/Sub specific publication configurations.</param>
     /// <param name="instrumentation">Optional instrumentation options for tracing and metrics.</param>
     public GcpPubSubMessageProducerFactory(GcpMessagingGatewayConnection connection,
         IEnumerable<GcpPublication> publications,
-        InstrumentationOptions? instrumentation = null) : base(connection)
+        Microsoft.Extensions.Logging.ILoggerFactory loggerFactory,
+        InstrumentationOptions? instrumentation = null) : base(connection, loggerFactory)
     {
         _connection = connection;
         _publications = publications;
@@ -101,7 +103,7 @@ public class GcpPubSubMessageProducerFactory : GcpPubSubMessageGateway, IAmAMess
                 EnableMessageOrdering = enableMessageOrdering
             }
         };
-        
+
         // The connection's configuration applies to every publication; the publication's own runs after it, so it wins
         _connection.PublisherConfiguration?.Invoke(builder);
         configure?.Invoke(builder);

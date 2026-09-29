@@ -107,13 +107,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 new SubscriptionName(subscriptionName),
                 noOfPerformers: noOfPerformers,
                 timeOut: TimeSpan.FromMilliseconds(100),
-                channelFactory: new InMemoryChannelFactory(bus, new FakeTimeProvider()),
+                channelFactory: new InMemoryChannelFactory(bus, new FakeTimeProvider(), loggerFactory: Initializer.TestLoggerFactory),
                 channelName: new ChannelName(ChannelName),
                 messagePumpType: MessagePumpType.Reactor,
                 routingKey: RoutingKey
             );
 
-            return new Dispatcher(commandProcessor, new List<Subscription> { subscription }, messageMapperRegistry);
+            return new Dispatcher(commandProcessor, new List<Subscription> { subscription }, Initializer.TestLoggerFactory, messageMapperRegistry);
         }
 
         private static void DrainDispatcher(Dispatcher dispatcher)

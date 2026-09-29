@@ -52,7 +52,7 @@ public class RequestScopeRegistrationEntryPointTests
     public void When_add_brighter_action_calls_the_extension_the_affinity_should_reach_the_options_and_adoption_should_work()
     {
         // Arrange - AddBrighter(Action<BrighterOptions>), extension called with the JoinAmbient default
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddScoped<IMarker, Marker>();
         services.AddSingleton<RegistrationAffinityRecorder>();
         services.AddBrighterRequestScope();
@@ -77,7 +77,7 @@ public class RequestScopeRegistrationEntryPointTests
     public void When_add_brighter_action_already_sets_join_ambient_the_extensions_always_new_should_still_win()
     {
         // Arrange - falsifiable direction: the host itself sets JoinAmbient, the extension overrides with AlwaysNew
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddScoped<IMarker, Marker>();
         services.AddSingleton<RegistrationAffinityRecorder>();
         services.AddBrighter(options =>
@@ -103,7 +103,7 @@ public class RequestScopeRegistrationEntryPointTests
     public void When_add_brighter_func_calls_the_extension_the_affinity_should_reach_the_options_and_adoption_should_work()
     {
         // Arrange - AddBrighter(Func<IServiceProvider, BrighterOptions>), extension called with the JoinAmbient default
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddScoped<IMarker, Marker>();
         services.AddSingleton<RegistrationAffinityRecorder>();
         services.AddBrighterRequestScope();
@@ -128,7 +128,7 @@ public class RequestScopeRegistrationEntryPointTests
     public void When_add_brighter_func_already_sets_join_ambient_the_extensions_always_new_should_still_win()
     {
         // Arrange - falsifiable direction
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddScoped<IMarker, Marker>();
         services.AddSingleton<RegistrationAffinityRecorder>();
         services.AddBrighter(_ => new BrighterOptions
@@ -154,7 +154,7 @@ public class RequestScopeRegistrationEntryPointTests
     public void When_add_consumers_action_alone_calls_the_extension_the_affinity_should_reach_the_options_and_adoption_should_work()
     {
         // Arrange - AddConsumers(Action<ConsumersOptions>) alone, extension called with the JoinAmbient default
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddScoped<IMarker, Marker>();
         services.AddSingleton<RegistrationAffinityRecorder>();
         services.AddBrighterRequestScope();
@@ -180,7 +180,7 @@ public class RequestScopeRegistrationEntryPointTests
     public void When_add_consumers_action_already_sets_join_ambient_the_extensions_always_new_should_still_win()
     {
         // Arrange - falsifiable direction
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddScoped<IMarker, Marker>();
         services.AddSingleton<RegistrationAffinityRecorder>();
         services.AddConsumers(options =>
@@ -207,7 +207,7 @@ public class RequestScopeRegistrationEntryPointTests
     public void When_add_consumers_func_alone_calls_the_extension_the_affinity_should_reach_the_options_and_adoption_should_work()
     {
         // Arrange - AddConsumers(Func<IServiceProvider, ConsumersOptions>) alone, extension called with the JoinAmbient default
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddScoped<IMarker, Marker>();
         services.AddSingleton<RegistrationAffinityRecorder>();
         services.AddBrighterRequestScope();
@@ -233,7 +233,7 @@ public class RequestScopeRegistrationEntryPointTests
     public void When_add_consumers_func_already_sets_join_ambient_the_extensions_always_new_should_still_win()
     {
         // Arrange - falsifiable direction
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddScoped<IMarker, Marker>();
         services.AddSingleton<RegistrationAffinityRecorder>();
         services.AddConsumers(_ => new ConsumersOptions

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
@@ -28,12 +30,12 @@ public class SpannerTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPro
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
-        return new SpannerOutbox(_configuration);
+        return new SpannerOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SpannerOutbox>());
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        return new SpannerOutbox(_configuration);
+        return new SpannerOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SpannerOutbox>());
     }
 
     public void CreateStore()
@@ -79,13 +81,13 @@ public class SpannerTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPro
 
     public IEnumerable<Message> GetAllMessages()
     {
-        var outbox = new SpannerOutbox(_configuration);
+        var outbox = new SpannerOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SpannerOutbox>());
         return outbox.Get(new RequestContext());
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        var outbox = new SpannerOutbox(_configuration);
+        var outbox = new SpannerOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SpannerOutbox>());
         return await outbox.GetAsync(new RequestContext());
     }
 

@@ -35,7 +35,7 @@ namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 
 // The first channel the producer opens fails its parked publish on release; every later channel publishes normally
 public class ParkedPublishRmqProducer(RmqMessagingGatewayConnection connection)
-    : RmqMessageProducer(connection)
+    : RmqMessageProducer(connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
 {
     private readonly ConcurrentDictionary<int, TaskCompletionSource<ParkedPublishRmqChannel>> _opened = new();
     private int _channelsOpened;

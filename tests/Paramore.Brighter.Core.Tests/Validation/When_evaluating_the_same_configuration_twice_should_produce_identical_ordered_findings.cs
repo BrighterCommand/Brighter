@@ -57,7 +57,7 @@ public class EvaluatingTheSameConfigurationTwiceProducesIdenticalOrderedFindings
 
         // driven through PipelineValidator, not by calling IsSatisfiedBy per subscription from the
         // test — that would impose the order this test then asserts
-        var pipelineBuilder = new PipelineBuilder<IRequest>(new SubscriberRegistry());
+        var pipelineBuilder = new PipelineBuilder<IRequest>(new SubscriberRegistry(), loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
         var validator = new PipelineValidator(pipelineBuilder, publications: null, subscriptions, consumerSpecs);
 

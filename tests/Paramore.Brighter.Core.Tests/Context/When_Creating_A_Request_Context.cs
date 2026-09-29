@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Context;
 

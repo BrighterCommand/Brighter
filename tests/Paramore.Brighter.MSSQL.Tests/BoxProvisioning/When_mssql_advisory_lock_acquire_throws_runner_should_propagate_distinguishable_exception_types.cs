@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -84,7 +86,7 @@ public class MsSqlAdvisoryLockAcquireExceptionPropagationTests : IAsyncLifetime
         var fakeLock = new FakeMsSqlAdvisoryLock(throwOnAcquire: null);
 
         var runner = new MsSqlBoxMigrationRunner(
-            catalog, config, TimeSpan.FromSeconds(30), fakeLock);
+            catalog, config, TimeSpan.FromSeconds(30), NullLoggerFactory.Instance, fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
@@ -105,7 +107,7 @@ public class MsSqlAdvisoryLockAcquireExceptionPropagationTests : IAsyncLifetime
         var fakeLock = new FakeMsSqlAdvisoryLock(throwOnAcquire: toThrow);
 
         var runner = new MsSqlBoxMigrationRunner(
-            catalog, config, TimeSpan.FromSeconds(30), fakeLock);
+            catalog, config, TimeSpan.FromSeconds(30), NullLoggerFactory.Instance, fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert

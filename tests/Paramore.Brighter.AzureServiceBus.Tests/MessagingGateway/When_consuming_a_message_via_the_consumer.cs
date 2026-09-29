@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
@@ -34,7 +36,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 CommandValue = "Do the things.",
                 CommandNumber = 26
             };
-            
+
             _channelName = "test-channel";
             _topicName = $"Consumer-Tests-{Guid.NewGuid()}";
             var routingKey = new RoutingKey(_topicName);
@@ -47,7 +49,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 MaxDeliveryCount = 7,
                 SqlFilter = "1=1"
             };
-            
+
             AzureServiceBusSubscription<ASBTestCommand> subscription = new(
                 subscriptionName: new SubscriptionName(_channelName),
                 channelName: new ChannelName(_channelName),
@@ -91,23 +93,23 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             );
 
             var clientProvider = ASBCreds.ASBClientProvider;
-            _administrationClient = new AdministrationClientWrapper(clientProvider);
+            _administrationClient = new AdministrationClientWrapper(clientProvider: clientProvider, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
             _serviceBusClient = clientProvider.GetServiceBusClient();
 
             var channelFactory =
-                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider));
+                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider, loggerFactory: NullLoggerFactory.Instance));
             _channel = channelFactory.CreateSyncChannel(subscription);
 
             _producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 clientProvider,
                 [
                     new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) }
-                ]
-                )
+                ],
+                loggerFactory: NullLoggerFactory.Instance)
                 .Create();
         }
-        
+
         [Fact]
         public async Task When_receiving_a_message_via_the_consumer()
         {
@@ -133,14 +135,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             Assert.Equal(_message.Header.DataSchema, message.Header.DataSchema);
             Assert.Equal(_message.Header.Subject, message.Header.Subject);
             Assert.Equal(_message.Header.HandledCount, message.Header.HandledCount);
-            Assert.Equal(_message.Header.Delayed.TotalMilliseconds, message.Header.Delayed.TotalMilliseconds) ;
+            Assert.Equal(_message.Header.Delayed.TotalMilliseconds, message.Header.Delayed.TotalMilliseconds);
             Assert.Equal(_message.Header.TraceParent?.Value, message.Header.TraceParent?.Value);
             Assert.Equal(_message.Header.TraceState?.Value, message.Header.TraceState?.Value);
             Assert.Equal(MessageHeader.DefaultSpecVersion, message.Header.SpecVersion);
             Assert.Equal(_message.Header.Baggage, message.Header.Baggage);
-            
+
             Assert.Equal(_message.Body.Value, message.Body.Value);
-            
+
             Assert.False(message.Redelivered);
 
             //clear the channel

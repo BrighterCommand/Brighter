@@ -1,11 +1,13 @@
-﻿using System.Threading.Tasks;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MsSql;
 
 namespace Paramore.Brighter.MSSQL.Tests.Inbox;
 
-public class MsSqlTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests 
+public class MsSqlTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
 {
     protected override string DefaultConnectingString => Tests.Configuration.DefaultConnectingString;
     protected override string TableNamePrefix => Tests.Configuration.TablePrefix;
@@ -14,7 +16,7 @@ public class MsSqlTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
 
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
-        return new MsSqlInbox(configuration);
+        return new MsSqlInbox(configuration, logger: NullLoggerFactory.Instance.CreateLogger<MsSqlInbox>());
     }
 
     protected override async Task CreateInboxTableAsync(RelationalDatabaseConfiguration configuration)

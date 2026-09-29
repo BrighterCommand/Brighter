@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -18,7 +20,7 @@ public class AsyncRmqMessageConsumerConnectionClosedTests : IDisposable, IAsyncD
 
     public AsyncRmqMessageConsumerConnectionClosedTests()
     {
-        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(),  
+        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(),
             new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
 
         messageHeader.UpdateHandledCount();
@@ -30,10 +32,10 @@ public class AsyncRmqMessageConsumerConnectionClosedTests : IDisposable, IAsyncD
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _sender = new RmqMessageProducer(rmqConnection);
+        _sender = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
-            
-        _receiver = new RmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, false);
+
+        _receiver = new RmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, NullLoggerFactory.Instance, false);
         _badReceiver = new AlreadyClosedRmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, 1, false);
     }
 
@@ -41,7 +43,7 @@ public class AsyncRmqMessageConsumerConnectionClosedTests : IDisposable, IAsyncD
     public async Task When_a_message_consumer_throws_an_already_closed_exception_when_connecting()
     {
         await _sender.SendAsync(_sentMessage);
-            
+
         bool exceptionHappened = false;
         try
         {
@@ -52,7 +54,7 @@ public class AsyncRmqMessageConsumerConnectionClosedTests : IDisposable, IAsyncD
             exceptionHappened = true;
             Assert.True((cfe.InnerException) is AlreadyClosedException);
         }
-            
+
         Assert.True(exceptionHappened);
     }
 
@@ -65,7 +67,7 @@ public class AsyncRmqMessageConsumerConnectionClosedTests : IDisposable, IAsyncD
 
     public async ValueTask DisposeAsync()
     {
-        await _receiver.DisposeAsync(); 
+        await _receiver.DisposeAsync();
         await _badReceiver.DisposeAsync();
         await _sender.DisposeAsync();
     }

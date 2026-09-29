@@ -105,7 +105,7 @@ public class RemedyKindDataTests
         => new(provider.GetRequiredService<OutboxSweeperState>(), provider.GetRequiredService<TimedOutboxSweeperOptions>(), TimeSpan.FromSeconds(30));
 
     private static OutboxSweeperInvestigateHealthCheck SweeperInvestigate(IServiceProvider provider)
-        => new(provider.GetRequiredService<OutboxSweeperState>(), provider.GetRequiredService<TimedOutboxSweeperOptions>());
+        => new(state: provider.GetRequiredService<OutboxSweeperState>(), options: provider.GetRequiredService<TimedOutboxSweeperOptions>(), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
     private static async Task<(RemedyKind Kind, HealthCheckResult Result)[]> RunAll(IEnumerable<(RemedyKind Kind, IHealthCheck Check)> checks)
     {

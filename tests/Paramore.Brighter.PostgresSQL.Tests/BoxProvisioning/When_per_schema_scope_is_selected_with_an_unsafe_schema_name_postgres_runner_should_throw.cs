@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Npgsql;
@@ -63,13 +65,13 @@ public class PostgreSqlPerSchemaUnsafeSchemaNameTests : IAsyncLifetime
             schemaName: UnsafeSchemaName);
         var runner = new PostgreSqlBoxMigrationRunner(
             new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: MigrationHistoryScope.PerSchema);
+            scope: MigrationHistoryScope.PerSchema, loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         var thrown = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());

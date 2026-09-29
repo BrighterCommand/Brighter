@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,7 +14,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 public class PurgeTest :  IAsyncDisposable, IDisposable
 {
     private readonly string _queueName = Guid.NewGuid().ToString();
-    private readonly IAmAProducerRegistry _producerRegistry; 
+    private readonly IAmAProducerRegistry _producerRegistry;
     private readonly IAmAMessageConsumerSync _consumer;
     private readonly RoutingKey _routingKey;
 
@@ -22,26 +24,26 @@ public class PurgeTest :  IAsyncDisposable, IDisposable
         testHelper.SetupDatabase();
 
         _routingKey = new RoutingKey(Guid.NewGuid().ToString());
-            
+
         var sub = new PostgresSubscription<MyCommand>(
             new SubscriptionName(_queueName),
             new ChannelName(_routingKey.Value), _routingKey,
             messagePumpType: MessagePumpType.Reactor);
-            
+
         _producerRegistry = new PostgresProducerRegistryFactory(
             new PostgresMessagingGatewayConnection(testHelper.Configuration),
-            [new PostgresPublication {Topic = _routingKey}]
-        ).Create();
-            
-        _consumer = new PostgresConsumerFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration)).Create(sub);
+            [new PostgresPublication {Topic = _routingKey}],
+            loggerFactory: NullLoggerFactory.Instance).Create();
+
+        _consumer = new PostgresConsumerFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration), loggerFactory: NullLoggerFactory.Instance).Create(sub);
     }
 
     [Fact]
     public void When_queue_is_Purged()
     {
-        //Send a sequence of messages to postgres 
+        //Send a sequence of messages to postgres
         var msgId = SendMessage();
-                
+
         //Now read those messages in order
 
         var firstMessage = ConsumeMessages(_consumer);
@@ -54,21 +56,21 @@ public class PurgeTest :  IAsyncDisposable, IDisposable
 
         var nextMessage = ConsumeMessages(_consumer);
         message = nextMessage.First();
-                
+
         Assert.Equal(new Message(), message);
     }
 
     private string SendMessage()
     {
         var messageId = Guid.NewGuid().ToString();
-            
+
         ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_routingKey)).Send(new Message(
             new MessageHeader(messageId, _routingKey, MessageType.MT_COMMAND),
             new MessageBody($"test content [{_queueName}]")));
 
         return messageId;
     }
-    
+
     private static IEnumerable<Message> ConsumeMessages(IAmAMessageConsumerSync consumer)
     {
         var messages = Array.Empty<Message>();

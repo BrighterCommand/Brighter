@@ -91,13 +91,9 @@ public class When_reading_the_circuit_breaker_throws_should_log_and_report_zero_
         using var outbox = new SweepableOutbox();
         using var measurements = new RecordedSweeperMeasurements();
         var state = new OutboxSweeperState(TimeProvider.System);
-        var meter = new SweeperMeter(measurements.MeterFactory, state, () => new ThrowingOutboxCircuitBreaker(marker));
+        var meter = new SweeperMeter(meterFactory: measurements.MeterFactory, state: state, findCircuitBreaker: () => new ThrowingOutboxCircuitBreaker(marker), loggerFactory: Initializer.TestLoggerFactory);
         var sweeper = new TimedOutboxSweeper(
-            outbox.ScopeFactory,
-            new InMemoryLock(),
-            new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero },
-            meter: meter,
-            state: state);
+serviceScopeFactory: outbox.ScopeFactory, distributedLock: new InMemoryLock(), options: new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero }, meter: meter, state: state, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         //Act
         Exception? recordException = null;
@@ -139,7 +135,7 @@ public class When_reading_the_circuit_breaker_throws_should_log_and_report_zero_
     {
         using var metrics = new ServiceCollection().AddMetrics().BuildServiceProvider();
         var meterFactory = metrics.GetRequiredService<IMeterFactory>();
-        var meter = new SweeperMeter(meterFactory, state, findCircuitBreaker);
+        var meter = new SweeperMeter(meterFactory: meterFactory, state: state, findCircuitBreaker: findCircuitBreaker, loggerFactory: Initializer.TestLoggerFactory);
         var values = new Dictionary<string, List<double>>
         {
             [TrippedTopics] = [],

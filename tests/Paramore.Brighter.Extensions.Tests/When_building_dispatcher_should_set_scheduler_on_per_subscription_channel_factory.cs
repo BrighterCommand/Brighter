@@ -20,6 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -40,10 +42,10 @@ public class PerSubscriptionChannelFactorySchedulerTests
     {
         // Arrange — one subscription uses a per-subscription channel factory
         var bus = new InternalBus();
-        var defaultFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
+        var defaultFactory = new InMemoryChannelFactory(bus, TimeProvider.System, loggerFactory: NullLoggerFactory.Instance);
         var perSubFactory = new SchedulerAwareChannelFactory(bus);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services
             .AddConsumers(options =>
             {
@@ -70,7 +72,7 @@ public class PerSubscriptionChannelFactorySchedulerTests
                 configure.ProducerRegistry = new ProducerRegistry(
                     new Dictionary<ProducerKey, IAmAMessageProducer>
                     {
-                        { new ProducerKey("in-memory"), new InMemoryMessageProducer(bus, new Publication { Topic = "test" }) }
+                        { new ProducerKey("in-memory"), new InMemoryMessageProducer(bus, NullLoggerFactory.Instance, new Publication { Topic = "test" }) }
                     });
             })
             .AutoFromAssemblies();
@@ -92,10 +94,10 @@ public class PerSubscriptionChannelFactorySchedulerTests
     {
         // Arrange — use a CombinedChannelFactory as the default (multi-bus scenario)
         var bus = new InternalBus();
-        var innerFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
+        var innerFactory = new InMemoryChannelFactory(bus, TimeProvider.System, loggerFactory: NullLoggerFactory.Instance);
         var combinedFactory = new CombinedChannelFactory([innerFactory]);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services
             .AddConsumers(options =>
             {
@@ -115,7 +117,7 @@ public class PerSubscriptionChannelFactorySchedulerTests
                 configure.ProducerRegistry = new ProducerRegistry(
                     new Dictionary<ProducerKey, IAmAMessageProducer>
                     {
-                        { new ProducerKey("in-memory"), new InMemoryMessageProducer(bus, new Publication { Topic = "test" }) }
+                        { new ProducerKey("in-memory"), new InMemoryMessageProducer(bus, NullLoggerFactory.Instance, new Publication { Topic = "test" }) }
                     });
             })
             .AutoFromAssemblies();
@@ -144,7 +146,7 @@ public class PerSubscriptionChannelFactorySchedulerTests
             return new Channel(
                 subscription.ChannelName,
                 subscription.RoutingKey,
-                new InMemoryMessageConsumer(subscription.RoutingKey, _bus, TimeProvider.System));
+                new InMemoryMessageConsumer(subscription.RoutingKey, _bus, TimeProvider.System, loggerFactory: NullLoggerFactory.Instance));
         }
 
         public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
@@ -152,7 +154,7 @@ public class PerSubscriptionChannelFactorySchedulerTests
             return new ChannelAsync(
                 subscription.ChannelName,
                 subscription.RoutingKey,
-                new InMemoryMessageConsumer(subscription.RoutingKey, _bus, TimeProvider.System));
+                new InMemoryMessageConsumer(subscription.RoutingKey, _bus, TimeProvider.System, loggerFactory: NullLoggerFactory.Instance));
         }
 
         public Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription,

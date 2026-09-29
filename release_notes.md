@@ -857,6 +857,14 @@ Delegate-valued Blob options remain configured in code; this change does not mak
 Already compiled code that accesses these fields is not binary-compatible with the new properties; replacing Brighter assemblies without rebuilding is not sufficient.
 Code using field reflection or passing these members by reference needs source changes. Property-based serializers may now encounter delegate values they previously ignored.
 
+### Explicit instance-scoped logging (V11 breaking change)
+
+`ApplicationLogging` is removed. Supply an application-owned `ILoggerFactory` or typed logger when constructing Brighter components. Register `AddLogging(...)` for a bare service collection; generic hosts already register logging. User-created stores and transports need explicit logging dependencies even when `AddBrighter()` is used.
+
+Builder chains require a logging stage before `Build()`. Constructor signatures may reorder required arguments, and external builder-interface implementations must be updated. Manually composed handler chains must call `ConfigureLogging(factory)` on each handler. There is no implicit no-op fallback. Existing logger categories are preserved.
+
+See the [migration guide](docs/guides/instance-scoped-logging.md) and [ADR 0077](docs/adr/0090-instance-scoped-logging.md).
+
 ### Scoped lifetime per pipeline (spec 0036, #4256)
 
 `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` now govern a **pipeline-scoped** DI scope: a `Scoped` handler, mapper or transform resolves from one DI scope shared by every `Scoped` participant on that pipeline, and disposed when the pipeline ends. An ASP.NET Core host can additionally opt a pipeline in to **adopting** an ambient request scope instead of creating its own, through a new `Paramore.Brighter.Extensions.AspNetCore` package (`AddBrighterRequestScope(...)`), and `ValidatePipelines()` gained seven new startup checks for common lifetime and scope-registration mistakes. See [docs/guides/lifetimes-and-scoping.md](docs/guides/lifetimes-and-scoping.md) for the full model, decision guide and troubleshooting, and [ADR 0070](docs/adr/0070-per-pipeline-di-scope-for-mapper-and-transform-factories.md) through [ADR 0076](docs/adr/0076-scope-affinity-option-and-write-through.md) for the design.
@@ -1955,7 +1963,7 @@ You only need to create custom message mappers when you require explicit transfo
 ```csharp
  services.AddBrighter(options =>
   {
-      ... 
+      ...
   })
   .AddProducers((configure) =>
   {
@@ -2000,9 +2008,9 @@ registry.RegisterAsync<MyCommand>(((request, context) =>
     var myCommand = request as MyCommand;
     if (myCommand?.Value == "first")
         return [typeof(MyImplicitHandlerAsync)];
-    
+
     return [typeof(MyCommandHandlerAsync)];
-}), 
+}),
     [typeof(MyImplicitHandlerAsync), typeof(MyCommandHandlerAsync)]
 );
 
@@ -2016,7 +2024,7 @@ For consumers, we now add a property to the `RequestContext` that provides the `
 
 **Breaking Change**: The `IRequestContext` interface has been enhanced to support:
 
-* **Partition Key**: Set message partition keys dynamically 
+* **Partition Key**: Set message partition keys dynamically
 * **Custom Headers**: Add headers via request context
 * **Resilience Context**: Integration with Polly Resilience Pipeline
 
@@ -2028,7 +2036,7 @@ public class MyHandler : RequestHandler<MyCommand>
     {
         Context.Span.SetAttribute("custom.header", "value");
         Context.PartitionKey = command.TenantId;
-        
+
         return base.Handle(command);
     }
 }
@@ -2100,7 +2108,7 @@ services.AddBrighter()
     .UseExternalBus(...)
     .AddServiceActivator(...);
 
-// V10  
+// V10
 services.AddBrighter()
     .AddProducers(...)
     .AddConsumers(...);
@@ -2110,7 +2118,7 @@ services.AddBrighter()
 
 ### Polly Resilience Pipeline
 
-**Breaking Change**: New resilience pipeline attributes replace legacy timeout policies 
+**Breaking Change**: New resilience pipeline attributes replace legacy timeout policies
 
 ```csharp
 // V9 - Deprecated
@@ -2127,7 +2135,7 @@ The `TimeoutPolicyAttribute` is now marked as obsolete.
 The new approach provides:
 
 * **Full Polly v8 Support**: Access to all Polly resilience strategies
-* **CancellationToken Integration**: Proper cancellation token flow from resilience pipelines 
+* **CancellationToken Integration**: Proper cancellation token flow from resilience pipelines
 * **Enhanced Context**: Request context integration with Polly's resilience context
 
 ### AWS SDK v4 Support
@@ -2135,7 +2143,7 @@ The new approach provides:
 Complete AWS SDK v4 support has been added:
 
 * **SNS/SQS**: Standard and FIFO queue support
-* **DynamoDB**: Inbox, Outbox, and Distributed Lock implementations  
+* **DynamoDB**: Inbox, Outbox, and Distributed Lock implementations
 * **S3**: Luggage store for claim check pattern
 
 You can now use the latest AWS SDK v4 while maintaining backwards compatibility with v3.
@@ -2161,7 +2169,7 @@ var subscription = new RmqSubscription<MyMessage>(
 
 **Kafka Improvements**:
 
-* **Configuration Callback**: Enhanced configuration support through KafkaSubscription callback 
+* **Configuration Callback**: Enhanced configuration support through KafkaSubscription callback
 * **Updated Defaults**: Improved default configuration values for better out-of-the-box experience
 
 **AWS Improvements**:
@@ -2174,10 +2182,10 @@ var subscription = new RmqSubscription<MyMessage>(
 Topic-level circuit breaking has been added to prevent cascade failures:
 
 * **Failure Tracking**: Automatic tracking of dispatch failures per topic
-* **Configurable Thresholds**: Set failure thresholds and cooldown periods  
+* **Configurable Thresholds**: Set failure thresholds and cooldown periods
 * **Automatic Recovery**: Topics automatically recover after cooldown period
-* **Bulk Dispatch Support**: Circuit breaking now properly supports bulk dispatch operations 
-* **Per-Transport Integration**: Circuit breaking is integrated with MongoDB 
+* **Bulk Dispatch Support**: Circuit breaking now properly supports bulk dispatch operations
+* **Per-Transport Integration**: Circuit breaking is integrated with MongoDB
 
 The bulk dispatch implementation brings circuit breaking inline with single dispatch, allowing individual batches to be retried and providing better control over transport-specific batching behavior.
 
@@ -2186,9 +2194,9 @@ The bulk dispatch implementation brings circuit breaking inline with single disp
 * **GUID v7**: Support for GUID v7 on .NET 9+ for better database performance
 * **Sealed Classes**: Internal classes sealed to reduce virtual dispatch overhead
 * **Optimized Collections**: Reduced dictionary lookups and improved collection usage
-* **Memory Optimization**: Better memory usage in SQL data readers and stream handling 
-* **Source-Generated Logging**: Migrated to source-generated logging for superior performance and stronger typing 
-* **Reduced Allocations**: Optimized string comparisons and reduced unnecessary allocations 
+* **Memory Optimization**: Better memory usage in SQL data readers and stream handling
+* **Source-Generated Logging**: Migrated to source-generated logging for superior performance and stronger typing
+* **Reduced Allocations**: Optimized string comparisons and reduced unnecessary allocations
 
 GUID v7 provides better database clustering and performance characteristics compared to GUID v4, especially beneficial for high-throughput scenarios with database-backed outboxes and inboxes.
 
@@ -2196,7 +2204,7 @@ GUID v7 provides better database clustering and performance characteristics comp
 
 **Enhanced Testing**:
 
-* **Colorful Test Output**: Improved test runner with colorful output and GitHub Actions logger support 
+* **Colorful Test Output**: Improved test runner with colorful output and GitHub Actions logger support
 * **Better Test Infrastructure**: Enhanced test reliability and coverage across all transport implementations
 
 
@@ -2270,7 +2278,7 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
 
 ## Release 9.3.6
 
-* Set correct partition key (kafka key) for Kafka messages  
+* Set correct partition key (kafka key) for Kafka messages
 * Add default option for Header bags serialisation
 * Set correct span status for Send and SendAsync @easyfy-fredrik
 * Note that this version pulls v7 of System.Text.Json which has breaking changes for users of System.Text.Json, see <https://devblogs.microsoft.com/dotnet/system-text-json-in-dotnet-7/#breaking-changes>
@@ -2301,7 +2309,7 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
   * Will insert an Inbox in all pipelines
   * Can be overridden by a NoGlobalInbox attribute for don't add to pipeline, or an alternative UseInbox attribute to vary config
 * The goal here is to be clearer than our own internal names, which don't help folks who were not part of this team
-* The Outbox now fills up if a producer fails to send. You can set an upper limit on your producer, which is the maximum outstanding messages that you want in the Outbox before we throw an exception. This is not the same as Outbox size limits or sweeper, which is separate and mainly intended if you don't want the Outbox limit to fail-fast on hitting a limit but keep accumulating results  
+* The Outbox now fills up if a producer fails to send. You can set an upper limit on your producer, which is the maximum outstanding messages that you want in the Outbox before we throw an exception. This is not the same as Outbox size limits or sweeper, which is separate and mainly intended if you don't want the Outbox limit to fail-fast on hitting a limit but keep accumulating results
 * Added caching of attributes on target handlers in the pipeline build step
   * This means we don't do reflection every time we build the pipeline for a request
   * We do still always call the handler factory to instantiate as we don't own handler lifetime, implementer does
@@ -2317,8 +2325,8 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
   * Derived classes contain transport specific details
   * On SQSConnection, renamed VisibilityTimeout to LockTimeout to more generically describe its purpose separated from GatewayConfiguration, that now has a marker interface, used to connect to the Gateway and not about how we publish or subscribe
   * We now have the option to declare infrastructure separately and Validate or Assume it exists, still have an option to Create which is the default
-  * We think it will be most useful for environments like AWS where there is a price to checking (HTTP call, and often looping through results)  
-  * Added support for a range of parameters that we did not have before such as dead letter queues, security etc via these platform specific configuration files  
+  * We think it will be most useful for environments like AWS where there is a price to checking (HTTP call, and often looping through results)
+  * Added support for a range of parameters that we did not have before such as dead letter queues, security etc via these platform specific configuration files
 * Provided a short form of the BrighterMessaging constructor, that queries object provided for async versions of interfaces
 * Changed IsAsync to RunAsync on a Subscription for clarity
 * Supports an async pipeline: callbacks should happen on the same thread as the handler (and the pump), avoiding thread pool threads
@@ -2357,13 +2365,13 @@ For detailed migration guidance, see the [V10 Migration Guide](https://brighterc
 * SNS+SQS now supports batch sizes of up to 10 for consuming messages
 * Added support for the Outbox pattern via DepositPost and ClearPostBox
 * Fixed <https://github.com/BrighterCommand/Brighter/issues/156> to allow different exchange types to be set (was broken by support of delayed exchange)
-  
+
 ## Release 7.4.0
 
 * Updated to signed version of Polly, works with netcore2.1.
 * Fix for Sql CommandStore.
 * Fixes to make flaky tests stable.
-  
+
 ## Release 7.3.0
 
 * Added beta Support for a Redis transport

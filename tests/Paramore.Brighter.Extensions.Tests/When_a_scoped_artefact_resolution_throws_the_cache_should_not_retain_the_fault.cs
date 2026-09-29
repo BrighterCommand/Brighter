@@ -48,7 +48,7 @@ public class ScopedArtefactCacheFaultEvictionTests
         // Arrange - a Scoped mapper whose first construction attempt always throws. No ambient is
         // established, so CreatePipelineScope() returns Brighter's own owned scope
         var state = new FlakyResolutionState();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton(state);
         services.AddScoped<FlakyOnFirstResolutionMapper>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
@@ -80,7 +80,7 @@ public class ScopedArtefactCacheFaultEvictionTests
         // host offers, so CreatePipelineScope() adopts it (borrowed) instead of owning one
         var state = new FlakyResolutionState();
         var scopeProvider = new AsyncLocalScopeProvider();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton(state);
         services.AddScoped<FlakyOnFirstResolutionMapper>();
         services.AddSingleton<IAmAScopeProvider>(scopeProvider);

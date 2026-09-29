@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Transformers.Gcp;
 
@@ -15,7 +17,7 @@ public class LuggageUploadMissingParametersTests
         //arrange
         var exception = Assert.Throws<ConfigurationException>(() =>
         {
-            var gcs = new GcsLuggageStore(new GcsLuggageOptions());
+            var gcs = new GcsLuggageStore(new GcsLuggageOptions(), loggerFactory: NullLoggerFactory.Instance);
             gcs.EnsureStoreExists();
         });
 
@@ -34,11 +36,11 @@ public class LuggageUploadMissingParametersTests
             {
                 ProjectId = Guid.NewGuid().ToString(),
                 BucketName = bucketName!
-            });
-            
+            }, loggerFactory: NullLoggerFactory.Instance);
+
             gcs.EnsureStoreExists();
         });
-        
+
         Assert.NotNull(exception);
     }
     [Fact]
@@ -47,7 +49,7 @@ public class LuggageUploadMissingParametersTests
         //arrange
         var exception = await Assert.ThrowsAsync<ConfigurationException>(async () =>
         {
-            var gcs = new GcsLuggageStore(new GcsLuggageOptions());
+            var gcs = new GcsLuggageStore(new GcsLuggageOptions(), loggerFactory: NullLoggerFactory.Instance);
             await gcs.EnsureStoreExistsAsync();
         });
 
@@ -66,11 +68,11 @@ public class LuggageUploadMissingParametersTests
             {
                 ProjectId = Guid.NewGuid().ToString(),
                 BucketName = bucketName!
-            });
-            
+            }, loggerFactory: NullLoggerFactory.Instance);
+
             await gcs.EnsureStoreExistsAsync();
         });
-        
+
         Assert.NotNull(exception);
     }
 }

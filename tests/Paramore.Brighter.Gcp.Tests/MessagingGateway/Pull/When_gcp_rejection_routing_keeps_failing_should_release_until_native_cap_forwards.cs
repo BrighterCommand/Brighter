@@ -152,7 +152,7 @@ public class GcpPullRejectionRoutingReleaseUntilNativeCapTests
                 PublisherConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
                 SubscriptionManagerConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
             };
-            readerChannelFactory = new GcpPubSubChannelFactory(readerConnection);
+            readerChannelFactory = new GcpPubSubChannelFactory(connection: readerConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
             // The native policy's own reading subscription already exists (created by
             // provisioning above); Assume attaches to it without touching the broker.
@@ -338,7 +338,7 @@ public class GcpPullOrderingRejectionRoutingReleaseUntilNativeCapTests
                 PublisherConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
                 SubscriptionManagerConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
             };
-            readerChannelFactory = new GcpPubSubChannelFactory(readerConnection);
+            readerChannelFactory = new GcpPubSubChannelFactory(connection: readerConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
             policySubscription = new GcpPubSubSubscription<PullOrderingCommand>(
                 subscriptionName: new SubscriptionName(nativeDlqChannel),

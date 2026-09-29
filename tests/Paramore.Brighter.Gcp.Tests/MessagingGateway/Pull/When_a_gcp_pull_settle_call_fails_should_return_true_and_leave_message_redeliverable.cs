@@ -163,12 +163,7 @@ public class GcpPullSettleCallFailureTests
             // The channel under test: the same broker subscription, but its consumer's Acknowledge
             // RPC is intercepted.
             var armedConsumer = new GcpPullMessageConsumer(
-                armedConnection,
-                Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(GatewayFactory.GetProjectId(), channelName.Value),
-                batchSize: 1,
-                TimeProvider.System,
-                deadLetterRoutingKey: dlqRoutingKey,
-                makeChannels: OnMissingChannel.Create);
+connection: armedConnection, subscriptionName: Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(GatewayFactory.GetProjectId(), channelName.Value), batchSize: 1, timeProvider: TimeProvider.System, deadLetterRoutingKey: dlqRoutingKey, makeChannels: OnMissingChannel.Create, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             armedChannel = new Channel(channelName, routingKey, armedConsumer, 1);
 
             using var logContext = TestCorrelator.CreateContext();
@@ -257,11 +252,7 @@ public class GcpPullSettleCallFailureTests
             Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
             var armedConsumer = new GcpPullMessageConsumer(
-                armedConnection,
-                Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(GatewayFactory.GetProjectId(), channelName.Value),
-                batchSize: 1,
-                TimeProvider.System,
-                makeChannels: OnMissingChannel.Create);
+connection: armedConnection, subscriptionName: Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(GatewayFactory.GetProjectId(), channelName.Value), batchSize: 1, timeProvider: TimeProvider.System, makeChannels: OnMissingChannel.Create, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             armedChannel = new Channel(channelName, routingKey, armedConsumer, 1);
 
             using var logContext = TestCorrelator.CreateContext();
@@ -348,12 +339,7 @@ public class GcpPullSettleCallFailureTests
             Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
             var armedConsumer = new GcpPullMessageConsumer(
-                armedConnection,
-                Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(GatewayFactory.GetProjectId(), channelName.Value),
-                batchSize: 1,
-                TimeProvider.System,
-                deadLetterRoutingKey: neverExistsDlqRoutingKey,
-                makeChannels: OnMissingChannel.Assume);
+connection: armedConnection, subscriptionName: Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(GatewayFactory.GetProjectId(), channelName.Value), batchSize: 1, timeProvider: TimeProvider.System, deadLetterRoutingKey: neverExistsDlqRoutingKey, makeChannels: OnMissingChannel.Assume, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             armedChannel = new Channel(channelName, routingKey, armedConsumer, 1);
 
             using var logContext = TestCorrelator.CreateContext();
@@ -442,12 +428,7 @@ public class GcpPullSettleCallFailureTests
             Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
             var armedConsumer = new GcpPullMessageConsumer(
-                armedConnection,
-                Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(GatewayFactory.GetProjectId(), channelName.Value),
-                batchSize: 1,
-                TimeProvider.System,
-                deadLetterRoutingKey: dlqRoutingKey,
-                makeChannels: OnMissingChannel.Create);
+connection: armedConnection, subscriptionName: Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(GatewayFactory.GetProjectId(), channelName.Value), batchSize: 1, timeProvider: TimeProvider.System, deadLetterRoutingKey: dlqRoutingKey, makeChannels: OnMissingChannel.Create, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             armedChannel = new Channel(channelName, routingKey, armedConsumer, 1);
 
             using var logContext = TestCorrelator.CreateContext();
@@ -525,11 +506,7 @@ public class GcpPullSettleCallFailureTests
             Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
             var armedConsumer = new GcpPullMessageConsumer(
-                armedConnection,
-                Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(GatewayFactory.GetProjectId(), channelName.Value),
-                batchSize: 1,
-                TimeProvider.System,
-                makeChannels: OnMissingChannel.Create);
+connection: armedConnection, subscriptionName: Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(GatewayFactory.GetProjectId(), channelName.Value), batchSize: 1, timeProvider: TimeProvider.System, makeChannels: OnMissingChannel.Create, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             armedChannel = new Channel(channelName, routingKey, armedConsumer, 1);
 
             using var logContext = TestCorrelator.CreateContext();
@@ -603,12 +580,7 @@ public class GcpPullSettleCallFailureTests
             Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
             var armedConsumer = new GcpPullMessageConsumer(
-                armedConnection,
-                Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(GatewayFactory.GetProjectId(), channelName.Value),
-                batchSize: 1,
-                TimeProvider.System,
-                deadLetterRoutingKey: neverExistsDlqRoutingKey,
-                makeChannels: OnMissingChannel.Assume);
+connection: armedConnection, subscriptionName: Google.Cloud.PubSub.V1.SubscriptionName.FromProjectSubscription(GatewayFactory.GetProjectId(), channelName.Value), batchSize: 1, timeProvider: TimeProvider.System, deadLetterRoutingKey: neverExistsDlqRoutingKey, makeChannels: OnMissingChannel.Assume, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             armedChannel = new Channel(channelName, routingKey, armedConsumer, 1);
 
             using var logContext = TestCorrelator.CreateContext();

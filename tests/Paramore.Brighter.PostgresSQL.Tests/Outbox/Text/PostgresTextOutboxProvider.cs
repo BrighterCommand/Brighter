@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
@@ -14,11 +16,11 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Text;
 
 public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync, IAmAnOutstandingCountOutboxProvider
 {
-    private readonly RelationalDatabaseConfiguration _configuration = new(Const.ConnectionString, 
+    private readonly RelationalDatabaseConfiguration _configuration = new(Const.ConnectionString,
         databaseName: "brightertests",
         outBoxTableName: $"Table{Uuid.New():N}",
         binaryMessagePayload: false);
-    
+
     public void CreateStore()
     {
         using var connection = new NpgsqlConnection(_configuration.ConnectionString);
@@ -39,18 +41,18 @@ public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
-        return new PostgreSqlOutbox(_configuration);
+        return new PostgreSqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlOutbox>());
     }
 
     public IEnumerable<Message> GetAllMessages()
     {
-        var outbox = new PostgreSqlOutbox(_configuration);
+        var outbox = new PostgreSqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlOutbox>());
         return outbox.Get(new RequestContext());
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        var outbox = new PostgreSqlOutbox(_configuration);
+        var outbox = new PostgreSqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlOutbox>());
         return await outbox.GetAsync(new RequestContext());
     }
 
@@ -61,9 +63,9 @@ public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        return new PostgreSqlOutbox(_configuration);
+        return new PostgreSqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlOutbox>());
     }
-    
+
     public async Task CreateStoreAsync()
     {
         await using var connection = new NpgsqlConnection(_configuration.ConnectionString);
@@ -96,7 +98,7 @@ public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutstandingCountStore()
     {
         CreateStore();
-        return new PostgreSqlOutbox(_configuration);
+        return new PostgreSqlOutbox(configuration: _configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<PostgreSqlOutbox>.Instance);
     }
 
     public Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareCancellationAsync(TimeSpan holdFor) =>

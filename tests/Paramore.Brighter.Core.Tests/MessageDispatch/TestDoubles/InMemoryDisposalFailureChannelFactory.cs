@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -52,7 +52,7 @@ internal sealed class InMemoryDisposalFailureChannelFactory(
 
     private InMemoryDisposalFailureConsumer CreateConsumer(Subscription subscription)
     {
-        var inner = new InMemoryMessageConsumer(subscription.RoutingKey, _bus, TimeProvider.System);
+        var inner = new InMemoryMessageConsumer(topic: subscription.RoutingKey, bus: _bus, timeProvider: TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory);
         var consumer = new InMemoryDisposalFailureConsumer(
             inner, Consumers.Count < failingConsumerCount ? failure : null, failAcknowledgment);
         Consumers.Add(consumer);

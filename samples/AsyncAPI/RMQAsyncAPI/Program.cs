@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,26 +46,16 @@ var rmqConnection = new RmqMessagingGatewayConnection
     Exchange = new Exchange("paramore.brighter.asyncapi.exchange"),
 };
 
-var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-
 // Build a producer registry with a typed Publication<T> to demonstrate RequestType auto-discovery
-var producerRegistry = new RmqProducerRegistryFactory(
-    rmqConnection,
-    new RmqPublication<OrderCreatedEvent>[]
-    {
-        new()
-        {
-            WaitForConfirmsTimeOutInMilliseconds = 1000,
-            MakeChannels = OnMissingChannel.Create,
-            Topic = new RoutingKey("order.created")
-        }
-    }).Create();
 
 var host = new HostBuilder()
     .ConfigureServices((_, services) =>
     {
-        services.AddConsumers(options =>
+        services.AddConsumers(provider =>
             {
+                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection, loggerFactory: loggerFactory);
+                var options = new ConsumersOptions();
                 options.Subscriptions = new Subscription[]
                 {
                     new RmqSubscription<PaymentReceivedEvent>(
@@ -76,10 +67,25 @@ var host = new HostBuilder()
                         makeChannels: OnMissingChannel.Create)
                 };
                 options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+                return options;
             })
-            .AddProducers(configure =>
+            .AddProducers(provider =>
             {
+                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                var producerRegistry = new RmqProducerRegistryFactory(
+                    rmqConnection,
+                    new RmqPublication<OrderCreatedEvent>[]
+                    {
+                        new()
+                        {
+                            WaitForConfirmsTimeOutInMilliseconds = 1000,
+                            MakeChannels = OnMissingChannel.Create,
+                            Topic = new RoutingKey("order.created")
+                        }
+                    }, loggerFactory: loggerFactory).Create();
+                var configure = new ProducersConfiguration();
                 configure.ProducerRegistry = producerRegistry;
+                return configure;
             })
             .UseAsyncApi(opts =>
             {

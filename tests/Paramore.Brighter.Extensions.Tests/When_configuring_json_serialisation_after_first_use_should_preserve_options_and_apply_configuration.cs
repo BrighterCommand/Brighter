@@ -62,7 +62,7 @@ public class JsonSerialisationCopyOnConfigureTests : IDisposable
         JsonSerializerOptions previousOptions = JsonSerialisationOptions.Options;
         JsonConverter[] previousConverters = [.. previousOptions.Converters];
         var converter = new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower);
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         IBrighterBuilder builder = services.AddBrighter();
 
         if (serializeFirst)
@@ -103,7 +103,7 @@ public class JsonSerialisationCopyOnConfigureTests : IDisposable
     public void When_configuring_json_serialisation_again_after_use_should_preserve_the_first_configuration()
     {
         // Arrange
-        var firstServices = new ServiceCollection();
+        var firstServices = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         IBrighterBuilder firstBuilder = firstServices.AddBrighter();
         firstBuilder.ConfigureJsonSerialisation(options => options.WriteIndented = true);
         JsonSerializerOptions firstOptions = JsonSerialisationOptions.Options;
@@ -111,7 +111,7 @@ public class JsonSerialisationCopyOnConfigureTests : IDisposable
         _ = JsonSerializer.Serialize(new { OrderId = new Id("order-42") }, firstOptions);
         Assert.True(firstOptions.IsReadOnly);
 
-        var secondServices = new ServiceCollection();
+        var secondServices = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         IBrighterBuilder secondBuilder = secondServices.AddBrighter();
 
         // Act
@@ -133,7 +133,7 @@ public class JsonSerialisationCopyOnConfigureTests : IDisposable
         JsonSerializerOptions previousOptions = JsonSerialisationOptions.Options;
         JsonConverter[] previousConverters = [.. previousOptions.Converters];
         var failure = new InvalidOperationException("Configuration failed");
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         IBrighterBuilder builder = services.AddBrighter();
 
         // Act

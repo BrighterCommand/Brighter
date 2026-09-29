@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -36,7 +38,7 @@ public class InMemorySchedulerRequestAsyncTests
         _timeProvider = new FakeTimeProvider();
         _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
 
-        _scheduler = new InMemorySchedulerFactory { TimeProvider = _timeProvider };
+        _scheduler = new InMemorySchedulerFactory (loggerFactory: NullLoggerFactory.Instance) { TimeProvider = _timeProvider };
 
         var handlerFactory = new SimpleHandlerFactoryAsync(
             type =>
@@ -45,7 +47,7 @@ public class InMemorySchedulerRequestAsyncTests
                 {
                     return new MyEventHandlerAsync(_receivedMessages);
                 }
-                
+
                 return new FireSchedulerRequestHandler(_processor!);
             });
 
@@ -62,7 +64,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, NullLoggerFactory.Instance, new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -82,9 +84,9 @@ public class InMemorySchedulerRequestAsyncTests
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox
+            NullLoggerFactory.Instance, _outbox
         );
-        
+
         _processor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,
@@ -92,8 +94,8 @@ public class InMemorySchedulerRequestAsyncTests
             policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             outboxBus,
-            _scheduler
-        );
+            _scheduler,
+            loggerFactory: NullLoggerFactory.Instance);
     }
 
     #region Scheduler
@@ -116,7 +118,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -148,7 +150,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -181,7 +183,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -213,7 +215,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual =  _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -292,7 +294,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -329,7 +331,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -371,7 +373,7 @@ public class InMemorySchedulerRequestAsyncTests
         var expected = Message.Empty;
 
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -407,7 +409,7 @@ public class InMemorySchedulerRequestAsyncTests
         var expected = Message.Empty;
 
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);

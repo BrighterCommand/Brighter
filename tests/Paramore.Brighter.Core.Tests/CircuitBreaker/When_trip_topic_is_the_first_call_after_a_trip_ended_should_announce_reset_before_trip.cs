@@ -64,9 +64,9 @@ public class InMemoryTripTopicObservesEndedTripTests
             .Build();
         var clock = new FakeTimeProvider();
         var breaker = new InMemoryOutboxCircuitBreaker(
-            new OutboxCircuitBreakerOptions { CooldownCount = 10, MaximumTripDuration = TimeSpan.FromMinutes(5) },
-            new BrighterTracer(),
-            timeProvider: clock);
+options: new OutboxCircuitBreakerOptions { CooldownCount = 10, MaximumTripDuration = TimeSpan.FromMinutes(5) },
+            tracer: new BrighterTracer(),
+            timeProvider: clock, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(topic);
         clock.Advance(TimeSpan.FromMinutes(5));
         return (breaker, exported, provider);

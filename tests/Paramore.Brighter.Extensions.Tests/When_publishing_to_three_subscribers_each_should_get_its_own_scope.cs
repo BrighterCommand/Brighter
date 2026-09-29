@@ -43,7 +43,7 @@ public class PublishSubscriberScopeTeardownTests
     {
         // Arrange
         var recorder = new UnitOfWorkRecorder();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddSingleton(recorder);
         services.AddBrighter(options =>

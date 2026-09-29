@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -20,13 +22,13 @@ public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             outBoxTableName: _tableName);
-        var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config, loggerFactory: NullLoggerFactory.Instance);
         _provisioner = new SqliteOutboxProvisioner(
             new SqliteBoxDetectionHelper(),
             new SqliteOutboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

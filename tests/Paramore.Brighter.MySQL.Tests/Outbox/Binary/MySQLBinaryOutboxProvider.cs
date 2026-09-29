@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
@@ -22,12 +24,12 @@ public class MySQLBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPro
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
-        return new MySqlOutbox(_configuration);
+        return new MySqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<MySqlOutbox>());
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        return new MySqlOutbox(_configuration);
+        return new MySqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<MySqlOutbox>());
     }
 
     public void CreateStore()
@@ -73,13 +75,13 @@ public class MySQLBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPro
 
     public IEnumerable<Message> GetAllMessages()
     {
-        var outbox = new MySqlOutbox(_configuration);
+        var outbox = new MySqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<MySqlOutbox>());
         return outbox.Get(new RequestContext());
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        var outbox = new MySqlOutbox(_configuration);
+        var outbox = new MySqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<MySqlOutbox>());
         return await outbox.GetAsync(new RequestContext());
     }
 
@@ -97,7 +99,7 @@ public class MySQLBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPro
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutstandingCountStore()
     {
         CreateStore();
-        return new MySqlOutbox(_configuration);
+        return new MySqlOutbox(configuration: _configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<MySqlOutbox>.Instance);
     }
 
     public Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareCancellationAsync(TimeSpan holdFor) =>

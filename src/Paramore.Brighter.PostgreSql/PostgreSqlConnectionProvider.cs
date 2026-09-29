@@ -22,7 +22,7 @@ namespace Paramore.Brighter.PostgreSql
         /// connections; Brighter will not manage type mapping for you in this case so you must register them
         /// globally</param>
         public PostgreSqlConnectionProvider(
-            IAmARelationalDatabaseConfiguration configuration,
+            IAmARelationalDatabaseConfiguration? configuration,
             NpgsqlDataSource? dataSource = null)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.PostgreSql
             {
                 return _dataSource!.OpenConnection();
             }
-            
+
             var connection = new NpgsqlConnection(_connectionString);
             if (connection.State != System.Data.ConnectionState.Open) connection.Open();
             return connection;
@@ -71,11 +71,11 @@ namespace Paramore.Brighter.PostgreSql
             if (connection.State != System.Data.ConnectionState.Open) await connection.OpenAsync(cancellationToken);
             return connection;
         }
-        
+
         protected override void Dispose(bool disposing)
         {
             if (HasDataSource()) _dataSource!.Dispose();
-            _dataSource = null; 
+            _dataSource = null;
             base.Dispose(disposing);
         }
 

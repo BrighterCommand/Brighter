@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;

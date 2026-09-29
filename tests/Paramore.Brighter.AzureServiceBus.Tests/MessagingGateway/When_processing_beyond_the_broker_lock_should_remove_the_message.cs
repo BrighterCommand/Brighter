@@ -59,7 +59,7 @@ public class AzureServiceBusBrokerLockRenewalTests
                 channelName: new ChannelName(queueName), routingKey: new RoutingKey(queueName),
                 makeChannels: OnMissingChannel.Assume,
                 subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { UseServiceBusQueue = true });
-            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(provider));
+            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: provider, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
             await using var channel = factory.CreateAsyncChannel(subscription);
 
             // Act

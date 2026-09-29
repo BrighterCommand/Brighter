@@ -25,12 +25,12 @@ public class CommandProcessorWithSharedResiliencePipelineAsyncTests
         registry.RegisterAsync<MyCommand, MyCommandHandlerWithSharedPipelineAsync>();
         registry.RegisterAsync<MyOtherCommand, MyOtherCommandHandlerWithSharedPipelineAsync>();
 
-        var container = new ServiceCollection();
+        var container = new ServiceCollection().AddLogging();
         container.AddTransient<MyCommandHandlerWithSharedPipelineAsync>();
         container.AddTransient<MyOtherCommandHandlerWithSharedPipelineAsync>();
         container.AddTransient<ResilienceExceptionPolicyHandlerAsync<MyCommand>>();
         container.AddTransient<ResilienceExceptionPolicyHandlerAsync<MyOtherCommand>>();
-        container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+        container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
         var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
@@ -46,7 +46,7 @@ public class CommandProcessorWithSharedResiliencePipelineAsyncTests
         MyCommandHandlerWithSharedPipelineAsync.ReceivedCommand = false;
         MyOtherCommandHandlerWithSharedPipelineAsync.ReceivedCommand = false;
 
-        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), resiliencePipelineRegistry, new InMemorySchedulerFactory());
+        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), resiliencePipelineRegistry, new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

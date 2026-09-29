@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Mime;
 using System.Text.Json;
@@ -29,12 +31,12 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
         var channelName = new ChannelName(queueName);
-        
+
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
-            channelType: ChannelType.PointToPoint, 
-            routingKey: routingKey, 
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create,
             queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }));
@@ -51,7 +53,7 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
                 new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("sqs_async_sub"));
         });
 
-        _channelFactory = new ChannelFactory(subscribeAwsConnection);
+        _channelFactory = new ChannelFactory(subscribeAwsConnection, loggerFactory: NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
         var publishAwsConnection = GatewayFactory.CreateFactory(config =>
@@ -61,8 +63,8 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
         });
 
         _messageProducer = new SqsMessageProducer(publishAwsConnection,
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create)
-            );
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create),
+            loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

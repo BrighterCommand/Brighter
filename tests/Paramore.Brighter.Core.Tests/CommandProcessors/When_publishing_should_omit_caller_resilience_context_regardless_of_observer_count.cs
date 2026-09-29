@@ -162,8 +162,7 @@ public class PublishResilienceContextTests
                         : type == typeof(ResilienceContextProbeHandlerAsync)
                             ? new ResilienceContextProbeHandlerAsync()
                             : throw new InvalidOperationException($"Unexpected handler type: {type}"));
-            var processor = new CommandProcessor(subscribers, factory,
-                new InMemoryRequestContextFactory(), new PolicyRegistry(), pipelines, new InMemorySchedulerFactory());
+            var processor = new CommandProcessor(subscriberRegistry: subscribers, handlerFactory: factory, requestContextFactory: new InMemoryRequestContextFactory(), policyRegistry: new PolicyRegistry(), resilienceResiliencePipelineRegistry: pipelines, requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
             //Act
             if (isAsync)

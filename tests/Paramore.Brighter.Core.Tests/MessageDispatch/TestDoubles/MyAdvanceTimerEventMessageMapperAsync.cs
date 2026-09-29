@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
@@ -9,10 +9,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 public class MyAdvanceTimerEventMessageMapperAsync : IAmAMessageMapperAsync<MyAdvanceTimerEvent>
 {
     public IRequestContext? Context { get; set; }
-    
+
     public Task<Message> MapToMessageAsync(MyAdvanceTimerEvent request, Publication publication, CancellationToken cancellationToken)
     {
-        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic ?? RoutingKey.Empty, source: publication.Source, 
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic ?? RoutingKey.Empty, source: publication.Source,
             type: publication.Type, messageType: request.RequestToMessageType());
         var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
         var message = new Message(header, body);

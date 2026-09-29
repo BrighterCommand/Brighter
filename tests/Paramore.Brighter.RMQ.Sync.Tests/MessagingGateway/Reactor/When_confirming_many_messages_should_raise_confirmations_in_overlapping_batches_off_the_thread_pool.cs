@@ -24,7 +24,7 @@ public class RmqConfirmationBatchingTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(connection: rmqConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //we need a queue to avoid a discard
         new QueueFactory(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), new RoutingKeys(_routingKey))

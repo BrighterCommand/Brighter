@@ -24,23 +24,23 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         {
             SpyCommandProcessor commandProcessor = new();
             Channel channel = new(
-                new(Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+                new(Channel), _routingKey,
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
             );
-            
+
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-            
-            var messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel);
+
+            var messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent),
+                messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory);
             messagePump.Channel = channel;
             messagePump.TimeOut = TimeSpan.FromMilliseconds(5000);
 
             var @event = new MyEvent();
             var message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
             );
             channel.Enqueue(message);
@@ -48,9 +48,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             Performer performer = new(channel, messagePump);
             _performerTask = performer.Run();
             performer.Stop(new RoutingKey(Topic));
-            
+
         }
-        
+
 #pragma warning disable xUnit1031
         [Fact]
         public void When_Running_A_Message_Pump_On_A_Thread_Should_Be_Able_To_Stop()

@@ -84,7 +84,7 @@ public class RocketMqDeliveryAttemptMeasurementTests(ITestOutputHelper output)
             receiveMessageTimeout: s_receiveMessageTimeout,
             invisibilityTimeout: s_invisibilityTimeout);
 
-        var factory = new RocketMessageConsumerFactory(connection);
+        var factory = new RocketMessageConsumerFactory(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var publication = new RocketMqPublication { Topic = routingKey };
         using var producer = new RocketMqMessageProducer(
             connection,

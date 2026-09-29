@@ -44,12 +44,12 @@ public class MessagePumpMapperReleaseThrowsTests
             new InMemoryRequestContextFactory(),
             new PolicyRegistry(),
             new ResiliencePipelineRegistry<string>(),
-            new InMemorySchedulerFactory());
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
         PipelineBuilder<MyEvent>.ClearPipelineCache();
 
         var channel = new Channel(new("myChannel"), _routingKey,
-            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
+            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory));
 
         //a mapper factory whose Release throws, standing in for a user Dispose/Release that faults
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -58,9 +58,10 @@ public class MessagePumpMapperReleaseThrowsTests
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
         _messagePump = new ServiceActivator.Reactor(commandProcessor, _ => typeof(MyEvent),
-            messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel)
+            messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory)
         {
-            Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000)
+            Channel = channel,
+            TimeOut = TimeSpan.FromMilliseconds(5000)
         };
 
         var message = new Message(new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT),

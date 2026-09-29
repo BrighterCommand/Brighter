@@ -20,20 +20,20 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => null));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-        
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory);
+
     }
-    
+
     [Fact]
     public void When_A_Message_Mapper_Map_To_Message_Has_No_Transform()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        
+
         //assert
-        Assert.Equal("MyVanillaCommandMessageMapper", TraceFilters().ToString()); 
+        Assert.Equal("MyVanillaCommandMessageMapper", TraceFilters().ToString());
     }
-    
+
     private TransformPipelineTracer TraceFilters()
     {
         var pipelineTracer = new TransformPipelineTracer();

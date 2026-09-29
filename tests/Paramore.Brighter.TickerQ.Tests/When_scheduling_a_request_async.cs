@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Paramore.Brighter.TickerQ.Tests.TestDoubles;
 using Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures;
 
@@ -196,7 +196,7 @@ namespace Paramore.Brighter.TickerQ.Tests
             var req = new MyEvent();
             var scheduler = _fixture.SchedulerFactory.CreateAsync(_fixture.Processor);
             var id = await scheduler.ScheduleAsync(req, type, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(2)));
-        
+
             Assert.True((id)?.Any());
 
             await scheduler.ReSchedulerAsync(id, _fixture.TimeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)));

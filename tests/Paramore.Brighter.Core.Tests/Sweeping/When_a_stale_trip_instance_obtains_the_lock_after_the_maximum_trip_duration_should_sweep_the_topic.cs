@@ -21,8 +21,8 @@ public class SweeperStaleTripTests
         //Arrange
         var clock = new FakeTimeProvider();
         var breaker = new InMemoryOutboxCircuitBreaker(
-            new OutboxCircuitBreakerOptions { MaximumTripDuration = TimeSpan.FromMinutes(5) },
-            timeProvider: clock);
+options: new OutboxCircuitBreakerOptions { MaximumTripDuration = TimeSpan.FromMinutes(5) },
+            timeProvider: clock, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         using var outbox = new SweepableOutbox(breaker);
         using var measurements = new RecordedSweeperMeasurements();
         var distributedLock = new SwitchableDistributedLock();
@@ -31,11 +31,7 @@ public class SweeperStaleTripTests
         breaker.TripTopic(outbox.RoutingKey);
 
         var sweeper = new TimedOutboxSweeper(
-            outbox.ScopeFactory,
-            distributedLock,
-            new TimedOutboxSweeperOptions { TimerInterval = 5, MinimumMessageAge = TimeSpan.Zero },
-            timeProvider: clock,
-            meter: new SweeperMeter(measurements.MeterFactory));
+serviceScopeFactory: outbox.ScopeFactory, distributedLock: distributedLock, options: new TimedOutboxSweeperOptions { TimerInterval = 5, MinimumMessageAge = TimeSpan.Zero }, timeProvider: clock, meter: new SweeperMeter(meterFactory: measurements.MeterFactory, loggerFactory: Initializer.TestLoggerFactory), logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         //Act
         await sweeper.StartAsync(CancellationToken.None);

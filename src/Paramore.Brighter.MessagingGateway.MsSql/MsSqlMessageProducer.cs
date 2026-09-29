@@ -28,7 +28,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Observability;
@@ -41,7 +40,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     /// </summary>
     public partial class MsSqlMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageProducer>();
+        private readonly ILogger _logger;
         private readonly InstrumentationOptions _instrumentation;
         private readonly MsSqlMessageQueue<Message> _sqlQ;
         private MsSqlPublicationSnapshot _publication;
@@ -75,15 +74,18 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="connectonProvider">The connection provider.</param>
         /// <param name="publication">The publication configuration.</param>
         /// <param name="instrumentation">The <see cref="InstrumentationOptions"/></param>
+        /// <param name="loggerFactory">The factory used to create loggers.</param>
         public MsSqlMessageProducer(
             RelationalDatabaseConfiguration msSqlConfiguration,
             IAmARelationalDbConnectionProvider connectonProvider,
+            ILoggerFactory loggerFactory,
             Publication? publication = null,
             InstrumentationOptions instrumentation = InstrumentationOptions.All
         )
         {
             _publication = new MsSqlPublicationSnapshot(publication ?? new Publication { MakeChannels = OnMissingChannel.Create });
-            _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectonProvider);
+            _logger = loggerFactory.CreateLogger<MsSqlMessageProducer>();
+            _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectonProvider, loggerFactory);
             _instrumentation = instrumentation;
         }
 
@@ -92,10 +94,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// </summary>
         /// <param name="msSqlConfiguration">The MS SQL configuration.</param>
         /// <param name="publication">The publication configuration.</param>
+        /// <param name="loggerFactory">The factory used to create loggers.</param>
         public MsSqlMessageProducer(
             RelationalDatabaseConfiguration msSqlConfiguration,
+            ILoggerFactory loggerFactory,
             Publication? publication = null)
-            : this(msSqlConfiguration, new MsSqlConnectionProvider(msSqlConfiguration), publication)
+            : this(msSqlConfiguration, new MsSqlConnectionProvider(msSqlConfiguration), loggerFactory, publication)
         {
         }
 
@@ -126,7 +130,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="message">The message to send.</param>
         /// <param name="delay">The delay to use.</param>
         public void SendWithDelay(Message message, TimeSpan? delay = null)
-        { 
+        {
             delay ??= TimeSpan.Zero;
             var publication = Volatile.Read(ref _publication);
             publication.ValidateMessageTopic(message.Header.Topic);
@@ -138,21 +142,21 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                     sync.Schedule(message, delay.Value);
                     return;
                 }
-                  
+
                 if (Scheduler is IAmAMessageSchedulerAsync async)
                 {
                     BrighterAsyncContext.Run(() => async.ScheduleAsync(message, delay.Value));
                     return;
-                } 
-                  
+                }
+
                 throw new ConfigurationException(
                     $"MsSqlMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
-              
+
             BrighterTracer.WriteProducerEvent(Span, "microsoft_sql_server", message, _instrumentation);
             var topic = message.Header.Topic;
 
-            Log.SendMessage(s_logger, topic.Value, message.Id.Value);
+            Log.SendMessage(_logger, topic.Value, message.Id.Value);
 
             if (subscriberChannels == null)
                 _sqlQ.Send(message, topic);
@@ -188,7 +192,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                     sync.Schedule(message, delay.Value);
                     return;
                 }
-                
+
                 throw new ConfigurationException(
                     $"MsSqlMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
@@ -196,7 +200,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             BrighterTracer.WriteProducerEvent(Span, "microsoft_sql_server", message, _instrumentation);
             var topic = message.Header.Topic;
 
-            Log.SendMessageAsync(s_logger, topic.Value, message.Id.Value);
+            Log.SendMessageAsync(_logger, topic.Value, message.Id.Value);
 
             if (subscriberChannels == null)
                 await _sqlQ.SendAsync(message, topic.Value, TimeSpan.Zero, cancellationToken);
@@ -218,10 +222,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             [LoggerMessage(LogLevel.Debug, "MsSqlMessageProducer: send message with topic {Topic} and id {Id}")]
             public static partial void SendMessage(ILogger logger, string topic, string id);
-            
+
             [LoggerMessage(LogLevel.Debug, "MsSqlMessageProducer: send async message with topic {Topic} and id {Id}")]
             public static partial void SendMessageAsync(ILogger logger, string topic, string id);
         }
     }
 }
-

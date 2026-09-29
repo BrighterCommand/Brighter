@@ -58,7 +58,7 @@ public class SqsBudgetMinusOneNeverRejectsProactorTests : IDisposable, IAsyncDis
     {
         ConformanceDeferredPump.ResetDispatchCount();
         _awsConnection = GatewayFactory.CreateFactory();
-        _channelFactory = new ChannelFactory(_awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     /// <summary>
@@ -110,19 +110,19 @@ public class SqsBudgetMinusOneNeverRejectsProactorTests : IDisposable, IAsyncDis
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create);
 
-        _dlqChannelFactory = new ChannelFactory(_awsConnection);
+        _dlqChannelFactory = new ChannelFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var dlqChannel = _dlqChannelFactory.CreateAsyncChannel(dlqSubscription);
 
         // Wrap the underlying consumer in a recording decorator so dispatch counts are observable.
-        var asyncConsumer = new SqsMessageConsumerFactory(_awsConnection).CreateAsync(subscription);
+        var asyncConsumer = new SqsMessageConsumerFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
         var channel = ConformanceDeferredPump.CreateRecordingChannelAsync(channelName, routingKey, asyncConsumer);
 
-        var producer = new SnsMessageProducer(_awsConnection, new SnsPublication
+        var producer = new SnsMessageProducer(connection: _awsConnection, publication: new SnsPublication
         {
             Topic = routingKey,
             RequestType = typeof(ConformanceDeferredCommand),
             MakeChannels = OnMissingChannel.Validate
-        });
+        }, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var cmd = new ConformanceDeferredCommand { Value = "budget minus one never rejects test" };
         var message = new Message(

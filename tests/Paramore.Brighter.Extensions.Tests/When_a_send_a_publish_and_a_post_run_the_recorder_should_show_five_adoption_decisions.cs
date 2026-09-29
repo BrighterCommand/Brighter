@@ -58,7 +58,7 @@ public class AdoptionDecisionCountTests
         var handlerMarkerRecorder = new HandlerMarkerRecorder();
         var unitOfWorkRecorder = new UnitOfWorkRecorder();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddScoped<IMarker, Marker>();
         collection.AddScoped<ScopedHandlerCommandHandler>();
         collection.AddSingleton(handlerMarkerRecorder);
@@ -93,7 +93,7 @@ public class AdoptionDecisionCountTests
         var routingKey = new RoutingKey("test");
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(AdoptionDecisionPostCommand) }) }
+            { routingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(AdoptionDecisionPostCommand) }) }
         });
 
         var timeProvider = new FakeTimeProvider();
@@ -108,7 +108,7 @@ public class AdoptionDecisionCountTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+Initializer.Factory,            new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         var commandProcessor = new CommandProcessor(
@@ -118,8 +118,8 @@ public class AdoptionDecisionCountTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory()
-        );
+new InMemorySchedulerFactory(loggerFactory: Initializer.Factory)
+,loggerFactory:Initializer.Factory        );
 
         // Act - one Send, one Publish to three subscribers, and one Post
         commandProcessor.Send(new ScopedHandlerCommand());

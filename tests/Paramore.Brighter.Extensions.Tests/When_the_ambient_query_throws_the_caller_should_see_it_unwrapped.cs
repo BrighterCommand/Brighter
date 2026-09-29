@@ -62,7 +62,7 @@ public class AmbientQueryThrowsUnwrappedTests
         var routingKey = new RoutingKey("test");
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(AmbientThrowsPostCommand) }) }
+            { routingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(AmbientThrowsPostCommand) }) }
         });
 
         var timeProvider = new FakeTimeProvider();
@@ -77,7 +77,7 @@ public class AmbientQueryThrowsUnwrappedTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+Initializer.Factory,            new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         // one CommandProcessor - the same host - handles both Send (via subscriberRegistry/handlerFactory)
@@ -89,8 +89,8 @@ public class AmbientQueryThrowsUnwrappedTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory()
-        );
+new InMemorySchedulerFactory(loggerFactory: Initializer.Factory)
+,loggerFactory:Initializer.Factory        );
 
         // Act & Assert — Send: the caller observes the ambient source's own exception unwrapped, not a
         // ConfigurationException, and no pipeline scope was created
@@ -109,7 +109,7 @@ public class AmbientQueryThrowsUnwrappedTests
 
     private static ScopeTracker BuildScopeTracker(out IServiceProvider trackingProvider)
     {
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddScoped<AmbientThrowsCommandHandler>();
         collection.AddScoped<AmbientThrowsPostMapper>();
         collection.AddSingleton<IAmAScopeProvider>(new ThrowingScopeProvider());

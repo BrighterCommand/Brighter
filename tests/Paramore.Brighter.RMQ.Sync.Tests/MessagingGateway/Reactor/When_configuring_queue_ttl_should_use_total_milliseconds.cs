@@ -63,7 +63,7 @@ public class RmqQueueTtlTests
 
         try
         {
-            using var consumer = new RmqMessageConsumerFactory(gatewayConnection).Create(subscription);
+            using var consumer = new RmqMessageConsumerFactory(rmqConnection: gatewayConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
 
             //Act
             consumer.Purge();

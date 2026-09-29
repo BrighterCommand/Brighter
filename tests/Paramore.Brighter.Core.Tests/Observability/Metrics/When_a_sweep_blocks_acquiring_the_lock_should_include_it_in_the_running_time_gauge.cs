@@ -50,14 +50,10 @@ public class SweeperRunningTimeIncludesLockGaugeTests
         using var provider = services.BuildServiceProvider();
         using var metrics = new ServiceCollection().AddMetrics().BuildServiceProvider();
         var meterFactory = metrics.GetRequiredService<IMeterFactory>();
-        var meter = new SweeperMeter(meterFactory, state);
+        var meter = new SweeperMeter(meterFactory: meterFactory, state: state, loggerFactory: Initializer.TestLoggerFactory);
         using var recorded = new RunningTimeListener(meterFactory);
         var sweeper = new TimedOutboxSweeper(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            gatedLock,
-            new TimedOutboxSweeperOptions { TimerInterval = 60, MinimumMessageAge = TimeSpan.Zero },
-            timeProvider: timeProvider,
-            state: state);
+serviceScopeFactory: provider.GetRequiredService<IServiceScopeFactory>(), distributedLock: gatedLock, options: new TimedOutboxSweeperOptions { TimerInterval = 60, MinimumMessageAge = TimeSpan.Zero }, timeProvider: timeProvider, state: state, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         try
         {

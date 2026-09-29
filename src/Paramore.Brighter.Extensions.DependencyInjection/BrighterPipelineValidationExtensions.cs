@@ -60,7 +60,8 @@ public static class BrighterPipelineValidationExtensions
     /// <returns>The builder, for fluent chaining.</returns>
     public static IBrighterBuilder ValidatePipelines(this IBrighterBuilder builder, bool enabled = true, bool throwOnError = true)
     {
-        if (!enabled) return builder;
+        if (!enabled)
+            return builder;
 
         builder.Services.Configure<BrighterPipelineValidationOptions>(o => o.ThrowOnError = throwOnError);
 
@@ -83,7 +84,10 @@ public static class BrighterPipelineValidationExtensions
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
                 ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
-            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, ResolveInboxConfiguration(sp));
+            var pipelineBuilder = new PipelineBuilder<IRequest>(
+                subscriberRegistry,
+                sp.GetRequiredService<ILoggerFactory>(),
+                ResolveInboxConfiguration(sp));
 
             var publications = ResolvePublications(sp);
             var subscriptions = ResolveSubscriptions(sp);
@@ -113,7 +117,7 @@ public static class BrighterPipelineValidationExtensions
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
                 ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
-            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, ResolveInboxConfiguration(sp));
+            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, sp.GetRequiredService<ILoggerFactory>(), ResolveInboxConfiguration(sp));
 
             return new ScopeConfigurationValidator(
                 sp.GetService<IBrighterOptions>(),
@@ -139,13 +143,17 @@ public static class BrighterPipelineValidationExtensions
     /// <returns>The builder, for fluent chaining.</returns>
     public static IBrighterBuilder DescribePipelines(this IBrighterBuilder builder, bool enabled = true)
     {
-        if (!enabled) return builder;
+        if (!enabled)
+            return builder;
         builder.Services.TryAddSingleton<IAmAPipelineDiagnosticWriter>(sp =>
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
                 ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
-            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, ResolveInboxConfiguration(sp));
-            var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<PipelineDiagnosticWriter>();
+            var pipelineBuilder = new PipelineBuilder<IRequest>(
+                subscriberRegistry,
+                sp.GetRequiredService<ILoggerFactory>(),
+                ResolveInboxConfiguration(sp));
+            var logger = sp.GetRequiredService<ILoggerFactory>().CreateBrighterLogger<PipelineDiagnosticWriter>();
 
             var publications = ResolvePublications(sp);
             var subscriptions = ResolveSubscriptions(sp);

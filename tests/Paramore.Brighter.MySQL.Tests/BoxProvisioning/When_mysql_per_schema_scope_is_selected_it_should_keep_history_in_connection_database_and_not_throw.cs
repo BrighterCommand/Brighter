@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using MySqlConnector;
@@ -113,13 +115,13 @@ public class MySqlPerSchemaNoOpTests : IAsyncLifetime
         // Evident data: PerSchema is the scope under test.
         var runner = new MySqlBoxMigrationRunner(
             new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: MigrationHistoryScope.PerSchema);
+            scope: MigrationHistoryScope.PerSchema, loggerFactory: NullLoggerFactory.Instance);
         return new MySqlOutboxProvisioner(
             new MySqlBoxDetectionHelper(),
             new MySqlOutboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
     }
 
     private async Task EnsureDatabaseExistsAsync(string databaseName)

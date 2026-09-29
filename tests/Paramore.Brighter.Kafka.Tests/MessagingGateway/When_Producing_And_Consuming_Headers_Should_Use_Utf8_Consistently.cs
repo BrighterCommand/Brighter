@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -43,7 +45,7 @@ public class KafkaHeaderUtf8EncodingTests
         };
 
         // Act
-        var readMessage = new KafkaMessageCreator().CreateMessage(consumeResult);
+        var readMessage = new KafkaMessageCreator(logger: Initializer.TestLoggerFactory.CreateLogger<KafkaMessageCreator>()).CreateMessage(consumeResult);
 
         // Assert — the non-ASCII characters survive the round-trip
         Assert.Equal(unicodeValue, readMessage.Header.Bag["unicode_key"]);
@@ -84,7 +86,7 @@ public class KafkaHeaderUtf8EncodingTests
         };
 
         // Act
-        var readMessage = new KafkaMessageCreator().CreateMessage(consumeResult);
+        var readMessage = new KafkaMessageCreator(logger: Initializer.TestLoggerFactory.CreateLogger<KafkaMessageCreator>()).CreateMessage(consumeResult);
 
         // Assert — standard Brighter headers round-trip correctly
         Assert.Equal(message.Header.MessageType, readMessage.Header.MessageType);

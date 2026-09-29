@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -24,6 +24,8 @@ THE SOFTWARE. */
 #endregion
 
 #nullable enable
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -82,7 +84,7 @@ public class GcpStreamOrderingMessageGatewayProvider
                 cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
             },
         };
-        _channelFactory = new GcpPubSubChannelFactory(_connection);
+        _channelFactory = new GcpPubSubChannelFactory(_connection, loggerFactory: NullLoggerFactory.Instance);
         _scheduler = new ConformanceHarnessMessageScheduler(RepublishToPubSub);
     }
 

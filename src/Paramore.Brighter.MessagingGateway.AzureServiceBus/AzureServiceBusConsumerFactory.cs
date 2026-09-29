@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.Observability;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using IServiceBusClientProvider = Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider.IServiceBusClientProvider;
@@ -36,6 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
 {
     private readonly IServiceBusClientProvider _clientProvider;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly AzureServiceBusPublication _publication;
     private readonly InstrumentationOptions _instrumentationOptions;
 
@@ -46,24 +48,25 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
     /// Factory to create an Azure Service Bus Consumer
     /// </summary>
     /// <param name="configuration">The configuration to connect to <see cref="AzureServiceBusConfiguration"/></param>
-    public AzureServiceBusConsumerFactory(AzureServiceBusConfiguration configuration)
-        : this(new ServiceBusConnectionStringClientProvider(configuration.ConnectionString))
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers</param>
+    public AzureServiceBusConsumerFactory(AzureServiceBusConfiguration configuration, ILoggerFactory loggerFactory)
+        : this(new ServiceBusConnectionStringClientProvider(configuration.ConnectionString), loggerFactory)
     { }
 
     /// <summary>
     /// Factory to create an Azure Service Bus Consumer
     /// </summary>
     /// <param name="clientProvider">A client Provider <see cref="IServiceBusClientProvider"/> to determine how to connect to ASB</param>
-    public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider)
-        : this(clientProvider, new AzureServiceBusPublication())
+    public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider, ILoggerFactory loggerFactory)
+        : this(clientProvider, new AzureServiceBusPublication(), loggerFactory)
     {
     }
 
     /// <summary>Creates consumers using the publication's retry scheduler selection.</summary>
     /// <param name="clientProvider">The client for the consuming broker.</param>
     /// <param name="publication">The publication selecting native or global retries.</param>
-    public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider, AzureServiceBusPublication publication)
-        : this(clientProvider, publication, InstrumentationOptions.All)
+    public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider, AzureServiceBusPublication publication, ILoggerFactory loggerFactory)
+        : this(clientProvider, publication, InstrumentationOptions.All, loggerFactory)
     {
     }
 
@@ -72,11 +75,12 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
     /// <param name="publication">The publication selecting native or global retries.</param>
     /// <param name="instrumentationOptions">The verbosity of native retry telemetry.</param>
     public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider, AzureServiceBusPublication publication,
-        InstrumentationOptions instrumentationOptions)
+        InstrumentationOptions instrumentationOptions, ILoggerFactory loggerFactory)
     {
         _clientProvider = clientProvider ?? throw new ArgumentNullException(nameof(clientProvider));
         _publication = publication ?? throw new ArgumentNullException(nameof(publication));
         _instrumentationOptions = instrumentationOptions;
+        _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
     }
 
     /// <summary>
@@ -114,7 +118,7 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
 
         IAmAMessageScheduler? scheduler = _publication.RequeueScheduler switch
         {
-            RequeueSchedulerMode.Native => usesQueue ? new AzureServiceBusRequeueScheduler(_clientProvider, instrumentationOptions: _instrumentationOptions) : null,
+            RequeueSchedulerMode.Native => usesQueue ? new AzureServiceBusRequeueScheduler(_clientProvider, instrumentationOptions: _instrumentationOptions, loggerFactory: _loggerFactory) : null,
             RequeueSchedulerMode.Global when !usesQueue => throw new ConfigurationException(
                 "Global retry scheduling requires UseServiceBusQueue or ForwardTo to identify a physical queue."),
             RequeueSchedulerMode.Global => Scheduler ?? throw new ConfigurationException(
@@ -130,12 +134,12 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
                 : "The selected retry scheduler must implement IAmAMessageRequeueSchedulerSync.");
         }
 
-        var administration = new AdministrationClientWrapper(_clientProvider);
-        var receiverProvider = new ServiceBusReceiverProvider(_clientProvider, sub.Configuration.MaxAutoLockRenewalDuration);
+        var administration = new AdministrationClientWrapper(_clientProvider, _loggerFactory);
+        var receiverProvider = new ServiceBusReceiverProvider(_clientProvider, sub.Configuration.MaxAutoLockRenewalDuration, _loggerFactory);
         if (sub.Configuration.ForwardTo is not null)
-            return new AzureServiceBusForwardingConsumer(sub, scheduler!, administration, receiverProvider);
+            return new AzureServiceBusForwardingConsumer(sub, scheduler!, administration, receiverProvider, _loggerFactory);
         if (sub.Configuration.UseServiceBusQueue)
-            return new AzureServiceBusQueueConsumer(sub, scheduler!, administration, receiverProvider);
-        return new AzureServiceBusTopicConsumer(sub, administration, receiverProvider);
+            return new AzureServiceBusQueueConsumer(sub, scheduler!, administration, receiverProvider, _loggerFactory);
+        return new AzureServiceBusTopicConsumer(sub, administration, receiverProvider, _loggerFactory);
     }
 }

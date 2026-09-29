@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -63,7 +63,7 @@ public class StaleStepAddedTests
                         new RoutingKey("orders"),
                         new InMemoryMessageProducer(
                             new InternalBus(),
-                            new Publication { Topic = new RoutingKey("orders"), StaleMessageAge = TimeSpan.FromMinutes(1) })
+publication:                            new Publication { Topic = new RoutingKey("orders"), StaleMessageAge = TimeSpan.FromMinutes(1) },loggerFactory:Initializer.TestLoggerFactory)
                     }
                 });
                 configuration.Outbox = outbox;

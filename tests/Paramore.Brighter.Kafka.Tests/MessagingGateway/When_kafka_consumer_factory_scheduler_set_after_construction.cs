@@ -37,7 +37,7 @@ public class When_kafka_consumer_factory_scheduler_set_after_construction
     public void Should_expose_scheduler_set_after_construction()
     {
         // Arrange — factory constructed without a scheduler
-        var factory = new KafkaMessageConsumerFactory(_configuration);
+        var factory = new KafkaMessageConsumerFactory(_configuration, loggerFactory: Initializer.TestLoggerFactory);
         var scheduler = new StubMessageScheduler();
 
         // Act — set scheduler after construction
@@ -52,7 +52,7 @@ public class When_kafka_consumer_factory_scheduler_set_after_construction
     {
         // Arrange — factory constructed with a scheduler via constructor
         var scheduler = new StubMessageScheduler();
-        var factory = new KafkaMessageConsumerFactory(_configuration, scheduler);
+        var factory = new KafkaMessageConsumerFactory(_configuration, Initializer.TestLoggerFactory, scheduler);
 
         // Assert — scheduler property reflects the constructor value
         Assert.Same(scheduler, factory.Scheduler);
@@ -63,7 +63,7 @@ public class When_kafka_consumer_factory_scheduler_set_after_construction
     {
         // Arrange — factory constructed with one scheduler
         var originalScheduler = new StubMessageScheduler();
-        var factory = new KafkaMessageConsumerFactory(_configuration, originalScheduler);
+        var factory = new KafkaMessageConsumerFactory(_configuration, Initializer.TestLoggerFactory, originalScheduler);
 
         // Act — override with a different scheduler
         var overrideScheduler = new StubMessageScheduler();

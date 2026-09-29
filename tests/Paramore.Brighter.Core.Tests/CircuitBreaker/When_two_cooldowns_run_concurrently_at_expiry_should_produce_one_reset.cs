@@ -28,8 +28,8 @@ public class InMemoryConcurrentExpiryTests
             {
                 var clock = new FakeTimeProvider();
                 var breaker = new InMemoryOutboxCircuitBreaker(
-                    new OutboxCircuitBreakerOptions { CooldownCount = 10, MaximumTripDuration = TimeSpan.FromMinutes(5) },
-                    timeProvider: clock);
+options: new OutboxCircuitBreakerOptions { CooldownCount = 10, MaximumTripDuration = TimeSpan.FromMinutes(5) },
+                    timeProvider: clock, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
                 breaker.TripTopic(topic);
                 clock.Advance(TimeSpan.FromMinutes(5));
 

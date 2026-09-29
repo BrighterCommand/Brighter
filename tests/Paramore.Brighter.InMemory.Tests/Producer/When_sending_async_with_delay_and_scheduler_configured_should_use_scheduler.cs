@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,7 +48,7 @@ public class When_sending_async_with_delay_and_scheduler_configured_should_use_s
     {
         // Arrange
         _bus = new InternalBus();
-        _producer = new InMemoryMessageProducer(_bus);
+        _producer = new InMemoryMessageProducer(_bus, loggerFactory: NullLoggerFactory.Instance);
         _scheduler = new SpySchedulerAsync();
         _producer.Scheduler = _scheduler;
 

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -100,7 +102,7 @@ public class CreateRequestFromReplyMessageOnPumpContextTests
     private static DisposeProbe BuildMediator(out OutboxProducerMediator<Message, CommittableTransaction> mediator)
     {
         var probe = new DisposeProbe();
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton(probe);
         collection.AddTransient<AsyncDisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
@@ -120,7 +122,7 @@ public class CreateRequestFromReplyMessageOnPumpContextTests
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             null,
-            new FindPublicationByPublicationTopicOrRequestType());
+            new FindPublicationByPublicationTopicOrRequestType(), loggerFactory: NullLoggerFactory.Instance);
 
         return probe;
     }

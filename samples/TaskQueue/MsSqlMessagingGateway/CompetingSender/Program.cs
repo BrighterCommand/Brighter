@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,24 +34,26 @@ var messagingConfiguration = new RelationalDatabaseConfiguration(
     connectionString,
     queueStoreTable: SampleDatabase.QueueTable);
 
-var producerRegistry = new MsSqlProducerRegistryFactory(
-        messagingConfiguration,
-        // A Publication with no Topic throws ConfigurationException from
-        // MsSqlMessageProducerFactory.Create(); the routing key must match the subscription
-        // CompetingReceiverConsole declares.
-        [new Publication<CompetingConsumerCommand>
-        {
-            Topic = new RoutingKey(SampleDatabase.CompetingTopic)
-        }])
-    .Create();
-
 builder.Services.AddBrighter()
     // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
     // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-    .UseScheduler(new InMemorySchedulerFactory())
-    .AddProducers((configure) =>
+    .UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
+    .AddProducers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var producerRegistry = new MsSqlProducerRegistryFactory(
+                messagingConfiguration,
+                // A Publication with no Topic throws ConfigurationException from
+                // MsSqlMessageProducerFactory.Create(); the routing key must match the subscription
+                // CompetingReceiverConsole declares.
+                [new Publication<CompetingConsumerCommand>
+                {
+                    Topic = new RoutingKey(SampleDatabase.CompetingTopic)
+                }], loggerFactory: loggerFactory)
+            .Create();
+        var configure = new ProducersConfiguration();
         configure.ProducerRegistry = producerRegistry;
+        return configure;
     })
     .AutoFromAssemblies([typeof(CompetingConsumerCommand).Assembly])
     // Producer-side validation of what has been registered above, so a misconfigured publication

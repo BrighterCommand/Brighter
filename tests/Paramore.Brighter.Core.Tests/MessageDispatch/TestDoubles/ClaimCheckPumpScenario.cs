@@ -162,20 +162,18 @@ public sealed class ClaimCheckPumpScenario : IDisposable
         }
 
         var processor = new CommandProcessor(subscribers, handlers, new InMemoryRequestContextFactory(),
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
         if (useAsync)
         {
             var transforms = new ServiceProviderTransformerFactoryAsync(_services);
-            var pump = new ServiceActivator.Proactor(processor, _ => typeof(TRequest), mappers, transforms,
-                new InMemoryRequestContextFactory(), Channel) { DontAckDelay = TimeSpan.Zero, RequeueCount = 10 };
+            var pump = new ServiceActivator.Proactor(commandProcessor: processor, mapRequestType: _ => typeof(TRequest), messageMapperRegistry: mappers, messageTransformerFactory: transforms, requestContextFactory: new InMemoryRequestContextFactory(), channel: Channel, loggerFactory: Initializer.TestLoggerFactory) { DontAckDelay = TimeSpan.Zero, RequeueCount = 10 };
             return (pump, transforms);
         }
         else
         {
             var transforms = new ServiceProviderTransformerFactory(_services);
-            var pump = new ServiceActivator.Reactor(processor, _ => typeof(TRequest), mappers, transforms,
-                new InMemoryRequestContextFactory(), Channel) { DontAckDelay = TimeSpan.Zero, RequeueCount = 10 };
+            var pump = new ServiceActivator.Reactor(commandProcessor: processor, mapRequestType: _ => typeof(TRequest), messageMapperRegistry: mappers, messageTransformerFactory: transforms, requestContextFactory: new InMemoryRequestContextFactory(), channel: Channel, loggerFactory: Initializer.TestLoggerFactory) { DontAckDelay = TimeSpan.Zero, RequeueCount = 10 };
             return (pump, transforms);
         }
     }

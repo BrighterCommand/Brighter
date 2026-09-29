@@ -21,18 +21,14 @@ public class SweepsWithDefaultCircuitBreakerOptionsTests
     {
         //Arrange
         var clock = new FakeTimeProvider();
-        var breaker = new InMemoryOutboxCircuitBreaker(timeProvider: clock);
+        var breaker = new InMemoryOutboxCircuitBreaker(timeProvider: clock, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         using var outbox = new SweepableOutbox(breaker);
         using var measurements = new RecordedSweeperMeasurements();
         outbox.AddUndispatched();
         breaker.TripTopic(outbox.RoutingKey);
 
         var sweeper = new TimedOutboxSweeper(
-            outbox.ScopeFactory,
-            new InMemoryLock(),
-            new TimedOutboxSweeperOptions { TimerInterval = 5, MinimumMessageAge = TimeSpan.Zero },
-            timeProvider: clock,
-            meter: new SweeperMeter(measurements.MeterFactory));
+serviceScopeFactory: outbox.ScopeFactory, distributedLock: new InMemoryLock(), options: new TimedOutboxSweeperOptions { TimerInterval = 5, MinimumMessageAge = TimeSpan.Zero }, timeProvider: clock, meter: new SweeperMeter(meterFactory: measurements.MeterFactory, loggerFactory: Initializer.TestLoggerFactory), logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         //Act
         await sweeper.StartAsync(CancellationToken.None);

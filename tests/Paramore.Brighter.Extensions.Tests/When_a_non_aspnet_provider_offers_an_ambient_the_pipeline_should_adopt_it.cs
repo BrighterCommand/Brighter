@@ -43,7 +43,7 @@ public class NonAspNetAmbientAdoptionTests
         // handler resolves a Scoped IUnitOfWork
         var recorder = new UnitOfWorkRecorder();
         var scopeProvider = new AsyncLocalScopeProvider();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddSingleton(recorder);
         services.AddSingleton<IAmAScopeProvider>(scopeProvider);

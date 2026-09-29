@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -59,13 +61,13 @@ public class MsSqlLegacyTableRaceTests : IAsyncLifetime
             new MsSqlOutboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance), loggerFactory: NullLoggerFactory.Instance);
         var provisionerB = new MsSqlOutboxProvisioner(
             new MsSqlBoxDetectionHelper(),
             new MsSqlOutboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance), loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
@@ -104,13 +106,13 @@ public class MsSqlLegacyTableRaceTests : IAsyncLifetime
             new MsSqlInboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance), loggerFactory: NullLoggerFactory.Instance);
         var provisionerB = new MsSqlInboxProvisioner(
             new MsSqlBoxDetectionHelper(),
             new MsSqlInboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance), loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());

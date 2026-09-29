@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory());
+new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),loggerFactory:Initializer.TestLoggerFactory);
 
             // Act
             await commandProcessor.SendAsync(new MyCommand());

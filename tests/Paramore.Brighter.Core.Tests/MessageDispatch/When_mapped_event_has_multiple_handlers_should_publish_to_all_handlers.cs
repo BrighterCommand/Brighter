@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -157,12 +157,12 @@ public class MessagePumpRequestRoutingTests
 
         var commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory,
             new InMemoryRequestContextFactory(), new PolicyRegistry(),
-            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),loggerFactory:Initializer.TestLoggerFactory);
         var routingKey = new RoutingKey("request-routing");
         var invalidMessageKey = new RoutingKey("invalid-request-routing");
         var bus = new InternalBus();
         var consumer = new InMemoryMessageConsumer(routingKey, bus, new FakeTimeProvider(),
-            invalidMessageTopic: invalidMessageKey);
+            invalidMessageTopic: invalidMessageKey, loggerFactory: Initializer.TestLoggerFactory);
         var mapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new JsonMessageMapper<TRequest>()),
             new SimpleMessageMapperFactoryAsync(_ => new JsonMessageMapper<TRequest>()));
@@ -178,7 +178,7 @@ public class MessagePumpRequestRoutingTests
             channel.Enqueue(message);
             channel.Enqueue(MessageFactory.CreateQuitMessage(routingKey));
             pump = new ServiceActivator.Reactor(commandProcessor, _ => typeof(TRequest), mapperRegistry,
-                null, new InMemoryRequestContextFactory(), channel);
+                null, new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory);
         }
         else
         {
@@ -186,7 +186,7 @@ public class MessagePumpRequestRoutingTests
             channel.Enqueue(message);
             channel.Enqueue(MessageFactory.CreateQuitMessage(routingKey));
             pump = new ServiceActivator.Proactor(commandProcessor, _ => typeof(TRequest), mapperRegistry,
-                null, new InMemoryRequestContextFactory(), channel);
+                null, new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory);
         }
 
         pump.Run();

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Net.Mime;
@@ -11,13 +13,13 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]   //
-public class KafkaHeaderToBrighterTests  
+public class KafkaHeaderToBrighterTests
 {
     [Fact]
     public void When_converting_kafkaheader_to_brighterheader()
     {
         //arrange
-        
+
         var message = new Message(
             new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
@@ -31,7 +33,7 @@ public class KafkaHeaderToBrighterTests
             ),
             new MessageBody("test content")
         );
-        
+
         message.Header.Delayed = TimeSpan.FromMilliseconds(500);
         message.Header.HandledCount = 2;
 
@@ -41,7 +43,7 @@ public class KafkaHeaderToBrighterTests
         bag.Add("myint", 7);
         bag.Add("mydouble", 3.56);
         bag.Add("mydatetime", DateTime.UtcNow);
-        
+
         var builder = new KafkaDefaultMessageHeaderBuilder();
         Headers headers = builder.Build(message);
 
@@ -49,13 +51,13 @@ public class KafkaHeaderToBrighterTests
         result.Topic = "test";
         result.Message = new Message<string, byte[]>
         {
-            Headers = headers, 
-            Key = message.Id.ToString(), 
+            Headers = headers,
+            Key = message.Id.ToString(),
             Value = "test content"u8.ToArray()
         };
 
         //act
-        var readMessage = new KafkaMessageCreator().CreateMessage(result);
+        var readMessage = new KafkaMessageCreator(logger: Initializer.TestLoggerFactory.CreateLogger<KafkaMessageCreator>()).CreateMessage(result);
 
         //assert
         Assert.Equal(message.Id, readMessage.Id);

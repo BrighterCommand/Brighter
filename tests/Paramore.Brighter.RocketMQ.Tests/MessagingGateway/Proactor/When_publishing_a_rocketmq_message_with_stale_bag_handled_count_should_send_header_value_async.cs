@@ -78,7 +78,7 @@ public class RocketMqPublishWithStaleBagHandledCountTestsAsync : IAsyncLifetime
             messagePumpType: MessagePumpType.Proactor,
             receiveMessageTimeout: s_receiveMessageTimeout);
 
-        _consumer = new RocketMessageConsumerFactory(_connection).CreateAsync(subscription);
+        _consumer = new RocketMessageConsumerFactory(connection: _connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
     }
 
     public async Task DisposeAsync()

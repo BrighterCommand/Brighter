@@ -48,16 +48,7 @@ public class When_a_send_fails_should_not_count_cleared
         var outbox = new CountingOutbox(_timeProvider);
 
         using var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { topic, producer } }),
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
-            new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null),
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer: null,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            outbox: outbox,
-            timeProvider: _timeProvider,
-            outboxMeter: meter);
+producerRegistry: new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { topic, producer } }), resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(), mapperRegistry: new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null), messageTransformerFactory: new EmptyMessageTransformerFactory(), messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: null, publicationFinder: new FindPublicationByPublicationTopicOrRequestType(), outbox: outbox, timeProvider: _timeProvider, outboxMeter: meter, loggerFactory: Initializer.TestLoggerFactory);
 
         var ctx = new RequestContext();
         var msg = new Message(
@@ -83,16 +74,7 @@ public class When_a_send_fails_should_not_count_cleared
         var outbox = new CountingOutbox(_timeProvider);
 
         using var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { topic, producer } }),
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
-            new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null),
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer: null,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            outbox: outbox,
-            timeProvider: _timeProvider,
-            outboxMeter: meter);
+producerRegistry: new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { topic, producer } }), resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(), mapperRegistry: new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null), messageTransformerFactory: new EmptyMessageTransformerFactory(), messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: null, publicationFinder: new FindPublicationByPublicationTopicOrRequestType(), outbox: outbox, timeProvider: _timeProvider, outboxMeter: meter, loggerFactory: Initializer.TestLoggerFactory);
 
         var ctx = new RequestContext();
         var msg = new Message(

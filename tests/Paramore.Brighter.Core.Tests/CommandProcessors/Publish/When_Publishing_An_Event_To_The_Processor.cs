@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
@@ -18,8 +18,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             registry.Register<MyEvent, MyEventHandler>();
             var handlerFactory = new SimpleHandlerFactorySync(_ => new MyEventHandler(_receivedMessages));
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(),  new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
             PipelineBuilder<MyEvent>.ClearPipelineCache();
         }
 
@@ -28,8 +28,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
         {
             _commandProcessor.Publish(_myEvent);
 
-           //Should publish the command to the first event handler
-           Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandler), _myEvent.Id), _receivedMessages);
+            //Should publish the command to the first event handler
+            Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandler), _myEvent.Id), _receivedMessages);
 
         }
     }

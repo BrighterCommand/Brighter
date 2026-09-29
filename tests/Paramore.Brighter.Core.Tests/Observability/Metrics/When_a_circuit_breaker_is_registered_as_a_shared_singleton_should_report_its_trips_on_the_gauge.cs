@@ -50,7 +50,7 @@ public class When_a_circuit_breaker_is_registered_as_a_shared_singleton_should_r
     public async Task When_the_mediator_and_gauge_share_a_singleton_breaker_should_record_its_tripped_topic()
     {
         //Arrange
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         var services = SweeperContainer.Create(new InMemoryLock(), new FakeTimeProvider(), useOutboxSweeper: true);
         services.AddSingleton<IAmAnOutboxCircuitBreaker>(breaker);
         services.AddMetrics();

@@ -33,7 +33,7 @@ using RabbitMQ.Client;
 namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 
 public class GatedTagReadRmqProducer(RmqMessagingGatewayConnection connection)
-    : RmqMessageProducer(connection)
+    : RmqMessageProducer(connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
 {
     protected override async Task ConnectToBrokerAsync(OnMissingChannel makeExchange, CancellationToken cancellationToken = default)
     {

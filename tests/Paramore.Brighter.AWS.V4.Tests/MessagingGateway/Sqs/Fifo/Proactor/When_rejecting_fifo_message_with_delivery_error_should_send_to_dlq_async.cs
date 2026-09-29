@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Mime;
 using System.Text.Json;
@@ -86,12 +88,12 @@ public class SqsMessageConsumerFifoDeliveryErrorDlqTestsAsync : IDisposable, IAs
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create, queueAttributes: queueAttributes));
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create, queueAttributes: queueAttributes), loggerFactory: NullLoggerFactory.Instance);
 
         var dlqSubscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName($"DLQ-Reader-{Guid.NewGuid().ToString()}".Truncate(45)),
@@ -102,7 +104,7 @@ public class SqsMessageConsumerFifoDeliveryErrorDlqTestsAsync : IDisposable, IAs
             queueAttributes: queueAttributes,
             makeChannels: OnMissingChannel.Create);
 
-        _dlqChannelFactory = new ChannelFactory(awsConnection);
+        _dlqChannelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         _dlqChannel = _dlqChannelFactory.CreateAsyncChannel(dlqSubscription);
     }
 

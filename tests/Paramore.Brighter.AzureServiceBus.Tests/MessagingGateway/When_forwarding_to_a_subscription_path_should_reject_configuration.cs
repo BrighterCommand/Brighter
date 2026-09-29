@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -45,7 +45,7 @@ public class AzureServiceBusForwardingDestinationValidationTests
     {
         // Arrange
         await using var client = new InMemoryRetryServiceBusClient(ServiceBusModelFactory.ServiceBusReceivedMessage());
-        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client));
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         var subscription = new AzureServiceBusSubscription(new SubscriptionName("accounting"),
             new ChannelName("accounting"), new RoutingKey("orders"),
             requestType: typeof(Command), timeOut: System.TimeSpan.FromSeconds(1),
@@ -77,7 +77,7 @@ public class AzureServiceBusForwardingDestinationValidationTests
     {
         // Arrange
         await using var client = new InMemoryRetryServiceBusClient(ServiceBusModelFactory.ServiceBusReceivedMessage());
-        var scheduler = new AzureServiceBusRequeueScheduler(client);
+        var scheduler = new AzureServiceBusRequeueScheduler(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var message = new Message(new MessageHeader(Id.Random(), new RoutingKey("orders"), MessageType.MT_COMMAND),
             new MessageBody("order"));
 
@@ -103,7 +103,7 @@ public class AzureServiceBusForwardingDestinationValidationTests
     {
         // Arrange
         await using var client = new InMemoryRetryServiceBusClient(ServiceBusModelFactory.ServiceBusReceivedMessage());
-        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client));
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         var subscription = new AzureServiceBusSubscription(new SubscriptionName("retry"),
             new ChannelName("retry"), new RoutingKey(destination), requestType: typeof(Command),
             timeOut: System.TimeSpan.FromSeconds(1),

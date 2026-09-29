@@ -29,7 +29,7 @@ public class MaximumTripDurationValidationTests
         var options = new OutboxCircuitBreakerOptions { MaximumTripDuration = maximumTripDuration };
 
         // Act
-        var construct = () => new InMemoryOutboxCircuitBreaker(options);
+        var construct = () => new InMemoryOutboxCircuitBreaker(options: options, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
 
         // Assert
         Assert.Throws<ArgumentOutOfRangeException>(construct);
@@ -43,7 +43,7 @@ public class MaximumTripDurationValidationTests
         var options = new OutboxCircuitBreakerOptions { MaximumTripDuration = maximumTripDuration };
 
         // Act
-        var breaker = new InMemoryOutboxCircuitBreaker(options);
+        var breaker = new InMemoryOutboxCircuitBreaker(options: options, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
 
         // Assert
         Assert.NotNull(breaker);

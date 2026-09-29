@@ -47,46 +47,46 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         public MessagePumpEventProcessingDeferMessageActionTests()
         {
             _routingKey = new RoutingKey(Topic);
-            
+
             SpyRequeueCommandProcessor commandProcessor = new();
 
             _bus = new InternalBus();
 
             _channel = new Channel(
-                new(Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+                new(Channel), _routingKey,
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
             );
-            
+
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
-                null); 
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-             
-            _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
+
+            _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent),
+                messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel, loggerFactory: Initializer.TestLoggerFactory)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };
 
-            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, null);
+            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, null, loggerFactory: Initializer.TestLoggerFactory);
 
             var msg = transformPipelineBuilder.BuildWrapPipeline<MyEvent>()
                 .Wrap(new MyEvent(), new RequestContext(), new Publication{Topic = _routingKey});
-            
+
             _bus.Enqueue(msg);
-            
+
         }
 
         [Fact]
         public async Task When_an_event_handler_throws_a_defer_message_Then_message_is_requeued_until_rejected()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-           
+
             //allow requeue to run
             await Task.Delay(1000);
-            
+
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
-            
+
             var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey(Topic));
             _channel.Enqueue(quitMessage);
 

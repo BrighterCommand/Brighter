@@ -39,9 +39,18 @@ namespace Paramore.Brighter.Logging.Handlers
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public partial class RequestLoggingHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestLoggingHandlerAsync<TRequest>>();
+        private readonly ILogger _logger;
 
         private HandlerTiming _timing;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RequestLoggingHandlerAsync{TRequest}"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        public RequestLoggingHandlerAsync(ILogger<RequestLoggingHandlerAsync<TRequest>> logger)
+        {
+            _logger = logger;
+        }
 
         /// <summary>
         /// Initializes from attribute parameters.
@@ -60,7 +69,7 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
         public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
         {
-            Log.LogCommand(s_logger, _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), DateTime.UtcNow);
+            Log.LogCommand(_logger, _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), DateTime.UtcNow);
             return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
@@ -69,7 +78,7 @@ namespace Paramore.Brighter.Logging.Handlers
         /// This allows for graceful  degradation. Using the <see cref="AsyncFallbackPolicyAttribute"/> handler you can configure a policy to catch either all <see cref="Exception"/>'s or
         /// just <see cref="BrokenCircuitException"/> that occur later in the pipeline, and then call the <see cref="RequestHandler{TRequest}.Fallback"/> path.
         /// Note that the <see cref="AsyncFallbackPolicyAttribute"/> target handler might be 'beginning of chain' and need to pass through to actual handler that is end of chain.
-        /// Because of this we need to call Fallback on the chain. Later step handlers don't know the context of failure so they cannot know if any operations they had, 
+        /// Because of this we need to call Fallback on the chain. Later step handlers don't know the context of failure so they cannot know if any operations they had,
         /// that could fail (such as DB access) were the cause of the failure chain being hit.
         /// Steps that don't know how to handle should pass through.
         /// Useful alternatives for Fallback are to try via the cache.
@@ -86,7 +95,7 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <returns>TRequest.</returns>
         public override async Task<TRequest> FallbackAsync(TRequest command, CancellationToken cancellationToken = default)
         {
-            Log.LogFailure(s_logger, typeof(TRequest), JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), DateTime.UtcNow);
+            Log.LogFailure(_logger, typeof(TRequest), JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), DateTime.UtcNow);
             return await base.FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
@@ -100,4 +109,3 @@ namespace Paramore.Brighter.Logging.Handlers
         }
     }
 }
-

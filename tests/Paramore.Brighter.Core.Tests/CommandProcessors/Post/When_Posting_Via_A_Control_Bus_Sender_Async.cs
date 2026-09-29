@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
-     public class ControlBusSenderPostMessageAsyncTests : IDisposable
+    public class ControlBusSenderPostMessageAsyncTests : IDisposable
     {
         private readonly RoutingKey _routingKey = new("MyCommand");
         private readonly ControlBusSender _controlBusSender;
@@ -29,8 +29,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
-            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
+            _outbox = new InMemoryOutbox(timeProvider) { Tracer = tracer };
+            InMemoryMessageProducer messageProducer = new(_internalBus, Initializer.TestLoggerFactory, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -42,29 +42,28 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{_routingKey, messageProducer},});
-            
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _routingKey, messageProducer }, });
+
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
                 .AddBrighterDefault();
-            
+
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
-                resiliencePipelineRegistry, 
+                producerRegistry,
+                resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox
+                Initializer.TestLoggerFactory, _outbox
             );
 
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
-                bus, 
-                new InMemorySchedulerFactory()
-            );
+                bus,
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
             _controlBusSender = new ControlBusSender(commandProcessor);
         }
@@ -76,14 +75,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             //_should_send_a_message_via_the_messaging_gateway
             Assert.True(_internalBus.Stream(new RoutingKey(_routingKey)).Any());
-            
+
             //_should_store_the_message_in_the_sent_command_message_repository
             var message = _outbox
               .DispatchedMessages(TimeSpan.FromMilliseconds(1200000), new RequestContext(), 1)
               .SingleOrDefault();
-              
+
             Assert.NotNull(message);
-            
+
             //_should_convert_the_command_into_a_message
             Assert.Equal(_message, message);
         }

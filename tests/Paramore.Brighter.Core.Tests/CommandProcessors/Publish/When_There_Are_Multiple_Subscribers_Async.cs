@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -24,16 +24,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
             registry.RegisterAsync<MyEvent, MyOtherEventHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyEventHandlerAsync>();
             container.AddTransient<MyOtherEventHandlerAsync>();
             container.AddSingleton(_receivedMessages);
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
             PipelineBuilder<MyEvent>.ClearPipelineCache();
         }
 

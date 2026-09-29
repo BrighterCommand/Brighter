@@ -55,5 +55,5 @@ public class MySqlOutboxDataRefTests : RelationalOutboxDataRefTests
     protected override string CreateTableSql(bool binary) => MySqlOutboxBuilder.GetDDL(TableName, binary);
     /// <inheritdoc />
     protected override RelationDatabaseOutbox CreateOutbox(RelationalDatabaseConfiguration configuration) =>
-        new MySqlOutbox(configuration);
+        new MySqlOutbox(configuration: configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<MySqlOutbox>.Instance);
 }

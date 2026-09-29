@@ -42,8 +42,7 @@ namespace Paramore.Brighter;
 /// </remarks>
 public static partial class DeliveryBudgetDiagnostics
 {
-    private static readonly ILogger s_logger =
-        ApplicationLogging.CreateLogger(typeof(DeliveryBudgetDiagnostics));
+
 
     /// <summary>
     /// Logs a Warning when <paramref name="subscription"/> implements
@@ -55,13 +54,13 @@ public static partial class DeliveryBudgetDiagnostics
     /// when <see cref="Subscription.RequeueCount"/> is <c>-1</c> (budget disabled), or when
     /// <see cref="IAmADeliveryCountingSubscription.DeliveryBudgetUnenforceableReason"/> is <c>null</c>.
     /// </param>
-    public static void WarnIfUnenforceable(Subscription subscription)
+    public static void WarnIfUnenforceable(Subscription subscription, ILoggerFactory loggerFactory)
     {
         if (subscription is not IAmADeliveryCountingSubscription counting) return;
         if (subscription.RequeueCount == -1) return;
         if (counting.DeliveryBudgetUnenforceableReason is not { } reason) return;
 
-        Log.UnenforceableDeliveryBudget(s_logger, subscription.Name, subscription.RequeueCount, reason);
+        Log.UnenforceableDeliveryBudget(loggerFactory.CreateLogger(typeof(DeliveryBudgetDiagnostics).FullName!), subscription.Name, subscription.RequeueCount, reason);
     }
 
     private static partial class Log

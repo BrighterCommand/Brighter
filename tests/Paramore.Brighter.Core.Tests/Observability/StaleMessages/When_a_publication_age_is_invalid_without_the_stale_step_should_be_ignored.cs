@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -53,7 +53,7 @@ public class InvalidAgeWithoutStepTests
             var publication = new Publication { Topic = new RoutingKey("orders"), StaleMessageAge = TimeSpan.Zero };
             var producers = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { new RoutingKey("orders"), new InMemoryMessageProducer(new InternalBus(), publication) }
+                { new RoutingKey("orders"), new InMemoryMessageProducer(bus:new InternalBus(),publication:publication,loggerFactory:Initializer.TestLoggerFactory) }
             });
             host = new HostBuilder()
                 .ConfigureServices(services =>

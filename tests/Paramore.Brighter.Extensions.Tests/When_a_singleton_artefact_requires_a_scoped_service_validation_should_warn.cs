@@ -47,7 +47,7 @@ public class SingletonArtefactCaptiveDependencyTests
         // Arrange — a producer-only host with {Transient, Singleton, Transient}, FR-22.2-conformant because
         // Singleton is discarded and the remainder is uniform, and a mapper whose single constructor
         // requires the AddScoped IOrderDbContext
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
         var mapperRegistryBuilder = new ServiceCollectionMessageMapperRegistryBuilder(services);
@@ -86,7 +86,7 @@ public class SingletonArtefactCaptiveDependencyTests
     {
         // Arrange — a mapper whose single constructor requires only AddSingleton- and AddTransient-registered
         // services
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
         var mapperRegistryBuilder = new ServiceCollectionMessageMapperRegistryBuilder(services);
@@ -121,7 +121,7 @@ public class SingletonArtefactCaptiveDependencyTests
     {
         // Arrange — a mapper requiring an AddTransient gateway that itself requires the AddScoped
         // IOrderDbContext — pins C-20(ii)'s direct-parameter-only limit
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
         var mapperRegistryBuilder = new ServiceCollectionMessageMapperRegistryBuilder(services);
@@ -156,7 +156,7 @@ public class SingletonArtefactCaptiveDependencyTests
     {
         // Arrange — two public constructors, a wider (ISomeSingletonService, ISomeTransientService,
         // IOrderDbContext) and a narrower (ISomeSingletonService)
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
         var mapperRegistryBuilder = new ServiceCollectionMessageMapperRegistryBuilder(services);
@@ -195,7 +195,7 @@ public class SingletonArtefactCaptiveDependencyTests
         // Arrange — a Singleton handler decorated with [UsePolicyAsync], so ExceptionPolicyHandlerAsync<>
         // joins its pipeline, registered exactly as assembly scanning would register it (an open generic
         // service-to-self registration)
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
         subscriberRegistry.RegisterAsync<PolicyDecoratedCommand, PolicyDecoratedCommandHandlerAsync>();
@@ -229,7 +229,7 @@ public class SingletonArtefactCaptiveDependencyTests
         // Arrange — {_, _, TransformerLifetime = Singleton} using Brighter's own ClaimCheckTransformer, with
         // IAmAStorageProvider and IAmAStorageProviderAsync registered AddScoped. Registering the transformer
         // explicitly is what makes it a candidate at all
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
         subscriberRegistry.Register<ClaimCheckCommand, ClaimCheckCommandHandler>();
@@ -269,7 +269,7 @@ public class SingletonArtefactCaptiveDependencyTests
         // defined in this very Paramore.Brighter.Extensions.Tests assembly, requiring the AddScoped
         // IOrderDbContext — the only case that fails under `== "Paramore.Brighter"` and passes under the
         // prefix rule
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
         subscriberRegistry.Register<PrefixExcludedCommand, PrefixExcludedCommandHandler>();
@@ -306,7 +306,7 @@ public class SingletonArtefactCaptiveDependencyTests
         // Arrange — the same Paramore.Brighter.Extensions.Tests assembly, but a Singleton MAPPER (not a
         // transform) requiring the AddScoped IOrderDbContext — pinning C-20(iv)'s gap as a deliberate
         // asymmetry: no mapper is ever returned by an attribute, so the exclusion cannot reach one
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
         var mapperRegistryBuilder = new ServiceCollectionMessageMapperRegistryBuilder(services);
@@ -342,7 +342,7 @@ public class SingletonArtefactCaptiveDependencyTests
     {
         // Arrange — two public constructors of the same parameter count, one taking IOrderDbContext and one
         // not. Not activatable by Microsoft's own container at all
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
         var mapperRegistryBuilder = new ServiceCollectionMessageMapperRegistryBuilder(services);

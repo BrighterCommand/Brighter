@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             _timeProvider = new FakeTimeProvider();
             InMemoryMessageProducer messageProducer =
-                new(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
+                new(new InternalBus(), Initializer.TestLoggerFactory, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND),
@@ -47,16 +47,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var tracer = new BrighterTracer(_timeProvider);
             _outbox = new InMemoryOutbox(_timeProvider) {Tracer = tracer};
-            
+
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
-                resiliencePipelineRegistry, 
+                producerRegistry,
+                resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox,
+                Initializer.TestLoggerFactory, _outbox,
                 timeProvider: _timeProvider
             );
 
@@ -65,8 +65,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus,
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
 
             _controlBusSender = new ControlBusSender(commandProcessor);
         }
@@ -75,16 +75,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         public void When_Posting_Via_A_Control_Bus_Sender()
         {
             _controlBusSender.Post(_myCommand);
-            
+
             _timeProvider.Advance(TimeSpan.FromSeconds(30));
 
             //_should_store_the_message_in_the_sent_command_message_repository
             var message = _outbox
               .DispatchedMessages(TimeSpan.FromSeconds(10), new RequestContext(), 1)
               .SingleOrDefault();
-              
+
             Assert.NotNull(message);
-            
+
             //_should_convert_the_command_into_a_message
             Assert.Equal(_message, message);
         }

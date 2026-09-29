@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var myCommand = new MyCommand{ Value = "Hello World"};
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryMessageProducer messageProducer = new(_bus, new Publication { Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand) });
+            InMemoryMessageProducer messageProducer = new(_bus, Initializer.TestLoggerFactory, new Publication { Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand) });
 
             _message = new Message(
                 new MessageHeader(myCommand.Id, Topic, MessageType.MT_COMMAND),
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             {
                 { Topic, messageProducer },
             });
-            
+
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
                 .AddBrighterDefault();
 
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox
+                Initializer.TestLoggerFactory, _outbox
                 );
 
             _commandProcessor = new CommandProcessor(
@@ -74,8 +74,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 _mediator,
-                requestSchedulerFactory: new InMemorySchedulerFactory()
-            );
+                requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact(Skip = "Erratic due to timing")]

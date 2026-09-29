@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia <irakli.gabisonia94@gmail.com>
 
@@ -44,16 +44,15 @@ public class KafkaProducerRepeatedDisposalTests
     {
         // Arrange
         var producer = new KafkaMessageProducer(
-            new KafkaMessagingGatewayConfiguration
-            {
-                Name = "producer-disposal",
-                BootStrapServers = ["localhost:9092"]
-            },
-            new KafkaPublication
-            {
-                Topic = new RoutingKey(Guid.NewGuid().ToString()),
-                MakeChannels = OnMissingChannel.Assume
-            });
+configuration: new KafkaMessagingGatewayConfiguration
+{
+    Name = "producer-disposal",
+    BootStrapServers = ["localhost:9092"]
+}, publication: new KafkaPublication
+{
+    Topic = new RoutingKey(Guid.NewGuid().ToString()),
+    MakeChannels = OnMissingChannel.Assume
+}, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         producer.Init();
 
         if (firstDisposeAsync)

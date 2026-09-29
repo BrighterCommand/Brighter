@@ -28,7 +28,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Npgsql;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 
@@ -54,17 +53,19 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
     /// <summary>
     /// Initialises the runner with an explicit detection helper and optional UoW dependencies.
     /// </summary>
+    /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
     public PostgreSqlBoxMigrationRunner(
         PostgreSqlBoxDetectionHelper detectionHelper,
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
+        ILoggerFactory loggerFactory,
         IPostgreSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxMigrationRunner>(),
+            logger ?? loggerFactory.CreateBrighterLogger<PostgreSqlBoxMigrationRunner>(),
             tracer, scope)
     {
         _advisoryLock = advisoryLock ?? new PostgreSqlAdvisoryLock();
@@ -73,15 +74,26 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
     /// <summary>
     /// Initialises the runner with a default <see cref="PostgreSqlBoxDetectionHelper"/>.
     /// </summary>
+    /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
     public PostgreSqlBoxMigrationRunner(
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
+        ILoggerFactory loggerFactory,
         IPostgreSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global)
-        : this(new PostgreSqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope)
+        : this(
+            new PostgreSqlBoxDetectionHelper(loggerFactory.CreateBrighterLogger<PostgreSqlBoxDetectionHelper>()),
+            catalog,
+            configuration,
+            loggerFactory,
+            advisoryLock,
+            logger,
+            lockTimeout,
+            tracer,
+            scope)
     {
     }
 
@@ -348,7 +360,8 @@ WHERE src.""SchemaName"" = @SchemaName
         for (var i = 0; i < migrations.Count; i++)
         {
             var migration = migrations[i];
-            if (migration.Version <= detected) continue;
+            if (migration.Version <= detected)
+                continue;
 
             await ExecuteUpScriptAsync(connection, transaction!, migration, cancellationToken);
             await InsertHistoryRowAsync(
@@ -368,7 +381,8 @@ WHERE src.""SchemaName"" = @SchemaName
 
         foreach (var migration in migrations)
         {
-            if (migration.Version <= maxVersion) continue;
+            if (migration.Version <= maxVersion)
+                continue;
 
             await ExecuteUpScriptAsync(connection, transaction!, migration, cancellationToken);
             await InsertHistoryRowAsync(

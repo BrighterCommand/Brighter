@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
 using Xunit;
@@ -25,10 +25,10 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsWithDivideByZeroHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddSingleton<MyFailsWithDivideByZeroHandler>();
             container.AddSingleton<ExceptionPolicyHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
-                policyRegistry, new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+                policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         //We have to catch the final exception that bubbles out after retry
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             //this one should tell us that the circuit is broken
             _thirdException = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
- 
+
             // Should send the command to the command handler
             Assert.True(MyFailsWithDivideByZeroHandler.ShouldReceive(_myCommand));
             // Should bubble up the first exception

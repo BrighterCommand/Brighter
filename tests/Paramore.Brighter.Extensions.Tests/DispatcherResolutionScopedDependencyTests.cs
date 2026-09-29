@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,7 +20,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 public class DispatcherResolutionScopedDependencyTests
 {
     private IServiceProvider? _provider;
-    
+
     [Fact]
     public void ShouldResolveIDispatcherCorrectly()
     {
@@ -39,10 +41,10 @@ public class DispatcherResolutionScopedDependencyTests
         _provider.GetRequiredService<IDispatcher>();
     }
 
-    
+
     private void Build(InternalBus bus)
     {
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
 
         AddServices(services, bus);
 
@@ -73,9 +75,9 @@ public class DispatcherResolutionScopedDependencyTests
                 };
                 options.HandlerLifetime = ServiceLifetime.Scoped;
                 options.TransformerLifetime = ServiceLifetime.Scoped;
-                
-                options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
-            })    
+
+                options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System, loggerFactory: NullLoggerFactory.Instance);
+            })
             .AddProducers(configure =>
             {
                 configure.ProducerRegistry = new ProducerRegistry(
@@ -83,7 +85,7 @@ public class DispatcherResolutionScopedDependencyTests
                     {
                         {
                             new ProducerKey("in-memory"), new InMemoryMessageProducer(bus,
-                                new Publication { Topic = "test" })
+                            NullLoggerFactory.Instance, new Publication { Topic = "test" })
                         }
                     });
                 var outboxConfiguration = new RelationalDatabaseConfiguration(
@@ -92,18 +94,18 @@ public class DispatcherResolutionScopedDependencyTests
                     outBoxTableName: "Outbox",
                     binaryMessagePayload: false
                     );
-                
+
                 //We need this as it is a dependency of the SqliteConnectionProvider
                 services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
-                
-                configure.Outbox = new SqliteOutbox(outboxConfiguration, new SqliteConnectionProvider(outboxConfiguration));
+
+                configure.Outbox = new SqliteOutbox(outboxConfiguration, new SqliteConnectionProvider(outboxConfiguration), logger: NullLoggerFactory.Instance.CreateLogger<SqliteOutbox>());
                 configure.TransactionProvider = typeof(SqliteEntityFrameworkTransactionProvider<Discography>);
                 configure.ConnectionProvider = typeof(SqliteConnectionProvider);
                 configure.MaxOutStandingMessages = 5;
                 configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
             })
             .AutoFromAssemblies();
-        
+
         services.AddHostedService<ServiceActivatorHostedService>();
     }
 

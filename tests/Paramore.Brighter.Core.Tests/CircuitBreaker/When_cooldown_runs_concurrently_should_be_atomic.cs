@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
         {
             // Arrange: many tripped topics with CooldownCount 0, so a single CoolDown evicts each topic.
             // That maximises the read-modify-write / read-after-remove window CoolDown must survive.
-            var breaker = new InMemoryOutboxCircuitBreaker(new OutboxCircuitBreakerOptions { CooldownCount = 0 });
+            var breaker = new InMemoryOutboxCircuitBreaker(LoggerFactoryExtensions.CreateLogger<Paramore.Brighter.CircuitBreaker.InMemoryOutboxCircuitBreaker>( Initializer.TestLoggerFactory ), new OutboxCircuitBreakerOptions { CooldownCount = 0 });
             var topics = Enumerable.Range(0, 50).Select(i => new RoutingKey($"topic-{i}")).ToArray();
             foreach (var topic in topics)
                 breaker.TripTopic(topic);

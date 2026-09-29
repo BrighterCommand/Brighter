@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -83,7 +85,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: "dbo",
             boxType: BoxType.Outbox,
-            tableState:new BoxTableState(false, false, 0));
+            tableState: new BoxTableState(false, false, 0));
 
         _tracerProvider.ForceFlush();
 
@@ -123,7 +125,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Inbox,
-            tableState:new BoxTableState(true, false, 0));
+            tableState: new BoxTableState(true, false, 0));
 
         _tracerProvider.ForceFlush();
 
@@ -159,7 +161,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: "dbo",
             boxType: BoxType.Outbox,
-            tableState:new BoxTableState(true, true, 7));
+            tableState: new BoxTableState(true, true, 7));
 
         _tracerProvider.ForceFlush();
 
@@ -196,7 +198,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
-            tableState:new BoxTableState(false, false, 0));
+            tableState: new BoxTableState(false, false, 0));
 
         _tracerProvider.ForceFlush();
 
@@ -222,7 +224,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
-            tableState:new BoxTableState(false, false, 0));
+            tableState: new BoxTableState(false, false, 0));
 
         _tracerProvider.ForceFlush();
 
@@ -243,7 +245,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
                 new StubBoxMigrationCatalog(),
                 new StubRelationalDatabaseConfiguration(),
                 TimeSpan.FromSeconds(30),
-                logger: null,
+                logger: NullLogger.Instance,
                 tracer: tracer)
         {
             _unitOfWork = unitOfWork;

@@ -1,4 +1,5 @@
-﻿using Amazon.DynamoDBv2;
+﻿using Microsoft.Extensions.Logging;
+using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
@@ -15,19 +16,19 @@ namespace DbMaker;
 
 public static class InboxFactory
 {
-    public static IAmAnInbox MakeInbox(Rdbms rdbms, IAmARelationalDatabaseConfiguration configuration)
+    public static IAmAnInbox MakeInbox(Rdbms rdbms, IAmARelationalDatabaseConfiguration configuration, ILoggerFactory loggerFactory)
     {
         return rdbms switch
         {
-            Rdbms.Sqlite => new SqliteInbox(configuration),
-            Rdbms.MySql => new MySqlInbox(configuration),
-            Rdbms.MsSql => new MsSqlInbox(configuration),
-            Rdbms.Postgres => new PostgreSqlInbox(configuration),
+            Rdbms.Sqlite => new SqliteInbox(configuration, logger: loggerFactory.CreateLogger<SqliteInbox>()),
+            Rdbms.MySql => new MySqlInbox(configuration, logger: loggerFactory.CreateLogger<MySqlInbox>()),
+            Rdbms.MsSql => new MsSqlInbox(configuration, logger: loggerFactory.CreateLogger<MsSqlInbox>()),
+            Rdbms.Postgres => new PostgreSqlInbox(configuration, logger: loggerFactory.CreateLogger<PostgreSqlInbox>()),
             _ => throw new ArgumentOutOfRangeException(nameof(rdbms), "Database type is not supported")
         };
     }
 
-       public static void CreateInbox<T>(IAmazonDynamoDB client, IServiceCollection services) where T : class, IRequest
+    public static void CreateInbox<T>(IAmazonDynamoDB client, IServiceCollection services) where T : class, IRequest
     {
         var tableRequestFactory = new DynamoDbTableFactory();
         var dbTableBuilder = new DynamoDbTableBuilder(client);

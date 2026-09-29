@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -75,10 +75,10 @@ public class StaleMessageMonitorStartReadingsTests
     {
         var producers = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { topic, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = topic }) }
+            { topic, new InMemoryMessageProducer(new InternalBus(), publication:new Publication { Topic = topic },loggerFactory:Initializer.TestLoggerFactory) }
         });
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton<TimeProvider>(new FakeTimeProvider());
         var builder = new ServiceCollectionBrighterBuilder(
             services,

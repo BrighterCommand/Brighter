@@ -21,10 +21,10 @@ public class MessageUnwrapRequestMissingMapperTests
             null);
 
         MyTransformableCommand myCommand = new();
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransform()));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
         Message message = new(
             new MessageHeader(myCommand.Id, new RoutingKey("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
@@ -33,7 +33,7 @@ public class MessageUnwrapRequestMissingMapperTests
 
         message.Header.Bag[MySimpleTransformAsync.HEADER_KEY] = MySimpleTransformAsync.TRANSFORM_VALUE;
     }
-    
+
     [Fact]
     public void When_Wrapping_But_No_Registered_Mapper()
     {

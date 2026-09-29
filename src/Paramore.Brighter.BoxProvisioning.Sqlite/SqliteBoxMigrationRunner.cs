@@ -27,7 +27,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.Sqlite;
@@ -87,17 +86,19 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     /// <summary>
     /// Initialises the runner with an explicit detection helper and optional UoW dependencies.
     /// </summary>
+    /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
     public SqliteBoxMigrationRunner(
         SqliteBoxDetectionHelper detectionHelper,
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
+        ILoggerFactory loggerFactory,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
         bool enableWalMode = true,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? ApplicationLogging.CreateLogger<SqliteBoxMigrationRunner>(),
+            logger ?? loggerFactory.CreateBrighterLogger<SqliteBoxMigrationRunner>(),
             tracer, scope)
     {
         _enableWalMode = enableWalMode;
@@ -107,14 +108,16 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     /// <summary>
     /// Initialises the runner with a default <see cref="SqliteBoxDetectionHelper"/>.
     /// </summary>
+    /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
     public SqliteBoxMigrationRunner(
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
+        ILoggerFactory loggerFactory,
         bool enableWalMode = true,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global)
-        : this(new SqliteBoxDetectionHelper(), catalog, configuration, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode, tracer: tracer, scope: scope)
+        : this(new SqliteBoxDetectionHelper(), catalog, configuration, loggerFactory, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode, tracer: tracer, scope: scope)
     {
     }
 
@@ -123,10 +126,12 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     /// of 30 seconds and WAL journal mode enabled. Callers that need a custom timeout or want to
     /// skip the WAL pragma should use the multi-argument form.
     /// </summary>
+    /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
     public SqliteBoxMigrationRunner(
         IAmABoxMigrationCatalog catalog,
-        IAmARelationalDatabaseConfiguration configuration)
-        : this(catalog, configuration, TimeSpan.FromSeconds(30))
+        IAmARelationalDatabaseConfiguration configuration,
+        ILoggerFactory loggerFactory)
+        : this(catalog, configuration, TimeSpan.FromSeconds(30), loggerFactory)
     {
     }
 
@@ -235,7 +240,8 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         for (var i = 0; i < migrations.Count; i++)
         {
             var migration = migrations[i];
-            if (migration.Version <= detected) continue;
+            if (migration.Version <= detected)
+                continue;
 
             await ApplyOrSkipAsync(connection, transaction!, tableName, migration, cancellationToken);
         }
@@ -252,7 +258,8 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
 
         foreach (var migration in migrations)
         {
-            if (migration.Version <= maxVersion) continue;
+            if (migration.Version <= maxVersion)
+                continue;
 
             await ApplyOrSkipAsync(connection, transaction!, tableName, migration, cancellationToken);
         }

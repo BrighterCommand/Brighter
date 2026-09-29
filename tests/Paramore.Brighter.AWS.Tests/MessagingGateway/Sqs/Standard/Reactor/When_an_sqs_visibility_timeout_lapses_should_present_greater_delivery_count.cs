@@ -51,7 +51,7 @@ public class SqsVisibilityTimeoutLapseDeliveryCountTests : IDisposable, IAsyncDi
     public SqsVisibilityTimeoutLapseDeliveryCountTests()
     {
         _awsConnection = GatewayFactory.CreateFactory();
-        _channelFactory = new ChannelFactory(_awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     /// <summary>
@@ -87,14 +87,14 @@ public class SqsVisibilityTimeoutLapseDeliveryCountTests : IDisposable, IAsyncDi
         // Create the SNS topic and SQS queue; we drive the consumer directly — no pump
         _channelFactory.CreateSyncChannel(subscription);
 
-        var consumer = (IAmAMessageConsumerSync)new SqsMessageConsumerFactory(_awsConnection).Create(subscription);
+        var consumer = (IAmAMessageConsumerSync)new SqsMessageConsumerFactory(awsConnection: _awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
 
-        var producer = new SnsMessageProducer(_awsConnection, new SnsPublication
+        var producer = new SnsMessageProducer(connection: _awsConnection, publication: new SnsPublication
         {
             Topic = routingKey,
             RequestType = typeof(MyCommand),
             MakeChannels = OnMissingChannel.Validate
-        });
+        }, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var cmd = new MyCommand { Value = "visibility timeout test" };
         var message = new Message(

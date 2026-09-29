@@ -76,7 +76,7 @@ public class GcpChannelUnenforceableBudgetWarningTests
         var channelName = new ChannelName($"gen-budget-{Guid.NewGuid():N}");
 
         var connection = CreateConnection();
-        var channelFactory = new GcpPubSubChannelFactory(connection);
+        var channelFactory = new GcpPubSubChannelFactory(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var subscription = new GcpPubSubSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
@@ -87,7 +87,7 @@ public class GcpChannelUnenforceableBudgetWarningTests
             requeueCount: 3,
             makeChannels: OnMissingChannel.Create,
             subscriptionMode: SubscriptionMode.Pull
-            // deadLetter intentionally omitted — R-11 (no DeadLetterPolicy configured)
+        // deadLetter intentionally omitted — R-11 (no DeadLetterPolicy configured)
         );
 
         IAmAChannelSync? channel = null;
@@ -129,7 +129,7 @@ public class GcpChannelUnenforceableBudgetWarningTests
         var channelName = new ChannelName($"gen-budget-{Guid.NewGuid():N}");
 
         var connection = CreateConnection();
-        var channelFactory = new GcpPubSubChannelFactory(connection);
+        var channelFactory = new GcpPubSubChannelFactory(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var subscription = new GcpPubSubSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
@@ -179,7 +179,7 @@ public class GcpChannelUnenforceableBudgetWarningTests
         var dlqChannelName = new ChannelName(dlqTopicName.Value);
 
         var connection = CreateConnection();
-        var channelFactory = new GcpPubSubChannelFactory(connection);
+        var channelFactory = new GcpPubSubChannelFactory(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var subscription = new GcpPubSubSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),

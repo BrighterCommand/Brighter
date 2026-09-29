@@ -46,21 +46,21 @@ public class AsyncMessagePumpUnacceptableMessageTests
     public AsyncMessagePumpUnacceptableMessageTests()
     {
         SpyRequeueCommandProcessor commandProcessor = new();
-            
+
         _bus = new InternalBus();
-            
+
         _channel = new ChannelAsync(
-            new(Channel), _routingKey, 
-            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+            new(Channel), _routingKey,
+            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
         );
-            
+
         var messageMapperRegistry = new MessageMapperRegistry(
             null,
             new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
-            
-        _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), 
-            messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
+
+        _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent),
+            messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel, loggerFactory: Initializer.TestLoggerFactory)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
         };
@@ -69,7 +69,7 @@ public class AsyncMessagePumpUnacceptableMessageTests
         var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), new MessageBody(myMessage));
 
         _bus.Enqueue(unacceptableMessage);
-            
+
     }
 
     [Fact]
@@ -77,11 +77,11 @@ public class AsyncMessagePumpUnacceptableMessageTests
     {
         var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
         await Task.Delay(1000);
-            
+
         _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
         var quitMessage = new Message(
-            new MessageHeader(string.Empty, RoutingKey.Empty, MessageType.MT_QUIT), 
+            new MessageHeader(string.Empty, RoutingKey.Empty, MessageType.MT_QUIT),
             new MessageBody("")
         );
         _channel.Enqueue(quitMessage);

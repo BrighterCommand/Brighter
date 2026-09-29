@@ -53,7 +53,7 @@ public class ConsumerOptionalInboxEventTests
 
         void Configure(ConsumersOptions options)
         {
-            options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
+            options.DefaultChannelFactory = new InMemoryChannelFactory(internalBus: bus, timeProvider: TimeProvider.System, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             if (explicitlyDisableInbox)
                 options.InboxConfiguration = null;
         }
@@ -76,9 +76,7 @@ public class ConsumerOptionalInboxEventTests
         if (addProducers)
         {
             builder.AddProducers(options =>
-                options.ProducerRegistry = new InMemoryProducerRegistryFactory(bus,
-                    [new Publication { Topic = new RoutingKey("optional-inbox"), RequestType = typeof(ConsumerOptionalInboxEvent) }],
-                    InstrumentationOptions.All).Create());
+                options.ProducerRegistry = new InMemoryProducerRegistryFactory(bus: bus, publications: [new Publication { Topic = new RoutingKey("optional-inbox"), RequestType = typeof(ConsumerOptionalInboxEvent) }], instrumentationOptions: InstrumentationOptions.All, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create());
         }
 
         builder.AutoFromAssemblies();

@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.Redis;
@@ -46,10 +48,10 @@ public class RedisMessageConsumerNoChannelsRejectTests : IDisposable
         var queueName = new ChannelName($"no-channels-test-{Guid.NewGuid()}");
 
         _messageProducer = new RedisMessageProducer(configuration,
-            new RedisMessagePublication { Topic = topic });
+            new RedisMessagePublication { Topic = topic }, loggerFactory: NullLoggerFactory.Instance);
 
         // No deadLetterRoutingKey, no invalidMessageRoutingKey
-        _consumer = new RedisMessageConsumer(configuration, queueName, topic);
+        _consumer = new RedisMessageConsumer(configuration, queueName, topic, loggerFactory: NullLoggerFactory.Instance);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

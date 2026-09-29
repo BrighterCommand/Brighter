@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia <irakli.gabisonia94@gmail.com>
 
@@ -47,7 +47,7 @@ internal sealed class KafkaDisposalTestHost : IDisposable, IAsyncDisposable
             Name = "consumer-disposal",
             BootStrapServers = ["localhost:9092"]
         };
-        _producer = new KafkaMessageProducer(configuration, new KafkaPublication
+        _producer = new KafkaMessageProducer(configuration: configuration, publication: new KafkaPublication
         {
             Topic = _topic,
             NumPartitions = 1,
@@ -55,17 +55,13 @@ internal sealed class KafkaDisposalTestHost : IDisposable, IAsyncDisposable
             MessageTimeoutMs = 2000,
             RequestTimeoutMs = 2000,
             MakeChannels = OnMissingChannel.Create
-        });
+        }, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _producer.Init();
 
         try
         {
             // Keep offsets pending until shutdown, regardless of how long test setup takes.
-            Consumer = new KafkaMessageConsumer(configuration, _topic, GroupId,
-                numPartitions: 1, replicationFactor: 1, makeChannels: OnMissingChannel.Create,
-                sweepUncommittedOffsetsInterval: Timeout.InfiniteTimeSpan,
-                deadLetterRoutingKey: new RoutingKey(_topic.Value + ".dead-letter"),
-                invalidMessageRoutingKey: new RoutingKey(_topic.Value + ".invalid"), timeProvider: timeProvider);
+            Consumer = new KafkaMessageConsumer(configuration: configuration, routingKey: _topic, groupId: GroupId, numPartitions: 1, replicationFactor: 1, makeChannels: OnMissingChannel.Create, sweepUncommittedOffsetsInterval: Timeout.InfiniteTimeSpan, deadLetterRoutingKey: new RoutingKey(_topic.Value + ".dead-letter"), invalidMessageRoutingKey: new RoutingKey(_topic.Value + ".invalid"), timeProvider: timeProvider, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         }
         catch
         {

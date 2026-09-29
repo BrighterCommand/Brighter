@@ -46,7 +46,7 @@ public class StaleMessageMonitorInvalidMeasurementIntervalTests
     public void When_the_measurement_interval_is_invalid_should_throw_a_configuration_exception(TimeSpan measurementInterval)
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         var builder = new ServiceCollectionBrighterBuilder(
             services,
             new ServiceCollectionSubscriberRegistry(services),

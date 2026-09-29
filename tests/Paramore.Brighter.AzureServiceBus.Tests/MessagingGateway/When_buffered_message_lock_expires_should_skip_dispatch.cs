@@ -48,7 +48,7 @@ public class AzureServiceBusExpiredLockTests
             {
                 MaxAutoLockRenewalDuration = TimeSpan.FromMilliseconds(renewalMilliseconds)
             });
-        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client));
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         Message received;
 
         // Act
@@ -82,7 +82,7 @@ public class AzureServiceBusExpiredLockTests
         // Arrange
         var receiver = new InMemoryLockingServiceBusReceiver(1, TimeSpan.FromSeconds(2));
         var client = new InMemoryLockingServiceBusClient(receiver);
-        var factory = new AzureServiceBusConsumerFactory(client);
+        var factory = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             routingKey: new RoutingKey("locks"),
             subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration
@@ -109,7 +109,7 @@ public class AzureServiceBusExpiredLockTests
         await using var client = new InMemoryLockingServiceBusClient(receiver);
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"), makeChannels: OnMissingChannel.Assume);
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
 
         // Act
         var message = Assert.Single(await consumer.ReceiveAsync());
@@ -134,7 +134,7 @@ public class AzureServiceBusExpiredLockTests
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"),
             bufferSize: 2, makeChannels: OnMissingChannel.Assume);
-        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client));
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         await using var channel = factory.CreateAsyncChannel(subscription);
         var first = await channel.ReceiveAsync(null);
         await channel.AcknowledgeAsync(first);

@@ -23,7 +23,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Observability;
@@ -56,10 +58,10 @@ namespace Paramore.Brighter
     ///         <description>
     ///             A <see cref="ProducersConfiguration"/> describing how you want to configure Task Queues for the <see cref="CommandProcessor"/>. We store messages in a <see cref="IAmAnOutbox"/>
     ///             for later replay (in case we need to compensate by trying a message again). We send messages to a Task Queue via a <see cref="IAmAMessageProducer"/> and we  want to know how
-    ///             to map the <see cref="IRequest"/> (<see cref="Command"/> or <see cref="Event"/>) to a <see cref="Message"/> using a <see cref="IAmAMessageMapper"/> using 
-    ///             an <see cref="IAmAMessageMapperRegistry"/>. You can use the default <see cref="MessageMapperRegistry"/> to register the association. You need to 
+    ///             to map the <see cref="IRequest"/> (<see cref="Command"/> or <see cref="Event"/>) to a <see cref="Message"/> using a <see cref="IAmAMessageMapper"/> using
+    ///             an <see cref="IAmAMessageMapperRegistry"/>. You can use the default <see cref="MessageMapperRegistry"/> to register the association. You need to
     ///             provide a <see cref="IAmAMessageMapperFactory"/> so that we can create instances of your  <see cref="IAmAMessageMapper"/>. You need to provide a <see cref="IAmAMessageMapperFactory"/>
-    ///             when using <see cref="MessageMapperRegistry"/> so that we can create instances of your mapper. 
+    ///             when using <see cref="MessageMapperRegistry"/> so that we can create instances of your mapper.
     ///             If you don't want to use Task Queues i.e. you are just using a synchronous Command Dispatcher approach, then use the <see cref="NoExternalBus"/> method to indicate your intent
     ///         </description>
     ///     </item>
@@ -77,7 +79,7 @@ namespace Paramore.Brighter
     ///             to provide a <see cref="RequestContext"/> unless you have a requirement to replace this, such as in testing.
     ///         </description>
     ///     </item>
-    /// </list> 
+    /// </list>
     /// </summary>
     public class CommandProcessorBuilder : INeedAHandlers,
         INeedResilience,
@@ -85,6 +87,7 @@ namespace Paramore.Brighter
         INeedInstrumentation,
         INeedARequestContext,
         INeedARequestSchedulerFactory,
+        INeedCommandProcessorLogging,
         IAmACommandProcessorBuilder
     {
         private IAmARequestContextFactory? _requestContextFactory;
@@ -103,6 +106,7 @@ namespace Paramore.Brighter
         private InstrumentationOptions? _instrumetationOptions;
         private IAmABrighterTracer? _tracer;
         private IAmARequestSchedulerFactory _requestSchedulerFactory = null!;
+        private ILoggerFactory? _loggerFactory;
 
         private CommandProcessorBuilder()
         {
@@ -162,7 +166,7 @@ namespace Paramore.Brighter
             {
                 throw new ConfigurationException("The resilience pipeline registry is missing the CommandProcessor.OutboxProducer resilience pipeline which is required");
             }
-            
+
             policyRegistry ??= new DefaultPolicy();
 #pragma warning disable CS0618 // Type or member is obsolete
             if (!policyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
@@ -181,7 +185,7 @@ namespace Paramore.Brighter
             return this;
         }
 
-        
+
         /// <inheritdoc />
         public INeedMessaging DefaultResilience()
         {
@@ -218,7 +222,7 @@ namespace Paramore.Brighter
                     break;
                 case ExternalBusType.FireAndForget:
                     _bus = bus;
-                    _transactionType = transactionType;   
+                    _transactionType = transactionType;
                     break;
                 case ExternalBusType.RPC:
                     _bus = bus;
@@ -285,9 +289,17 @@ namespace Paramore.Brighter
         }
 
         /// <inheritdoc />
-        public IAmACommandProcessorBuilder RequestSchedulerFactory(IAmARequestSchedulerFactory messageSchedulerFactory)
+        public INeedCommandProcessorLogging RequestSchedulerFactory(IAmARequestSchedulerFactory messageSchedulerFactory)
         {
             _requestSchedulerFactory = messageSchedulerFactory;
+            return this;
+        }
+
+        /// <inheritdoc />
+        /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
+        public IAmACommandProcessorBuilder ConfigureLogging(ILoggerFactory loggerFactory)
+        {
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             return this;
         }
 
@@ -297,6 +309,9 @@ namespace Paramore.Brighter
         /// <returns>CommandProcessor.</returns>
         public CommandProcessor Build()
         {
+            var loggerFactory = _loggerFactory ?? throw new ConfigurationException(
+                "A logger factory is required. Call ConfigureLogging before Build.");
+
             if (_registry == null)
                 throw new ConfigurationException(
                     "A SubscriberRegistry must be provided to construct a command processor");
@@ -318,16 +333,17 @@ namespace Paramore.Brighter
 
             if (_bus == null)
             {
-                return new CommandProcessor(subscriberRegistry: _registry, 
+                return new CommandProcessor(subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
-                    requestContextFactory: _requestContextFactory, 
+                    requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     featureSwitchRegistry: _featureSwitchRegistry,
                     inboxConfiguration: _inboxConfiguration,
                     tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions.Value,
-                    requestSchedulerFactory: _requestSchedulerFactory);
+                    requestSchedulerFactory: _requestSchedulerFactory,
+                    loggerFactory: loggerFactory);
             }
 
             if (!_useRequestReplyQueues)
@@ -339,11 +355,12 @@ namespace Paramore.Brighter
                     resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     bus: _bus,
                     transactionType: _transactionType,
-                    featureSwitchRegistry: _featureSwitchRegistry, 
+                    featureSwitchRegistry: _featureSwitchRegistry,
                     inboxConfiguration: _inboxConfiguration,
                     tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions.Value,
-                    requestSchedulerFactory: _requestSchedulerFactory
+                    requestSchedulerFactory: _requestSchedulerFactory,
+                    loggerFactory: loggerFactory
                 );
 
             if (_useRequestReplyQueues)
@@ -355,13 +372,14 @@ namespace Paramore.Brighter
                     resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     bus: _bus,
                     transactionType: _transactionType,
-                    featureSwitchRegistry: _featureSwitchRegistry, 
+                    featureSwitchRegistry: _featureSwitchRegistry,
                     inboxConfiguration: _inboxConfiguration,
                     replySubscriptions: _replySubscriptions,
                     responseChannelFactory: _responseChannelFactory,
                     tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions.Value,
-                    requestSchedulerFactory: _requestSchedulerFactory
+                    requestSchedulerFactory: _requestSchedulerFactory,
+                    loggerFactory: loggerFactory
                 );
 
             throw new ConfigurationException(
@@ -410,7 +428,7 @@ namespace Paramore.Brighter
         /// <returns>An <see cref="INeedMessaging"/> interface to continue configuring the messaging pipeline.</returns>
         INeedMessaging DefaultResilience();
     }
-    
+
     /// <summary>
     /// Interface INeedMessaging
     /// Note that a single command builder does not support both task queues and rpc, using the builder
@@ -489,15 +507,28 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messageSchedulerFactory"></param>
         /// <returns></returns>
-        IAmACommandProcessorBuilder RequestSchedulerFactory(IAmARequestSchedulerFactory messageSchedulerFactory);
+        INeedCommandProcessorLogging RequestSchedulerFactory(IAmARequestSchedulerFactory messageSchedulerFactory);
     }
 
 
     /// <summary>
     /// Interface IAmACommandProcessorBuilder
     /// </summary>
+    public interface INeedCommandProcessorLogging
+    {
+        /// <summary>
+        /// Supplies the <see cref="ILoggerFactory"/> used to create instance-scoped loggers for the <see cref="CommandProcessor"/>
+        /// and the object graph it constructs. This must be called before <see cref="IAmACommandProcessorBuilder.Build"/>.
+        /// </summary>
+        /// <param name="loggerFactory">The logger factory.</param>
+        /// <returns>IAmACommandProcessorBuilder.</returns>
+        IAmACommandProcessorBuilder ConfigureLogging(ILoggerFactory loggerFactory);
+    }
+
+    /// <summary>Builds an instance after all required configuration stages.</summary>
     public interface IAmACommandProcessorBuilder
     {
+
         /// <summary>
         /// Builds this instance.
         /// </summary>

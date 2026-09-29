@@ -34,7 +34,7 @@ namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 
 public class CleanupFailureRmqProducer(
     RmqMessagingGatewayConnection connection, Func<string?> failingOperation)
-    : RmqMessageProducer(connection)
+    : RmqMessageProducer(connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
 {
     protected override async Task ConnectToBrokerAsync(OnMissingChannel makeExchange, CancellationToken cancellationToken = default)
     {

@@ -20,8 +20,8 @@ public class When_a_topic_trips_on_the_shared_breaker_should_report_it_until_coo
         state.SweepStarted();
         state.LockObtained();
         state.SweepEnded(SweepOutcome.Completed);
-        var sharedBreaker = new InMemoryOutboxCircuitBreaker(new OutboxCircuitBreakerOptions { CooldownCount = 2 });
-        var check = new OutboxSweeperInvestigateHealthCheck(state, new TimedOutboxSweeperOptions(), () => sharedBreaker, 3);
+        var sharedBreaker = new InMemoryOutboxCircuitBreaker(options: new OutboxCircuitBreakerOptions { CooldownCount = 2 }, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
+        var check = new OutboxSweeperInvestigateHealthCheck(state: state, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => sharedBreaker, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         sharedBreaker.TripTopic(new RoutingKey("orders"));

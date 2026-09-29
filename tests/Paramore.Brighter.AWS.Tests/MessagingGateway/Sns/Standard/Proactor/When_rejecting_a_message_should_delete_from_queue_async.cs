@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Mime;
 using System.Text.Json;
@@ -49,10 +51,10 @@ public class SqsMessageConsumerRejectTestsAsync : IDisposable, IAsyncDisposable
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
+        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create }, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

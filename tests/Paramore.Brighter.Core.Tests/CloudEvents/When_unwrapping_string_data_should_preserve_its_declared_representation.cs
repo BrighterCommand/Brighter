@@ -70,7 +70,7 @@ public class CloudEventsStringDataUnwrapTests
             new MessageHeader(Id.Random(), new RoutingKey("Test.Topic"), MessageType.MT_EVENT,
                 contentType: new ContentType("application/cloudevents+json")),
             new MessageBody(envelope));
-        var transformer = new CloudEventsTransformer();
+        var transformer = new CloudEventsTransformer(loggerFactory: Initializer.TestLoggerFactory);
         transformer.InitializeUnwrapFromAttributeParams(CloudEventFormat.Json);
         var expectedBody = expectJson ? JsonSerializer.Serialize(value) : value;
 

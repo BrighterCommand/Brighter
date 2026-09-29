@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Mime;
@@ -85,10 +87,10 @@ public class RmqMessageProducerSendMessageTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
-            
-        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, false);
+
+        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, false, loggerFactory: NullLoggerFactory.Instance);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(_message.Header.Topic)).Create(TimeSpan.FromMilliseconds(1000));
     }
@@ -98,7 +100,7 @@ public class RmqMessageProducerSendMessageTests : IDisposable
     {
         _messageProducer.Send(_message);
 
-        var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
+        var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
 
         // Assert message body
         Assert.Equal(_message.Body.Value, result.Body.Value);
@@ -116,7 +118,7 @@ public class RmqMessageProducerSendMessageTests : IDisposable
         Assert.Equal(_message.Header.HandledCount, result.Header.HandledCount);
         Assert.Equal(_message.Header.DataSchema, result.Header.DataSchema);
         Assert.Equal(_message.Header.Subject, result.Header.Subject);
-        Assert.Equal(TimeSpan.Zero, result.Header.Delayed);                                //we clear any delay from the producer, as it represents delay in the pipeline 
+        Assert.Equal(TimeSpan.Zero, result.Header.Delayed);                                //we clear any delay from the producer, as it represents delay in the pipeline
         Assert.Equal(_message.Header.TraceParent, result.Header.TraceParent);
         Assert.Equal(_message.Header.TraceState, result.Header.TraceState);
         Assert.Equal(_message.Header.Baggage, result.Header.Baggage);
@@ -127,4 +129,3 @@ public class RmqMessageProducerSendMessageTests : IDisposable
         _messageProducer.Dispose();
     }
 }
-

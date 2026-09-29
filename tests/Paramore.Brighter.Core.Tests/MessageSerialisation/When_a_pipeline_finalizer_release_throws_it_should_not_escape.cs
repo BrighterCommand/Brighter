@@ -69,7 +69,7 @@ public class TransformPipelineFinalizerReleaseTests
             messageTransformerFactory: null,
             transformLeases: Array.Empty<Lease<IAmAMessageTransform>>(),
             instrumentationOptions: InstrumentationOptions.All,
-            mapperRegistry: new ThrowingOnReleaseRegistry());
+            mapperRegistry: new ThrowingOnReleaseRegistry(), loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -80,7 +80,7 @@ public class TransformPipelineFinalizerReleaseTests
             messageTransformerFactoryAsync: null,
             transformLeases: Array.Empty<Lease<IAmAMessageTransformAsync>>(),
             instrumentationOptions: InstrumentationOptions.All,
-            mapperRegistry: new ThrowingOnReleaseRegistryAsync());
+            mapperRegistry: new ThrowingOnReleaseRegistryAsync(), loggerFactory: Initializer.TestLoggerFactory);
     }
 
     private sealed class MinimalCommand() : Command(Guid.NewGuid());

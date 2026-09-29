@@ -55,5 +55,5 @@ public class PostgreSqlOutboxDataRefTests : RelationalOutboxDataRefTests
     protected override string CreateTableSql(bool binary) => PostgreSqlOutboxBuilder.GetDDL(TableName, binary);
     /// <inheritdoc />
     protected override RelationDatabaseOutbox CreateOutbox(RelationalDatabaseConfiguration configuration) =>
-        new PostgreSqlOutbox(configuration);
+        new PostgreSqlOutbox(configuration: configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<PostgreSqlOutbox>.Instance);
 }

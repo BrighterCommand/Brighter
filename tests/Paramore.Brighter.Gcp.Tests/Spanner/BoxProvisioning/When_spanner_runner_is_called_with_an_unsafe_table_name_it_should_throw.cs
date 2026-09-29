@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning;
@@ -48,7 +50,7 @@ public class SpannerRunnerUnsafeIdentifierTests
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(IgnoredConnectionString);
-        var runner = new SpannerBoxMigrationRunner(config);
+        var runner = new SpannerBoxMigrationRunner(config, loggerFactory: NullLoggerFactory.Instance);
         var tableState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert
@@ -65,7 +67,7 @@ public class SpannerRunnerUnsafeIdentifierTests
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(IgnoredConnectionString);
-        var runner = new SpannerBoxMigrationRunner(config);
+        var runner = new SpannerBoxMigrationRunner(config, loggerFactory: NullLoggerFactory.Instance);
         var tableState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert

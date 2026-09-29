@@ -40,7 +40,7 @@ public class MsSqlMessageIdFreshProvisioningTests
         //Arrange
         await using var store = new MsSqlMessageIdOutboxStore(binary, customSchema: true);
         await store.InitializeAsync(provision: true);
-        var outbox = new MsSqlOutbox(store.OutboxConfig);
+        var outbox = new MsSqlOutbox(configuration: store.OutboxConfig, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<MsSqlOutbox>.Instance);
         var message = MsSqlMessageIdOutboxStore.Message(Id.Random(), "original");
         var context = new RequestContext();
 

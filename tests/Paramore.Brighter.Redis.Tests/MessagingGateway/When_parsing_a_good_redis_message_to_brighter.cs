@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.Redis;
@@ -16,7 +18,7 @@ public class RedisGoodMessageParsingTests
     [Fact]
     public void When_parsing_a_good_redis_message_to_brighter()
     {
-        Message message = RedisMessageCreator.CreateMessage(GoodMessage);
+        Message message = new RedisMessageCreator(logger: NullLoggerFactory.Instance.CreateLogger<RedisMessageCreator>()).CreateMessage(GoodMessage);
 
         // Assert existing properties
         Assert.Equal(DateTime.Parse("2018-02-07T09:38:36Z"), message.Header.TimeStamp);
@@ -33,12 +35,12 @@ public class RedisGoodMessageParsingTests
         Assert.Equal("goparamore.io.Paramore.Brighter.Message", message.Header.Type);
         Assert.Equal(new Uri("http://schema.example.com/test"), message.Header.DataSchema);
         Assert.Equal("test-subject", message.Header.Subject);
-        
+
         // Assert W3C Trace Context properties
         Assert.Equal(new TraceParent("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"), message.Header.TraceParent);
         Assert.Equal(new TraceState("congo=t61rcWkgMzE"), message.Header.TraceState);
         Assert.Contains(new KeyValuePair<string, string?>("userId", "alice"), message.Header.Baggage);
-        
+
         // Assert message body
         Assert.Equal("more test content", message.Body.Value);
     }

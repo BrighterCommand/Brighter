@@ -66,8 +66,8 @@ public class RmqDisposedConsumerTests
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
         var queueName = new ChannelName(Guid.NewGuid().ToString());
         var factory = new ConnectionFactory { Uri = connection.AmpqUri.Uri };
-        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat);
-        using var consumer = new RmqMessageConsumer(connection, queueName, routingKey, isDurable: true);
+        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        using var consumer = new RmqMessageConsumer(connection, queueName, routingKey, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         if (connectBeforeDisposing) await consumer.PurgeAsync();
         if (useAsync) await consumer.DisposeAsync();
         else consumer.Dispose();

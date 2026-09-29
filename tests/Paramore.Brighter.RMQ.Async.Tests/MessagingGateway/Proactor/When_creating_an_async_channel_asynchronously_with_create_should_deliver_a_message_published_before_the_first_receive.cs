@@ -60,7 +60,7 @@ public class RmqChannelFactoryAsyncChannelAsyncProvisioningTests : IAsyncDisposa
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND),
             new MessageBody("published before the first receive"));
 
-        _messageProducer = new RmqMessageProducer(_rmqConnection);
+        _messageProducer = new RmqMessageProducer(connection: _rmqConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _subscription = new RmqSubscription(
             subscriptionName: new SubscriptionName("rmq-channel-factory-provisioning-test-async-async"),
@@ -75,7 +75,7 @@ public class RmqChannelFactoryAsyncChannelAsyncProvisioningTests : IAsyncDisposa
     public async Task When_creating_an_async_channel_asynchronously_with_create_should_deliver_a_message_published_before_the_first_receive()
     {
         // Arrange
-        _channel = await new ChannelFactory(new RmqMessageConsumerFactory(_rmqConnection))
+        _channel = await new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection: _rmqConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
             .CreateAsyncChannelAsync(_subscription);
 
         // Act - publish before the channel has ever received

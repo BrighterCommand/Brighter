@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -49,7 +49,7 @@ public class TopicsReadAtStartTests
         var outbox = new StaleMessageTopicCountingOutbox();
         var orders = new InMemoryMessageProducer(
             new InternalBus(),
-            new Publication { Topic = new RoutingKey("orders"), StaleMessageAge = TimeSpan.FromMinutes(2) });
+publication: new Publication { Topic = new RoutingKey("orders"), StaleMessageAge = TimeSpan.FromMinutes(2) }, loggerFactory: Initializer.TestLoggerFactory);
         using var metrics = new StaleMessageMetricsFixture(services =>
         {
             services.AddSingleton<TimeProvider>(_clock);

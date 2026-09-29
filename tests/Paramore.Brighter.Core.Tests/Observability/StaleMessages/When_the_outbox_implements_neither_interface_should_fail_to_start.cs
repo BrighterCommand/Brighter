@@ -44,7 +44,7 @@ public class StaleMessageMonitorNeitherInterfaceOutboxTests
     {
         //Arrange
         var timeProvider = new FakeTimeProvider();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton<TimeProvider>(timeProvider);
         services.AddSingleton<IAmAnOutbox>(new NeitherInterfaceOutbox());
         services.AddSingleton<IAmProducersConfiguration>(new ProducersConfiguration());

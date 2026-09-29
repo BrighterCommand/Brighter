@@ -78,8 +78,8 @@ public sealed class TransientHandlerWebApplicationFactory : WebApplicationFactor
             var publishPostedRoutingKey = new RoutingKey("transient-handler-publish-posted");
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { sendPostedRoutingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = sendPostedRoutingKey, RequestType = typeof(TransientHandlerSendPostedCommand) }) },
-                { publishPostedRoutingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = publishPostedRoutingKey, RequestType = typeof(TransientHandlerPublishPostedCommand) }) }
+                { sendPostedRoutingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = sendPostedRoutingKey, RequestType = typeof(TransientHandlerSendPostedCommand) }) },
+                { publishPostedRoutingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = publishPostedRoutingKey, RequestType = typeof(TransientHandlerPublishPostedCommand) }) }
             });
 
             services.AddBrighterRequestScope();

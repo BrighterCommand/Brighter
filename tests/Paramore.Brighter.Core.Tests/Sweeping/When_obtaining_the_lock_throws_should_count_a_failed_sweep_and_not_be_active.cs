@@ -25,12 +25,7 @@ public class SweeperLockFailureStateTests
         var state = new OutboxSweeperState(timeProvider);
         using var measurements = new RecordedSweeperMeasurements();
         var sweeper = new TimedOutboxSweeper(
-            outbox.ScopeFactory,
-            new ThrowingDistributedLock("the lock store is unreachable"),
-            new TimedOutboxSweeperOptions { TimerInterval = (int)s_timerInterval.TotalSeconds, MinimumMessageAge = TimeSpan.Zero },
-            timeProvider: timeProvider,
-            meter: new SweeperMeter(measurements.MeterFactory),
-            state: state);
+serviceScopeFactory: outbox.ScopeFactory, distributedLock: new ThrowingDistributedLock("the lock store is unreachable"), options: new TimedOutboxSweeperOptions { TimerInterval = (int)s_timerInterval.TotalSeconds, MinimumMessageAge = TimeSpan.Zero }, timeProvider: timeProvider, meter: new SweeperMeter(meterFactory: measurements.MeterFactory, loggerFactory: Initializer.TestLoggerFactory), state: state, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         //Act
         await sweeper.StartAsync(CancellationToken.None);

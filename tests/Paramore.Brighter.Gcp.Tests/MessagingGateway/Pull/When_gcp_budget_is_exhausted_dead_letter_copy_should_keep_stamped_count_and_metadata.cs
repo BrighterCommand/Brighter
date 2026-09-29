@@ -128,7 +128,7 @@ public class GcpPullBudgetExhaustedDlqTests
                 PublisherConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
                 SubscriptionManagerConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
             };
-            readerChannelFactory = new GcpPubSubChannelFactory(readerConnection);
+            readerChannelFactory = new GcpPubSubChannelFactory(connection: readerConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
             readingSubscription = new GcpPubSubSubscription<ConformanceDeferredCommand>(
                 subscriptionName: new SubscriptionName(readingChannelName),

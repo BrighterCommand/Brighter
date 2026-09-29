@@ -239,8 +239,7 @@ public class ReceivedMessageWithoutHandlerTests
                 handleAsync ?? ((_, _) => throw new InvalidOperationException("Unexpected handler invocation"))))
             : new SimpleHandlerFactorySync(_ => new ReceivedRequestHandler<TRequest>(
                 handle ?? ((_, _) => throw new InvalidOperationException("Unexpected handler invocation"))));
-        return new CommandProcessor(subscribers, factory, new InMemoryRequestContextFactory(),
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+        return new CommandProcessor(subscriberRegistry: subscribers, handlerFactory: factory, requestContextFactory: new InMemoryRequestContextFactory(), policyRegistry: new PolicyRegistry(), resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(), requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
     }
 
     private Message Map<TRequest>(TRequest request) where TRequest : class, IRequest
@@ -259,8 +258,7 @@ public class ReceivedMessageWithoutHandlerTests
             new SimpleMessageMapperFactoryAsync(_ => new JsonMessageMapper<TRequest>()));
         mappers.Register<TRequest, JsonMessageMapper<TRequest>>();
         mappers.RegisterAsync<TRequest, JsonMessageMapper<TRequest>>();
-        var consumer = new InMemoryMessageConsumer(_topic, _bus, new FakeTimeProvider(),
-            deadLetterTopic: _deadLetterTopic, invalidMessageTopic: useDeadLetterFallback ? null : _invalidTopic);
+        var consumer = new InMemoryMessageConsumer(topic: _topic, bus: _bus, timeProvider: new FakeTimeProvider(), deadLetterTopic: _deadLetterTopic, invalidMessageTopic: useDeadLetterFallback ? null : _invalidTopic, loggerFactory: Initializer.TestLoggerFactory);
         var contextFactory = new InMemoryRequestContextFactory();
         var requestTypes = new Dictionary<string, Type> { [typeof(TRequest).FullName!] = typeof(TRequest) };
         Type GetRequestType(Message message) => dynamicRouting
@@ -268,13 +266,9 @@ public class ReceivedMessageWithoutHandlerTests
             : typeof(TRequest);
 
         return useProactor
-            ? new ServiceActivator.Proactor(processor, GetRequestType, mappers,
-                new EmptyMessageTransformerFactoryAsync(), contextFactory,
-                new ChannelAsync(new ChannelName("unhandled-received-message"), _topic, consumer))
-                { UnacceptableMessageLimit = 0 }
-            : new ServiceActivator.Reactor(processor, GetRequestType, mappers,
-                new EmptyMessageTransformerFactory(), contextFactory,
-                new Channel(new ChannelName("unhandled-received-message"), _topic, consumer))
-                { UnacceptableMessageLimit = 0 };
+            ? new ServiceActivator.Proactor(commandProcessor: processor, mapRequestType: GetRequestType, messageMapperRegistry: mappers, messageTransformerFactory: new EmptyMessageTransformerFactoryAsync(), requestContextFactory: contextFactory, channel: new ChannelAsync(new ChannelName("unhandled-received-message"), _topic, consumer), loggerFactory: Initializer.TestLoggerFactory)
+            { UnacceptableMessageLimit = 0 }
+            : new ServiceActivator.Reactor(commandProcessor: processor, mapRequestType: GetRequestType, messageMapperRegistry: mappers, messageTransformerFactory: new EmptyMessageTransformerFactory(), requestContextFactory: contextFactory, channel: new Channel(new ChannelName("unhandled-received-message"), _topic, consumer), loggerFactory: Initializer.TestLoggerFactory)
+            { UnacceptableMessageLimit = 0 };
     }
 }

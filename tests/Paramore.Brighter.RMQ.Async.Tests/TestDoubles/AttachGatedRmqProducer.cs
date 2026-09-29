@@ -33,7 +33,7 @@ using RabbitMQ.Client;
 namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 
 public class AttachGatedRmqProducer(RmqMessagingGatewayConnection connection)
-    : RmqMessageProducer(connection)
+    : RmqMessageProducer(connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
 {
     public AttachGatedRmqChannel? GatedChannel { get; private set; }
 

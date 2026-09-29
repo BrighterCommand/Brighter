@@ -66,7 +66,7 @@ public class AzureServiceBusRetryTelemetryTests
         });
         try
         {
-            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(provider));
+            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: provider, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
             var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
                 new SubscriptionName("consumer"), new ChannelName("consumer"),
                 new RoutingKey(useQueue ? queue : "orders"),

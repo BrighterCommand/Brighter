@@ -22,22 +22,15 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Runtime.CompilerServices;
+using System.Data.Common;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
-using Paramore.Brighter.Logging;
-using Xunit;
-
-// These hosts replace the process-wide logging factory and must not overlap other tests.
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
-[assembly: ResetApplicationLogging]
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
+/// <summary>
+/// Provides a shared logger factory for explicitly constructed test components.
+/// </summary>
 internal static class Initializer
 {
     public static readonly ILoggerFactory Factory = new LoggerFactory();
-
-    [ModuleInitializer]
-    public static void Initialize() => ApplicationLogging.LoggerFactory = Factory;
 }

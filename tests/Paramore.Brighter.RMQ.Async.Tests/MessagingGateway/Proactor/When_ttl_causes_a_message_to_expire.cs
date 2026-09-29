@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -41,13 +43,13 @@ public class RmqMessageProducerTTLTests : IAsyncDisposable, IDisposable
     public RmqMessageProducerTTLTests ()
     {
         _messageOne = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), 
-                new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(),
+                new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND),
             new MessageBody("test content"));
-           
+
         _messageTwo = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), 
-                new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(),
+                new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND),
             new MessageBody("test content"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -55,22 +57,22 @@ public class RmqMessageProducerTTLTests : IAsyncDisposable, IDisposable
             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
             Exchange = new Exchange("paramore.brighter.exchange"),
         };
-            
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
 
         _messageConsumer = new RmqMessageConsumer(
-            connection: rmqConnection, 
-            queueName: new ChannelName(Guid.NewGuid().ToString()), 
-            routingKey: _messageOne.Header.Topic, 
-            isDurable: true, 
+            connection: rmqConnection,
+            queueName: new ChannelName(Guid.NewGuid().ToString()),
+            routingKey: _messageOne.Header.Topic,
+            isDurable: true,
             highAvailability: false,
             ttl: TimeSpan.FromMilliseconds(10000),
-            makeChannels:OnMissingChannel.Create
-        );
+            makeChannels:OnMissingChannel.Create,
+            loggerFactory: NullLoggerFactory.Instance);
 
         //create the infrastructure
-        _messageConsumer.ReceiveAsync(TimeSpan.Zero).GetAwaiter().GetResult(); 
-             
+        _messageConsumer.ReceiveAsync(TimeSpan.Zero).GetAwaiter().GetResult();
+
     }
 
     [Fact]
@@ -87,7 +89,7 @@ public class RmqMessageProducerTTLTests : IAsyncDisposable, IDisposable
         await Task.Delay(11000);
 
         var dlqMessage = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First();
-            
+
         //assert this is our message
         Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
     }

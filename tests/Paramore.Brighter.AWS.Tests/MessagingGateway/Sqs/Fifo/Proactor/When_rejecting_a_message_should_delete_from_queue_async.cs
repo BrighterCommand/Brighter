@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Mime;
 using System.Text.Json;
@@ -34,14 +36,14 @@ public class SqsMessageConsumerRejectTestsAsync : IDisposable, IAsyncDisposable
         var queueAttributes = new SqsAttributes(
             type: SqsType.Fifo,
             tags: new Dictionary<string, string> { { "Environment", "Test" } });
-        
+
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            queueAttributes: queueAttributes, 
+            queueAttributes: queueAttributes,
             makeChannels: OnMissingChannel.Create
             );
 
@@ -53,13 +55,13 @@ public class SqsMessageConsumerRejectTestsAsync : IDisposable, IAsyncDisposable
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create, queueAttributes: queueAttributes)
-            );
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create, queueAttributes: queueAttributes),
+            loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

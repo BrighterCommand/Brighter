@@ -22,8 +22,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         {
             var routingKey = new RoutingKey(Topic);
             _bus = new InternalBus();
-            var consumer = new InMemoryMessageConsumer(routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000));
-            
+            var consumer = new InMemoryMessageConsumer(routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory);
+
             IAmAChannelSync channel = new Channel(new (ChannelName), new(Topic), consumer, 6);
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
@@ -33,24 +33,24 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
             var connection = new Subscription<MyEvent>(
-                new SubscriptionName("test"), 
-                noOfPerformers: 3, 
-                timeOut: TimeSpan.FromMilliseconds(100), 
-                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), 
-                channelName: new ChannelName("fakeChannel"), 
+                new SubscriptionName("test"),
+                noOfPerformers: 3,
+                timeOut: TimeSpan.FromMilliseconds(100),
+                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory),
+                channelName: new ChannelName("fakeChannel"),
                 messagePumpType: MessagePumpType.Proactor,
                 routingKey: routingKey
             );
-            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { connection }, messageMapperRegistryAsync: messageMapperRegistry);
+            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { connection }, messageMapperRegistryAsync: messageMapperRegistry, loggerFactory: Initializer.TestLoggerFactory);
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapperAsync().MapToMessageAsync(@event, new Publication{Topic = connection.RoutingKey})
                 .GetAwaiter()
                 .GetResult();
-            
+
             for (var i = 0; i < 6; i++)
                 channel.Enqueue(message);
-            
+
             Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
         }

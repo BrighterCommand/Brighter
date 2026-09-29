@@ -22,10 +22,7 @@ public class SweeperFailedSweepMetricsTests
 
         using var measurements = new RecordedSweeperMeasurements();
         var sweeper = new TimedOutboxSweeper(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            new InMemoryLock(),
-            new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero },
-            meter: new SweeperMeter(measurements.MeterFactory));
+serviceScopeFactory: provider.GetRequiredService<IServiceScopeFactory>(), distributedLock: new InMemoryLock(), options: new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero }, meter: new SweeperMeter(meterFactory: measurements.MeterFactory, loggerFactory: Initializer.TestLoggerFactory), logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         //Act
         await sweeper.StartAsync(CancellationToken.None);

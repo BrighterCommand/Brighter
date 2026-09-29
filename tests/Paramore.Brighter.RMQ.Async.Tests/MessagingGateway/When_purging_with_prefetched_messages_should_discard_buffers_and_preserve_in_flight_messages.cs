@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -73,9 +73,9 @@ public class RmqPurgeBufferedMessagesTests
         string? failure = null;
         await using var consumer = failAcknowledgement
             ? new CleanupFailureRmqConsumer(connection, queueName, routingKey, () => failure, batchSize: 3, queueType: queueType)
-            : new RmqMessageConsumer(connection, queueName, routingKey, isDurable: true, batchSize: 3, queueType: queueType);
+            : new RmqMessageConsumer(connection: connection, queueName: queueName, routingKey: routingKey, isDurable: true, batchSize: 3, queueType: queueType, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await using var channel = new ChannelAsync(queueName, routingKey, consumer, maxQueueLength: 3);
-        await using var producer = new RmqMessageProducer(connection);
+        await using var producer = new RmqMessageProducer(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         try
         {
@@ -140,8 +140,7 @@ public class RmqPurgeBufferedMessagesTests
             await channel.AcknowledgeAsync(received);
             await channel.DisposeAsync();
 
-            await using var reconnected = new RmqMessageConsumer(connection, queueName, routingKey,
-                isDurable: true, batchSize: 3, queueType: queueType);
+            await using var reconnected = new RmqMessageConsumer(connection: connection, queueName: queueName, routingKey: routingKey, isDurable: true, batchSize: 3, queueType: queueType, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             var afterReconnect = Assert.Single(await reconnected.ReceiveAsync(TimeSpan.FromSeconds(1)));
             Assert.Equal(MessageType.MT_NONE, afterReconnect.Header.MessageType);
         }
@@ -154,7 +153,7 @@ public class RmqPurgeBufferedMessagesTests
 
     private static async Task recoverConnectionAsync(RmqMessagingGatewayConnection connection, ConnectionFactory factory)
     {
-        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat);
+        var pool = new RmqMessageGatewayConnectionPool(connectionName: connection.Name, connectionHeartbeat: connection.Heartbeat, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var shared = await pool.GetConnectionAsync(factory);
         using var management = new HttpClient { BaseAddress = new Uri("http://localhost:15672/api/") };
         management.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(

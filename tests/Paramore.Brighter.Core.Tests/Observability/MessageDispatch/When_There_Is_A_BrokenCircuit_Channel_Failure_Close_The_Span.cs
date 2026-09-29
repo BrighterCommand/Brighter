@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -34,71 +34,73 @@ public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
     public MessagePumpBrokenCircuitChannelFailureOberservabilityTests()
     {
         var builder = Sdk.CreateTracerProviderBuilder();
-            _exportedActivities = new List<Activity>();
+        _exportedActivities = new List<Activity>();
 
-            _traceProvider = builder
-                .AddSource("Paramore.Brighter.Tests", "Paramore.Brighter")
-                .ConfigureResource(r => r.AddService("in-memory-tracer"))
-                .AddInMemoryExporter(_exportedActivities)
-                .Build();
-        
-            
-            var subscriberRegistry = new SubscriberRegistry();
-            subscriberRegistry.Register<MyEvent, MyEventHandler>();
+        _traceProvider = builder
+            .AddSource("Paramore.Brighter.Tests", "Paramore.Brighter")
+            .ConfigureResource(r => r.AddService("in-memory-tracer"))
+            .AddInMemoryExporter(_exportedActivities)
+            .Build();
 
-            var handlerFactory = new SimpleHandlerFactorySync(_ => new MyEventHandler(_receivedMessages));
-            
-            var timeProvider  = new FakeTimeProvider();
-            var tracer = new BrighterTracer(timeProvider);
-            var instrumentationOptions = InstrumentationOptions.All;
-            
-            var commandProcessor = new Brighter.CommandProcessor(
-                subscriberRegistry,
-                handlerFactory, 
-                new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(),
-                new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory(),
-                tracer: tracer,
-                instrumentationOptions: instrumentationOptions);
-            
-            PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            FailingChannel channel = new(
-                new (ChannelName), 
-                _routingKey,
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)),
-                brokenCircuit: true);
-            
-            var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(
-                    _ => new MyEventMessageMapper()),
-                null); 
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-            
-            _messagePump = new Reactor(commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel, tracer, instrumentationOptions)
-            {
-                Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)
-            };
-            
-            var externalActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessagePumpSpanTests");
-            
-            _message = new Message(
-                new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT), 
-                new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
-            );
-            
-            var contextPropogator = new TextContextPropogator();
-            contextPropogator.PropogateContext(externalActivity?.Context, _message);
-            
-            externalActivity?.Stop();
+        var subscriberRegistry = new SubscriberRegistry();
+        subscriberRegistry.Register<MyEvent, MyEventHandler>();
 
-            channel.Enqueue(_message);
-            
-            var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
-            channel.Enqueue(quitMessage);
-            
+        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyEventHandler(_receivedMessages));
+
+        var timeProvider = new FakeTimeProvider();
+        var tracer = new BrighterTracer(timeProvider);
+        var instrumentationOptions = InstrumentationOptions.All;
+
+        var commandProcessor = new Brighter.CommandProcessor(
+            subscriberRegistry,
+            handlerFactory,
+            new InMemoryRequestContextFactory(),
+            new PolicyRegistry(),
+            new ResiliencePipelineRegistry<string>(),
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            tracer: tracer,
+            instrumentationOptions: instrumentationOptions, loggerFactory: Initializer.TestLoggerFactory);
+
+        PipelineBuilder<MyEvent>.ClearPipelineCache();
+
+        FailingChannel channel = new(
+            new(ChannelName),
+            _routingKey,
+            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory),
+            brokenCircuit: true);
+
+        var messageMapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(
+                _ => new MyEventMessageMapper()),
+            null);
+        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+
+        _messagePump = new Reactor(commandProcessor, (message) => typeof(MyEvent),
+            messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel, Initializer.TestLoggerFactory, tracer, instrumentationOptions)
+        {
+            Channel = channel,
+            TimeOut = TimeSpan.FromMilliseconds(5000),
+            EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)
+        };
+
+        var externalActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessagePumpSpanTests");
+
+        _message = new Message(
+            new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT),
+            new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
+        );
+
+        var contextPropogator = new TextContextPropogator();
+        contextPropogator.PropogateContext(externalActivity?.Context, _message);
+
+        externalActivity?.Stop();
+
+        channel.Enqueue(_message);
+
+        var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
+        channel.Enqueue(quitMessage);
+
     }
 
     [Fact]
@@ -107,15 +109,15 @@ public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
         _messagePump.Run();
 
         _traceProvider.ForceFlush();
-            
+
         Assert.Equal(8, _exportedActivities.Count);
-        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter")); 
-        
-        var errorMessageActivity = _exportedActivities.FirstOrDefault(a => 
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
+
+        var errorMessageActivity = _exportedActivities.FirstOrDefault(a =>
             a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}"
             && a.Status == ActivityStatusCode.Error
         );
-        
+
         Assert.NotNull(errorMessageActivity);
         Assert.Equal(ActivityStatusCode.Error, errorMessageActivity?.Status);
     }

@@ -38,7 +38,7 @@ public class StaleMessageMonitorHostedServiceRegistrationTests
     public void When_the_monitor_is_added_twice_should_register_one_hosted_service()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         var builder = new ServiceCollectionBrighterBuilder(
             services,
             new ServiceCollectionSubscriberRegistry(services),

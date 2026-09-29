@@ -57,8 +57,7 @@ public class HandlerFactoryReleaseFailureTests
         using var logs = new InMemoryLogCapture();
 
         var commandProcessor = new CommandProcessor(
-            registry, factory, new InMemoryRequestContextFactory(), new PolicyRegistry(),
-            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+subscriberRegistry: registry, handlerFactory: factory, requestContextFactory: new InMemoryRequestContextFactory(), policyRegistry: new PolicyRegistry(), resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(), requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: logs.Factory), loggerFactory: logs.Factory);
 
         // Act — the caller observes normal completion despite the release failure
         commandProcessor.Send(new HandlerReleaseThrowsCommand());
@@ -85,8 +84,7 @@ public class HandlerFactoryReleaseFailureTests
         using var logs = new InMemoryLogCapture();
 
         var commandProcessor = new CommandProcessor(
-            registry, factory, new InMemoryRequestContextFactory(), new PolicyRegistry(),
-            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+subscriberRegistry: registry, handlerFactory: factory, requestContextFactory: new InMemoryRequestContextFactory(), policyRegistry: new PolicyRegistry(), resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(), requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: logs.Factory), loggerFactory: logs.Factory);
 
         // Act — the caller observes the handler's own exception, not an AggregateException composing it
         // with the release failure, and not the release failure itself
@@ -114,7 +112,7 @@ public class HandlerFactoryReleaseFailureTests
 
         using var logs = new InMemoryLogCapture();
 
-        var lifetimeScope = new HandlerLifetimeScope(factory, pipelineScope);
+        var lifetimeScope = new HandlerLifetimeScope(factory, logs.Factory, pipelineScope);
         lifetimeScope.Add(first);
         lifetimeScope.Add(second);
         lifetimeScope.Add(third);
@@ -151,8 +149,7 @@ public class HandlerFactoryReleaseFailureTests
         using var logs = new InMemoryLogCapture();
 
         var commandProcessor = new CommandProcessor(
-            registry, factory, new InMemoryRequestContextFactory(), new PolicyRegistry(),
-            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+subscriberRegistry: registry, handlerFactory: factory, requestContextFactory: new InMemoryRequestContextFactory(), policyRegistry: new PolicyRegistry(), resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(), requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: logs.Factory), loggerFactory: logs.Factory);
 
         // Act — first Send
         commandProcessor.Send(new HandlerReleaseThrowsCommand());

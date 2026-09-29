@@ -45,7 +45,7 @@ public class AzureServiceBusRetrySenderFailureTests
             lockedUntil: DateTimeOffset.UtcNow.AddMinutes(1),
             properties: new Dictionary<string, object> { ["MessageType"] = "MT_COMMAND" });
         await using var client = new InMemoryRetryServiceBusClient(delivery);
-        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client));
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         var subscription = new AzureServiceBusSubscription(new SubscriptionName("retry"),
             new ChannelName("retry-queue"), new RoutingKey("retry-queue"),
             requestType: typeof(Command), timeOut: System.TimeSpan.FromSeconds(1),

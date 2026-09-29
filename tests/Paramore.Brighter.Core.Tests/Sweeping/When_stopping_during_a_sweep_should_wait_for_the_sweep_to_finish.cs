@@ -22,15 +22,13 @@ public class TimedOutboxSweeperStopTests
     {
         //Arrange
         var routingKey = new RoutingKey("MyCommand");
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton<IAmAnOutboxProducerMediator>(CreateMediator(routingKey));
         await using var provider = services.BuildServiceProvider();
 
         using var sweepInFlight = new GatedDistributedLock();
         var sweeper = new TimedOutboxSweeper(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            sweepInFlight,
-            new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero });
+serviceScopeFactory: provider.GetRequiredService<IServiceScopeFactory>(), distributedLock: sweepInFlight, options: new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero }, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         await sweeper.StartAsync(CancellationToken.None);
         Assert.True(sweepInFlight.WaitForSweepToStart(TimeSpan.FromSeconds(5)), "No sweep started");
@@ -49,7 +47,7 @@ public class TimedOutboxSweeperStopTests
 
     private static OutboxProducerMediator<Message, CommittableTransaction> CreateMediator(RoutingKey routingKey)
     {
-        var producer = new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey });
+        var producer = new InMemoryMessageProducer(new InternalBus(), publication: new Publication { Topic = routingKey }, loggerFactory: Initializer.TestLoggerFactory);
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
             { routingKey, producer }
@@ -63,6 +61,6 @@ public class TimedOutboxSweeperStopTests
             new EmptyMessageTransformerFactoryAsync(),
             new BrighterTracer(TimeProvider.System),
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(TimeProvider.System));
+            Initializer.TestLoggerFactory, new InMemoryOutbox(TimeProvider.System));
     }
 }

@@ -116,7 +116,7 @@ public class GcpPullRejectionRoutingReleaseUntilNativeCapProactorTests
                 PublisherConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
                 SubscriptionManagerConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
             };
-            readerChannelFactory = new GcpPubSubChannelFactory(readerConnection);
+            readerChannelFactory = new GcpPubSubChannelFactory(connection: readerConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
             policySubscription = new GcpPubSubSubscription<ConformanceDeferredCommand>(
                 subscriptionName: new SubscriptionName(nativeDlqChannel),
@@ -295,7 +295,7 @@ public class GcpPullOrderingRejectionRoutingReleaseUntilNativeCapProactorTests
                 PublisherConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
                 SubscriptionManagerConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
             };
-            readerChannelFactory = new GcpPubSubChannelFactory(readerConnection);
+            readerChannelFactory = new GcpPubSubChannelFactory(connection: readerConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
             policySubscription = new GcpPubSubSubscription<PullOrderingCommand>(
                 subscriptionName: new SubscriptionName(nativeDlqChannel),

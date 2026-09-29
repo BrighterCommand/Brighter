@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
@@ -28,7 +30,7 @@ public class AwsValidateMissingTopicTests
         //arrange
         var producer = new SqsMessageProducer(
             _awsConnection,
-            new SqsPublication(channelName: new ChannelName(_routingKey), makeChannels: OnMissingChannel.Validate));
+            new SqsPublication(channelName: new ChannelName(_routingKey), makeChannels: OnMissingChannel.Validate), loggerFactory: NullLoggerFactory.Instance);
 
         //act && assert
         Assert.Throws<QueueDoesNotExistException>(() => producer.Send(new Message(

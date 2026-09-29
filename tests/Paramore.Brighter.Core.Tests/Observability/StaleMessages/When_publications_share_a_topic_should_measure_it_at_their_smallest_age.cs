@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -88,5 +88,5 @@ public class SmallestTopicAgeTests
     }
 
     private static InMemoryMessageProducer Producer(RoutingKey topic, string type, TimeSpan? staleMessageAge) =>
-        new(new InternalBus(), new Publication { Topic = topic, Type = new CloudEventsType(type), StaleMessageAge = staleMessageAge });
+        new InMemoryMessageProducer(new InternalBus(), publication: new Publication { Topic = topic, Type = new CloudEventsType(type), StaleMessageAge = staleMessageAge }, loggerFactory: Initializer.TestLoggerFactory);
 }

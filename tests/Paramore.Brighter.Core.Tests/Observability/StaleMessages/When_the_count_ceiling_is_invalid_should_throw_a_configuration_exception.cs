@@ -45,7 +45,7 @@ public class StaleMessageMonitorInvalidCountCeilingTests
     public void When_the_count_ceiling_is_invalid_should_throw_a_configuration_exception(int countCeiling)
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         var builder = new ServiceCollectionBrighterBuilder(
             services,
             new ServiceCollectionSubscriberRegistry(services),

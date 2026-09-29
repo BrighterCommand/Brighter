@@ -43,7 +43,7 @@ public class AzureServiceBusRetryWithoutActivityTests
         const string traceParent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
         const string traceState = "vendor=value";
         await using var client = new InMemoryRetryServiceBusClient(ServiceBusModelFactory.ServiceBusReceivedMessage());
-        var scheduler = new AzureServiceBusRequeueScheduler(client);
+        var scheduler = new AzureServiceBusRequeueScheduler(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var message = new Message(new MessageHeader(new Id("original"), new RoutingKey("orders"),
             MessageType.MT_COMMAND, traceParent: new TraceParent(traceParent), traceState: new TraceState(traceState)),
             new MessageBody("order"));

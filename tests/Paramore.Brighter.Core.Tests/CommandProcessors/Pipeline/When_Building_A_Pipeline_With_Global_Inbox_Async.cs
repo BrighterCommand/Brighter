@@ -13,7 +13,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     //TODO:
     //Respects different global choices i.e. throw, what to capture, context
     //allow a lambda for the context, to override, and pass in a default of typeof() ????
- 
+
     public class PipelineGlobalInboxTestsAsync
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
@@ -25,25 +25,25 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         {
             IAmAnInboxAsync inbox = new InMemoryInbox(new FakeTimeProvider());
             var handler = new MyCommandHandlerAsync(new Dictionary<string, string>());
-           
+
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
-            
-            var container = new ServiceCollection();
+
+            var container = new ServiceCollection().AddLogging();
             container.AddSingleton(handler);
             container.AddSingleton(inbox);
             container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
- 
+
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
 
             _requestContext = new RequestContext();
-            
+
             InboxConfiguration inboxConfiguration = new();
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, inboxConfiguration);
-            
+            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, Initializer.TestLoggerFactory, inboxConfiguration);
+
         }
 
         [Fact]
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         {
            //act
             _chainOfResponsibility = _chainBuilder.BuildAsync(new MyCommand(), _requestContext, false);
-            
+
             //assert
             var tracer = TracePipeline(_chainOfResponsibility.First());
             Assert.Contains("UseInboxHandlerAsync", tracer.ToString());
@@ -63,6 +63,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
- 
+
     }
 }

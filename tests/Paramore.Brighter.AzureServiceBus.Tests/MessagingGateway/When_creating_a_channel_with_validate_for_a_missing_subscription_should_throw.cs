@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -37,7 +37,7 @@ public class AzureServiceBusChannelValidationTests
         // Arrange
         var administrationClient = new InMemoryServiceBusAdministrationClient();
         var factory = new AzureServiceBusChannelFactory(
-            new AzureServiceBusConsumerFactory(new InMemoryServiceBusClientProvider(administrationClient)));
+            new AzureServiceBusConsumerFactory(clientProvider: new InMemoryServiceBusClientProvider(administrationClient), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             new SubscriptionName("orders-subscription"),

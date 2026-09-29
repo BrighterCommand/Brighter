@@ -25,7 +25,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
@@ -36,10 +35,10 @@ namespace Paramore.Brighter
     /// Takes a request and maps it to a message
     /// Runs transforms on that message
     /// </summary>
-    public partial class WrapPipeline<TRequest> : TransformPipeline<TRequest> where TRequest: class, IRequest
+    public partial class WrapPipeline<TRequest> : TransformPipeline<TRequest> where TRequest : class, IRequest
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<WrapPipeline<TRequest>>();
-            
+        private readonly ILogger _logger;
+
         private readonly InstrumentationOptions _instrumentationOptions;
 
         /// <summary>
@@ -51,24 +50,27 @@ namespace Paramore.Brighter
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         /// <param name="mapperRegistry">The registry the message mapper came from, required to release it when the pipeline is disposed</param>
         /// <param name="scope">The pipeline's own DI scope, if one was offered when the pipeline was built</param>
+        /// <param name="loggerFactory">The factory used to create loggers.</param>
         public WrapPipeline(
             Lease<IAmAMessageMapper<TRequest>> messageMapperLease,
             IAmAMessageTransformerFactory? messageTransformerFactory,
             IEnumerable<Lease<IAmAMessageTransform>> transformLeases,
             InstrumentationOptions instrumentationOptions,
+            ILoggerFactory loggerFactory,
             IAmAMessageMapperRegistry? mapperRegistry = null,
             IAmAScope? scope = null
-            ) : base(messageMapperLease, transformLeases, mapperRegistry, scope)
+            ) : base(messageMapperLease, transformLeases, loggerFactory, mapperRegistry, scope)
         {
+            _logger = loggerFactory.CreateBrighterLogger<WrapPipeline<TRequest>>();
             _instrumentationOptions = instrumentationOptions;
             if (messageTransformerFactory != null)
             {
-                InstanceScope = new TransformLifetimeScope(messageTransformerFactory);
+                InstanceScope = new TransformLifetimeScope(messageTransformerFactory, loggerFactory);
                 TransformLeases.Each(lease => InstanceScope.Add(lease));
             }
         }
 
-        /// <summary>        
+        /// <summary>
         /// Lists the wrap pipeline: message mapper and filter transforms that will be executed
         /// Used for pipeline verification
         /// </summary>
@@ -81,7 +83,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Transforms a <see cref="IRequest"/> into a <see cref="Message"/>
-        /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/> 
+        /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/>
         /// </summary>
         /// <param name="request">The request to wrap</param>
         /// <param name="requestContext">The context of the request in this pipeline</param>
@@ -96,7 +98,7 @@ namespace Paramore.Brighter
 
             if (message.Header.Topic != publication.Topic)
             {
-                Log.DifferentPublicationAndMessageTopic(s_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic.Value);
+                Log.DifferentPublicationAndMessageTopic(_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic.Value);
                 if (publication.Topic is not null)
                 {
                     message.Header.Bag[Message.ProducerTopicHeaderName] = publication.Topic.Value;
@@ -104,7 +106,7 @@ namespace Paramore.Brighter
             }
 
             BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, false, _instrumentationOptions, true);
-            
+
             Transforms.Each(transform =>
             {
                 transform.Context = requestContext;
@@ -115,11 +117,11 @@ namespace Paramore.Brighter
             if (!string.IsNullOrEmpty(publication.ReplyTo))
             {
                 message.Header.ReplyTo = publication.ReplyTo!;
-            } 
-            
+            }
+
             return message;
         }
-        
+
         private static partial class Log
         {
             [LoggerMessage(LogLevel.Warning, "Topic mismatch detected: The found topic ({FindPublicationTopic}) differs from the message topic ({MessageTopic}). This discrepancy could lead to invalid data in the pipeline")]

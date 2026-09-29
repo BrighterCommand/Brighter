@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.Json;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
-  public class MessagePumpDispatchAsyncTests
+    public class MessagePumpDispatchAsyncTests
     {
         private const string ChannelName = "myChannel";
         private readonly RoutingKey _routingKey = new("MyTopic");
@@ -29,25 +29,24 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory()
-                );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            var channel = new ChannelAsync(new(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
+            var channel = new ChannelAsync(new(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory));
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
-            
-             _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel) 
-                { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
+
+            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory)
+            { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
 
             var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent)));
             channel.Enqueue(message);
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
-            
+
         }
 
         [Fact]
@@ -57,10 +56,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 
             Assert.True(MyEventHandlerAsyncWithContinuation.ShouldReceive(_myEvent));
             Assert.Equal(2, MyEventHandlerAsyncWithContinuation.MonitorValue);
-            //NOTE: We may want to run the continuation on the captured context, so as not to create a new thread, which means this test would 
+            //NOTE: We may want to run the continuation on the captured context, so as not to create a new thread, which means this test would
             //change once we fix the pump to exhibit that behavior\
             Assert.NotEqual(MyEventHandlerAsyncWithContinuation.WorkThreadId, MyEventHandlerAsyncWithContinuation.ContinuationThreadId);
 
         }
     }
-  }
+}

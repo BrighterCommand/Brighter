@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -67,7 +69,7 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
             realMigrations, BrokenVersion, BrokenUpScript);
         var brokenCatalog = new BrokenChainCatalog(brokenMigrations, realCatalog.FreshInstallDdl(config));
 
-        var brokenRunner = new MySqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30));
+        var brokenRunner = new MySqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
         //Act + Assert
@@ -95,13 +97,13 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
         Assert.Equal(1, await GetMarkerRowCount());
 
         //Act
-        var realRunner = new MySqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
+        var realRunner = new MySqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new MySqlOutboxProvisioner(
             new MySqlBoxDetectionHelper(),
             new MySqlOutboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             config,
-            realRunner);
+            realRunner, loggerFactory: NullLoggerFactory.Instance);
         await provisioner.ProvisionAsync();
 
         //Assert

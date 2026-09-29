@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Azure.Core.Amqp;
@@ -65,7 +67,7 @@ public class AzureServiceBusNativePartitionKeyRoundTripTests
         var native = ServiceBusReceivedMessage.FromAmqpMessage(
             AmqpAnnotatedMessage.FromBytes(serialized), new BinaryData(Guid.NewGuid().ToByteArray()));
         await using var client = new InMemoryServiceBusClient(native);
-        var factory = new AzureServiceBusConsumerFactory(client);
+        var factory = new AzureServiceBusConsumerFactory(client, loggerFactory: NullLoggerFactory.Instance);
         await using var consumer = factory.CreateAsync(subscription);
         var messages = await consumer.ReceiveAsync(TimeSpan.FromSeconds(1));
 

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -45,31 +45,31 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public OnceOnlyAttributeWithThrowExceptionAsyncTests()
         {
             _inbox = new InMemoryInbox(new FakeTimeProvider());
-            
+
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyStoredCommandToThrowHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
             container.AddTransient<MyStoredCommandToThrowHandlerAsync>();
             container.AddSingleton(_inbox);
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
-            _command = new MyCommand {Value = "My Test String"};
-            
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+
+            _command = new MyCommand { Value = "My Test String" };
+
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]
         public async Task When_Handling_A_Command_Once_Only_With_Throw_Enabled()
         {
             await _commandProcessor.SendAsync(_command);
-            
+
             Exception ex = await Assert.ThrowsAsync<OnceOnlyException>(() => _commandProcessor.SendAsync(_command));
-            
+
             Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
         }
     }

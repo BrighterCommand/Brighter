@@ -26,27 +26,27 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var timeProvider = new FakeTimeProvider();
             _routingKey = new RoutingKey("MyRequest");
-            var messageProducer = new  InMemoryMessageProducer(_bus, new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)});
-            
+            var messageProducer = new  InMemoryMessageProducer(_bus, Initializer.TestLoggerFactory, new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)});
+
             _messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
             {
                 if (type == typeof(MyRequestMessageMapper))
                     return new MyRequestMessageMapper();
                 if (type == typeof(MyResponseMessageMapper))
                     return new MyResponseMessageMapper();
-               
+
                 throw new ConfigurationException($"No mapper found for {type.Name}");
             }), null);
             _messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
             _messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
-            
+
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
             var handlerFactory = new SimpleHandlerFactorySync(_ => new MyResponseHandler());
 
             var internalBus = new InternalBus();
-            InMemoryChannelFactory inMemoryChannelFactory = new(internalBus, TimeProvider.System);
-            
+            InMemoryChannelFactory inMemoryChannelFactory = new(internalBus, TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory);
+
             var replySubs = new List<Subscription>
             {
                 new Subscription<MyResponse>()
@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
                 .AddBrighterDefault();
-            
+
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
@@ -63,29 +63,29 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var tracer = new BrighterTracer();
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
+                producerRegistry,
                 resiliencePipelineRegistry,
                 _messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                new InMemoryOutbox(timeProvider){Tracer = tracer});
-        
+                Initializer.TestLoggerFactory, new InMemoryOutbox(timeProvider){Tracer = tracer});
+
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
-                new InMemoryRequestContextFactory(), 
+                new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus,
                 replySubscriptions:replySubs,
                 responseChannelFactory: inMemoryChannelFactory,
-                requestSchedulerFactory: new InMemorySchedulerFactory()
-            );
+                requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
 
             PipelineBuilder<MyRequest>.ClearPipelineCache();
-            
+
             _myRequest.RequestValue = "Hello World";
         }
 
@@ -94,21 +94,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         {
             //start a message pump on a new thread, to recieve the Call message
             Channel channel = new(
-                new("MyChannel"), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000))
+                new("MyChannel"), _routingKey,
+                new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
             );
-            
-            var messagePump = new Reactor(_commandProcessor, (message) => typeof(MyRequest),_messageMapperRegistry, 
-                    new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel) 
+
+            var messagePump = new Reactor(_commandProcessor, (message) => typeof(MyRequest),_messageMapperRegistry,
+                    new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory)
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
 
             //RunAsync the pump on a new thread
             Task.Factory.StartNew(() => messagePump.Run());
-            
+
             _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOut: TimeSpan.FromMilliseconds(500));
-            
+
             MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.ReplyAddress) {Id = _myRequest.Id});
-            
+
             channel.Stop(_routingKey);
 
         }

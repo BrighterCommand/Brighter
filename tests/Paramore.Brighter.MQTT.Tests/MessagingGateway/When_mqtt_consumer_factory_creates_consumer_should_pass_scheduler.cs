@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Xunit;
 
@@ -18,7 +20,7 @@ public class When_mqtt_consumer_factory_creates_consumer_should_pass_scheduler
     {
         // Arrange
         var scheduler = new StubMessageScheduler();
-        var factory = new MqttMessageConsumerFactory(_configuration, scheduler);
+        var factory = new MqttMessageConsumerFactory(_configuration, NullLoggerFactory.Instance, scheduler);
 
         // Act
         var consumer = factory.Create(new Subscription(
@@ -39,7 +41,7 @@ public class When_mqtt_consumer_factory_creates_consumer_should_pass_scheduler
     {
         // Arrange
         var scheduler = new StubMessageScheduler();
-        var factory = new MqttMessageConsumerFactory(_configuration, scheduler);
+        var factory = new MqttMessageConsumerFactory(_configuration, NullLoggerFactory.Instance, scheduler);
 
         // Act
         var consumer = factory.CreateAsync(new Subscription(
@@ -59,7 +61,7 @@ public class When_mqtt_consumer_factory_creates_consumer_should_pass_scheduler
     public void Should_create_consumer_without_scheduler_for_backward_compat()
     {
         // Arrange
-        var factory = new MqttMessageConsumerFactory(_configuration);
+        var factory = new MqttMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance);
 
         // Act
         var consumer = factory.Create(new Subscription(

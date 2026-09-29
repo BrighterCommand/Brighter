@@ -45,7 +45,7 @@ public class GcpPubSubSubscriptionValidationWarningTests
     public void When_validating_a_gcp_subscription_without_dead_letter_policy_should_report_one_warning()
     {
         // Arrange — a real GcpPubSubSubscription with no DeadLetterPolicy and requeueCount: 3
-        var pipelineBuilder = new PipelineBuilder<IRequest>(new SubscriberRegistry());
+        var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistryInspector: new SubscriberRegistry(), loggerFactory: Initializer.Factory);
 
         var subscription = new GcpPubSubSubscription<MyCommand>(
             subscriptionName: new SubscriptionName("no-dlq-sub"),

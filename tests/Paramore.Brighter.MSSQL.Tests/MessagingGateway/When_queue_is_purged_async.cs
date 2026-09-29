@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -27,13 +29,13 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 new SubscriptionName(_queueName),
                 new ChannelName(_routingKey.Value), _routingKey,
                 messagePumpType: MessagePumpType.Proactor);
-            
+
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration,
-                [new() { Topic = _routingKey }]
-            ).CreateAsync().Result;
-            
-            _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).CreateAsync(sub);
+                [new() { Topic = _routingKey }],
+                loggerFactory: NullLoggerFactory.Instance).CreateAsync().Result;
+
+            _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration, loggerFactory: NullLoggerFactory.Instance).CreateAsync(sub);
         }
 
         [Fact]

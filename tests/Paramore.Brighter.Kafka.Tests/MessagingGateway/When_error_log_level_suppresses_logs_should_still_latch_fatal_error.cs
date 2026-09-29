@@ -26,8 +26,8 @@ public class When_error_log_level_suppresses_logs_should_still_latch_fatal_error
             numPartitions: 1,
             replicationFactor: 1,
             makeChannels: OnMissingChannel.Assume,
-            errorLogLevel: _ => LogLevel.None
-        );
+            errorLogLevel: _ => LogLevel.None,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

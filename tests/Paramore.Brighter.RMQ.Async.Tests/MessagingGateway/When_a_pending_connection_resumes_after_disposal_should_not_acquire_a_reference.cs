@@ -49,8 +49,8 @@ public class RmqConsumerConnectionDisposalRaceTests
         };
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
         var factory = new ConnectionFactory { Uri = connection.AmpqUri.Uri };
-        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat);
-        using var peer = new RmqMessageProducer(connection);
+        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        using var peer = new RmqMessageProducer(connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await peer.SendAsync(new Message(
             new MessageHeader(Id.Random(), routingKey, MessageType.MT_COMMAND), new MessageBody("peer")));
         var sharedConnection = await pool.GetConnectionAsync(factory);

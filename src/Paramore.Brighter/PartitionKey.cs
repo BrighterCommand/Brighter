@@ -30,7 +30,7 @@ namespace Paramore.Brighter
         /// Implicitly converts a PartitionKey to its string representation.
         /// </summary>
         /// <param name="key">The PartitionKey to convert</param>
-        public static implicit operator string?(PartitionKey key) => key?.Value;
+        public static implicit operator string?(PartitionKey? key) => key?.Value;
 
         /// <summary>
         /// Implicitly converts a string to a PartitionKey.
@@ -43,7 +43,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>The partition key string value</returns>
         public override string ToString() => Value;
-        
+
         /// <summary>
         /// Gets an empty partition key.
         /// </summary>
@@ -59,7 +59,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public static bool IsNullOrEmpty([NotNullWhen(false)]PartitionKey? partitionKey)
         {
-            return partitionKey == null || string.IsNullOrEmpty(partitionKey.Value);    
+            return partitionKey == null || string.IsNullOrEmpty(partitionKey.Value);
         }
     }
 }

@@ -24,7 +24,7 @@ public class ScopedTransformPerPipelineTests
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MinimalMapper()), null);
         mapperRegistry.Register<MinimalCommand, MinimalMapper>();
 
-        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactory);
+        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactory, loggerFactory: Initializer.Factory);
 
         //act — consume message N: build and dispose its pipeline, which constructs the Scoped unwrap
         //transform for this pipeline and, on Dispose, releases the pipeline's owned DI scope
@@ -53,7 +53,7 @@ public class ScopedTransformPerPipelineTests
         var mapperRegistry = new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(_ => new MinimalMapperAsync()));
         mapperRegistry.RegisterAsync<MinimalCommand, MinimalMapperAsync>();
 
-        var pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactory, InstrumentationOptions.All);
+        var pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactory,Initializer.Factory, InstrumentationOptions.All);
 
         //act — consume message N, then message N+1: two independent pipelines
         var pipelineForMessageN = pipelineBuilder.BuildUnwrapPipeline<MinimalCommand>();
@@ -69,7 +69,7 @@ public class ScopedTransformPerPipelineTests
 
     private static ScopeTracker BuildScopeTracker(ConstructionOrderRecorder recorder, out IServiceProvider trackingProvider)
     {
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddSingleton(recorder);
         collection.AddScoped<TrackingTransform>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions

@@ -61,8 +61,8 @@ public class ConsumerPumpFlowSuppressionTests
 
         var routingKey = new RoutingKey("consumer.pipeline");
         var bus = new InternalBus();
-        var channelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
-        var producer = new InMemoryMessageProducer(bus, new Publication { Topic = routingKey, RequestType = typeof(ConsumerPipelineCommand) });
+        var channelFactory = new InMemoryChannelFactory(bus, TimeProvider.System, loggerFactory: Initializer.Factory);
+        var producer = new InMemoryMessageProducer(bus,Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(ConsumerPipelineCommand) });
 
         var services = new ServiceCollection();
         services.AddScoped<IUnitOfWork, UnitOfWork>();

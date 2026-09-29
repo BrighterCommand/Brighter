@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -56,16 +56,16 @@ internal sealed class QueueFactory(RmqMessagingGatewayConnection connection, Cha
                 publisherConfirmationTrackingEnabled: true));
 
         await channel.DeclareExchangeForConnection(connection, OnMissingChannel.Create);
-        
+
         // Create arguments for queue declaration
         var arguments = new Dictionary<string, object?>();
-        
+
         // Set queue type for quorum queues
         if (queueType == QueueType.Quorum)
         {
             arguments.Add("x-queue-type", "quorum");
         }
-        
+
         await channel.QueueDeclareAsync(channelName.Value, isDurable, false, false, arguments.Any() ? arguments : null);
         if (routingKeys.Any())
         {

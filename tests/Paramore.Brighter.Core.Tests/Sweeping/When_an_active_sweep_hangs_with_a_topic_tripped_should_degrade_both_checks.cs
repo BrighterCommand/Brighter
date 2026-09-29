@@ -49,7 +49,7 @@ public class ActiveHungSweepWithTrippedTopicTests
     {
         //Arrange
         var timeProvider = new FakeTimeProvider();
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(new RoutingKey("orders"));
         using var mediator = new GatedOutboxProducerMediator().CompleteFirst(1);
         var services = SweeperContainer.Create(new InMemoryLock(), timeProvider, useOutboxSweeper: true,

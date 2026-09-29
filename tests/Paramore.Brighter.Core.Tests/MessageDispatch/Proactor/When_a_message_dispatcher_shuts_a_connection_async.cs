@@ -22,7 +22,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         public MessageDispatcherShutConnectionTests()
         {
             InternalBus bus = new();
-            
+
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -31,24 +31,24 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
             _subscription = new Subscription<MyEvent>(
-                new SubscriptionName("test"), 
-                noOfPerformers: 3, 
-                timeOut: TimeSpan.FromMilliseconds(1000), 
-                channelFactory: new InMemoryChannelFactory(bus, _timeProvider), 
-                channelName: new ChannelName(ChannelName), 
+                new SubscriptionName("test"),
+                noOfPerformers: 3,
+                timeOut: TimeSpan.FromMilliseconds(1000),
+                channelFactory: new InMemoryChannelFactory(bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
+                channelName: new ChannelName(ChannelName),
                 messagePumpType: MessagePumpType.Proactor,
                 routingKey: _routingKey
             );
-            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { _subscription }, messageMapperRegistryAsync: messageMapperRegistry);
+            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { _subscription }, messageMapperRegistryAsync: messageMapperRegistry, loggerFactory: Initializer.TestLoggerFactory);
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapperAsync().MapToMessageAsync(@event, new Publication{ Topic = _subscription.RoutingKey})
                 .GetAwaiter()
                 .GetResult();
-            
+
             for (var i = 0; i < 6; i++)
                 bus.Enqueue(message);
-            
+
             Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
         }
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             Assert.Equal(DispatcherState.DS_STOPPED, _dispatcher.State);
             Assert.Empty(_dispatcher.Consumers);
         }
-        
+
         public void Dispose()
         {
             if (_dispatcher?.State == DispatcherState.DS_RUNNING)

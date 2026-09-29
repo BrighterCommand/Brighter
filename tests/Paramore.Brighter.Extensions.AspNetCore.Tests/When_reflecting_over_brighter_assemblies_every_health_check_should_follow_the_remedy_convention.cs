@@ -54,7 +54,7 @@ public class RemedyConventionReflectionTests
     public void When_reflecting_over_brighter_assemblies_every_health_check_should_follow_the_remedy_convention()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var builder = services.AddHealthChecks();
         builder.AddBrighterOutboxSweeperHealthChecks();
         builder.AddBrighterConsumerHealthChecks();

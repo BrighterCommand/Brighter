@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -68,7 +70,7 @@ public class RmqMessageProducerDisposedSendTests
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        return new RmqMessageProducer(rmqConnection);
+        return new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
     }
 
     private static Message CreateMessage()

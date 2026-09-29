@@ -45,7 +45,7 @@ public class MsSqlMessageIdMigrationConflictTests
         //Arrange
         await using var store = new MsSqlMessageIdOutboxStore(binary, customSchema: true);
         await store.InitializeAsync(legacy: true, withHistory: withHistory);
-        var outbox = new MsSqlOutbox(store.OutboxConfig);
+        var outbox = new MsSqlOutbox(configuration: store.OutboxConfig, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<MsSqlOutbox>.Instance);
         var context = new RequestContext();
         var id = Id.Random();
         await outbox.AddAsync(MsSqlMessageIdOutboxStore.Message(id, "first version"), context);

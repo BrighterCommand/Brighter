@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,7 +33,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, NullLoggerFactory.Instance, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -50,7 +52,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox
+                NullLoggerFactory.Instance, outbox
             );
 
             var context = new RequestContext();
@@ -99,7 +101,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, NullLoggerFactory.Instance, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -118,7 +120,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox
+                NullLoggerFactory.Instance, outbox
             );
 
             var context = new RequestContext();

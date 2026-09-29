@@ -13,7 +13,7 @@ public class ScopedMapperFirstResolutionRaceTests
     public void When_two_threads_first_resolve_a_scoped_mapper_concurrently_it_should_not_leak_a_scope()
     {
         // Arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddScoped<NonDisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Scoped });
         var rootProvider = collection.BuildServiceProvider();

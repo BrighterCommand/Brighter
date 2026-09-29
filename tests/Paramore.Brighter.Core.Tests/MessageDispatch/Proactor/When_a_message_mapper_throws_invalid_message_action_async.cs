@@ -45,14 +45,13 @@ public class MessageDispatchInvalidMessageActionAsyncTests
             new InMemoryRequestContextFactory(),
             new PolicyRegistry(),
             resiliencePipelineRegistry,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
         var subscription = new InMemorySubscription<MyRejectedEvent>(
             new SubscriptionName("test"),
             noOfPerformers: 1,
             timeOut: TimeSpan.FromMilliseconds(1000),
-            channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
+            channelFactory: new InMemoryChannelFactory(_bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
             channelName: new ChannelName("myChannel"),
             messagePumpType: MessagePumpType.Proactor,
             routingKey: _routingKey
@@ -64,12 +63,12 @@ public class MessageDispatchInvalidMessageActionAsyncTests
             commandProcessor,
             new List<Subscription> { subscription },
             messageMapperRegistryAsync: messageMapperRegistry,
-            requestContextFactory: new InMemoryRequestContextFactory()
-        );
+            requestContextFactory: new InMemoryRequestContextFactory(),
+            loggerFactory: Initializer.TestLoggerFactory);
 
         // Act: Send a message that will fail deserialization
         var @event = new MyRejectedEvent(Id.Random());
-        var message = new MyRejectedEventHandlerMessageMapper().MapToMessage(@event, new Publication{Topic = _routingKey});
+        var message = new MyRejectedEventHandlerMessageMapper().MapToMessage(@event, new Publication { Topic = _routingKey });
         _bus.Enqueue(message);
 
         _dispatcher.Receive();

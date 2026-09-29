@@ -23,9 +23,9 @@ public class AsyncMessageWrapRequestMissingMapperTests
 
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync((_ => new MySimpleTransformAsync()));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
     }
-    
+
     [Fact]
     public void When_Wrapping_But_No_Registered_Mapper()
     {

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia
@@ -70,7 +70,7 @@ internal sealed class GcpPurgeTestContext : IDisposable
         Topic = TopicName.FromProjectTopic(_project, id);
         var subscription = new GcpPubSubSubscription<MyCommand>(new SubscriptionName(id),
             new ChannelName(id), new RoutingKey(id), subscriptionMode: mode, messagePumpType: useAsync ? MessagePumpType.Proactor : MessagePumpType.Reactor, makeChannels: OnMissingChannel.Create);
-        var factory = new GcpPubSubChannelFactory(connection);
+        var factory = new GcpPubSubChannelFactory(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         if (useAsync)
         {
             _asyncChannel = factory.CreateAsyncChannel(subscription);

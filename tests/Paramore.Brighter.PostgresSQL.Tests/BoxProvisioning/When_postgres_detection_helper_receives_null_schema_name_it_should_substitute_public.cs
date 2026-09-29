@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -53,7 +55,7 @@ public class PostgreSqlDetectionHelperNullSchemaTests : IAsyncLifetime
         await EnsureHistoryTable();
         await SeedHistoryRow(tableName, schemaName: "public", migrationVersion: SeededVersion);
 
-        var helper = new PostgreSqlBoxDetectionHelper();
+        var helper = new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>());
 
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync();

@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
         private InMemoryMessageProducer BuildConfirmingProducer(bool fail)
         {
             var bus = new InternalBus();
-            var producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
+            var producer = new InMemoryMessageProducer(bus, Initializer.TestLoggerFactory, new Publication { Topic = _topic })
             {
                 UseAsyncPublishConfirmation = true,
                 PublishFailurePredicate = fail ? _ => true : null
@@ -90,7 +90,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer: _tracer,
-                new FindPublicationByPublicationTopicOrRequestType());
+                new FindPublicationByPublicationTopicOrRequestType(), loggerFactory: Initializer.TestLoggerFactory);
 
             return producer;
         }

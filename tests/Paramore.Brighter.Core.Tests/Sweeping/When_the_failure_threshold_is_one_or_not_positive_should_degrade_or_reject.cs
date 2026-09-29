@@ -19,7 +19,7 @@ public class When_the_failure_threshold_is_one_or_not_positive_should_degrade_or
         var state = new OutboxSweeperState(new FakeTimeProvider());
         state.SweepStarted();
         state.SweepEnded(SweepOutcome.Failed);
-        var check = new OutboxSweeperInvestigateHealthCheck(state, new TimedOutboxSweeperOptions { TimerInterval = 10 }, null, 1);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: state, options: new TimedOutboxSweeperOptions { TimerInterval = 10 }, findCircuitBreaker: null, failureThreshold: 1, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
@@ -40,7 +40,7 @@ public class When_the_failure_threshold_is_one_or_not_positive_should_degrade_or
         var options = new TimedOutboxSweeperOptions { TimerInterval = 10 };
 
         //Act
-        var exception = Record.Exception(() => new OutboxSweeperInvestigateHealthCheck(null, options, null, failureThreshold));
+        var exception = Record.Exception(() => new OutboxSweeperInvestigateHealthCheck(state: null, options: options, findCircuitBreaker: null, failureThreshold: failureThreshold, loggerFactory: Initializer.TestLoggerFactory));
 
         //Assert
         var argumentException = Assert.IsType<ArgumentOutOfRangeException>(exception);

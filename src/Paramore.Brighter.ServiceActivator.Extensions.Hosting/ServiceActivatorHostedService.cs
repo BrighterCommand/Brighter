@@ -33,7 +33,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.Hosting
             IServiceProvider serviceProvider,
             IOptions<BrighterPipelineValidationOptions> options)
         {
-            _logger = logger;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _dispatcher = dispatcher;
             _serviceProvider = serviceProvider;
             _options = options;

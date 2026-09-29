@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Postgres;
 
@@ -10,7 +11,8 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// ensures the underlying queue store exists for each publication, and creates a corresponding
 /// <see cref="PostgresMessageProducer"/> instance, keyed by the publication's topic.
 /// </summary>
-public class PostgresMessageProducerFactory(PostgresMessagingGatewayConnection connection, IEnumerable<PostgresPublication> publications) :  PostgresMessagingGateway(connection), IAmAMessageProducerFactory
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
+public class PostgresMessageProducerFactory(PostgresMessagingGatewayConnection connection, IEnumerable<PostgresPublication> publications, ILoggerFactory loggerFactory) :  PostgresMessagingGateway(connection), IAmAMessageProducerFactory
 {
     /// <summary>
     /// Creates a dictionary of in-memory message producers.
@@ -28,11 +30,11 @@ public class PostgresMessageProducerFactory(PostgresMessagingGatewayConnection c
             var schemaName = publication.SchemaName ?? Connection.Configuration.SchemaName ?? "public";
             var tableName = publication.QueueStoreTable ?? Connection.Configuration.QueueStoreTable;
             var binaryMessagePayload = publication.BinaryMessagePayload ?? Connection.Configuration.BinaryMessagePayload;
-            
+
             EnsureQueueStoreExists(schemaName, tableName, binaryMessagePayload, publication.MakeChannels);
-            
-            var producer = new PostgresMessageProducer(Connection.Configuration, publication);
-            
+
+            var producer = new PostgresMessageProducer(Connection.Configuration, publication, loggerFactory: loggerFactory);
+
             producer.Publication = publication;
             var producerKey = new ProducerKey(publication.Topic, publication.Type);
             if (producers.ContainsKey(producerKey))
@@ -61,11 +63,11 @@ public class PostgresMessageProducerFactory(PostgresMessagingGatewayConnection c
             var schemaName = publication.SchemaName ?? Connection.Configuration.SchemaName ?? "public";
             var tableName = publication.QueueStoreTable ?? Connection.Configuration.QueueStoreTable;
             var binaryMessagePayload = publication.BinaryMessagePayload ?? Connection.Configuration.BinaryMessagePayload;
-            
+
             await EnsureQueueStoreExistsAsync(schemaName, tableName, binaryMessagePayload, publication.MakeChannels, CancellationToken.None);
-            
-            var producer = new PostgresMessageProducer(Connection.Configuration, publication);
-            
+
+            var producer = new PostgresMessageProducer(Connection.Configuration, publication, loggerFactory: loggerFactory);
+
             producer.Publication = publication;
             var producerKey = new ProducerKey(publication.Topic, publication.Type);
             if (producers.ContainsKey(producerKey))

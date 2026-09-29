@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Linq;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
@@ -15,7 +17,7 @@ public class InMemoryMessageProducerTests
         const string topic = "test_topic";
         var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(topic), MessageType.MT_DOCUMENT), new MessageBody("test_content"));
         var bus = new InternalBus();
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions:InstrumentationOptions.All);
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions:InstrumentationOptions.All, loggerFactory: NullLoggerFactory.Instance);
 
         // act
         producer.Send(message);

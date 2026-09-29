@@ -26,18 +26,18 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
     {
         string groupId = Guid.NewGuid().ToString();
         _output = output;
-        
-        
+
+
         var clientConfig = new ClientConfig
         {
             Acks = (Acks)((int)Acks.All),
             BootstrapServers = string.Join(",", new[] { "localhost:9092" }),
-            ClientId = "Kafka Producer Send with Missing Header Tests", 
+            ClientId = "Kafka Producer Send with Missing Header Tests",
         };
 
         var producerConfig = new ProducerConfig(clientConfig)
         {
-            BatchNumMessages = 10, 
+            BatchNumMessages = 10,
             EnableIdempotence = true,
             MaxInFlight = 1,
             LingerMs = 5,
@@ -49,7 +49,7 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
             RequestTimeoutMs = 500,
             RetryBackoffMs = 100,
         };
-        
+
         _producer = new ProducerBuilder<string, byte[]>(producerConfig)
             .SetErrorHandler((_, error) =>
             {
@@ -61,7 +61,7 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(new KafkaSubscription<MyCommand>(
                     channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
@@ -78,7 +78,7 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
     public async Task When_recieving_a_message_without_partition_key_header()
     {
         await Task.Delay(500); //Let topic propagate in the broker
-        
+
         var command = new MyCommand { Value = "Test Content" };
 
         //vanilla i.e. no Kafka specific bytes at the beginning
@@ -86,12 +86,12 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
         var value = Encoding.UTF8.GetBytes(body);
         var kafkaMessage = new Message<string, byte[]>
         {
-            Key = command.Id, 
+            Key = command.Id,
             Value = value
         };
 
        _producer.Produce(_topic, kafkaMessage, report => _output.WriteLine(report.ToString()) );
-       
+
        //ensure any messages are flushed
        _producer.Flush();
 

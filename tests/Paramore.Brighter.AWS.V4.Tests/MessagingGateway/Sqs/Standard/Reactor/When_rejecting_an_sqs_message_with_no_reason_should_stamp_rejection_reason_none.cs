@@ -75,12 +75,11 @@ public class SqsMessageConsumerNullReasonDlqTests : IDisposable, IAsyncDisposabl
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection: awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateSyncChannel(subscription);
 
         _messageProducer = new SqsMessageProducer(
-            awsConnection,
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create));
+connection: awsConnection, publication: new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Create a separate channel to consume from the DLQ queue
         var dlqSubscription = new SqsSubscription<MyCommand>(
@@ -91,7 +90,7 @@ public class SqsMessageConsumerNullReasonDlqTests : IDisposable, IAsyncDisposabl
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create);
 
-        _dlqChannelFactory = new ChannelFactory(awsConnection);
+        _dlqChannelFactory = new ChannelFactory(awsConnection: awsConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _dlqChannel = _dlqChannelFactory.CreateSyncChannel(dlqSubscription);
     }
 

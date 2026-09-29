@@ -14,8 +14,8 @@ public class InMemoryCooldownCountShorterThanMaximumTripDurationTests
         var orders = new RoutingKey("orders");
         var clock = new FakeTimeProvider();
         var breaker = new InMemoryOutboxCircuitBreaker(
-            new OutboxCircuitBreakerOptions { CooldownCount = 2, MaximumTripDuration = TimeSpan.FromMinutes(5) },
-            timeProvider: clock);
+options: new OutboxCircuitBreakerOptions { CooldownCount = 2, MaximumTripDuration = TimeSpan.FromMinutes(5) },
+            timeProvider: clock, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(orders);
 
         // Act

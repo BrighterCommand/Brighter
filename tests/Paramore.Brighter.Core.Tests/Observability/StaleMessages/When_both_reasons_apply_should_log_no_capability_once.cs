@@ -56,7 +56,7 @@ public class StaleMessageMonitorBothReasonsLogTests
         var outbox = new StaleMessageCountingOutbox();
         var producers = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>());
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton<TimeProvider>(new FakeTimeProvider());
         services.AddSingleton<IAmAnOutbox>(outbox);
         services.AddSingleton<IAmProducersConfiguration>(new ProducersConfiguration { ProducerRegistry = producers });

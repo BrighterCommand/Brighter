@@ -78,7 +78,7 @@ public class GcpOrderingEnabledByConfigurationTests
             };
 
             channel = provider.CreateChannel(subscription);
-            var producers = new GcpPubSubMessageProducerFactory(connection, [publication]).Create();
+            var producers = new GcpPubSubMessageProducerFactory(connection: connection, publications: [publication], loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
             producer = (IAmAMessageProducerSync)producers.Values.Single();
 
             var partitionKey = new PartitionKey("customer-42");

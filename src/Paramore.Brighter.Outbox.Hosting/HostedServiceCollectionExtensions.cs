@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 
@@ -47,7 +48,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         {
             var options = new TimedOutboxSweeperOptions();
             timedOutboxSweeperOptionsAction?.Invoke(options);
-            
+
             brighterBuilder.Services.TryAddSingleton(options);
             brighterBuilder.Services.TryAddSingleton(sp =>
                 new OutboxSweeperState(sp.GetService<TimeProvider>() ?? TimeProvider.System));
@@ -66,11 +67,12 @@ namespace Paramore.Brighter.Outbox.Hosting
             brighterBuilder.Services.TryAddSingleton(provider => new OutboxArchiver<Message, TTransaction>(
                 provider.GetRequiredService<IAmAnOutbox>(),
                 provider.GetRequiredService<IAmAnArchiveProvider>(),
+                provider.GetRequiredService<ILoggerFactory>(),
                 provider.GetService<IAmARequestContextFactory>(),
                 options.ArchiveBatchSize,
                 provider.GetService<IAmABrighterTracer>(),
                 options.Instrumentation));
-            
+
             brighterBuilder.Services.AddHostedService<TimedOutboxArchiver<Message, TTransaction>>();
 
             return brighterBuilder;

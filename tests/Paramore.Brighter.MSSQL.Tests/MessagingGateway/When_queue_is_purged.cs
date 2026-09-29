@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,7 +14,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
     public class PurgeTest :  IAsyncDisposable, IDisposable
     {
         private readonly string _queueName = Guid.NewGuid().ToString();
-        private readonly IAmAProducerRegistry _producerRegistry; 
+        private readonly IAmAProducerRegistry _producerRegistry;
         private readonly IAmAMessageConsumerSync _consumer;
         private readonly RoutingKey _routingKey;
 
@@ -22,17 +24,17 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             testHelper.SetupQueueDb();
 
             _routingKey = new RoutingKey(Guid.NewGuid().ToString());
-            
+
             var sub = new Subscription<MyCommand>(
                 new SubscriptionName(_queueName),
                 new ChannelName(_routingKey.Value), _routingKey,
                 messagePumpType: MessagePumpType.Reactor);
-            
+
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration,
-                [new() {Topic = _routingKey}]
-            ).Create();
-            _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
+                [new() {Topic = _routingKey}],
+                loggerFactory: NullLoggerFactory.Instance).Create();
+            _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration, loggerFactory: NullLoggerFactory.Instance).Create(sub);
         }
 
         [Fact]
@@ -41,7 +43,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             IAmAMessageConsumerSync consumer = _consumer;
                 //Send a sequence of messages to Kafka
                 var msgId = SendMessage();
-                
+
                 //Now read those messages in order
 
                 var firstMessage = ConsumeMessages(consumer);
@@ -54,14 +56,14 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
                 var nextMessage = ConsumeMessages(consumer);
                 message = nextMessage.First();
-                
+
                 Assert.Equal(new Message(), message);
         }
 
         private string SendMessage()
         {
             var messageId = Guid.NewGuid().ToString();
-            
+
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_routingKey)).Send(new Message(
                 new MessageHeader(messageId, _routingKey, MessageType.MT_COMMAND),
                 new MessageBody($"test content [{_queueName}]")));

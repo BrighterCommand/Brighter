@@ -46,8 +46,8 @@ public class AzureServiceBusManualRetrySchedulerValidationTests
         var processor = new CommandProcessor(new SubscriberRegistry(),
             new SimpleHandlerFactoryAsync(_ => throw new InvalidOperationException()),
             new InMemoryRequestContextFactory(), new DefaultPolicy(),
-            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
-        var scheduler = missing ? null : new InMemorySchedulerFactory().Create(processor);
+            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        var scheduler = missing ? null : new InMemorySchedulerFactory(loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(processor);
         var subscription = new AzureServiceBusSubscription(new SubscriptionName("retry"),
             new ChannelName("queue"), new RoutingKey("queue"), requestType: typeof(Command),
             messagePumpType: MessagePumpType.Proactor, makeChannels: OnMissingChannel.Assume,
@@ -56,8 +56,7 @@ public class AzureServiceBusManualRetrySchedulerValidationTests
         // Act
         var error = Record.Exception(() =>
         {
-            using var consumer = new AzureServiceBusQueueConsumer(subscription, scheduler!,
-                new AdministrationClientWrapper(client), new FakeServiceBusReceiverProvider(null));
+            using var consumer = new AzureServiceBusQueueConsumer(subscription: subscription, requeueScheduler: scheduler!, administrationClientWrapper: new AdministrationClientWrapper(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), serviceBusReceiverProvider: new FakeServiceBusReceiverProvider(null), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         });
 
         // Assert

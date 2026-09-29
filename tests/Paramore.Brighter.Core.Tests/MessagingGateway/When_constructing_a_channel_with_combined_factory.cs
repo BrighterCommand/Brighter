@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
@@ -87,7 +87,7 @@ public class CombinedChannelFactoryTest
         public override Type ChannelFactoryType { get; }
 
         public MockSubscription(
-           Type channelFactoryType, SubscriptionName? name = null, ChannelName? channelName = null,  
+           Type channelFactoryType, SubscriptionName? name = null, ChannelName? channelName = null,
            RoutingKey? routingKey = null,  Type? dataType = null, Func<Message, Type>? getRequestType = null,
             int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null, int requeueCount = -1, TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0, MessagePumpType messagePumpType = MessagePumpType.Unknown,

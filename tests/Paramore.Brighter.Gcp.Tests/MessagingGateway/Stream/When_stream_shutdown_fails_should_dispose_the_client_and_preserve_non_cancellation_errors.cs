@@ -60,10 +60,10 @@ public class GcpStreamShutdownCleanupTests
         var stopFailure = CreateFailure(stopFailureKind);
         var disposalFailure = CreateFailure(disposalFailureKind);
         var client = new InMemoryShutdownSubscriberClient(stopFailure, disposalFailure);
-        var stream = new GcpStreamConsumer(client);
+        var stream = new GcpStreamConsumer(client: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         Assert.True(stream.TryStart());
         var consumer = new GcpPubSubStreamMessageConsumer(
-            new GcpMessagingGatewayConnection(), stream, client.SubscriptionName, TimeProvider.System);
+connection: new GcpMessagingGatewayConnection(), consumer: stream, subscriptionName: client.SubscriptionName, timeProvider: TimeProvider.System, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act
         var error = await Record.ExceptionAsync(() => useAsync

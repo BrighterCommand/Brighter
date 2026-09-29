@@ -77,7 +77,7 @@ public class RocketMqRejectWithNoReasonTestsAsync : IAsyncLifetime
             receiveMessageTimeout: s_receiveMessageTimeout,
             deadLetterRoutingKey: new RoutingKey(DlqTopic));
 
-        _consumer = new RocketMessageConsumerFactory(_connection).CreateAsync(subscription);
+        _consumer = new RocketMessageConsumerFactory(connection: _connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
     }
 
     public async Task DisposeAsync()
@@ -105,7 +105,7 @@ public class RocketMqRejectWithNoReasonTestsAsync : IAsyncLifetime
 
         // Assert — the message reaches the dead-letter queue stamped rejectionReason="None"
         await using var dlqSimpleConsumer = await GatewayFactory.CreateSimpleConsumer(_connection!, DlqTopic);
-        await using var dlqConsumer = new RocketMessageConsumer(dlqSimpleConsumer, 1, TimeSpan.FromSeconds(30));
+        await using var dlqConsumer = new RocketMessageConsumer(consumer: dlqSimpleConsumer, bufferSize: 1, invisibilityTimeout: TimeSpan.FromSeconds(30), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var dlqMessage = await ReceiveOursAsync(dlqConsumer, message.Id, s_receiveCeiling);
         Assert.NotNull(dlqMessage);

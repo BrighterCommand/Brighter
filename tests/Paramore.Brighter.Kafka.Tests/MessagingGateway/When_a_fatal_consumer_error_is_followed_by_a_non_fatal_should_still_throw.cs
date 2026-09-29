@@ -23,8 +23,8 @@ public class When_a_fatal_consumer_error_is_followed_by_a_non_fatal_should_still
             offsetDefault: AutoOffsetReset.Earliest,
             numPartitions: 1,
             replicationFactor: 1,
-            makeChannels: OnMissingChannel.Assume
-        );
+            makeChannels: OnMissingChannel.Assume,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

@@ -50,7 +50,7 @@ public class MsSqlMessageIdBulkRetryTests
         //Arrange
         await using var store = new MsSqlMessageIdOutboxStore(binary);
         await store.InitializeAsync();
-        var outbox = new MsSqlOutbox(store.OutboxConfig);
+        var outbox = new MsSqlOutbox(configuration: store.OutboxConfig, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<MsSqlOutbox>.Instance);
         var context = new RequestContext();
         var existing = MsSqlMessageIdOutboxStore.Message(Id.Random(), "existing payload");
         var retry = MsSqlMessageIdOutboxStore.Message(existing.Id, "replacement must not win");

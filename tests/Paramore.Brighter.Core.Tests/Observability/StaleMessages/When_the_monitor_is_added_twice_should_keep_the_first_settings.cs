@@ -39,7 +39,7 @@ public class StaleMessageMonitorAddedTwiceTests
     public void When_the_monitor_is_added_twice_should_keep_the_first_settings()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         var builder = new ServiceCollectionBrighterBuilder(
             services,
             new ServiceCollectionSubscriberRegistry(services),

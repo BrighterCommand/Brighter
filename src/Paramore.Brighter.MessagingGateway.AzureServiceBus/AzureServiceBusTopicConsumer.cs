@@ -28,7 +28,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.Tasks;
 
@@ -39,9 +38,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// </summary>
 public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
 {
-    protected override ILogger Logger => s_logger;
+    protected override ILogger Logger => _logger;
 
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusTopicConsumer>();
+    private readonly ILogger _logger;
     private bool _subscriptionCreated;
     private readonly string _subscriptionName;
     private readonly IServiceBusReceiverProvider _serviceBusReceiverProvider;
@@ -53,28 +52,31 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
     /// <param name="subscription">An Azure Service Bus Subscription.</param>
     /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
     /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
     public AzureServiceBusTopicConsumer(
         AzureServiceBusSubscription subscription,
         IAdministrationClientWrapper administrationClientWrapper,
-        IServiceBusReceiverProvider serviceBusReceiverProvider) 
-        : base(subscription, null, administrationClientWrapper)
+        IServiceBusReceiverProvider serviceBusReceiverProvider,
+        ILoggerFactory loggerFactory)
+        : base(subscription, null, administrationClientWrapper, loggerFactory: loggerFactory)
     {
+        _logger = loggerFactory.CreateBrighterLogger<AzureServiceBusTopicConsumer>();
         _subscriptionName = subscription.ChannelName.Value;
         _serviceBusReceiverProvider = serviceBusReceiverProvider;
     }
-    
+
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
     public override async Task PurgeAsync(CancellationToken ct = default)
     {
-        Log.PurgingMessagesFromSubscriptionOnTopic(s_logger, SubscriptionName, Topic);
+        Log.PurgingMessagesFromSubscriptionOnTopic(_logger, SubscriptionName, Topic);
 
         await ResetReceiverAsync();
         await AdministrationClientWrapper.DeleteTopicAsync(Topic);
         await EnsureChannelAsync();
     }
- 
+
     protected override async Task EnsureChannelAsync()
     {
         if (_subscriptionCreated || Subscription.MakeChannels.Equals(OnMissingChannel.Assume))
@@ -106,7 +108,7 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         {
             if (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
             {
-                Log.MessageEntityAlreadyExists(s_logger, Topic, _subscriptionName);
+                Log.MessageEntityAlreadyExists(_logger, Topic, _subscriptionName);
                 _subscriptionCreated = true;
             }
             else
@@ -116,7 +118,7 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         }
         catch (Exception e)
         {
-            Log.FailingToCheckOrCreateSubscription(s_logger, e);
+            Log.FailingToCheckOrCreateSubscription(_logger, e);
 
             //The connection to Azure Service bus may have failed so we re-establish the connection.
             AdministrationClientWrapper.Reset();
@@ -124,10 +126,10 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
             throw new ChannelFailureException("Failing to check or create subscription", e);
         }
     }
-        
+
     protected override async Task GetMessageReceiverProviderAsync()
     {
-        Log.GettingMessageReceiverProviderForTopicAndSubscription(s_logger, Topic, _subscriptionName);
+        Log.GettingMessageReceiverProviderForTopicAndSubscription(_logger, Topic, _subscriptionName);
         try
         {
             ServiceBusReceiver = await _serviceBusReceiverProvider.GetAsync(Topic, _subscriptionName,
@@ -135,7 +137,7 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         }
         catch (Exception e)
         {
-            Log.FailedToGetMessageReceiverProviderForTopicAndSubscription(s_logger, e, Topic, _subscriptionName);
+            Log.FailedToGetMessageReceiverProviderForTopicAndSubscription(_logger, e, Topic, _subscriptionName);
         }
     }
 
@@ -149,7 +151,7 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
 
         [LoggerMessage(LogLevel.Error, "Failing to check or create subscription")]
         public static partial void FailingToCheckOrCreateSubscription(ILogger logger, Exception e);
-        
+
         [LoggerMessage(LogLevel.Information, "Getting message receiver provider for topic {Topic} and subscription {ChannelName}...")]
         public static partial void GettingMessageReceiverProviderForTopicAndSubscription(ILogger logger, string topic, string channelName);
 
@@ -157,4 +159,3 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         public static partial void FailedToGetMessageReceiverProviderForTopicAndSubscription(ILogger logger, Exception e, string topic, string channelName);
     }
 }
-

@@ -47,17 +47,8 @@ public class When_the_sweeper_clears_the_outbox_should_count_cleared_as_sweeper
         _outbox = new CountingOutbox(_timeProvider);
 
         _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
-                { { _topic, new NonConfirmingProducerAsync(_topic) } }),
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
-            new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null),
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer: null,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            outbox: _outbox,
-            timeProvider: _timeProvider,
-            outboxMeter: _meter);
+producerRegistry: new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
+                { { _topic, new NonConfirmingProducerAsync(_topic) } }), resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(), mapperRegistry: new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null), messageTransformerFactory: new EmptyMessageTransformerFactory(), messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: null, publicationFinder: new FindPublicationByPublicationTopicOrRequestType(), outbox: _outbox, timeProvider: _timeProvider, outboxMeter: _meter, loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -64,6 +66,7 @@ public class When_scheduling_message_with_existing_id_should_atomically_replace_
         // Configure scheduler to use a fixed ID so multiple Schedule calls target the same entry
         // and to overwrite (not throw) on conflict
         _schedulerFactory = new InMemorySchedulerFactory
+(loggerFactory: NullLoggerFactory.Instance)
         {
             TimeProvider = _timeProvider,
             GetOrCreateMessageSchedulerId = _ => FixedSchedulerId,
@@ -87,7 +90,7 @@ public class When_scheduling_message_with_existing_id_should_atomically_replace_
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) })
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, NullLoggerFactory.Instance, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) })
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -111,7 +114,7 @@ public class When_scheduling_message_with_existing_id_should_atomically_replace_
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox
+            NullLoggerFactory.Instance, outbox
         );
 
         _processor = new CommandProcessor(
@@ -121,8 +124,8 @@ public class When_scheduling_message_with_existing_id_should_atomically_replace_
             policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             outboxBus,
-            _schedulerFactory
-        );
+            _schedulerFactory,
+            loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

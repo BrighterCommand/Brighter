@@ -18,7 +18,7 @@ public class SharedInstanceLeaseReleaseTests
         // instance (the pre-redesign model) could not tell the two resolutions apart, so releasing one could
         // pop and dispose the other still-live resolution's scope — a use-after-dispose. Keying on the lease
         // fixes that: each Create returns its own lease over its own scope.
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton<SharedMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
         var rootProvider = collection.BuildServiceProvider();

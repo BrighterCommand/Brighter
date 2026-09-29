@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -47,7 +47,7 @@ public class ConsumerGlobalInboxAsyncTests
         var inbox = new InMemoryInbox(TimeProvider.System);
         var configuration = new InboxConfiguration(inbox,
             actionOnExists: OnceOnlyAction.Warn, context: _ => "global-inbox");
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         IBrighterBuilder builder;
         if (useOptionsFactory)
             builder = services.AddConsumers(_ => new ConsumersOptions { InboxConfiguration = configuration });

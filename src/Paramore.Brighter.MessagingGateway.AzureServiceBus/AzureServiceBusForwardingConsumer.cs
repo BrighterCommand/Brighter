@@ -20,7 +20,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
-
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,31 +29,21 @@ using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
-
-internal sealed class AzureServiceBusForwardingConsumer(
-    AzureServiceBusSubscription subscription,
-    IAmAMessageScheduler requeueScheduler,
-    IAdministrationClientWrapper administrationClientWrapper,
-    IServiceBusReceiverProvider receiverProvider)
-    : AzureServiceBusConsumer(subscription, requeueScheduler, administrationClientWrapper)
+internal sealed class AzureServiceBusForwardingConsumer(AzureServiceBusSubscription subscription, IAmAMessageScheduler requeueScheduler, IAdministrationClientWrapper administrationClientWrapper, IServiceBusReceiverProvider receiverProvider, ILoggerFactory loggerFactory) : AzureServiceBusConsumer(subscription, requeueScheduler, administrationClientWrapper, loggerFactory)
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusForwardingConsumer>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<AzureServiceBusForwardingConsumer>();
     private readonly string _queueName = subscription.Configuration.ForwardTo!;
     private bool _channelCreated;
-
-    protected override ILogger Logger => s_logger;
+    protected override ILogger Logger => _logger;
     protected override string SubscriptionName => Subscription.ChannelName.Value;
 
-    protected override async Task GetMessageReceiverProviderAsync()
-        => ServiceBusReceiver = await receiverProvider.GetAsync(_queueName, SubscriptionConfiguration.RequireSession);
-
+    protected override async Task GetMessageReceiverProviderAsync() => ServiceBusReceiver = await receiverProvider.GetAsync(_queueName, SubscriptionConfiguration.RequireSession);
     public override async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (Subscription.MakeChannels != OnMissingChannel.Create)
         {
-            throw new NotSupportedException(
-                "Purging a forwarding queue requires OnMissingChannel.Create so the destination can be recreated.");
+            throw new NotSupportedException("Purging a forwarding queue requires OnMissingChannel.Create so the destination can be recreated.");
         }
 
         await ResetReceiverAsync();
@@ -67,7 +56,6 @@ internal sealed class AzureServiceBusForwardingConsumer(
     {
         if (_channelCreated || Subscription.MakeChannels == OnMissingChannel.Assume)
             return;
-
         await EnsureQueueAsync();
         await EnsureSubscriptionAsync();
         _channelCreated = true;
@@ -77,17 +65,15 @@ internal sealed class AzureServiceBusForwardingConsumer(
     {
         if (await AdministrationClientWrapper.QueueExistsAsync(_queueName))
             return;
-
         if (Subscription.MakeChannels == OnMissingChannel.Validate)
             throw new ChannelFailureException($"Forwarding queue {_queueName} does not exist.");
-
         try
         {
             await AdministrationClientWrapper.CreateQueueAsync(_queueName, SubscriptionConfiguration);
         }
-        catch (ServiceBusException exception) when (exception.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+        catch (ServiceBusException exception)when (exception.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
         {
-            // Another consumer may provision the shared destination concurrently.
+        // Another consumer may provision the shared destination concurrently.
         }
     }
 
@@ -96,15 +82,13 @@ internal sealed class AzureServiceBusForwardingConsumer(
         if (await AdministrationClientWrapper.SubscriptionExistsAsync(Topic, SubscriptionName))
         {
             await ValidateForwardingAsync();
-            if (Subscription.MakeChannels == OnMissingChannel.Create && SubscriptionConfiguration.GetRuleOptions() is not null)
+            if (Subscription.MakeChannels == OnMissingChannel.Create && SubscriptionConfiguration.GetRuleOptions()is not null)
                 await AdministrationClientWrapper.CreateSubscriptionAsync(Topic, SubscriptionName, SubscriptionConfiguration);
-
             return;
         }
 
         if (Subscription.MakeChannels == OnMissingChannel.Validate)
             throw new ChannelFailureException($"Subscription {SubscriptionName} does not exist on topic {Topic}.");
-
         await AdministrationClientWrapper.CreateSubscriptionAsync(Topic, SubscriptionName, SubscriptionConfiguration);
         await ValidateForwardingAsync();
     }
@@ -115,12 +99,11 @@ internal sealed class AzureServiceBusForwardingConsumer(
         var destination = properties.ForwardTo;
         if (Uri.TryCreate(destination, UriKind.Absolute, out var address))
             destination = Uri.UnescapeDataString(address.AbsolutePath).TrimStart('/');
-
         if (!string.Equals(destination, _queueName, StringComparison.OrdinalIgnoreCase))
         {
-            throw new ChannelFailureException(
-                $"Subscription {SubscriptionName} on topic {Topic} must forward to queue {_queueName}. " +
-                "Provision forwarding before starting this consumer; existing subscriptions are not reconfigured.");
+            throw new ChannelFailureException($"Subscription {SubscriptionName} on topic {Topic} must forward to queue {_queueName}. " + "Provision forwarding before starting this consumer; existing subscriptions are not reconfigured.");
         }
     }
+
+
 }

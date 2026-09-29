@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
 using Paramore.Brighter.Inbox.Exceptions;
@@ -11,31 +11,31 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
-     public class OnceOnlyAttributeTests
+    public class OnceOnlyAttributeTests
     {
         private readonly MyCommand _command;
         private readonly IAmAnInboxSync _inbox;
         private readonly IAmACommandProcessor _commandProcessor;
-        
+
         public OnceOnlyAttributeTests()
         {
             _inbox = new InMemoryInbox(new FakeTimeProvider());
-            
+
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStoredCommandHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyStoredCommandHandler>();
             container.AddSingleton(_inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _command = new MyCommand {Value = "My Test String"};
+            _command = new MyCommand { Value = "My Test String" };
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _commandProcessor.Send(_command);
 
             Exception ex = Assert.Throws<OnceOnlyException>(() => _commandProcessor.Send(_command));
-            
+
             Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
         }
     }

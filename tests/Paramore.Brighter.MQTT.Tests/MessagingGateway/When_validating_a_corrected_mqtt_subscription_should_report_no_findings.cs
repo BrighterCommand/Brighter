@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.MQTT.Tests.TestDoubles;
@@ -45,7 +47,7 @@ public class MqttCorrectedSubscriptionValidationTests
             TopicPrefix = "test",
             ClientID = "test-client"
         };
-        var consumerFactory = new MqttMessageConsumerFactory(configuration);
+        var consumerFactory = new MqttMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance);
         var channelFactory = new ChannelFactory(consumerFactory);
         var combinedChannelFactory = new CombinedChannelFactory([channelFactory]);
         var subscription = new MqttSubscription<MyCommand>(

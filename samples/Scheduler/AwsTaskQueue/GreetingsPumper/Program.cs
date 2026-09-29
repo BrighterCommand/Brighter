@@ -45,34 +45,36 @@ static class Program
                                 }
                             });
 
-                        var producerRegistry = new SnsProducerRegistryFactory(
-                            awsConnection,
-                            [
-                                new SnsPublication
-                                {
-                                    Topic = new RoutingKey(typeof(GreetingEvent).FullName
-                                        .ToValidSNSTopicName()),
-                                    RequestType = typeof(GreetingEvent)
-                                },
-                                new SnsPublication
-                                {
-                                    Topic = new RoutingKey(
-                                        typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
-                                    TopicAttributes = new SnsAttributes { Type = SqsType.Fifo },
-                                    RequestType = typeof(FarewellEvent)
-                                },
-                                new SnsPublication
-                                {
-                                    Topic = new RoutingKey("message-scheduler-topic"),
-                                    RequestType = typeof(FireAwsScheduler)
-                                }
-                            ]
-                        ).Create();
-
                         services.AddBrighter()
-                            .AddProducers(configure =>
+                            .AddProducers(provider =>
                             {
+                                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                                var producerRegistry = new SnsProducerRegistryFactory(
+                                    awsConnection,
+                                    [
+                                        new SnsPublication
+                                        {
+                                            Topic = new RoutingKey(typeof(GreetingEvent).FullName
+                                                .ToValidSNSTopicName()),
+                                            RequestType = typeof(GreetingEvent)
+                                        },
+                                        new SnsPublication
+                                        {
+                                            Topic = new RoutingKey(
+                                                typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
+                                            TopicAttributes = new SnsAttributes { Type = SqsType.Fifo },
+                                            RequestType = typeof(FarewellEvent)
+                                        },
+                                        new SnsPublication
+                                        {
+                                            Topic = new RoutingKey("message-scheduler-topic"),
+                                            RequestType = typeof(FireAwsScheduler)
+                                        }
+                                    ],
+                                    loggerFactory: loggerFactory).Create();
+                                var configure = new ProducersConfiguration();
                                 configure.ProducerRegistry = producerRegistry;
+                                return configure;
                             })
                             .UseScheduler(new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
                             {
@@ -125,7 +127,7 @@ static class Program
                 {
                     continue;
                 }
-                
+
                 logger.LogInformation("Pausing for breath...");
                 await Task.Delay(TimeSpan.FromMinutes(2), cancellationToken);
             }

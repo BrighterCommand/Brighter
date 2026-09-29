@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 gabisonia <irakli.gabisonia94@gmail.com>
@@ -247,7 +247,7 @@ public class DispatcherConcurrentShutdownTests
             new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
         registry.Register<MyEvent, MyEventMessageMapper>();
         registry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
-        return new Dispatcher(new SpyCommandProcessor(), [subscription], registry, registry);
+        return new Dispatcher(commandProcessor: new SpyCommandProcessor(), subscriptions: [subscription], messageMapperRegistry: registry, messageMapperRegistryAsync: registry, loggerFactory: Initializer.TestLoggerFactory);
     }
 
     private static void AssertStoppedAndDisposed(Dispatcher dispatcher, InMemoryUnopenedConsumerChannelFactory factory)

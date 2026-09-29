@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -47,12 +49,12 @@ public class LargeMessagePaylodUnwrapTests : IAsyncLifetime
             BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }]
-        });
+        }, loggerFactory: NullLoggerFactory.Instance);
 
         var messageTransformerFactory =
             new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.None);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, NullLoggerFactory.Instance, InstrumentationOptions.None);
     }
 
     [Fact]

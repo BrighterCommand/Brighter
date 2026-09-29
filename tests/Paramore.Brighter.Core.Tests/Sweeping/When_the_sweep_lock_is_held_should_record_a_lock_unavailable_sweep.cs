@@ -18,10 +18,7 @@ public class SweeperLockUnavailableMetricsTests
         using var outbox = new SweepableOutbox();
         using var measurements = new RecordedSweeperMeasurements();
         var sweeper = new TimedOutboxSweeper(
-            outbox.ScopeFactory,
-            new HeldDistributedLock(),
-            new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero },
-            meter: new SweeperMeter(measurements.MeterFactory));
+serviceScopeFactory: outbox.ScopeFactory, distributedLock: new HeldDistributedLock(), options: new TimedOutboxSweeperOptions { TimerInterval = 1, MinimumMessageAge = TimeSpan.Zero }, meter: new SweeperMeter(meterFactory: measurements.MeterFactory, loggerFactory: Initializer.TestLoggerFactory), logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         //Act
         await sweeper.StartAsync(CancellationToken.None);

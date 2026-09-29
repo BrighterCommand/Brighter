@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,19 +37,20 @@ public class DispatchBuilderTests : IAsyncLifetime
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-        var container = new ServiceCollection();
+        var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
+        var container = new ServiceCollection().AddLogging();
 
         var tracer = new BrighterTracer(TimeProvider.System);
         var instrumentationOptions = InstrumentationOptions.All;
-            
+
         var commandProcessor = CommandProcessorBuilder.StartNew()
             .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
             .DefaultResilience()
             .NoExternalBus()
             .ConfigureInstrumentation(tracer, instrumentationOptions)
             .RequestContextFactory(new InMemoryRequestContextFactory())
-            .RequestSchedulerFactory(new InMemorySchedulerFactory())
+            .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: NullLoggerFactory.Instance))
+            .ConfigureLogging(NullLoggerFactory.Instance)
             .Build();
 
         _builder = DispatchBuilder.StartNew()
@@ -71,7 +74,8 @@ public class DispatchBuilderTests : IAsyncLifetime
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
             ])
-            .ConfigureInstrumentation(tracer, instrumentationOptions);
+            .ConfigureInstrumentation(tracer, instrumentationOptions)
+            .ConfigureLogging(NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -83,7 +87,7 @@ public class DispatchBuilderTests : IAsyncLifetime
         Assert.NotNull(GetConnection("foo"));
         Assert.NotNull(GetConnection("bar"));
         Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
-            
+
         await Task.Delay(1000);
 
         _dispatcher.Receive();
@@ -93,7 +97,7 @@ public class DispatchBuilderTests : IAsyncLifetime
         Assert.Equal(DispatcherState.DS_RUNNING, _dispatcher.State);
 
         await _dispatcher.End();
-            
+
         Assert.Equal(DispatcherState.DS_STOPPED, _dispatcher.State);
     }
 

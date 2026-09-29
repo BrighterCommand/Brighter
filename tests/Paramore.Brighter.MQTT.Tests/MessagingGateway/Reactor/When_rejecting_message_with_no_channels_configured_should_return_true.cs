@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net;
@@ -59,7 +61,7 @@ public class MqttMessageConsumerRejectNoChannelsTests : IDisposable
             TopicPrefix = SOURCE_TOPIC_PREFIX,
             ClientID = "BrighterTests-NoChannels-Producer"
         };
-        var publisher = new MqttMessagePublisher(producerConfig);
+        var publisher = new MqttMessagePublisher(producerConfig, loggerFactory: NullLoggerFactory.Instance);
         _sourceProducer = new MqttMessageProducer(publisher, new Publication());
 
         //Arrange — source consumer with NO DLQ or invalid message routing keys
@@ -70,7 +72,7 @@ public class MqttMessageConsumerRejectNoChannelsTests : IDisposable
             TopicPrefix = SOURCE_TOPIC_PREFIX,
             ClientID = "BrighterTests-NoChannels-Consumer"
         };
-        _sourceConsumer = new MqttMessageConsumer(consumerConfig);
+        _sourceConsumer = new MqttMessageConsumer(consumerConfig, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

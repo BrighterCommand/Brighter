@@ -24,10 +24,10 @@ public class When_more_than_ten_topics_are_tripped_should_name_the_first_ten_and
         state.SweepStarted();
         state.LockObtained();
         state.SweepEnded(SweepOutcome.Completed);
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         foreach (var name in ordinal.Reverse())
             breaker.TripTopic(new RoutingKey(name));
-        var check = new OutboxSweeperInvestigateHealthCheck(state, new TimedOutboxSweeperOptions(), () => breaker, 3);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: state, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => breaker, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         var result = await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);

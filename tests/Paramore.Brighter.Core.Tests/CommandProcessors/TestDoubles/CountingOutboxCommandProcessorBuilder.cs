@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Transactions;
 using Paramore.Brighter.Extensions;
@@ -24,7 +24,7 @@ internal static class CountingOutboxCommandProcessorBuilder
 
         var producer = new InMemoryMessageProducer(
             new InternalBus(),
-            new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
+publication: new Publication { Topic = routingKey, RequestType = typeof(MyCommand) }, loggerFactory: Initializer.TestLoggerFactory);
 
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
@@ -39,23 +39,13 @@ internal static class CountingOutboxCommandProcessorBuilder
         var tracer = new BrighterTracer();
 
         var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry: producerRegistry,
-            resiliencePipelineRegistry: resiliencePipelineRegistry,
-            mapperRegistry: messageMapperRegistry,
-            messageTransformerFactory: new EmptyMessageTransformerFactory(),
-            messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
-            tracer: tracer,
-            publicationFinder: new FindPublicationByPublicationTopicOrRequestType(),
-            outbox: outbox,
-            maxOutStandingMessages: maxOutStandingMessages,
-            maxOutStandingCheckInterval: maxOutStandingCheckInterval,
-            timeProvider: timeProvider);
+            producerRegistry: producerRegistry, resiliencePipelineRegistry: resiliencePipelineRegistry, mapperRegistry: messageMapperRegistry, messageTransformerFactory: new EmptyMessageTransformerFactory(), messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: tracer, publicationFinder: new FindPublicationByPublicationTopicOrRequestType(), outbox: outbox, maxOutStandingMessages: maxOutStandingMessages, maxOutStandingCheckInterval: maxOutStandingCheckInterval, timeProvider: timeProvider, loggerFactory: Initializer.TestLoggerFactory);
 
         return new CommandProcessor(
             new InMemoryRequestContextFactory(),
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             mediator,
-            new InMemorySchedulerFactory());
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
     }
 }

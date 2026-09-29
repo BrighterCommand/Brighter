@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -28,8 +30,8 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             _topic = new RoutingKey($"Consumer-Requeue-Tests-{Guid.NewGuid()}");
 
             _message = new Message(
-                new MessageHeader(myCommand.Id, _topic, MessageType.MT_COMMAND, correlationId:correlationId,
-                    replyTo:new RoutingKey(replyTo), contentType:contentType),
+                new MessageHeader(myCommand.Id, _topic, MessageType.MT_COMMAND, correlationId: correlationId,
+                    replyTo: new RoutingKey(replyTo), contentType: contentType),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -40,9 +42,9 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 new ChannelName(_topic), new RoutingKey(_topic));
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration,
-                [new Publication {Topic = new RoutingKey(_topic)}]
-            ).CreateAsync().Result;
-            _channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration));
+                [new Publication { Topic = new RoutingKey(_topic) }],
+                loggerFactory: NullLoggerFactory.Instance).CreateAsync().Result;
+            _channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration, loggerFactory: NullLoggerFactory.Instance), logger: NullLoggerFactory.Instance.CreateLogger<global::Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory>());
         }
 
         [Fact]
@@ -60,7 +62,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
             Assert.Equal(message.Body.Value, requeuedMessage.Body.Value);
         }
-        
+
         public void Dispose()
         {
             _producerRegistry.Dispose();

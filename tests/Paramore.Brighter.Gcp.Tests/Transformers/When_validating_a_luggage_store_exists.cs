@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Transformers.Gcp;
@@ -6,8 +8,8 @@ using Paramore.Brighter.Transforms.Storage;
 
 namespace Paramore.Brighter.Gcp.Tests.Transformers;
 
-[Trait("Category", "GCS")] 
-public class LuggageStoreExistsTests 
+[Trait("Category", "GCS")]
+public class LuggageStoreExistsTests
 {
     [Fact]
     public async Task When_checking_store_that_exists()
@@ -20,20 +22,20 @@ public class LuggageStoreExistsTests
             ProjectId = GatewayFactory.GetProjectId(),
             Credential = GatewayFactory.GetCredential()
         };
-        
-        var luggageStore = new GcsLuggageStore(options);
+
+        var luggageStore = new GcsLuggageStore(options, loggerFactory: NullLoggerFactory.Instance);
         await luggageStore.EnsureStoreExistsAsync();
-        
+
         // act
         options.Strategy = StorageStrategy.Validate;
         await luggageStore.EnsureStoreExistsAsync();
 
-        
+
         //teardown
         var client = await options.CreateStorageClientAsync();
         await client.DeleteBucketAsync(bucketName);
     }
-    
+
     [Fact]
     public async Task When_checking_store_that_does_not_exist()
     {
@@ -47,11 +49,11 @@ public class LuggageStoreExistsTests
                      ProjectId = GatewayFactory.GetProjectId(),
                      Credential = GatewayFactory.GetCredential()
                  };
-        
-                 var luggageStore = new GcsLuggageStore(options);
+
+                 var luggageStore = new GcsLuggageStore(options, loggerFactory: NullLoggerFactory.Instance);
                  await luggageStore.EnsureStoreExistsAsync();
              });
-         
+
          Assert.NotNull(doesNotExist);
     }
 }

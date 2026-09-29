@@ -26,19 +26,11 @@ public sealed class SweepableOutbox : IDisposable
     /// <summary>Shares <paramref name="outboxCircuitBreaker"/> with the mediator, so a test can read the breaker the mediator trips.</summary>
     public SweepableOutbox(IAmAnOutboxCircuitBreaker? outboxCircuitBreaker)
     {
-        var producer = new InMemoryMessageProducer(Bus, new Publication { Topic = RoutingKey });
+        var producer = new InMemoryMessageProducer(Bus, publication: new Publication { Topic = RoutingKey }, loggerFactory: Initializer.TestLoggerFactory);
         var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { RoutingKey, producer } }),
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
-            new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null),
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            new BrighterTracer(TimeProvider.System),
-            new FindPublicationByPublicationTopicOrRequestType(),
-            Outbox,
-            outboxCircuitBreaker: outboxCircuitBreaker);
+producerRegistry: new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { RoutingKey, producer } }), resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(), mapperRegistry: new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), null), messageTransformerFactory: new EmptyMessageTransformerFactory(), messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: new BrighterTracer(TimeProvider.System), publicationFinder: new FindPublicationByPublicationTopicOrRequestType(), outbox: Outbox, outboxCircuitBreaker: outboxCircuitBreaker, loggerFactory: Initializer.TestLoggerFactory);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton<IAmAnOutboxProducerMediator>(mediator);
         _provider = services.BuildServiceProvider();
     }

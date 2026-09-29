@@ -25,10 +25,10 @@ public class AsyncMessageUnwrapRequestTests
         mapperRegistry.RegisterAsync<MyTransformableCommand, MyTransformableCommandMessageMapperAsync>();
 
         MyTransformableCommand myCommand = new();
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync((_ => new MySimpleTransformAsync()));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, new("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
@@ -37,14 +37,14 @@ public class AsyncMessageUnwrapRequestTests
 
         _message.Header.Bag[MySimpleTransformAsync.HEADER_KEY] = MySimpleTransformAsync.TRANSFORM_VALUE;
     }
-    
+
     [Fact]
     public async Task When_Unwrapping_A_Message_Mapper()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
         var request = await _transformPipeline.UnwrapAsync(_message, new RequestContext());
-        
+
         //assert
         Assert.Equal(MySimpleTransformAsync.TRANSFORM_VALUE, request.Value);
     }

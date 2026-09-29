@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 public sealed class StaleMessageLoggingFixture
 {
     /// <summary>Adds the provider to the application's logger factory.</summary>
-    public StaleMessageLoggingFixture() => ApplicationLogging.LoggerFactory.AddProvider(Logs);
+    public StaleMessageLoggingFixture() => Initializer.TestLoggerFactory.AddProvider(Logs);
 
     /// <summary>The shared provider; each test calls <see cref="CapturingLoggerProvider.Reset"/> before it acts.</summary>
     public CapturingLoggerProvider Logs { get; } = new();

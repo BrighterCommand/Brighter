@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -46,7 +46,7 @@ public class MsSqlFanOutConfigurationTests
         var publication = new MsSqlPublication { Topic = new("topic"), SubscriberChannels = [new(name!)] };
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(_configuration, publication));
+        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(msSqlConfiguration: _configuration, publication: publication, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         //Assert
         Assert.Contains("subscriber", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -59,7 +59,7 @@ public class MsSqlFanOutConfigurationTests
         var publication = new MsSqlPublication { Topic = new("topic") };
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(_configuration, publication));
+        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(msSqlConfiguration: _configuration, publication: publication, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         //Assert
         Assert.Contains("subscriber", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -72,7 +72,7 @@ public class MsSqlFanOutConfigurationTests
         var publication = new MsSqlPublication { Topic = new("topic"), SubscriberChannels = [null!] };
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(_configuration, publication));
+        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(msSqlConfiguration: _configuration, publication: publication, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         //Assert
         Assert.Contains("subscriber", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -85,7 +85,7 @@ public class MsSqlFanOutConfigurationTests
         var publication = new MsSqlPublication { Topic = new("topic"), SubscriberChannels = [new(new string('a', 256))] };
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(_configuration, publication));
+        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(msSqlConfiguration: _configuration, publication: publication, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         //Assert
         Assert.Contains("255", exception.Message);
@@ -98,7 +98,7 @@ public class MsSqlFanOutConfigurationTests
         var publication = new MsSqlPublication { Topic = new("topic"), SubscriberChannels = Enumerable.Range(0, 1001).Select(i => new ChannelName($"subscriber{i}")).ToArray() };
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(_configuration, publication));
+        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(msSqlConfiguration: _configuration, publication: publication, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         //Assert
         Assert.Contains("1000", exception.Message);
@@ -111,7 +111,7 @@ public class MsSqlFanOutConfigurationTests
         var publication = new MsSqlPublication { Topic = new("topic"), SubscriberChannels = [new("topic")] };
 
         //Act
-        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(_configuration, publication));
+        var exception = Assert.Throws<ConfigurationException>(() => new MsSqlMessageProducer(msSqlConfiguration: _configuration, publication: publication, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         //Assert
         Assert.Contains("logical topic", exception.Message);
@@ -124,7 +124,7 @@ public class MsSqlFanOutConfigurationTests
     {
         //Arrange
         using var producer = new MsSqlMessageProducer(_configuration,
-            new MsSqlPublication { Topic = new("topic"), SubscriberChannels = [new("subscriber")] });
+publication: new MsSqlPublication { Topic = new("topic"), SubscriberChannels = [new("subscriber")] }, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var message = new Message(new MessageHeader(Id.Random(), new RoutingKey("other"), MessageType.MT_EVENT), new MessageBody("payload"));
 
         //Act
@@ -143,8 +143,9 @@ public class MsSqlFanOutConfigurationTests
     {
         //Arrange
         var subscription = new MsSqlSubscription(new("subscriber"), new("queue"), new("topic"),
-            requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand), requeueDelay: TimeSpan.FromSeconds(1)) { IsIndependentSubscriber = true };
-        var factory = new MsSqlMessageConsumerFactory(_configuration);
+            requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand), requeueDelay: TimeSpan.FromSeconds(1))
+        { IsIndependentSubscriber = true };
+        var factory = new MsSqlMessageConsumerFactory(msSqlConfiguration: _configuration, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act
         var exception = Assert.Throws<ConfigurationException>(() =>
@@ -169,8 +170,9 @@ public class MsSqlFanOutConfigurationTests
         var configuration = new RelationalDatabaseConfiguration("invalid-connection-string", queueStoreTable: "queue");
         var subscription = new MsSqlSubscription(new("subscriber"), new("queue"), new("topic"),
             requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand),
-            requeueDelay: TimeSpan.FromSeconds(1), makeChannels: OnMissingChannel.Create) { IsIndependentSubscriber = true };
-        var factory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+            requeueDelay: TimeSpan.FromSeconds(1), makeChannels: OnMissingChannel.Create)
+        { IsIndependentSubscriber = true };
+        var factory = new ChannelFactory(msSqlMessageConsumerFactory: new MsSqlMessageConsumerFactory(msSqlConfiguration: configuration, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<ChannelFactory>.Instance);
 
         //Act
         var exception = await Assert.ThrowsAsync<ConfigurationException>(async () =>

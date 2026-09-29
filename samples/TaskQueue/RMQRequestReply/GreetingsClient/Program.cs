@@ -45,7 +45,8 @@ namespace GreetingsSender
                 .CreateLogger();
 
             var serviceCollection = new ServiceCollection();
-            serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
+            using var loggerFactory = new SerilogLoggerFactory();
+            serviceCollection.AddSingleton<ILoggerFactory>(loggerFactory);
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {
@@ -57,7 +58,7 @@ namespace GreetingsSender
                 .AddBrighter()
                 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
                 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-                .UseScheduler(new InMemorySchedulerFactory())
+                .UseScheduler(new InMemorySchedulerFactory(loggerFactory: loggerFactory))
                 .AddProducers((configure) =>
                 {
                     configure.ProducerRegistry = new RmqProducerRegistryFactory(
@@ -68,19 +69,19 @@ namespace GreetingsSender
                                 Topic = new RoutingKey("Greeting.Request"),
                                 RequestType = typeof(GreetingRequest)
                             }
-                        ]).Create();
+                        ], loggerFactory: loggerFactory).Create();
                     configure.UseRpc = true;
                     configure.ReplyQueueSubscriptions =
                     [
                         new RmqSubscription(
-                            new SubscriptionName("ReplySubscription"), 
-                            new ChannelName("ReplyChannel"), 
-                            new RoutingKey("Reply"), 
+                            new SubscriptionName("ReplySubscription"),
+                            new ChannelName("ReplyChannel"),
+                            new RoutingKey("Reply"),
                             typeof(GreetingReply),
                             messagePumpType: MessagePumpType.Reactor
                         )
                     ];
-                    configure.ResponseChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
+                    configure.ResponseChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection, loggerFactory: loggerFactory));
                 })
                 .AutoFromAssemblies();
 
@@ -94,8 +95,9 @@ namespace GreetingsSender
             commandProcessor.Call<GreetingRequest, GreetingReply>(
                 new GreetingRequest
                 {
-                    Name = "Ian", Language = "en-gb"
-                }, 
+                    Name = "Ian",
+                    Language = "en-gb"
+                },
                 timeOut: TimeSpan.FromMilliseconds(2000)
             );
 

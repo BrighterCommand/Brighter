@@ -21,7 +21,7 @@ public class PipelineBuildFailureScopeLeakTests
         //build fails
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddScoped<UnresolvableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -42,7 +42,7 @@ public class PipelineBuildFailureScopeLeakTests
         var internalBus = new InternalBus();
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(internalBus, new Publication { Topic = routingKey, RequestType = typeof(UnresolvableCommand) }) }
+            { routingKey, new InMemoryMessageProducer(internalBus,Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(UnresolvableCommand) }) }
         });
 
         var timeProvider = new FakeTimeProvider();
@@ -57,7 +57,7 @@ public class PipelineBuildFailureScopeLeakTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+Initializer.Factory,            new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         var commandProcessor = new CommandProcessor(
@@ -65,8 +65,8 @@ public class PipelineBuildFailureScopeLeakTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.Factory)
+        , loggerFactory: Initializer.Factory);
 
         //act — 1,000 Post attempts, each failing to build the pipeline
         for (var i = 0; i < 1_000; i++)

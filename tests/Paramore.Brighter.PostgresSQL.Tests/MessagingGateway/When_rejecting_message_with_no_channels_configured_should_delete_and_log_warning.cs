@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.Postgres;
@@ -55,12 +57,12 @@ public class PostgresMessageConsumerNoChannelsConfiguredTests : IDisposable
 
         var producerRegistry = new PostgresProducerRegistryFactory(
             connection,
-            [new PostgresPublication { Topic = _topic }]
-        ).Create();
+            [new PostgresPublication { Topic = _topic }],
+            loggerFactory: NullLoggerFactory.Instance).Create();
 
         _producer = (IAmAMessageProducerSync)producerRegistry.LookupBy(_topic);
 
-        var consumerFactory = new PostgresConsumerFactory(connection);
+        var consumerFactory = new PostgresConsumerFactory(connection, loggerFactory: NullLoggerFactory.Instance);
         _consumer = consumerFactory.Create(sub);
     }
 

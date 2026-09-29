@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using DbMaker;
 using GreetingsApp.Requests;
@@ -30,20 +32,23 @@ if (string.IsNullOrEmpty(dbType))
     throw new ArgumentNullException("No database type specified in configuration");
 
 var rdbms = DbResolver.GetDatabaseType(dbType);
-(IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
-    OutboxFactory.MakeDapperOutbox(rdbms, outboxConfiguration);
 
 builder.Services.AddBrighter(options =>
 {
     options.InstrumentationOptions = InstrumentationOptions.All;
-}).AddProducers(configure =>
+}).AddProducers(provider =>
 {
-    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
+        OutboxFactory.MakeDapperOutbox(rdbms, outboxConfiguration, loggerFactory);
+    var configure = new ProducersConfiguration();
+    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport, loggerFactory);
     configure.Outbox = makeOutbox.outbox;
     configure.TransactionProvider = makeOutbox.transactionProvider;
     configure.ConnectionProvider = makeOutbox.connectionProvider;
     configure.MaxOutStandingMessages = 5;
     configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
+    return configure;
 });
 
 WebApplication app = builder.Build();
@@ -65,6 +70,5 @@ app.MapHealthChecks("/health/detail", new HealthCheckOptions
         await context.Response.WriteAsync(JsonSerializer.Serialize(content, jsonOptions));
     }
 });
-
 
 app.Run();

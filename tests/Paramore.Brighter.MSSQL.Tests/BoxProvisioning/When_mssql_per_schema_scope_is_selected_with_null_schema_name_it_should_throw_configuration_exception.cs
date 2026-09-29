@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -49,7 +51,7 @@ public class MsSqlPerSchemaNullSchemaNameTests : IAsyncLifetime
             schemaName: null);
         _runner = new MsSqlBoxMigrationRunner(
             new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: MigrationHistoryScope.PerSchema);
+            scope: MigrationHistoryScope.PerSchema, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

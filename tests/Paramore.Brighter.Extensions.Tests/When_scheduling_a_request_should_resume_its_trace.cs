@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -87,16 +87,16 @@ public class ScheduledRequestTraceTests : IDisposable
         var bus = new InternalBus();
         var syncTopic = new RoutingKey("scheduled-trace.sync");
         var asyncTopic = new RoutingKey("scheduled-trace.async");
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton<IAmABrighterTracer>(tracer);
         services.AddSingleton<ScheduledContextEventHandler>();
         services.AddSingleton<ScheduledContextEventHandlerAsync>();
         services.AddBrighter(options => options.InstrumentationOptions = InstrumentationOptions.RequestInformation)
-            .UseScheduler(new InMemorySchedulerFactory { TimeProvider = timeProvider })
+            .UseScheduler(new InMemorySchedulerFactory (loggerFactory:Initializer.Factory){ TimeProvider = timeProvider })
             .AddProducers(options => options.ProducerRegistry = new InMemoryProducerRegistryFactory(bus,
                 [new Publication { Topic = syncTopic, RequestType = typeof(ScheduledContextEvent) },
                  new Publication { Topic = asyncTopic, RequestType = typeof(ScheduledContextEventAsync) }],
-                InstrumentationOptions.RequestInformation).Create())
+Initializer.Factory,                InstrumentationOptions.RequestInformation).Create())
             .MapperRegistry(_ => { });
         await using var provider = services.BuildServiceProvider();
         var processor = provider.GetRequiredService<IAmACommandProcessor>();

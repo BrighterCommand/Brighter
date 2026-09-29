@@ -14,7 +14,7 @@ public class InMemoryBreakerOptionsChangedAfterConstructionTests
         var orders = new RoutingKey("orders");
         var clock = new FakeTimeProvider();
         var options = new OutboxCircuitBreakerOptions { CooldownCount = 10, MaximumTripDuration = TimeSpan.FromMinutes(5) };
-        var breaker = new InMemoryOutboxCircuitBreaker(options, timeProvider: clock);
+        var breaker = new InMemoryOutboxCircuitBreaker(options: options, timeProvider: clock, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
 
         // Act
         options.MaximumTripDuration = TimeSpan.FromMinutes(1);
@@ -34,7 +34,7 @@ public class InMemoryBreakerOptionsChangedAfterConstructionTests
         // Arrange
         var payments = new RoutingKey("payments");
         var options = new OutboxCircuitBreakerOptions { CooldownCount = 10 };
-        var breaker = new InMemoryOutboxCircuitBreaker(options);
+        var breaker = new InMemoryOutboxCircuitBreaker(options: options, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
 
         // Act
         options.CooldownCount = 0;

@@ -121,7 +121,7 @@ public class RocketMqBudgetExhaustedDlqHandledCountProactorTests
             // decorator (task 3.3's harness) purely to track dispatch counts via
             // ConformanceDeferredPump's static state — the delivery-budget rule under test lives in
             // Proactor, not here.
-            var innerConsumer = new RocketMessageConsumerFactory(GatewayFactory.CreateConnection())
+            var innerConsumer = new RocketMessageConsumerFactory(connection: GatewayFactory.CreateConnection(), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
                 .CreateAsync(subscription);
             channel = ConformanceDeferredPump.CreateRecordingChannelAsync(channelName, routingKey, innerConsumer);
 
@@ -151,7 +151,7 @@ public class RocketMqBudgetExhaustedDlqHandledCountProactorTests
             // over its own reading subscription on the DLQ topic (R-28 / AC-41), matching this run's
             // message by id and acknowledging anything else.
             var readerChannelFactory = new RocketMqChannelFactory(
-                new RocketMessageConsumerFactory(GatewayFactory.CreateConnection()));
+factory: new RocketMessageConsumerFactory(connection: GatewayFactory.CreateConnection(), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
             var readingSubscription = new RocketMqSubscription<ConformanceDeferredCommand>(
                 subscriptionName: new SubscriptionName($"dlq-count-reader-{Guid.NewGuid():N}"),

@@ -71,12 +71,7 @@ public class SweeperEndedSweepStateTests
         var state = new OutboxSweeperState(timeProvider);
         using var measurements = new RecordedSweeperMeasurements();
         var sweeper = new TimedOutboxSweeper(
-            scopeFactory,
-            distributedLock,
-            new TimedOutboxSweeperOptions { TimerInterval = 60, MinimumMessageAge = TimeSpan.Zero },
-            timeProvider: timeProvider,
-            meter: new SweeperMeter(measurements.MeterFactory),
-            state: state);
+serviceScopeFactory: scopeFactory, distributedLock: distributedLock, options: new TimedOutboxSweeperOptions { TimerInterval = 60, MinimumMessageAge = TimeSpan.Zero }, timeProvider: timeProvider, meter: new SweeperMeter(meterFactory: measurements.MeterFactory, loggerFactory: Initializer.TestLoggerFactory), state: state, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         await sweeper.StartAsync(CancellationToken.None);
         var recorded = measurements.WaitFor(m => m.Of(RecordedSweeperMeasurements.Sweeps).Any(), TimeSpan.FromSeconds(10));

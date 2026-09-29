@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,8 +20,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
         /// </summary>
         /// <param name="testOutputHelper">The output helper for capturing test output during execution.</param>
         /// <remarks>
-        /// This constructor sets up the MQTT messaging gateway test environment by configuring the client ID, topic prefix, 
-        /// and test output helper. It leverages the base class <see cref="MqttTestClassBase{T}"/> to initialize the necessary 
+        /// This constructor sets up the MQTT messaging gateway test environment by configuring the client ID, topic prefix,
+        /// and test output helper. It leverages the base class <see cref="MqttTestClassBase{T}"/> to initialize the necessary
         /// MQTT configurations and logging mechanisms.
         /// </remarks>
         public MqttMessageProducerSendMessageTestsAsync(ITestOutputHelper testOutputHelper)

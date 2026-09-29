@@ -33,13 +33,13 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
                     ReplicationFactor = 1,
-                    //These timeouts support running on a container using the same host as the tests, 
+                    //These timeouts support running on a container using the same host as the tests,
                     //your production values ought to be lower
                     MessageTimeoutMs = 2000,
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).Create();
+            ], loggerFactory: Initializer.TestLoggerFactory).Create();
     }
 
     //[Fact(Skip = "Fragile as commit thread needs to be scheduled to run")]
@@ -143,7 +143,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.Tests"),

@@ -21,7 +21,7 @@ public class ScopedMapperPerPostTests
         TransformPipelineBuilder.ClearPipelineCache();
 
         var recorder = new ConstructionOrderRecorder();
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddSingleton(recorder);
         collection.AddScoped<PostedMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions
@@ -40,7 +40,7 @@ public class ScopedMapperPerPostTests
         var internalBus = new InternalBus();
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(internalBus, new Publication { Topic = routingKey, RequestType = typeof(PostedCommand) }) }
+            { routingKey, new InMemoryMessageProducer(internalBus,Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(PostedCommand) }) }
         });
 
         var timeProvider = new FakeTimeProvider();
@@ -55,7 +55,7 @@ public class ScopedMapperPerPostTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+Initializer.Factory,            new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         var commandProcessor = new CommandProcessor(
@@ -63,8 +63,8 @@ public class ScopedMapperPerPostTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.Factory)
+        , loggerFactory: Initializer.Factory);
 
         //act — Post(commandA) completes, then Post(commandB) is called
         commandProcessor.Post(new PostedCommand());

@@ -57,7 +57,7 @@ public class TrippedTopicSignalsLockCollisionGapTests
         var timeProvider = new FakeTimeProvider();
         var mediator = new SwitchableOutboxProducerMediator();
         var switchableLock = new SwitchableDistributedLock();
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(new RoutingKey("orders"));
         var services = SweeperContainer.Create(switchableLock, timeProvider, useOutboxSweeper: true,
             configureSweeper: options => options.TimerInterval = 10);

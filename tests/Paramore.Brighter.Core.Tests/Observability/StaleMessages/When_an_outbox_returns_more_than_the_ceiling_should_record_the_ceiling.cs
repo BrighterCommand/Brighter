@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -93,7 +93,7 @@ public class OutboxAboveTheCeilingTests
     }
 
     private static InMemoryMessageProducer Producer(string topic) =>
-        new(new InternalBus(), new Publication { Topic = new RoutingKey(topic) });
+        new InMemoryMessageProducer(new InternalBus(), publication: new Publication { Topic = new RoutingKey(topic) }, loggerFactory: Initializer.TestLoggerFactory);
 
     private void WaitUntilTheMonitorWaits(OutboxStaleMessageReadings readings)
     {

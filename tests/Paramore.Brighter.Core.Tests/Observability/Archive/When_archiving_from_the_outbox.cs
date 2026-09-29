@@ -44,7 +44,7 @@ public class ExternalServiceBusArchiveObservabilityTests
 
 
         var type = new CloudEventsType("io.goparamore.brighter.myevent");
-        
+
         _publication = new Publication
         {
             Source = new Uri("http://localhost"),
@@ -53,7 +53,7 @@ public class ExternalServiceBusArchiveObservabilityTests
             Type = type,
         };
 
-        var producer = new InMemoryMessageProducer(internalBus, _publication);
+        var producer = new InMemoryMessageProducer(internalBus, Initializer.TestLoggerFactory, _publication);
 
         var producerRegistry =
             new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer> { { new ProducerKey(_routingKey, type), producer } });
@@ -73,7 +73,7 @@ public class ExternalServiceBusArchiveObservabilityTests
             new EmptyMessageTransformerFactoryAsync(),
             _tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox,
+            Initializer.TestLoggerFactory, _outbox,
             timeProvider:_timeProvider);
     }
 
@@ -84,29 +84,29 @@ public class ExternalServiceBusArchiveObservabilityTests
     public void When_archiving_from_the_outbox(InstrumentationOptions instrumentationOptions)
     {
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
-        
+
         var context = new RequestContext { Span = parentActivity };
 
         //add and clear message
         var myEvent = new MyEvent();
         var myMessage = new MyEventMessageMapper().MapToMessage(myEvent, _publication);
-        _bus.AddToOutbox(myMessage, context); 
+        _bus.AddToOutbox(myMessage, context);
         _bus.ClearOutbox([myMessage.Id], context);
-        
+
         //we should have an entry in the outbox
         Assert.Equal(1, _outbox.EntryCount);
-        
+
         //allow time to pass
-        _timeProvider.Advance(TimeSpan.FromSeconds(300)); 
-        
+        _timeProvider.Advance(TimeSpan.FromSeconds(300));
+
         //archive
         var dispatchedSince = TimeSpan.FromSeconds(100);
         var archiveProvider = new InMemoryArchiveProvider();
 
         var archiver = new OutboxArchiver<Message, CommittableTransaction>(_outbox, archiveProvider, tracer: _tracer,
-            instrumentationOptions: instrumentationOptions);
+            instrumentationOptions: instrumentationOptions, loggerFactory: Initializer.TestLoggerFactory);
         archiver.Archive(dispatchedSince, context);
-        
+
         //should be no messages in the outbox
         Assert.Equal(0, _outbox.EntryCount);
 
@@ -171,6 +171,6 @@ public class ExternalServiceBusArchiveObservabilityTests
         Assert.True(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable));
         Assert.True(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName()));
         Assert.True(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.OutboxDbName));
-        
+
     }
 }

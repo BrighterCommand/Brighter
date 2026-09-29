@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var third = new RecordingHandler("Third");
             factory.ThrowFor(first);
 
-            var lifetimeScope = new HandlerLifetimeScope(factory, scopeHandle);
+            var lifetimeScope = new HandlerLifetimeScope(factory,Initializer.TestLoggerFactory, scopeHandle);
             lifetimeScope.Add(first);
             lifetimeScope.Add(second);
             lifetimeScope.Add(third);

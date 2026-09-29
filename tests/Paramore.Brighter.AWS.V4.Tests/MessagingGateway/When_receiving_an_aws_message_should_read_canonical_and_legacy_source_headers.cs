@@ -25,6 +25,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -140,6 +142,7 @@ public class AwsCloudEventSourceReaderTests
 
             await sqs.SendMessageAsync(request, timeout.Token);
             await using var consumer = new SqsMessageConsumer(connection, queueUrl,
+                loggerFactory: NullLoggerFactory.Instance,
                 makeChannels: OnMissingChannel.Assume, isQueueUrl: true, rawMessageDelivery: rawDelivery);
 
             //Act

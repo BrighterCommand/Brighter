@@ -24,35 +24,35 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         public MessagePumpCommandRequeueTestsAsync()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
-            ChannelAsync channel = new(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)), 2);
-           
+            ChannelAsync channel = new(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory), 2);
+
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
              messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
-             
+
              _messagePump = new ServiceActivator.Proactor(_commandProcessor, (message) => typeof(MyCommand),
-                     messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel) 
+                     messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory)
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = -1 };
 
             var message1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
             );
-            
+
             var message2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
             );
-            
+
             channel.Enqueue(message1);
             channel.Enqueue(message2);
             var quitMessage = new Message(
-                new MessageHeader(string.Empty, RoutingKey.Empty, MessageType.MT_QUIT), 
+                new MessageHeader(string.Empty, RoutingKey.Empty, MessageType.MT_QUIT),
                 new MessageBody("")
             );
             channel.Enqueue(quitMessage);
-            
+
         }
 
         [Fact]

@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 // Completes each enqueue only after the runner has finished that job and requested another.
 internal sealed class InMemoryRunnerCoordinatedJobChannel : IAmAJobChannel<WorkflowTestData>
 {
-    private readonly InMemoryJobChannel<WorkflowTestData> _inner = new();
+    private readonly InMemoryJobChannel<WorkflowTestData> _inner = new(Initializer.TestLoggerFactory);
     private TaskCompletionSource<bool>? _pendingCompletion;
     private TaskCompletionSource<bool>? _lastDequeuedCompletion;
 

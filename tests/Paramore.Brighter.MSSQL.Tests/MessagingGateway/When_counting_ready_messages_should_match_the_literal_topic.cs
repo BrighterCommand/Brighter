@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
@@ -42,7 +44,7 @@ public class MsSqlMessageQueueTopicMatchingTests : IDisposable
         var testHelper = new MsSqlTestHelper();
         testHelper.SetupQueueDb();
         _configuration = testHelper.QueueConfiguration;
-        _queue = new MsSqlMessageQueue<string>(_configuration, new MsSqlConnectionProvider(_configuration));
+        _queue = new MsSqlMessageQueue<string>(_configuration, new MsSqlConnectionProvider(_configuration), loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Theory]

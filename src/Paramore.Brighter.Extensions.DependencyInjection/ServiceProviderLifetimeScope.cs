@@ -30,7 +30,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -41,7 +40,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// </summary>
     internal sealed partial class ServiceProviderLifetimeScope : IDisposable, IAsyncDisposable
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ServiceProviderLifetimeScope>();
+        private readonly ILogger _logger;
+
+        internal ILogger Logger => _logger;
 
         private readonly IServiceProvider _serviceProvider;
         private readonly ServiceLifetime _lifetime;
@@ -86,19 +87,21 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="serviceProvider">The .NET IoC container</param>
         /// <param name="lifetime">The lifetime for created objects</param>
+        /// <param name="logger">The lifetime logger created by the owning factory.</param>
         /// <param name="isolateTransientScopes">
         /// When <c>true</c> (default) each Transient resolution gets its own <see cref="IServiceScope"/>,
         /// released independently; when <c>false</c> every Transient resolution shares one scope that is
         /// disposed with this lifetime scope (the pre-#4254 handler behaviour).
         /// </param>
-        public ServiceProviderLifetimeScope(IServiceProvider serviceProvider, ServiceLifetime lifetime, bool isolateTransientScopes = true)
-            : this(serviceProvider, lifetime, isolateTransientScopes, borrowed: false, ambientProviderType: null)
+        public ServiceProviderLifetimeScope(IServiceProvider serviceProvider, ServiceLifetime lifetime, ILogger logger, bool isolateTransientScopes = true)
+            : this(serviceProvider, lifetime, isolateTransientScopes, borrowed: false, ambientProviderType: null, logger)
         {
         }
 
-        private ServiceProviderLifetimeScope(IServiceProvider serviceProvider, ServiceLifetime lifetime, bool isolateTransientScopes, bool borrowed, Type? ambientProviderType)
+        private ServiceProviderLifetimeScope(IServiceProvider serviceProvider, ServiceLifetime lifetime, bool isolateTransientScopes, bool borrowed, Type? ambientProviderType, ILogger logger)
         {
             _serviceProvider = serviceProvider;
+            _logger = logger;
             _lifetime = lifetime;
             _isolateTransientScopes = isolateTransientScopes;
             _borrowed = borrowed;
@@ -118,8 +121,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// offered this ambient, named in the <see cref="ConfigurationException"/>
         /// <see cref="ServiceProviderPipelineScope"/> translates an <see cref="ObjectDisposedException"/>
         /// into if the ambient's owner disposes it while a pipeline is still resolving from it.</param>
-        internal static ServiceProviderLifetimeScope CreateBorrowed(IServiceProvider borrowedProvider, Type ambientProviderType) =>
-            new(borrowedProvider, ServiceLifetime.Scoped, isolateTransientScopes: true, borrowed: true, ambientProviderType);
+        /// <param name="loggerFactory">The owning container's logger factory, resolved without accessing the borrowed ambient.</param>
+        internal static ServiceProviderLifetimeScope CreateBorrowed(IServiceProvider borrowedProvider, Type ambientProviderType, ILoggerFactory loggerFactory) =>
+            new(borrowedProvider, ServiceLifetime.Scoped, isolateTransientScopes: true, borrowed: true, ambientProviderType, loggerFactory.CreateBrighterLogger<ServiceProviderLifetimeScope>());
 
         /// <summary>
         /// Gets the configured lifetime for objects created by this scope
@@ -626,8 +630,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     //best-effort cleanup: a throw must not skip the remaining scopes, but it is logged
                     //(a repeated failure on this terminal teardown path means an unbounded leak) rather
                     //than swallowed silently, matching the other release paths in this change.
-                    try { DisposeScope(scope); }
-                    catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
+                    try
+                    { DisposeScope(scope); }
+                    catch (Exception e) { Log.FailedToDisposeScope(_logger, e); }
                 }
             }
             finally
@@ -639,8 +644,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 if (rootScope != null)
                 {
                     //logged for the same reason as the transient drain above — best-effort, but not silent
-                    try { DisposeScope(rootScope); }
-                    catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
+                    try
+                    { DisposeScope(rootScope); }
+                    catch (Exception e) { Log.FailedToDisposeScope(_logger, e); }
                 }
                 //claim _ownedFallbackCache with the same atomic exchange ResolveOwnedArtefactCache
                 //reclaims it with, so a resolution publishing concurrently with this Dispose is disposed
@@ -669,7 +675,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     if (!_outstandingScopes.TryRemove(scope, out _))
                         continue;
                     try { await DisposeScopeAsync(scope).ConfigureAwait(false); }
-                    catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
+                    catch (Exception e) { Log.FailedToDisposeScope(_logger, e); }
                 }
             }
             finally
@@ -678,7 +684,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 if (rootScope != null)
                 {
                     try { await DisposeScopeAsync(rootScope).ConfigureAwait(false); }
-                    catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
+                    catch (Exception e) { Log.FailedToDisposeScope(_logger, e); }
                 }
                 Interlocked.Exchange(ref _ownedFallbackCache, null)?.Dispose();
             }

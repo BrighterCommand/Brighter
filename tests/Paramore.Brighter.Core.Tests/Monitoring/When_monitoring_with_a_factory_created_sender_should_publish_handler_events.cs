@@ -55,12 +55,12 @@ public class MonitorControlBusSenderTests
         var bus = new InternalBus();
         var topic = new RoutingKey("monitoring.events");
         using var producer = new InMemoryMessageProducer(bus,
-            new Publication { Topic = topic, RequestType = typeof(MonitorEvent) });
+            publication: new Publication { Topic = topic, RequestType = typeof(MonitorEvent) }, loggerFactory: Initializer.TestLoggerFactory);
         using var producers = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
             { topic, producer }
         });
-        var sender = new ControlBusSenderFactory().Create<Message, CommittableTransaction>(
+        var sender = new ControlBusSenderFactory(Initializer.TestLoggerFactory).Create<Message, CommittableTransaction>(
             new InMemoryOutbox(TimeProvider.System), producers, new BrighterTracer());
         using var senderLifetime = Assert.IsAssignableFrom<IDisposable>(sender);
         var asyncSender = Assert.IsAssignableFrom<IAmAControlBusSenderAsync>(sender);
@@ -70,7 +70,7 @@ public class MonitorControlBusSenderTests
             subscribers.RegisterAsync<MyCommand, MyMonitoredHandlerAsync>();
         else
             subscribers.Register<MyCommand, MyMonitoredHandler>();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddTransient<MyMonitoredHandler>();
         services.AddTransient<MyMonitoredHandlerAsync>();
         services.AddTransient<MonitorHandler<MyCommand>>();
@@ -82,7 +82,7 @@ public class MonitorControlBusSenderTests
         using var provider = services.BuildServiceProvider();
         var processor = new CommandProcessor(subscribers, new ServiceProviderHandlerFactory(provider),
             new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),
-            new InMemorySchedulerFactory());
+            new InMemorySchedulerFactory(Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         var command = new MyCommand();
         var requestBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
         var handlerType = isAsync ? typeof(MyMonitoredHandlerAsync) : typeof(MyMonitoredHandler);

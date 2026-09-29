@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -48,7 +48,7 @@ public class When_scheduler_explicitly_configured_should_override_default
         RequestSchedulerType operation, bool isAsync, bool useDateTime)
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter().UseScheduler(new StubSchedulerFactory());
         await using var provider = services.BuildServiceProvider();
         var processor = provider.GetRequiredService<IAmACommandProcessor>();
@@ -86,7 +86,7 @@ public class When_scheduler_explicitly_configured_should_override_default
         // Arrange — configure a custom scheduler factory via UseScheduler
         var customFactory = new StubSchedulerFactory();
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter()
             .UseScheduler(customFactory);
         var provider = services.BuildServiceProvider();
@@ -106,7 +106,7 @@ public class When_scheduler_explicitly_configured_should_override_default
         // Arrange — configure a custom scheduler factory via UseScheduler
         var customFactory = new StubSchedulerFactory();
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter()
             .UseScheduler(customFactory);
         var provider = services.BuildServiceProvider();
@@ -125,7 +125,7 @@ public class When_scheduler_explicitly_configured_should_override_default
         // Arrange — configure a custom scheduler factory via UseScheduler
         var customFactory = new StubSchedulerFactory();
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter()
             .UseScheduler(customFactory);
         var provider = services.BuildServiceProvider();

@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,10 +54,13 @@ var subscriptions = new Subscription[]
 
 var connection = new PostgresMessagingGatewayConnection(new RelationalDatabaseConfiguration("Host=localhost;Username=postgres;Password=password;Database=brightertests;"));
 
-builder.Services.AddConsumers(options =>
+builder.Services.AddConsumers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var options = new ConsumersOptions();
         options.Subscriptions = subscriptions;
-        options.DefaultChannelFactory = new PostgresChannelFactory(connection);
+        options.DefaultChannelFactory = new PostgresChannelFactory(connection, loggerFactory: loggerFactory);
+        return options;
     })
     .AutoFromAssemblies();
 

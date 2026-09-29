@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -68,7 +70,7 @@ public class KafkaMessageConsumerSweepCommitsHighestOffsetAsync : IAsyncDisposab
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).CreateAsync().Result;
+            ], loggerFactory: NullLoggerFactory.Instance).CreateAsync().Result;
 
         //Fake time lets us fire the sweeper deterministically, instead of waiting on a real clock
         _fakeTimeProvider = new FakeTimeProvider();
@@ -92,7 +94,7 @@ public class KafkaMessageConsumerSweepCommitsHighestOffsetAsync : IAsyncDisposab
                 {
                     Name = "Kafka Consumer Test",
                     BootStrapServers = ["localhost:9092"]
-                })
+                }, loggerFactory: NullLoggerFactory.Instance)
             .CreateAsync(subscription);
     }
 

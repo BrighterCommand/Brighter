@@ -24,19 +24,21 @@ THE SOFTWARE. */
 
 using System;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter;
 
 /// <summary>
 /// The <see cref="InMemoryScheduler"/> factory
 /// </summary>
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
 /// <remarks>
 /// Reuses one scheduler per command processor instance across message, synchronous request,
 /// and asynchronous request scheduling. Configure this factory before creating a scheduler;
 /// its settings are captured on first creation for each processor. Disposing a returned
 /// scheduler cancels all pending work for that processor in this factory.
 /// </remarks>
-public class InMemorySchedulerFactory : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
+public class InMemorySchedulerFactory(ILoggerFactory loggerFactory) : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
 {
     private readonly ConditionalWeakTable<IAmACommandProcessor, InMemoryScheduler> _schedulers = new();
 
@@ -44,12 +46,12 @@ public class InMemorySchedulerFactory : IAmAMessageSchedulerFactory, IAmARequest
     /// The <see cref="System.TimeProvider"/>.
     /// </summary>
     public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
-    
+
     /// <summary>
     /// Get or create a scheduler id for a message
     /// </summary>
     /// <remarks>
-    /// The default approach is generate a Guid 
+    /// The default approach is generate a Guid
     /// </remarks>
     public Func<Message, string> GetOrCreateMessageSchedulerId { get; set; } = _ => Id.Random().Value;
 
@@ -57,7 +59,7 @@ public class InMemorySchedulerFactory : IAmAMessageSchedulerFactory, IAmARequest
     /// Get or create  a scheduler id to a request
     /// </summary>
     /// <remarks>
-    /// The default approach is generate a Guid 
+    /// The default approach is generate a Guid
     /// </remarks>
     public Func<IRequest, string> GetOrCreateRequestSchedulerId { get; set; } = _ => Id.Random().Value;
 
@@ -65,9 +67,9 @@ public class InMemorySchedulerFactory : IAmAMessageSchedulerFactory, IAmARequest
     /// The action be executed on conflict during scheduler message
     /// </summary>
     public OnSchedulerConflict OnConflict { get; set; } = OnSchedulerConflict.Throw;
-    
+
     /// <inheritdoc />
-    public IAmAMessageScheduler Create(IAmACommandProcessor processor) 
+    public IAmAMessageScheduler Create(IAmACommandProcessor processor)
         => _schedulers.GetValue(processor, CreateScheduler);
 
     /// <inheritdoc />
@@ -79,6 +81,5 @@ public class InMemorySchedulerFactory : IAmAMessageSchedulerFactory, IAmARequest
         => _schedulers.GetValue(processor, CreateScheduler);
 
     private InMemoryScheduler CreateScheduler(IAmACommandProcessor processor)
-        => new InMemoryScheduler(processor, TimeProvider, GetOrCreateRequestSchedulerId, GetOrCreateMessageSchedulerId, OnConflict);
+        => new InMemoryScheduler(processor, TimeProvider, GetOrCreateRequestSchedulerId, GetOrCreateMessageSchedulerId, OnConflict, loggerFactory);
 }
- 

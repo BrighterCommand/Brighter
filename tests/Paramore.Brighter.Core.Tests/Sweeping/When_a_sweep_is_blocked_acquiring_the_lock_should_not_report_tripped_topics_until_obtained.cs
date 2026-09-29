@@ -57,7 +57,7 @@ public class SweepBlockedAcquiringTheLockTrippedTopicsTests
         //Arrange
         var timeProvider = new FakeTimeProvider();
         using var lockGate = new GatedDistributedLock().PassFirst(1);
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(new RoutingKey("orders"));
         using var mediator = new GatedOutboxProducerMediator().CompleteFirst(1);
         var services = SweeperContainer.Create(lockGate, timeProvider, useOutboxSweeper: true,

@@ -19,11 +19,11 @@ public class KafkaConfirmationBatchingTests : IDisposable
     public KafkaConfirmationBatchingTests()
     {
         _producerRegistry = new KafkaProducerRegistryFactory(
-            new KafkaMessagingGatewayConfiguration
-            {
-                Name = "Kafka Confirmation Ordering Test", BootStrapServers = new[] { "localhost:9092" }
-            },
-            [
+globalConfiguration: new KafkaMessagingGatewayConfiguration
+{
+    Name = "Kafka Confirmation Ordering Test",
+    BootStrapServers = new[] { "localhost:9092" }
+}, publications: [
                 new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
@@ -33,7 +33,7 @@ public class KafkaConfirmationBatchingTests : IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).Create();
+            ], loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
     }
 
     [Fact]

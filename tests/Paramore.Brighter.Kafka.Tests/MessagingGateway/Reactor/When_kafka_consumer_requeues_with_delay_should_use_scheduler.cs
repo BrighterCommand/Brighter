@@ -72,7 +72,7 @@ public class KafkaConsumerRequeueSchedulerTests : IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).Create();
+            ], loggerFactory: Initializer.TestLoggerFactory).Create();
 
         _scheduler = new SpySchedulerSync();
 
@@ -88,7 +88,7 @@ public class KafkaConsumerRequeueSchedulerTests : IDisposable
             numPartitions: 1,
             replicationFactor: 1,
             makeChannels: OnMissingChannel.Create,
-            scheduler: _scheduler);
+            scheduler: _scheduler, loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

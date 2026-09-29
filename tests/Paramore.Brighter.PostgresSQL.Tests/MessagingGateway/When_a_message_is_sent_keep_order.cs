@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -20,7 +22,7 @@ public class OrderTest : IAsyncDisposable, IDisposable
     {
         var testHelper = new PostgresSqlTestHelper();
         testHelper.SetupDatabase();
-            
+
         var routingKey = new RoutingKey(_topicName);
 
         var sub = new PostgresSubscription<MyCommand>(
@@ -30,16 +32,16 @@ public class OrderTest : IAsyncDisposable, IDisposable
 
         _producerRegistry = new PostgresProducerRegistryFactory(
             new PostgresMessagingGatewayConnection(testHelper.Configuration),
-            [new PostgresPublication { Topic = routingKey }]
-        ).Create();
-            
-        _consumer = new PostgresConsumerFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration)).Create(sub);
+            [new PostgresPublication { Topic = routingKey }],
+            loggerFactory: NullLoggerFactory.Instance).Create();
+
+        _consumer = new PostgresConsumerFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration), loggerFactory: NullLoggerFactory.Instance).Create(sub);
     }
 
     [Fact]
     public void When_a_message_is_sent_keep_order()
     {
-        //Send a sequence of messages to postgres 
+        //Send a sequence of messages to postgres
         var msgId = SendMessage();
         var msgId2 = SendMessage();
         var msgId3 = SendMessage();

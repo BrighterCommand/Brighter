@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -67,7 +69,7 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
             realMigrations, BrokenVersion, BrokenUpScript);
         var brokenCatalog = new BrokenChainCatalog(brokenMigrations, realCatalog.FreshInstallDdl(config));
 
-        var brokenRunner = new PostgreSqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30));
+        var brokenRunner = new PostgreSqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
         //Act + Assert
@@ -84,13 +86,13 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
         Assert.Equal(1, await GetMarkerRowCount());
 
         //Act
-        var realRunner = new PostgreSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
+        var realRunner = new PostgreSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            realRunner);
+            realRunner, loggerFactory: NullLoggerFactory.Instance);
         await provisioner.ProvisionAsync();
 
         //Assert

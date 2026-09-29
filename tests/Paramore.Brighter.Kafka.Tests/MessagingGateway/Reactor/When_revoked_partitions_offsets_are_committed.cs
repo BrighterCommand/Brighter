@@ -42,7 +42,7 @@ public class KafkaMessageConsumerCommitOnRevoke : IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).Create();
+            ], loggerFactory: Initializer.TestLoggerFactory).Create();
     }
 
     /// <summary>
@@ -188,7 +188,7 @@ public class KafkaMessageConsumerCommitOnRevoke : IDisposable
                 {
                     Name = "Kafka Consumer Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(new KafkaSubscription<MyCommand>(
                 channelName: new ChannelName(_queueName),
                 routingKey: new RoutingKey(_topic),

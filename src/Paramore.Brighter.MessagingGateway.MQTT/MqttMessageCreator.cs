@@ -2,7 +2,6 @@ using System;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
 {
@@ -17,7 +16,6 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// </remarks>
     public static partial class MqttMessageCreator
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MqttMessageConsumer>();
 
         /// <summary>
         /// Turns an arriving MQTT payload into a <see cref="Message"/>, or reports that it could
@@ -47,8 +45,9 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// </remarks>
         /// <param name="payload">The raw bytes MQTTnet delivered.</param>
         /// <param name="topicPrefix">The topic the payload arrived on, for the log entry.</param>
+        /// <param name="logger">The logger for malformed payloads.</param>
         /// <returns>The message, or <c>null</c> when the payload could not be read.</returns>
-        public static Message? CreateMessage(byte[] payload, object? topicPrefix)
+        public static Message? CreateMessage(byte[] payload, object? topicPrefix, ILogger logger)
         {
             try
             {
@@ -57,14 +56,14 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
                 if (message is null)
                 {
-                    Log.MqttMessageConsumerDroppedUnreadablePayload(s_logger, topicPrefix);
+                    Log.MqttMessageConsumerDroppedUnreadablePayload(logger, topicPrefix);
                 }
 
                 return message;
             }
             catch (Exception ex)
             {
-                Log.MqttMessageConsumerDroppedMalformedPayload(s_logger, ex, topicPrefix);
+                Log.MqttMessageConsumerDroppedMalformedPayload(logger, ex, topicPrefix);
                 return null;
             }
         }

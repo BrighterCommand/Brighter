@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -29,7 +31,7 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
 
                 var tracer = new BrighterTracer();
                 var topic = new RoutingKey("cooling.down.topic");
-                var circuitBreaker = new InMemoryOutboxCircuitBreaker(
+                var circuitBreaker = new InMemoryOutboxCircuitBreaker(LoggerFactoryExtensions.CreateLogger<Paramore.Brighter.CircuitBreaker.InMemoryOutboxCircuitBreaker>( Initializer.TestLoggerFactory ),
                     new OutboxCircuitBreakerOptions { CooldownCount = 1 },
                     tracer);
                 circuitBreaker.TripTopic(topic);

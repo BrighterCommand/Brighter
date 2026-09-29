@@ -39,14 +39,14 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 
         public ChannelMessageReceiveTests()
         {
-            IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, _fakeTimeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000));
+            IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, _fakeTimeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory);
 
             _channel = new Channel(new(ChannelName),new(_routingKey), gateway);
 
             _sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("a test body"));
-            
+
             _bus.Enqueue(_sentMessage);
         }
 
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         {
             var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
             _channel.Acknowledge(receivedMessage);
-            
+
             Assert.NotNull(receivedMessage);
             Assert.Equal(_sentMessage, receivedMessage);
         }

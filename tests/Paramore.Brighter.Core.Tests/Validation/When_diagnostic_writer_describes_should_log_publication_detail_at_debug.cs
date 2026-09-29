@@ -38,7 +38,7 @@ public class PipelineDiagnosticWriterPublicationDetailTests
         // Arrange — one publication with a custom mapper that has a wrap transform
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyPublicSyncHandler));
-        var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
+        var pipelineBuilder = new PipelineBuilder<IRequest>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(

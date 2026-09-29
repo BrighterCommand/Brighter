@@ -23,7 +23,7 @@ namespace Paramore.Brighter.PostgreSql
         /// connections; Brighter will not manage type mapping for you in this case so you must register them
         /// globally</param>
         public PostgreSqlTransactionProvider(
-            IAmARelationalDatabaseConfiguration configuration,
+            IAmARelationalDatabaseConfiguration? configuration,
             NpgsqlDataSource? dataSource = null)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
@@ -59,13 +59,13 @@ namespace Paramore.Brighter.PostgreSql
 
         /// <summary>
         /// Gets a existing Connection; creates a new one if it does not exist
-        /// This is a shared connection and you should manage it via this interface 
+        /// This is a shared connection and you should manage it via this interface
         /// </summary>
         /// <returns>A database connection</returns>
         public override DbConnection GetConnection()
         {
             if (Connection == null && HasDataSource()) Connection = _dataSource!.CreateConnection();
-            
+
             if (Connection == null) Connection = new NpgsqlConnection(_connectionString);
             if (Connection.State != ConnectionState.Open) Connection.Open();
             return Connection;
@@ -73,13 +73,13 @@ namespace Paramore.Brighter.PostgreSql
 
         /// <summary>
         /// Gets a existing Connection; creates a new one if it does not exist
-        /// This is a shared connection and you should manage it via this interface 
+        /// This is a shared connection and you should manage it via this interface
         /// </summary>
         /// <returns>A database connection</returns>
         public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
             if (Connection == null && HasDataSource()) Connection = _dataSource!.CreateConnection();
-            
+
             if (Connection == null) Connection = new NpgsqlConnection(_connectionString);
             if (Connection.State != ConnectionState.Open) await Connection.OpenAsync(cancellationToken);
             return Connection;

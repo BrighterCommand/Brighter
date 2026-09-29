@@ -37,7 +37,7 @@ public class RmqAutoRecoveryConfirmationTests : IDisposable
 
         _messageProducer = new CoalescingConfirmsRmqProducer(rmqConnection);
         _connectionFactory = new ConnectionFactory { Uri = rmqConnection.AmpqUri.Uri };
-        _connectionPool = new RmqMessageGatewayConnectionPool(_connectionName, rmqConnection.Heartbeat);
+        _connectionPool = new RmqMessageGatewayConnectionPool(connectionName: _connectionName, connectionHeartbeat: rmqConnection.Heartbeat, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //we need a queue to avoid a discard
         new QueueFactory(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), new RoutingKeys(_routingKey))

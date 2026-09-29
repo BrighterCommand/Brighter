@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
-public class MediatorTwoStepFlowTests 
+public class MediatorTwoStepFlowTests
 {
     private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
@@ -23,48 +23,48 @@ public class MediatorTwoStepFlowTests
         _testOutputHelper = testOutputHelper;
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
-        
+
         CommandProcessor commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor));
 
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
-        PipelineBuilder<MyCommand>.ClearPipelineCache();    
-        
-        var workflowData= new WorkflowTestData();
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
+        PipelineBuilder<MyCommand>.ClearPipelineCache();
+
+        var workflowData = new WorkflowTestData();
         workflowData.Bag["MyValue"] = "Test";
-        
-        _job = new Job<WorkflowTestData>(workflowData) ;
-        
+
+        _job = new Job<WorkflowTestData>(workflowData);
+
         var secondStep = new Sequential<WorkflowTestData>(
             "Test of Job Two",
-            new FireAndForgetAsync<MyCommand, WorkflowTestData>((data) => 
+            new FireAndForgetAsync<MyCommand, WorkflowTestData>((data) =>
                 new MyCommand { Value = (data.Bag["MyValue"] as string)! }),
             () => { _stepsCompleted = true; },
-            null
-            );
-        
+            null,
+            loggerFactory: Initializer.TestLoggerFactory);
+
         var firstStep = new Sequential<WorkflowTestData>(
             "Test of Job One",
-            new FireAndForgetAsync<MyCommand, WorkflowTestData>((data) => 
+            new FireAndForgetAsync<MyCommand, WorkflowTestData>((data) =>
                 new MyCommand { Value = (data.Bag["MyValue"] as string)! }),
-            () => { workflowData.Bag["MyValue"] = "TestTwo"; }, 
-            secondStep
-            );
-        
-        _job.InitSteps(firstStep); 
-        
-        InMemoryStateStoreAsync store = new();
-        _channel = new InMemoryJobChannel<WorkflowTestData>();
+            () => { workflowData.Bag["MyValue"] = "TestTwo"; },
+            secondStep,
+            loggerFactory: Initializer.TestLoggerFactory);
+
+        _job.InitSteps(firstStep);
+
+        InMemoryStateStoreAsync store = new(loggerFactory: Initializer.TestLoggerFactory);
+        _channel = new InMemoryJobChannel<WorkflowTestData>(loggerFactory: Initializer.TestLoggerFactory);
 
         _scheduler = new Scheduler<WorkflowTestData>(
             _channel,
             store
         );
 
-        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler);
+        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler, loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact]
     public async Task When_running_a_two_step_workflow()
     {

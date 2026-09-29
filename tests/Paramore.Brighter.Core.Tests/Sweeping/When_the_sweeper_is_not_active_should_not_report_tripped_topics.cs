@@ -97,7 +97,7 @@ public class When_the_sweeper_is_not_active_should_not_report_tripped_topics_tes
         //Arrange
         var marker = $"inactive-breaker-{Guid.NewGuid():N}";
         var state = new OutboxSweeperState(new FakeTimeProvider());
-        var check = new OutboxSweeperInvestigateHealthCheck(state, new TimedOutboxSweeperOptions(), () => new ThrowingOutboxCircuitBreaker(marker), 3);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: state, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => new ThrowingOutboxCircuitBreaker(marker), failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
 
         //Act
         HealthCheckResult result = default;
@@ -112,9 +112,9 @@ public class When_the_sweeper_is_not_active_should_not_report_tripped_topics_tes
 
     private static async Task<HealthCheckResult> CheckWithOrdersTripped(OutboxSweeperState state)
     {
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(new RoutingKey("orders"));
-        var check = new OutboxSweeperInvestigateHealthCheck(state, new TimedOutboxSweeperOptions(), () => breaker, 3);
+        var check = new OutboxSweeperInvestigateHealthCheck(state: state, options: new TimedOutboxSweeperOptions(), findCircuitBreaker: () => breaker, failureThreshold: 3, loggerFactory: Initializer.TestLoggerFactory);
         return await check.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
     }
 

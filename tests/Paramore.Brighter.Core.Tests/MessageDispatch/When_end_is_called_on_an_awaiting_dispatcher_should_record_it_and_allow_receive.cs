@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -61,7 +61,7 @@ public class DispatcherEndRequestedTests
                 timeOut: TimeSpan.FromMilliseconds(10),
                 emptyChannelDelay: TimeSpan.FromMilliseconds(10))
         ];
-        using var dispatcher = new Dispatcher(new SpyCommandProcessor(), subscriptions, registry, registry);
+        using var dispatcher = new Dispatcher(commandProcessor: new SpyCommandProcessor(), subscriptions: subscriptions, messageMapperRegistry: registry, messageMapperRegistryAsync: registry, loggerFactory: Initializer.TestLoggerFactory);
 
         try
         {

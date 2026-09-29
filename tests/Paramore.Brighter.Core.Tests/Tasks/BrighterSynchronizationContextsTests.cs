@@ -1,4 +1,4 @@
-﻿#region Sources
+#region Sources
 
 // This class is based on Stephen Cleary's AyncContext, see <a href="https://github.com/StephenCleary/AsyncEx/blob/db32fd5db0d1051e867b36ae039ea13d2c36eb91/test/AsyncEx.Context.UnitTests/AsyncContextUnitTests.cs#L144-L149
 // Used to test that BrighterSynchronizationHelper which is derived, passes the same tests as AsyncContext
@@ -120,7 +120,7 @@ public class BrighterSynchronizationContextsTests
         Assert.True(resumed);
         Assert.Equal(17, result);
     }
-    
+
     [Fact]
     public void Run_AsyncTaskWithResultAndConfigurateAwait_BlockingCode_Still_Ends()
     {
@@ -176,7 +176,7 @@ public class BrighterSynchronizationContextsTests
     }
 
     private static bool s_runnerCalled = false;
-    
+
     static void MessagePublishedHandler(bool called, int value)
     {
         Assert.Equal(17, value);
@@ -198,7 +198,7 @@ public class BrighterSynchronizationContextsTests
              Task.Run(() => OnMessagePublished?.Invoke(true, value));
         }
     }
-    
+
     [Fact]
     public void Current_WithoutAsyncContext_IsNull()
     {
@@ -221,7 +221,7 @@ public class BrighterSynchronizationContextsTests
 
         Assert.Equal(helper, observedHelper);
     }
-    
+
     [Fact]
     public async Task Run_AsyncTaskWithResult_ContainsMultipleAsyncTasks_Still_Ends2()
     {
@@ -232,7 +232,7 @@ public class BrighterSynchronizationContextsTests
             resumed = true;
             return 17;
         }));
-        
+
         await Task.Delay(100);
 
         var result =await Task.WhenAll(newTask);
@@ -241,7 +241,7 @@ public class BrighterSynchronizationContextsTests
         Assert.Equal(17, result[0]);
     }
 
-    [Fact]                 
+    [Fact]
     public void SynchronizationContextCurrent_FromBrighterSynchronizationHelper_IsBrighterSynchronizationHelperSynchronizationContext()
     {
         System.Threading.SynchronizationContext? observedContext = null;
@@ -436,7 +436,7 @@ public class BrighterSynchronizationContextsTests
 
         Assert.True(threadPoolExceptionRan);
     }
-    
+
     [Fact]
     public void SynchronizationContext_IsEqualToCopyOfItself()
     {

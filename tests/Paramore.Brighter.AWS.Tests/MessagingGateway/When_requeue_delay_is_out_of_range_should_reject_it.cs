@@ -63,7 +63,7 @@ public class SqsRequeueDelayValidationTests
                 config.Timeout = TimeSpan.FromSeconds(1);
             });
         using var consumer = new SqsMessageConsumer(
-            connection, "http://127.0.0.1:1/000000000000/unused", isQueueUrl: true);
+awsConnection: connection, queueName: "http://127.0.0.1:1/000000000000/unused", isQueueUrl: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var message = new Message();
         message.Header.Bag["ReceiptHandle"] = "receipt";
 

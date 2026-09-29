@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -105,7 +105,7 @@ public class BothGaugesWorkedExampleTests
     }
 
     private static InMemoryMessageProducer Producer(string topic, TimeSpan? staleMessageAge) =>
-        new(new InternalBus(), new Publication { Topic = new RoutingKey(topic), StaleMessageAge = staleMessageAge });
+        new InMemoryMessageProducer(new InternalBus(), publication: new Publication { Topic = new RoutingKey(topic), StaleMessageAge = staleMessageAge }, loggerFactory: Initializer.TestLoggerFactory);
 
     private static Message Event(string topic) =>
         new(new MessageHeader(Id.Random(), new RoutingKey(topic), MessageType.MT_EVENT), new MessageBody("{}"));

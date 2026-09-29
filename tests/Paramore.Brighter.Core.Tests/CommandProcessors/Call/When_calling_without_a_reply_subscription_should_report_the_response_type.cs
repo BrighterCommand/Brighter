@@ -44,7 +44,7 @@ public class CommandProcessorMissingReplySubscriptionTests
             new InMemoryRequestContextFactory(),
             new DefaultPolicy(),
             new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
-            new InMemorySchedulerFactory());
+new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),loggerFactory:Initializer.TestLoggerFactory);
 
         //Act
         var exception = Assert.Throws<InvalidOperationException>(() =>

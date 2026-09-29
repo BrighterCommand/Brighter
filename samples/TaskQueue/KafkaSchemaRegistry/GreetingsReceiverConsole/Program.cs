@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
@@ -56,20 +57,24 @@ var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:80
 var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
 builder.Services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
 
-builder.Services.AddConsumers(options =>
+builder.Services.AddConsumers(provider =>
 {
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    var options = new ConsumersOptions();
     options.Subscriptions = subscriptions;
     options.DefaultChannelFactory = new ChannelFactory(
         new KafkaMessageConsumerFactory(
             new KafkaMessagingGatewayConfiguration
             {
-                Name = "paramore.brighter", BootStrapServers = ["localhost:9092"]
-            }
-        ));
+                Name = "paramore.brighter",
+                BootStrapServers = ["localhost:9092"]
+            },
+            loggerFactory: loggerFactory));
+    return options;
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-.UseScheduler(new InMemorySchedulerFactory())
+.UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
 .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

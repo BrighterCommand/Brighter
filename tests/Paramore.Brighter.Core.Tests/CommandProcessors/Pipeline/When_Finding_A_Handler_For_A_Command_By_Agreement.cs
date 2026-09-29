@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             );
             var handlerFactory = new SimpleHandlerFactorySync(factoryMethod: _ => new MyCommandHandler(new Dictionary<string, string>()));
 
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(subscriberRegistry: registry, syncHandlerFactory: handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(subscriberRegistry: registry, syncHandlerFactory: handlerFactory, loggerFactory: Initializer.TestLoggerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 

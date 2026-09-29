@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -41,43 +43,43 @@ public class RmqMessageProducerDLQTests : IDisposable
     public RmqMessageProducerDLQTests()
     {
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
-            
+
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
-                MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey,
+                MessageType.MT_COMMAND),
             new MessageBody("test content"));
 
         var queueName = new ChannelName(Guid.NewGuid().ToString());
         var deadLetterQueueName = new ChannelName($"{_message.Header.Topic}.DLQ");
         var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
-            
+
         var rmqConnection = new RmqMessagingGatewayConnection
         {
             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
             Exchange = new Exchange("paramore.brighter.exchange"),
             DeadLetterExchange = new Exchange("paramore.brighter.exchange.dlq")
         };
-            
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
 
         _messageConsumer = new RmqMessageConsumer(
-            connection: rmqConnection, 
-            queueName: queueName, 
-            routingKey: routingKey, 
-            isDurable: true, 
+            connection: rmqConnection,
+            queueName: queueName,
+            routingKey: routingKey,
+            isDurable: true,
             highAvailability: false,
             deadLetterQueueName: deadLetterQueueName,
             deadLetterRoutingKey: deadLetterRoutingKey,
-            makeChannels:OnMissingChannel.Create
-        );
+            makeChannels:OnMissingChannel.Create,
+            loggerFactory: NullLoggerFactory.Instance);
 
         _deadLetterConsumer = new RmqMessageConsumer(
             connection: rmqConnection,
             queueName: deadLetterQueueName,
             routingKey: deadLetterRoutingKey,
             isDurable: true,
-            makeChannels:OnMissingChannel.Assume
-        );
+            makeChannels:OnMissingChannel.Assume,
+            loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact(Skip = "Breaks due to fault in Task Scheduler running after context has closed")]
@@ -85,17 +87,17 @@ public class RmqMessageProducerDLQTests : IDisposable
     public void When_rejecting_a_message_to_a_dead_letter_queue()
     {
         //create the infrastructure
-        _messageConsumer.Receive(TimeSpan.FromMilliseconds(0)); 
+        _messageConsumer.Receive(TimeSpan.FromMilliseconds(0));
 
         _messageProducer.Send(_message);
 
-        var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
-            
+        var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
+
         //This will push onto the DLQ
         _messageConsumer.Reject(message);
 
         var dlqMessage = _deadLetterConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
-            
+
         //assert this is our message
         Assert.Equal(_message.Id, dlqMessage.Id);
         Assert.Equal(dlqMessage.Body.Value, message.Body.Value);

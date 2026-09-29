@@ -43,7 +43,7 @@ public class PipelineValidatorBudgetOnlyWarningsTests
     {
         // Arrange — one subscription per budget rule; none of the three budget rules is an Error
         var registry = new SubscriberRegistry();
-        var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
+        var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistryInspector: registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         var subscriptions = new Subscription[]
@@ -101,7 +101,7 @@ public class PipelineValidatorBudgetOnlyWarningsTests
         // Arrange — requeueCount 0 trips R-7 (zero-budget: 0 != -1, 0 < 1) and R-11 (unenforceable:
         // 0 != -1, reason not null); NativeRedriveLimit null means R-10 passes vacuously
         var registry = new SubscriberRegistry();
-        var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
+        var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistryInspector: registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         var subscriptions = new Subscription[]

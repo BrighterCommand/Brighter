@@ -67,10 +67,8 @@ internal sealed class MsSqlMessageIdOutboxStore : IAsyncDisposable
     public Task ProvisionAsync()
     {
         var catalog = new MsSqlOutboxMigrationCatalog();
-        var runner = new MsSqlBoxMigrationRunner(catalog, Config, TimeSpan.FromSeconds(30),
-            scope: MigrationHistoryScope.PerSchema);
-        return new MsSqlOutboxProvisioner(new MsSqlBoxDetectionHelper(), catalog,
-            new MsSqlPayloadModeValidator(), Config, runner).ProvisionAsync();
+        var runner = new MsSqlBoxMigrationRunner(catalog: catalog, configuration: Config, lockTimeout: TimeSpan.FromSeconds(30), scope: MigrationHistoryScope.PerSchema, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        return new MsSqlOutboxProvisioner(detectionHelper: new MsSqlBoxDetectionHelper(), catalog: catalog, payloadValidator: new MsSqlPayloadModeValidator(), configuration: Config, migrationRunner: runner, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).ProvisionAsync();
     }
 
     public static Message Message(Id id, string body) => new(

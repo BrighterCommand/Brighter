@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Google.Api.Gax;
@@ -26,7 +28,7 @@ public class When_spanner_outbox_provisioner_finds_existing_table_without_histor
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             outBoxTableName: _tableName);
-        var runner = new SpannerBoxMigrationRunner(config);
+        var runner = new SpannerBoxMigrationRunner(config, loggerFactory: NullLoggerFactory.Instance);
         _provisioner = new SpannerOutboxProvisioner(
             new SpannerBoxDetectionHelper(),
             new SpannerPayloadModeValidator(),

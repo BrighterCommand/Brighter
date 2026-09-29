@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -45,10 +47,10 @@ public class GlobalInboxScopeCommandTests
         registry.Register<InboxScopeCommand, InboxScopeCommandHandler>();
         var factory = new SimpleHandlerFactorySync(type =>
             type == typeof(UseInboxHandler<InboxScopeCommand>)
-                ? new UseInboxHandler<InboxScopeCommand>(inbox)
+                ? new UseInboxHandler<InboxScopeCommand>(inbox, logger: LoggerFactoryExtensions.CreateLogger<UseInboxHandler<InboxScopeCommand>>( Initializer.TestLoggerFactory ))
                 : new InboxScopeCommandHandler());
         using var builder = new PipelineBuilder<InboxScopeCommand>(registry, factory,
-            new InboxConfiguration(inbox, scope, actionOnExists: OnceOnlyAction.Warn));
+Initializer.TestLoggerFactory,            new InboxConfiguration(inbox, scope, actionOnExists: OnceOnlyAction.Warn));
         var request = new InboxScopeCommand();
         var pipeline = builder.Build(request, new RequestContext()).Single();
 

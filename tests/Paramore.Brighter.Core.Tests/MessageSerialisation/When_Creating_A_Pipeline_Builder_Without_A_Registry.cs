@@ -11,15 +11,15 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
     {
          //arrange
           TransformPipelineBuilder.ClearPipelineCache();
-          
+
           var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransform()));
 
          //act
-         var exception = Catch.Exception(() => new TransformPipelineBuilder(null, messageTransformerFactory));
-         
+         var exception = Catch.Exception(() => new TransformPipelineBuilder(null, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory));
+
          //assert
          Assert.NotNull(exception);
          Assert.True((exception) is ConfigurationException);
-          
+
     }
 }

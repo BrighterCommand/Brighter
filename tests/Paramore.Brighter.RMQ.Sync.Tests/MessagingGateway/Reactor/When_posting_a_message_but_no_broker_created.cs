@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Xunit;
 
@@ -14,8 +16,8 @@ public class RmqBrokerNotPreCreatedTests : IDisposable
     public RmqBrokerNotPreCreatedTests()
     {
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
-                MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()),
+                MessageType.MT_COMMAND),
             new MessageBody("test content"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -24,10 +26,10 @@ public class RmqBrokerNotPreCreatedTests : IDisposable
             Exchange = new Exchange(Guid.NewGuid().ToString())
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate});
+        _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate}, loggerFactory: NullLoggerFactory.Instance);
 
     }
-        
+
     [Fact]
     public void When_posting_a_message_but_no_broker_created()
     {

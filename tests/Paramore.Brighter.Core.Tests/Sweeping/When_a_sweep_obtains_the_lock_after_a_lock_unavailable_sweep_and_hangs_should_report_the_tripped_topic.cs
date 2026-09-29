@@ -58,7 +58,7 @@ public class HungLockHolderAfterLockUnavailableSweepTests
         var switchableLock = new SwitchableDistributedLock();
         switchableLock.MakeUnavailable();
         var distributedLock = new CountingDistributedLock(switchableLock);
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(new RoutingKey("orders"));
         using var mediator = new GatedOutboxProducerMediator();
         var services = SweeperContainer.Create(distributedLock, timeProvider, useOutboxSweeper: true,

@@ -27,7 +27,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
@@ -37,7 +36,7 @@ namespace Paramore.Brighter
     /// </summary>
     public sealed partial class HandlerLifetimeScope : IAmALifetime
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<HandlerLifetimeScope>();
+        private readonly ILogger _logger;
 
         private readonly IAmAHandlerFactorySync? _handlerFactorySync;
         private readonly List<IHandleRequests> _trackedObjects = new List<IHandleRequests>();
@@ -48,22 +47,23 @@ namespace Paramore.Brighter
         //Interlocked.Exchange, making release run exactly once whichever of the three runs first
         private int _released;
 
-        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync, IAmAScope? pipelineScope = null)
-            : this(handlerFactorySync, null, pipelineScope)
+        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync, ILoggerFactory loggerFactory, IAmAScope? pipelineScope = null)
+            : this(handlerFactorySync, null, loggerFactory, pipelineScope)
         {}
 
-        public HandlerLifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory, IAmAScope? pipelineScope = null)
-            : this(null, asyncHandlerFactory, pipelineScope)
+        public HandlerLifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory, ILoggerFactory loggerFactory, IAmAScope? pipelineScope = null)
+            : this(null, asyncHandlerFactory, loggerFactory, pipelineScope)
         {}
 
         public HandlerLifetimeScope(
             IAmAHandlerFactorySync? handlerFactorySync,
             IAmAHandlerFactoryAsync? asyncHandlerFactory,
-            IAmAScope? pipelineScope = null)
+            ILoggerFactory loggerFactory, IAmAScope? pipelineScope = null)
         {
             _handlerFactorySync = handlerFactorySync;
             _asyncHandlerFactory = asyncHandlerFactory;
             _pipelineScope = pipelineScope;
+            _logger = loggerFactory.CreateBrighterLogger<HandlerLifetimeScope>();
         }
 
         public int TrackedItemCount => _trackedObjects.Count + _trackedAsyncObjects.Count;
@@ -75,7 +75,7 @@ namespace Paramore.Brighter
             if (_handlerFactorySync == null)
                 throw new ArgumentException("An instance of a handler can not be added without a HandlerFactory.");
             _trackedObjects.Add(instance);
-            Log.TrackingInstance(s_logger, instance.GetHashCode(), instance.GetType());
+            Log.TrackingInstance(_logger, instance.GetHashCode(), instance.GetType());
         }
 
         public void Add(IHandleRequestsAsync instance)
@@ -83,7 +83,7 @@ namespace Paramore.Brighter
             if (_asyncHandlerFactory == null)
                 throw new ArgumentException("An instance of an async handler can not be added without an AsyncHandlerFactory.");
             _trackedAsyncObjects.Add(instance);
-            Log.TrackingAsyncHandlerInstance(s_logger, instance.GetHashCode(), instance.GetType());
+            Log.TrackingAsyncHandlerInstance(_logger, instance.GetHashCode(), instance.GetType());
         }
 
         /// <summary>
@@ -126,7 +126,7 @@ namespace Paramore.Brighter
                 }
                 catch (Exception exception)
                 {
-                    Log.FailedToDisposePipelineScope(s_logger, exception);
+                    Log.FailedToDisposePipelineScope(_logger, exception);
                 }
             }
             finally
@@ -162,7 +162,7 @@ namespace Paramore.Brighter
             }
             catch (Exception exception)
             {
-                Log.FailedToDisposePipelineScope(s_logger, exception);
+                Log.FailedToDisposePipelineScope(_logger, exception);
             }
         }
 
@@ -175,11 +175,11 @@ namespace Paramore.Brighter
                 try
                 {
                     _handlerFactorySync?.Release(trackedItem, this);
-                    Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                    Log.ReleasingHandlerInstance(_logger, trackedItem.GetHashCode(), trackedItem.GetType());
                 }
                 catch (Exception exception)
                 {
-                    Log.FailedToReleaseHandler(s_logger, trackedItem.GetHashCode(), trackedItem.GetType(), trackedItem.Name, exception);
+                    Log.FailedToReleaseHandler(_logger, trackedItem.GetHashCode(), trackedItem.GetType(), trackedItem.Name, exception);
                 }
             }
 
@@ -188,11 +188,11 @@ namespace Paramore.Brighter
                 try
                 {
                     _asyncHandlerFactory?.Release(trackedItem, this);
-                    Log.ReleasingAsyncHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                    Log.ReleasingAsyncHandlerInstance(_logger, trackedItem.GetHashCode(), trackedItem.GetType());
                 }
                 catch (Exception exception)
                 {
-                    Log.FailedToReleaseHandler(s_logger, trackedItem.GetHashCode(), trackedItem.GetType(), trackedItem.Name, exception);
+                    Log.FailedToReleaseHandler(_logger, trackedItem.GetHashCode(), trackedItem.GetType(), trackedItem.Name, exception);
                 }
             }
 
@@ -223,4 +223,3 @@ namespace Paramore.Brighter
         }
     }
 }
-

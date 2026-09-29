@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
 using System.Reflection;
@@ -79,7 +81,7 @@ public class MqttConsumerRejectionProducerDisposalTests : IDisposable
         _configuration,
         scheduler: null,
         deadLetterRoutingKey: new RoutingKey("orders-dlq"),
-        invalidMessageRoutingKey: new RoutingKey("orders-invalid"));
+        invalidMessageRoutingKey: new RoutingKey("orders-invalid"), loggerFactory: NullLoggerFactory.Instance);
 
     private static Lazy<MqttMessageProducer?>? LazyProducer(MqttMessageConsumer consumer, string fieldName)
         => consumer.GetType()

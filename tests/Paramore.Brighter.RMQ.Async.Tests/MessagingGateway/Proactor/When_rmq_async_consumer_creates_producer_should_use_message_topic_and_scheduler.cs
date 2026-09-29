@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -61,7 +63,7 @@ public class RMQMessageConsumerProducerTopicSchedulerTestsAsync : IAsyncDisposab
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),
             new MessageBody("test content for scheduler injection"));
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
 
         _scheduler = new SpySchedulerAsync();
 
@@ -71,7 +73,7 @@ public class RMQMessageConsumerProducerTopicSchedulerTestsAsync : IAsyncDisposab
             queueName,
             topic,
             isDurable: true,
-            scheduler: _scheduler);
+            scheduler: _scheduler, loggerFactory: NullLoggerFactory.Instance);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(topic))
             .CreateAsync()

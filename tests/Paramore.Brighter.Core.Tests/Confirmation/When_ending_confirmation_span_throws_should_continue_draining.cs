@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,8 +46,8 @@ public class ConfirmationSpanEndIsolationTests
         // Arrange
         const int messageCount = 2;
         var topic = new RoutingKey("Confirmation.EndSpan.Throws.Topic");
-        var circuitBreaker = new InMemoryOutboxCircuitBreaker();
-        var producer = new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = topic })
+        var circuitBreaker = new InMemoryOutboxCircuitBreaker(logger: LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>( Initializer.TestLoggerFactory ));
+        var producer = new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication { Topic = topic })
         {
             UseAsyncPublishConfirmation = true,
             PublishFailurePredicate = _ => true
@@ -63,7 +65,7 @@ public class ConfirmationSpanEndIsolationTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer: new ThrowingConfirmationTracer(throwOnEndSpan: true),
             new FindPublicationByPublicationTopicOrRequestType(),
-            outboxCircuitBreaker: circuitBreaker);
+            outboxCircuitBreaker: circuitBreaker, loggerFactory: Initializer.TestLoggerFactory);
 
         using var context = TestCorrelator.CreateContext();
 

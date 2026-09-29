@@ -71,7 +71,7 @@ public class AzureServiceBusLockRenewalTests
                 RequireSession = useSession,
                 LockDuration = lockDuration
             });
-        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client));
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         var receivedIds = new HashSet<Id>();
 
         // Act

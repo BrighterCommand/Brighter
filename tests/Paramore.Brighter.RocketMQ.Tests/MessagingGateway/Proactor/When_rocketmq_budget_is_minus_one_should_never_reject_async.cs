@@ -159,7 +159,7 @@ public class RocketMqBudgetMinusOneNeverRejectsProactorTests
     {
         var connection = GatewayFactory.CreateConnection();
         await using var simpleConsumer = await GatewayFactory.CreateSimpleConsumer(connection, DlqTopic);
-        await using var dlqConsumer = new RocketMessageConsumer(simpleConsumer, 1, TimeSpan.FromSeconds(30));
+        await using var dlqConsumer = new RocketMessageConsumer(consumer: simpleConsumer, bufferSize: 1, invisibilityTimeout: TimeSpan.FromSeconds(30), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var deadline = Stopwatch.StartNew();
         while (deadline.Elapsed < s_dlqReadCeiling)

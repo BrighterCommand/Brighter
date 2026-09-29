@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -34,13 +36,13 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, NullLoggerFactory.Instance, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
             var mapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
-                new SimpleMessageMapperFactoryAsync(_ =>  new MyEventMessageMapperAsync())
+                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync())
             );
 
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
@@ -53,7 +55,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox
+                NullLoggerFactory.Instance, outbox
             );
 
 
@@ -62,7 +64,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
                 mediator,
-                new InMemorySchedulerFactory());
+                new InMemorySchedulerFactory(loggerFactory: NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
             var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
@@ -105,13 +107,13 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, NullLoggerFactory.Instance, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
             var mapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
-                new SimpleMessageMapperFactoryAsync(_ =>  new MyEventMessageMapperAsync())
+                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync())
             );
 
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
@@ -124,7 +126,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox
+                NullLoggerFactory.Instance, outbox
             );
 
 
@@ -133,8 +135,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
                 mediator,
-                new InMemorySchedulerFactory());
-            
+                new InMemorySchedulerFactory(loggerFactory: NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+
             var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
             var events = new[]
@@ -175,13 +177,13 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, NullLoggerFactory.Instance, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
             var mapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
-                new SimpleMessageMapperFactoryAsync(_ =>  new MyEventMessageMapperAsync())
+                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync())
             );
 
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
@@ -194,7 +196,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox
+                NullLoggerFactory.Instance, outbox
             );
 
 
@@ -203,14 +205,14 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
                 mediator,
-                new InMemorySchedulerFactory());
-            
+                new InMemorySchedulerFactory(loggerFactory: NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+
             var sweeper = new OutboxSweeper(
                 timeSinceSent,
                 mediator,
                 new InMemoryRequestContextFactory());
 
-            var oldEvent = new MyEvent{Value = "old"};
+            var oldEvent = new MyEvent { Value = "old" };
             commandProcessor.DepositPost(oldEvent);
 
             //delay so the previous message is old enough to sweep
@@ -254,13 +256,13 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, NullLoggerFactory.Instance, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
             var mapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
-                new SimpleMessageMapperFactoryAsync(_ =>  new MyEventMessageMapperAsync())
+                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync())
             );
 
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
@@ -273,7 +275,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox
+                NullLoggerFactory.Instance, outbox
             );
 
 
@@ -282,11 +284,11 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
                 mediator,
-                new InMemorySchedulerFactory());           
-            
+                new InMemorySchedulerFactory(loggerFactory: NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+
             var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
-            var oldEvent = new MyEvent{Value = "old"};
+            var oldEvent = new MyEvent { Value = "old" };
             commandProcessor.DepositPost(oldEvent);
 
             //-- allow the messages to be old enough to sweep

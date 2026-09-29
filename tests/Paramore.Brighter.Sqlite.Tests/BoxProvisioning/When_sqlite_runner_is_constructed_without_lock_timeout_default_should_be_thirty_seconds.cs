@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading;
@@ -93,7 +95,8 @@ file sealed class TimeoutCapturingSqliteBoxMigrationRunner : SqliteBoxMigrationR
 
     // Omits lockTimeout: its default is what the test pins.
     public TimeoutCapturingSqliteBoxMigrationRunner(IAmARelationalDatabaseConfiguration configuration)
-        : base(new SqliteBoxDetectionHelper(), new SqliteOutboxMigrationCatalog(), configuration)
+        : base(new SqliteBoxDetectionHelper(), new SqliteOutboxMigrationCatalog(), configuration,
+            NullLoggerFactory.Instance)
     {
     }
 

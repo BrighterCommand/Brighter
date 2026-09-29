@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -80,7 +80,7 @@ public class AzureServiceBusForwardedRetryIsolationTests
                 });
             }
 
-            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(provider));
+            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: provider, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
             var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
                 subscriptionName: new SubscriptionName("a"),
                 channelName: new ChannelName("a"),

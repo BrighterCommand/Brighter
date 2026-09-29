@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Http;
 using Amazon;
@@ -59,10 +60,13 @@ if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var cr
 {
     var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-    builder.Services.AddConsumers(options =>
+    builder.Services.AddConsumers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var options = new ConsumersOptions();
         options.Subscriptions = subscriptions;
-        options.DefaultChannelFactory = new ChannelFactory(awsConnection);
+        options.DefaultChannelFactory = new ChannelFactory(awsConnection, loggerFactory: loggerFactory);
+        return options;
     })
     .UseExternalLuggageStore(provider => new S3LuggageStore(new S3LuggageOptions(
         new AWSS3Connection(credentials, RegionEndpoint.EUWest1),
@@ -70,7 +74,7 @@ if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var cr
     {
         HttpClientFactory = provider.GetService<IHttpClientFactory>(),
         Strategy = StorageStrategy.Validate
-    }))
+    }, loggerFactory: provider.GetRequiredService<ILoggerFactory>()))
     .AutoFromAssemblies();
 
     //We need this for the check as to whether an S3 bucket exists

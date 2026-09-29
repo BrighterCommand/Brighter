@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -79,7 +81,7 @@ public class MigrationCancellationRollbackTests : IAsyncLifetime
             "RollbackAsync should receive CancellationToken.None to ensure the writer-slot release completes.");
         Assert.Equal(CancellationToken.None, spy.RollbackToken);
 
-        var freshRunner = new SqliteBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
+        var freshRunner = new SqliteBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5), loggerFactory: NullLoggerFactory.Instance);
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
@@ -121,7 +123,8 @@ file sealed class CancellingSqliteBoxMigrationRunner : SqliteBoxMigrationRunner
     public CancellingSqliteBoxMigrationRunner(
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration)
-        : base(catalog, configuration)
+        : base(catalog, configuration,
+            NullLoggerFactory.Instance)
     {
     }
 

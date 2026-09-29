@@ -61,7 +61,7 @@ public static class OutboxSweeperHealthChecksBuilderExtensions
                 tags: new[] { RemedyCheckConvention.RestartTag }))
             .Add(new HealthCheckRegistration(
                 "brighter-outbox-sweeper-investigate",
-                sp => new OutboxSweeperInvestigateHealthCheck(sp.GetService<OutboxSweeperState>(), sp.GetService<TimedOutboxSweeperOptions>(), () => sp.GetService<IAmAnOutboxCircuitBreaker>(), failureThreshold),
+                sp => new OutboxSweeperInvestigateHealthCheck(sp.GetService<OutboxSweeperState>(), sp.GetService<TimedOutboxSweeperOptions>(), sp.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>(), () => sp.GetService<IAmAnOutboxCircuitBreaker>(), failureThreshold),
                 failureStatus: HealthStatus.Degraded,
                 tags: new[] { RemedyCheckConvention.InvestigateTag }));
     }

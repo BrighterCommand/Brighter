@@ -23,11 +23,7 @@ public class SweeperStateBlockedInOutboxTests
         services.AddSingleton<IAmAnOutboxProducerMediator>(mediator);
         using var provider = services.BuildServiceProvider();
         var sweeper = new TimedOutboxSweeper(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            new InMemoryLock(),
-            new TimedOutboxSweeperOptions { TimerInterval = 60, MinimumMessageAge = TimeSpan.Zero },
-            timeProvider: timeProvider,
-            state: state);
+serviceScopeFactory: provider.GetRequiredService<IServiceScopeFactory>(), distributedLock: new InMemoryLock(), options: new TimedOutboxSweeperOptions { TimerInterval = 60, MinimumMessageAge = TimeSpan.Zero }, timeProvider: timeProvider, state: state, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         OutboxSweeperSnapshot blocked;
         try

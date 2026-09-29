@@ -45,7 +45,7 @@ public sealed class CloudEventsType : IEquatable<CloudEventsType>
     {
         Value = value ?? throw new ArgumentNullException(nameof(value));
     }
-    
+
     /// <summary>
     /// Returns an empty <see cref="CloudEventsType"/> instance.
     /// </summary>
@@ -62,7 +62,7 @@ public sealed class CloudEventsType : IEquatable<CloudEventsType>
     /// </summary>
     /// <param name="type">The <see cref="CloudEventsType"/> instance.</param>
     /// <returns>The string value of the CloudEvents type.</returns>
-    public static implicit operator string?(CloudEventsType type) => type?.Value;
+    public static implicit operator string?(CloudEventsType? type) => type?.Value;
 
     /// <summary>
     /// Explicitly converts a <see cref="string"/> to a <see cref="CloudEventsType"/>.
@@ -84,7 +84,7 @@ public sealed class CloudEventsType : IEquatable<CloudEventsType>
 
     /// <inheritdoc />
     public override int GetHashCode() => Value.GetHashCode();
-    
+
     public static bool operator ==(CloudEventsType? left, CloudEventsType? right) =>
         Equals(left, right);
 

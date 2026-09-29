@@ -29,13 +29,13 @@ public class LargeMessagePayloadUnwrapTests : IDisposable
 
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
         _luggageStore = new FileSystemStorageProvider(new FileSystemOptions($"./{_bucketName}"));
-            
+
         _luggageStore.EnsureStoreExists();
 
         var messageTransformerFactory =
             new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class LargeMessagePayloadUnwrapTests : IDisposable
         writer.Flush();
         stream.Position = 0;
         var id = _luggageStore.Store(stream);
-        
+
         //pretend we ran through the claim check
         myCommand.Value = $"Claim Check {id}";
 

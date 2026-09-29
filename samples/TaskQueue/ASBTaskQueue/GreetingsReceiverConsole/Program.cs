@@ -42,11 +42,14 @@ var subscriptions = new Subscription[]
 //TODO: add your ASB qualified name here
 var clientProvider = new ServiceBusConnectionStringClientProvider("Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
 
-var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider);
-builder.Services.AddConsumers(options =>
+builder.Services.AddConsumers(provider =>
 {
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, loggerFactory: loggerFactory);
+    var options = new ConsumersOptions();
     options.Subscriptions = subscriptions;
     options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
+    return options;
 }).AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

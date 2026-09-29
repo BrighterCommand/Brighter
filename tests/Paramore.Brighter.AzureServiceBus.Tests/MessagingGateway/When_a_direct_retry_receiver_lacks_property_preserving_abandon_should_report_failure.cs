@@ -56,8 +56,7 @@ public class AzureServiceBusDirectRetryReceiverCapabilityTests
             new ChannelName("consumer"), new RoutingKey("orders"), requestType: typeof(Command),
             messagePumpType: synchronous ? MessagePumpType.Reactor : MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Assume);
-        using var consumer = new AzureServiceBusTopicConsumer(subscription,
-            new FakeAdministrationClient(), new FakeServiceBusReceiverProvider(receiver));
+        using var consumer = new AzureServiceBusTopicConsumer(subscription: subscription, administrationClientWrapper: new FakeAdministrationClient(), serviceBusReceiverProvider: new FakeServiceBusReceiverProvider(receiver), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var received = synchronous ? consumer.Receive(TimeSpan.FromSeconds(1))
             : await consumer.ReceiveAsync(TimeSpan.FromSeconds(1));
         var message = Assert.Single(received);

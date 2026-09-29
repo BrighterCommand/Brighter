@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -44,7 +44,7 @@ public class StaleMessageMonitorConstructionValidationTests
 
         //Act
         var exception = Assert.Throws<ConfigurationException>(() =>
-            new TimedOutboxStaleMessageMonitor(scopeFactory, new OutboxStaleMessageReadings(), options));
+            new TimedOutboxStaleMessageMonitor(serviceScopeFactory: scopeFactory, readings: new OutboxStaleMessageReadings(), options: options, loggerFactory: Initializer.TestLoggerFactory));
 
         //Assert
         Assert.Contains(nameof(TimedOutboxStaleMessageMonitorOptions.MeasurementTimeout), exception.Message);

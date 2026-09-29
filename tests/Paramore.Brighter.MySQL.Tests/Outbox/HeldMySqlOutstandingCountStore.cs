@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -58,7 +58,7 @@ public static class HeldMySqlOutstandingCountStore
         await ExecuteAsync(holder, $"LOCK TABLES {configuration.OutBoxTableName} WRITE");
 
         return new OutstandingCountCancellationSetup<DbTransaction>(
-            new MySqlOutbox(configuration),
+            new MySqlOutbox(configuration: configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<MySqlOutbox>.Instance),
             storeHeld: true,
             clientCancellationException: typeof(MySqlException),
             release: async () =>

@@ -51,7 +51,7 @@ public class AzureServiceBusImmediateRetryIsolationTests
 
         try
         {
-            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(provider));
+            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: provider, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
             var subscription = CreateSubscription(topicName, "a",
                 synchronous ? MessagePumpType.Reactor : MessagePumpType.Proactor);
             using var syncRetrying = synchronous ? factory.CreateSyncChannel(subscription) : null;

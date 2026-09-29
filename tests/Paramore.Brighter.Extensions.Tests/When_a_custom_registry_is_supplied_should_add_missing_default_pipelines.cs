@@ -69,7 +69,7 @@ public sealed class SuppliedRegistryDefaultsTests
             customPipeline = registry.GetPipeline(configuredPipeline);
         }
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var optionsRegistry = setBuilderRegistry ? null : registry;
         var builder = addConsumers
             ? useOptionsFactory

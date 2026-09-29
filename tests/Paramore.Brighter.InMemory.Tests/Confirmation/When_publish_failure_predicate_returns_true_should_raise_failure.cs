@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using Paramore.Brighter.Observability;
 using Xunit;
@@ -40,7 +42,7 @@ public class PublishFailurePredicateTests
             new MessageHeader(messageId, new RoutingKey(topic), MessageType.MT_DOCUMENT),
             new MessageBody("test_content"));
         var bus = new InternalBus();
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All)
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All, loggerFactory: NullLoggerFactory.Instance)
         {
             PublishFailurePredicate = _ => true
         };
@@ -69,7 +71,7 @@ public class PublishFailurePredicateTests
             new MessageHeader(messageId, new RoutingKey(topic), MessageType.MT_DOCUMENT),
             new MessageBody("test_content"));
         var bus = new InternalBus();
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All);
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All, loggerFactory: NullLoggerFactory.Instance);
 
         var confirmations = new List<PublishConfirmationResult>();
         producer.OnMessagePublished += confirmations.Add;
@@ -93,7 +95,7 @@ public class PublishFailurePredicateTests
             new MessageHeader(messageId, new RoutingKey(topic), MessageType.MT_DOCUMENT),
             new MessageBody("test_content"));
         var bus = new InternalBus();
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All)
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All, loggerFactory: NullLoggerFactory.Instance)
         {
             PublishFailurePredicate = _ => false
         };

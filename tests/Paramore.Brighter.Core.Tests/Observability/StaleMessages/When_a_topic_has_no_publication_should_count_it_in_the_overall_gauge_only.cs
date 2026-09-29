@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -60,7 +60,7 @@ public class TopicWithoutAPublicationTests
             {
                 configuration.ProducerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
-                    { new RoutingKey("orders"), new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = new RoutingKey("orders") }) }
+                    { new RoutingKey("orders"), new InMemoryMessageProducer(new InternalBus(), publication:new Publication { Topic = new RoutingKey("orders") },loggerFactory:Initializer.TestLoggerFactory) }
                 });
                 configuration.Outbox = outbox;
             });

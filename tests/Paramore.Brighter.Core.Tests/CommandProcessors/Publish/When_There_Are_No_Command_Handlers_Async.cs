@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -41,8 +41,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 
         public CommandProcessorNoHandlersMatchAsyncTests()
         {
-            var container = new ServiceCollection();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+            var container = new ServiceCollection().AddLogging();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             _commandProcessor = new CommandProcessor(
                 new SubscriberRegistry(),
@@ -50,8 +50,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory()
-                );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

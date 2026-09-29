@@ -23,36 +23,36 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         _myCommand = new MyTransformableCommand();
-        
+
         _message = new Message(
             new MessageHeader(_myCommand.Id, new("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null, loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact]
     public void When_Creating_An_Unwrap_Without_A_Factory()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        
+
         // If no factory we default to just them mapper
         Assert.Equal("MyTransformableCommandMessageMapper", TraceFilters().ToString());
 
-        //wrap should just do message mapper                                          
+        //wrap should just do message mapper
         var request = _transformPipeline.Unwrap(_message, new RequestContext());
-        
+
         //assert
         request.Value = _myCommand.Value;
     }
-    
+
     private TransformPipelineTracer TraceFilters()
     {
         var pipelineTracer = new TransformPipelineTracer();
         _transformPipeline.DescribePath(pipelineTracer);
         return pipelineTracer;
     }
-    
+
 }

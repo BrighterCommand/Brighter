@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
@@ -41,8 +43,8 @@ public class RmqMessageProducerConfirmationsSendMessageTests : IDisposable
     public RmqMessageProducerConfirmationsSendMessageTests ()
     {
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
-                MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()),
+                MessageType.MT_COMMAND),
             new MessageBody("test content"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -51,7 +53,7 @@ public class RmqMessageProducerConfirmationsSendMessageTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
         _messageProducer.OnMessagePublished += result =>
         {
             if (result.Success)

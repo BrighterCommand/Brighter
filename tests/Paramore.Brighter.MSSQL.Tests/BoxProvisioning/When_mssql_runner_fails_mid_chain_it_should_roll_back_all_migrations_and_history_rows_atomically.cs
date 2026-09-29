@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -66,7 +68,7 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
             realMigrations, BrokenVersion, BrokenUpScript);
         var brokenCatalog = new BrokenChainCatalog(brokenMigrations, realCatalog.FreshInstallDdl(config));
 
-        var brokenRunner = new MsSqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30));
+        var brokenRunner = new MsSqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
         //Act + Assert
@@ -83,13 +85,13 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
         Assert.Equal(1, GetMarkerRowCount());
 
         //Act + Assert
-        var realRunner = new MsSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
+        var realRunner = new MsSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new MsSqlOutboxProvisioner(
             new MsSqlBoxDetectionHelper(),
             new MsSqlOutboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            realRunner);
+            realRunner, loggerFactory: NullLoggerFactory.Instance);
         await provisioner.ProvisionAsync();
 
         var rowsByVersion = GetHistoryRowsByVersion();

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -29,37 +29,37 @@ public class BrighterSemanticConventionsMessageMapperTests
             .ConfigureResource(r => r.AddService("in-memory-tracer"))
             .AddInMemoryExporter(_exportedActivities)
             .Build();
-        
+
         _tracer = new BrighterTracer();
         _parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterSemanticConventionsMessageMapperTests");
     }
-    
+
     [Fact]
     public void When_Creating_A_Message_Mapper_Add_Brighter_Semantic_Conventions()
     {
         //arrange
         const string paritionKey = "MyPartitionKey";
         var routingKey = new RoutingKey("MyTopic");
-        
+
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, partitionKey: paritionKey), 
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, partitionKey: paritionKey),
             new MessageBody("test content")
         );
 
         var publication = new Publication() { Topic = routingKey };
-        
+
         //act
         BrighterTracer.WriteMapperEvent(message, publication, _parentActivity, "MyMessageMapper", false, InstrumentationOptions.All, true);
-        
+
         _parentActivity.Stop();
         var flushed = _traceProvider.ForceFlush();
-        
+
         //assert
         //check the created activity
         var childActivity = _exportedActivities.First(a => a.DisplayName == "BrighterSemanticConventionsMessageMapperTests");
         Assert.NotNull(childActivity);
         var childEvent = childActivity.Events.First(e => e.Name == "MyMessageMapper");
-        
+
         //assert
         Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MapperName && (string)t.Value == "MyMessageMapper"));
         Assert.True(childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MapperType && (string)t.Value == "sync"));

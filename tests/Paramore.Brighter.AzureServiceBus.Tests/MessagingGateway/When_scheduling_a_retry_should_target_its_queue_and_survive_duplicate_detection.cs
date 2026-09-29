@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -102,18 +102,18 @@ public class AzureServiceBusScheduledRetryIsolationTests
             var processor = new CommandProcessor(new SubscriberRegistry(),
                 new SimpleHandlerFactoryAsync(_ => throw new InvalidOperationException("No handler is needed for broker scheduling.")),
                 new InMemoryRequestContextFactory(), new DefaultPolicy(),
-                new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
-            var schedulerFactory = new AzureServiceBusSchedulerFactory(provider, new RoutingKey(schedulerQueue));
+                new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+            var schedulerFactory = new AzureServiceBusSchedulerFactory(client: provider, topic: new RoutingKey(schedulerQueue), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             var observedScheduler = new RecordingMessageRequeueScheduler(schedulerFactory.Create(processor));
             var retryPublication = new AzureServiceBusPublication
             {
                 RequeueScheduler = useGlobalScheduler ? RequeueSchedulerMode.Global : RequeueSchedulerMode.Native
             };
-            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(provider, retryPublication));
+            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: provider, publication: retryPublication, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
             Assert.IsAssignableFrom<IAmAChannelFactoryWithScheduler>(factory).Scheduler = schedulerMode switch
             {
                 1 => observedScheduler,
-                2 => new InMemorySchedulerFactory().Create(processor),
+                2 => new InMemorySchedulerFactory(loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(processor),
                 _ => null
             };
             var logicalTopic = useQueue ? retryQueue : topicName;

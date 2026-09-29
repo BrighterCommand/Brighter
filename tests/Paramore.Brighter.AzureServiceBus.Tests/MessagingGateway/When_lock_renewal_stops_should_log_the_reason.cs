@@ -38,7 +38,7 @@ public class AzureServiceBusLockLoggingTests
 {
     private static readonly InMemoryServiceBusLogProvider s_logs = new();
 
-    static AzureServiceBusLockLoggingTests() => ApplicationLogging.LoggerFactory.AddProvider(s_logs);
+    private static readonly Microsoft.Extensions.Logging.ILoggerFactory s_factory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddProvider(s_logs));
 
     [Fact]
     public async Task When_transient_failures_continue_until_lock_loss_should_warn_once_and_log_retries_at_debug()
@@ -50,7 +50,7 @@ public class AzureServiceBusLockLoggingTests
             RenewalFailureIsTransient = true
         };
         await using var client = new InMemoryLockingServiceBusClient(receiver);
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(CreateSubscription(TimeSpan.FromSeconds(30)));
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: s_factory).CreateAsync(CreateSubscription(TimeSpan.FromSeconds(30)));
         var message = Assert.Single(await consumer.ReceiveAsync());
 
         // Act
@@ -79,7 +79,7 @@ public class AzureServiceBusLockLoggingTests
             RenewalException = new InvalidOperationException("The transport cannot renew.")
         };
         await using var client = new InMemoryLockingServiceBusClient(receiver);
-        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client));
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: s_factory));
         await using var channel = factory.CreateAsyncChannel(CreateSubscription(TimeSpan.FromSeconds(30)));
         var first = await channel.ReceiveAsync(null);
         await channel.AcknowledgeAsync(first);
@@ -111,7 +111,7 @@ public class AzureServiceBusLockLoggingTests
             RenewalFailureIsTransient = transient
         };
         await using var client = new InMemoryLockingServiceBusClient(receiver);
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(CreateSubscription(TimeSpan.FromSeconds(30)));
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: s_factory).CreateAsync(CreateSubscription(TimeSpan.FromSeconds(30)));
         var message = Assert.Single(await consumer.ReceiveAsync());
 
         // Act
@@ -136,7 +136,7 @@ public class AzureServiceBusLockLoggingTests
                 : null
         };
         await using var client = new InMemoryLockingServiceBusClient(receiver);
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(CreateSubscription(TimeSpan.FromSeconds(30)));
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: s_factory).CreateAsync(CreateSubscription(TimeSpan.FromSeconds(30)));
         var message = Assert.Single(await consumer.ReceiveAsync());
 
         // Act
@@ -171,7 +171,7 @@ public class AzureServiceBusLockLoggingTests
             RenewalException = new OperationCanceledException("The transport cancelled the operation.")
         };
         await using var client = new InMemoryLockingServiceBusClient(receiver);
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(CreateSubscription(TimeSpan.FromSeconds(30)));
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: s_factory).CreateAsync(CreateSubscription(TimeSpan.FromSeconds(30)));
         var message = Assert.Single(await consumer.ReceiveAsync());
 
         // Act
@@ -227,7 +227,7 @@ public class AzureServiceBusLockLoggingTests
                 MaxAutoLockRenewalDuration = TimeSpan.Zero,
                 UseServiceBusQueue = useQueue
             });
-        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client));
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: s_factory));
         Message first;
         Message next;
 
@@ -270,7 +270,7 @@ public class AzureServiceBusLockLoggingTests
         await using var client = new InMemoryLockingServiceBusClient(receiver);
         var duration = TimeSpan.FromMilliseconds(1500);
         var subscription = CreateSubscription(duration);
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: s_factory).CreateAsync(subscription);
         var message = Assert.Single(await consumer.ReceiveAsync());
 
         // Act
@@ -292,7 +292,7 @@ public class AzureServiceBusLockLoggingTests
         await using var client = new InMemoryLockingServiceBusClient(session);
         var duration = TimeSpan.FromMilliseconds(100);
         var subscription = CreateSubscription(duration, requireSession: true);
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: s_factory).CreateAsync(subscription);
 
         // Act
         Assert.Equal(2, (await consumer.ReceiveAsync()).Length);
@@ -313,7 +313,7 @@ public class AzureServiceBusLockLoggingTests
         var receiver = new InMemoryLockingServiceBusReceiver(1, TimeSpan.FromSeconds(5));
         await using var client = new InMemoryLockingServiceBusClient(receiver);
         var subscription = CreateSubscription(TimeSpan.FromMilliseconds(500));
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: s_factory).CreateAsync(subscription);
         var message = Assert.Single(await consumer.ReceiveAsync());
 
         // Act
@@ -339,7 +339,7 @@ public class AzureServiceBusLockLoggingTests
         var receiver = new InMemoryLockingServiceBusReceiver(1, TimeSpan.FromSeconds(2)) { BlockRenewal = true };
         await using var client = new InMemoryLockingServiceBusClient(receiver);
         var subscription = CreateSubscription(operation == "disabled" ? TimeSpan.Zero : TimeSpan.FromMilliseconds(1500));
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        await using var consumer = new AzureServiceBusConsumerFactory(clientProvider: client, loggerFactory: s_factory).CreateAsync(subscription);
         var message = Assert.Single(await consumer.ReceiveAsync());
         if (operation != "disabled") await receiver.RenewalStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 

@@ -47,7 +47,7 @@ public class SqliteInboxDuplicateConstraintTests
     {
         //Arrange
         using var database = new SqliteConstraintDatabase(inbox: true, binary: binary, constraint: constraint);
-        var inbox = new SqliteInbox(database.Configuration);
+        var inbox = new SqliteInbox(configuration: database.Configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteInbox>.Instance);
         var command = new MyCommand { Value = "original" };
         var context = new RequestContext();
 

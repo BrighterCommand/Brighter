@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -25,6 +25,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text.Json;
 using Paramore.Brighter.Azure.Tests.TestDoubles;
@@ -44,7 +46,7 @@ public class AzureScheduledRequestContextTests
     {
         //Arrange
         var sender = new FakeServiceBusSender();
-        var scheduler = new AzureServiceBusScheduler(sender, new RoutingKey("scheduler-topic"), TimeProvider.System);
+        var scheduler = new AzureServiceBusScheduler(sender, new RoutingKey("scheduler-topic"), TimeProvider.System, loggerFactory: NullLoggerFactory.Instance);
         var request = new SuperAwesomeCommand("scheduled context");
         using var parent = new Activity("scheduled request").Start();
         var context = new RequestContext { Span = parent };

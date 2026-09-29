@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -24,20 +26,21 @@ public class DispatchBuilderTests
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        var connection = GatewayFactory.CreateConnection(); 
-        var consumerFactory = new RocketMessageConsumerFactory(connection);
+        var connection = GatewayFactory.CreateConnection();
+        var consumerFactory = new RocketMessageConsumerFactory(connection, loggerFactory: NullLoggerFactory.Instance);
         var container = new ServiceCollection();
 
         var tracer = new BrighterTracer(TimeProvider.System);
         const InstrumentationOptions instrumentationOptions = InstrumentationOptions.All;
-            
+
         var commandProcessor = CommandProcessorBuilder.StartNew()
             .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
             .DefaultResilience()
             .NoExternalBus()
             .ConfigureInstrumentation(tracer, instrumentationOptions)
             .RequestContextFactory(new InMemoryRequestContextFactory())
-            .RequestSchedulerFactory(new InMemorySchedulerFactory())
+            .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: NullLoggerFactory.Instance))
+            .ConfigureLogging(NullLoggerFactory.Instance)
             .Build();
 
         _builder = DispatchBuilder.StartNew()
@@ -45,7 +48,7 @@ public class DispatchBuilderTests
                 new InMemoryRequestContextFactory()
             )
             .MessageMappers(messageMapperRegistry, null, null, null)
-            .ChannelFactory(new RocketMqChannelFactory(consumerFactory))
+            .ChannelFactory(new RocketMqChannelFactory(factory: consumerFactory, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
             .Subscriptions([
                 new RocketMqSubscription<MyEvent>(
                     new SubscriptionName("foo"),
@@ -62,7 +65,8 @@ public class DispatchBuilderTests
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
             ])
-            .ConfigureInstrumentation(tracer);
+            .ConfigureInstrumentation(tracer)
+            .ConfigureLogging(NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -74,7 +78,7 @@ public class DispatchBuilderTests
         Assert.NotNull(GetConnection("foo"));
         Assert.NotNull(GetConnection("bar"));
         Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
-            
+
         Thread.Sleep(1000);
 
         _dispatcher.Receive();
@@ -84,7 +88,7 @@ public class DispatchBuilderTests
         Assert.Equal(DispatcherState.DS_RUNNING, _dispatcher.State);
 
         _dispatcher.End().GetAwaiter().GetResult();
-            
+
         Assert.Equal(DispatcherState.DS_STOPPED, _dispatcher.State);
     }
     private Subscription? GetConnection(string name)

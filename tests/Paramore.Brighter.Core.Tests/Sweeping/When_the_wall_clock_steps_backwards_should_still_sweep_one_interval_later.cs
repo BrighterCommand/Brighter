@@ -18,11 +18,7 @@ public class TimedOutboxSweeperWallClockTests
         using var outbox = new SweepableOutbox();
         using var measurements = new RecordedSweeperMeasurements();
         var sweeper = new TimedOutboxSweeper(
-            outbox.ScopeFactory,
-            new InMemoryLock(),
-            new TimedOutboxSweeperOptions { TimerInterval = 5, MinimumMessageAge = TimeSpan.Zero },
-            timeProvider: clock,
-            meter: new SweeperMeter(measurements.MeterFactory));
+serviceScopeFactory: outbox.ScopeFactory, distributedLock: new InMemoryLock(), options: new TimedOutboxSweeperOptions { TimerInterval = 5, MinimumMessageAge = TimeSpan.Zero }, timeProvider: clock, meter: new SweeperMeter(meterFactory: measurements.MeterFactory, loggerFactory: Initializer.TestLoggerFactory), logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 
         await sweeper.StartAsync(CancellationToken.None);
         var firstSweep = measurements.WaitFor(m => m.Of(RecordedSweeperMeasurements.Sweeps).Count == 1, TimeSpan.FromSeconds(3));

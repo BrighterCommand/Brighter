@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using Confluent.Kafka;
 using Greetings.Ports.Commands;
@@ -62,12 +63,6 @@ var subscriptions = new Subscription[]
 };
 
 //create the gateway
-var consumerFactory = new KafkaMessageConsumerFactory(
-    new KafkaMessagingGatewayConfiguration
-    {
-        Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" }
-    }
-);
 
 var rmqConnection = new RmqMessagingGatewayConnection
 {
@@ -75,19 +70,28 @@ var rmqConnection = new RmqMessagingGatewayConnection
     Exchange = new Exchange("paramore.brighter.exchange")
 };
 
-var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-
-builder.Services.AddConsumers(options =>
+builder.Services.AddConsumers(provider =>
 {
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    var consumerFactory = new KafkaMessageConsumerFactory(
+        new KafkaMessagingGatewayConfiguration
+        {
+            Name = "paramore.brighter",
+            BootStrapServers = new[] { "localhost:9092" }
+        },
+        loggerFactory: loggerFactory);
+    var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection, loggerFactory: loggerFactory);
+    var options = new ConsumersOptions();
     options.Subscriptions = subscriptions;
     options.DefaultChannelFactory = new CombinedChannelFactory([
         new Paramore.Brighter.MessagingGateway.Kafka.ChannelFactory(consumerFactory),
         new Paramore.Brighter.MessagingGateway.RMQ.Async.ChannelFactory(rmqMessageConsumerFactory)
     ]);
+    return options;
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-.UseScheduler(new InMemorySchedulerFactory())
+.UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
 .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

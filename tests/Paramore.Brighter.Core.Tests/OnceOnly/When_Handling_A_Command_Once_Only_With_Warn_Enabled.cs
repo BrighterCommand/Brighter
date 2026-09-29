@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -43,28 +43,28 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public OnceOnlyAttributeWithWarnExceptionTests()
         {
             _inbox = new InMemoryInbox(new FakeTimeProvider());
-            
+
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStoredCommandToWarnHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyStoredCommandToWarnHandler>();
             container.AddSingleton(_inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
-            _command = new MyCommand {Value = "My Test String"};
-            
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+
+            _command = new MyCommand { Value = "My Test String" };
+
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]
         public void When_Handling_A_Command_Once_Only_With_Warn_Enabled()
         {
-            _commandProcessor.Send(_command);            
+            _commandProcessor.Send(_command);
             _commandProcessor.Send(_command);
 
             Assert.Equal(1, MyStoredCommandToWarnHandler.ReceivedCount);

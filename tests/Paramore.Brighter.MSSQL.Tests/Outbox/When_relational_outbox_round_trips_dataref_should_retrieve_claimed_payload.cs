@@ -56,7 +56,7 @@ public class MsSqlOutboxDataRefTests : RelationalOutboxDataRefTests
     protected override string CreateTableSql(bool binary) => SqlOutboxBuilder.GetDDL(TableName, binary);
     /// <inheritdoc />
     protected override RelationDatabaseOutbox CreateOutbox(RelationalDatabaseConfiguration configuration) =>
-        new MsSqlOutbox(configuration);
+        new MsSqlOutbox(configuration: configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<MsSqlOutbox>.Instance);
 
     /// <inheritdoc />
     protected override Task EnsureDatabaseAsync() => Configuration.EnsureDatabaseExistsAsync(ConnectionString);

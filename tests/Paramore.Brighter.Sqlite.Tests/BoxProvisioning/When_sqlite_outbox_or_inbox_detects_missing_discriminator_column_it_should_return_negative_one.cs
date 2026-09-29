@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -191,18 +193,10 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
     }
 
     private static SqliteOutboxProvisioner CreateOutboxProvisioner(RelationalDatabaseConfiguration config) =>
-        new(new SqliteBoxDetectionHelper(),
-            new SqliteOutboxMigrationCatalog(),
-            new SqlitePayloadModeValidator(),
-            config,
-            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
+        new(detectionHelper: new SqliteBoxDetectionHelper(), catalog: new SqliteOutboxMigrationCatalog(), payloadValidator: new SqlitePayloadModeValidator(), configuration: config, migrationRunner: new SqliteBoxMigrationRunner(catalog: new SqliteOutboxMigrationCatalog(), configuration: config, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
     private static SqliteInboxProvisioner CreateInboxProvisioner(RelationalDatabaseConfiguration config) =>
-        new(new SqliteBoxDetectionHelper(),
-            new SqliteInboxMigrationCatalog(),
-            new SqlitePayloadModeValidator(),
-            config,
-            new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config));
+        new(detectionHelper: new SqliteBoxDetectionHelper(), catalog: new SqliteInboxMigrationCatalog(), payloadValidator: new SqlitePayloadModeValidator(), configuration: config, migrationRunner: new SqliteBoxMigrationRunner(catalog: new SqliteInboxMigrationCatalog(), configuration: config, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
     private string TrackTable(string tableName)
     {

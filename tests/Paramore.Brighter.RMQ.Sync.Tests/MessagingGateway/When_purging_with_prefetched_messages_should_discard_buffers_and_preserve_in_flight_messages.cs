@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -69,9 +69,9 @@ public class RmqPurgeBufferedMessagesTests
         string? failure = null;
         using var consumer = failAcknowledgement
             ? new CleanupFailureRmqConsumer(connection, queueName, routingKey, () => failure, batchSize: 3)
-            : new RmqMessageConsumer(connection, queueName, routingKey, isDurable: true, batchSize: 3);
+            : new RmqMessageConsumer(connection: connection, queueName: queueName, routingKey: routingKey, isDurable: true, batchSize: 3, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         using var channel = new Channel(queueName, routingKey, consumer, maxQueueLength: 3);
-        using var producer = new RmqMessageProducer(connection);
+        using var producer = new RmqMessageProducer(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         try
         {
@@ -136,8 +136,7 @@ public class RmqPurgeBufferedMessagesTests
             channel.Acknowledge(received);
             channel.Dispose();
 
-            using var reconnected = new RmqMessageConsumer(connection, queueName, routingKey,
-                isDurable: true, batchSize: 3);
+            using var reconnected = new RmqMessageConsumer(connection: connection, queueName: queueName, routingKey: routingKey, isDurable: true, batchSize: 3, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             var afterReconnect = Assert.Single(reconnected.Receive(TimeSpan.FromSeconds(1)));
             Assert.Equal(MessageType.MT_NONE, afterReconnect.Header.MessageType);
         }
@@ -150,7 +149,7 @@ public class RmqPurgeBufferedMessagesTests
 
     private static async Task recoverConnectionAsync(RmqMessagingGatewayConnection connection, ConnectionFactory factory)
     {
-        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat);
+        var pool = new RmqMessageGatewayConnectionPool(connectionName: connection.Name, connectionHeartbeat: connection.Heartbeat, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var shared = pool.GetConnection(factory);
         using var management = new HttpClient { BaseAddress = new Uri("http://localhost:15672/api/") };
         management.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(

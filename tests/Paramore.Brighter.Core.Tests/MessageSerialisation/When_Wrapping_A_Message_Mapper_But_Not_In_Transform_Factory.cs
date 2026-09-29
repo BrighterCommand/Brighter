@@ -20,9 +20,9 @@ public class MessageWrapRequestMissingTransformTests
 
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => null));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact]
     public void When_Wrapping_A_Message_Mapper_But_Not_In_Transform_Factory()
     {
@@ -30,6 +30,6 @@ public class MessageWrapRequestMissingTransformTests
         var exception = Catch.Exception(() => _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
         Assert.NotNull(exception);
         Assert.True((exception) is ConfigurationException);
-        
+
     }
 }

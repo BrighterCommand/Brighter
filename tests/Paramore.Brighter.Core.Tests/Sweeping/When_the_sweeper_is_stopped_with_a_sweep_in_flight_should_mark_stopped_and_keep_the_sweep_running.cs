@@ -94,9 +94,5 @@ public class SweeperStateStoppedTests
 
     private static TimedOutboxSweeper CreateSweeper(ServiceProvider provider, FakeTimeProvider timeProvider, OutboxSweeperState state) =>
         new(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            new InMemoryLock(),
-            new TimedOutboxSweeperOptions { TimerInterval = 60, MinimumMessageAge = TimeSpan.Zero },
-            timeProvider: timeProvider,
-            state: state);
+serviceScopeFactory: provider.GetRequiredService<IServiceScopeFactory>(), distributedLock: new InMemoryLock(), options: new TimedOutboxSweeperOptions { TimerInterval = 60, MinimumMessageAge = TimeSpan.Zero }, timeProvider: timeProvider, state: state, logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<TimedOutboxSweeper>(Initializer.TestLoggerFactory));
 }

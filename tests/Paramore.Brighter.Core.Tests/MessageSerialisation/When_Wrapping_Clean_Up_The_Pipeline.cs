@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
 
@@ -23,12 +23,12 @@ public class MessageWrapCleanupTests
         mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         _myCommand = new MyTransformableCommand();
-        
+
         _publication = new Publication { Topic = new RoutingKey("MyTransformableCommand") };
-        
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new MyReleaseTrackingTransformFactory());
+
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new MyReleaseTrackingTransformFactory(), loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact]
     public void When_Wrapping_Clean_Up_The_Pipeline()
     {
@@ -36,12 +36,12 @@ public class MessageWrapCleanupTests
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         var message = _transformPipeline.Wrap(_myCommand, new RequestContext(), _publication);
         _transformPipeline.Dispose();
-        
+
         //assert
         Assert.Equal("|MySimpleTransform", s_released);
 
     }
-    
+
     private sealed class MyReleaseTrackingTransformFactory : IAmAMessageTransformerFactory
     {
         public IAmAScope? CreatePipelineScope() => null;

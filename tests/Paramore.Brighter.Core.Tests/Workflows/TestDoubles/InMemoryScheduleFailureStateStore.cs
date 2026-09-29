@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 
 internal sealed class InMemoryScheduleFailureStateStore(TimeProvider timeProvider) : IAmAStateStoreAsync
 {
-    private readonly InMemoryStateStoreAsync _inner = new(timeProvider);
+    private readonly InMemoryStateStoreAsync _inner = new(Initializer.TestLoggerFactory, timeProvider);
 
     public Exception? NextSaveException { get; set; }
 

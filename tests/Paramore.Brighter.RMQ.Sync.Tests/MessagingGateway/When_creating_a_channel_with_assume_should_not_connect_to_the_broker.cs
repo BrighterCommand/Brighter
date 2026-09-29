@@ -53,7 +53,7 @@ public class RmqSyncChannelFactoryAssumeTests
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Assume);
 
-        var channelFactory = new ChannelFactory(new RmqMessageConsumerFactory(unreachableBroker));
+        var channelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection: unreachableBroker, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         // Act
         var exception = Record.Exception(() => channelFactory.CreateSyncChannel(subscription).Dispose());

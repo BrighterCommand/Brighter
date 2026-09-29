@@ -56,8 +56,7 @@ public class AzureServiceBusLegacySessionReceiverTests
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"),
             makeChannels: OnMissingChannel.Assume,
             subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { RequireSession = true });
-        await using var consumer = new AzureServiceBusTopicConsumer(subscription,
-            new FakeAdministrationClient(), new FakeServiceBusReceiverProvider(receiver));
+        await using var consumer = new AzureServiceBusTopicConsumer(subscription: subscription, administrationClientWrapper: new FakeAdministrationClient(), serviceBusReceiverProvider: new FakeServiceBusReceiverProvider(receiver), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act
         var message = Assert.Single(useAsync ? await consumer.ReceiveAsync() : consumer.Receive());

@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
@@ -40,7 +42,7 @@ public class RmqMessageConsumerOperationInterruptedTests : IDisposable
 
     public RmqMessageConsumerOperationInterruptedTests()
     {
-        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), 
+        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(),
             new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
 
         messageHeader.UpdateHandledCount();
@@ -52,8 +54,8 @@ public class RmqMessageConsumerOperationInterruptedTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _sender = new RmqMessageProducer(rmqConnection);
-        _receiver = new RmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), sentMessage.Header.Topic, false, false);
+        _sender = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
+        _receiver = new RmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), sentMessage.Header.Topic, false, NullLoggerFactory.Instance, false);
         _badReceiver = new OperationInterruptedRmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), sentMessage.Header.Topic, false, 1, false);
 
         _sender.Send(sentMessage);
@@ -72,7 +74,7 @@ public class RmqMessageConsumerOperationInterruptedTests : IDisposable
             exceptionHappened = true;
             Assert.True((cfe.InnerException) is OperationInterruptedException);
         }
-            
+
         Assert.True(exceptionHappened);
     }
 

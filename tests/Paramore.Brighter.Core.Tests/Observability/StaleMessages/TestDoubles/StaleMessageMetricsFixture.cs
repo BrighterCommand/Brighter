@@ -54,7 +54,7 @@ public sealed class StaleMessageMetricsFixture : IDisposable
     /// <param name="configure">Registers what the test needs in the container before it is built.</param>
     public StaleMessageMetricsFixture(Action<IServiceCollection> configure)
     {
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddMetrics();
         services.AddOpenTelemetry().WithMetrics(metrics => metrics.AddBrighterInstrumentation());
         configure(services);

@@ -17,10 +17,10 @@ public class AssemblyResolutionMissingDependenciesTests
                 ValidateOnBuild = true, ValidateScopes = true
             });
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
 
         services.AddConsumers().AutoFromAssemblies();
-        
+
         //act
         bool caught = false;
         try
@@ -32,9 +32,9 @@ public class AssemblyResolutionMissingDependenciesTests
             Assert.Contains("Some services are not able", ae.Message);
             caught = true;
         }
-        
+
         //assert
         Assert.True(caught);
-        
+
     }
 }

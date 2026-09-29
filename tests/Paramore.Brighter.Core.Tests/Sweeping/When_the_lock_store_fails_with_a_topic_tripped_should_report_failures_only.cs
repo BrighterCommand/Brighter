@@ -56,7 +56,7 @@ public class FailingLockStoreWithTrippedTopicTests
         //Arrange
         var timeProvider = new FakeTimeProvider();
         var distributedLock = new ThrowingDistributedLock("the lock store is unreachable");
-        var breaker = new InMemoryOutboxCircuitBreaker();
+        var breaker = new InMemoryOutboxCircuitBreaker(logger: Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory));
         breaker.TripTopic(new RoutingKey("orders"));
         var services = SweeperContainer.Create(distributedLock, timeProvider, useOutboxSweeper: true,
             configureSweeper: options => options.TimerInterval = 10);

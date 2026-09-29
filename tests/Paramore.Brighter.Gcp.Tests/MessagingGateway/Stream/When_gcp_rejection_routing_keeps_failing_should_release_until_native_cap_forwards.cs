@@ -123,7 +123,7 @@ public class GcpStreamRejectionRoutingReleaseUntilNativeCapTests
                 PublisherConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
                 SubscriptionManagerConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
             };
-            readerChannelFactory = new GcpPubSubChannelFactory(readerConnection);
+            readerChannelFactory = new GcpPubSubChannelFactory(connection: readerConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
             // The reading subscription is a plain Pull-mode read (Receive/Acknowledge), sufficient
             // to read the native DLQ copy regardless of the main configuration's stream mode.
@@ -303,7 +303,7 @@ public class GcpStreamOrderingRejectionRoutingReleaseUntilNativeCapTests
                 PublisherConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
                 SubscriptionManagerConfiguration = cfg => { cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction; },
             };
-            readerChannelFactory = new GcpPubSubChannelFactory(readerConnection);
+            readerChannelFactory = new GcpPubSubChannelFactory(connection: readerConnection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
             policySubscription = new GcpPubSubSubscription<StreamOrderingCommand>(
                 subscriptionName: new SubscriptionName(nativeDlqChannel),

@@ -108,7 +108,7 @@ public class RocketMqRedeliveryDeliveryCountReactorTests
 
             // Build the consumer directly (not provider.CreateChannel) so it can be wrapped with
             // the recording decorator that logs Header.HandledCount on each Receive.
-            var consumerFactory = new RocketMessageConsumerFactory(GatewayFactory.CreateConnection());
+            var consumerFactory = new RocketMessageConsumerFactory(connection: GatewayFactory.CreateConnection(), loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             var consumer = consumerFactory.Create(subscription);
             channel = ConformanceDeferredPump.CreateRecordingChannel(channelName, routingKey, consumer);
 

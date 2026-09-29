@@ -38,7 +38,7 @@ public class FactoryErrorHandlingTests
     public void Factory_UnregisteredHandler_ReturnsNull()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         // Note: NOT registering TestHandler
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -60,7 +60,7 @@ public class FactoryErrorHandlingTests
     public void Factory_NullLifetime_ThrowsConfigurationExceptionForTransient()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient<SimpleHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -79,7 +79,7 @@ public class FactoryErrorHandlingTests
     public void Factory_InvalidHandlerType_ReturnsNull()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
             HandlerLifetime = ServiceLifetime.Transient
@@ -100,7 +100,7 @@ public class FactoryErrorHandlingTests
     public void Factory_MissingBrighterOptions_UsesDefaultTransient()
     {
         // Arrange - Don't register IBrighterOptions
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient<SimpleHandler>();
         // NOT registering IBrighterOptions
 

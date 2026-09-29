@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel
 
@@ -58,7 +58,7 @@ public class NoInstrumentationTests
         //Arrange
         _logs.Reset();
         var outbox = new StaleMessageTopicCountingOutbox();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddSingleton<TimeProvider>(_clock);
         var builder = new ServiceCollectionBrighterBuilder(
             services,
@@ -70,7 +70,7 @@ public class NoInstrumentationTests
             {
                 {
                     new RoutingKey("orders"),
-                    new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = new RoutingKey("orders") })
+                    new InMemoryMessageProducer(new InternalBus(), publication:new Publication { Topic = new RoutingKey("orders") },loggerFactory:Initializer.TestLoggerFactory)
                 }
             });
             configuration.Outbox = outbox;

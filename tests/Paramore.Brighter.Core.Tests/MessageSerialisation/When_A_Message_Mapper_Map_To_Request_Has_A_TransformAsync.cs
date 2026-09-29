@@ -22,16 +22,16 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync((_ => new MySimpleTransformAsync()));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
-        
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
+
     }
-    
+
     [Fact]
     public void When_A_Message_Mapper_Map_To_Request_Has_A_Transform()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        
+
         //assert
         Assert.Equal("MyTransformableCommandMessageMapperAsync|MySimpleTransformAsync", TraceFilters().ToString());
     }

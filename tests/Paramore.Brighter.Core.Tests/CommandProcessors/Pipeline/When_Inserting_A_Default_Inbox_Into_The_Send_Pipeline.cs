@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
@@ -24,11 +24,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             //This handler has no Inbox attribute
             subscriberRegistry.Add(typeof(MyCommand), typeof(MyCommandHandler));
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyCommandHandler>(_ => new MyCommandHandler(_receivedMessages));
             container.AddSingleton<IAmAnInboxSync>(new InMemoryInbox(new FakeTimeProvider()));
             container.AddTransient<UseInboxHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             _provider = container.BuildServiceProvider();
             var handlerFactory = new ServiceProviderHandlerFactory(_provider);
@@ -52,11 +52,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 subscriberRegistry,
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry {{CommandProcessor.RETRYPOLICY, retryPolicy}, {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
+                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory(),
-                inboxConfiguration: inboxConfiguration
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                inboxConfiguration: inboxConfiguration, loggerFactory: Initializer.TestLoggerFactory);
 
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
@@ -66,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         public void WhenInsertingADefaultInboxIntoTheSendPipeline()
         {
             //act
-            var command = new MyCommand {Value = "Inbox Capture"};
+            var command = new MyCommand { Value = "Inbox Capture" };
             _commandProcessor.Send(command);
 
             //assert we are in, and auto-context added us under our name

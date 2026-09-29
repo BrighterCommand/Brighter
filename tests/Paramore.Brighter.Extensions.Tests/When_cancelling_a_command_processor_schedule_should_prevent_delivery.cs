@@ -113,7 +113,7 @@ public class ScheduledRequestControlTests
     public async Task When_scheduling_duplicate_ids_across_factory_calls_should_reject_the_second_request()
     {
         //Arrange
-        await using var setup = new SchedulingSetup(new InMemorySchedulerFactory
+        await using var setup = new SchedulingSetup(new InMemorySchedulerFactory(Initializer.Factory)
         {
             TimeProvider = new FakeTimeProvider(),
             GetOrCreateRequestSchedulerId = _ => "duplicate",
@@ -135,7 +135,7 @@ public class ScheduledRequestControlTests
     public async Task When_overwriting_across_factory_calls_should_deliver_only_the_replacement()
     {
         //Arrange
-        await using var setup = new SchedulingSetup(new InMemorySchedulerFactory
+        await using var setup = new SchedulingSetup(new InMemorySchedulerFactory(Initializer.Factory)
         {
             TimeProvider = new FakeTimeProvider(),
             GetOrCreateRequestSchedulerId = _ => "replacement",
@@ -163,13 +163,13 @@ public class ScheduledRequestControlTests
     {
         //Arrange
         var clock = new FakeTimeProvider();
-        var factory = new InMemorySchedulerFactory
+        var factory = new InMemorySchedulerFactory(Initializer.Factory)
         {
             TimeProvider = clock,
             GetOrCreateRequestSchedulerId = _ => "same-id"
         };
         await using var first = new SchedulingSetup(factory);
-        await using var second = new SchedulingSetup(shareFactory ? factory : new InMemorySchedulerFactory
+        await using var second = new SchedulingSetup(shareFactory ? factory : new InMemorySchedulerFactory(Initializer.Factory)
         {
             TimeProvider = clock,
             GetOrCreateRequestSchedulerId = _ => "same-id"
@@ -192,7 +192,7 @@ public class ScheduledRequestControlTests
     {
         //Arrange
         await using var setup = new SchedulingSetup();
-        var otherFactory = new InMemorySchedulerFactory { TimeProvider = setup.Clock };
+        var otherFactory = new InMemorySchedulerFactory(Initializer.Factory) { TimeProvider = setup.Clock };
         var otherScheduler = otherFactory.CreateAsync(setup.Processor);
         await using var otherLifetime = (IAsyncDisposable)otherScheduler;
         var scheduled = await setup.Schedule(RequestSchedulerType.Send, true, false, TimeSpan.FromSeconds(10));
@@ -283,9 +283,9 @@ public class ScheduledRequestControlTests
 
         public SchedulingSetup(InMemorySchedulerFactory? factory = null)
         {
-            factory ??= new InMemorySchedulerFactory { TimeProvider = new FakeTimeProvider() };
+            factory ??= new InMemorySchedulerFactory(Initializer.Factory) { TimeProvider = new FakeTimeProvider() };
             Clock = (FakeTimeProvider)factory.TimeProvider;
-            var services = new ServiceCollection();
+            var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
             services.AddSingleton(_syncHandler);
             services.AddSingleton(_asyncHandler);
             services.AddBrighter()
@@ -294,7 +294,7 @@ public class ScheduledRequestControlTests
                     [
                         new Publication { Topic = _syncTopic, RequestType = typeof(SchedulerControlEvent) },
                         new Publication { Topic = _asyncTopic, RequestType = typeof(SchedulerControlEventAsync) }
-                    ], InstrumentationOptions.All).Create())
+                    ],Initializer.Factory, InstrumentationOptions.All).Create())
                 .MapperRegistry(registry =>
                 {
                     registry.Register<SchedulerControlEvent, JsonMessageMapper<SchedulerControlEvent>>();

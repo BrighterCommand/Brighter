@@ -48,7 +48,7 @@ public class CompletedPipelineScopeDisposalLoggingTests
         //disposes the scope, which throws from IPoisonedDependency's own Dispose()
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddScoped<IPoisonedDependency, PoisonedDependency>();
         collection.AddScoped<PoisonedScopeCompletingMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions
@@ -67,7 +67,7 @@ public class CompletedPipelineScopeDisposalLoggingTests
         var internalBus = new InternalBus();
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(internalBus, new Publication { Topic = routingKey, RequestType = typeof(PoisonedScopeCompletingCommand) }) }
+            { routingKey, new InMemoryMessageProducer(internalBus,Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(PoisonedScopeCompletingCommand) }) }
         });
 
         var timeProvider = new FakeTimeProvider();
@@ -82,7 +82,7 @@ public class CompletedPipelineScopeDisposalLoggingTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+Initializer.Factory,            new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         var commandProcessor = new CommandProcessor(
@@ -90,10 +90,12 @@ public class CompletedPipelineScopeDisposalLoggingTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.Factory)
+        , loggerFactory: Initializer.Factory);
 
-        using var logs = new InMemoryLogCapture();
+        // Capture both pipeline and scope-disposal logs through the explicitly registered factory.
+        var loggerProvider = new CapturingLoggerProvider();
+        Initializer.Factory.AddProvider(loggerProvider);
 
         //act — the first Post completes despite its owned scope's disposal throwing
         commandProcessor.Post(new PoisonedScopeCompletingCommand());
@@ -101,20 +103,20 @@ public class CompletedPipelineScopeDisposalLoggingTests
         //assert — exactly one Error naming the request type, and the Post did not throw to get here.
         //Filtered by CategoryName as well as EventId.Name: TransformPipelineDrain and HandlerLifetimeScope
         //both log a "FailedToDisposePipelineScope" event.
-        var disposalFailures = logs.Entries.Where(IsTransformScopeDisposalFailure).ToList();
+        var disposalFailures = loggerProvider.Entries.Where(IsTransformScopeDisposalFailure).ToList();
         var disposalFailure = Assert.Single(disposalFailures);
         Assert.Equal(LogLevel.Error, disposalFailure.Level);
         Assert.Contains(nameof(PoisonedScopeCompletingCommand), disposalFailure.Message);
 
         //assert — the outer OutboxProducerMediator.ReleasePipeline guard did not also log its own Warning
         //for the same failure: the drain's own catch already swallowed it, so pipeline.Dispose() did not throw
-        Assert.DoesNotContain(logs.Entries, e => e.EventId.Name == "FailedToReleasePipeline");
+        Assert.DoesNotContain(loggerProvider.Entries, e => e.EventId.Name == "FailedToReleasePipeline");
 
         //act — a second Post is not affected by the first pipeline's release-once guard
         commandProcessor.Post(new PoisonedScopeCompletingCommand());
 
         //assert — the failure is not latched: a second, separate Error was logged for the second Post
-        var disposalFailuresAfterSecondPost = logs.Entries.Where(IsTransformScopeDisposalFailure).ToList();
+        var disposalFailuresAfterSecondPost = loggerProvider.Entries.Where(IsTransformScopeDisposalFailure).ToList();
         Assert.Equal(2, disposalFailuresAfterSecondPost.Count);
         Assert.All(disposalFailuresAfterSecondPost, e => Assert.Equal(LogLevel.Error, e.Level));
     }

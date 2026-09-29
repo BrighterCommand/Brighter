@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-     public class CommandProcessorWithBothRetryAndCircuitBreaker
+    public class CommandProcessorWithBothRetryAndCircuitBreaker
     {
         private readonly CommandProcessor _commandProcessor;
         private Exception _thirdException;
@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyMultiplePoliciesFailsWithDivideByZeroHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddSingleton<MyMultiplePoliciesFailsWithDivideByZeroHandler>();
             container.AddSingleton<ExceptionPolicyHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions()
@@ -42,8 +42,8 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var retryPolicy = Policy
                 .Handle<DivideByZeroException>()
                 .WaitAndRetry([
-                        TimeSpan.FromMilliseconds(10), 
-                        TimeSpan.FromMilliseconds(20), 
+                        TimeSpan.FromMilliseconds(10),
+                        TimeSpan.FromMilliseconds(20),
                         TimeSpan.FromMilliseconds(30)
                     ],
                     (exception, timeSpan) =>
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
                     onBreak: (exception, timespan, context) =>
                     {
                     },
-                    onReset: context =>  _context = context
+                    onReset: context => _context = context
                 );
 
             policyRegistry.Add("MyDivideByZeroRetryPolicy", retryPolicy);
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             MyMultiplePoliciesFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
-                policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+                policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

@@ -43,7 +43,7 @@ public class MsSqlMessageIdMigrationTests
         //Arrange
         await using var store = new MsSqlMessageIdOutboxStore(binary, customSchema: true);
         await store.InitializeAsync(legacy: true, withHistory: withHistory);
-        var outbox = new MsSqlOutbox(store.OutboxConfig);
+        var outbox = new MsSqlOutbox(configuration: store.OutboxConfig, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<MsSqlOutbox>.Instance);
         var context = new RequestContext();
         var original = MsSqlMessageIdOutboxStore.Message(Id.Random(), "preserve existing row");
         await outbox.AddAsync(original, context);

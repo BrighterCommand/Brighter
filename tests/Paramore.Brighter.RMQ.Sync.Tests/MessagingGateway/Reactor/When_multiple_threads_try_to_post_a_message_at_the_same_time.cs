@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,8 +18,8 @@ public class RmqMessageProducerSupportsMultipleThreadsTests : IDisposable
     public RmqMessageProducerSupportsMultipleThreadsTests()
     {
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("nonexistenttopic"), 
-                MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("nonexistenttopic"),
+                MessageType.MT_COMMAND),
             new MessageBody("test content"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -26,7 +28,7 @@ public class RmqMessageProducerSupportsMultipleThreadsTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

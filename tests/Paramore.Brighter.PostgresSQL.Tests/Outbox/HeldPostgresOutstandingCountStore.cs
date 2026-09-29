@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Guilherme Appel <guilhermeaappel@gmail.com>
 
@@ -58,7 +58,7 @@ public static class HeldPostgresOutstandingCountStore
         await ExecuteAsync(holder, $"LOCK TABLE {configuration.OutBoxTableName} IN ACCESS EXCLUSIVE MODE", transaction);
 
         return new OutstandingCountCancellationSetup<DbTransaction>(
-            new PostgreSqlOutbox(configuration),
+            new PostgreSqlOutbox(configuration: configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<PostgreSqlOutbox>.Instance),
             storeHeld: true,
             clientCancellationException: typeof(PostgresException),
             release: async () =>

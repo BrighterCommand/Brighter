@@ -20,6 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Xunit;
 
@@ -39,7 +41,7 @@ public class When_mqtt_channel_factory_forwards_scheduler_to_consumers
     public void Should_forward_scheduler_to_consumer_factory()
     {
         // Arrange
-        var consumerFactory = new MqttMessageConsumerFactory(_configuration);
+        var consumerFactory = new MqttMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance);
         var channelFactory = new ChannelFactory(consumerFactory);
         var scheduler = new StubMessageScheduler();
 
@@ -55,7 +57,7 @@ public class When_mqtt_channel_factory_forwards_scheduler_to_consumers
     {
         // Arrange — consumer factory has a scheduler from construction
         var scheduler = new StubMessageScheduler();
-        var consumerFactory = new MqttMessageConsumerFactory(_configuration, scheduler);
+        var consumerFactory = new MqttMessageConsumerFactory(_configuration, NullLoggerFactory.Instance, scheduler);
         var channelFactory = new ChannelFactory(consumerFactory);
 
         // Assert — channel factory reads from the consumer factory

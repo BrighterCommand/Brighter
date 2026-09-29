@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -82,7 +82,7 @@ public class OutboxResilienceRegistryTests
             }));
         registry.AddBrighterDefault();
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var optionsRegistry = postConfigure ? null : registry;
         var builder = addConsumers
             ? useOptionsFactory
@@ -96,9 +96,7 @@ public class OutboxResilienceRegistryTests
 
         var bus = new InternalBus();
         var topic = new RoutingKey("shared-registry.event");
-        var producer = new InMemoryMessageProducer(bus,
-            new Publication { Topic = topic, RequestType = typeof(DefaultMapperEvent) },
-            InstrumentationOptions.All)
+        var producer = new InMemoryMessageProducer(bus: bus, publication: new Publication { Topic = topic, RequestType = typeof(DefaultMapperEvent) }, instrumentationOptions: InstrumentationOptions.All, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             PublishFailurePredicate = _ =>
             {

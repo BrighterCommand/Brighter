@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Transactions;
@@ -34,7 +36,7 @@ public class InMemorySchedulerRequestTests
         _timeProvider = new FakeTimeProvider();
         _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
 
-        _scheduler = new InMemorySchedulerFactory { TimeProvider = _timeProvider };
+        _scheduler = new InMemorySchedulerFactory (loggerFactory: NullLoggerFactory.Instance) { TimeProvider = _timeProvider };
 
         var handlerFactory = new SimpleHandlerFactory(
             _ => new MyEventHandler(_receivedMessages),
@@ -53,7 +55,7 @@ public class InMemorySchedulerRequestTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, NullLoggerFactory.Instance, new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -73,10 +75,10 @@ public class InMemorySchedulerRequestTests
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox
+            NullLoggerFactory.Instance, _outbox
         );
 
-        
+
         _processor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,
@@ -84,8 +86,8 @@ public class InMemorySchedulerRequestTests
             policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             outboxBus,
-            _scheduler
-        );
+            _scheduler,
+            loggerFactory: NullLoggerFactory.Instance);
     }
 
     #region Scheduler
@@ -108,7 +110,7 @@ public class InMemorySchedulerRequestTests
 
         var expected = Message.Empty;
         var actual =  _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -140,7 +142,7 @@ public class InMemorySchedulerRequestTests
 
         var expected = Message.Empty;
         var actual =  _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -173,7 +175,7 @@ public class InMemorySchedulerRequestTests
 
         var expected = Message.Empty;
         var actual =  _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -205,7 +207,7 @@ public class InMemorySchedulerRequestTests
 
         var expected = Message.Empty;
         var actual =  _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -284,7 +286,7 @@ public class InMemorySchedulerRequestTests
 
         var expected = Message.Empty;
         var actual =  _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -321,7 +323,7 @@ public class InMemorySchedulerRequestTests
 
         var expected = Message.Empty;
         var actual =  _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -363,7 +365,7 @@ public class InMemorySchedulerRequestTests
 
         var expected = Message.Empty;
         var actual =  _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -398,7 +400,7 @@ public class InMemorySchedulerRequestTests
 
         var expected = Message.Empty;
         var actual =  _outbox.Get(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);

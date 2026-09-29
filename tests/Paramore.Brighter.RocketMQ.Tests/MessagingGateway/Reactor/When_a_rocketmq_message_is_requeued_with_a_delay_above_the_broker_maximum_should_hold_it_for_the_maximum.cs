@@ -77,7 +77,7 @@ public class RocketMqRequeueDelayAboveMaximumTests : IDisposable
             receiveMessageTimeout: s_receiveMessageTimeout,
             invisibilityTimeout: s_invisibilityTimeout);
 
-        _consumer = new RocketMessageConsumerFactory(connection).Create(subscription);
+        _consumer = new RocketMessageConsumerFactory(connection: connection, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
     }
 
     public void Dispose()

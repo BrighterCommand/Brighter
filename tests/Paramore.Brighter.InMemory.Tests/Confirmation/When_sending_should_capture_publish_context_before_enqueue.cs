@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
@@ -49,7 +51,7 @@ public class ContextCaptureBeforeEnqueueTests
         var capturedContext = publishActivity.Context; // what we expect to arrive in the confirmation
 
         var bus = new InternalBus();
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All)
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All, loggerFactory: NullLoggerFactory.Instance)
         {
             UseAsyncPublishConfirmation = true
         };

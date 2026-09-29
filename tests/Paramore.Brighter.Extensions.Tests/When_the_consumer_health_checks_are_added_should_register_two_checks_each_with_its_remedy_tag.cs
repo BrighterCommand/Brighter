@@ -45,7 +45,7 @@ public class ConsumerHealthChecksRegistrationTests
     public void When_the_consumer_health_checks_are_added_should_register_two_checks_each_with_its_remedy_tag()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var builder = services.AddHealthChecks();
 
         //Act
@@ -67,7 +67,7 @@ public class ConsumerHealthChecksRegistrationTests
     public void When_the_consumer_health_checks_are_not_added_should_register_neither_check()
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddHealthChecks();
         services.AddOptions();
 

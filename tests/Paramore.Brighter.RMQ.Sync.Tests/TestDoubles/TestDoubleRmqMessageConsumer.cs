@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
@@ -34,8 +36,9 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 
 internal sealed class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
 {
-    public BrokerUnreachableRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
-        : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
+    public BrokerUnreachableRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability)
+        : base(connection, queueName, routingKey, isDurable,
+            NullLoggerFactory.Instance, isHighAvailability) { }
 
     protected override void EnsureChannel()
     {
@@ -45,8 +48,9 @@ internal sealed class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
 
 internal sealed class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer
 {
-    public AlreadyClosedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
-        : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
+    public AlreadyClosedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability)
+        : base(connection, queueName, routingKey, isDurable,
+            NullLoggerFactory.Instance, isHighAvailability) { }
 
     protected override void EnsureChannel()
     {
@@ -56,8 +60,9 @@ internal sealed class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer
 
 internal sealed class OperationInterruptedRmqMessageConsumer : RmqMessageConsumer
 {
-    public OperationInterruptedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
-        : base(connection, queueName, routingKey, isDurable,isHighAvailability) { }
+    public OperationInterruptedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability)
+        : base(connection, queueName, routingKey, isDurable,
+            NullLoggerFactory.Instance, isHighAvailability) { }
 
     protected override void EnsureChannel()
     {
@@ -67,8 +72,9 @@ internal sealed class OperationInterruptedRmqMessageConsumer : RmqMessageConsume
 
 internal sealed class NotSupportedRmqMessageConsumer : RmqMessageConsumer
 {
-    public NotSupportedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
-        : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
+    public NotSupportedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability)
+        : base(connection, queueName, routingKey, isDurable,
+            NullLoggerFactory.Instance, isHighAvailability) { }
 
     protected override void EnsureChannel()
     {

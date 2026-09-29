@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -11,7 +13,7 @@ using Paramore.Brighter.Transforms.Transformers;
 namespace Paramore.Brighter.Gcp.Tests.Transformers;
 
 [Trait("Category", "GCS")]
-public class LargeMessagePaylodUnwrapTests : IDisposable 
+public class LargeMessagePaylodUnwrapTests : IDisposable
 {
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly string _bucketName;
@@ -38,15 +40,15 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
             Credential = GatewayFactory.GetCredential(),
             BucketName = _bucketName
         };
-        
-        _luggageStore = new GcsLuggageStore(_luggageStoreOptions);
-            
+
+        _luggageStore = new GcsLuggageStore(_luggageStoreOptions, loggerFactory: NullLoggerFactory.Instance);
+
         _luggageStore.EnsureStoreExists();
 
         var messageTransformerFactory =
             new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.None);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, NullLoggerFactory.Instance, InstrumentationOptions.None);
     }
 
     [Fact]
@@ -88,7 +90,7 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
 
         //assert
         //contents should be from storage
-        Assert.Equal(contents, transformedMessage.Value); 
+        Assert.Equal(contents, transformedMessage.Value);
         Assert.False(await _luggageStore.HasClaimAsync(id));
     }
 

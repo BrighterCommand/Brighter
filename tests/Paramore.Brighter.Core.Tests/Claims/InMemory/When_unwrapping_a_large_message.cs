@@ -27,7 +27,7 @@ public class LargeMessagePaylodUnwrapTests
         _inMemoryStorageProvider = new InMemoryStorageProvider();
         var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_inMemoryStorageProvider, _inMemoryStorageProvider));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class LargeMessagePaylodUnwrapTests
 
         //pretend we ran through the claim check
         myCommand.Value = $"Claim Check {id}";
- 
+
         //set the headers, so that we have a claim check listed
         var message = new Message(
             new MessageHeader(myCommand.Id, new("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),

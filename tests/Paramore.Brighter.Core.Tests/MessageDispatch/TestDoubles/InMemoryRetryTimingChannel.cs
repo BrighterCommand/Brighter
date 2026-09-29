@@ -42,7 +42,7 @@ internal sealed class InMemoryRetryTimingChannel : Channel
     public InMemoryRetryTimingChannel(Subscription subscription, bool brokenCircuit,
         TaskCompletionSource<TimeSpan[]> retryDelays)
         : base(subscription.ChannelName, subscription.RoutingKey,
-            new InMemoryMessageConsumer(subscription.RoutingKey, new InternalBus(), TimeProvider.System))
+            new InMemoryMessageConsumer(topic: subscription.RoutingKey, bus: new InternalBus(), timeProvider: TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory))
     {
         _brokenCircuit = brokenCircuit;
         _retryDelays = retryDelays;

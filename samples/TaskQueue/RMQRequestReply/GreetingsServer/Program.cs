@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,8 +41,10 @@ var rmqConnection = new RmqMessagingGatewayConnection
     Exchange = new Exchange("paramore.brighter.exchange")
 };
 
-builder.Services.AddConsumers(options =>
+builder.Services.AddConsumers(provider =>
 {
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    var options = new ConsumersOptions();
     options.Subscriptions =
     [
         new RmqSubscription<GreetingRequest>(
@@ -53,10 +56,13 @@ builder.Services.AddConsumers(options =>
             highAvailability: true,
             messagePumpType: MessagePumpType.Reactor)
     ];
-    options.DefaultChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
+    options.DefaultChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection, loggerFactory: loggerFactory));
+    return options;
 })
-.AddProducers((configure) =>
+.AddProducers(provider =>
 {
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    var configure = new ProducersConfiguration();
     configure.ProducerRegistry = new RmqProducerRegistryFactory(
         rmqConnection,
         [
@@ -67,11 +73,12 @@ builder.Services.AddConsumers(options =>
                 RequestType = typeof(GreetingReply),
                 MakeChannels = OnMissingChannel.Assume
             }
-        ]).Create();
+        ], loggerFactory: loggerFactory).Create();
+    return configure;
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-.UseScheduler(new InMemorySchedulerFactory())
+.UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
 .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

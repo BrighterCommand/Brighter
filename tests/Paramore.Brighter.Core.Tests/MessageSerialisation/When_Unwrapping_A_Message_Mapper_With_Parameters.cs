@@ -23,23 +23,23 @@ public class MessageUnwrapRequestWithAttributesTests
 
         var myCommand = new MyTransformableCommand();
         myCommand.Value = "Hello World";
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MyParameterizedTransform()));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, new("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General))));
     }
-    
+
     [Fact]
     public void When_Wrapping_A_Message_Mapper_With_Attributes()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
         var request = _transformPipeline.Unwrap(_message, new RequestContext());
-        
+
         //assert
         Assert.Equal("I am a parameterized template: Hello World", request.Value);
     }

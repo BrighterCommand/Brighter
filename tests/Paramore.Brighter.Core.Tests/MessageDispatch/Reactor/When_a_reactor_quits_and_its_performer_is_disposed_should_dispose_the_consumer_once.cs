@@ -24,8 +24,7 @@ public class ReactorQuitConsumerDisposalTests
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        var messagePump = new ServiceActivator.Reactor(new SpyCommandProcessor(), _ => typeof(MyEvent),
-            messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel)
+        var messagePump = new ServiceActivator.Reactor(commandProcessor: new SpyCommandProcessor(), mapRequestType: _ => typeof(MyEvent), messageMapperRegistry: messageMapperRegistry, messageTransformerFactory: new EmptyMessageTransformerFactory(), requestContextFactory: new InMemoryRequestContextFactory(), channel: channel, loggerFactory: Initializer.TestLoggerFactory)
         {
             Channel = channel,
             TimeOut = TimeSpan.FromMilliseconds(5000)
