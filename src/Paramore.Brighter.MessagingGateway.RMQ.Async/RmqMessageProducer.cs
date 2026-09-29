@@ -257,46 +257,51 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
-        WaitForActiveSends();
-        WaitForPendingPublisherConfirmations();
-        DetachPublisherConfirmHandlers();
-
-        var channel = Channel;
-        if (channel is not null)
+        try
         {
-            BrighterAsyncContext.Run(async () =>
-            {
-                await channel.AbortAsync();
-                await channel.DisposeAsync();
-            });
-            // The base dispose still removes the pooled connection; the producer has already disposed the channel.
-            Channel = null;
+            WaitForActiveSends();
+            WaitForPendingPublisherConfirmations();
+            DetachPublisherConfirmHandlers();
+            BrighterAsyncContext.Run(DisposeChannelAsync);
         }
-
-        base.Dispose();
-        // Explicit for symmetry with DisposeAsync; base.Dispose() also suppresses, so this is defensive.
-        GC.SuppressFinalize(this);
+        finally
+        {
+            base.Dispose();
+        }
     }
 
     public sealed override async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
-        await WaitForActiveSendsAsync();
-        await WaitForPendingPublisherConfirmationsAsync();
-        DetachPublisherConfirmHandlers();
+        try
+        {
+            await WaitForActiveSendsAsync();
+            await WaitForPendingPublisherConfirmationsAsync();
+            DetachPublisherConfirmHandlers();
+            await DisposeChannelAsync();
+        }
+        finally
+        {
+            await base.DisposeAsync();
+        }
+    }
 
+    private async Task DisposeChannelAsync()
+    {
         var channel = Channel;
-        if (channel is not null)
+        // The base class must release the connection even if this channel's cleanup fails.
+        Channel = null;
+        if (channel is null) return;
+
+        try
         {
             await channel.AbortAsync();
-            await channel.DisposeAsync();
-            // The base async dispose still removes the pooled connection; the producer has already disposed the channel.
-            Channel = null;
         }
-
-        await base.DisposeAsync();
-        GC.SuppressFinalize(this);
+        finally
+        {
+            await channel.DisposeAsync();
+        }
     }
 
     private void BeginSend()

@@ -85,6 +85,11 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         {
             if (await AdministrationClientWrapper.SubscriptionExistsAsync(Topic, _subscriptionName))
             {
+                if (Subscription.MakeChannels.Equals(OnMissingChannel.Create) && SubscriptionConfiguration.GetRuleOptions() is not null)
+                {
+                    await AdministrationClientWrapper.CreateSubscriptionAsync(Topic, _subscriptionName, SubscriptionConfiguration);
+                }
+
                 _subscriptionCreated = true;
                 return;
             }

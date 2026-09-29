@@ -29,7 +29,8 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 
-public class InMemoryServiceBusClient(ServiceBusReceivedMessage message) : ServiceBusClient, IServiceBusClientProvider
+public class InMemoryServiceBusClient(ServiceBusReceivedMessage message,
+    ServiceBusAdministrationClient? administrationClient = null) : ServiceBusClient, IServiceBusClientProvider
 {
     private readonly InMemoryServiceBusReceiver _receiver = new(message);
 
@@ -39,7 +40,8 @@ public class InMemoryServiceBusClient(ServiceBusReceivedMessage message) : Servi
 
     public ServiceBusClient GetServiceBusClient() => this;
 
-    public ServiceBusAdministrationClient GetServiceBusAdministrationClient() => new InMemoryServiceBusAdministrationClient();
+    public ServiceBusAdministrationClient GetServiceBusAdministrationClient()
+        => administrationClient ?? new InMemoryServiceBusAdministrationClient();
 
     public override async ValueTask DisposeAsync() => await _receiver.CloseAsync();
 }
