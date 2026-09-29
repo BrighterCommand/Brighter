@@ -62,13 +62,15 @@ public class AzureServiceBusSubscriptionConfiguration
     public bool RequireSession { get; set; } = false;
 
     /// <summary>
-    /// A Sql Filter to apply to the subscription
+    /// Gets or sets the SQL filter to apply to the subscription.
     /// </summary>
-    public string SqlFilter = string.Empty;
+    /// <value>The SQL filter expression, or an empty string to use the default rule.</value>
+    public string SqlFilter { get; set; } = string.Empty;
 
     /// <summary>
-    /// Use a Service Bus Queue instead of a Topic
+    /// Gets or sets whether to use a Service Bus queue instead of a topic.
     /// </summary>
+    /// <value><see langword="true"/> to use a queue; otherwise, <see langword="false"/>. Defaults to <see langword="false"/>.</value>
     /// <remarks>
     /// When a consumer creates a queue, the delivery count, expiration, lock duration, lifetime,
     /// idle timeout and session settings are applied. Existing queues are not reconfigured.
@@ -76,5 +78,5 @@ public class AzureServiceBusSubscriptionConfiguration
     /// producers start, or let the configured consumer create them first: Azure Service Bus
     /// does not allow the session requirement to be changed after queue creation.
     /// </remarks>
-    public bool UseServiceBusQueue = false;
+    public bool UseServiceBusQueue { get; set; } = false;
 }

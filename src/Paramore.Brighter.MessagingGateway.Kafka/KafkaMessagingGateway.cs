@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Confluent.Kafka;
@@ -77,7 +78,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private async Task MakeTopic()
         {
             if (RoutingKey.IsNullOrEmpty(Topic)) throw new InvalidOperationException("Topic cannot be null");
-            
+
             using var adminClient = new AdminClientBuilder(ClientConfig).Build();
             try
             {
@@ -100,6 +101,37 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
 
                 Log.TopicAlreadyExists(s_logger, Topic.Value);
+            }
+
+            // A topic just created (or found to already exist, moments earlier, by another caller)
+            // may not yet be visible in this broker's own metadata: CreateTopics returns once the
+            // controller accepts the request, not once the broker's local metadata image reflects
+            // it. Wait, best-effort and bounded by TopicFindTimeout, for that visibility before
+            // returning, so a consumer that subscribes immediately after does not race the topic's
+            // own creation.
+            await WaitForTopicVisible(adminClient);
+        }
+
+        private async Task WaitForTopicVisible(IAdminClient adminClient)
+        {
+            if (RoutingKey.IsNullOrEmpty(Topic)) throw new InvalidOperationException("Topic cannot be null");
+
+            var stopwatch = Stopwatch.StartNew();
+            var pollTimeout = TimeSpan.FromMilliseconds(Math.Min(500, TopicFindTimeout.TotalMilliseconds));
+
+            while (stopwatch.Elapsed < TopicFindTimeout)
+            {
+                var metadata = adminClient.GetMetadata(Topic.Value, pollTimeout);
+                var matchingTopic = metadata.Topics.FirstOrDefault(tp => tp.Topic == Topic.Value);
+
+                var visible = matchingTopic is { Error.Code: ErrorCode.NoError }
+                    && matchingTopic.Partitions.Count == NumPartitions
+                    && matchingTopic.Partitions.All(partition => partition.Leader >= 0);
+
+                if (visible)
+                    return;
+
+                await Task.Delay(50);
             }
         }
 

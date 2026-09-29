@@ -24,7 +24,11 @@ namespace Paramore.Brighter
         : IAmAnOutboxSync<Message, DbTransaction>, IAmAnOutboxAsync<Message, DbTransaction>, IAmACausationTrackingOutbox
     {
 
-        protected IAmARelationalDatabaseConfiguration DatabaseConfiguration { get; } = configuration;
+        /// <summary>
+        /// Gets the database configuration used by this outbox.
+        /// </summary>
+        /// <value>The configuration instance supplied when the outbox was constructed.</value>
+        public IAmARelationalDatabaseConfiguration DatabaseConfiguration { get; } = configuration;
 
         protected IAmARelationalDbConnectionProvider ConnectionProvider { get; } = connectionProvider;
 
