@@ -87,7 +87,33 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             Log.QueueCreated(s_logger, queueName);
         }
-        
+
+        /// <inheritdoc />
+        public async Task CreateQueueAsync(string queueName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
+        {
+            Log.CreatingTopic(s_logger, queueName);
+
+            try
+            {
+                await _administrationClient.CreateQueueAsync(new CreateQueueOptions(queueName)
+                {
+                    MaxDeliveryCount = subscriptionConfiguration.MaxDeliveryCount,
+                    DeadLetteringOnMessageExpiration = subscriptionConfiguration.DeadLetteringOnMessageExpiration,
+                    LockDuration = subscriptionConfiguration.LockDuration,
+                    DefaultMessageTimeToLive = subscriptionConfiguration.DefaultMessageTimeToLive,
+                    AutoDeleteOnIdle = subscriptionConfiguration.QueueIdleBeforeDelete,
+                    RequiresSession = subscriptionConfiguration.RequireSession
+                });
+            }
+            catch (Exception e)
+            {
+                Log.FailedToCreateQueue(s_logger, e, queueName);
+                throw;
+            }
+
+            Log.QueueCreated(s_logger, queueName);
+        }
+
         /// <summary>
         /// Create a subscription, or reconcile its explicitly configured rule if it already exists.
         /// </summary>
