@@ -765,7 +765,7 @@
     - A red points at 6.10's parser change or at a deadline extension in `GcpPullMessageConsumer`.
   - Depends on: 6.10
 
-- [ ] **6.13 MEASURE: Does `bufferSize: 2` admit a stream redelivery while the first delivery is held? (ADR 0077 Risks; stream procedure prerequisite)**
+- [x] **6.13 MEASURE: Does `bufferSize: 2` admit a stream redelivery while the first delivery is held? (ADR 0077 Risks; stream procedure prerequisite)**
   - On the emulator:
     - Configure `bufferSize: 2`, `noOfPerformers: 1`, and `StreamingConfiguration` with `MaxTotalAckExtension = 10 s`
     - Hold m1 and poll `Receive` every 500 ms for 45 s
