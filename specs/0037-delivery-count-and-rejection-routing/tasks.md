@@ -726,7 +726,7 @@
 
 > Do this section only if 6.7 claimed AC-19. Otherwise mark every task `[!] not taken — AC-39 selected AC-40`.
 
-- [ ] **6.10 TEST + IMPLEMENT: The GCP pull consumer presents a strictly increasing delivery count across redeliveries, starting at 0**
+- [x] **6.10 TEST + IMPLEMENT: The GCP pull consumer presents a strictly increasing delivery count across redeliveries, starting at 0**
   - **USE COMMAND**: `/test-first when a gcp pull message is redelivered should present a strictly greater delivery count starting at zero`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull"
   - Test file: `When_a_gcp_pull_message_is_redelivered_should_present_increasing_delivery_count.cs` (async: `…_async.cs`)
