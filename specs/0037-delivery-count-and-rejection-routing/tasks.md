@@ -751,7 +751,7 @@
     - If 5.5c(ii) showed a stale attribute survives, record the effect in ADR 0077 before proceeding
   - Depends on: 6.10
 
-- [ ] **6.12 CHARACTERISE: A GCP pull message whose ack deadline lapses presents a higher count on the expiry redelivery, with no pump and no Requeue**
+- [x] **6.12 CHARACTERISE: A GCP pull message whose ack deadline lapses presents a higher count on the expiry redelivery, with no pump and no Requeue**
   - **USE COMMAND**: `/test-first when a gcp pull ack deadline lapses without ack or requeue should present a greater delivery count on redelivery`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull"
   - Test file: `When_a_gcp_pull_ack_deadline_lapses_should_present_greater_delivery_count.cs` (async: `…_async.cs`)
