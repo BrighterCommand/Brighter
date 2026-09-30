@@ -537,7 +537,24 @@ Either half of the fix unblocks the cell: stop connecting in the constructor (an
 lazy connect on first publish), or create the requeue producer eagerly with the consumer so it is
 never built on the pump thread.
 
-### `GCP` ×4 was attempted and stays `Deferred` — the emulator cannot create a DLQ subscription
+### `GCP` ×4 was `Deferred`; the four cells are now `Fixed (#4386)` — the budget reads the broker's delivery counter
+
+⭐ **Evidence (2026-10-01, spec 0037 task 6.16, AC-19, AC-3 on GCP, AC-30 row 3, NFR-7): the four `GCP / *`
+FR-23 cells moved to `Fixed (#4386)`.** The two blockers recorded below no longer stand. The first was the
+emulator refusing the IAM calls a native `DeadLetterPolicy` needs; 5.3 now tolerates those failures, so a
+DLQ-backed subscription is creatable on the emulator. The second was the header-carried `HandledCount`
+never advancing; 6.10/6.11 now resolve it from the broker's own delivery counter (`DeliveryAttempt` on Pull,
+`GetDeliveryAttempt()` on Stream), which 6.7 measured as 1, 2, 3. Regenerating `Paramore.Brighter.Gcp.Tests`
+un-skipped exactly the 8 FR-23 tests (4 configurations × Reactor/Proactor). On a clean emulator
+(`docker-compose -f docker-compose-gcp.yaml down -v; up -d`) all 8 passed, in 4–9 s each. Each one
+asserts that the handler was invoked at most `RequeueCount` (3) times, and that the Brighter DLQ copy
+arrived within 60 s carrying `rejectionReason == "DeliveryError"`. The full scoped GCP suite
+(`Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Fragile!=CI`) showed
+151 passed / 50 failed / 30 skipped. The 50 failures match the pre-existing Firestore + GCS baseline
+failures (real-GCP-only) by name. The Stream suite
+(`(Category=GcpPubSubStream|Category=GcpPubSubStreamOrdering)&Fragile!=CI`) showed 118 passed / 0 failed /
+25 skipped. The conformance audits (42) re-ran green against the new ledger. The dated notes below record
+how the cells got here. Their "stays `Deferred`" statements are superseded by this note.
 
 ⭐ **Evidence (2026-09-28, spec 0037 task 5.11): the twenty rejection-routing cells (FR-4, FR-5, FR-6,
 FR-8, FR-17 × four configurations) moved to `Fixed (#4386)`, and this paragraph's blocker does not
@@ -967,10 +984,10 @@ CI is unaffected — GitHub Actions `services:` mount no volume.
 | AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
 | AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4341) |
 | AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Fixed (#4341) |
-| GCP / Pull | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
-| GCP / PullOrdering | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
-| GCP / Stream | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4449) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
-| GCP / StreamOrdering | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4449) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
+| GCP / Pull | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) |
+| GCP / PullOrdering | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) |
+| GCP / Stream | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4449) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) |
+| GCP / StreamOrdering | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4449) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) |
 | Kafka / Classic | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / Consumer | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
