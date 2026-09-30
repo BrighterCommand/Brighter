@@ -227,6 +227,37 @@ Both `GCP / Stream` and `GCP / StreamOrdering`, emulator, both variants (NFR-8),
 - **Alternative test for `StreamOrdering`** if same-key serialisation blocks the primary (unverified, R-13): same procedure on the same ordering-enabled subscription with a message published **without** an ordering key. Ordered delivery withholds a same-key redelivery while its predecessor is outstanding by design, so "hold, then observe the lapse" is not drivable with a key; a keyless message still exercises the stream consumer's lease-lapse path on that configuration. The switch, if taken, is recorded in the ledger.
 - **On the AC-40 branch** this obligation lapses (R-13).
 
+##### Amendment (2026-09-30) — task 6.13 measurement: `bufferSize: 2` and the lease lapse
+
+Measured on the local Pub/Sub emulator with the configuration above (`bufferSize: 2`, `noOfPerformers: 1`,
+subscription `AckDeadlineSeconds = 10`, `DeadLetterPolicy` M = 5, `MaxTotalAckExtension = 10 s`), holding m1
+unsettled and polling `Receive` every 500 ms. The fixture is committed Skip-marked at
+`tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream/GcpStreamLeaseLapseBufferMeasurementTests.cs`; each
+case also ran with the client's own `SubscriberClient.Settings.AckDeadline` set to 10 s. The default-deadline
+cases were run twice, with the same result.
+
+| Case | Client `AckDeadline` default (60 s) | Client `AckDeadline` = 10 s |
+|---|---|---|
+| `Stream` | redelivered at 60.0 s, count 0 → 1 | redelivered at 15.0 s, count 0 → 1 |
+| `StreamOrdering`, no ordering key | redelivered at 60.0 s, count 0 → 1 | redelivered at 15.0 s, count 0 → 1 |
+| `StreamOrdering`, with an ordering key | no redelivery in 90 s | no redelivery in 90 s |
+
+- **`bufferSize: 2` admits the redelivery while the first delivery is held**, on `Stream` and on a keyless
+  `StreamOrdering` message. The redelivery presents a strictly greater count (6.11's parser change).
+- **The procedure's timing assumption was wrong.** `MaxTotalAckExtension` stops further extensions, but the
+  client leases each message for its own stream `AckDeadline` (default 60 s), whatever the subscription's
+  `AckDeadlineSeconds`. The lapse therefore lands at ~60 s, outside the 45 s poll. The procedure's
+  `StreamingConfiguration` must also set `Settings.AckDeadline = TimeSpan.FromSeconds(10)`. With both set, the
+  lapse lands at ~15 s.
+- **A subscription's `StreamingConfiguration` replaces the connection's** (`GcpPubSubConsumerFactory` passes
+  `sub.StreamingConfiguration ?? _connection.StreamConfiguration`), so the hook must repeat the connection's
+  `EmulatorDetection`. Otherwise the client goes to production Pub/Sub and fails `Unauthenticated`.
+- **Ordering blocks the primary procedure on `StreamOrdering`.** A keyed message's redelivery is withheld while
+  m1 is outstanding, so 6.14 takes the **keyless alternative** on `StreamOrdering`, and records the switch in the
+  ledger.
+- Incidental observation, not in scope here: with an ordering key and the default client deadline, disposing
+  the channel afterwards threw `TaskCanceledException` from `SubscriberClient.StopAsync` (`GcpStreamConsumer.cs:55`).
+
 #### RocketMQ conditional (R-14, AC-23..AC-25)
 
 **Measurement (AC-23):** from a clean store (`docker-compose -f docker-compose-rocketmq.yaml down -v; up -d`), `requeueCount: 3`, a deferring handler, Reactor variant. The test reads the raw `MessageView.DeliveryAttempt` from `message.Header.Bag["ReceiptHandle"]`, which is the `MessageView` (set at `RocketMessageConsumer.cs:333`) — no production change needed to observe it. Three deliveries across 10 s invisibility lapses, no `ChangeInvisibleDuration` call (commented out, `:186-187`). **Dispose the consumer and create a fresh one between deliveries 2 and 3**: the 5.2.1 assembly contains a client-side `IncrementAndGetDeliveryAttempt`, and a value that survives a fresh client proves the increment is broker-supplied, as R-14's condition requires.
@@ -323,11 +354,11 @@ Bespoke tests (constructed subscriptions, not provider-supplied): AC-1, AC-5, AC
 |---|---|
 | A-2 refuted on the emulator | pre-registered branch rule (AC-40); independent search already recorded |
 | First-delivery over-count (C-7) | recorded residual risk; observed failures logged against this ADR |
-| `StreamOrdering` lapse blocked by ordering | alternative test defined above |
+| `StreamOrdering` lapse blocked by ordering | confirmed 2026-09-30 (6.13): the keyless alternative defined above is required |
 | RocketMQ counter is client-local, not broker-supplied | fresh-client step in AC-23 |
 | Stale `googclient_deliveryattempt` travels on a routed GCP copy | excluded from the bag here; 0078 must not reintroduce it |
 | A replay tool puts messages back without stripping metadata, and they bounce straight back to the DLQ | documented as the tool's responsibility; the bounce is immediate and visible (a `DeliveryError` rejection on first delivery), not a silent loop |
-| Unverified library behaviours: whether `SubscriberClient` injects/overwrites `googclient_deliveryattempt`; whether `bufferSize: 2` admits the stream redelivery while the first is held | `SubscriberClient` half confirmed 2026-09-28, see amendment below; `bufferSize: 2` still open |
+| Unverified library behaviours: whether `SubscriberClient` injects/overwrites `googclient_deliveryattempt`; whether `bufferSize: 2` admits the stream redelivery while the first is held | `SubscriberClient` half confirmed 2026-09-28, see amendment below; `bufferSize: 2` confirmed 2026-09-30 (6.13, amendment under the stream lease-lapse procedure), provided the client `AckDeadline` is also 10 s |
 
 ### Amendment (2026-09-28) — task 5.5c measurement: `SubscriberClient` and `googclient_deliveryattempt`
 
