@@ -739,7 +739,7 @@
     - No allocation and no RPC (NFR-1, NFR-2)
   - Depends on: 2.2, 3.1, 3.3, 5.5d, 6.7
 
-- [ ] **6.11 TEST + IMPLEMENT: The GCP stream consumer presents a strictly increasing delivery count across redeliveries, starting at 0**
+- [x] **6.11 TEST + IMPLEMENT: The GCP stream consumer presents a strictly increasing delivery count across redeliveries, starting at 0**
   - **USE COMMAND**: `/test-first when a gcp stream message is redelivered should present a strictly greater delivery count starting at zero`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream"
   - Test file: `When_a_gcp_stream_message_is_redelivered_should_present_increasing_delivery_count.cs` (async: `…_async.cs`)
