@@ -793,7 +793,7 @@
     - A red points at 6.11's parser change or at the `StreamingConfiguration` hook (`GcpPubSubConsumerFactory.cs:110-121`).
   - Depends on: 6.13
 
-- [ ] **6.15 CHARACTERISE: The GCP dead-letter copy of a budget rejection, read through a real channel, carries the stamped count and full rejection metadata**
+- [x] **6.15 CHARACTERISE: The GCP dead-letter copy of a budget rejection, read through a real channel, carries the stamped count and full rejection metadata**
   - **USE COMMAND**: `/test-first when the gcp budget is exhausted the dead letter copy read through a channel should present the stamped handled count and rejection metadata`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull" and "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream"
   - Test file: `When_gcp_budget_is_exhausted_dead_letter_copy_should_keep_stamped_count_and_metadata.cs` (async: `…_async.cs`)
