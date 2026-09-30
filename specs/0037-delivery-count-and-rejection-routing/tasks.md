@@ -809,7 +809,7 @@
     - A red points at `Parser.cs:307` (`HandledCount` attribute), the router's stamping (5.5a), or `Resolve`'s discriminator.
   - Depends on: 5.4, 6.10, 6.11
 
-- [ ] **6.16 GATE: GCP FR-23 passes on all four configurations, both variants; move the four ledger cells (AC-19, AC-3 on GCP, AC-30 row 3, NFR-7)**
+- [x] **6.16 GATE: GCP FR-23 passes on all four configurations, both variants; move the four ledger cells (AC-19, AC-3 on GCP, AC-30 row 3, NFR-7)**
   - Set the four `GCP / *` FR-23 cells to `Fixed (#4386)`, regenerate, and run FR-23 on a clean emulator in both variants.
   - Handler invoked at most 3 times. The message reaches the Brighter DLQ carrying `rejectionReason == "DeliveryError"` inside 60 s.
   - **Output:** four cells moved, with a dated evidence note in the GCP paragraph. Mark 6.20–6.21 `[!] not taken — AC-39 selected AC-19`.
