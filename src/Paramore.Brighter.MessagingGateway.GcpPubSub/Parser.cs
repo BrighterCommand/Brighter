@@ -130,6 +130,13 @@ internal static class Parser
 
         messageHeader.Bag["ReceiptHandle"] = receiptHandle;
 
+        // R-1/R-2/R-3 (ADR 0077): present the broker's own delivery counter, normalised so a first
+        // delivery reads 0, unless the message is a Brighter-routed rejection copy (R-28), in which
+        // case the stamped header count is kept. Runs after the bag is filled so the rejectionReason
+        // discriminator (if present) is visible to Resolve. No allocation, no RPC (NFR-1, NFR-2):
+        // DeliveryAttempt is already on the ReceivedMessage the Pull call returned.
+        messageHeader.HandledCount = DeliveryCount.Resolve(handleCount, receivedMessage.DeliveryAttempt, messageHeader.Bag);
+
         var body = new MessageBody(receivedMessage.Message.Data.ToByteArray());
 
         return new Message(messageHeader, body);
