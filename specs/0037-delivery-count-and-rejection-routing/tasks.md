@@ -774,7 +774,7 @@
   - **Output:** a dated amendment note in ADR 0077 under "GCP stream consumer lease-lapse procedure". Record the outcome, and whether `StreamOrdering` needs the keyless alternative test.
   - Depends on: 6.11
 
-- [ ] **6.14 CHARACTERISE: A GCP stream message whose lease lapses presents a higher count on the expiry redelivery (ADR 0077 stream procedure)**
+- [x] **6.14 CHARACTERISE: A GCP stream message whose lease lapses presents a higher count on the expiry redelivery (ADR 0077 stream procedure)**
   - **USE COMMAND**: `/test-first when a gcp stream lease lapses without ack or requeue should present a greater delivery count on redelivery`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream"
   - Test file: `When_a_gcp_stream_lease_lapses_should_present_greater_delivery_count.cs` (async: `…_async.cs`)
