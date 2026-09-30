@@ -575,6 +575,15 @@ that A-2 held and claims **AC-19**. The broker counter advances where the header
 cannot (see the second blocker below), and that is the mechanism 6.10/6.11 wire in. **The four FR-23
 cells stay `Deferred` until 6.16 moves them.**
 
+⭐ **Lease-lapse evidence (2026-09-30, spec 0037 tasks 6.13/6.14, AC-42): `GCP / StreamOrdering` uses the
+keyless alternative.** 6.13 measured that a message published with an ordering key is not redelivered while
+its first delivery is held (none in 90 s), because ordered delivery withholds a same-key redelivery behind an
+outstanding predecessor. So on `GCP / StreamOrdering`, 6.14 publishes **without** an ordering key on the same
+ordering-enabled subscription, as ADR 0077's stream lease-lapse procedure allows. `GCP / Stream` uses the
+primary procedure. Both need the client's own `AckDeadline` set to 10 s as well as the subscription's (lapse at
+~15 s rather than ~60 s). See ADR 0077's 6.13 amendment. Tests:
+`tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream/When_a_gcp_stream_lease_lapses_should_present_greater_delivery_count{,_async}.cs`.
+
 Measured 2026-09-12 against `docker-compose-gcp.yaml` (the `cloud-sdk:emulators` Pub/Sub emulator on
 `localhost:8085`, with `PUBSUB_EMULATOR_HOST` and `GOOGLE_CLOUD_PROJECT` exported). All eight tests —
 four configurations × both variants — fail in ~4 s during **arrange**, before any pump runs. The
