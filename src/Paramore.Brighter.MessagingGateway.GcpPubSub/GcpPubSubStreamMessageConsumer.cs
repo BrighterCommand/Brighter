@@ -65,23 +65,36 @@ public partial class GcpPubSubStreamMessageConsumer(
     }
 
     /// <summary>
-    /// Nacks the specified message. For GCP Pub/Sub (stream-based), this is a no-op because not
-    /// acknowledging the message is sufficient to allow redelivery.
+    /// Nacks the specified message by calling <see cref="GcpStreamMessage.Reject"/> on the receipt
+    /// handle, releasing it to the service for immediate redelivery.
     /// </summary>
-    /// <param name="message">The message.</param>
+    /// <remarks>
+    /// Not acknowledging is not enough on a stream: the <see cref="SubscriberClient"/> keeps the
+    /// message's flow-control slot and extends its lease until the handler replies, so an unsettled
+    /// message is never redelivered and, at the default flow control of one, stalls the subscription.
+    /// </remarks>
+    /// <param name="message">The message, containing the receipt handle in its header bag.</param>
     public void Nack(Message message)
     {
-        // No-op for GCP Pub/Sub: not acknowledging is sufficient for redelivery
+        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle) || receiptHandle is not GcpStreamMessage gcpStreamMessage)
+        {
+            return;
+        }
+
+        Nack(gcpStreamMessage);
+        Log.NackComplete(s_logger, message.Id.Value);
     }
 
     /// <summary>
-    /// Nacks the specified message. For GCP Pub/Sub (stream-based), this is a no-op because not
-    /// acknowledging the message is sufficient to allow redelivery.
+    /// Nacks the specified message by calling <see cref="GcpStreamMessage.Reject"/> on the receipt
+    /// handle, releasing it to the service for immediate redelivery.
     /// </summary>
-    /// <param name="message">The message.</param>
+    /// <param name="message">The message, containing the receipt handle in its header bag.</param>
     /// <param name="cancellationToken">Cancel the nack operation</param>
+    /// <returns>A completed task.</returns>
     public Task NackAsync(Message message, CancellationToken cancellationToken = default)
     {
+        Nack(message);
         return Task.CompletedTask;
     }
 
@@ -350,5 +363,8 @@ public partial class GcpPubSubStreamMessageConsumer(
 
         [LoggerMessage(LogLevel.Information, "PullPubSubConsumer: re-queued the message {Id}")]
         public static partial void RequeueComplete(ILogger logger, string id);
+
+        [LoggerMessage(LogLevel.Information, "GcpStreamMessageConsumer: nacked the message {Id}")]
+        public static partial void NackComplete(ILogger logger, string id);
     }
 }

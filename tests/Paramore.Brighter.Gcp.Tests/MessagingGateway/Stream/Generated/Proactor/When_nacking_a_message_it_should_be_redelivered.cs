@@ -45,7 +45,7 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — Nack redelivers not yet conformant for GCP / Stream (maintainer sign-off)")]
+    [Fact]
     public async Task When_nacking_a_message_it_should_be_redelivered_async()
     {
         // Arrange
@@ -92,7 +92,7 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
         _messageAssertion.Assert(message, redelivered);
     }
 
-    [Fact(Skip = "Deferred: #4240 — Nack redelivers not yet conformant for GCP / Stream (maintainer sign-off)")]
+    [Fact]
     public async Task When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second_async()
     {
         // Arrange — two queued messages: the first is nacked and must come back, and the one

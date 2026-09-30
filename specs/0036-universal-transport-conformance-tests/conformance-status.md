@@ -391,6 +391,22 @@ cell remains `Unknown`.
     `schema-registry` up. ⚠️ Running `kafka` alone fails the two hand-written
     `KafkaMessageProducerHeaderBytesSendTests` arms on `Connection refused (localhost:8081)` — they need
     the schema registry; that is infra, not conformance.
+- `GCP / Stream` **and `GCP / StreamOrdering`** FR-16 (Nack redelivers) are `Fixed (#4449)`
+  (2026-09-30, bugfix 0024). The Stream consumer's `Nack`/`NackAsync` were no-ops. On a stream that
+  left the `SubscriberClient` callback parked: the message was never redelivered, and at the default
+  flow control of one the whole subscription stalled. `Nack` now replies `Nack` to the client
+  (`GcpStreamMessage.Reject()`, the same path as `Requeue`), which releases the message for immediate
+  redelivery. `GCP / Pull` and `/ PullOrdering` FR-16 stay `Deferred`: Pull `Nack` is still a no-op that
+  waits out the ack deadline, recorded as a follow-up.
+  ⚠️ **`GCP / StreamOrdering`'s two-message fact is intermittent on the Pub/Sub emulator.** Two messages
+  share one ordering key, and the first is nacked. In about 5 of 12 probe runs, the second message was
+  acked and the nacked one was never redelivered within 60 s; the acked second message came back at
+  about the client's 60 s lease instead. Brighter's call path is the same in every run, so this looks
+  like the emulator's ordering-key redelivery, not the fix. That is **UNVERIFIED** until it is run
+  against real GCP, which is pending the non-emulator run from #4321. `GCP / Stream` (no ordering)
+  passed 20/20. CI is unaffected: `ci.yml` excludes `Category=GcpPubSubStream` and
+  `GcpPubSubStreamOrdering`, so it runs no Stream tests. Evidence is in
+  `bugfixes/0024-gcp-stream-nack-no-redelivery/bugfix.md`.
 
 ## FR-23 — requeue budget exhausted to DLQ
 
@@ -944,8 +960,8 @@ CI is unaffected — GitHub Actions `services:` mount no volume.
 | AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Fixed (#4341) |
 | GCP / Pull | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
 | GCP / PullOrdering | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
-| GCP / Stream | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
-| GCP / StreamOrdering | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
+| GCP / Stream | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4449) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
+| GCP / StreamOrdering | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4449) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
 | Kafka / Classic | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / Consumer | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
