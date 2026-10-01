@@ -1029,6 +1029,42 @@
 
 ---
 
+## Phase 7A — Shared reject-template gaps (all generated transports)
+
+> Added 2026-10-01 (user's call). Deleting the hand-written RocketMQ reject tests (`ec2071bb0`) exposed two assertions
+> that no generated reject test makes. These are TEST changes to the shared Liquid templates in
+> `tools/Paramore.Brighter.Test.Generator/Templates/MessagingGateway/{Reactor,Proactor}/`, followed by regeneration
+> across every transport. Never edit the generated files. This section is outside the Phase 7 gear scope, so it runs
+> `review-before` unless the user re-scopes it with `/spec:gear`.
+
+- [ ] **7A.1 CHARACTERISE: A routed reject copy keeps the original message body**
+  - **USE COMMAND**: `/test-first when a rejected message is routed to the dlq or invalid channel the routed copy should keep the original body`
+  - Templates: the `When_rejecting_message_with_delivery_error_should_send_to_dlq`, `…_should_include_metadata`, `…_unacceptable_reason_should_send_to_invalid_channel`, `…_unacceptable_and_no_invalid_channel_should_fallback_to_dlq` and `…_unknown_reason_should_send_to_dlq` templates, in both Reactor and Proactor
+  - Test should verify:
+    - The message read from the DLQ or invalid channel has `Body.Value` equal to the sent message's body
+  - 🔁 **Characterisation — expected green on first run** on every transport whose reject cell is `Fixed` or `Supported`. **RED mutation(s)**, applied and reverted one at a time: (a) in one transport's rejection route (RocketMQ `RocketMessageConsumer` reject path, and SQS's), send the routed copy with an empty body — fails on the body assertion.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should (only if a transport is unexpectedly RED on arrival): fix that transport's routed copy, as its own bugfix if the cause is not obvious.
+  - Depends on: none within the phase
+
+- [ ] **7A.2 CHARACTERISE: `Reject` returns `true` after a successful route**
+  - **USE COMMAND**: `/test-first when a rejected message is routed successfully reject should return true`
+  - Templates: the same five templates as 7A.1, both variants (no-channels already asserts the return value)
+  - Test should verify:
+    - The value returned by `Reject` / `RejectAsync` is `true` when the copy was routed
+  - 🔁 **Characterisation — expected green on first run.** **RED mutation(s)**, applied and reverted one at a time: (a) in one transport's reject path (RocketMQ and SQS), return `false` after a successful route — fails on the return-value assertion.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should (only if a transport is unexpectedly RED on arrival): fix that transport's return value.
+  - Depends on: none within the phase
+
+- [ ] **7A.3 GATE: Regenerated reject tests pass on every generated transport**
+  - Regenerate all 17 projects that carry a `test-configuration.json` (see `.agent_instructions/generated_tests.md`), and confirm the diff touches only the reject tests.
+  - Run the reject tests for each transport that has local infrastructure, from a clean store where the transport needs one (RocketMQ: `down -v`). Record which transports could not be run locally.
+  - **Output:** a dated run record in `conformance-status.md`, and no ledger cell changed.
+  - Depends on: 7A.1, 7A.2
+
+---
+
 ## Phase 8 — Samples, audits, ledger and exit criteria
 
 - [ ] **8.1 GATE: ADR document reviews (AC-33 second clause, AC-34 first clause, AC-41 final clause)**
