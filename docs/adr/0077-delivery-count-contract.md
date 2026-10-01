@@ -265,6 +265,27 @@ cases were run twice, with the same result.
 - **Condition holds (AC-24):** `HandledCount` is resolved after the bag loop (`RocketMessageConsumer.cs:328`), because `ReadHandledCount` (`:422`) runs before the header exists: `header.HandledCount = DeliveryCount.Resolve(header.HandledCount, view.DeliveryAttempt, header.Bag)`, as on GCP; the publisher's bag loop (`RocketMqMessagePublisher.cs:54-59`) skips any key `AddHeaderProperties` already wrote (GCP's `!headers.ContainsKey` shape, `Parser.cs:352`), so the stamped `HandledCount` (`:103`) reaches the DLQ copy instead of the stale bag entry; `Requeue` stays a broker no-op; `DeliveryBudgetUnenforceableReason` is null; the FR-23 cell moves to `Fixed`.
 - **Condition fails (AC-25):** receive path unchanged; `RocketSubscription.DeliveryBudgetUnenforceableReason` returns fixed text naming the upstream `ChangeInvisibleDuration` blocker; the cell stays `Deferred`, re-pointed; #4353 and the ledger record the three values. AC-38 protects the nine `Fixed` cells on both branches.
 
+##### Measurement outcome (2026-10-01): task 7.1, AC-23
+
+Measured with the Skip-marked fixture
+`tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Reactor/RocketMqDeliveryAttemptMeasurementTests.cs`
+(unskip locally to reproduce; both facts stay Skip-marked in the committed tree). Broker `apache/rocketmq:5.5.0`,
+RocketMQ.Client 5.2.1, `requeueCount: 3`, Reactor, a 10 s lease, and no `ChangeInvisibleDuration` call. The consumer
+was disposed and recreated in the same group before delivery 3. Two runs, the second from a `down -v` store:
+`DeliveryAttempt` **1, 2, 3** both times.
+
+- **The condition holds. AC-24 is claimed; AC-25 is not applicable.** Tasks 7.10–7.13 are taken, and 7.20–7.21
+  are marked `[!] not taken — AC-23 selected AC-24`. The "Condition holds" design above stands as written.
+- **Classification unchanged: approximate.** The Apache RocketMQ consumption-retry documentation describes the
+  retry mechanism (lease lapse, `ChangeInvisibleDuration`, a per-group maximum) but makes no exactness claim for
+  the attempt count. AC-34's second clause and AC-41's "exactly 3" are therefore **not** activated; 7.10 and 7.12
+  assert the approximate form.
+- **Finding outside the branch rule:** `SimpleConsumer.ChangeInvisibleDuration(view, TimeSpan.Zero)` works on
+  5.2.1. It redelivered in 2–3 s instead of after the 10 s lease, and `DeliveryAttempt` still advanced. The
+  "upstream blocker" this ADR and R-14 name for the AC-25 branch is therefore gone. That branch is not taken, so
+  nothing here changes. Making `Requeue`/`Nack` act on the broker (as PR #4263 does for `Nack`) is a follow-up
+  outside this spec. On this measurement it would not disturb the counter AC-24 relies on.
+
 #### Budget rules: which rung (R-25)
 
 All three rules take the **lower rung** — `ISpecification<Subscription>`, registered alongside the existing four in `RegisterConsumerValidationSpecs` (`ServiceActivator.Extensions.DependencyInjection/ServiceCollectionExtensions.cs:199-215`) and harvested at `BrighterPipelineValidationExtensions.cs:79`. **No dependency on #4282.**

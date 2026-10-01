@@ -172,6 +172,10 @@ services:
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_p_rej_unk_DLQ -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_p_rej_unk_Invalid -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
 
+            echo 'Creating measurement topics...' &&
+
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_measure_delivery_attempt -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+
             echo 'done'
         "
     depends_on: # Ensure broker is healthy before attempting topic creation

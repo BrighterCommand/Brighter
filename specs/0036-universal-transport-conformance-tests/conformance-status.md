@@ -688,6 +688,31 @@ FR-23 tests reach the DLQ and fail on the *count*. RocketMQ has no such policy w
 is never dead-lettered by anyone. **The common requirement this column keeps finding: a transport
 whose requeue does not persist the delivery count cannot exhaust the pump's budget.**
 
+**2026-10-01: AC-23 measured (spec 0037, task 7.1). R-14's condition holds, so AC-24 is claimed.** Two runs
+with the Skip-marked fixture `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Reactor/RocketMqDeliveryAttemptMeasurementTests.cs`,
+broker `apache/rocketmq:5.5.0`, RocketMQ.Client 5.2.1. Run 1 used a freshly created topic. Run 2 used a store reset
+with `down -v; up -d`. Setup: `requeueCount: 3`, Reactor, 10 s invisibility lease, and no `Requeue`, `Nack` or
+`ChangeInvisibleDuration` call. The raw `MessageView.DeliveryAttempt` was read from `Header.Bag["ReceiptHandle"]`.
+**The consumer was disposed and a new one created in the same consumer group before delivery 3.**
+
+| Run | Delivery 1 | Delivery 2 | Delivery 3 (new client) | `HandledCount` as received |
+|---|---|---|---|---|
+| 1 (fresh topic) | **1** (t+0.1 s) | **2** (t+13.3 s) | **3** (t+25.4 s) | 0, 0, 0 |
+| 2 (clean store) | **1** (t+0.2 s) | **2** (t+12.3 s) | **3** (t+24.3 s) | 0, 0, 0 |
+
+The sequence is strictly increasing, and it survives a new client, so the increment is broker-supplied, not the
+client-local `IncrementAndGetDeliveryAttempt`. AC-25 is not applicable on the strength of this measurement. The
+counter stays classified **approximate** (ADR 0077): the Apache RocketMQ retry documentation describes the retry
+mechanism but makes no statement that the attempt count is exact. The `HandledCount` column shows the defect
+above as measured: the received header stays at its published value.
+
+**`ChangeInvisibleDuration` works on client 5.2.1.** This is a probe in the same fixture, prompted by PR #4263,
+which calls it from `Nack`. `SimpleConsumer.ChangeInvisibleDuration(view, TimeSpan.Zero)` returned without error,
+and the message was redelivered after **2.9 s / 2.3 s** (runs 1 / 2) rather than after the 10 s lease (the
+lease-lapse control above took 12–13 s). `DeliveryAttempt` still advanced, 1 → 2. So the "upstream blocker" in the
+`Requeue` comment ("Waiting for next RocketMQ C# version") no longer exists. R-14 lets `Requeue` stay a broker
+no-op on AC-24, so enabling it is a follow-up, not part of this spec.
+
 ### ⚠️ Running `RocketMQ` locally — what the compose file now handles, and what it cannot
 
 The FR-23 attempt cost **four failed runs** before a single one measured the behaviour, and
