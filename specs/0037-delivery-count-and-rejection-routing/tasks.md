@@ -839,7 +839,7 @@
 
 ### Phase 6 common — after the branch
 
-- [ ] **6.30 CHARACTERISE: When GCP routing fails, the release loop outlives the rejection until the native cap forwards the message without rejection metadata**
+- [x] **6.30 CHARACTERISE: When GCP routing fails, the release loop outlives the rejection until the native cap forwards the message without rejection metadata**
   - **USE COMMAND**: `/test-first when gcp rejection routing keeps failing should keep releasing until the native dead letter policy forwards the message without rejection metadata`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull" and "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream"
   - Test file: `When_gcp_rejection_routing_keeps_failing_should_release_until_native_cap_forwards.cs` (async: `…_async.cs`)
