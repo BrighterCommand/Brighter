@@ -713,6 +713,9 @@ lease-lapse control above took 12–13 s). `DeliveryAttempt` still advanced, 1 �
 `Requeue` comment ("Waiting for next RocketMQ C# version") no longer exists. R-14 lets `Requeue` stay a broker
 no-op on AC-24, so enabling it is a follow-up, not part of this spec.
 
+#4353 was updated with this measurement:
+[#4353 (comment)](https://github.com/BrighterCommand/Brighter/issues/4353#issuecomment-5930270994).
+
 ### ⚠️ Running `RocketMQ` locally — what the compose file now handles, and what it cannot
 
 The FR-23 attempt cost **four failed runs** before a single one measured the behaviour, and

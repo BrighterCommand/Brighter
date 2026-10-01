@@ -867,7 +867,7 @@
 
 ## Phase 7 — RocketMQ (#4353; R-14, AC-23 branch)
 
-- [ ] **7.1 MEASURE: AC-23 — the broker's `DeliveryAttempt` across lease-lapse redeliveries, with a fresh client between deliveries 2 and 3 (R-14, A-3)**
+- [x] **7.1 MEASURE: AC-23 — the broker's `DeliveryAttempt` across lease-lapse redeliveries, with a fresh client between deliveries 2 and 3 (R-14, A-3)**
   - Setup:
     - Start from a clean store (`docker-compose -f docker-compose-rocketmq.yaml down -v; up -d`), with `requeueCount: 3`, Reactor
     - Three deliveries across the 10 s invisibility lapses, with no `ChangeInvisibleDuration` call
@@ -1001,7 +1001,7 @@
 
 > Do this section only if 7.1 claimed AC-25. Otherwise mark every task `[!] not taken — AC-23 selected AC-24`.
 
-- [ ] **7.20 TEST + IMPLEMENT: A RocketMQ channel with a budget warns at creation that the count cannot advance, naming the upstream blocker, and keeps Brighter rejection routing**
+- [!] **7.20 TEST + IMPLEMENT: A RocketMQ channel with a budget warns at creation that the count cannot advance, naming the upstream blocker, and keeps Brighter rejection routing** <!-- not taken — AC-23 selected AC-24 (7.1, 2026-10-01) -->
   - **USE COMMAND**: `/test-first when a rocketmq channel is created with a budget should warn that the upstream change invisible duration blocker prevents the count advancing`
   - Test location: "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Reactor" and "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Proactor"
   - Test file: `When_a_rocketmq_channel_is_created_with_a_budget_should_warn_naming_the_upstream_blocker.cs` (Proactor: `…_async.cs`)
@@ -1014,7 +1014,7 @@
     - Leave the receive path unchanged
   - Depends on: 7.4, 7.1
 
-- [ ] **7.21 GATE: Re-point the RocketMQ FR-23 cell at the upstream blocker (AC-25 ledger clause, AC-30 row 4)**
+- [!] **7.21 GATE: Re-point the RocketMQ FR-23 cell at the upstream blocker (AC-25 ledger clause, AC-30 row 4)** <!-- not taken — AC-23 selected AC-24 (7.1, 2026-10-01) -->
   - Change the cell from `Deferred -> #4353` to `Deferred` pointing at the upstream `ChangeInvisibleDuration` C# client fix, citing 7.1's measurement.
   - **Output:** the cell is re-pointed, and #4353 is updated.
   - Depends on: 7.20
