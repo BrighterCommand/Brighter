@@ -182,6 +182,8 @@ services:
             $$MQADMIN updateTopic -n nameserver:9876 -t rmq_rej_none_r_DLQ -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t rmq_rej_none_p -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t rmq_rej_none_p_DLQ -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_stale_hc_r -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_stale_hc_p -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
 
             echo 'done'
         "
