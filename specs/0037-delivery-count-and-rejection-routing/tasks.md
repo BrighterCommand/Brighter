@@ -907,7 +907,7 @@
     - Make the bag loop in `RocketMqMessagePublisher.cs:54-59` skip any key `AddHeaderProperties` already wrote (GCP's `!headers.ContainsKey` shape, `Parser.cs:352`), so the stamped `HandledCount` (`:103`) survives
   - Depends on: none within the phase
 
-- [ ] **7.4 TEST + IMPLEMENT: `RocketSubscription` is a delivery-counting subscription whose native limit is not visible to Brighter**
+- [x] **7.4 TEST + IMPLEMENT: `RocketSubscription` is a delivery-counting subscription whose native limit is not visible to Brighter**
   - **USE COMMAND**: `/test-first when a rocketmq subscription is created should report no visible native redrive limit`
   - Test location: "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway"
   - Test file: `When_creating_rocket_subscription_should_report_no_visible_native_redrive_limit.cs`
