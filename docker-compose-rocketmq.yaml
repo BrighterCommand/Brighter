@@ -77,6 +77,10 @@ services:
                 sleep 60
             done;
             MQADMIN=$$(ls -d /home/rocketmq/rocketmq-*/bin/mqadmin | head -1) &&
+            echo 'Waiting for the broker to register with the nameserver...' &&
+            until $$MQADMIN clusterList -n nameserver:9876 2>/dev/null | grep -q '^DefaultCluster'; do
+              sleep 5
+            done;
             echo 'Broker is up. Creating multiple topics...' &&
 
             $$MQADMIN updateTopic -n nameserver:9876 -t bt_building_dispatch -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL && 
