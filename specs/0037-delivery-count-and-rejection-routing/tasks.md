@@ -920,7 +920,7 @@
     - Call `DeliveryBudgetDiagnostics.WarnIfUnenforceable` in `RocketMqChannelFactory` `CreateSyncChannel` (`:13`), `CreateAsyncChannel` (`:28`) and `CreateAsyncChannelAsync` (`:43`), the three non-delegating paths named in ADR 0077 R-26
   - Depends on: 2.4, 2.6
 
-- [ ] **7.5 CHARACTERISE: RocketMQ budget of -1 never rejects**
+- [x] **7.5 CHARACTERISE: RocketMQ budget of -1 never rejects**
   - **USE COMMAND**: `/test-first when rocketmq budget is minus one should never reject and never dead letter`
   - Test location: "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Reactor" and "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Proactor"
   - Test file: `When_rocketmq_budget_is_minus_one_should_never_reject.cs` (Proactor: `…_async.cs`)
