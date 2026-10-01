@@ -115,8 +115,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
             await ServiceBusReceiver!.CompleteAsync(lockToken);
                 
-            if (SubscriptionConfiguration.RequireSession)
-                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+            await CloseSessionIfIdleAsync();
         }
         catch (AggregateException ex)
         {
@@ -180,8 +179,10 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
         try
         {
-            if (SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
+            if (ServiceBusReceiver == null || (SubscriptionConfiguration.RequireSession &&
+                ServiceBusReceiver is not ServiceBusReceiverWrapper { HasPendingMessages: true }))
             {
+                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
                 await GetMessageReceiverProviderAsync();
                 if (ServiceBusReceiver == null)
                 {
@@ -209,18 +210,28 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
             Log.FailingToReceiveMessages(Logger, e);
 
             //The connection to Azure Service bus may have failed so we re-establish the connection.
-            if(!SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
-                await GetMessageReceiverProviderAsync();
+            await ResetReceiverAsync();
+            await GetMessageReceiverProviderAsync();
 
             throw new ChannelFailureException("Failing to receive messages.", e);
         }
 
-        foreach (IBrokeredMessageWrapper azureServiceBusMessage in messages)
+        try
         {
-            Message message = _azureServiceBusMesssageCreator.MapToBrighterMessage(azureServiceBusMessage);
-            messagesToReturn.Add(message);
+            foreach (IBrokeredMessageWrapper azureServiceBusMessage in messages)
+            {
+                Message message = _azureServiceBusMesssageCreator.MapToBrighterMessage(azureServiceBusMessage);
+                if (await CanDispatchAsync(message)) messagesToReturn.Add(message);
+            }
+        }
+        catch
+        {
+            await ResetReceiverAsync();
+            throw;
         }
 
+        if (ServiceBusReceiver is ServiceBusReceiverWrapper)
+            await CloseSessionIfIdleAsync();
         return messagesToReturn.ToArray();
     }
                
@@ -253,8 +264,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
             await ServiceBusReceiver!.AbandonAsync(lockToken);
 
-            if (SubscriptionConfiguration.RequireSession)
-                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+            await CloseSessionIfIdleAsync();
         }
         catch (AggregateException ex)
         {
@@ -312,8 +322,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
                 await GetMessageReceiverProviderAsync();
 
             await ServiceBusReceiver!.DeadLetterAsync(lockToken, reasonString, description);
-            if (SubscriptionConfiguration.RequireSession)
-                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+            await CloseSessionIfIdleAsync();
         }
         catch (Exception ex)
         {
@@ -365,6 +374,34 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         await AcknowledgeAsync(message, cancellationToken);
 
         return true;
+    }
+
+    internal async Task ResetReceiverAsync()
+    {
+        var receiver = ServiceBusReceiver;
+        ServiceBusReceiver = null;
+        if (receiver is not null) await receiver.CloseAsync().ConfigureAwait(false);
+    }
+
+    internal async Task<bool> CanDispatchAsync(Message message)
+    {
+        if (ServiceBusReceiver is not ServiceBusReceiverWrapper receiver ||
+            !message.Header.Bag.TryGetValue(ASBConstants.LockTokenHeaderBagKey, out var token))
+            return true;
+
+        var lockToken = token.ToString();
+        if (string.IsNullOrEmpty(lockToken) || receiver.IsLockValid(lockToken)) return true;
+
+        await receiver.ForgetAsync(lockToken).ConfigureAwait(false);
+        await CloseSessionIfIdleAsync().ConfigureAwait(false);
+        return false;
+    }
+
+    private async Task CloseSessionIfIdleAsync()
+    {
+        if (SubscriptionConfiguration.RequireSession && ServiceBusReceiver is not null &&
+            ServiceBusReceiver is not ServiceBusReceiverWrapper { HasPendingMessages: true })
+            await ServiceBusReceiver.CloseAsync().ConfigureAwait(false);
     }
 
     protected abstract Task GetMessageReceiverProviderAsync();
