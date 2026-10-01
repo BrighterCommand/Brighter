@@ -858,7 +858,7 @@
     - If the branch taken needs a change, make it only in 5.8's failure path or the branch's own task. This test is also the A-6 risk measurement.
   - Depends on: 5.5d, 5.8, 6.16 or 6.20
 
-- [ ] **6.31 GATE: Run the GCP rejection-routing behaviours twice on a clean emulator with identical results, with no gcp-ci (AC-22, R-21)**
+- [x] **6.31 GATE: Run the GCP rejection-routing behaviours twice on a clean emulator with identical results, with no gcp-ci (AC-22, R-21)**
   - Run the GCP conformance behaviours FR-4, FR-5, FR-6, FR-8 and FR-17, plus FR-23 if AC-19 was claimed, twice across all four configurations and both variants, with `docker-compose -f docker-compose-gcp.yaml down -v; up -d` between runs.
   - **Output:** a dated record of both runs (identical results) in the GCP paragraph of `conformance-status.md`.
   - Depends on: 5.11, 6.16 or 6.21, 6.30
