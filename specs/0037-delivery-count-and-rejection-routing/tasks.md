@@ -883,7 +883,7 @@
 
 ### Phase 7 common — both branches
 
-- [ ] **7.2 TEST + IMPLEMENT: A null-reason RocketMQ Reject stamps `rejectionReason = "None"` on the dead-letter copy**
+- [x] **7.2 TEST + IMPLEMENT: A null-reason RocketMQ Reject stamps `rejectionReason = "None"` on the dead-letter copy**
   - **USE COMMAND**: `/test-first when a rocketmq message is rejected with no reason should stamp rejection reason none on the dead letter copy`
   - Test location: "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Reactor" and "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Proactor"
   - Test file: `When_rejecting_a_rocketmq_message_with_no_reason_should_stamp_rejection_reason_none.cs` (Proactor: `…_async.cs`)
