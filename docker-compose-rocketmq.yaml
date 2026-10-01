@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # RocketMQ Nameserver (Service Discovery)
   nameserver:
-    image: apache/rocketmq
+    image: apache/rocketmq:5.5.0
     platform: linux/amd64
     container_name: rocketmq-nameserver
     ports:
@@ -19,7 +19,7 @@ services:
 
   # RocketMQ Broker (Message Storage)
   broker:
-    image: apache/rocketmq
+    image: apache/rocketmq:5.5.0
     platform: linux/amd64
     container_name: rocketmq-broker
     ports:
@@ -46,7 +46,7 @@ services:
       retries: 10
   
   proxy:
-    image: apache/rocketmq
+    image: apache/rocketmq:5.5.0
     platform: linux/amd64
     container_name: rmqproxy
     depends_on:
@@ -67,7 +67,7 @@ services:
     
   # Service to create the RocketMQ topic
   create-topic:
-    image: apache/rocketmq # Use the same RocketMQ image to get mqadmin tool
+    image: apache/rocketmq:5.5.0 # Use the same RocketMQ image to get mqadmin tool
     platform: linux/amd64
     command: > # Multi-line command to create the topic
       sh -c "
@@ -87,6 +87,9 @@ services:
             $$MQADMIN updateTopic -n nameserver:9876 -t rmq_dlq_source -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t rmq_dlq_target -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t rmq_dlq_invalid -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t orders -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t orders-dlq -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t orders-invalid -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
 
             echo 'Creating generated test topics...' &&
 
