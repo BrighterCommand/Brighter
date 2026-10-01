@@ -933,7 +933,7 @@
     - A red points at `MessagePump.DiscardRequeuedMessagesEnabled()`.
   - Depends on: 3.3
 
-- [ ] **7.6 CHARACTERISE: RocketMQ budget of 1, 0 or below -1 rejects on the first deferral without requeuing**
+- [x] **7.6 CHARACTERISE: RocketMQ budget of 1, 0 or below -1 rejects on the first deferral without requeuing**
   - **USE COMMAND**: `/test-first when rocketmq budget is one zero or below minus one should reject on first deferral without requeue`
   - Test location: "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Reactor" and "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Proactor"
   - Test file: `When_rocketmq_budget_is_one_zero_or_below_minus_one_should_reject_on_first_deferral.cs` (Proactor: `…_async.cs`)
