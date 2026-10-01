@@ -176,6 +176,13 @@ services:
 
             $$MQADMIN updateTopic -n nameserver:9876 -t rmq_measure_delivery_attempt -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
 
+            echo 'Creating hand-written test topics...' &&
+
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_rej_none_r -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_rej_none_r_DLQ -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_rej_none_p -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_rej_none_p_DLQ -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+
             echo 'done'
         "
     depends_on: # Ensure broker is healthy before attempting topic creation
