@@ -950,7 +950,7 @@
 
 > Do this section only if 7.1 claimed AC-24. Otherwise mark every task `[!] not taken — AC-23 selected AC-25`.
 
-- [ ] **7.10 TEST + IMPLEMENT: RocketMQ presents a strictly increasing delivery count across lease-lapse redeliveries, starting at 0**
+- [x] **7.10 TEST + IMPLEMENT: RocketMQ presents a strictly increasing delivery count across lease-lapse redeliveries, starting at 0**
   - **USE COMMAND**: `/test-first when a rocketmq message is redelivered should present a strictly greater delivery count starting at zero`
   - Test location: "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Reactor" and "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Proactor"
   - Test file: `When_a_rocketmq_message_is_redelivered_should_present_increasing_delivery_count.cs` (Proactor: `…_async.cs`)
