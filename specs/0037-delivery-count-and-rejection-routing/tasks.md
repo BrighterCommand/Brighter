@@ -963,7 +963,7 @@
     - `Requeue` stays a broker no-op; do not touch `ReadDelay` (out of scope)
   - Depends on: 2.2, 3.1, 3.3, 7.1
 
-- [ ] **7.11 CHARACTERISE: A RocketMQ message whose invisible duration lapses presents a higher count on the expiry redelivery, with no pump and no Requeue**
+- [x] **7.11 CHARACTERISE: A RocketMQ message whose invisible duration lapses presents a higher count on the expiry redelivery, with no pump and no Requeue**
   - **USE COMMAND**: `/test-first when a rocketmq invisible duration lapses without ack or requeue should present a greater delivery count on redelivery`
   - Test location: "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Reactor" and "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Proactor"
   - Test file: `When_a_rocketmq_invisible_duration_lapses_should_present_greater_delivery_count.cs` (Proactor: `…_async.cs`)
