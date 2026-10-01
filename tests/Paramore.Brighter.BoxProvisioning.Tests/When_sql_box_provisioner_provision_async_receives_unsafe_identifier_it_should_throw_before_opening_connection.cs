@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -109,7 +111,8 @@ public class SqlBoxProvisionerIdentifierValidationTests
                 new ThrowingPayloadValidator(),
                 configuration,
                 new ThrowingMigrationRunner(),
-                BoxType.Outbox)
+                BoxType.Outbox,
+                NullLoggerFactory.Instance)
         {
         }
 

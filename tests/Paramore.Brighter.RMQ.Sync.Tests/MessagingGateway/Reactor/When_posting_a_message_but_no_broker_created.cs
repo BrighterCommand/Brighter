@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Xunit;
 
@@ -24,7 +26,7 @@ public class RmqBrokerNotPreCreatedTests : IDisposable
             Exchange = new Exchange(Guid.NewGuid().ToString())
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate});
+        _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate}, loggerFactory: NullLoggerFactory.Instance);
 
     }
         

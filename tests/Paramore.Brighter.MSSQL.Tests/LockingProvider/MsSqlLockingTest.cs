@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Base.Test.Locking;
 using Paramore.Brighter.Locking.MsSql;
 using Paramore.Brighter.MsSql;
@@ -10,6 +12,6 @@ public class MsSqlLockingTest : RelationalDatabaseDistributedLockingAsyncTest
     protected override IDistributedLock CreateDistributedLock()
     {
         Tests.Configuration.EnsureDatabaseExists(Configuration.ConnectionString);
-        return new MsSqlLockingProvider(new MsSqlConnectionProvider(Configuration));
+        return new MsSqlLockingProvider(new MsSqlConnectionProvider(Configuration), loggerFactory: NullLoggerFactory.Instance);
     }
 }

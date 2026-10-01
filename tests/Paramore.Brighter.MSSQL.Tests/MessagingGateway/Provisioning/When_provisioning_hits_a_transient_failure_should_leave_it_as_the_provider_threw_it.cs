@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -65,7 +67,7 @@ public class MsSqlQueueProvisioningTransientTests : IDisposable
 
         var configuration = new RelationalDatabaseConfiguration(
             Configuration.DefaultConnectingString + ";Command Timeout=1", queueStoreTable: _queueTable);
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = Record.Exception(() => channelFactory.CreateSyncChannel(Subscription()));
@@ -87,7 +89,7 @@ public class MsSqlQueueProvisioningTransientTests : IDisposable
         CreateView(_queueTable);
         var configuration = new RelationalDatabaseConfiguration(
             Configuration.DefaultConnectingString, queueStoreTable: _queueTable);
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         try
         {
@@ -124,7 +126,7 @@ public class MsSqlQueueProvisioningTransientTests : IDisposable
             $"Server=127.0.0.1,{port};Database=BrighterTests;User Id=sa;Password=Password123!;" +
             "Connect Timeout=2;Encrypt=false",
             queueStoreTable: _queueTable);
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = Record.Exception(() => channelFactory.CreateSyncChannel(Subscription()));
@@ -143,7 +145,7 @@ public class MsSqlQueueProvisioningTransientTests : IDisposable
         //then. Measured, it arrives as number 0 rather than as a timeout, so it stays wrapped.
         var configuration = new RelationalDatabaseConfiguration(
             MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString, queueStoreTable: _queueTable);
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = Record.Exception(() => channelFactory.CreateSyncChannel(Subscription()));

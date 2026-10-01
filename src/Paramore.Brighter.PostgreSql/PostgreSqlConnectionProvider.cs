@@ -22,7 +22,7 @@ namespace Paramore.Brighter.PostgreSql
         /// connections; Brighter will not manage type mapping for you in this case so you must register them
         /// globally</param>
         public PostgreSqlConnectionProvider(
-            IAmARelationalDatabaseConfiguration configuration,
+            IAmARelationalDatabaseConfiguration? configuration,
             NpgsqlDataSource? dataSource = null)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))

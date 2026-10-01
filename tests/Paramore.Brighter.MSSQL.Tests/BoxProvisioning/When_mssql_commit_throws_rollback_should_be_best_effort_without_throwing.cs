@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -161,7 +162,9 @@ file sealed class CommitThrowingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunne
         TimeSpan lockTimeout,
         ILogger logger,
         Exception commitFailure)
-        : base(catalog, configuration, lockTimeout, advisoryLock: null, logger: logger)
+        : base(catalog, configuration, lockTimeout,
+            NullLoggerFactory.Instance,
+            advisoryLock: null, logger: logger)
     {
         _commitFailure = commitFailure;
     }

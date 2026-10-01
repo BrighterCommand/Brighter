@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Npgsql;
@@ -35,13 +37,13 @@ public class PostgreSqlReservedKeywordTableNameTests
             _connectionString,
             outBoxTableName: ReservedKeywordTableName);
         _runner = new PostgreSqlBoxMigrationRunner(
-            new PostgreSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
+            new PostgreSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         _provisioner = new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             _config,
-            _runner);
+            _runner, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -96,7 +98,7 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public'";
         // Act + Assert: runtime DML — write a message via the PG outbox and read it back.
         // Exercises GenerateSqlText override that lowercases-quotes the table name; with the
         // legacy unquoted form this would emit `INSERT INTO Order ...` and fail at parse.
-        var outbox = new PostgreSqlOutbox(_config);
+        var outbox = new PostgreSqlOutbox(_config, logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlOutbox>());
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test.topic"), MessageType.MT_COMMAND),
             new MessageBody("hello reserved keyword"));

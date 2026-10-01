@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -37,7 +39,7 @@ public class SnsFifoMessageGatewayProvider
             TopicAttributes = new SnsAttributes(type: SqsType.Fifo, contentBasedDeduplication: false),
         };
 
-        var producer = new SnsMessageProducer(_awsConnection, publication);
+        var producer = new SnsMessageProducer(_awsConnection, publication, loggerFactory: NullLoggerFactory.Instance);
         return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
@@ -169,7 +171,7 @@ public class SnsFifoMessageGatewayProvider
         IAmAChannelAsync? invalidChannel = null;
         try
         {
-            invalidChannel = await new ChannelFactory(_awsConnection)
+            invalidChannel = await new ChannelFactory(_awsConnection, loggerFactory: NullLoggerFactory.Instance)
                 .CreateAsyncChannelAsync(invalidSubscription, cancellationToken);
 
             var message = await invalidChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
@@ -256,7 +258,7 @@ public class SnsFifoMessageGatewayProvider
 
     public IAmAChannelSync CreateChannel(SqsSubscription subscription)
     {
-        var channel = new ChannelFactory(_awsConnection)
+        var channel = new ChannelFactory(_awsConnection, loggerFactory: NullLoggerFactory.Instance)
             .CreateSyncChannel(subscription);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -271,7 +273,7 @@ public class SnsFifoMessageGatewayProvider
         SqsSubscription subscription,
         CancellationToken cancellationToken = default)
     {
-        var channel = await new ChannelFactory(_awsConnection)
+        var channel = await new ChannelFactory(_awsConnection, loggerFactory: NullLoggerFactory.Instance)
             .CreateAsyncChannelAsync(subscription, cancellationToken);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -291,7 +293,7 @@ public class SnsFifoMessageGatewayProvider
             connection = GatewayFactory.CreateFactory();
         }
 
-        var producer = new SnsMessageProducer(connection, publication);
+        var producer = new SnsMessageProducer(connection, publication, loggerFactory: NullLoggerFactory.Instance);
         producer.Scheduler = Scheduler;
         return new FifoMetadataProducer(producer);
     }
@@ -307,7 +309,7 @@ public class SnsFifoMessageGatewayProvider
             connection = GatewayFactory.CreateFactory();
         }
 
-        var producer = new SnsMessageProducer(connection, publication);
+        var producer = new SnsMessageProducer(connection, publication, loggerFactory: NullLoggerFactory.Instance);
         producer.Scheduler = Scheduler;
         return Task.FromResult<IAmAMessageProducerAsync>(new FifoMetadataProducer(producer));
     }
@@ -326,7 +328,7 @@ public class SnsFifoMessageGatewayProvider
             queueAttributes: new SqsAttributes(type: SqsType.Fifo)
         );
 
-        var dlqChannel = await new ChannelFactory(_awsConnection)
+        var dlqChannel = await new ChannelFactory(_awsConnection, loggerFactory: NullLoggerFactory.Instance)
             .CreateAsyncChannelAsync(dlqSubscription, cancellationToken);
 
         try

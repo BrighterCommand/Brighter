@@ -29,7 +29,6 @@ using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Validation;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Attributes;
@@ -40,7 +39,8 @@ namespace Paramore.Brighter
         : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>, IAsyncDisposable
         where TRequest : class, IRequest
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<PipelineBuilder<TRequest>>();
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
 
         private readonly IAmASubscriberRegistry? _subscriberRegistry;
         private readonly IAmASubscriberRegistryInspector? _subscriberRegistryInspector;
@@ -61,15 +61,17 @@ namespace Paramore.Brighter
         /// <param name="syncHandlerFactory">An <see cref="IAmAHandlerFactoryAsync"/>providing a callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
         /// <param name="isolateSubscribers">Does this build isolate each subscriber's pipeline from the others (a Publish dispatch) rather than a single dispatch (a Send)</param>
+        /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
         public PipelineBuilder(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactorySync syncHandlerFactory,
+            ILoggerFactory loggerFactory,
             InboxConfiguration? inboxConfiguration = null,
             bool isolateSubscribers = false)
+            : this(loggerFactory, inboxConfiguration)
         {
             _subscriberRegistry = subscriberRegistry;
             _syncHandlerFactory = syncHandlerFactory;
-            _inboxConfiguration = inboxConfiguration;
             _isolateSubscribers = isolateSubscribers;
         }
 
@@ -81,15 +83,17 @@ namespace Paramore.Brighter
         /// <param name="asyncHandlerFactory">An <see cref="IAmAHandlerFactoryAsync"/>providing a callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
         /// <param name="isolateSubscribers">Does this build isolate each subscriber's pipeline from the others (a Publish dispatch) rather than a single dispatch (a Send)</param>
+        /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
         public PipelineBuilder(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
+            ILoggerFactory loggerFactory,
             InboxConfiguration? inboxConfiguration = null,
             bool isolateSubscribers = false)
+            : this(loggerFactory, inboxConfiguration)
         {
             _subscriberRegistry = subscriberRegistry;
             _asyncHandlerFactory = asyncHandlerFactory;
-            _inboxConfiguration = inboxConfiguration;
             _isolateSubscribers = isolateSubscribers;
         }
 
@@ -99,12 +103,21 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="subscriberRegistryInspector">An <see cref="IAmASubscriberRegistryInspector"/> for introspecting registered handlers.</param>
         /// <param name="inboxConfiguration">Optional inbox configuration for global inbox attribute detection.</param>
+        /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
         public PipelineBuilder(
             IAmASubscriberRegistryInspector subscriberRegistryInspector,
+            ILoggerFactory loggerFactory,
             InboxConfiguration? inboxConfiguration = null)
+            : this(loggerFactory, inboxConfiguration)
         {
             _subscriberRegistryInspector = subscriberRegistryInspector;
+        }
+
+        private PipelineBuilder(ILoggerFactory loggerFactory, InboxConfiguration? inboxConfiguration)
+        {
             _inboxConfiguration = inboxConfiguration;
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _logger = loggerFactory.CreateBrighterLogger<PipelineBuilder<TRequest>>();
         }
 
         /// <summary>
@@ -186,7 +199,7 @@ namespace Paramore.Brighter
 
         internal Pipelines<TRequest> Build(TRequest request, IRequestContext requestContext, bool excludeResilienceContext)
         {
-            if(_syncHandlerFactory is null)
+            if (_syncHandlerFactory is null)
                 throw new NullReferenceException("HandlerFactorySync is null");
             
             try
@@ -210,6 +223,7 @@ namespace Paramore.Brighter
                     var handler = (RequestHandler<TRequest>?)_syncHandlerFactory.Create(observer, instanceScope);
                     if (handler is null)
                         throw new ConfigurationException($"Handler Factory could not construct handler of type {observer}");
+                    ConfigureLogging(handler);
                     var pipeline = BuildPipeline(handler, context, instanceScope);
                     pipeline.AddToLifetime(instanceScope);
 
@@ -246,7 +260,7 @@ namespace Paramore.Brighter
         internal AsyncPipelines<TRequest> BuildAsync(TRequest request, IRequestContext requestContext,
             bool continueOnCapturedContext, bool excludeResilienceContext)
         {
-            if(_asyncHandlerFactory is null)
+            if (_asyncHandlerFactory is null)
                 throw new NullReferenceException("AsyncHandlerFactory is null");
             
             try
@@ -270,6 +284,7 @@ namespace Paramore.Brighter
                     var handler = (RequestHandlerAsync<TRequest>?)_asyncHandlerFactory.Create(observer, instanceScope);
                     if (handler is null)
                         throw new ConfigurationException($"Handler Factory could not construct handler of type {observer}");
+                    ConfigureLogging(handler);
                     var pipeline = BuildAsyncPipeline(handler, context, instanceScope,
                         continueOnCapturedContext);
                     pipeline.AddToLifetime(instanceScope);
@@ -361,7 +376,7 @@ namespace Paramore.Brighter
             }
 
             AppendToPipeline(postAttributes, implicitHandler, requestContext, instanceScope);
-            Log.NewHandlerPipelineCreated(s_logger, TracePipeline(firstInPipeline).ToString());
+            Log.NewHandlerPipelineCreated(_logger, TracePipeline(firstInPipeline).ToString());
             return firstInPipeline;
         }
 
@@ -402,7 +417,7 @@ namespace Paramore.Brighter
             }
 
             AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext, instanceScope);
-            Log.NewAsyncHandlerPipelineCreated(s_logger, TracePipeline(firstInPipeline).ToString());
+            Log.NewAsyncHandlerPipelineCreated(_logger, TracePipeline(firstInPipeline).ToString());
             return firstInPipeline;
         }
 
@@ -504,6 +519,7 @@ namespace Paramore.Brighter
                 {
                     var decorator =
                         new HandlerFactory<TRequest>(attribute, _syncHandlerFactory!, requestContext).CreateRequestHandler(instanceScope);
+                    ConfigureLogging(decorator);
                     lastInPipeline.SetSuccessor(decorator);
                     lastInPipeline = decorator;
                 }
@@ -527,6 +543,7 @@ namespace Paramore.Brighter
                     var decorator =
                         _asyncHandlerFactory!.CreateAsyncRequestHandler<TRequest>(attribute, requestContext,
                             instanceScope);
+                    ConfigureLogging(decorator);
                     lastInPipeline.SetSuccessor(decorator);
                     lastInPipeline = decorator;
                 }
@@ -574,6 +591,7 @@ namespace Paramore.Brighter
                     var decorator =
                         new HandlerFactory<TRequest>(attribute, _syncHandlerFactory!, requestContext)
                             .CreateRequestHandler(instanceScope);
+                    ConfigureLogging(decorator);
                     decorator.SetSuccessor(lastInPipeline);
                     lastInPipeline = decorator;
                 }
@@ -601,6 +619,7 @@ namespace Paramore.Brighter
                     var decorator =
                         _asyncHandlerFactory!.CreateAsyncRequestHandler<TRequest>(attribute, requestContext,
                             instanceScope);
+                    ConfigureLogging(decorator);
                     decorator.ContinueOnCapturedContext = continueOnCapturedContext;
                     decorator.SetSuccessor(lastInPipeline);
                     lastInPipeline = decorator;
@@ -615,6 +634,12 @@ namespace Paramore.Brighter
                 }
             });
             return lastInPipeline;
+        }
+
+        private void ConfigureLogging(object handler)
+        {
+            if (handler is IRequireLoggerFactory loggingHandler)
+                loggingHandler.ConfigureLogging(_loggerFactory);
         }
 
         private PipelineTracer TracePipeline(IHandleRequests<TRequest> firstInPipeline)
@@ -633,10 +658,10 @@ namespace Paramore.Brighter
 
         private IAmALifetime GetSyncInstanceScope()
         {
-            if(_syncHandlerFactory is null)
+            if (_syncHandlerFactory is null)
                 throw new NullReferenceException("HandlerFactorySync is null");
 
-            var scope = new HandlerLifetimeScope(_syncHandlerFactory, _syncHandlerFactory.CreatePipelineScope());
+            var scope = new HandlerLifetimeScope(_syncHandlerFactory, _loggerFactory, _syncHandlerFactory.CreatePipelineScope());
             _instanceScopes.Add(scope);
 
             return scope;
@@ -644,10 +669,10 @@ namespace Paramore.Brighter
 
         private IAmALifetime GetAsyncInstanceScope()
         {
-            if(_asyncHandlerFactory is null)
+            if (_asyncHandlerFactory is null)
                 throw new NullReferenceException("AsyncHandlerFactory is null");
 
-            var scope = new HandlerLifetimeScope(_asyncHandlerFactory, _asyncHandlerFactory.CreatePipelineScope());
+            var scope = new HandlerLifetimeScope(_asyncHandlerFactory, _loggerFactory, _asyncHandlerFactory.CreatePipelineScope());
             _instanceScopes.Add(scope);
 
             return scope;

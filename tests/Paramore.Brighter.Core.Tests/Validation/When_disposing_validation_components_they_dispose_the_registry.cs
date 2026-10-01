@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Core.Tests.Validation
             var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
 
             var subscriberRegistry = new SubscriberRegistry();
-            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
+            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, loggerFactory: Initializer.TestLoggerFactory);
             PipelineBuilder<IRequest>.ClearPipelineCache();
 
             var validator = new PipelineValidator(
@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Core.Tests.Validation
             var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
 
             var subscriberRegistry = new SubscriberRegistry();
-            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
+            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, loggerFactory: Initializer.TestLoggerFactory);
             PipelineBuilder<IRequest>.ClearPipelineCache();
 
             var writer = new PipelineDiagnosticWriter(

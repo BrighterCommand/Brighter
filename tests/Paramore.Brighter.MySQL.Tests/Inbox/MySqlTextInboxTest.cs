@@ -1,4 +1,6 @@
-﻿using MySqlConnector;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using MySqlConnector;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MySql;
 
@@ -12,7 +14,7 @@ public class MySqlTextInboxTest : RelationalDatabaseInboxTests
     protected override bool JsonMessagePayload => false;
 
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration) 
-        => new MySqlInbox(configuration);
+        => new MySqlInbox(configuration, logger: NullLoggerFactory.Instance.CreateLogger<MySqlInbox>());
 
     protected override void CreateInboxTable(RelationalDatabaseConfiguration configuration)
     {

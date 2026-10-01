@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using Confluent.Kafka;
 using Microsoft.Extensions.DependencyInjection;
@@ -58,20 +59,24 @@ var subscriptions = new[]
         messagePumpType: MessagePumpType.Reactor)
 };
 
-builder.Services.AddConsumers(options =>
+builder.Services.AddConsumers(provider =>
 {
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    var options = new ConsumersOptions();
     options.Subscriptions = subscriptions;
     options.DefaultChannelFactory = new ChannelFactory(
         new KafkaMessageConsumerFactory(
             new KafkaMessagingGatewayConfiguration
             {
-                Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" }
-            }
-        ));
+                Name = "paramore.brighter",
+                BootStrapServers = new[] { "localhost:9092" }
+            },
+            loggerFactory: loggerFactory));
+    return options;
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-.UseScheduler(new InMemorySchedulerFactory())
+.UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
 //This is the default mapper type, but we are  explicit  for the sample anyway
 .AutoFromAssemblies([typeof(TaskCreated).Assembly], defaultMessageMapper: typeof(JsonMessageMapper<>), asyncDefaultMessageMapper: typeof(JsonMessageMapper<>));
 

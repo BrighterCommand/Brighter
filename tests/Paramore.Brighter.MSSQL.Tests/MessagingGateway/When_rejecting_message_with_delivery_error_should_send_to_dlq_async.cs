@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -54,11 +56,11 @@ public class MsSqlMessageConsumerDeliveryErrorDlqAsyncTests : IAsyncDisposable
             deadLetterRoutingKey: dlqTopic,
             messagePumpType: MessagePumpType.Proactor);
 
-        _producer = new MsSqlMessageProducer(testHelper.QueueConfiguration);
+        _producer = new MsSqlMessageProducer(testHelper.QueueConfiguration, loggerFactory: NullLoggerFactory.Instance);
 
-        _consumer = (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
+        _consumer = (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration, loggerFactory: NullLoggerFactory.Instance).Create(sub);
 
-        _dlqConsumer = new MsSqlMessageConsumer(testHelper.QueueConfiguration, dlqTopic);
+        _dlqConsumer = new MsSqlMessageConsumer(testHelper.QueueConfiguration, dlqTopic, loggerFactory: NullLoggerFactory.Instance);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

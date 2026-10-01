@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 using Amazon;
 using Amazon.Runtime;
@@ -42,7 +44,7 @@ public class SqsCombinedChannelFactoryRoutingTests
         var connection = new AWSMessagingGatewayConnection(
             new BasicAWSCredentials("test", "test"),
             RegionEndpoint.EUWest1);
-        var channelFactory = new ChannelFactory(connection);
+        var channelFactory = new ChannelFactory(connection, loggerFactory: NullLoggerFactory.Instance);
         var combinedChannelFactory = new CombinedChannelFactory([channelFactory]);
         var subscription = new SqsSubscription<MyCommand>(
             new SubscriptionName("t"),

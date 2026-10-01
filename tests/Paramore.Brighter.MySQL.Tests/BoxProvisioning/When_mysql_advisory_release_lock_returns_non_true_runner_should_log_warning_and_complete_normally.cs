@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -74,7 +75,7 @@ public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
         var capturingLogger = new CapturingLogger();
 
         var runner = new MySqlBoxMigrationRunner(
-            new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), fakeLock, capturingLogger);
+            new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), NullLoggerFactory.Instance, fakeLock, capturingLogger);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
@@ -97,7 +98,7 @@ public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
         var capturingLogger = new CapturingLogger();
 
         var runner = new MySqlBoxMigrationRunner(
-            new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), fakeLock, capturingLogger);
+            new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), NullLoggerFactory.Instance, fakeLock, capturingLogger);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act — runner must not throw despite the non-true release result.

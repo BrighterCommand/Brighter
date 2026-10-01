@@ -49,30 +49,34 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureServices((_, services) =>
     {
-        var producerRegistry = new KafkaProducerRegistryFactory(
-                new KafkaMessagingGatewayConfiguration
-                {
-                    Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
-                },
-                [
-                    new KafkaPublication<GreetingEvent>
-                    {
-                        Topic = new RoutingKey("greeting.event"),
-                        RequestType = typeof(GreetingEvent),
-                        NumPartitions = 3,
-                        MessageSendMaxRetries = 3,
-                        MessageTimeoutMs = 1000,
-                        MaxInFlightRequestsPerConnection = 1
-                    }
-                ])
-            .Create();
 
         services
             .AddBrighter()
-            .UseScheduler(new InMemorySchedulerFactory())
-            .AddProducers((configure) =>
+            .UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
+            .AddProducers(provider =>
             {
+                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                var producerRegistry = new KafkaProducerRegistryFactory(
+                        new KafkaMessagingGatewayConfiguration
+                        {
+                            Name = "paramore.brighter.greetingsender",
+                            BootStrapServers = new[] { "localhost:9092" }
+                        },
+                        [
+                            new KafkaPublication<GreetingEvent>
+                            {
+                                Topic = new RoutingKey("greeting.event"),
+                                RequestType = typeof(GreetingEvent),
+                                NumPartitions = 3,
+                                MessageSendMaxRetries = 3,
+                                MessageTimeoutMs = 1000,
+                                MaxInFlightRequestsPerConnection = 1
+                            }
+                        ], loggerFactory: loggerFactory)
+                    .Create();
+                var configure = new ProducersConfiguration();
                 configure.ProducerRegistry = producerRegistry;
+                return configure;
             })
             .AutoFromAssemblies();
 

@@ -34,7 +34,7 @@ public class DefaultOutboxConfigurationTests
     public void When_custom_box_configuration_set_should_apply_to_default_outbox()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter()
             .AddProducers(config =>
             {
@@ -59,7 +59,7 @@ public class DefaultOutboxConfigurationTests
     public void When_no_box_configuration_set_should_use_defaults()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter()
             .AddProducers(config =>
             {

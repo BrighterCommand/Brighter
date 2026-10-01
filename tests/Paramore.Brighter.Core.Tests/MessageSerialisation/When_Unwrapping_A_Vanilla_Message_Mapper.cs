@@ -26,7 +26,7 @@ public class VanillaMessageUnwrapRequestTests
         
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => null));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, new("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),

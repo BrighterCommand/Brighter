@@ -53,8 +53,9 @@ namespace GreetingsSender
                 .CreateLogger();
 
             var serviceCollection = new ServiceCollection();
-            serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
-            
+            using var loggerFactory = new SerilogLoggerFactory();
+            serviceCollection.AddSingleton<ILoggerFactory>(loggerFactory);
+
             if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
             {
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
@@ -71,9 +72,9 @@ namespace GreetingsSender
                             FindTopicBy = TopicFindBy.Convention,
                             MakeChannels = OnMissingChannel.Create
                         }
-                    ]
-                ).Create();
-                
+                    ],
+                    loggerFactory: loggerFactory).Create();
+
                 serviceCollection.AddBrighter()
                     .AddProducers((configure) =>
                     {
@@ -85,30 +86,30 @@ namespace GreetingsSender
                     {
                         HttpClientFactory = provider.GetService<IHttpClientFactory>(),
                         Strategy = StorageStrategy.Validate
-                    }))
+                    }, loggerFactory: loggerFactory))
                     .AutoFromAssemblies([typeof(GreetingEvent).Assembly]);
 
                 //We need this for the check as to whether an S3 bucket exists
                 serviceCollection.AddHttpClient();
-                
+
                 var serviceProvider = serviceCollection.BuildServiceProvider();
 
                 var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-                
+
                 Console.WriteLine($"Sending Event to SNS topic {topic} ");
 
                 //create a 512K string, too large for a payload, that needs offloading
                 commandProcessor.Post(new GreetingEvent($"Hi - {CreateString(524288)}"));
-                
+
                 Console.WriteLine($"Sent Event to SNS topic {topic} ");
             }
         }
-        
+
         public static string CreateString(int length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             return new string(Enumerable.Repeat(chars, length)
                 .Select(s => s[new Random().Next(s.Length)]).ToArray());
-        }    
+        }
     }
 }

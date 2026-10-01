@@ -15,7 +15,7 @@ public class ScopedAsyncDisposableMapperDisposalTests
         //arrange
         var disposals = new MapperDisposalLog();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton(disposals);
         collection.AddScoped<AsyncDisposableOnlyMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Scoped });

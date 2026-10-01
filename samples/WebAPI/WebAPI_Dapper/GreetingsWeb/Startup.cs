@@ -48,7 +48,6 @@ public class Startup
         app.UseOpenTelemetryPrometheusScrapingEndpoint();
     }
 
-
     // This method gets called by the runtime. Use this method to add services to the container.
     public void ConfigureServices(IServiceCollection services)
     {
@@ -73,6 +72,7 @@ public class Startup
 
     private void ConfigureBrighter(IServiceCollection services)
     {
+
         var transport = _configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
         if (string.IsNullOrWhiteSpace(transport))
             throw new InvalidOperationException("Transport is not set");
@@ -93,8 +93,6 @@ public class Startup
             throw new InvalidOperationException("DbType is not set");
 
         var rdbms = DbResolver.GetDatabaseType(dbType);
-        (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
-            OutboxFactory.MakeDapperOutbox(rdbms, outboxConfiguration);
 
         services.AddBrighter(options =>
             {
@@ -103,14 +101,19 @@ public class Startup
                 options.MapperLifetime = ServiceLifetime.Singleton;
                 options.PolicyRegistry = new GreetingsPolicy();
             })
-            .AddProducers(configure =>
+            .AddProducers(provider =>
             {
-                configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
+                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
+                    OutboxFactory.MakeDapperOutbox(rdbms, outboxConfiguration, loggerFactory);
+                var configure = new ProducersConfiguration();
+                configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport, loggerFactory);
                 configure.Outbox = makeOutbox.outbox;
                 configure.TransactionProvider = makeOutbox.transactionProvider;
                 configure.ConnectionProvider = makeOutbox.connectionProvider;
                 configure.MaxOutStandingMessages = 5;
                 configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
+                return configure;
             })
             .AutoFromAssemblies([typeof(AddPersonHandlerAsync).Assembly])
             .UseBoxProvisioning(options =>

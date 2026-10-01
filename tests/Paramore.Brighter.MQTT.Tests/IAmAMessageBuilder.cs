@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -201,4 +201,3 @@ public interface IAmAMessageBuilder
     /// <returns>The constructed message with all configured properties.</returns>
     Message Build();
 }
-

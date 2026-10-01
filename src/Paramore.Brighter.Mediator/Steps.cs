@@ -28,7 +28,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -48,17 +47,19 @@ public enum StepState
 /// <param name="stepTask">The action to be taken with the step, null if no action</param>
 /// <param name="onCompletion">An optional callback to run, following completion of the step</param>
 /// <typeparam name="TData">The data that the step operates over</typeparam>
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
 public abstract class Step<TData>(
     string name,
     Sequential<TData>? next,
+    ILoggerFactory loggerFactory,
     IStepTask<TData>? stepTask = null,
     Action? onCompletion = null) 
 {
     /// <summary> Which job is being executed by the step. </summary>
-    protected Job<TData>? Job ;
+    protected Job<TData>? Job;
 
     /// <summary> The logger for the step. </summary>
-    protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<Step<TData>>();
+    protected readonly ILogger Logger = loggerFactory.CreateBrighterLogger<Step<TData>>();
     
     /// <summary>The name of the step, used for tracing execution</summary>
     public string Name { get; init; } = name;
@@ -111,14 +112,16 @@ public abstract class Step<TData>(
 /// <param name="nextTrue">The next step in the sequence, if the predicate evaluates to true, null if this is the last step.</param>
 /// <param name="nextFalse">The next step in the sequence, if the predicate evaluates to false, null if this is the last step.</param>
 /// <typeparam name="TData">The data that the step operates over</typeparam>
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
 public class ExclusiveChoice<TData>(
     string name,
     ISpecification<TData> predicate,
     Action? onCompletion,
     Sequential<TData>? nextTrue,
-    Sequential<TData>? nextFalse
+    Sequential<TData>? nextFalse,
+    ILoggerFactory loggerFactory
 )
-    : Step<TData>(name, null, null, onCompletion)
+    : Step<TData>(name, null, loggerFactory, null, onCompletion)
 {
     /// <summary>
     ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
@@ -158,8 +161,9 @@ public class ExclusiveChoice<TData>(
 
 public class ParallelSplit<TData>(
     string name,
-    Func<TData, IEnumerable<Step<TData>>>? onMap)
-    : Step<TData>(name, null)
+    Func<TData, IEnumerable<Step<TData>>>? onMap,
+    ILoggerFactory loggerFactory)
+    : Step<TData>(name, null, loggerFactory: loggerFactory)
 {
     /// <summary>
     ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
@@ -222,15 +226,17 @@ public class ParallelSplit<TData>(
 /// <param name="onFaulted">An optional callback to run, following a faulted execution of the step</param>
 /// <param name="faultNext">The next step in the sequence, following a faulted execution of the step</param>
 /// <typeparam name="TData">The data that the step operates over</typeparam>
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
 public class Sequential<TData>(
     string name, 
     IStepTask<TData> stepTask, 
     Action? onCompletion, 
     Sequential<TData>? next, 
+    ILoggerFactory loggerFactory,
     Action? onFaulted = null, 
     Sequential<TData>? faultNext = null
 ) 
-    : Step<TData>(name, next, stepTask, onCompletion)
+    : Step<TData>(name, next, loggerFactory, stepTask, onCompletion)
 {
     /// <summary>
     ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
@@ -254,7 +260,7 @@ public class Sequential<TData>(
         
         if (StepTask is null)
         {
-            s_logger.LogWarning("No task to execute for {Name}", Name);
+            Logger.LogWarning("No task to execute for {Name}", Name);
             State = StepState.Done;
             await stateStore.SaveJobAsync(Job, cancellationToken);
             return;
@@ -268,7 +274,7 @@ public class Sequential<TData>(
             OnCompletion?.Invoke();
             State = StepState.Done;
             
-            if(Next != null)
+            if (Next != null)
                 Next.State = StepState.Queued;
             
             Job.NextStep(Next);
@@ -303,9 +309,10 @@ public class Wait<TData> : Step<TData>
     /// <param name="name">The name of the step, used for tracing execution</param>
     /// <param name="duration">The period for which we pause</param>
     /// <param name="next">The next step in the sequence, null if this is the last step.</param>
+    /// <param name="loggerFactory">The factory used to create the logger for this step.</param>
     /// <typeparam name="TData">The data that the step operates over</typeparam>
-    public Wait(string name, TimeSpan duration, Sequential<TData>? next) 
-        : base(name, next)
+    public Wait(string name, TimeSpan duration, Sequential<TData>? next, ILoggerFactory loggerFactory)
+        : base(name, next, loggerFactory: loggerFactory)
     {
         _duration = duration;
     }

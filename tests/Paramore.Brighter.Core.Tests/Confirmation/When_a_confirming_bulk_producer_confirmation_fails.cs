@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
         private readonly RoutingKey _topic = new("Bulk.Confirming.Producer.Topic");
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly RequestContext _requestContext = new();
-        private readonly InMemoryOutboxCircuitBreaker _circuitBreaker = new();
+        private readonly InMemoryOutboxCircuitBreaker _circuitBreaker = new(logger: LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>( Initializer.TestLoggerFactory ));
         private readonly InMemoryOutbox _outbox;
         private readonly InMemoryMessageProducer _producer;
         private readonly OutboxProducerMediator<Message, CommittableTransaction> _mediator;
@@ -56,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // clock keeps the outbox outstanding/dispatched windows deterministic.
             var bus = new InternalBus();
             _outbox = new InMemoryOutbox(_timeProvider);
-            _producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
+            _producer = new InMemoryMessageProducer(bus, Initializer.TestLoggerFactory, new Publication { Topic = _topic })
             {
                 UseAsyncPublishConfirmation = true,
                 PublishFailurePredicate = _ => true
@@ -78,7 +80,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new FindPublicationByPublicationTopicOrRequestType(),
                 outbox: _outbox,
                 outboxCircuitBreaker: _circuitBreaker,
-                timeProvider: _timeProvider);
+                timeProvider: _timeProvider, loggerFactory: Initializer.TestLoggerFactory);
         }
 
         private Message MessageOn(RoutingKey topic) => new(

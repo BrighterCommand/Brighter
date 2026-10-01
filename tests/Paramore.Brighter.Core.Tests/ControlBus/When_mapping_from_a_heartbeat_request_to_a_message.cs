@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Xunit;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Mappers;
@@ -19,7 +19,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _mapper = new HeartbeatRequestCommandMessageMapper();
 
             _request = new HeartbeatRequest(new ReplyAddress(TOPIC, _correlationId));
-            
+
             _publication = new Publication { Topic = new RoutingKey(TOPIC) };
         }
 

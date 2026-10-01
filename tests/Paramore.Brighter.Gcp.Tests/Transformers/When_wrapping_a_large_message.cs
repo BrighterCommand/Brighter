@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
@@ -42,14 +44,14 @@ public class LargeMessagePayloadWrapTests : IDisposable
             BucketName = _bucketName
         };
         
-        _luggageStore = new GcsLuggageStore(_luggageStoreOptions);
+        _luggageStore = new GcsLuggageStore(_luggageStoreOptions, loggerFactory: NullLoggerFactory.Instance);
         _luggageStore.EnsureStoreExists();
 
         var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, InstrumentationOptions.None);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, NullLoggerFactory.Instance, InstrumentationOptions.None);
     }
 
     [Fact]

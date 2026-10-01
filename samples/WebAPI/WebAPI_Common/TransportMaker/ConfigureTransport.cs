@@ -1,4 +1,5 @@
-﻿using Confluent.Kafka;
+﻿using Microsoft.Extensions.Logging;
+using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
@@ -31,22 +32,23 @@ public static class ConfigureTransport
                 "Messaging transport is not supported")
         };
     }
-    
-    public static IAmAProducerRegistry MakeProducerRegistry<T>(MessagingTransport messagingTransport) where T : class, IRequest
+
+    public static IAmAProducerRegistry MakeProducerRegistry<T>(MessagingTransport messagingTransport, ILoggerFactory loggerFactory) where T : class, IRequest
     {
         return messagingTransport switch
         {
-            MessagingTransport.Rmq => GetRmqProducerRegistry<T>(),
-            MessagingTransport.Kafka => GetKafkaProducerRegistry<T>(),
-            MessagingTransport.Asb => GetAsbProducerRegistry<T>(),
+            MessagingTransport.Rmq => GetRmqProducerRegistry<T>(loggerFactory),
+            MessagingTransport.Kafka => GetKafkaProducerRegistry<T>(loggerFactory),
+            MessagingTransport.Asb => GetAsbProducerRegistry<T>(loggerFactory),
             _ => throw new ArgumentOutOfRangeException(nameof(messagingTransport),
                 "Messaging transport is not supported")
         };
     }
-    
+
     public static void AddSchemaRegistryMaybe(IServiceCollection services, MessagingTransport messagingTransport)
     {
-        if (messagingTransport != MessagingTransport.Kafka) return;
+        if (messagingTransport != MessagingTransport.Kafka)
+            return;
 
         SchemaRegistryConfig schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081" };
         CachedSchemaRegistryClient cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
@@ -61,8 +63,8 @@ public static class ConfigureTransport
 
         return TransportType(transport) == MessagingTransport.Kafka;
     }
-    
-    static IAmAProducerRegistry GetRmqProducerRegistry<T>() where T : class, IRequest
+
+    static IAmAProducerRegistry GetRmqProducerRegistry<T>(ILoggerFactory loggerFactory) where T : class, IRequest
     {
         IAmAProducerRegistry producerRegistry = new RmqProducerRegistryFactory(
                 new RmqMessagingGatewayConnection
@@ -78,19 +80,20 @@ public static class ConfigureTransport
                         WaitForConfirmsTimeOutInMilliseconds = 1000,
                         MakeChannels = OnMissingChannel.Create
                     }
-                ]
-            )
+                ],
+                loggerFactory: loggerFactory)
             .Create();
 
         return producerRegistry;
     }
-    
-    public static IAmAProducerRegistry GetKafkaProducerRegistry<T>() where T: class, IRequest
+
+    public static IAmAProducerRegistry GetKafkaProducerRegistry<T>(ILoggerFactory loggerFactory) where T : class, IRequest
     {
         IAmAProducerRegistry producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
+                    Name = "paramore.brighter.greetingsender",
+                    BootStrapServers = new[] { "localhost:9092" }
                 },
                 [
                     new KafkaPublication
@@ -102,57 +105,58 @@ public static class ConfigureTransport
                         MaxInFlightRequestsPerConnection = 1,
                         MakeChannels = OnMissingChannel.Create
                     }
-                ])
+                ], loggerFactory: loggerFactory)
             .Create();
 
         return producerRegistry;
     }
-    
-    private static IAmAProducerRegistry GetAsbProducerRegistry<T>() where T : class, IRequest
+
+    private static IAmAProducerRegistry GetAsbProducerRegistry<T>(ILoggerFactory loggerFactory) where T : class, IRequest
     {
         IAmAProducerRegistry producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net"),
                 new AzureServiceBusPublication[]
                 {
                     new() { Topic = new RoutingKey(typeof(T).Name), RequestType = typeof(T) }
-                }
-            )
+                },
+                loggerFactory: loggerFactory)
             .Create();
 
         return producerRegistry;
     }
-    
-    public static IAmAChannelFactory GetChannelFactory(MessagingTransport messagingTransport)
+
+    public static IAmAChannelFactory GetChannelFactory(MessagingTransport messagingTransport, ILoggerFactory loggerFactory)
     {
         return messagingTransport switch
         {
-            MessagingTransport.Rmq => GetRmqChannelFactory(),
-            MessagingTransport.Kafka => GetKafkaChannelFactory(),
+            MessagingTransport.Rmq => GetRmqChannelFactory(loggerFactory),
+            MessagingTransport.Kafka => GetKafkaChannelFactory(loggerFactory),
             _ => throw new ArgumentOutOfRangeException(nameof(messagingTransport),
                 "Messaging transport is not supported")
         };
     }
-    
-    static IAmAChannelFactory GetRmqChannelFactory()
+
+    static IAmAChannelFactory GetRmqChannelFactory(ILoggerFactory loggerFactory)
     {
         return new Paramore.Brighter.MessagingGateway.RMQ.Async.ChannelFactory(
             new RmqMessageConsumerFactory(new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
                 Exchange = new Exchange("paramore.brighter.exchange")
-            })
+            }, loggerFactory: loggerFactory)
         );
     }
 
-    static IAmAChannelFactory GetKafkaChannelFactory()
+    static IAmAChannelFactory GetKafkaChannelFactory(ILoggerFactory loggerFactory)
     {
         return new Paramore.Brighter.MessagingGateway.Kafka.ChannelFactory(
             new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" }
-                }
-            )
+                    Name = "paramore.brighter",
+                    BootStrapServers = new[] { "localhost:9092" }
+                },
+                loggerFactory: loggerFactory)
         );
     }
 
@@ -203,5 +207,5 @@ public static class ConfigureTransport
     }
 }
 
- 
+
 

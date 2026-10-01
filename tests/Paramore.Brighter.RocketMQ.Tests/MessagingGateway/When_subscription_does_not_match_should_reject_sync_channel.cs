@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -36,7 +38,7 @@ public class RocketMQChannelFactorySubscriptionTests
     {
         // Arrange
         _factory = new RocketMqChannelFactory(new RocketMessageConsumerFactory(
-            new RocketMessagingGatewayConnection(new ClientConfig.Builder().SetEndpoints("localhost:8081").EnableSsl(false).Build())));
+            new RocketMessagingGatewayConnection(new ClientConfig.Builder().SetEndpoints("localhost:8081").EnableSsl(false).Build()), loggerFactory: NullLoggerFactory.Instance));
     }
 
     [Theory]

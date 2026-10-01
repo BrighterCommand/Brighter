@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -46,7 +46,7 @@ public class CommandProcessorPumpActionTests
         //Arrange
         var subscribers = new SubscriberRegistry();
         subscribers.RegisterAsync<ResilienceActionCommandAsync, ResilienceActionHandlerAsync>();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.TestLoggerFactory);
         services.AddTransient<ResilienceActionHandlerAsync>();
         services.AddTransient<ResilienceExceptionPolicyHandlerAsync<ResilienceActionCommandAsync>>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
@@ -55,7 +55,7 @@ public class CommandProcessorPumpActionTests
         pipelines.TryAddBuilder("pump-actions", (builder, _) => builder.AddRetry(
             new RetryStrategyOptions { MaxRetryAttempts = 3, Delay = TimeSpan.Zero }));
         var processor = new CommandProcessor(subscribers, new ServiceProviderHandlerFactory(provider),
-            new InMemoryRequestContextFactory(), new PolicyRegistry(), pipelines, new InMemorySchedulerFactory());
+            new InMemoryRequestContextFactory(), new PolicyRegistry(), pipelines, new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         var action = new RejectMessageAction("permanent failure");
         var command = new ResilienceActionCommandAsync(action);
 

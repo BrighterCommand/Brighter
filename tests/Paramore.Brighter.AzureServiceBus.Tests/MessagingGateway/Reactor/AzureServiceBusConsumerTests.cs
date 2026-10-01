@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -28,13 +30,13 @@ public class AzureServiceBusConsumerTests
         _fakeMessageProducer = new FakeMessageProducer();
         _messageReceiver = new FakeServiceBusReceiverWrapper();
         _fakeMessageReceiver = new FakeServiceBusReceiverProvider(_messageReceiver);
-            
+
 
         var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
-            ,makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig);
-            
+            , makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig);
+
         _azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _fakeMessageProducer,
-            _nameSpaceManagerWrapper, _fakeMessageReceiver);
+            _nameSpaceManagerWrapper, _fakeMessageReceiver, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -48,14 +50,14 @@ public class AzureServiceBusConsumerTests
         {
             MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
             ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } }
-        }; 
-            
+        };
+
         var message2 = new BrokeredMessage()
         {
             MessageBodyValue = Encoding.UTF8.GetBytes("somebody2"),
             ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_DOCUMENT" } }
-        }; 
-            
+        };
+
         brokeredMessageList.Add(message1);
         brokeredMessageList.Add(message2);
 
@@ -76,19 +78,19 @@ public class AzureServiceBusConsumerTests
     public async Task When_a_subscription_does_not_exist_and_messages_are_in_the_queue_then_the_subscription_is_created_and_messages_are_returned()
     {
         _nameSpaceManagerWrapper.ResetState();
-        _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+        _nameSpaceManagerWrapper.Topics.Add("topic", new());
         var brokeredMessageList = new List<IBrokeredMessageWrapper>();
         var message1 = new BrokeredMessage()
         {
             MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
             ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } }
-        }; 
+        };
         brokeredMessageList.Add(message1);
 
         _messageReceiver.MessageQueue = brokeredMessageList;
 
         Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
-            
+
         await _nameSpaceManagerWrapper.SubscriptionExistsAsync("topic", "subscription");
         //A.CallTo(() => _nameSpaceManagerWrapper.f => f.CreateSubscription("topic", "subscription", _subConfig)).MustHaveHappened();
         Assert.Equal("somebody", result[0].Body.Value);
@@ -105,9 +107,9 @@ public class AzureServiceBusConsumerTests
         {
             MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
             ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_COMMAND" } }
-        }; 
+        };
         brokeredMessageList.Add(message1);
-            
+
         _messageReceiver.MessageQueue = brokeredMessageList;
 
         Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
@@ -128,7 +130,7 @@ public class AzureServiceBusConsumerTests
         {
             MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
             ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_COmmAND" } }
-        }; 
+        };
         brokeredMessageList.Add(message1);
 
         _messageReceiver.MessageQueue = brokeredMessageList;
@@ -151,7 +153,7 @@ public class AzureServiceBusConsumerTests
         {
             MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
             ApplicationProperties = new Dictionary<string, object> { { "MessageType", "wrong_message_type" } }
-        }; 
+        };
         brokeredMessageList.Add(message1);
 
         _messageReceiver.MessageQueue = brokeredMessageList;
@@ -171,8 +173,8 @@ public class AzureServiceBusConsumerTests
         var message1 = new BrokeredMessage()
         {
             MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
-            ApplicationProperties = new Dictionary<string, object>() 
-        }; 
+            ApplicationProperties = new Dictionary<string, object>()
+        };
         brokeredMessageList.Add(message1);
 
         _messageReceiver.MessageQueue = brokeredMessageList;
@@ -196,7 +198,7 @@ public class AzureServiceBusConsumerTests
         {
             MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
             ApplicationProperties = new Dictionary<string, object>()
-        }; 
+        };
         brokeredMessageList.Add(message1);
 
         _messageReceiver.MessageQueue = brokeredMessageList;
@@ -233,13 +235,13 @@ public class AzureServiceBusConsumerTests
         {
             MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
             ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } }
-        }; 
+        };
         brokeredMessageList.Add(message1);
 
         _messageReceiver.MessageQueue = brokeredMessageList;
 
         Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
-            
+
         Assert.Equal("somebody", result[0].Body.Value);
     }
 
@@ -247,7 +249,7 @@ public class AzureServiceBusConsumerTests
     public void When_dispose_is_called_the_close_method_is_called()
     {
         _nameSpaceManagerWrapper.ResetState();
-        _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+        _nameSpaceManagerWrapper.Topics.Add("topic", new());
         _azureServiceBusConsumer.Receive(TimeSpan.Zero);
         _azureServiceBusConsumer.Dispose();
 
@@ -258,7 +260,7 @@ public class AzureServiceBusConsumerTests
     public void When_requeue_is_called_and_the_delay_is_zero_the_send_method_is_called()
     {
         _nameSpaceManagerWrapper.ResetState();
-        _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+        _nameSpaceManagerWrapper.Topics.Add("topic", new());
         _fakeMessageProducer.SentMessages.Clear();
         var messageLockTokenOne = Guid.NewGuid();
         var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_EVENT);
@@ -274,9 +276,9 @@ public class AzureServiceBusConsumerTests
     public void When_requeue_is_called_and_the_delay_is_more_than_zero_the_sendWithDelay_method_is_called()
     {
         _nameSpaceManagerWrapper.ResetState();
-        _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+        _nameSpaceManagerWrapper.Topics.Add("topic", new());
         _fakeMessageProducer.SentMessages.Clear();
-            
+
         var messageLockTokenOne = Guid.NewGuid();
         var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_EVENT);
         var message = new Message(messageHeader, new MessageBody("body"));
@@ -329,22 +331,23 @@ public class AzureServiceBusConsumerTests
     public async Task Once_the_subscription_is_created_or_exits_it_does_not_check_if_it_exists_every_time(bool subscriptionExists)
     {
         _nameSpaceManagerWrapper.ResetState();
-        _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+        _nameSpaceManagerWrapper.Topics.Add("topic", new());
         _messageReceiver.MessageQueue.Clear();
-        if (subscriptionExists) await _nameSpaceManagerWrapper.CreateSubscriptionAsync("topic", "subscription", new());
+        if (subscriptionExists)
+            await _nameSpaceManagerWrapper.CreateSubscriptionAsync("topic", "subscription", new());
         var brokeredMessageList = new List<IBrokeredMessageWrapper>();
         var message1 = new BrokeredMessage()
         {
             MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
             ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } }
-        }; 
+        };
         brokeredMessageList.Add(message1);
 
         _messageReceiver.MessageQueue = brokeredMessageList;
 
         _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
         _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
-            
+
         //Subscription is only created once
         Assert.Equal(1, _nameSpaceManagerWrapper.Topics["topic"].Count(s => s.Equals("subscription")));
 
@@ -355,24 +358,24 @@ public class AzureServiceBusConsumerTests
     public void When_MessagingEntityAlreadyExistsException_does_not_check_if_subscription_exists()
     {
         _nameSpaceManagerWrapper.ResetState();
-        _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+        _nameSpaceManagerWrapper.Topics.Add("topic", new());
         _nameSpaceManagerWrapper.CreateSubscriptionException =
             new ServiceBusException("whatever", ServiceBusFailureReason.MessagingEntityAlreadyExists);
         _messageReceiver.MessageQueue.Clear();
-            
+
         var brokeredMessageList = new List<IBrokeredMessageWrapper>();
         var message1 = new BrokeredMessage()
         {
             MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
             ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } }
-        }; 
+        };
         brokeredMessageList.Add(message1);
 
         _messageReceiver.MessageQueue = brokeredMessageList;
 
         Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
         _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
-            
+
         Assert.Equal("somebody", result[0].Body.Value);
 
         Assert.Equal(1, _nameSpaceManagerWrapper.ExistCount);
@@ -382,16 +385,16 @@ public class AzureServiceBusConsumerTests
     public void When_a_message_contains_a_null_body_message_is_still_processed()
     {
         _nameSpaceManagerWrapper.ResetState();
-        _nameSpaceManagerWrapper.Topics.Add("topic", new ());
-            
+        _nameSpaceManagerWrapper.Topics.Add("topic", new());
+
         _messageReceiver.MessageQueue.Clear();
-            
+
         var brokeredMessageList = new List<IBrokeredMessageWrapper>();
         var message1 = new BrokeredMessage()
         {
             MessageBodyValue = null,
             ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } }
-        }; 
+        };
 
         brokeredMessageList.Add(message1);
 
@@ -405,7 +408,7 @@ public class AzureServiceBusConsumerTests
     [Fact]
     public void When_receiving_messages_and_the_receiver_is_closing_a_MT_QUIT_message_is_sent()
     {
-        _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+        _nameSpaceManagerWrapper.Topics.Add("topic", new());
         _messageReceiver.Close();
 
         Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
@@ -454,10 +457,10 @@ public class AzureServiceBusConsumerTests
         _nameSpaceManagerWrapper.ResetState();
 
         var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
-            ,makeChannels: OnMissingChannel.Validate, subscriptionConfiguration: _subConfig);
-            
+            , makeChannels: OnMissingChannel.Validate, subscriptionConfiguration: _subConfig);
+
         var azureServiceBusConsumerValidate = new AzureServiceBusTopicConsumer(sub, _fakeMessageProducer,
-            _nameSpaceManagerWrapper, _fakeMessageReceiver);
+            _nameSpaceManagerWrapper, _fakeMessageReceiver, loggerFactory: NullLoggerFactory.Instance);
 
         Assert.Throws<ChannelFailureException>(() => azureServiceBusConsumerValidate.Receive(TimeSpan.FromMilliseconds(400)));
     }

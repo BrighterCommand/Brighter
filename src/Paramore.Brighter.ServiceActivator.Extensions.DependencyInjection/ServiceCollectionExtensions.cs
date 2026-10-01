@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Validation;
@@ -14,7 +13,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
     /// <summary>
     /// Extension methods for adding a service activator to the .NET IoC container
     /// </summary>
-    public static class  ServiceActivatorServiceCollectionExtensions 
+    public static class ServiceActivatorServiceCollectionExtensions
     {
         /// <summary>
         /// Adds a service activator to the .NET IoC Container, used to register one or more message pump for a subscription to messages on an external bus
@@ -133,10 +132,9 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
         {
-            var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
-            //if not supplied, use the default logger factory, which has no providers
-            if (loggerFactory != null)
-                ApplicationLogging.LoggerFactory = loggerFactory;
+            //Resolve the container's logger factory and flow it through the builder as an instance,
+            //rather than copying it into a process-wide static (which would be disposed with the container).
+            var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         
             var options = serviceProvider.GetRequiredService<IAmConsumerOptions>();
             
@@ -154,7 +152,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             
             var tracer = serviceProvider.GetService<IAmABrighterTracer>();
 
-            var channelFactory = options.DefaultChannelFactory ?? new InMemoryChannelFactory(new InternalBus(), TimeProvider.System);
+            var channelFactory = options.DefaultChannelFactory ?? new InMemoryChannelFactory(new InternalBus(), TimeProvider.System, loggerFactory);
             var scheduler = serviceProvider.GetService<IAmAMessageScheduler>();
             if (channelFactory is IAmAChannelFactoryWithScheduler schedulerAwareFactory)
             {
@@ -178,6 +176,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 .ChannelFactory(channelFactory)
                 .Subscriptions(options.Subscriptions)
                 .ConfigureInstrumentation(tracer, options.InstrumentationOptions)
+                .ConfigureLogging(loggerFactory)
                 .Build(ownsRegistry: true, ownsTransformerFactories: true, shutdownTimeout: options.ShutdownTimeout);
         }
 

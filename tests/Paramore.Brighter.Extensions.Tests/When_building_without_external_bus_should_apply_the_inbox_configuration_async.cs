@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
@@ -51,7 +53,7 @@ public class CommandProcessorBuilderInboxAsyncTests
         registry.RegisterAsync<ConsumerGlobalInboxAsyncCommand, ConsumerGlobalInboxAsyncCommandHandler>();
         var factory = new SimpleHandlerFactoryAsync(type =>
             type == typeof(UseInboxHandlerAsync<ConsumerGlobalInboxAsyncCommand>)
-                ? new UseInboxHandlerAsync<ConsumerGlobalInboxAsyncCommand>(inbox)
+                ? new UseInboxHandlerAsync<ConsumerGlobalInboxAsyncCommand>(inbox, logger: LoggerFactoryExtensions.CreateLogger<UseInboxHandlerAsync<ConsumerGlobalInboxAsyncCommand>>( Initializer.Factory ))
                 : new ConsumerGlobalInboxAsyncCommandHandler());
         var processor = CommandProcessorBuilder.StartNew(configuration)
             .Handlers(new HandlerConfiguration(registry, factory))
@@ -59,7 +61,8 @@ public class CommandProcessorBuilderInboxAsyncTests
             .NoExternalBus()
             .NoInstrumentation()
             .RequestContextFactory(new InMemoryRequestContextFactory())
-            .RequestSchedulerFactory(new InMemorySchedulerFactory())
+            .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: Initializer.Factory))
+            .ConfigureLogging(Initializer.Factory)
             .Build();
         var command = new ConsumerGlobalInboxAsyncCommand();
         var duplicate = new ConsumerGlobalInboxAsyncCommand { Id = command.Id };

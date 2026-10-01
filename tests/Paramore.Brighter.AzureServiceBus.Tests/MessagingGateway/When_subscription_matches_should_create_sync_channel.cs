@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
@@ -36,7 +38,7 @@ public class AzureServiceBusChannelFactorySubscriptionTests
     {
         // Arrange
         _factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(
-            new AzureServiceBusConfiguration("Endpoint=sb://localhost/;SharedAccessKeyName=test;SharedAccessKey=dGVzdA==")));
+            new AzureServiceBusConfiguration("Endpoint=sb://localhost/;SharedAccessKeyName=test;SharedAccessKey=dGVzdA=="), loggerFactory: NullLoggerFactory.Instance));
     }
 
     [Theory]

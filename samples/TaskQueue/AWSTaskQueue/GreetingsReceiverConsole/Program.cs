@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
@@ -75,10 +76,13 @@ if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var cr
             }
         });
 
-    builder.Services.AddConsumers(options =>
+    builder.Services.AddConsumers(provider =>
         {
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var options = new ConsumersOptions();
             options.Subscriptions = subscriptions;
-            options.DefaultChannelFactory = new ChannelFactory(awsConnection);
+            options.DefaultChannelFactory = new ChannelFactory(awsConnection, loggerFactory: loggerFactory);
+            return options;
         })
         .AutoFromAssemblies();
 

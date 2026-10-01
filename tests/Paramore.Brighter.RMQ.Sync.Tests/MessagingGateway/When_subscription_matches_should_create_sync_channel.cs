@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
@@ -39,7 +41,7 @@ public class RmqSyncChannelFactorySubscriptionTests
         {
             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
             Exchange = new Exchange("channel-factory-tests")
-        }));
+        },loggerFactory:NullLoggerFactory.Instance));
     }
 
     [Theory]

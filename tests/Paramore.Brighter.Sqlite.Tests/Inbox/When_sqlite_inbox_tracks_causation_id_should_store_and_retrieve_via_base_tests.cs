@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.Sqlite;
 using Xunit;
@@ -17,7 +19,7 @@ public class SqliteCausationTrackingInboxTest : CausationTrackingInboxBaseTests
         _configuration = new RelationalDatabaseConfiguration(
             Tests.Configuration.ConnectionString,
             inboxTableName: $"{Tests.Configuration.TablePrefix}{Uuid.New():N}");
-        _inbox = new SqliteInbox(_configuration);
+        _inbox = new SqliteInbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SqliteInbox>());
         base.BeforeEachTest();
     }
 

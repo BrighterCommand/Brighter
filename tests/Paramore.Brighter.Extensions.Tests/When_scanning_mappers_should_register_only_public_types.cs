@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -38,7 +38,7 @@ public class MapperScanVisibilityTests
     public void When_scanning_mappers_should_register_only_public_types(bool autoFromAssemblies)
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var registry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(
             services, new ServiceCollectionSubscriberRegistry(services), registry);

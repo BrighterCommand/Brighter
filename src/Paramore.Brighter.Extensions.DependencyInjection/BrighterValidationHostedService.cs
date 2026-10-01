@@ -66,7 +66,7 @@ public class BrighterValidationHostedService : IHostedService
         _options = options;
         _validators = validators;
         _serviceProvider = serviceProvider;
-        _logger = logger;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc />

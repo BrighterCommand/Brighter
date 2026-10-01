@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Mime;
 using System.Text.Json;
@@ -76,12 +78,12 @@ public class SqsMessageConsumerUnacceptableFallbackToDlqTests : IDisposable, IAs
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateSyncChannel(subscription);
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create));
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create), loggerFactory: NullLoggerFactory.Instance);
 
         // Create a separate channel to consume from the DLQ queue
         var dlqSubscription = new SqsSubscription<MyCommand>(
@@ -92,7 +94,7 @@ public class SqsMessageConsumerUnacceptableFallbackToDlqTests : IDisposable, IAs
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create);
 
-        _dlqChannelFactory = new ChannelFactory(awsConnection);
+        _dlqChannelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         _dlqChannel = _dlqChannelFactory.CreateSyncChannel(dlqSubscription);
     }
 

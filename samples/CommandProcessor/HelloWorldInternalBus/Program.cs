@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using HelloWorldInternalBus;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -36,7 +37,7 @@ var routingKey = new RoutingKey("greeting.command");
 
 var bus = new InternalBus();
 
-var publications = new[] { new Publication { Topic = routingKey, RequestType = typeof(GreetingCommand)} };
+var publications = new[] { new Publication { Topic = routingKey, RequestType = typeof(GreetingCommand) } };
 
 var subscriptions = new[]
 {
@@ -49,18 +50,24 @@ var subscriptions = new[]
 
 var builder = Host.CreateApplicationBuilder();
 
-builder.Services.AddConsumers(options =>
+builder.Services.AddConsumers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var options = new ConsumersOptions();
         options.Subscriptions = subscriptions;
-        options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
+        options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System, loggerFactory: loggerFactory);
         options.HandlerLifetime = ServiceLifetime.Scoped;
         options.MapperLifetime = ServiceLifetime.Singleton;
         options.InboxConfiguration = new InboxConfiguration(new InMemoryInbox(TimeProvider.System));
+        return options;
     })
-    .AddProducers((config) =>
+    .AddProducers(provider =>
     {
-        config.ProducerRegistry = new InMemoryProducerRegistryFactory(bus, publications, InstrumentationOptions.All).Create();
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var config = new ProducersConfiguration();
+        config.ProducerRegistry = new InMemoryProducerRegistryFactory(bus, publications, loggerFactory, InstrumentationOptions.All).Create();
         config.Outbox = new InMemoryOutbox(TimeProvider.System);
+        return config;
     })
     .AutoFromAssemblies();
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

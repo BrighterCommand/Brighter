@@ -290,7 +290,7 @@ namespace Paramore.Brighter
         /// <returns>A list of dispatched messages</returns>
         public IEnumerable<Message> DispatchedMessages(
             TimeSpan dispatchedSince,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int pageSize = 100,
             int pageNumber = 1,
             int outBoxTimeout = -1,
@@ -352,7 +352,7 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>The message</returns>
-        public Message Get(Id messageId, RequestContext requestContext, int outBoxTimeout = -1,
+        public Message Get(Id messageId, RequestContext? requestContext, int outBoxTimeout = -1,
             Dictionary<string, object>? args = null)
         {
             ClearExpiredMessages();
@@ -374,7 +374,7 @@ namespace Paramore.Brighter
         }
 
         /// <inheritdoc />
-        public IEnumerable<Message> Get(IEnumerable<Id> messageIds, RequestContext requestContext, int outBoxTimeout = -1,
+        public IEnumerable<Message> Get(IEnumerable<Id> messageIds, RequestContext? requestContext, int outBoxTimeout = -1,
             Dictionary<string, object>? args = null)
         {
             ClearExpiredMessages();
@@ -511,7 +511,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>       
         /// <param name="dispatchedAt">The time that the message was dispatched</param>
         /// <param name="args">Allows passing arbitrary arguments for searching for a message - not used</param>
-        public void MarkDispatched(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null,
+        public void MarkDispatched(Id id, RequestContext? requestContext, DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null)
         {
             ClearExpiredMessages();

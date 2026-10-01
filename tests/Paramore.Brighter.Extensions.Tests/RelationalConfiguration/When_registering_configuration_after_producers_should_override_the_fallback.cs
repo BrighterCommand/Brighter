@@ -44,9 +44,10 @@ public class LaterRelationalConfigurationTests
         var outboxConfiguration = new RelationalDatabaseConfiguration("Data Source=:memory:");
         var explicitConfiguration = new RelationalDatabaseConfiguration("Data Source=:memory:", outBoxTableName: "ExplicitOutbox");
         var services = new ServiceCollection();
+        services.AddSingleton(Initializer.Factory);
         services.AddBrighter().AddProducers(options =>
         {
-            options.Outbox = new SqliteOutbox(outboxConfiguration);
+            options.Outbox = new SqliteOutbox(outboxConfiguration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
             options.TransactionProvider = typeof(SqliteTransactionProvider);
             options.ConnectionProvider = typeof(SqliteConnectionProvider);
         }, ServiceLifetime.Scoped);

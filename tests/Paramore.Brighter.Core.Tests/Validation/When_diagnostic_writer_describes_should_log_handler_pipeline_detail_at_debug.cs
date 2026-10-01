@@ -38,7 +38,7 @@ public class PipelineDiagnosticWriterHandlerDetailTests
         // Arrange — handler with two before-step attributes (backstop at 5, resilience at 3)
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyMisorderedBackstopHandler));
-        var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
+        var pipelineBuilder = new PipelineBuilder<IRequest>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         var logger = new SpyLogger();

@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Reflection;
 using Paramore.Brighter.MessagingGateway.MsSql;
@@ -40,7 +42,7 @@ public class MsSqlMessageConsumerFactoryDlqTests : IDisposable
     {
         //Arrange
         var configuration = new RelationalDatabaseConfiguration("Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;TrustServerCertificate=true");
-        _factory = new MsSqlMessageConsumerFactory(configuration);
+        _factory = new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

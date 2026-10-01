@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
@@ -50,7 +52,7 @@ public class RmqMessageConsumerChannelFailureTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _sender = new RmqMessageProducer(rmqConnection);
+        _sender = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
             
         _badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection,queueName, sentMessage.Header.Topic, false, 1, false);

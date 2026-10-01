@@ -1,10 +1,10 @@
-﻿using Greeting.Consumer;
+﻿using Microsoft.Extensions.Logging;
+using Greeting.Consumer;
 using Greeting.Models;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,9 +19,10 @@ var rmqConnection = new RmqMessagingGatewayConnection
 // Register the existing handler(s)
 builder.Services.AddTransient(typeof(GreetingHandler));
 
-
-builder.Services.AddConsumers(opt =>
+builder.Services.AddConsumers(provider =>
 {
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    var opt = new ConsumersOptions();
     opt.Subscriptions = new Subscription[]
         {
             new RmqSubscription<GreetingEvent>(
@@ -34,28 +35,25 @@ builder.Services.AddConsumers(opt =>
         };
 
     opt.DefaultChannelFactory = new ChannelFactory(
-        new RmqMessageConsumerFactory(rmqConnection)
+        new RmqMessageConsumerFactory(rmqConnection, loggerFactory: loggerFactory)
     );
-
+    return opt;
 })
 .AutoFromAssemblies();
 
 builder.Services
     .AddHostedService<ServiceActivatorHostedService>();
 
-
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
-
 
 app.UseHttpsRedirection();
 
 app.MapGet("/", () =>
 {
-   return "helloConsumer";
+    return "helloConsumer";
 });
 
 app.Run();
-
 

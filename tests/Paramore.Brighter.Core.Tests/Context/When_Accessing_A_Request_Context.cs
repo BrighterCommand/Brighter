@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using OpenTelemetry;
@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Context;
 
-public class RequestContextTests 
+public class RequestContextTests
 {
     [Fact]
     public void When_Accessing_A_Request_Context()
@@ -26,17 +26,17 @@ public class RequestContextTests
             .AddSource("Paramore.Brighter.Tests", "Paramore.Brighter")
             .ConfigureResource(r => r.AddService("in-memory-tracer"))
             .AddInMemoryExporter(exportedActivities)
-            .Build(); 
-        
+            .Build();
+
         var activitySource = new ActivitySource("Paramore.Brighter.Tests");
         var span = activitySource.StartActivity();
 
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test"), MessageType.MT_COMMAND),
             new MessageBody("test content"));
-        
+
         //act
-        
+
         var context = new RequestContext
         {
             FeatureSwitches = FluentConfigRegistryBuilder
@@ -50,14 +50,14 @@ public class RequestContextTests
         };
         context.Bag.AddOrUpdate("key", "value", (key, oldValue) => "value");
         context.Span = span;
-        context.OriginatingMessage = message; 
-        
+        context.OriginatingMessage = message;
+
         //assert
        Assert.Equal(context.Bag["key"], "value");
        Assert.NotNull(context.Policies["key"]);
-       Assert.Equal(span?.Id, context.Span?.Id);  
+       Assert.Equal(span?.Id, context.Span?.Id);
        Assert.NotNull(context.OriginatingMessage);
        Assert.Equal(context.OriginatingMessage.Header.MessageId, message.Header.MessageId);
-        
+
     }
 }

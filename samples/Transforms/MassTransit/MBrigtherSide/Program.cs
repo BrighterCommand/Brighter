@@ -24,8 +24,10 @@ var connection = new AWSMessagingGatewayConnection(new BasicAWSCredentials("test
 
 builder.Services
     .AddHostedService<ServiceActivatorHostedService>()
-    .AddConsumers(configure =>
+    .AddConsumers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var configure = new ConsumersOptions();
         configure.Subscriptions = [
             new SqsSubscription<Greeting>(
                 channelName: new ChannelName("brighter-queue"),
@@ -33,10 +35,13 @@ builder.Services
                 messagePumpType: MessagePumpType.Reactor)
         ];
 
-        configure.DefaultChannelFactory = new ChannelFactory(connection);
+        configure.DefaultChannelFactory = new ChannelFactory(connection, loggerFactory: loggerFactory);
+        return configure;
     })
-    .AddProducers(configure =>
+    .AddProducers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var configure = new ProducersConfiguration();
         configure.ProducerRegistry = new SnsProducerRegistryFactory(connection,
                 [
                     new SnsPublication
@@ -44,19 +49,19 @@ builder.Services
                         Topic = "brighter-topic",
                         RequestType = typeof(Greeting)
                     }
-                ])
+                ], loggerFactory: loggerFactory)
             .Create();
+        return configure;
     })
     .TransformsFromAssemblies([typeof(MassTransitWrapAttribute).Assembly])
     .AutoFromAssemblies();
 
 var host = builder.Build();
 
-
 await host.StartAsync();
 
 var cts = new CancellationTokenSource();
-Console.CancelKeyPress  += (_,_) => cts.Cancel();
+Console.CancelKeyPress += (_, _) => cts.Cancel();
 
 while (!cts.IsCancellationRequested)
 {
@@ -74,7 +79,6 @@ while (!cts.IsCancellationRequested)
 }
 
 await host.StopAsync();
-
 
 public class Greeting() : Event(Id.Random())
 {
@@ -101,12 +105,12 @@ public class GreetingMapper : IAmAMessageMapper<Greeting>, IAmAMessageMapperAsyn
     public Message MapToMessage(Greeting request, Publication publication)
     {
         return new Message(new MessageHeader
-            {
-                MessageId = request.Id,
-                CorrelationId = Id.Random(),
-                MessageType = MessageType.MT_EVENT,
-                Topic = publication.Topic!,
-            },
+        {
+            MessageId = request.Id,
+            CorrelationId = Id.Random(),
+            MessageType = MessageType.MT_EVENT,
+            Topic = publication.Topic!,
+        },
             new MessageBody(JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options)));
     }
 
@@ -116,7 +120,6 @@ public class GreetingMapper : IAmAMessageMapper<Greeting>, IAmAMessageMapperAsyn
         return JsonSerializer.Deserialize<Greeting>(message.Body.Value, JsonSerialisationOptions.Options)!;
     }
 }
-
 
 public class GreetingHandler(ILogger<GreetingHandler> logger) : RequestHandler<Greeting>
 {

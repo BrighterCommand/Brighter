@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Net.Mime;
@@ -55,7 +57,7 @@ public class KafkaHeaderToBrighterTests
         };
 
         //act
-        var readMessage = new KafkaMessageCreator().CreateMessage(result);
+        var readMessage = new KafkaMessageCreator(logger: Initializer.TestLoggerFactory.CreateLogger<KafkaMessageCreator>()).CreateMessage(result);
 
         //assert
         Assert.Equal(message.Id, readMessage.Id);

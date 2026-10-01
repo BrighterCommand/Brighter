@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
 using System.Threading;
@@ -63,7 +65,7 @@ public class MqttConsumerProducerConfigAndDisposeTests : IDisposable
             TopicPrefix = topicPrefix
         };
 
-        _producer = new MqttMessageProducer(new MqttMessagePublisher(producerConfig), new Publication());
+        _producer = new MqttMessageProducer(new MqttMessagePublisher(producerConfig, loggerFactory: NullLoggerFactory.Instance), new Publication());
 
         _scheduler = new SpySchedulerSync();
 
@@ -76,7 +78,7 @@ public class MqttConsumerProducerConfigAndDisposeTests : IDisposable
         };
 
         // Create consumer WITH scheduler - this is the constructor parameter being tested
-        _consumer = new MqttMessageConsumer(consumerConfig, _scheduler);
+        _consumer = new MqttMessageConsumer(consumerConfig, NullLoggerFactory.Instance, _scheduler);
     }
 
     [Fact]

@@ -46,7 +46,7 @@ public class SuccessfulSendPipelineScopeDisposalLoggingTests
         // Arrange — a handler that completes normally; its Scoped dependency's Dispose() throws when
         // the pipeline's owned scope is released
         var recorder = new HandlerCompletionRecorder();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddScoped<IPoisonedDependency, PoisonedDependency>();
         services.AddSingleton(recorder);
         services.AddBrighter(options =>

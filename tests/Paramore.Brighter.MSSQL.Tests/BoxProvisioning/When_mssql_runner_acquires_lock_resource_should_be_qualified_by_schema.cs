@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning;
@@ -66,7 +68,7 @@ public class MsSqlRunnerLockResourceSchemaQualificationTests
             throwOnAcquire: new InvalidOperationException("acquire-then-stop probe for lock-resource assertion"));
 
         var runner = new MsSqlBoxMigrationRunner(
-            new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), fakeLock);
+            new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), NullLoggerFactory.Instance, fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act

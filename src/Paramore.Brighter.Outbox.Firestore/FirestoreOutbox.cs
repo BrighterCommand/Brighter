@@ -1120,7 +1120,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
     /// <param name="cancellationToken"></param>
     /// <returns>A list of messages</returns>
-    public async Task<IEnumerable<Message>> GetAsync(IEnumerable<Id> messageIds, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<Message>> GetAsync(IEnumerable<Id> messageIds, RequestContext? requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
         var ids = messageIds.Select(id => id.Value).ToArray();
         

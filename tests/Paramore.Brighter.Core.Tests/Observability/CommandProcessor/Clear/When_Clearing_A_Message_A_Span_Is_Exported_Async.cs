@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -19,7 +19,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Clear;
 
 [Collection("Observability")]
-public class AsyncCommandProcessorClearObservabilityTests 
+public class AsyncCommandProcessorClearObservabilityTests
 {
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
@@ -38,30 +38,30 @@ public class AsyncCommandProcessorClearObservabilityTests
             .ConfigureResource(r => r.AddService("in-memory-tracer"))
             .AddInMemoryExporter(_exportedActivities)
             .Build();
-        
-        
+
+
         var registry = new SubscriberRegistry();
 
-        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync(); 
-        
+        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync();
+
         var retryPolicy = Policy
             .Handle<Exception>()
             .RetryAsync();
-        
+
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy}};
 
         var timeProvider  = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
         InMemoryOutbox outbox = new(timeProvider){Tracer = tracer};
-        
+
         var messageMapperRegistry = new MessageMapperRegistry(
             null,
             new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         var type = new CloudEventsType("io.goparamore.brighter.myevent");
-        _messageProducer = new InMemoryMessageProducer(_internalBus, 
-            new Publication
+        _messageProducer = new InMemoryMessageProducer(_internalBus,
+        Initializer.TestLoggerFactory, new Publication
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
@@ -73,58 +73,58 @@ public class AsyncCommandProcessorClearObservabilityTests
         {
             {new ProducerKey(_topic, type), _messageProducer}
         });
-        
+
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
-            messageMapperRegistry, 
-            new EmptyMessageTransformerFactory(), 
+            producerRegistry,
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
+            messageMapperRegistry,
+            new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
+            Initializer.TestLoggerFactory, outbox,
             maxOutStandingMessages: -1
         );
-        
+
         _commandProcessor = new Brighter.CommandProcessor(
-            registry, 
-            handlerFactory, 
+            registry,
+            handlerFactory,
             new InMemoryRequestContextFactory(),
-            policyRegistry, 
+            policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             bus,
-            new InMemorySchedulerFactory(),
-            tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            tracer: tracer,
+            instrumentationOptions: InstrumentationOptions.All,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact]
     public async Task When_Clearing_A_Message_A_Span_Is_Exported()
     {
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
-        
+
         var @event = new MyEvent();
         var context = new RequestContext { Span = parentActivity };
 
         //act
         var messageId = await _commandProcessor.DepositPostAsync(@event, context);
-        
+
         //reset the parent span as deposit and clear are siblings
-        
+
         context.Span = parentActivity;
         await _commandProcessor.ClearOutboxAsync([messageId], context);
-        
+
         parentActivity?.Stop();
-        
+
         _traceProvider.ForceFlush();
-        
+
         //assert
         //+1 confirmation (settle) span emitted per confirmed message (FR-2)
         Assert.Equal(9, _exportedActivities.Count);
         Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
-        
+
         //there should be a create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");
         Assert.NotNull(createActivity);
@@ -150,7 +150,7 @@ public class AsyncCommandProcessorClearObservabilityTests
         Assert.NotNull(clearActivity);
         Assert.Contains(clearActivity.Tags, t => t is { Key: BrighterSemanticConventions.Operation, Value: "clear" });
         Assert.Contains(clearActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageId && t.Value == messageId.Value);
-        
+
         //there should be a span in the Db for retrieving the message
         var outBoxActivity = _exportedActivities.Single(a => a.DisplayName == $"{BoxDbOperation.Get.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
         Assert.Contains(outBoxActivity.Tags, t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.Get.ToSpanName());
@@ -162,26 +162,26 @@ public class AsyncCommandProcessorClearObservabilityTests
         var producerActivity = _exportedActivities.Single(a => a.DisplayName == $"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
         Assert.Equal(clearActivity.Id, producerActivity.ParentId);
         Assert.Equal(ActivityKind.Producer, producerActivity.Kind);
-        
+
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessagingOperationType && t.Value as string == CommandProcessorSpanOperation.Publish.ToSpanName());
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessageId && t.Value as string == message.Id.Value);
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessageType && t.Value as string == message.Header.MessageType.ToString());
-        Assert.Contains(producerActivity.TagObjects, t => t is { Value: not null, Key: BrighterSemanticConventions.MessagingDestination } && t.Value.ToString() == _topic.Value); 
+        Assert.Contains(producerActivity.TagObjects, t => t is { Value: not null, Key: BrighterSemanticConventions.MessagingDestination } && t.Value.ToString() == _topic.Value);
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value as string == message.Header.PartitionKey.Value);
         Assert.Contains(producerActivity.TagObjects, t => t is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)t.Value == message.Body.Bytes.Length);
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessageBody && t.Value as string == message.Body.Value);
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.ConversationId && t.Value as string == message.Header.CorrelationId.Value);
-        
+
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeMessageId && t.Value as string == message.Id.Value);
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeSource && t.Value as Uri == _messageProducer.Publication.Source);
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeVersion && t.Value as string == "1.0");
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeSubject && t.Value as string == _messageProducer.Publication.Subject);
         Assert.Contains(producerActivity.TagObjects, t => t.Key == BrighterSemanticConventions.CeType && t.Value as string == _messageProducer.Publication.Type);
-        
+
         //there should be an event in the producer for producing the message
         var produceEvent = producerActivity.Events.Single(e => e.Name ==$"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessagingOperationType && t.Value as string == CommandProcessorSpanOperation.Publish.ToSpanName());
-        Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessagingSystem && t.Value as string == MessagingSystem.InternalBus.ToMessagingSystemName());          
+        Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessagingSystem && t.Value as string == MessagingSystem.InternalBus.ToMessagingSystemName());
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value?.ToString() == _topic.Value);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value as string == message.Header.PartitionKey.Value);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessageId && t.Value as string == message.Id.Value);
@@ -189,13 +189,13 @@ public class AsyncCommandProcessorClearObservabilityTests
         Assert.Contains(produceEvent.Tags, t => t is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)t.Value == message.Body.Bytes.Length);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.MessageBody && t.Value as string == message.Body.Value);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.ConversationId && t.Value as string == message.Header.CorrelationId.Value);
-        
+
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeMessageId && t.Value as string == message.Id.Value);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeSource && t.Value as Uri == _messageProducer.Publication.Source);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeVersion && t.Value as string == "1.0");
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeSubject && t.Value as string == _messageProducer.Publication.Subject);
         Assert.Contains(produceEvent.Tags, t => t.Key == BrighterSemanticConventions.CeType && t.Value as string == _messageProducer.Publication.Type);
-        
+
         //There should be  a span event to mark as dispatched
         var markAsDispatchedActivity = _exportedActivities.Single(a => a.DisplayName == $"{BoxDbOperation.MarkDispatched.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
         Assert.Contains(markAsDispatchedActivity.Tags, t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.MarkDispatched.ToSpanName());

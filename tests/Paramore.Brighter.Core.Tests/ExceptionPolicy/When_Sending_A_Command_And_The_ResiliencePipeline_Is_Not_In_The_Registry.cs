@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
@@ -22,17 +22,17 @@ public class CommandProcessorMissingResiliencePipelineFromRegistryTests
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyDoesNotFailResiliencePipelineHandler>();
 
-        var container = new ServiceCollection();
+        var container = new ServiceCollection().AddLogging();
         container.AddTransient<MyDoesNotFailResiliencePipelineHandler>();
         container.AddTransient<ResilienceExceptionPolicyHandler<MyCommand>>();
         container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
 
         var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
+
         MyDoesNotFailResiliencePipelineHandler.ReceivedCommand = false;
 
-        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
     }
 
     //We have to catch the final exception that bubbles out after retry

@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -203,10 +205,10 @@ public sealed class SpannerLegacySchemaCausationCompatibilityTests : IDisposable
             _connectionString,
             databaseName: "brightertests",
             outBoxTableName: tableName,
-            binaryMessagePayload: false));
+            binaryMessagePayload: false), logger: NullLoggerFactory.Instance.CreateLogger<SpannerOutbox>());
 
     private IAmAnInboxSync InboxFor(string tableName)
-        => new SpannerInboxAsync(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName));
+        => new SpannerInboxAsync(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName), logger: NullLoggerFactory.Instance.CreateLogger<SpannerInboxAsync>());
 
     private void ExecuteDdl(string ddl)
     {

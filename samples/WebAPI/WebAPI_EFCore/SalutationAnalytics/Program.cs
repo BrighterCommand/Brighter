@@ -27,7 +27,8 @@ return;
 
 static void AddSchemaRegistryMaybe(IServiceCollection services, MessagingTransport messagingTransport)
 {
-    if (messagingTransport != MessagingTransport.Kafka) return;
+    if (messagingTransport != MessagingTransport.Kafka)
+        return;
 
     SchemaRegistryConfig schemaRegistryConfig = new() { Url = "http://localhost:8081" };
     CachedSchemaRegistryClient cachedSchemaRegistryClient = new(schemaRegistryConfig);
@@ -63,6 +64,7 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
 
 static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection services)
 {
+
     string? transport = hostContext.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
     if (string.IsNullOrWhiteSpace(transport))
         throw new InvalidOperationException("Transport is not set");
@@ -70,7 +72,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     MessagingTransport messagingTransport = ConfigureTransport.TransportType(transport);
 
     AddSchemaRegistryMaybe(services, messagingTransport);
-    
+
     string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
     if (string.IsNullOrWhiteSpace(dbType))
         throw new InvalidOperationException("DbType is not set");
@@ -88,10 +90,6 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
     Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
-    (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider)  makeOutbox =
-        OutboxFactory.MakeEfOutbox<SalutationsEntityGateway>(rdbms, outboxConfiguration);
-
-    IAmAProducerRegistry producerRegistry = ConfigureProducerRegistry();
 
     var subscriptions = new Subscription[]
     {
@@ -106,32 +104,40 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
                 .Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
     };
 
-    var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(new RmqMessagingGatewayConnection
-    {
-        AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-        Exchange = new Exchange("paramore.brighter.exchange"),
-    });
-
-    services.AddConsumers(options =>
+    services.AddConsumers(provider =>
         {
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(new RmqMessagingGatewayConnection
+            {
+                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                Exchange = new Exchange("paramore.brighter.exchange"),
+            }, loggerFactory: loggerFactory);
+            var options = new ConsumersOptions();
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
             options.PolicyRegistry = new SalutationPolicy();
             options.InboxConfiguration = new InboxConfiguration(
-                InboxFactory.MakeInbox(rdbms, relationalDatabaseConfiguration),
+                InboxFactory.MakeInbox(rdbms, relationalDatabaseConfiguration, loggerFactory),
                 InboxScope.Commands
             );
+            return options;
         })
-        .AddProducers((configure) =>
+        .AddProducers(provider =>
         {
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider) makeOutbox =
+                OutboxFactory.MakeEfOutbox<SalutationsEntityGateway>(rdbms, outboxConfiguration, loggerFactory);
+            IAmAProducerRegistry producerRegistry = ConfigureProducerRegistry(loggerFactory);
+            var configure = new ProducersConfiguration();
             configure.ProducerRegistry = producerRegistry;
             configure.Outbox = makeOutbox.outbox;
             configure.TransactionProvider = makeOutbox.transactionProvider;
             configure.ConnectionProvider = makeOutbox.connectionProvider;
             configure.MaxOutStandingMessages = 5;
             configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
+            return configure;
         })
         .AutoFromAssemblies()
         .UseBoxProvisioning(options =>
@@ -145,11 +151,10 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddHostedService<ServiceActivatorHostedService>();
 }
 
-
 static string GetEnvironment()
 {
     //NOTE: Hosting Context will always return Production outside of ASPNET_CORE at this point, so grab it directly
-    return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
+    return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
            ?? throw new InvalidOperationException(" ASP_NETCORE_ENVIRONMENT is not set ");
 }
 
@@ -177,7 +182,7 @@ static void ConfigureEFCore(HostBuilderContext hostContext, IServiceCollection s
     }
 }
 
-static IAmAProducerRegistry ConfigureProducerRegistry()
+static IAmAProducerRegistry ConfigureProducerRegistry(ILoggerFactory loggerFactory)
 {
     var producerRegistry = new RmqProducerRegistryFactory(
         new RmqMessagingGatewayConnection
@@ -193,8 +198,8 @@ static IAmAProducerRegistry ConfigureProducerRegistry()
                 WaitForConfirmsTimeOutInMilliseconds = 1000,
                 MakeChannels = OnMissingChannel.Create
             }
-        ]
-    ).Create();
+        ],
+        loggerFactory: loggerFactory).Create();
 
     return producerRegistry;
 }

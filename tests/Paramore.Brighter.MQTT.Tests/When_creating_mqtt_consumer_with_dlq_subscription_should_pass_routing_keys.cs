@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
 using System.Reflection;
@@ -57,7 +59,7 @@ public class MqttMessageConsumerFactoryDlqTests : IDisposable
             ClientID = "BrighterTests-FactoryDlq"
         };
 
-        _factory = new MqttMessageConsumerFactory(configuration);
+        _factory = new MqttMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

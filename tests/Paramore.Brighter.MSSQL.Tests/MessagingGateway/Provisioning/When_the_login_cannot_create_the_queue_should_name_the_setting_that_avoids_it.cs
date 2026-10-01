@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
@@ -84,7 +86,7 @@ public class MsSqlQueueProvisioningPermissionTests : IDisposable
     public void When_the_login_cannot_create_the_queue_should_name_the_setting_that_avoids_it()
     {
         //Arrange
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = Record.Exception(() => channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Create)));
@@ -107,7 +109,7 @@ public class MsSqlQueueProvisioningPermissionTests : IDisposable
         Execute($"CREATE TABLE [{_queueTable}] ([Id] [BIGINT] IDENTITY(1,1) NOT NULL PRIMARY KEY, " +
                 "[Topic] [NVARCHAR](255) NOT NULL, [MessageType] [NVARCHAR](1024) NOT NULL, " +
                 "[Payload] [NVARCHAR](MAX) NOT NULL)");
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = Record.Exception(() =>

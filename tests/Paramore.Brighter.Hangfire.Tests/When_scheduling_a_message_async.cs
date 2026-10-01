@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using System.Transactions;
 using Hangfire;
 using Hangfire.InMemory;
@@ -54,7 +56,7 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) })
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, NullLoggerFactory.Instance, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) })
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -74,7 +76,7 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox
+            NullLoggerFactory.Instance, _outbox
         );
 
         GlobalConfiguration.Configuration
@@ -97,8 +99,8 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
             policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             outboxBus,
-            _scheduler
-        );
+            _scheduler,
+            loggerFactory: NullLoggerFactory.Instance);
 
         BrighterActivator.Processor = _processor;
     }
@@ -222,7 +224,7 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
 
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -258,7 +260,7 @@ public class HangfireSchedulerMessageAsyncTests : IDisposable
 
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -19,14 +21,14 @@ public class TimedOutboxArchiverPrefersAsyncTests
         var timeProvider = new FakeTimeProvider();
         var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer() };
         var archiveProvider = new InMemoryArchiveProvider();
-        var archiver = new OutboxArchiver<Message, CommittableTransaction>(outbox, archiveProvider);
+        var archiver = new OutboxArchiver<Message, CommittableTransaction>(outbox, archiveProvider, loggerFactory: Initializer.TestLoggerFactory);
         var distributedLock = new InMemoryLock();
         var options = new TimedOutboxArchiverOptions
         {
             TimerInterval = 5,
             MinimumAge = TimeSpan.FromMilliseconds(500)
         };
-        var timedArchiver = new TimedOutboxArchiver<Message, CommittableTransaction>(archiver, distributedLock, options);
+        var timedArchiver = new TimedOutboxArchiver<Message, CommittableTransaction>(archiver, distributedLock, options, logger: LoggerFactoryExtensions.CreateLogger<TimedOutboxArchiver<global::Paramore.Brighter.Message, global::System.Transactions.CommittableTransaction>>(Initializer.TestLoggerFactory));
 
         var context = new RequestContext();
         var routingKey = new RoutingKey("test-topic");

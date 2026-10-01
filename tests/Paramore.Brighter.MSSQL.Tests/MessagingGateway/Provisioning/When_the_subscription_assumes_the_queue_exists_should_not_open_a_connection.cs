@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using Paramore.Brighter.MessagingGateway.MsSql;
@@ -54,7 +56,7 @@ public class MsSqlQueueProvisioningAssumeTests
     public void When_the_subscription_assumes_the_queue_exists_should_not_open_a_connection()
     {
         //Arrange
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
         var subscription = new MsSqlSubscription<MyCommand>(
             new SubscriptionName("assume.subscription"),
             new ChannelName("assume.channel"),
@@ -77,7 +79,7 @@ public class MsSqlQueueProvisioningAssumeTests
     {
         //Arrange -- the control for the fact above: the same configuration, the only difference
         //being that this one is allowed to touch the database.
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
         var subscription = new MsSqlSubscription<MyCommand>(
             new SubscriptionName("create.subscription"),
             new ChannelName("create.channel"),
@@ -107,7 +109,7 @@ public class MsSqlQueueProvisioningAssumeTests
             Topic = new RoutingKey("assume.topic"), MakeChannels = OnMissingChannel.Assume
         };
         var producerFactory = new MsSqlMessageProducerFactory(
-            _configuration, new List<Publication> { publication });
+            _configuration, new List<Publication> { publication }, loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         var exception = Record.Exception(() => producerFactory.Create());
@@ -125,7 +127,7 @@ public class MsSqlQueueProvisioningAssumeTests
             Topic = new RoutingKey("create.topic"), MakeChannels = OnMissingChannel.Create
         };
         var producerFactory = new MsSqlMessageProducerFactory(
-            _configuration, new List<Publication> { publication });
+            _configuration, new List<Publication> { publication }, loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         var exception = Record.Exception(() => producerFactory.Create());

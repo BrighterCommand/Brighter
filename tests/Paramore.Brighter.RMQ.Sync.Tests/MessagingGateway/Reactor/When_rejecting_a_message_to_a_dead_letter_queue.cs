@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
@@ -58,7 +60,7 @@ public class RmqMessageProducerDLQTests : IDisposable
             DeadLetterExchange = new Exchange("paramore.brighter.exchange.dlq")
         };
             
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
 
         _messageConsumer = new RmqMessageConsumer(
             connection: rmqConnection, 
@@ -68,16 +70,16 @@ public class RmqMessageProducerDLQTests : IDisposable
             highAvailability: false,
             deadLetterQueueName: deadLetterQueueName,
             deadLetterRoutingKey: deadLetterRoutingKey,
-            makeChannels:OnMissingChannel.Create
-        );
+            makeChannels:OnMissingChannel.Create,
+            loggerFactory: NullLoggerFactory.Instance);
 
         _deadLetterConsumer = new RmqMessageConsumer(
             connection: rmqConnection,
             queueName: deadLetterQueueName,
             routingKey: deadLetterRoutingKey,
             isDurable:false,
-            makeChannels:OnMissingChannel.Assume
-        );
+            makeChannels:OnMissingChannel.Assume,
+            loggerFactory: NullLoggerFactory.Instance);
     }
 
     //[Fact(Skip = "Breaks due to fault in Task Scheduler running after context has closed")]

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = _tracer};
 
             var routingKey = new RoutingKey("MyTopic");
-            
+
             _messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);
@@ -37,30 +37,30 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             _producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { 
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication  {Topic = routingKey, RequestType = typeof(MyCommand) })
+                {
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication  {Topic = routingKey, RequestType = typeof(MyCommand) })
                 },
             });
          }
 
         [Fact]
         public void When_Creating_A_Command_Processor_Without_Message_Transformer()
-        {                                             
+        {
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
                 .AddBrighterDefault();
-            
+
             var exception = Catch.Exception(() => new OutboxProducerMediator<Message, CommittableTransaction>(
-                _producerRegistry, 
+                _producerRegistry,
                 resiliencePipelineRegistry,
                 _messageMapperRegistry,
                  null!,
                 new EmptyMessageTransformerFactoryAsync(),
                 _tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox)
-            );               
+                Initializer.TestLoggerFactory, _outbox)
+            );
 
-            Assert.IsType<ConfigurationException>(exception); 
+            Assert.IsType<ConfigurationException>(exception);
         }
     }
 }

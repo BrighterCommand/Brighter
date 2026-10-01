@@ -84,10 +84,10 @@ public sealed class PlaceOrderWebApplicationFactory : WebApplicationFactory<Plac
             var syncPublishPostedRoutingKey = new RoutingKey("sync-publish-posted");
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(PostedOrderCommand) }) },
-                { sharedMarkerRoutingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = sharedMarkerRoutingKey, RequestType = typeof(SharedMarkerPostedCommand) }) },
-                { concurrentPublishPostedRoutingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = concurrentPublishPostedRoutingKey, RequestType = typeof(ConcurrentPublishPostedCommand) }) },
-                { syncPublishPostedRoutingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = syncPublishPostedRoutingKey, RequestType = typeof(SyncPublishPostedCommand) }) }
+                { routingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(PostedOrderCommand) }) },
+                { sharedMarkerRoutingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = sharedMarkerRoutingKey, RequestType = typeof(SharedMarkerPostedCommand) }) },
+                { concurrentPublishPostedRoutingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = concurrentPublishPostedRoutingKey, RequestType = typeof(ConcurrentPublishPostedCommand) }) },
+                { syncPublishPostedRoutingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = syncPublishPostedRoutingKey, RequestType = typeof(SyncPublishPostedCommand) }) }
             });
 
             services.AddBrighterRequestScope();

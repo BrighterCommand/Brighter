@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -93,7 +95,7 @@ public class ReleaseAsyncDisposableMapperOnPumpContextTests
     private static DisposeProbe BuildPipelineFactory(out TransformPipelineBuilderAsync builder)
     {
         var probe = new DisposeProbe();
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton(probe);
         collection.AddTransient<AsyncDisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
@@ -104,7 +106,7 @@ public class ReleaseAsyncDisposableMapperOnPumpContextTests
         mapperRegistry.RegisterAsync<MinimalEvent, AsyncDisposableMapper>();
 
         builder = new TransformPipelineBuilderAsync(
-            mapperRegistry, new NoOpTransformerFactoryAsync(), InstrumentationOptions.None);
+            mapperRegistry, new NoOpTransformerFactoryAsync(), NullLoggerFactory.Instance, InstrumentationOptions.None);
         return probe;
     }
 

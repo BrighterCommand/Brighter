@@ -30,7 +30,7 @@ public class MediatorWaitStepFlowTests
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor));
         
         commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var workflowData= new WorkflowTestData();
@@ -42,26 +42,26 @@ public class MediatorWaitStepFlowTests
             "Test of Job",
             new ChangeAsync<WorkflowTestData>( (_) => Task.CompletedTask),
             () => { _stepCompleted = true; },
-            null
-        );
+            null,
+            loggerFactory: Initializer.TestLoggerFactory);
         
         var firstStep = new Wait<WorkflowTestData>("Test of Job",
             TimeSpan.FromMilliseconds(100),
-            secondStep
-            );
+            secondStep,
+            loggerFactory: Initializer.TestLoggerFactory);
         
         _job.InitSteps(firstStep);
 
-        InMemoryStateStoreAsync store = new(_timeProvider);
-        InMemoryJobChannel<WorkflowTestData> channel = new();
+        InMemoryStateStoreAsync store = new(Initializer.TestLoggerFactory, _timeProvider);
+        InMemoryJobChannel<WorkflowTestData> channel = new(loggerFactory: Initializer.TestLoggerFactory);
         
         _scheduler = new Scheduler<WorkflowTestData>(
             channel,
             store
             );
         
-        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor, _scheduler);
-        _waker = new Waker<WorkflowTestData>(TimeSpan.FromMilliseconds(100), _scheduler);
+        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor, _scheduler, loggerFactory: Initializer.TestLoggerFactory);
+        _waker = new Waker<WorkflowTestData>(TimeSpan.FromMilliseconds(100), _scheduler, loggerFactory: Initializer.TestLoggerFactory);
     }
     
     [Fact]

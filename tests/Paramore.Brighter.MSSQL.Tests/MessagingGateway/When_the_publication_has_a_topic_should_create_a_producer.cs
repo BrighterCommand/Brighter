@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.MessagingGateway.MsSql;
@@ -52,7 +54,7 @@ public class MsSqlProducerFactoryPublicationTopicTests
         // Arrange
         var factory = new MsSqlMessageProducerFactory(
             _configuration,
-            [new Publication { RequestType = typeof(MyEvent) }]);
+            [new Publication { RequestType = typeof(MyEvent) }], loggerFactory: NullLoggerFactory.Instance);
 
         // Act
         var exception = Assert.Throws<ConfigurationException>(() => factory.Create());
@@ -76,7 +78,7 @@ public class MsSqlProducerFactoryPublicationTopicTests
                     RequestType = typeof(MyEvent),
                     MakeChannels = OnMissingChannel.Assume
                 }
-            ]);
+            ], loggerFactory: NullLoggerFactory.Instance);
 
         // Act
         var producers = factory.Create();

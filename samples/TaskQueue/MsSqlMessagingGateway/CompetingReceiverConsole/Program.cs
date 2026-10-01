@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,16 +37,19 @@ var connectionString = SampleDatabase.ConnectionString(
 var messagingConfiguration = new RelationalDatabaseConfiguration(
     connectionString,
     queueStoreTable: SampleDatabase.QueueTable);
-var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
 
-builder.Services.AddConsumers(options =>
+builder.Services.AddConsumers(provider =>
 {
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration, loggerFactory: loggerFactory);
+    var options = new ConsumersOptions();
     options.Subscriptions = subscriptions;
-    options.DefaultChannelFactory = new ChannelFactory(messageConsumerFactory);
+    options.DefaultChannelFactory = new ChannelFactory(messageConsumerFactory, logger: loggerFactory.CreateLogger<global::Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory>());
+    return options;
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-.UseScheduler(new InMemorySchedulerFactory())
+.UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
 .AutoFromAssemblies([typeof(CompetingConsumerCommand).Assembly])
 // Surfaces a pump/handler mismatch as a named startup error rather than a per-message failure.
 .ValidatePipelines();

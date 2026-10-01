@@ -41,7 +41,7 @@ public class SendHandlerPipelineScopeTeardownTests
     {
         // Arrange
         var recorder = new HandlerMarkerRecorder();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddScoped<IMarker, Marker>();
         services.AddSingleton(recorder);
         services.AddBrighter(options =>

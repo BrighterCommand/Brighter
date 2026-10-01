@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Paramore.Brighter.Base.Test.Locking;
 using Paramore.Brighter.Locking.DynamoDb;
@@ -19,6 +21,6 @@ public class DynamoDbLockingTest : DistributedLockingAsyncTest
            new DynamoDbLockingProviderOptions(tableName, _leaseholderGroupId)
            {
                LeaseValidity = TimeSpan.FromSeconds(10)
-           });
+           }, loggerFactory: NullLoggerFactory.Instance);
     }
 }

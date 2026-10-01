@@ -52,7 +52,7 @@ public class BorrowedAmbientDisposedMidPipelineTests
         var recorder = new HandlerMarkerRecorder();
         var scopeProvider = new AsyncLocalScopeProvider();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddScoped<IMarker, Marker>();
         collection.AddScoped<ScopedHandlerCommandHandler>();
         collection.AddSingleton(recorder);
@@ -76,8 +76,8 @@ public class BorrowedAmbientDisposedMidPipelineTests
             new InMemoryRequestContextFactory(),
             new DefaultPolicy(),
             new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
-            new InMemorySchedulerFactory()
-        );
+new InMemorySchedulerFactory(loggerFactory: Initializer.Factory)
+,loggerFactory:Initializer.Factory        );
 
         // Arrange - establish an ambient whose own scope is still alive right now, but which disposes
         // itself the moment the probe's own ScopedArtefactCache resolution passes - before the handler
@@ -118,7 +118,7 @@ public class BorrowedAmbientDisposedMidPipelineTests
         // Arrange - the same race, on the transform pipeline a Post builds
         var scopeProvider = new AsyncLocalScopeProvider();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddScoped<IMarker, Marker>();
         collection.AddScoped<MarkerMapper>();
         collection.AddSingleton(new MarkerLog());
@@ -140,7 +140,7 @@ public class BorrowedAmbientDisposedMidPipelineTests
         var routingKey = new RoutingKey("test");
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(MarkerCommand) }) }
+            { routingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(MarkerCommand) }) }
         });
 
         var timeProvider = new FakeTimeProvider();
@@ -155,7 +155,7 @@ public class BorrowedAmbientDisposedMidPipelineTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+Initializer.Factory,            new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         var commandProcessor = new CommandProcessor(
@@ -163,8 +163,8 @@ public class BorrowedAmbientDisposedMidPipelineTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.Factory)
+        , loggerFactory: Initializer.Factory);
 
         var ambientScope = rootProvider.CreateScope();
         scopeProvider.Establish(new AsyncLocalAmbientScope(new DisposeAfterProbeServiceProvider(ambientScope)));

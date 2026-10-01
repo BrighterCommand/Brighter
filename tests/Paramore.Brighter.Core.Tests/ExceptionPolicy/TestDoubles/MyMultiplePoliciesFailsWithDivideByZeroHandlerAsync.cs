@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -26,5 +26,5 @@ public class MyMultiplePoliciesFailsWithDivideByZeroHandlerAsync : RequestHandle
     {
         return ReceivedCommand;
     }
-    
+
 }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -36,12 +36,12 @@ namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
         {
             LogCommand(command);
-            if (!raiseFault) 
+            if (!raiseFault)
                 await commandProcessor?.PublishAsync(new MyEvent(command.Value) {CorrelationId = command.CorrelationId}, cancellationToken: cancellationToken);
             else
                  await commandProcessor?.PublishAsync(new MyFault(command.Value) {CorrelationId = command.CorrelationId}, cancellationToken: cancellationToken);
-                 
-            
+
+
             return await base.HandleAsync(command, cancellationToken);
         }
 

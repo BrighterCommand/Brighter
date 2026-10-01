@@ -10,7 +10,6 @@ using MQTTnet.Client;
 using MQTTnet.Packets;
 using MQTTnet.Protocol;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 
@@ -38,7 +37,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         // are capped at the subscription's BufferSize. A directly-constructed consumer is not
         // behind a Channel and keeps the uncapped behaviour it has always had.
         private readonly int? _batchSize;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MqttMessageConsumer>();
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly Message _noopMessage = new();
 
         /// <summary>How long a receive waits for a message when the caller does not say.</summary>
@@ -73,6 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <see cref="Channel"/>, which throws if handed more messages than it can buffer.
         /// Null, the default, returns everything buffered.
         /// </param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for this consumer and the producers it creates.</param>
         /// <exception cref="ArgumentNullException">
         /// Thrown when the <paramref name="configuration.TopicPrefix"/> is null.
         /// </exception>
@@ -85,11 +86,14 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// </remarks>
         public MqttMessageConsumer(
             MqttMessagingGatewayConsumerConfiguration configuration,
+            ILoggerFactory loggerFactory,
             IAmAMessageScheduler? scheduler = null,
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null,
             int? batchSize = null)
         {
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _logger = loggerFactory.CreateBrighterLogger<MqttMessageConsumer>();
             _configuration = configuration;
             if (batchSize is <= 0)
             {
@@ -137,10 +141,10 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             _mqttClient.ApplicationMessageReceivedAsync += e =>
             {
-                Log.MqttMessageConsumerReceivedMessage(s_logger, configuration.TopicPrefix);
+                Log.MqttMessageConsumerReceivedMessage(_logger, configuration.TopicPrefix);
 
                 var message = MqttMessageCreator.CreateMessage(
-                    e.ApplicationMessage.PayloadSegment.ToArray(), configuration.TopicPrefix);
+                    e.ApplicationMessage.PayloadSegment.ToArray(), configuration.TopicPrefix, _logger);
 
                 if (message is not null)
                 {
@@ -336,19 +340,20 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         public bool Reject(Message message, MessageRejectionReason? reason = null)
         {
             var (producer, routingKey) = ResolveRejectionProducer(message, reason);
-            if (producer == null || routingKey == null) return true;
+            if (producer == null || routingKey == null)
+                return true;
 
             try
             {
                 producer.Send(message);
-                Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, routingKey.Value);
+                Log.MessageSentToRejectionChannel(_logger, message.Id.Value, routingKey.Value);
             }
             catch (Exception ex)
             {
                 // DLQ send failed — MQTT fire-and-forget model means the source message
                 // only exists in memory and cannot be requeued. Return true to prevent
                 // requeue loops (per ADR 0034).
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, routingKey.Value);
+                Log.ErrorSendingToRejectionChannel(_logger, ex, message.Id.Value, routingKey.Value);
                 return true;
             }
 
@@ -365,19 +370,20 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
         {
             var (producer, routingKey) = ResolveRejectionProducer(message, reason);
-            if (producer == null || routingKey == null) return true;
+            if (producer == null || routingKey == null)
+                return true;
 
             try
             {
                 await producer.SendAsync(message, cancellationToken);
-                Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, routingKey.Value);
+                Log.MessageSentToRejectionChannel(_logger, message.Id.Value, routingKey.Value);
             }
             catch (Exception ex)
             {
                 // DLQ send failed — MQTT fire-and-forget model means the source message
                 // only exists in memory and cannot be requeued. Return true to prevent
                 // requeue loops (per ADR 0034).
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, routingKey.Value);
+                Log.ErrorSendingToRejectionChannel(_logger, ex, message.Id.Value, routingKey.Value);
                 return true;
             }
 
@@ -388,7 +394,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         {
             if (_deadLetterProducer == null && _invalidMessageProducer == null)
             {
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value);
+                Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value);
                 return (null, null);
             }
 
@@ -397,11 +403,11 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             var (routingKey, hasProducer, isFallingBackToDlq) = DetermineRejectionRoute(reason);
 
             if (isFallingBackToDlq)
-                Log.FallingBackToDlq(s_logger, message.Id.Value);
+                Log.FallingBackToDlq(_logger, message.Id.Value);
 
             if (!hasProducer)
             {
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value);
+                Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value);
                 return (null, null);
             }
 
@@ -494,7 +500,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                         CleanSession = _configuration.CleanSession,
                         Username = _configuration.Username,
                         Password = _configuration.Password
-                    });
+                    }, _loggerFactory);
                     return new MqttMessageProducer(publisher, new Publication(), _instrumentationOptions)
                     {
                         Scheduler = _scheduler
@@ -510,7 +516,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
 #pragma warning restore CS0618
 
-            if (reason == null) return;
+            if (reason == null)
+                return;
 
             message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
             if (!string.IsNullOrEmpty(reason.Description))
@@ -535,7 +542,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         private MqttMessageProducer? CreateDeadLetterProducer()
         {
-            if (_deadLetterRoutingKey == null) return null;
+            if (_deadLetterRoutingKey == null)
+                return null;
 
             try
             {
@@ -549,19 +557,20 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                     ClientID = string.IsNullOrEmpty(_configuration.ClientID) ? null : $"{_configuration.ClientID}-dlq",
                     TopicPrefix = _deadLetterRoutingKey.Value
                 };
-                var publisher = new MqttMessagePublisher(config);
+                var publisher = new MqttMessagePublisher(config, _loggerFactory);
                 return new MqttMessageProducer(publisher, new Publication { Topic = _deadLetterRoutingKey }, _instrumentationOptions);
             }
             catch (Exception ex)
             {
-                Log.ErrorCreatingDlqProducer(s_logger, ex, _deadLetterRoutingKey.Value);
+                Log.ErrorCreatingDlqProducer(_logger, ex, _deadLetterRoutingKey.Value);
                 return null;
             }
         }
 
         private MqttMessageProducer? CreateInvalidMessageProducer()
         {
-            if (_invalidMessageRoutingKey == null) return null;
+            if (_invalidMessageRoutingKey == null)
+                return null;
 
             try
             {
@@ -575,12 +584,12 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                     ClientID = string.IsNullOrEmpty(_configuration.ClientID) ? null : $"{_configuration.ClientID}-invalid",
                     TopicPrefix = _invalidMessageRoutingKey.Value
                 };
-                var publisher = new MqttMessagePublisher(config);
+                var publisher = new MqttMessagePublisher(config, _loggerFactory);
                 return new MqttMessageProducer(publisher, new Publication { Topic = _invalidMessageRoutingKey }, _instrumentationOptions);
             }
             catch (Exception ex)
             {
-                Log.ErrorCreatingInvalidMessageProducer(s_logger, ex, _invalidMessageRoutingKey.Value);
+                Log.ErrorCreatingInvalidMessageProducer(_logger, ex, _invalidMessageRoutingKey.Value);
                 return null;
             }
         }
@@ -592,16 +601,16 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 try
                 {
                     await _mqttClient.ConnectAsync(_mqttClientOptions, CancellationToken.None);
-                    Log.MqttConsumerClientConnected(s_logger);
+                    Log.MqttConsumerClientConnected(_logger);
 
                     await _mqttClient.SubscribeAsync(new MqttTopicFilter { Topic = _topic, QualityOfServiceLevel = MqttQualityOfServiceLevel.AtLeastOnce });
-                    Log.SubscribedToTopic(s_logger, _topic);
+                    Log.SubscribedToTopic(_logger, _topic);
 
                     return;
                 }
                 catch (Exception ex)
                 {
-                    Log.UnableToConnectMqttConsumerClient(s_logger, ex);
+                    Log.UnableToConnectMqttConsumerClient(_logger, ex);
                 }
             }
         }

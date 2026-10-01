@@ -64,7 +64,7 @@ public class KafkaMessageConsumerInvalidMessageAsyncTests : IAsyncDisposable
                 Name = "Kafka Producer Invalid Message Async Test",
                 BootStrapServers = new[] { "localhost:9092" }
             },
-            publication);
+            publication, loggerFactory: Initializer.TestLoggerFactory);
 
         _producer.Init();
     }
@@ -139,7 +139,7 @@ public class KafkaMessageConsumerInvalidMessageAsyncTests : IAsyncDisposable
                 {
                     Name = "Kafka Consumer Invalid Message Async Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.Tests"),
@@ -162,7 +162,7 @@ public class KafkaMessageConsumerInvalidMessageAsyncTests : IAsyncDisposable
                 {
                     Name = "Kafka Invalid Message Consumer Async Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.InvalidMessage.Tests"),

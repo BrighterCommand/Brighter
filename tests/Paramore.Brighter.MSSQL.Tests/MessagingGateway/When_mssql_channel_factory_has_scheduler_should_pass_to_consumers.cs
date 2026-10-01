@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MsSql;
 using Xunit;
@@ -24,8 +26,8 @@ public class When_mssql_channel_factory_has_scheduler_should_pass_to_consumers
     public void Should_implement_channel_factory_with_scheduler()
     {
         // Arrange
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration);
-        var channelFactory = new ChannelFactory(consumerFactory);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance);
+        var channelFactory = new ChannelFactory(consumerFactory, logger: NullLoggerFactory.Instance.CreateLogger<global::Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory>());
 
         // Assert
         Assert.IsAssignableFrom<IAmAChannelFactoryWithScheduler>(channelFactory);
@@ -36,8 +38,8 @@ public class When_mssql_channel_factory_has_scheduler_should_pass_to_consumers
     {
         // Arrange
         var scheduler = new StubMessageScheduler();
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration);
-        var channelFactory = new ChannelFactory(consumerFactory);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance);
+        var channelFactory = new ChannelFactory(consumerFactory, logger: NullLoggerFactory.Instance.CreateLogger<global::Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory>());
         ((IAmAChannelFactoryWithScheduler)channelFactory).Scheduler = scheduler;
 
         // Act
@@ -53,8 +55,8 @@ public class When_mssql_channel_factory_has_scheduler_should_pass_to_consumers
     {
         // Arrange
         var scheduler = new StubMessageScheduler();
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration);
-        var channelFactory = new ChannelFactory(consumerFactory);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance);
+        var channelFactory = new ChannelFactory(consumerFactory, logger: NullLoggerFactory.Instance.CreateLogger<global::Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory>());
         ((IAmAChannelFactoryWithScheduler)channelFactory).Scheduler = scheduler;
 
         // Act
@@ -69,8 +71,8 @@ public class When_mssql_channel_factory_has_scheduler_should_pass_to_consumers
     public void Should_create_channel_without_scheduler_for_backward_compat()
     {
         // Arrange — no scheduler set
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration);
-        var channelFactory = new ChannelFactory(consumerFactory);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance);
+        var channelFactory = new ChannelFactory(consumerFactory, logger: NullLoggerFactory.Instance.CreateLogger<global::Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory>());
 
         // Act
         var channel = channelFactory.CreateSyncChannel(_subscription);

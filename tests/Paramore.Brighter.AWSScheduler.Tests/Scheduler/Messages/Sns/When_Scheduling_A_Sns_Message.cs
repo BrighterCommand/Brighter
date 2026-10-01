@@ -1,4 +1,6 @@
-﻿using System.Net.Mime;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System.Net.Mime;
 using Paramore.Brighter.AWSScheduler.Tests.Helpers;
 using Paramore.Brighter.AWSScheduler.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.AWS;
@@ -23,7 +25,7 @@ public class SnsSchedulingMessageTest : IDisposable
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         //we need the channel to create the queues and notifications
         _topicName = $"Producer-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var channelName = $"Producer-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -40,9 +42,9 @@ public class SnsSchedulingMessageTest : IDisposable
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
-        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
+        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), NullLoggerFactory.Instance, BufferSize);
         _messageProducer = new SnsMessageProducer(awsConnection,
-            new SnsPublication { MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]) });
+            new SnsPublication { MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]) }, loggerFactory: NullLoggerFactory.Instance);
 
         // Enforce topic to be created
         _messageProducer.Send(new Message(
@@ -55,7 +57,8 @@ public class SnsSchedulingMessageTest : IDisposable
 
         _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
         {
-            UseMessageTopicAsTarget = true, MakeRole = OnMissingRole.Create
+            UseMessageTopicAsTarget = true,
+            MakeRole = OnMissingRole.Create
         };
     }
 

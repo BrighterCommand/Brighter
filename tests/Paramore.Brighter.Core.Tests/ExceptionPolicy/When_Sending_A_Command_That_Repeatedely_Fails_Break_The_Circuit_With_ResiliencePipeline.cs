@@ -25,7 +25,7 @@ public class CommandProcessorWithCircuitBreakerAndResiliencePipelineTests
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyFailsWithDivideByZeroWithResiliencePipelineHandler>();
 
-        var container = new ServiceCollection();
+        var container = new ServiceCollection().AddLogging();
         container.AddSingleton<MyFailsWithDivideByZeroWithResiliencePipelineHandler>();
         container.AddSingleton<ResilienceExceptionPolicyHandler<MyCommand>>();
         container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
@@ -45,7 +45,7 @@ public class CommandProcessorWithCircuitBreakerAndResiliencePipelineTests
         MyFailsWithDivideByZeroWithResiliencePipelineHandler.ReceivedCommand = false;
 
         _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
-            new PolicyRegistry(), resiliencePipeline, new InMemorySchedulerFactory());
+            new PolicyRegistry(), resiliencePipeline, new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
     }
 
     //We have to catch the final exception that bubbles out after retry

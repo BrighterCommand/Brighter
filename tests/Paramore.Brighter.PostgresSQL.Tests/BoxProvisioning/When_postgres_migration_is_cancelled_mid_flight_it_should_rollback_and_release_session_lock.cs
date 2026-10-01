@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -83,7 +85,7 @@ public class PostgreSqlMigrationCancellationTests : IAsyncLifetime
         // BeginAsync calls pg_advisory_lock on the same per-table lock resource completes the
         // migration normally; the 5s lock timeout would expire and surface as
         // MigrationLockDeadlockException if the lock were still held.
-        var freshRunner = new PostgreSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
+        var freshRunner = new PostgreSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5), loggerFactory: NullLoggerFactory.Instance);
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
@@ -137,7 +139,8 @@ file sealed class CancellingPostgreSqlBoxMigrationRunner : PostgreSqlBoxMigratio
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout)
-        : base(catalog, configuration, lockTimeout)
+        : base(catalog, configuration, lockTimeout,
+            NullLoggerFactory.Instance)
     {
     }
 

@@ -38,7 +38,7 @@ public class PipelineValidatorHandlerOnlyTests
         //           no publications or subscriptions provided
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyInternalHandler));
-        var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
+        var pipelineBuilder = new PipelineBuilder<IRequest>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         var validator = new PipelineValidator(pipelineBuilder);

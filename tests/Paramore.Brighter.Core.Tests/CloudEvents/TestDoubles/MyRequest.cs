@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Core.Tests.CloudEvents.TestDoubles;
 public class MyRequest : IRequest
 {
     public Id? CorrelationId { get; set; }
-    
+
     public string? Value { get; set; }
     public Id Id { get; set; } = Id.Random();
 }

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -50,7 +51,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var options = (IBrighterOptions?)serviceProvider.GetService(typeof(IBrighterOptions));
             _handlerLifetime = options?.HandlerLifetime ?? ServiceLifetime.Transient;
             _isolateTransientHandlerScope = options?.IsolateTransientHandlerScope ?? true;
-            _singletonScope = new ServiceProviderLifetimeScope(serviceProvider, ServiceLifetime.Singleton);
+            _singletonScope = new ServiceProviderLifetimeScope(serviceProvider, ServiceLifetime.Singleton, serviceProvider.GetRequiredService<ILoggerFactory>().CreateBrighterLogger<ServiceProviderLifetimeScope>());
             _scopeProvider = (IAmAScopeProvider?)serviceProvider.GetService(typeof(IAmAScopeProvider));
             _scopeAffinityPolicy = new ScopeAffinityPolicy(options);
             _diagnostics = (AmbientScopeDiagnostics?)serviceProvider.GetService(typeof(AmbientScopeDiagnostics));
@@ -83,7 +84,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return _handlerLifetime == ServiceLifetime.Singleton
                 ? null
-                : new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, _handlerLifetime, _isolateTransientHandlerScope));
+                : new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, _handlerLifetime, _singletonScope.Logger, _isolateTransientHandlerScope));
         }
 
         /// <summary>

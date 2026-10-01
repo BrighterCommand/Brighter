@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using Microsoft.Extensions.Time.Testing;
@@ -51,7 +53,7 @@ public class InMemoryConsumerRequeueWithZeroDelayTests
         _scheduler = new SpyScheduler();
 
         // Create consumer with scheduler configured
-        _consumer = new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, scheduler: _scheduler);
+        _consumer = new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, scheduler: _scheduler, loggerFactory: NullLoggerFactory.Instance);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -50,10 +50,10 @@ public class CommandProcessorSchedulerCommandAsyncTests
         var messageMapperRegistry = new MessageMapperRegistry(
             null,
             new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
-        
+
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
-        var producer = new InMemoryMessageProducer (_internalBus) { Publication = { Topic = routingKey, RequestType = typeof(MyCommand) } };
+        var producer = new InMemoryMessageProducer (_internalBus, loggerFactory: Initializer.TestLoggerFactory) { Publication = { Topic = routingKey, RequestType = typeof(MyCommand) } };
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
             .AddBrighterDefault();
@@ -69,7 +69,7 @@ public class CommandProcessorSchedulerCommandAsyncTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox
+            Initializer.TestLoggerFactory, _outbox
         );
 
         _commandProcessor = new CommandProcessor(registry,
@@ -78,7 +78,7 @@ public class CommandProcessorSchedulerCommandAsyncTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory { TimeProvider = _timeProvider });
+            new InMemorySchedulerFactory (loggerFactory: Initializer.TestLoggerFactory) { TimeProvider = _timeProvider }, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
         PipelineBuilder<FireSchedulerRequest>.ClearPipelineCache();
     }
@@ -143,12 +143,12 @@ public class CommandProcessorSchedulerCommandAsyncTests
 
         var actual = _outbox.Get(_myCommand.Id, new RequestContext());
         Assert.NotNull(actual);
-        
+
         var expected = new Message(
             new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND),
             new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
         );
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -175,12 +175,12 @@ public class CommandProcessorSchedulerCommandAsyncTests
 
         var actual = _outbox.Get(_myCommand.Id, new RequestContext());
         Assert.NotNull(actual);
-        
+
         var expected = new Message(
             new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND),
             new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
         );
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -193,6 +193,6 @@ public class CommandProcessorSchedulerCommandAsyncTests
         Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
         Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
         Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
-        
+
     }
 }

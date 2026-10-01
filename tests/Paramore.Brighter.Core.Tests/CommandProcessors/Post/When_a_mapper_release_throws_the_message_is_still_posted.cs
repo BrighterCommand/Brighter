@@ -31,7 +31,7 @@ public class CommandProcessorPostMapperReleaseThrowsTests
         var timeProvider = new FakeTimeProvider();
 
         InMemoryMessageProducer messageProducer = new(_internalBus,
-            new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
+        Initializer.TestLoggerFactory, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
 
         var messageMapperRegistry = new MessageMapperRegistry(new ThrowingOnReleaseMessageMapperFactory(), null);
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
@@ -51,7 +51,7 @@ public class CommandProcessorPostMapperReleaseThrowsTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+            Initializer.TestLoggerFactory, new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         _commandProcessor = new CommandProcessor(
@@ -59,8 +59,8 @@ public class CommandProcessorPostMapperReleaseThrowsTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

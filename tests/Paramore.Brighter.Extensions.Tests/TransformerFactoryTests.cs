@@ -14,7 +14,7 @@ public class TransformerFactoryTests
     public void When_resolving_a_transformer_from_the_factory()
     {
        //arrange
-       var collection = new ServiceCollection();
+       var collection = new ServiceCollection().AddLogging();
        collection.AddSingleton(typeof(TestTransform),new TestTransform());
        collection.AddSingleton<IBrighterOptions>(new BrighterOptions { TransformerLifetime = ServiceLifetime.Singleton });
        var provider = collection.BuildServiceProvider(new ServiceProviderOptions{ValidateOnBuild = true});
@@ -32,7 +32,7 @@ public class TransformerFactoryTests
     public void When_resolving_a_transformer_from_the_factory_async()
     {
         //arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton(typeof(TestTransform),new TestTransform());
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { TransformerLifetime = ServiceLifetime.Singleton });
         var provider = collection.BuildServiceProvider(new ServiceProviderOptions{ValidateOnBuild = true});
@@ -50,7 +50,7 @@ public class TransformerFactoryTests
     public void When_resolving_a_missing_transformer_from_the_factory()
     {
         //arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { TransformerLifetime = ServiceLifetime.Singleton });
         var provider = collection.BuildServiceProvider();
 
@@ -67,7 +67,7 @@ public class TransformerFactoryTests
     public void When_resolving_a_missing_transformer_from_the_factory_async()
     {
         //arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { TransformerLifetime = ServiceLifetime.Singleton });
         var provider = collection.BuildServiceProvider();
 

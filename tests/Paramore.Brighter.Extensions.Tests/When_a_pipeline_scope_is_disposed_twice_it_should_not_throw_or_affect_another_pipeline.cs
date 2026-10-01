@@ -43,7 +43,7 @@ public class PipelineScopeDoubleDisposeTests
         //pipeline scope (FR-27.1). Two concurrently live pipelines, X and Y, each holding a
         //Brighter-created IAmAScope and each resolving its own Scoped IMarker through it
         var markerLog = new MarkerLog();
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddSingleton(markerLog);
         collection.AddScoped<IMarker, Marker>();
         collection.AddScoped<MarkerMapper>();

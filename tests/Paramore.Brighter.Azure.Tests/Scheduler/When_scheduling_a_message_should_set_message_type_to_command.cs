@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.Azure.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.Azure;
@@ -18,7 +20,7 @@ public class AzureServiceBusSchedulerMessageTypeTests
     private readonly DateTimeOffset _fireAt = DateTimeOffset.UtcNow.AddDays(1);
 
     public AzureServiceBusSchedulerMessageTypeTests()
-        => _scheduler = new AzureServiceBusScheduler(_sender, new RoutingKey("scheduler-topic"), TimeProvider.System);
+        => _scheduler = new AzureServiceBusScheduler(_sender, new RoutingKey("scheduler-topic"), TimeProvider.System, loggerFactory: NullLoggerFactory.Instance);
 
     [Test]
     public async Task When_scheduling_a_message_async_should_set_message_type_to_command()

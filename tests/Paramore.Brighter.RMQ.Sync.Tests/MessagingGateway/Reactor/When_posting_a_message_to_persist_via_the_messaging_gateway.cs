@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Xunit;
@@ -16,7 +18,7 @@ public class RmqMessageProducerSendPersistentMessageTests : IDisposable
     public RmqMessageProducerSendPersistentMessageTests()
     {
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()),
                 MessageType.MT_COMMAND),
             new MessageBody("test content"));
 
@@ -27,10 +29,10 @@ public class RmqMessageProducerSendPersistentMessageTests : IDisposable
             PersistMessages = true
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
-            
-        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, false);
+
+        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, false, loggerFactory: NullLoggerFactory.Instance);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys( _message.Header.Topic)).Create(TimeSpan.FromMilliseconds(1000));
     }

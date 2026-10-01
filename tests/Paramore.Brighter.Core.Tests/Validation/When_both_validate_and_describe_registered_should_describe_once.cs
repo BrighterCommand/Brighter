@@ -44,7 +44,7 @@ public class DoubleDescribePreventionTests
         var validator = SpyPipelineValidator.WithNoErrors();
         var options = Options.Create(new BrighterPipelineValidationOptions { ConsumerOwnsValidation = false });
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<IAmAPipelineDiagnosticWriter>(diagnosticWriter);
         var provider = services.BuildServiceProvider();
 

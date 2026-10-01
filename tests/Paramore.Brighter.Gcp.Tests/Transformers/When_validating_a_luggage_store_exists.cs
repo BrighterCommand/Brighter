@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Transformers.Gcp;
@@ -21,7 +23,7 @@ public class LuggageStoreExistsTests
             Credential = GatewayFactory.GetCredential()
         };
         
-        var luggageStore = new GcsLuggageStore(options);
+        var luggageStore = new GcsLuggageStore(options, loggerFactory: NullLoggerFactory.Instance);
         await luggageStore.EnsureStoreExistsAsync();
         
         // act
@@ -48,7 +50,7 @@ public class LuggageStoreExistsTests
                      Credential = GatewayFactory.GetCredential()
                  };
         
-                 var luggageStore = new GcsLuggageStore(options);
+                 var luggageStore = new GcsLuggageStore(options, loggerFactory: NullLoggerFactory.Instance);
                  await luggageStore.EnsureStoreExistsAsync();
              });
          

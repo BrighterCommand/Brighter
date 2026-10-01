@@ -44,7 +44,7 @@ public class FailedBuildScopeDisposalLoggingTests
         //branch, after the mapper has already been built into the same scope
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddScoped<IPoisonedDependency, PoisonedDependency>();
         collection.AddScoped<PoisonedScopeMapper>();
         collection.AddScoped<PoisonedTransform>();
@@ -61,10 +61,9 @@ public class FailedBuildScopeDisposalLoggingTests
         var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
         mapperRegistry.Register<PoisonedScopeCommand, PoisonedScopeMapper>();
 
-        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactory);
+        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactory, loggerFactory: Initializer.Factory);
 
-        //added to Initializer.Factory directly — the one instance every Brighter static logger in this
-        //process is bound to — not to ApplicationLogging.LoggerFactory, which another test may reassign
+        // Capture both pipeline and scope-disposal logs through the explicitly registered factory.
         var loggerProvider = new CapturingLoggerProvider();
         Initializer.Factory.AddProvider(loggerProvider);
 

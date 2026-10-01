@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
@@ -51,7 +53,7 @@ public class MsSqlQueueProvisioningValidateTests : IDisposable
     public void When_validating_a_missing_queue_should_throw_a_configuration_exception()
     {
         //Arrange -- nothing has created _queueTable.
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
         var subscription = Subscription(OnMissingChannel.Validate);
 
         //Act
@@ -68,12 +70,12 @@ public class MsSqlQueueProvisioningValidateTests : IDisposable
         //Arrange -- the control for the fact above: same call, same table name, the only difference
         //being that the table now exists. Without it, a Validate that threw unconditionally would
         //pass the test above.
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
         using (var created = channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Create))) { }
 
         //Act -- a second factory, because a gateway instance remembers that it has provisioned and
         //the claim here is about Validate reaching the database and finding the table.
-        var validating = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var validating = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
         var exception = Record.Exception(() =>
         {
             using var channel = validating.CreateSyncChannel(Subscription(OnMissingChannel.Validate));
@@ -94,7 +96,7 @@ public class MsSqlQueueProvisioningValidateTests : IDisposable
         CreateQueueTableDirectly(longName);
         var configuration = new RelationalDatabaseConfiguration(
             Configuration.DefaultConnectingString, queueStoreTable: longName);
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         try
         {

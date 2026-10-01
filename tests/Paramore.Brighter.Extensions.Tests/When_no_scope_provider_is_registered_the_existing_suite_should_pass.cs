@@ -60,7 +60,7 @@ public class NoScopeProviderRegisteredRegressionTests
         var unitOfWorkRecorder = new UnitOfWorkRecorder();
         var constructionOrderRecorder = new ConstructionOrderRecorder();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddScoped<IMarker, Marker>();
         collection.AddScoped<ScopedHandlerCommandHandler>();
         collection.AddSingleton(handlerMarkerRecorder);
@@ -95,7 +95,7 @@ public class NoScopeProviderRegisteredRegressionTests
         var internalBus = new InternalBus();
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(internalBus, new Publication { Topic = routingKey, RequestType = typeof(PostedCommand) }) }
+            { routingKey, new InMemoryMessageProducer(internalBus,Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(PostedCommand) }) }
         });
 
         var timeProvider = new FakeTimeProvider();
@@ -110,7 +110,7 @@ public class NoScopeProviderRegisteredRegressionTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+Initializer.Factory,            new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         var commandProcessor = new CommandProcessor(
@@ -120,8 +120,8 @@ public class NoScopeProviderRegisteredRegressionTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory()
-        );
+new InMemorySchedulerFactory(loggerFactory: Initializer.Factory)
+,loggerFactory:Initializer.Factory        );
 
         // Act/Assert - Send: one fresh handler pipeline, its Scoped dependency disposed once Send returns
         commandProcessor.Send(new ScopedHandlerCommand());
@@ -159,10 +159,10 @@ public class NoScopeProviderRegisteredRegressionTests
         // subscription below must listen on the same value for the message to ever be delivered
         var consumerRoutingKey = new RoutingKey("consumer.pipeline");
         var consumerBus = new InternalBus();
-        var channelFactory = new InMemoryChannelFactory(consumerBus, TimeProvider.System);
-        var consumerProducer = new InMemoryMessageProducer(consumerBus, new Publication { Topic = consumerRoutingKey, RequestType = typeof(ConsumerPipelineCommand) });
+        var channelFactory = new InMemoryChannelFactory(consumerBus, TimeProvider.System, loggerFactory: Initializer.Factory);
+        var consumerProducer = new InMemoryMessageProducer(consumerBus,Initializer.Factory, new Publication { Topic = consumerRoutingKey, RequestType = typeof(ConsumerPipelineCommand) });
 
-        var consumerServices = new ServiceCollection();
+        var consumerServices = new ServiceCollection().AddLogging();
         consumerServices.AddScoped<IUnitOfWork, UnitOfWork>();
         consumerServices.AddSingleton(consumerUnitOfWorkRecorder);
         consumerServices.AddSingleton(signal);

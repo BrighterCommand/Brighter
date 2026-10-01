@@ -59,7 +59,7 @@ public class HandlerFactoryReleaseFailureTests
 
         var commandProcessor = new CommandProcessor(
             registry, factory, new InMemoryRequestContextFactory(), new PolicyRegistry(),
-            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.Factory),loggerFactory:Initializer.Factory);
 
         // Act — the caller observes normal completion despite the release failure
         commandProcessor.Send(new HandlerReleaseThrowsCommand());
@@ -88,7 +88,7 @@ public class HandlerFactoryReleaseFailureTests
 
         var commandProcessor = new CommandProcessor(
             registry, factory, new InMemoryRequestContextFactory(), new PolicyRegistry(),
-            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.Factory),loggerFactory:Initializer.Factory);
 
         // Act — the caller observes the handler's own exception, not an AggregateException composing it
         // with the release failure, and not the release failure itself
@@ -117,7 +117,7 @@ public class HandlerFactoryReleaseFailureTests
         var loggerProvider = new CapturingLoggerProvider();
         Initializer.Factory.AddProvider(loggerProvider);
 
-        var lifetimeScope = new HandlerLifetimeScope(factory, pipelineScope);
+        var lifetimeScope = new HandlerLifetimeScope(factory,Initializer.Factory, pipelineScope);
         lifetimeScope.Add(first);
         lifetimeScope.Add(second);
         lifetimeScope.Add(third);
@@ -156,7 +156,7 @@ public class HandlerFactoryReleaseFailureTests
 
         var commandProcessor = new CommandProcessor(
             registry, factory, new InMemoryRequestContextFactory(), new PolicyRegistry(),
-            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.Factory),loggerFactory:Initializer.Factory);
 
         // Act — first Send
         commandProcessor.Send(new HandlerReleaseThrowsCommand());

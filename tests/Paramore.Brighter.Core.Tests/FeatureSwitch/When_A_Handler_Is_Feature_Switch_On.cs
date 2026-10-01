@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             registry.Register<MyCommand, MyFeatureSwitchedOnHandler>();
             registry.RegisterAsync<MyCommandAsync, MyFeatureSwitchedOnHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddSingleton<MyFeatureSwitchedOnHandler>();
             container.AddSingleton<MyFeatureSwitchedOnHandlerAsync>();
             container.AddTransient<FeatureSwitchHandler<MyCommand>>();
@@ -39,7 +39,8 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
                 .NoExternalBus()
                 .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
-                .RequestSchedulerFactory(new InMemorySchedulerFactory())
+                .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory))
+                .ConfigureLogging(Initializer.TestLoggerFactory)
                 .Build();
         }
 

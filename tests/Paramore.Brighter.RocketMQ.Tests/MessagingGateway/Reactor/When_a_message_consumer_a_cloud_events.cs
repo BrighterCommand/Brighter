@@ -1,4 +1,6 @@
-﻿using Paramore.Brighter.MessagingGateway.RocketMQ;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
 using Xunit;
 
@@ -19,7 +21,7 @@ public class BufferedConsumerCloudEventsTests : IDisposable
         var consumer = GatewayFactory.CreateSimpleConsumer(connection, publication).GetAwaiter().GetResult();
         var producer = GatewayFactory.CreateProducer(connection, publication).GetAwaiter().GetResult();
 
-        _consumer = new RocketMessageConsumer(consumer, BatchSize, TimeSpan.FromSeconds(30));
+        _consumer = new RocketMessageConsumer(consumer, BatchSize, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         _producer = new RocketMqMessageProducer(connection, producer, publication);
     }
 

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -57,7 +59,7 @@ public class SqsMessageProducerResourcesAreTaggedAsyncTests : IAsyncDisposable, 
 
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(_awsConnection);
+        _channelFactory = new ChannelFactory(_awsConnection, loggerFactory: NullLoggerFactory.Instance);
         _channelFactory.CreateAsyncChannel(subscription);
 
         _messageProducer = new SnsMessageProducer(
@@ -67,7 +69,7 @@ public class SqsMessageProducerResourcesAreTaggedAsyncTests : IAsyncDisposable, 
                 Topic = new RoutingKey(_topicName),
                 MakeChannels = OnMissingChannel.Create,
                 TopicAttributes = topicAttributes
-            });
+            }, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

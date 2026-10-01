@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Xunit;
@@ -29,7 +31,7 @@ public class AwsValidateMissingTopicTests
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Validate,
-            });
+            }, loggerFactory: NullLoggerFactory.Instance);
 
         //act && assert
         Assert.Throws<BrokerUnreachableException>(() => producer.Send(new Message(

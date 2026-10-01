@@ -72,19 +72,23 @@ var host = Host.CreateDefaultBuilder(args)
         };
 
         //create the gateway
-        var consumerFactory = new KafkaMessageConsumerFactory(
-            new KafkaMessagingGatewayConfiguration
-            {
-                Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" }
-            }
-        );
 
-        services.AddConsumers(options =>
+        services.AddConsumers(provider =>
         {
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var consumerFactory = new KafkaMessageConsumerFactory(
+                new KafkaMessagingGatewayConfiguration
+                {
+                    Name = "paramore.brighter",
+                    BootStrapServers = new[] { "localhost:9092" }
+                },
+                loggerFactory: loggerFactory);
+            var options = new ConsumersOptions();
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new ChannelFactory(consumerFactory);
+            return options;
         })
-        .UseScheduler(new InMemorySchedulerFactory())
+        .UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
         .AutoFromAssemblies();
 
         services.AddHostedService<ServiceActivatorHostedService>();

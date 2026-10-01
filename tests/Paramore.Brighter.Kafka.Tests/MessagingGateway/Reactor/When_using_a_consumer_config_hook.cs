@@ -33,7 +33,7 @@ public class ConsumerConfigHookTests
                 {
                     Name = "Kafka Consumer Test",
                     BootStrapServers = ["localhost:9092"]
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(subscription
             );
         

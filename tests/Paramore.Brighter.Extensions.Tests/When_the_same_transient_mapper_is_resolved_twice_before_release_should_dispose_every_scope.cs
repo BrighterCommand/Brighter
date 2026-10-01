@@ -16,7 +16,7 @@ public class TransientScopeKeyCollisionTests
         // reference every resolution, while MapperLifetime is configured Transient. Each Create
         // opens its own transient IServiceScope, but both scopes are keyed by the one shared
         // instance in the factory's reference-keyed tracking dictionary.
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton<SharedMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
         var rootProvider = collection.BuildServiceProvider();

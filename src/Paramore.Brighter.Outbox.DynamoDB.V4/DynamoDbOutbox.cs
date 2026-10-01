@@ -368,7 +368,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// <exception cref="ArgumentException"></exception>
         public async Task<IEnumerable<Message>> DispatchedMessagesAsync(
             TimeSpan dispatchedSince,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int pageSize = 100,
             int pageNumber = 1,
             int outboxTimeout = -1,
@@ -433,7 +433,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// <inheritdoc/>
         public async Task<Message> GetAsync(
             Id messageId,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
@@ -473,7 +473,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// <inheritdoc/>
         public async Task<IEnumerable<Message>> GetAsync(
             IEnumerable<Id> messageIds,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
@@ -519,7 +519,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task MarkDispatchedAsync(
             Id id,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)

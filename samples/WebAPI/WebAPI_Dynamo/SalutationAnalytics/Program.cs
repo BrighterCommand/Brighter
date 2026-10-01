@@ -23,7 +23,6 @@ using SalutationApp.Policies;
 using SalutationApp.Requests;
 using TransportMaker;
 
-
 await CreateHostBuilder(args).Build().RunAsync();
 return;
 
@@ -59,6 +58,7 @@ static void ConfigureBrighter(
     HostBuilderContext hostContext,
     IServiceCollection services)
 {
+
     var subscriptions = new Subscription[]
     {
         new RmqSubscription<GreetingMade>(
@@ -80,21 +80,20 @@ static void ConfigureBrighter(
         Exchange = new Exchange("paramore.brighter.exchange")
     };
 
-    var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-
     var transport = hostContext.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
     if (string.IsNullOrWhiteSpace(transport))
         throw new InvalidOperationException("Transport is not set");
-        
+
     MessagingTransport messagingTransport =
         ConfigureTransport.TransportType(transport);
 
     ConfigureTransport.AddSchemaRegistryMaybe(services, messagingTransport);
-            
-    var producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport); 
 
-    services.AddConsumers(options =>
+    services.AddConsumers(provider =>
         {
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection, loggerFactory: loggerFactory);
+            var options = new ConsumersOptions();
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
             options.HandlerLifetime = ServiceLifetime.Scoped;
@@ -106,20 +105,25 @@ static void ConfigureBrighter(
                 onceOnly: true,
                 actionOnExists: OnceOnlyAction.Throw
             );
+            return options;
         })
         .ConfigureJsonSerialisation((options) =>
         {
             //We don't strictly need this, but added as an example
             options.PropertyNameCaseInsensitive = true;
         })
-        .AddProducers((configure) =>
+        .AddProducers(provider =>
             {
+                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                var producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport, loggerFactory);
+                var configure = new ProducersConfiguration();
                 configure.ProducerRegistry = producerRegistry;
                 configure.Outbox = ConfigureOutbox(dynamoDb);
                 configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
                 configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
                 configure.MaxOutStandingMessages = 5;
                 configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
+                return configure;
             }
         )
         .AutoFromAssemblies()

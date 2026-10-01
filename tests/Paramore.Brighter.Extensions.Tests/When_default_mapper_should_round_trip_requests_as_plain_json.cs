@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -113,7 +113,7 @@ public class DefaultMapperRoundTripTests
 
     private static ServiceProvider BuildProvider(bool addConsumers)
     {
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var builder = addConsumers ? services.AddConsumers() : services.AddBrighter();
         builder.MapperRegistry(_ => { });
         return services.BuildServiceProvider();

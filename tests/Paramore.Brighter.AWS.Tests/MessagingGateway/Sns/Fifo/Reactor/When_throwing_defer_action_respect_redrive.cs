@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
 using System.Net.Mime;
@@ -80,11 +82,11 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
                 RequestType = typeof(MyDeferredCommand),
                 MakeChannels = OnMissingChannel.Create,
                 TopicAttributes = topicAttributes
-            }
-        );
+            },
+            loggerFactory: NullLoggerFactory.Instance);
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
-        _channelFactory = new ChannelFactory(_awsConnection);
+        _channelFactory = new ChannelFactory(_awsConnection, loggerFactory: NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateSyncChannel(_subscription);
 
         //how do we handle a command
@@ -101,8 +103,8 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
             requestContextFactory: new InMemoryRequestContextFactory(),
             policyRegistry: new PolicyRegistry(),
             resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(),
-            requestSchedulerFactory: new InMemorySchedulerFactory()
-        );
+            requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: NullLoggerFactory.Instance),
+            loggerFactory: NullLoggerFactory.Instance);
 
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
@@ -111,10 +113,12 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
 
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
-        _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyDeferredCommand), 
-            messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
+        _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyDeferredCommand),
+            messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel, loggerFactory: NullLoggerFactory.Instance)
         {
-            Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
+            Channel = _channel,
+            TimeOut = TimeSpan.FromMilliseconds(5000),
+            RequeueCount = 3
         };
     }
 

@@ -54,14 +54,14 @@ public class ScopeGrowthOverSustainedConsumptionTests
         var mapperFactory = new ServiceProviderMapperFactory(trackingProvider);
         var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
         mapperRegistry.Register<ScopeCountingCommand, ScopeCountingMapper>();
-        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new EmptyMessageTransformerFactory());
+        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new EmptyMessageTransformerFactory(), loggerFactory: Initializer.Factory);
 
         var subscriberRegistry = new SubscriberRegistry();
         subscriberRegistry.Register<ScopeCountingCommand, ScopeCountingCommandHandler>();
         var handlerFactory = new ServiceProviderHandlerFactory(trackingProvider);
         var commandProcessor = new CommandProcessor(
             subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),
-            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.Factory),loggerFactory:Initializer.Factory);
 
         // Act — consume 10,000 messages: one wrap pipeline (mapper family) and one Send (handler
         // family) per message, each built and released before the next begins
@@ -81,7 +81,7 @@ public class ScopeGrowthOverSustainedConsumptionTests
 
     private static ScopeTracker BuildScopeTracker(out IServiceProvider trackingProvider)
     {
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddScoped<ScopeCountingDependency>();
         collection.AddScoped<ScopeCountingMapper>();
         collection.AddScoped<ScopeCountingCommandHandler>();

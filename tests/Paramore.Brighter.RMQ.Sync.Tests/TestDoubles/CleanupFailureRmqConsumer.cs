@@ -32,7 +32,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 
 public class CleanupFailureRmqConsumer(
     RmqMessagingGatewayConnection connection, ChannelName queue, RoutingKey routingKey, Func<string?> failingOperation)
-    : RmqMessageConsumer(connection, queue, routingKey, isDurable: true)
+    : RmqMessageConsumer(connection, queue, routingKey, isDurable: true, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
 {
     protected override void ConnectToBroker(OnMissingChannel makeExchange)
     {

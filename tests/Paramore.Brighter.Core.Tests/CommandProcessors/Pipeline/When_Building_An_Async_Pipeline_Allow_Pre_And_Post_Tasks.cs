@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyPreAndPostDecoratedHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyPreAndPostDecoratedHandlerAsync>();
             container.AddTransient<MyValidationHandlerAsync<MyCommand>>();
             container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
  
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry,(IAmAHandlerFactoryAsync)handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry,(IAmAHandlerFactoryAsync)handlerFactory, loggerFactory: Initializer.TestLoggerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 

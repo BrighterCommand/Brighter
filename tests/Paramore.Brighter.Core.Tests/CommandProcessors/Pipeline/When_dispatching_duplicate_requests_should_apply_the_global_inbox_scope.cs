@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Inbox.Exceptions;
@@ -50,14 +52,14 @@ public class CommandProcessorGlobalInboxScopeTests
         {
             _ when type == typeof(InboxScopeCommandHandler) => new InboxScopeCommandHandler(),
             _ when type == typeof(InboxScopeEventHandler) => new InboxScopeEventHandler(),
-            _ when type == typeof(UseInboxHandler<InboxScopeCommand>) => new UseInboxHandler<InboxScopeCommand>(inbox),
-            _ when type == typeof(UseInboxHandler<InboxScopeEvent>) => new UseInboxHandler<InboxScopeEvent>(inbox),
+            _ when type == typeof(UseInboxHandler<InboxScopeCommand>) => new UseInboxHandler<InboxScopeCommand>(inbox, logger: LoggerFactoryExtensions.CreateLogger<UseInboxHandler<InboxScopeCommand>>( Initializer.TestLoggerFactory )),
+            _ when type == typeof(UseInboxHandler<InboxScopeEvent>) => new UseInboxHandler<InboxScopeEvent>(inbox, logger: LoggerFactoryExtensions.CreateLogger<UseInboxHandler<InboxScopeEvent>>( Initializer.TestLoggerFactory )),
             _ => throw new InvalidOperationException($"Unexpected handler type {type}")
         });
         var configuration = scope.HasValue ? new InboxConfiguration(inbox, scope.Value) : null;
         var processor = new CommandProcessor(registry, factory, new InMemoryRequestContextFactory(),
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(),
-            inboxConfiguration: configuration);
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            inboxConfiguration: configuration,loggerFactory:Initializer.TestLoggerFactory);
         var command = new InboxScopeCommand();
         var duplicateCommand = new InboxScopeCommand { Id = command.Id };
         var @event = new InboxScopeEvent();

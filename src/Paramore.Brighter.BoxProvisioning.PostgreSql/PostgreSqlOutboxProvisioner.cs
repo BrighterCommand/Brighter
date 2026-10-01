@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using Npgsql;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
@@ -38,8 +39,9 @@ public class PostgreSqlOutboxProvisioner : SqlBoxProvisioner<NpgsqlConnection, N
         IAmABoxMigrationCatalog catalog,
         IAmABoxPayloadModeValidator<NpgsqlConnection> payloadValidator,
         IAmARelationalDatabaseConfiguration configuration,
-        IAmABoxMigrationRunner migrationRunner)
-        : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, BoxType.Outbox)
+        IAmABoxMigrationRunner migrationRunner,
+        ILoggerFactory loggerFactory)
+        : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, BoxType.Outbox, loggerFactory)
     {
     }
 

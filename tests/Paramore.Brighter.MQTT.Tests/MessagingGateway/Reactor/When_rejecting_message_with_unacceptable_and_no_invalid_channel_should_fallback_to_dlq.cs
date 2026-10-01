@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net;
@@ -61,7 +63,7 @@ public class MqttMessageConsumerRejectUnacceptableFallbackToDlqTests : IDisposab
             TopicPrefix = SOURCE_TOPIC_PREFIX,
             ClientID = "BrighterTests-Fallback-Producer"
         };
-        var publisher = new MqttMessagePublisher(producerConfig);
+        var publisher = new MqttMessagePublisher(producerConfig, loggerFactory: NullLoggerFactory.Instance);
         _sourceProducer = new MqttMessageProducer(publisher, new Publication());
 
         //Arrange — source consumer with DLQ only (no invalid message routing key)
@@ -74,8 +76,8 @@ public class MqttMessageConsumerRejectUnacceptableFallbackToDlqTests : IDisposab
         };
         _sourceConsumer = new MqttMessageConsumer(
             consumerConfig,
-            deadLetterRoutingKey: new RoutingKey(DLQ_TOPIC_PREFIX)
-        );
+            deadLetterRoutingKey: new RoutingKey(DLQ_TOPIC_PREFIX),
+            loggerFactory: NullLoggerFactory.Instance);
 
         //Arrange — DLQ consumer (should receive the fallback)
         var dlqConsumerConfig = new MqttMessagingGatewayConsumerConfiguration
@@ -85,7 +87,7 @@ public class MqttMessageConsumerRejectUnacceptableFallbackToDlqTests : IDisposab
             TopicPrefix = DLQ_TOPIC_PREFIX,
             ClientID = "BrighterTests-FallbackDlq-Consumer"
         };
-        _dlqConsumer = new MqttMessageConsumer(dlqConsumerConfig);
+        _dlqConsumer = new MqttMessageConsumer(dlqConsumerConfig, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

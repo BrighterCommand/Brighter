@@ -127,7 +127,7 @@ public class KafkaTopicPropagationRaceTests : IDisposable
             MakeChannels = OnMissingChannel.Create,
         };
 
-        var registry = new KafkaProducerRegistryFactory(_configuration, [publication]).Create();
+        var registry = new KafkaProducerRegistryFactory(_configuration, [publication], Initializer.TestLoggerFactory).Create();
         _registries.Add(registry);
 
         return (IAmAMessageProducerSync)registry.LookupBy(topic);
@@ -147,7 +147,7 @@ public class KafkaTopicPropagationRaceTests : IDisposable
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create);
 
-        var channel = new ChannelFactory(new KafkaMessageConsumerFactory(_configuration))
+        var channel = new ChannelFactory(new KafkaMessageConsumerFactory(_configuration, Initializer.TestLoggerFactory))
             .CreateSyncChannel(subscription);
         _channels.Add(channel);
 

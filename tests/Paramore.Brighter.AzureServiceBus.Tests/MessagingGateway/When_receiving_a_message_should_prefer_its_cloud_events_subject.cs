@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -49,7 +51,7 @@ public class AzureServiceBusCloudEventsSubjectPrecedenceTests
             body: BinaryData.FromString("{}"), messageId: Id.Random().Value, subject: nativeSubject,
             properties: new Dictionary<string, object> { ["cloudEvents:subject"] = cloudSubject! });
         await using var client = new InMemoryServiceBusClient(native);
-        var factory = new AzureServiceBusConsumerFactory(client);
+        var factory = new AzureServiceBusConsumerFactory(client, loggerFactory: NullLoggerFactory.Instance);
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             subscriptionName: new SubscriptionName("orders-subscription"),
             channelName: new ChannelName("orders-channel"),

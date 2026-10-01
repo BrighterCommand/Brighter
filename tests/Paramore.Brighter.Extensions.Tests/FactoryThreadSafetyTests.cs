@@ -41,7 +41,7 @@ public class FactoryThreadSafetyTests
     public async Task ConcurrentSingletonResolution_ReturnsSameInstance()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<ThreadSafetyTestHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -75,7 +75,7 @@ public class FactoryThreadSafetyTests
     public async Task ConcurrentScopedResolution_SameScopeReturnsSameInstance()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient<ThreadSafetyTestHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -109,7 +109,7 @@ public class FactoryThreadSafetyTests
     public async Task ConcurrentTransientResolution_ReturnsDifferentInstances()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient<ThreadSafetyTestHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -145,7 +145,7 @@ public class FactoryThreadSafetyTests
         // Arrange - Use a handler that tracks instantiation count
         CountingHandler.ResetCount();
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient<CountingHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {

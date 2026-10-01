@@ -32,7 +32,7 @@ public class When_no_scheduler_configured_should_default_to_InMemorySchedulerFac
     public void Should_resolve_InMemorySchedulerFactory_as_default()
     {
         // Arrange — AddBrighter with no explicit UseScheduler or UseMessageScheduler
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter();
         var provider = services.BuildServiceProvider();
 
@@ -48,7 +48,7 @@ public class When_no_scheduler_configured_should_default_to_InMemorySchedulerFac
     public void Should_resolve_IAmAMessageScheduler_from_default_factory()
     {
         // Arrange — AddBrighter with no explicit UseScheduler
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter();
         var provider = services.BuildServiceProvider();
 
@@ -64,7 +64,7 @@ public class When_no_scheduler_configured_should_default_to_InMemorySchedulerFac
     public void Should_resolve_IAmARequestSchedulerFactory_as_default()
     {
         // Arrange — AddBrighter with no explicit UseScheduler
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter();
         var provider = services.BuildServiceProvider();
 

@@ -22,11 +22,15 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using Microsoft.Extensions.Logging;
+
 namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 {
     public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly RmqMessagingGatewayConnection _rmqConnection;
+        private readonly ILoggerFactory _loggerFactory;
         private IAmAMessageScheduler? _scheduler;
 
         /// <summary>
@@ -44,10 +48,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// </summary>
         /// <param name="rmqConnection">The subscription to the broker hosting the queue</param>
         /// <param name="scheduler">The optional message scheduler for delayed requeue support</param>
-        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection rmqConnection, IAmAMessageScheduler? scheduler = null)
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers</param>
+        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection rmqConnection, ILoggerFactory loggerFactory, IAmAMessageScheduler? scheduler = null)
         {
             _rmqConnection = rmqConnection;
             _scheduler = scheduler;
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         }
 
         /// <summary>
@@ -66,6 +72,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 rmqSubscription.ChannelName, //RMQ Queue Name
                 rmqSubscription.RoutingKey,
                 rmqSubscription.IsDurable,
+                _loggerFactory,
                 rmqSubscription.HighAvailability,
                 rmqSubscription.BufferSize,
                 rmqSubscription.DeadLetterChannelName,

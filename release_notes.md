@@ -48,6 +48,14 @@ Delegate-valued Blob options remain configured in code; this change does not mak
 Already compiled code that accesses these fields is not binary-compatible with the new properties; replacing Brighter assemblies without rebuilding is not sufficient.
 Code using field reflection or passing these members by reference needs source changes. Property-based serializers may now encounter delegate values they previously ignored.
 
+### Explicit instance-scoped logging (V11 breaking change)
+
+`ApplicationLogging` is removed. Supply an application-owned `ILoggerFactory` or typed logger when constructing Brighter components. Register `AddLogging(...)` for a bare service collection; generic hosts already register logging. User-created stores and transports need explicit logging dependencies even when `AddBrighter()` is used.
+
+Builder chains require a logging stage before `Build()`. Constructor signatures may reorder required arguments, and external builder-interface implementations must be updated. Manually composed handler chains must call `ConfigureLogging(factory)` on each handler. There is no implicit no-op fallback. Existing logger categories are preserved.
+
+See the [migration guide](docs/guides/instance-scoped-logging.md) and [ADR 0077](docs/adr/0077-instance-scoped-logging.md).
+
 ### Scoped lifetime per pipeline (spec 0036, #4256)
 
 `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` now govern a **pipeline-scoped** DI scope: a `Scoped` handler, mapper or transform resolves from one DI scope shared by every `Scoped` participant on that pipeline, and disposed when the pipeline ends. An ASP.NET Core host can additionally opt a pipeline in to **adopting** an ambient request scope instead of creating its own, through a new `Paramore.Brighter.Extensions.AspNetCore` package (`AddBrighterRequestScope(...)`), and `ValidatePipelines()` gained seven new startup checks for common lifetime and scope-registration mistakes. See [docs/guides/lifetimes-and-scoping.md](docs/guides/lifetimes-and-scoping.md) for the full model, decision guide and troubleshooting, and [ADR 0070](docs/adr/0070-per-pipeline-di-scope-for-mapper-and-transform-factories.md) through [ADR 0076](docs/adr/0076-scope-affinity-option-and-write-through.md) for the design.

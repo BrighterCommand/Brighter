@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System;
 using DbMaker;
 using GreetingsApp.EntityGateway;
@@ -30,7 +31,6 @@ namespace GreetingsWeb
             _configuration = configuration;
         }
 
-
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
@@ -45,7 +45,6 @@ namespace GreetingsWeb
 
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
         }
-
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -71,6 +70,7 @@ namespace GreetingsWeb
 
         private void ConfigureBrighter(IServiceCollection services)
         {
+
             var transport = _configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
             if (string.IsNullOrWhiteSpace(transport))
                 throw new InvalidOperationException("Transport is not set");
@@ -90,12 +90,8 @@ namespace GreetingsWeb
                 throw new InvalidOperationException("DbType is not set");
 
             var rdbms = DbResolver.GetDatabaseType(dbType);
-            (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider) = 
-                OutboxFactory.MakeEfOutbox<GreetingsEntityGateway>(rdbms, outboxConfiguration);
-            
+
             services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
-            
-            IAmAProducerRegistry producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
 
             services.AddBrighter(options =>
                 {
@@ -104,14 +100,20 @@ namespace GreetingsWeb
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.PolicyRegistry = new GreetingsPolicy();
                 })
-                .AddProducers((configure) =>
+                .AddProducers(provider =>
                     {
+                        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                        (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider) =
+                            OutboxFactory.MakeEfOutbox<GreetingsEntityGateway>(rdbms, outboxConfiguration, loggerFactory);
+                        IAmAProducerRegistry producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport, loggerFactory);
+                        var configure = new ProducersConfiguration();
                         configure.ProducerRegistry = producerRegistry;
                         configure.Outbox = outbox;
                         configure.TransactionProvider = transactionProvider;
                         configure.ConnectionProvider = connectionProvider;
                         configure.MaxOutStandingMessages = 5;
                         configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
+                        return configure;
                     }
                 )
                 .AutoFromAssemblies()

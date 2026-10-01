@@ -1,3 +1,6 @@
+using Paramore.Brighter;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using DbMaker;
 using GreetingsApp.Requests;
@@ -26,15 +29,18 @@ OutboxFactory.MakeDynamoOutbox(client);
 builder.Services.AddBrighter(options =>
 {
     options.InstrumentationOptions = InstrumentationOptions.All;
-}).AddProducers(configure =>
+}).AddProducers(provider =>
 {
-    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    var configure = new ProducersConfiguration();
+    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport, loggerFactory);
     configure.Outbox = new DynamoDbOutbox(client, new DynamoDbConfiguration(), TimeProvider.System);;
     configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
     configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
     configure.MaxOutStandingMessages = 5;
     configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
     configure.OutBoxBag = new Dictionary<string, object> { { "Topic", "GreetingMade" } };
+    return configure;
 })
 .UseOutboxSweeper(
     options =>
@@ -64,6 +70,5 @@ app.MapHealthChecks("/health/detail", new HealthCheckOptions
         await context.Response.WriteAsync(JsonSerializer.Serialize(content, jsonOptions));
     }
 });
-
 
 app.Run();

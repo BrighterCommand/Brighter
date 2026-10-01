@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using MySqlConnector;
@@ -67,13 +69,13 @@ public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
             new MySqlOutboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             configA,
-            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configA, TimeSpan.FromSeconds(30), holdingLock));
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configA, TimeSpan.FromSeconds(30), NullLoggerFactory.Instance, holdingLock), loggerFactory: NullLoggerFactory.Instance);
         var provisionerB = new MySqlOutboxProvisioner(
             new MySqlBoxDetectionHelper(),
             new MySqlOutboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             configB,
-            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configB, TimeSpan.FromSeconds(1)));
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configB, TimeSpan.FromSeconds(1), loggerFactory: NullLoggerFactory.Instance), loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         var taskA = Task.Run(() => provisionerA.ProvisionAsync());

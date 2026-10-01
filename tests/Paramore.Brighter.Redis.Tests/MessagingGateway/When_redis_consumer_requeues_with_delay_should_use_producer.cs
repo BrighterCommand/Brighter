@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Paramore.Brighter.MessagingGateway.Redis;
 using Xunit;
@@ -50,7 +52,7 @@ public class When_redis_consumer_requeues_with_delay_should_use_producer : IDisp
         var queueName = new ChannelName($"Requeue-Delay-Queue-{Guid.NewGuid()}");
 
         _scheduler = new SpySchedulerSync();
-        _consumer = new RedisMessageConsumer(configuration, queueName, topic, _scheduler);
+        _consumer = new RedisMessageConsumer(configuration, queueName, topic, NullLoggerFactory.Instance, _scheduler);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

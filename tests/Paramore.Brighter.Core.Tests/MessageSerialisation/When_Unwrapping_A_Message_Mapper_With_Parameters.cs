@@ -26,7 +26,7 @@ public class MessageUnwrapRequestWithAttributesTests
         
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MyParameterizedTransform()));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
         _message = new Message(
             new MessageHeader(myCommand.Id, new("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),

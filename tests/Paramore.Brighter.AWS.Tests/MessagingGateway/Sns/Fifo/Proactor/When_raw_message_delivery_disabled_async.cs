@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using Amazon.SimpleNotificationService.Model;
@@ -22,7 +24,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         var channelName = $"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _routingKey = new RoutingKey($"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
         var topicAttributes = new SnsAttributes(type: SqsType.Fifo, tags: [new Tag { Key = "Environment", Value = "Test" }]);
@@ -36,17 +38,17 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             channelType: ChannelType.PubSub,
             routingKey: _routingKey,
             bufferSize: bufferSize,
-            queueAttributes:new SqsAttributes(rawMessageDelivery: false, type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }), 
+            queueAttributes: new SqsAttributes(rawMessageDelivery: false, type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: topicAttributes,
             makeChannels: OnMissingChannel.Create));
 
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create, 
-                Topic = _routingKey, 
+                MakeChannels = OnMissingChannel.Create,
+                Topic = _routingKey,
                 TopicAttributes = topicAttributes
-            });
+            }, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -62,7 +64,8 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             correlationId: Guid.NewGuid().ToString(),
             replyTo: RoutingKey.Empty,
             contentType: new ContentType(MediaTypeNames.Text.Plain),
-            partitionKey: messageGroupId) { Bag = { [HeaderNames.DeduplicationId] = deduplicationId } };
+            partitionKey: messageGroupId)
+        { Bag = { [HeaderNames.DeduplicationId] = deduplicationId } };
 
         var customHeaderItem = new KeyValuePair<string, object>("custom-header-item", "custom-header-item-value");
         messageHeader.Bag.Add(customHeaderItem.Key, customHeaderItem.Value);

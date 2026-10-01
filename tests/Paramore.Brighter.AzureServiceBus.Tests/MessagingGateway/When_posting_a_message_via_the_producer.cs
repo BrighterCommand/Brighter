@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
@@ -52,7 +54,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 subscriptionName: new SubscriptionName(queueChannelName),
                 channelName: new ChannelName(queueChannelName),
                 routingKey: queueRoutingKey,
-                subscriptionConfiguration : new AzureServiceBusSubscriptionConfiguration()
+                subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration()
                 {
                     UseServiceBusQueue = true
                 }
@@ -61,13 +63,13 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             _contentType = new ContentType(MediaTypeNames.Application.Json);
 
             var clientProvider = ASBCreds.ASBClientProvider;
-            _administrationClient = new AdministrationClientWrapper(clientProvider);
+            _administrationClient = new AdministrationClientWrapper(clientProvider, loggerFactory: NullLoggerFactory.Instance);
             _administrationClient.CreateSubscriptionAsync(_topicName, channelName, new AzureServiceBusSubscriptionConfiguration())
                 .GetAwaiter()
                 .GetResult();
 
             var channelFactory =
-                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider));
+                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider, loggerFactory: NullLoggerFactory.Instance));
             _topicChannel = channelFactory.CreateSyncChannel(subscription);
             _queueChannel = channelFactory.CreateSyncChannel(queueSubscription);
 
@@ -76,8 +78,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 [
                     new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) },
                         new AzureServiceBusPublication { Topic = new RoutingKey(_queueName), UseServiceBusQueue = true}
-                ]
-                )
+                ],
+                loggerFactory: NullLoggerFactory.Instance)
                 .Create();
         }
 
@@ -163,7 +165,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         }
 
         private Message GenerateMessage(string topicName) => new Message(
-            new MessageHeader(_command.Id, new RoutingKey( topicName), MessageType.MT_COMMAND, correlationId:_correlationId,
+            new MessageHeader(_command.Id, new RoutingKey(topicName), MessageType.MT_COMMAND, correlationId: _correlationId,
                 contentType: _contentType
             ),
             new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))

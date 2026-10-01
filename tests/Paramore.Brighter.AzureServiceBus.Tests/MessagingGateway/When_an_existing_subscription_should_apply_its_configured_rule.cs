@@ -251,7 +251,7 @@ public class AzureServiceBusSubscriptionRuleTests
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             subscriptionName: new SubscriptionName("rules"), channelName: new ChannelName("rules"),
             routingKey: new RoutingKey("orders"), subscriptionConfiguration: configuration);
-        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        await using var consumer = new AzureServiceBusConsumerFactory(client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
 
         //Act / Assert
         var error = await Assert.ThrowsAsync<ChannelFailureException>(() => consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1)));
@@ -324,7 +324,7 @@ public class AzureServiceBusSubscriptionRuleTests
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             subscriptionName: new SubscriptionName("rules"), channelName: new ChannelName("rules"),
             routingKey: new RoutingKey("orders"), makeChannels: makeChannels, subscriptionConfiguration: configuration);
-        var factory = new AzureServiceBusConsumerFactory(client);
+        var factory = new AzureServiceBusConsumerFactory(client, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         if (isAsync)
         {
             await using var consumer = factory.CreateAsync(subscription);

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using Greetings.Ports.Commands;
 using GreetingsSender;
@@ -62,40 +63,11 @@ var policyRegistry = new PolicyRegistry
     { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
 };
 
-var kafkaMessageProducerFactory = new KafkaMessageProducerFactory(
-        new KafkaMessagingGatewayConfiguration
-        {
-            Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
-        },
-        [
-            new KafkaPublication
-            {
-                Topic = new RoutingKey("greeting.event"),
-                RequestType = typeof(GreetingEvent),
-                NumPartitions = 3,
-                MessageSendMaxRetries = 3,
-                MessageTimeoutMs = 1000,
-                MaxInFlightRequestsPerConnection = 1
-            }
-        ]);
-
 var rmqConnection = new RmqMessagingGatewayConnection
 {
     AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
     Exchange = new Exchange("paramore.brighter.exchange"),
 };
-
-var rmqMessageProducerFactory = new RmqMessageProducerFactory(
-    rmqConnection,
-    [
-        new RmqPublication
-        {
-            WaitForConfirmsTimeOutInMilliseconds = 1000,
-            MakeChannels = OnMissingChannel.Create,
-            Topic = new RoutingKey("another.greeting.event"),
-            RequestType = typeof(AnotherGreetingEvent)
-        }
-    ]);
 
 builder.Services.AddBrighter(options =>
     {
@@ -103,13 +75,44 @@ builder.Services.AddBrighter(options =>
     })
     // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
     // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-    .UseScheduler(new InMemorySchedulerFactory())
-    .AddProducers((configure) =>
+    .UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
+    .AddProducers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var kafkaMessageProducerFactory = new KafkaMessageProducerFactory(
+                new KafkaMessagingGatewayConfiguration
+                {
+                    Name = "paramore.brighter.greetingsender",
+                    BootStrapServers = new[] { "localhost:9092" }
+                },
+                [
+                    new KafkaPublication
+                    {
+                        Topic = new RoutingKey("greeting.event"),
+                        RequestType = typeof(GreetingEvent),
+                        NumPartitions = 3,
+                        MessageSendMaxRetries = 3,
+                        MessageTimeoutMs = 1000,
+                        MaxInFlightRequestsPerConnection = 1
+                    }
+                ], loggerFactory: loggerFactory);
+        var rmqMessageProducerFactory = new RmqMessageProducerFactory(
+            rmqConnection,
+            [
+                new RmqPublication
+                {
+                    WaitForConfirmsTimeOutInMilliseconds = 1000,
+                    MakeChannels = OnMissingChannel.Create,
+                    Topic = new RoutingKey("another.greeting.event"),
+                    RequestType = typeof(AnotherGreetingEvent)
+                }
+            ], loggerFactory: loggerFactory);
+        var configure = new ProducersConfiguration();
         configure.ProducerRegistry = new CombinedProducerRegistryFactory(
             rmqMessageProducerFactory,
             kafkaMessageProducerFactory)
             .Create();
+        return configure;
     })
     .AutoFromAssemblies();
 

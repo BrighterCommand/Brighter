@@ -67,7 +67,7 @@ public class ManyThreadsRaceFirstScopedResolutionTests
 
         for (var trial = 0; trial < trials; trial++)
         {
-            var services = new ServiceCollection();
+            var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
             services.AddTransient<RaceHandler>();
             services.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Scoped });
 

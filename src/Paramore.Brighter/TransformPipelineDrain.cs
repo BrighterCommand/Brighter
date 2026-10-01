@@ -26,7 +26,6 @@ using System;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
@@ -39,10 +38,6 @@ namespace Paramore.Brighter
     /// </summary>
     internal static partial class TransformPipelineDrain
     {
-        //TransformPipelineDrain is static, so it cannot be a generic argument to ApplicationLogging.CreateLogger<T>();
-        //this is the same category a generic call would have produced
-        private static readonly ILogger s_logger = ApplicationLogging.LoggerFactory.CreateLogger(typeof(TransformPipelineDrain));
-
 
         /// <summary>
         /// Runs the drain synchronously: dispose the transform scope, then release the mapper, holding any
@@ -54,7 +49,8 @@ namespace Paramore.Brighter
         /// <param name="releaseMapper">Releases the mapper lease back to its registry.</param>
         /// <param name="releaseScope">Releases the pipeline's own DI scope (a no-op when there is none).</param>
         /// <param name="requestType">The pipeline's request type name, named in a scope-release failure's log entry.</param>
-        internal static void Drain(Action disposeScope, Action releaseMapper, Action releaseScope, string requestType)
+        /// <param name="logger">The owning pipeline logger.</param>
+        internal static void Drain(Action disposeScope, Action releaseMapper, Action releaseScope, string requestType, ILogger logger)
         {
             try
             {
@@ -98,7 +94,7 @@ namespace Paramore.Brighter
                 try { releaseScope(); }
                 catch (Exception scopeReleaseException)
                 {
-                    Log.FailedToDisposePipelineScope(s_logger, requestType, scopeReleaseException);
+                    Log.FailedToDisposePipelineScope(logger, requestType, scopeReleaseException);
                 }
             }
         }
@@ -112,9 +108,10 @@ namespace Paramore.Brighter
         /// <param name="releaseMapperAsync">Releases the mapper lease back to its registry.</param>
         /// <param name="releaseScopeAsync">Releases the pipeline's own DI scope (a no-op when there is none).</param>
         /// <param name="requestType">The pipeline's request type name, named in a scope-release failure's log entry.</param>
+        /// <param name="logger">The owning pipeline logger.</param>
         internal static async ValueTask DrainAsync(
             Func<ValueTask> disposeScopeAsync, Func<ValueTask> releaseMapperAsync, Func<ValueTask> releaseScopeAsync,
-            string requestType)
+            string requestType, ILogger logger)
         {
             try
             {
@@ -156,7 +153,7 @@ namespace Paramore.Brighter
                 try { await releaseScopeAsync().ConfigureAwait(false); }
                 catch (Exception scopeReleaseException)
                 {
-                    Log.FailedToDisposePipelineScope(s_logger, requestType, scopeReleaseException);
+                    Log.FailedToDisposePipelineScope(logger, requestType, scopeReleaseException);
                 }
             }
         }

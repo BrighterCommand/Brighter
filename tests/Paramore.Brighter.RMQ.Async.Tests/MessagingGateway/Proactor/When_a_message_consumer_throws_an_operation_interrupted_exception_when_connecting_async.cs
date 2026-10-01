@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -52,8 +54,8 @@ public class AsyncRmqMessageConsumerOperationInterruptedTestsAsync : IAsyncDispo
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _sender = new RmqMessageProducer(rmqConnection);
-        _receiver = new RmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), sentMessage.Header.Topic, false, false);
+        _sender = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
+        _receiver = new RmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), sentMessage.Header.Topic, false, NullLoggerFactory.Instance, false);
         _badReceiver = new OperationInterruptedRmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), sentMessage.Header.Topic, false, 1, false);
 
         _sender.SendAsync(sentMessage).GetAwaiter().GetResult();

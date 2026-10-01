@@ -26,8 +26,8 @@ public class When_a_non_fatal_consumer_error_follows_a_fatal_error_should_log_as
             offsetDefault: AutoOffsetReset.Earliest,
             numPartitions: 1,
             replicationFactor: 1,
-            makeChannels: OnMissingChannel.Assume
-        );
+            makeChannels: OnMissingChannel.Assume,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

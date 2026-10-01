@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -39,7 +39,7 @@ public class MapperScanStartupTests
     public void When_starting_with_non_public_duplicate_mappers_should_resolve_public_mappers(bool addConsumers)
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
 
         //Act
         var builder = addConsumers ? services.AddConsumers() : services.AddBrighter();

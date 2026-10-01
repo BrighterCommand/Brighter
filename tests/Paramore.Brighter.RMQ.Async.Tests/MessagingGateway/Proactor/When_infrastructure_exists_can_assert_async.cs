@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
@@ -24,7 +26,7 @@ public class RmqAssumeExistingInfrastructureTestsAsync : IDisposable, IAsyncDisp
             Exchange = new Exchange(Guid.NewGuid().ToString())
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Assume});
+        _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Assume}, loggerFactory: NullLoggerFactory.Instance);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
             
         _messageConsumer = new RmqMessageConsumer(
@@ -33,7 +35,7 @@ public class RmqAssumeExistingInfrastructureTestsAsync : IDisposable, IAsyncDisp
             routingKey:_message.Header.Topic, 
             isDurable: true, 
             highAvailability:false,
-            makeChannels: OnMissingChannel.Assume);
+            makeChannels: OnMissingChannel.Assume, loggerFactory: NullLoggerFactory.Instance);
 
         //This creates the infrastructure we want
         new QueueFactory(rmqConnection, queueName, new RoutingKeys( _message.Header.Topic))

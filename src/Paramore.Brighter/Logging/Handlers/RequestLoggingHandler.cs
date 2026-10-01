@@ -40,9 +40,18 @@ namespace Paramore.Brighter.Logging.Handlers
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public partial class RequestLoggingHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestLoggingHandler<TRequest>>();
+        private readonly ILogger _logger;
 
         private HandlerTiming _timing;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RequestLoggingHandler{TRequest}"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        public RequestLoggingHandler(ILogger<RequestLoggingHandler<TRequest>> logger)
+        {
+            _logger = logger;
+        }
 
         /// <summary>
         /// Initializes from attribute parameters.
@@ -60,7 +69,7 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <returns>TRequest.</returns>
         public override TRequest Handle(TRequest request)
         {
-            Log.LogCommand(s_logger, _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(request, JsonSerialisationOptions.Options), DateTime.UtcNow);
+            Log.LogCommand(_logger, _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(request, JsonSerialisationOptions.Options), DateTime.UtcNow);
             return base.Handle(request);
         }
 
@@ -85,7 +94,7 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <returns>TRequest.</returns>
         public override TRequest Fallback(TRequest command)
         {
-            Log.LogFailure(s_logger, typeof(TRequest), JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), DateTime.UtcNow);
+            Log.LogFailure(_logger, typeof(TRequest), JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), DateTime.UtcNow);
             return base.Fallback(command);
         }
 

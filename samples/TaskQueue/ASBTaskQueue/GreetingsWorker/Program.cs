@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Greetings.Adaptors.Data;
 using Greetings.Adaptors.Services;
@@ -60,7 +61,7 @@ var subscriptions = new Subscription[]
 };
 
 string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True";
-            
+
 //EF
 builder.Services.AddDbContext<GreetingsDataContext>(o =>
 {
@@ -69,19 +70,20 @@ builder.Services.AddDbContext<GreetingsDataContext>(o =>
 
 var clientProvider = new ServiceBusConnectionStringClientProvider("Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
 
-var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider);
-builder.Services.AddConsumers(options =>
+builder.Services.AddConsumers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, loggerFactory: loggerFactory);
+        var options = new ConsumersOptions();
         options.Subscriptions = subscriptions;
         options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
-        
+        return options;
     })
     .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();
-                
-builder.Logging.SetMinimumLevel(LogLevel.Information).AddConsole();
 
+builder.Logging.SetMinimumLevel(LogLevel.Information).AddConsole();
 
 builder.Services.AddRouting();
 builder.Services.AddHealthChecks()

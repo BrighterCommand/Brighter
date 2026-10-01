@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -24,7 +24,10 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Actions;
@@ -180,10 +183,12 @@ public class BackstopPumpActionTests
         if (isAsync)
         {
             var command = new BackstopActionCommandAsync(original);
-            var inner = new DeferMessageOnErrorHandlerAsync<BackstopActionCommandAsync>();
+            var inner = new DeferMessageOnErrorHandlerAsync<BackstopActionCommandAsync>(logger: LoggerFactoryExtensions.CreateLogger<DeferMessageOnErrorHandlerAsync<BackstopActionCommandAsync>>( Initializer.TestLoggerFactory ));
+            using var innerPipeline = HandlerTestPipeline.Create(inner, command);
             inner.InitializeFromAttributeParams(1234);
             inner.SetSuccessor(new BackstopActionHandlerAsync());
-            var outer = new RejectMessageOnErrorHandlerAsync<BackstopActionCommandAsync>();
+            var outer = new RejectMessageOnErrorHandlerAsync<BackstopActionCommandAsync>(logger: LoggerFactoryExtensions.CreateLogger<RejectMessageOnErrorHandlerAsync<BackstopActionCommandAsync>>( Initializer.TestLoggerFactory ));
+            using var outerPipeline = HandlerTestPipeline.Create(outer, command);
             outer.SetSuccessor(inner);
 
             //Act
@@ -192,10 +197,12 @@ public class BackstopPumpActionTests
         else
         {
             var command = new BackstopActionCommand(original);
-            var inner = new DeferMessageOnErrorHandler<BackstopActionCommand>();
+            var inner = new DeferMessageOnErrorHandler<BackstopActionCommand>(logger: LoggerFactoryExtensions.CreateLogger<DeferMessageOnErrorHandler<BackstopActionCommand>>( Initializer.TestLoggerFactory ));
+            using var innerPipeline = HandlerTestPipeline.Create(inner, command);
             inner.InitializeFromAttributeParams(1234);
             inner.SetSuccessor(new BackstopActionHandler());
-            var outer = new RejectMessageOnErrorHandler<BackstopActionCommand>();
+            var outer = new RejectMessageOnErrorHandler<BackstopActionCommand>(logger: LoggerFactoryExtensions.CreateLogger<RejectMessageOnErrorHandler<BackstopActionCommand>>( Initializer.TestLoggerFactory ));
+            using var outerPipeline = HandlerTestPipeline.Create(outer, command);
             outer.SetSuccessor(inner);
 
             //Act
@@ -238,11 +245,11 @@ public class BackstopPumpActionTests
                 if (type == typeof(BackstopActionHandlerAsync))
                     return new BackstopActionHandlerAsync();
                 if (type == typeof(DeferMessageOnErrorHandlerAsync<BackstopActionCommandAsync>))
-                    return new DeferMessageOnErrorHandlerAsync<BackstopActionCommandAsync>();
+                    return new DeferMessageOnErrorHandlerAsync<BackstopActionCommandAsync>(logger: LoggerFactoryExtensions.CreateLogger<DeferMessageOnErrorHandlerAsync<BackstopActionCommandAsync>>( Initializer.TestLoggerFactory ));
                 throw new ArgumentOutOfRangeException(nameof(type));
             });
             var processor = new CommandProcessor(registry, factory, new InMemoryRequestContextFactory(),
-                new PolicyRegistry(), pipelines, new InMemorySchedulerFactory());
+                new PolicyRegistry(), pipelines, new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
             //Act
             thrown = await Record.ExceptionAsync(() => processor.SendAsync(command));
@@ -259,11 +266,11 @@ public class BackstopPumpActionTests
                 if (type == typeof(BackstopActionHandler))
                     return new BackstopActionHandler();
                 if (type == typeof(DeferMessageOnErrorHandler<BackstopActionCommand>))
-                    return new DeferMessageOnErrorHandler<BackstopActionCommand>();
+                    return new DeferMessageOnErrorHandler<BackstopActionCommand>(logger: LoggerFactoryExtensions.CreateLogger<DeferMessageOnErrorHandler<BackstopActionCommand>>( Initializer.TestLoggerFactory ));
                 throw new ArgumentOutOfRangeException(nameof(type));
             });
             var processor = new CommandProcessor(registry, factory, new InMemoryRequestContextFactory(),
-                new PolicyRegistry(), pipelines, new InMemorySchedulerFactory());
+                new PolicyRegistry(), pipelines, new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
             //Act
             thrown = Record.Exception(() => processor.Send(command));
@@ -282,11 +289,12 @@ public class BackstopPumpActionTests
             var command = new BackstopActionCommandAsync(exception);
             RequestHandlerAsync<BackstopActionCommandAsync> handler = backstop switch
             {
-                "defer" => new DeferMessageOnErrorHandlerAsync<BackstopActionCommandAsync>(),
-                "reject" => new RejectMessageOnErrorHandlerAsync<BackstopActionCommandAsync>(),
+                "defer" => new DeferMessageOnErrorHandlerAsync<BackstopActionCommandAsync>(logger: LoggerFactoryExtensions.CreateLogger<DeferMessageOnErrorHandlerAsync<BackstopActionCommandAsync>>( Initializer.TestLoggerFactory )),
+                "reject" => new RejectMessageOnErrorHandlerAsync<BackstopActionCommandAsync>(logger: LoggerFactoryExtensions.CreateLogger<RejectMessageOnErrorHandlerAsync<BackstopActionCommandAsync>>( Initializer.TestLoggerFactory )),
                 "dont-ack" => new DontAckOnErrorHandlerAsync<BackstopActionCommandAsync>(),
                 _ => throw new ArgumentOutOfRangeException(nameof(backstop))
             };
+            using var pipeline = HandlerTestPipeline.Create(handler, command);
             if (backstop == "defer")
                 handler.InitializeFromAttributeParams(5000);
             handler.SetSuccessor(new BackstopActionHandlerAsync());
@@ -305,11 +313,12 @@ public class BackstopPumpActionTests
             var command = new BackstopActionCommand(exception);
             RequestHandler<BackstopActionCommand> handler = backstop switch
             {
-                "defer" => new DeferMessageOnErrorHandler<BackstopActionCommand>(),
-                "reject" => new RejectMessageOnErrorHandler<BackstopActionCommand>(),
+                "defer" => new DeferMessageOnErrorHandler<BackstopActionCommand>(logger: LoggerFactoryExtensions.CreateLogger<DeferMessageOnErrorHandler<BackstopActionCommand>>( Initializer.TestLoggerFactory )),
+                "reject" => new RejectMessageOnErrorHandler<BackstopActionCommand>(logger: LoggerFactoryExtensions.CreateLogger<RejectMessageOnErrorHandler<BackstopActionCommand>>( Initializer.TestLoggerFactory )),
                 "dont-ack" => new DontAckOnErrorHandler<BackstopActionCommand>(),
                 _ => throw new ArgumentOutOfRangeException(nameof(backstop))
             };
+            using var pipeline = HandlerTestPipeline.Create(handler, command);
             if (backstop == "defer")
                 handler.InitializeFromAttributeParams(5000);
             handler.SetSuccessor(new BackstopActionHandler());

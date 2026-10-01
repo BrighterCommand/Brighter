@@ -28,7 +28,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -39,12 +38,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 /// <summary>
 /// Class MessageGatewayConnectionPool.
 /// </summary>
-public partial class RmqMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat)
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
+public partial class RmqMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat, ILoggerFactory loggerFactory)
 {
     private static readonly Dictionary<string, PooledConnection> s_connectionPool = new();
 
     private static readonly SemaphoreSlim s_lock = new SemaphoreSlim(1, 1);
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageGatewayConnectionPool>();
+    private readonly ILogger _logger = loggerFactory.CreateBrighterLogger<RmqMessageGatewayConnectionPool>();
     private static readonly Random jitter = new Random();
 
     /// <summary>
@@ -111,7 +111,7 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
               }
               catch (BrokerUnreachableException exception)
               {
-                  Log.FailedToResetSubscriptionToRabbitMqEndpoint(s_logger, connectionFactory.Endpoint, exception);
+                Log.FailedToResetSubscriptionToRabbitMqEndpoint(_logger, connectionFactory.Endpoint, exception);
               }
           }
           finally
@@ -165,7 +165,7 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
 
         await TryRemoveConnectionAsync(connectionId).ConfigureAwait(false);
 
-        Log.CreatingSubscriptionToRabbitMqEndpoint(s_logger, connectionFactory.Endpoint);
+        Log.CreatingSubscriptionToRabbitMqEndpoint(_logger, connectionFactory.Endpoint);
 
         connectionFactory.RequestedHeartbeat = TimeSpan.FromSeconds(connectionHeartbeat);
         connectionFactory.RequestedConnectionTimeout = TimeSpan.FromMilliseconds(5000);
@@ -174,12 +174,12 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
 
         var connection = await connectionFactory.CreateConnectionAsync(connectionName, cancellationToken).ConfigureAwait(false);
 
-        Log.NewConnectedToAddedToPool(s_logger, connection.Endpoint, connection.ClientProvidedName);
+        Log.NewConnectedToAddedToPool(_logger, connection.Endpoint, connection.ClientProvidedName);
 
 
         async Task ShutdownHandler(object sender, ShutdownEventArgs e)
         {
-            Log.SubscriptionHasBeenShutdown(s_logger, connection.Endpoint, e.ToString());
+            Log.SubscriptionHasBeenShutdown(_logger, connection.Endpoint, e.ToString());
 
             try
             {

@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using FakeItEasy;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
@@ -40,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         public ConfigurationCommandStartTests()
         {
             _dispatcher = A.Fake<IDispatcher>();
-            _configurationCommandHandler = new ConfigurationCommandHandler(_dispatcher);
+            _configurationCommandHandler = new ConfigurationCommandHandler(_dispatcher, logger: Initializer.TestLoggerFactory.CreateLogger<ConfigurationCommandHandler>());
             _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTCHANNEL, new SubscriptionName(SubscriptionName));
         }
 

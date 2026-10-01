@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -66,7 +68,7 @@ public class MsSqlQueueProvisioningOnceTests : IDisposable
                 Topic = new RoutingKey($"create.topic.{i}"), MakeChannels = OnMissingChannel.Create
             })
             .ToList();
-        var producerFactory = new MsSqlMessageProducerFactory(_configuration, publications);
+        var producerFactory = new MsSqlMessageProducerFactory(_configuration, publications, loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         var producers = producerFactory.Create();
@@ -92,11 +94,11 @@ public class MsSqlQueueProvisioningOnceTests : IDisposable
         {
             Topic = new RoutingKey("create.topic"), MakeChannels = OnMissingChannel.Create
         };
-        new MsSqlMessageProducerFactory(_configuration, new List<Publication> { publication }).Create();
+        new MsSqlMessageProducerFactory(_configuration, new List<Publication> { publication }, loggerFactory: NullLoggerFactory.Instance).Create();
         MsSqlQueueProvisioningCreateTests.DropQueueTable(_queueTable);
 
         //Act
-        new MsSqlMessageProducerFactory(_configuration, new List<Publication> { publication }).Create();
+        new MsSqlMessageProducerFactory(_configuration, new List<Publication> { publication }, loggerFactory: NullLoggerFactory.Instance).Create();
 
         //Assert
         Assert.True(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable));
@@ -113,7 +115,7 @@ public class MsSqlQueueProvisioningOnceTests : IDisposable
         //instance. Keying the memory on OnMissingChannel rather than on a single flag is what makes
         //the second call still run; a bool would have swallowed it and left the index missing.
         CreateQueueTableWithoutIndex(_queueTable);
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         using (var validated = channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Validate))) { }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Xunit;
@@ -36,7 +38,7 @@ public class PostgresSQLChannelFactorySubscriptionTests
         // Arrange
         _factory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(
             new RelationalDatabaseConfiguration("Host=localhost;Database=channel_factory_tests;Username=postgres;Password=postgres;",
-                queueStoreTable: "BrighterMessages")));
+                queueStoreTable: "BrighterMessages")), loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Theory]

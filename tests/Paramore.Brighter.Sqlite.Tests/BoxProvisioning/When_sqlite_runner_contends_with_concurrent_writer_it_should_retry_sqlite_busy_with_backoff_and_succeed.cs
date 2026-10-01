@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -53,7 +55,7 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
     {
         _connectionString = $"Data Source={_dbPath}";
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        _runner = new SqliteBoxMigrationRunner(new SingleV1Catalog(), _config);
+        _runner = new SqliteBoxMigrationRunner(new SingleV1Catalog(), _config, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

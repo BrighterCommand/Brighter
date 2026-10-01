@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,7 +59,7 @@ public class When_rmq_async_consumer_disposes_should_dispose_producer
             _rmqConnection,
             new ChannelName(Guid.NewGuid().ToString()),
             new RoutingKey(Guid.NewGuid().ToString()),
-            isDurable: true);
+            isDurable: true, loggerFactory: NullLoggerFactory.Instance);
 
         // Act & Assert - should not throw
         var exception = Record.Exception(() => consumer.Dispose());
@@ -77,9 +79,9 @@ public class When_rmq_async_consumer_disposes_should_dispose_producer
             queueName,
             topic,
             isDurable: true,
-            scheduler: scheduler);
+            scheduler: scheduler, loggerFactory: NullLoggerFactory.Instance);
 
-        var sendProducer = new RmqMessageProducer(_rmqConnection);
+        var sendProducer = new RmqMessageProducer(_rmqConnection, loggerFactory: NullLoggerFactory.Instance);
 
         new QueueFactory(_rmqConnection, queueName, new RoutingKeys(topic))
             .CreateAsync()
@@ -116,9 +118,9 @@ public class When_rmq_async_consumer_disposes_should_dispose_producer
             queueName,
             topic,
             isDurable: true,
-            scheduler: scheduler);
+            scheduler: scheduler, loggerFactory: NullLoggerFactory.Instance);
 
-        var sendProducer = new RmqMessageProducer(_rmqConnection);
+        var sendProducer = new RmqMessageProducer(_rmqConnection, loggerFactory: NullLoggerFactory.Instance);
 
         new QueueFactory(_rmqConnection, queueName, new RoutingKeys(topic))
             .CreateAsync()

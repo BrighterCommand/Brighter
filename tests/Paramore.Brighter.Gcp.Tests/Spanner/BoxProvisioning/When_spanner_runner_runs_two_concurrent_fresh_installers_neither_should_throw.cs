@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Google.Api.Gax;
@@ -63,12 +65,12 @@ public class SpannerConcurrentFreshInstallTests : IAsyncLifetime
             new SpannerBoxDetectionHelper(),
             new SpannerPayloadModeValidator(),
             _config,
-            new SpannerBoxMigrationRunner(_config));
+            new SpannerBoxMigrationRunner(_config, loggerFactory: NullLoggerFactory.Instance));
         var provisionerB = new SpannerOutboxProvisioner(
             new SpannerBoxDetectionHelper(),
             new SpannerPayloadModeValidator(),
             _config,
-            new SpannerBoxMigrationRunner(_config));
+            new SpannerBoxMigrationRunner(_config, loggerFactory: NullLoggerFactory.Instance));
 
         //Act
         var act = async () => await Task.WhenAll(

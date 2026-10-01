@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
@@ -38,7 +40,7 @@ public class PostgresCombinedChannelFactoryRoutingTests
         // Arrange — construction only, so no database connection is made (NFR-3)
         var configuration = new RelationalDatabaseConfiguration("Host=localhost;Database=test");
         var connection = new PostgresMessagingGatewayConnection(configuration);
-        var combinedChannelFactory = new CombinedChannelFactory([new PostgresChannelFactory(connection)]);
+        var combinedChannelFactory = new CombinedChannelFactory([new PostgresChannelFactory(connection, loggerFactory: NullLoggerFactory.Instance)]);
         var subscription = new PostgresSubscription<MyCommand>(
             new SubscriptionName("t"),
             new ChannelName("t"),

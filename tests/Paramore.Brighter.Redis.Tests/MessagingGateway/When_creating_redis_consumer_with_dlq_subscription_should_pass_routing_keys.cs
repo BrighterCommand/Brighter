@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Reflection;
 using Paramore.Brighter.MessagingGateway.Redis;
@@ -39,7 +41,7 @@ public class RedisMessageConsumerFactoryDlqTests : IDisposable
     {
         //Arrange
         var configuration = RedisFixture.RedisMessagingGatewayConfiguration();
-        _factory = new RedisMessageConsumerFactory(configuration);
+        _factory = new RedisMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

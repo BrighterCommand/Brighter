@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Google.Api.Gax;
@@ -54,7 +56,7 @@ public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatch
             new SpannerBoxDetectionHelper(),
             new SpannerPayloadModeValidator(),
             config,
-            new SpannerBoxMigrationRunner(config));
+            new SpannerBoxMigrationRunner(config, loggerFactory: NullLoggerFactory.Instance));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
@@ -75,7 +77,7 @@ public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatch
             new SpannerBoxDetectionHelper(),
             new SpannerPayloadModeValidator(),
             config,
-            new SpannerBoxMigrationRunner(config));
+            new SpannerBoxMigrationRunner(config, loggerFactory: NullLoggerFactory.Instance));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());

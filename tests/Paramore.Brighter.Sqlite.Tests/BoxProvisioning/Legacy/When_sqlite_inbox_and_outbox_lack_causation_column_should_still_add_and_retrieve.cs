@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -233,10 +235,10 @@ public sealed class SqliteLegacySchemaCausationCompatibilityTests : IDisposable
             _connectionString,
             databaseName: "brightertests",
             outBoxTableName: tableName,
-            binaryMessagePayload: false));
+            binaryMessagePayload: false), logger: NullLoggerFactory.Instance.CreateLogger<SqliteOutbox>());
 
     private IAmAnInboxSync InboxFor(string tableName)
-        => new SqliteInbox(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName));
+        => new SqliteInbox(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName), logger: NullLoggerFactory.Instance.CreateLogger<SqliteInbox>());
 
     private static Message CreateMessage()
         => new(

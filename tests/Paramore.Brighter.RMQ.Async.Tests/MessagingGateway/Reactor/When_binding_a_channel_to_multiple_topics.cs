@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -38,8 +40,8 @@ public class RmqMessageConsumerMultipleTopicTests : IDisposable
         ]);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
-        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName , topics, isDurable: true, highAvailability: false);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
+        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName , topics, true, NullLoggerFactory.Instance, false);
 
         new QueueFactory(rmqConnection, queueName, topics).CreateAsync().GetAwaiter().GetResult();
     }

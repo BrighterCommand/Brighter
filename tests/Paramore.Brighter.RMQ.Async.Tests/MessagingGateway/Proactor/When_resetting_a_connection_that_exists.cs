@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using RabbitMQ.Client;
@@ -37,7 +39,7 @@ public class RMQMessageGatewayConnectionPoolResetConnectionExists
 
     public RMQMessageGatewayConnectionPoolResetConnectionExists()
     {
-        _connectionPool = new RmqMessageGatewayConnectionPool("MyConnectionName", 7);
+        _connectionPool = new RmqMessageGatewayConnectionPool("MyConnectionName", 7, loggerFactory: NullLoggerFactory.Instance);
 
         var connectionFactory = new ConnectionFactory { HostName = "localhost" };
 

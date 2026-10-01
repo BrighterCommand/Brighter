@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -33,9 +35,9 @@ namespace Paramore.Brighter.Core.Tests.Logging
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, IHandleRequests<MyCommand>>();
 
-            var requestLogger = new RequestLoggingHandler<MyCommand>();
+            var requestLogger = new RequestLoggingHandler<MyCommand>(logger: LoggerFactoryExtensions.CreateLogger<RequestLoggingHandler<MyCommand>>(Initializer.TestLoggerFactory));
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyLoggedHandler>();
             container.AddTransient(typeof(RequestLoggingHandler<MyCommand>), provider => requestLogger);
 
@@ -43,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.Logging
 
             var commandProcessor = new  CommandProcessor(registry, handlerFactory: handlerFactory, 
                 new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), 
-                new InMemorySchedulerFactory());
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
 
             commandProcessor.Send(myCommand);

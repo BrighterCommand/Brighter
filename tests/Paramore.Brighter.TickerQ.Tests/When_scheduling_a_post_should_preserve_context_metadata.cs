@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -25,6 +25,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
@@ -67,7 +69,7 @@ public class TickerQScheduledPostContextTests
         var bus = new InternalBus();
         var topic = new RoutingKey($"context-{Guid.NewGuid():N}");
         var publications = new[] { new Publication { Topic = topic, RequestType = typeof(MyEvent) } };
-        var producerRegistry = new InMemoryProducerRegistryFactory(bus, publications, InstrumentationOptions.None).Create();
+        var producerRegistry = new InMemoryProducerRegistryFactory(bus, publications,NullLoggerFactory.Instance, InstrumentationOptions.None).Create();
         using var mappers = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new CloudEventJsonMessageMapper<MyEvent>()),
             new SimpleMessageMapperFactoryAsync(_ => new CloudEventJsonMessageMapper<MyEvent>()));
@@ -76,13 +78,13 @@ public class TickerQScheduledPostContextTests
         using var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(producerRegistry,
             new ResiliencePipelineRegistry<string>().AddBrighterDefault(), mappers,
             new EmptyMessageTransformerFactory(), new EmptyMessageTransformerFactoryAsync(), null,
-            new FindPublicationByPublicationTopicOrRequestType());
+            new FindPublicationByPublicationTopicOrRequestType(), loggerFactory: NullLoggerFactory.Instance);
         var subscribers = new SubscriberRegistry();
         subscribers.RegisterAsync<FireSchedulerRequest, FireSchedulerRequestHandler>();
         processor = new CommandProcessor(subscribers,
             new SimpleHandlerFactoryAsync(_ => new FireSchedulerRequestHandler(processor!)),
             new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),
-            mediator, factory);
+            mediator, factory, loggerFactory: NullLoggerFactory.Instance);
         var context = new RequestContext();
         var headers = new Dictionary<string, object> { ["x-attempt"] = 3 };
         var properties = new Dictionary<string, object> { ["tenant"] = "tenant-1" };

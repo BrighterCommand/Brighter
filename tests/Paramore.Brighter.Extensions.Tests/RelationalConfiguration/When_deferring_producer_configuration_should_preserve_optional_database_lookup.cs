@@ -40,6 +40,7 @@ public class DeferredRelationalConfigurationTests
     {
         //Arrange
         var services = new ServiceCollection();
+        services.AddSingleton(Initializer.Factory);
         var configuration = new RelationalDatabaseConfiguration("Data Source=:memory:");
         SqliteOutbox? outbox = null;
         var factoryCalls = 0;
@@ -49,7 +50,7 @@ public class DeferredRelationalConfigurationTests
         {
             factoryCalls++;
             var databaseConfiguration = sp.GetService<IAmARelationalDatabaseConfiguration>() ?? configuration;
-            outbox = new SqliteOutbox(databaseConfiguration);
+            outbox = new SqliteOutbox(databaseConfiguration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
             return new ProducersConfiguration
             {
                 Outbox = outbox,

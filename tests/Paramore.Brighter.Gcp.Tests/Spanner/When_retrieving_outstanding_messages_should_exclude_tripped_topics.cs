@@ -25,6 +25,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -56,7 +58,7 @@ public class SpannerOutstandingMessagesTrippedTopicsTests
 
         try
         {
-            var outbox = new SpannerOutbox(configuration);
+            var outbox = new SpannerOutbox(configuration,logger:LoggerFactoryExtensions.CreateLogger<SpannerOutbox>(NullLoggerFactory.Instance));
             var context = new RequestContext();
             var timestamp = DateTimeOffset.UtcNow.AddHours(-2);
             var orders = CreateMessage("orders", timestamp.AddMinutes(3));

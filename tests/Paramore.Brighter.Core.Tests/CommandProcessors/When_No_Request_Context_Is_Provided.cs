@@ -38,7 +38,7 @@ public class RequestContextFromFactoryTests : IDisposable
        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareCommandHandler());
        var myCommand = new MyCommand();
 
-       var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+       var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
        //act
        commandProcessor.Send(myCommand);
@@ -58,7 +58,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareCommandHandlerAsync());
         var myCommand = new MyCommand();
 
-        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         
         //act
         await commandProcessor.SendAsync(myCommand);
@@ -78,7 +78,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareEventHandler());
         var myEvent = new MyEvent();
 
-        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
         //act
         commandProcessor.Publish(myEvent);
@@ -98,7 +98,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareEventHandlerAsync());
         var myEvent = new MyEvent();
 
-        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
         //act
         await commandProcessor.PublishAsync(myEvent);
@@ -124,7 +124,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
                 }
             });
 
@@ -139,7 +139,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            fakeOutbox
+            Initializer.TestLoggerFactory, fakeOutbox
         );
 
         var commandProcessor = new CommandProcessor(
@@ -147,8 +147,8 @@ public class RequestContextFromFactoryTests : IDisposable
             _policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             bus,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            loggerFactory: Initializer.TestLoggerFactory);
 
         //act
         commandProcessor.DepositPost(new MyCommand());
@@ -172,7 +172,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
                 },
             });
 
@@ -187,7 +187,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            fakeOutbox
+            Initializer.TestLoggerFactory, fakeOutbox
         );
 
         var commandProcessor = new CommandProcessor(
@@ -195,8 +195,8 @@ public class RequestContextFromFactoryTests : IDisposable
             _policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             bus,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            loggerFactory: Initializer.TestLoggerFactory);
 
         //act
         await commandProcessor.DepositPostAsync(new MyCommand());
@@ -220,7 +220,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), instrumentationOptions:InstrumentationOptions.All)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), instrumentationOptions:InstrumentationOptions.All, loggerFactory: Initializer.TestLoggerFactory)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -237,7 +237,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            fakeOutbox
+            Initializer.TestLoggerFactory, fakeOutbox
         );
 
         var commandProcessor = new CommandProcessor(
@@ -245,8 +245,8 @@ public class RequestContextFromFactoryTests : IDisposable
             _policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             bus,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            loggerFactory: Initializer.TestLoggerFactory);
 
         var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};
         var message = new Message(new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
@@ -274,7 +274,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), instrumentationOptions:InstrumentationOptions.All)
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), instrumentationOptions:InstrumentationOptions.All, loggerFactory: Initializer.TestLoggerFactory)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
@@ -291,7 +291,7 @@ public class RequestContextFromFactoryTests : IDisposable
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            fakeOutbox
+            Initializer.TestLoggerFactory, fakeOutbox
         );
 
         var commandProcessor = new CommandProcessor(
@@ -299,8 +299,8 @@ public class RequestContextFromFactoryTests : IDisposable
             _policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             bus,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            loggerFactory: Initializer.TestLoggerFactory);
 
         var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};
         var message = new Message(new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));

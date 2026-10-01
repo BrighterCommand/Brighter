@@ -23,13 +23,16 @@ THE SOFTWARE. */
 
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
+using System;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    internal sealed class ServiceBusReceiverProvider(IServiceBusClientProvider clientProvider) : IServiceBusReceiverProvider
+    internal sealed class ServiceBusReceiverProvider(IServiceBusClientProvider clientProvider, ILoggerFactory loggerFactory) : IServiceBusReceiverProvider
     {
         private readonly ServiceBusClient _client = clientProvider.GetServiceBusClient();
+        private readonly ILoggerFactory _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
 
         /// <summary>
         /// Gets a <see cref="IServiceBusReceiverWrapper"/> for a Service Bus Queue
@@ -45,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 try
                 {
                     return new ServiceBusReceiverWrapper(await _client.AcceptNextSessionAsync(queueName,
-                        new ServiceBusSessionReceiverOptions() {ReceiveMode = ServiceBusReceiveMode.PeekLock}));
+                        new ServiceBusSessionReceiverOptions() { ReceiveMode = ServiceBusReceiveMode.PeekLock }), _loggerFactory);
                 }
                 catch (ServiceBusException e)
                 {
@@ -61,7 +64,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             else
             {
                 return new ServiceBusReceiverWrapper(_client.CreateReceiver(queueName,
-                    new ServiceBusReceiverOptions { ReceiveMode = ServiceBusReceiveMode.PeekLock }));
+                    new ServiceBusReceiverOptions { ReceiveMode = ServiceBusReceiveMode.PeekLock }), _loggerFactory);
             }
         }
 
@@ -80,7 +83,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 try
                 {
                     return new ServiceBusReceiverWrapper(await _client.AcceptNextSessionAsync(topicName, subscriptionName,
-                        new ServiceBusSessionReceiverOptions() {ReceiveMode = ServiceBusReceiveMode.PeekLock}));
+                        new ServiceBusSessionReceiverOptions() { ReceiveMode = ServiceBusReceiveMode.PeekLock }), _loggerFactory);
                 }
                 catch (ServiceBusException e)
                 {
@@ -96,7 +99,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             else
             {
                 return new ServiceBusReceiverWrapper(_client.CreateReceiver(topicName, subscriptionName,
-                    new ServiceBusReceiverOptions { ReceiveMode = ServiceBusReceiveMode.PeekLock }));
+                    new ServiceBusReceiverOptions { ReceiveMode = ServiceBusReceiveMode.PeekLock }), _loggerFactory);
             }
         }
     }

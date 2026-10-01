@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Xunit;
 
@@ -11,7 +13,7 @@ public class InMemoryChannelFactoryTests
     {
         //arrange
         var internalBus = new InternalBus();
-        var inMemoryChannelFactory = new InMemoryChannelFactory(internalBus, TimeProvider.System);
+        var inMemoryChannelFactory = new InMemoryChannelFactory(internalBus, TimeProvider.System, loggerFactory: NullLoggerFactory.Instance);
         
         //act
         var channel = inMemoryChannelFactory.CreateSyncChannel(new Subscription<MyEvent>(messagePumpType: MessagePumpType.Reactor));

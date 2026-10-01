@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Mime;
@@ -65,7 +67,7 @@ public class RocketMqDeliveryErrorDlqTests : IDisposable
             deadLetterRoutingKey: dlqTopic,
             messagePumpType: MessagePumpType.Reactor);
 
-        var consumerFactory = new RocketMessageConsumerFactory(connection);
+        var consumerFactory = new RocketMessageConsumerFactory(connection, loggerFactory: NullLoggerFactory.Instance);
         _consumer = consumerFactory.Create(sourceSub);
 
         // DLQ topic consumer (to verify forwarded messages)

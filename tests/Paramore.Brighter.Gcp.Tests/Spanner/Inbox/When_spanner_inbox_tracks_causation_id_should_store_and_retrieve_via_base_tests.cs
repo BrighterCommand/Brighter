@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Google.Api.Gax;
 using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.Base.Test.Inbox;
@@ -24,7 +26,7 @@ public class SpannerCausationTrackingInboxTest : CausationTrackingInboxBaseTests
         _configuration = new RelationalDatabaseConfiguration(
             connectionString,
             inboxTableName: $"{Const.TablePrefix}{Uuid.New():N}");
-        _inbox = new SpannerInboxAsync(_configuration);
+        _inbox = new SpannerInboxAsync(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SpannerInboxAsync>());
         base.BeforeEachTest();
     }
 

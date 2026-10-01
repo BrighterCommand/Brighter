@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -92,7 +94,7 @@ public class MigrationCancellationRollbackTests : IAsyncLifetime
         // BeginAsync issues BEGIN IMMEDIATE on the same database completes the migration
         // normally; the 5s lock timeout would expire and surface as SQLITE_BUSY (wrapped as
         // MigrationLockDeadlockException) if the writer slot were still held.
-        var freshRunner = new SqliteBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
+        var freshRunner = new SqliteBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5), loggerFactory: NullLoggerFactory.Instance);
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
@@ -134,7 +136,8 @@ file sealed class CancellingSqliteBoxMigrationRunner : SqliteBoxMigrationRunner
     public CancellingSqliteBoxMigrationRunner(
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration)
-        : base(catalog, configuration)
+        : base(catalog, configuration,
+            NullLoggerFactory.Instance)
     {
     }
 

@@ -24,19 +24,21 @@ THE SOFTWARE. */
 
 using System;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter;
 
 /// <summary>
 /// The <see cref="InMemoryScheduler"/> factory
 /// </summary>
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
 /// <remarks>
 /// Reuses one scheduler per command processor instance across message, synchronous request,
 /// and asynchronous request scheduling. Configure this factory before creating a scheduler;
 /// its settings are captured on first creation for each processor. Disposing a returned
 /// scheduler cancels all pending work for that processor in this factory.
 /// </remarks>
-public class InMemorySchedulerFactory : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
+public class InMemorySchedulerFactory(ILoggerFactory loggerFactory) : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
 {
     private readonly ConditionalWeakTable<IAmACommandProcessor, InMemoryScheduler> _schedulers = new();
 
@@ -79,6 +81,6 @@ public class InMemorySchedulerFactory : IAmAMessageSchedulerFactory, IAmARequest
         => _schedulers.GetValue(processor, CreateScheduler);
 
     private InMemoryScheduler CreateScheduler(IAmACommandProcessor processor)
-        => new InMemoryScheduler(processor, TimeProvider, GetOrCreateRequestSchedulerId, GetOrCreateMessageSchedulerId, OnConflict);
+        => new InMemoryScheduler(processor, TimeProvider, GetOrCreateRequestSchedulerId, GetOrCreateMessageSchedulerId, OnConflict, loggerFactory);
 }
  

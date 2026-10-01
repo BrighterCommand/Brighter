@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             _channel = new Channel(
                 new(ChannelName),
                 _routingKey,
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
             );
 
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new InMemoryRequestContextFactory(),
-                _channel)
+                _channel, loggerFactory: Initializer.TestLoggerFactory)
             {
                 Channel = _channel,
                 TimeOut = TimeSpan.FromMilliseconds(5000),

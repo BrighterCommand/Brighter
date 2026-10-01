@@ -20,7 +20,7 @@ public class DispatcherOnLimitedConcurrencySchedulerTests
     {
         var routingKey = new RoutingKey(Topic);
         var bus = new InternalBus();
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000));
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory);
 
         IAmAChannelSync channel = new Channel(new(ChannelName), new(Topic), consumer, 6);
         IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
@@ -34,12 +34,12 @@ public class DispatcherOnLimitedConcurrencySchedulerTests
             new SubscriptionName("test"),
             noOfPerformers: 3,
             timeOut: TimeSpan.FromMilliseconds(100),
-            channelFactory: new InMemoryChannelFactory(bus, TimeProvider.System),
+            channelFactory: new InMemoryChannelFactory(bus, TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory),
             channelName: new ChannelName("fakeChannel"),
             messagePumpType: MessagePumpType.Proactor,
             routingKey: routingKey
         );
-        var dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { subscription }, messageMapperRegistryAsync: messageMapperRegistry);
+        var dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { subscription }, messageMapperRegistryAsync: messageMapperRegistry, loggerFactory: Initializer.TestLoggerFactory);
 
         var @event = new MyEvent();
         var message = new MyEventMessageMapperAsync()

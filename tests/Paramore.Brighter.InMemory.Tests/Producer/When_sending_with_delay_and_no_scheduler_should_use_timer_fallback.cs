@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Xunit;
@@ -42,7 +44,7 @@ public class SchedulerNotConfiguredTests
     {
         // Arrange - no scheduler configured
         var bus = new InternalBus();
-        _producer = new InMemoryMessageProducer(bus);
+        _producer = new InMemoryMessageProducer(bus, loggerFactory: NullLoggerFactory.Instance);
         // Note: Scheduler is NOT set - testing exception behavior
 
         var routingKey = new RoutingKey("test.topic");

@@ -48,7 +48,7 @@ namespace Paramore.Brighter
         IAmAnOutboxProducerMediator<TMessage, TTransaction>
         where TMessage : Message
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
+        private readonly ILogger _logger;
 
         private readonly ResiliencePipelineRegistry<string> _resiliencePipelineRegistry;
         private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
@@ -102,6 +102,7 @@ namespace Paramore.Brighter
         /// <param name="messageTransformerFactoryAsync">The factory used to create a transformer pipeline for an async message mapper</param>
         /// <param name="tracer"></param>
         /// <param name="publicationFinder">A publication finder.</param>
+        /// <param name="loggerFactory">The factory used to create instance-scoped loggers.</param>
         /// <param name="outboxCircuitBreaker">Track unhealthy topics and allow for cooldown, should be registered as singleton and shared with Outbox</param>
         /// <param name="outbox">An outbox for transactional messaging, if none is provided, use an InMemoryOutbox</param>
         /// <param name="requestContextFactory"></param>
@@ -129,6 +130,7 @@ namespace Paramore.Brighter
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
             IAmABrighterTracer? tracer,
             IAmAPublicationFinder publicationFinder,
+            ILoggerFactory loggerFactory,
             IAmAnOutbox? outbox = null,
             IAmAnOutboxCircuitBreaker? outboxCircuitBreaker = null,
             IAmARequestContextFactory? requestContextFactory = null,
@@ -141,22 +143,16 @@ namespace Paramore.Brighter
             bool ownsRegistry = false,
             bool ownsTransformerFactories = false)
         {
+            _logger = loggerFactory.CreateBrighterLogger<CommandProcessor>();
+
             _producerRegistry = producerRegistry ??
                                 throw new ConfigurationException("Missing Producer Registry for External Bus Services");
             _resiliencePipelineRegistry = resiliencePipelineRegistry ??
                               throw new ConfigurationException("Missing Resilience Pipeline Registry for External Bus Services");
 
             requestContextFactory ??= new InMemoryRequestContextFactory();
-
-            if (mapperRegistry is null)
-                throw new ConfigurationException(
-                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
-            if (mapperRegistry is not IAmAMessageMapperRegistryAsync mapperRegistryAsync)
-                throw new ConfigurationException(
-                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
-            if (messageTransformerFactory is null || messageTransformerFactoryAsync is null)
-                throw new ConfigurationException(
-                    "A Command Processor with an external bus must have a message transformer factory");
+            var mapperRegistryAsync = ValidateMessagingDependencies(
+                mapperRegistry, messageTransformerFactory, messageTransformerFactoryAsync);
             
             _timeProvider = timeProvider ?? TimeProvider.System;
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
@@ -167,16 +163,13 @@ namespace Paramore.Brighter
             _ownsRegistry = ownsRegistry;
             _ownsTransformerFactories = ownsTransformerFactories;
 
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, instrumentationOptions);
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory, instrumentationOptions);
             _transformPipelineBuilderAsync =
-                new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync, instrumentationOptions);
+                new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync, loggerFactory, instrumentationOptions);
 
             //default to in-memory; expectation for an in memory box is Message and CommittableTransaction
             outbox ??= new InMemoryOutbox(TimeProvider.System);
-            outbox.Tracer = tracer;
-
-            if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
-            if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
+            (_outBox, _asyncOutbox) = ConfigureOutbox(outbox, tracer);
             _outboxCircuitBreaker = outboxCircuitBreaker;
 
             _outboxTimeout = outboxTimeout;
@@ -188,6 +181,32 @@ namespace Paramore.Brighter
             _publicationFinder = publicationFinder;
 
             ConfigureCallbacks(requestContextFactory.Create());
+        }
+
+        private static (IAmAnOutboxSync<TMessage, TTransaction>? Sync, IAmAnOutboxAsync<TMessage, TTransaction>? Async)
+            ConfigureOutbox(IAmAnOutbox outbox, IAmABrighterTracer? tracer)
+        {
+            outbox.Tracer = tracer;
+            return (outbox as IAmAnOutboxSync<TMessage, TTransaction>,
+                outbox as IAmAnOutboxAsync<TMessage, TTransaction>);
+        }
+
+        private static IAmAMessageMapperRegistryAsync ValidateMessagingDependencies(
+            IAmAMessageMapperRegistry mapperRegistry,
+            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync)
+        {
+            if (mapperRegistry is null)
+                throw new ConfigurationException(
+                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
+            if (mapperRegistry is not IAmAMessageMapperRegistryAsync mapperRegistryAsync)
+                throw new ConfigurationException(
+                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
+            if (messageTransformerFactory is null || messageTransformerFactoryAsync is null)
+                throw new ConfigurationException(
+                    "A Command Processor with an external bus must have a message transformer factory");
+
+            return mapperRegistryAsync;
         }
 
         /// <summary>
@@ -213,8 +232,9 @@ namespace Paramore.Brighter
                 //guard every step independently: a failure in one must not skip the rest. Otherwise a throw
                 //from CloseAll() would leak the per-resolution IServiceScope each factory retains for a
                 //mapper or transform obtained but not released — the exact retention this owner exists to drain.
-                try { _producerRegistry.CloseAll(); }
-                catch (Exception e) { Log.FailedToCloseProducers(s_logger, e); }
+                try
+                { _producerRegistry.CloseAll(); }
+                catch (Exception e) { Log.FailedToCloseProducers(_logger, e); }
 
                 //dispose only what this mediator owns. On the DI path it is the sole owner of the runtime
                 //mapper/transform factories (built for it in ServiceCollectionExtensions and never registered in
@@ -237,10 +257,11 @@ namespace Paramore.Brighter
 
         //Disposes a member if it is IDisposable, swallowing and logging any failure so one factory's fault
         //cannot skip the remaining disposals in the teardown chain.
-        private static void DisposeQuietly(object? member)
+        private void DisposeQuietly(object? member)
         {
-            try { (member as IDisposable)?.Dispose(); }
-            catch (Exception e) { Log.FailedToDisposeOwnedResource(s_logger, member?.GetType().Name ?? "null", e); }
+            try
+            { (member as IDisposable)?.Dispose(); }
+            catch (Exception e) { Log.FailedToDisposeOwnedResource(_logger, member?.GetType().Name ?? "null", e); }
         }
 
         /// <summary>
@@ -262,7 +283,8 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default,
             string? batchId = null)
         {
-            if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
+            if (_asyncOutbox is null)
+                throw new ArgumentException(NoAsyncOutboxError);
             
             if (batchId != null)
             {
@@ -306,7 +328,8 @@ namespace Paramore.Brighter
             string? batchId = null
         )
         {
-            if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
+            if (_outBox is null)
+                throw new ArgumentException(NoSyncOutboxError);
             if (batchId != null)
             {
                 GetBatchOrThrow(batchId).Add(message);
@@ -378,7 +401,7 @@ namespace Paramore.Brighter
                 if (messages.Length != posts.Length)
                 {
                     var missingMessageIds = posts.Where(id => !messages.Any(m => m.Id == id));
-                    Log.OutboxMessagesNotFound(s_logger, string.Join(",", missingMessageIds));
+                    Log.OutboxMessagesNotFound(_logger, string.Join(",", missingMessageIds));
                 }
                 BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, messages, parentSpan, false, false,
                         _instrumentationOptions);
@@ -447,7 +470,7 @@ namespace Paramore.Brighter
                 if (messages.Length != postArray.Length)
                 {
                     var missingMessageIds = postArray.Where(id => !messages.Any(m => m.Id == id));
-                    Log.OutboxMessagesNotFound(s_logger, string.Join(",", missingMessageIds));
+                    Log.OutboxMessagesNotFound(_logger, string.Join(",", missingMessageIds));
                 }
                 BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, messages, parentSpan, false, true,
                         _instrumentationOptions);
@@ -626,7 +649,8 @@ namespace Paramore.Brighter
         {
             var batch = BeginBatchAddToOutbox(batchId, transactionProvider, requestContext, isAsync: false);
 
-            if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
+            if (_outBox is null)
+                throw new ArgumentException(NoSyncOutboxError);
             
             var written = ExecuteWithResiliencePipeline(() =>
                 {
@@ -654,7 +678,8 @@ namespace Paramore.Brighter
         {
             var batch = BeginBatchAddToOutbox(batchId, transactionProvider, requestContext, isAsync: true);
 
-            if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
+            if (_asyncOutbox is null)
+                throw new ArgumentException(NoAsyncOutboxError);
 
             var written = await ExecuteWithResiliencePipelineAsync(
                 async ct =>
@@ -707,7 +732,8 @@ namespace Paramore.Brighter
         
         private List<TMessage> GetBatchOrThrow(string batchId)
         {
-            if (_outboxBatches.TryGetValue(batchId, out var batch)) return batch;
+            if (_outboxBatches.TryGetValue(batchId, out var batch))
+                return batch;
 
             throw new ArgumentException($"Batch id {batchId} is not active", nameof(batchId));
         }
@@ -732,7 +758,8 @@ namespace Paramore.Brighter
                 {
                     requestContext.Span = span;
 
-                    if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
+                    if (_asyncOutbox is null)
+                        throw new ArgumentException(NoAsyncOutboxError);
                     var messages =
                         (await _asyncOutbox.OutstandingMessagesAsync(timeSinceSent, requestContext,
                             pageSize: amountToClear, trippedTopics: _outboxCircuitBreaker?.TrippedTopics, args: args, cancellationToken: cancellationToken)).ToArray();
@@ -742,7 +769,7 @@ namespace Paramore.Brighter
 
                     requestContext.Span = parentSpan;
 
-                    Log.FoundMessagesToClear(s_logger, messages.Length, amountToClear);
+                    Log.FoundMessagesToClear(_logger, messages.Length, amountToClear);
 
                     if (useBulk)
                     {
@@ -753,11 +780,11 @@ namespace Paramore.Brighter
                         await DispatchAsync(messages, requestContext, false, cancellationToken);
                     }
 
-                    Log.MessagesHaveBeenCleared(s_logger);
+                    Log.MessagesHaveBeenCleared(_logger);
                 }
                 catch (Exception e)
                 {
-                    Log.ErrorWhileDispatchingFromOutbox(s_logger, e);
+                    Log.ErrorWhileDispatchingFromOutbox(_logger, e);
                     requestContext.Span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
                     throw;
                 }
@@ -772,7 +799,7 @@ namespace Paramore.Brighter
             else
             {
                 requestContext.Span?.SetStatus(ActivityStatusCode.Error);
-                Log.SkippingDispatchOfMessages(s_logger);
+                Log.SkippingDispatchOfMessages(_logger);
             }
         }
 
@@ -782,7 +809,7 @@ namespace Paramore.Brighter
             if (!hasOutBox)
                 return;
 
-            Log.OutboxOutstandingMessageCount(s_logger, _outStandingCount);
+            Log.OutboxOutstandingMessageCount(_logger, _outStandingCount);
             // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
             bool exceedsOutstandingMessageLimit =
                 _maxOutStandingMessages != -1 && _outStandingCount > _maxOutStandingMessages;
@@ -798,15 +825,15 @@ namespace Paramore.Brighter
 
             var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
 
-            Log.TimeSinceLastCheck(s_logger, timeSinceLastCheck.TotalSeconds);
+            Log.TimeSinceLastCheck(_logger, timeSinceLastCheck.TotalSeconds);
 
             if (timeSinceLastCheck < _maxOutStandingCheckInterval)
             {
-                Log.CheckNotReadyToRunYet(s_logger);
+                Log.CheckNotReadyToRunYet(_logger);
                 return;
             }                                                    
 
-            Log.RunningOutstandingMessageCheck(s_logger, now, timeSinceLastCheck.TotalSeconds);
+            Log.RunningOutstandingMessageCheck(_logger, now, timeSinceLastCheck.TotalSeconds);
             //This is expensive, so use a background thread
             Task.Run(
                 () => OutstandingMessagesCheck(requestContext)
@@ -865,7 +892,7 @@ namespace Paramore.Brighter
             {
                 if (result.Success)
                 {
-                    Log.SentMessage(s_logger, result.MessageId.Value);
+                    Log.SentMessage(_logger, result.MessageId.Value);
                     if (_asyncOutbox != null)
                     {
                         // Explicitly re-parent the MarkDispatched DB span to the confirmation
@@ -886,7 +913,7 @@ namespace Paramore.Brighter
                 }
                 else
                 {
-                    Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
+                    Log.ConfirmationFailed(_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
                     // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
                     // not the Publication topic — exact parity with the non-confirmation send
                     // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
@@ -897,7 +924,7 @@ namespace Paramore.Brighter
             {
                 // The callback must not allow a failed dispatch update to crash the producer. The
                 // message remains undispatched, so the Sweeper will retry it.
-                Log.ConfirmationDispatchError(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty, ex);
+                Log.ConfirmationDispatchError(_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty, ex);
             }
             finally
             {
@@ -925,7 +952,7 @@ namespace Paramore.Brighter
             }
             catch (Exception ex)
             {
-                Log.ConfirmationObservabilityFault(s_logger, ex);
+                Log.ConfirmationObservabilityFault(_logger, ex);
                 return null;
             }
         }
@@ -939,7 +966,7 @@ namespace Paramore.Brighter
             }
             catch (Exception ex)
             {
-                Log.ConfirmationObservabilityFault(s_logger, ex);
+                Log.ConfirmationObservabilityFault(_logger, ex);
             }
         }
 
@@ -953,7 +980,7 @@ namespace Paramore.Brighter
         {
             if (producer is ISupportPublishConfirmation producerSync)
             {
-                producerSync.OnMessagePublished += delegate(PublishConfirmationResult result)
+                producerSync.OnMessagePublished += delegate (PublishConfirmationResult result)
                 {
                     var confirmationSpan = StartConfirmationSpan(result);
 
@@ -961,7 +988,7 @@ namespace Paramore.Brighter
                     {
                         if (result.Success)
                         {
-                            Log.SentMessage(s_logger, result.MessageId.Value);
+                            Log.SentMessage(_logger, result.MessageId.Value);
 
                             if (_outBox != null)
                             {
@@ -980,7 +1007,7 @@ namespace Paramore.Brighter
                         }
                         else
                         {
-                            Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
+                            Log.ConfirmationFailed(_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
                             // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
                             // not the Publication topic — exact parity with the non-confirmation send
                             // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
@@ -995,7 +1022,7 @@ namespace Paramore.Brighter
                         // MarkDispatched path — a throwing breaker, logger or context copy must not be able to
                         // crash the producer. The message is left un-dispatched, so the Sweeper will retry it
                         // (C-1); we log at Warning, not Error, because nothing is lost.
-                        Log.ConfirmationDispatchError(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty, ex);
+                        Log.ConfirmationDispatchError(_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty, ex);
                     }
                     finally
                     {
@@ -1038,19 +1065,21 @@ namespace Paramore.Brighter
             var producerSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
-                if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
+                if (_outBox is null)
+                    throw new ArgumentException(NoSyncOutboxError);
                 foreach (var message in posts)
                 {
                     // Log the wire topic (Header.Topic) — where the message is going. Producer
                     // lookup uses GetProducerLookupTopic, which may differ from Header.Topic when
                     // a mapper overrode it (e.g. Reply messages routed to a dynamic reply address).
-                    Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic.Value, message.Id.Value);
+                    Log.DecoupledInvocationOfMessage(_logger, message.Header.Topic.Value, message.Id.Value);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span,
                         _instrumentationOptions);
                     producer.Span = span;
-                    if (span != null) producerSpans.TryAdd(message.Id.Value, span);
+                    if (span != null)
+                        producerSpans.TryAdd(message.Id.Value, span);
 
                     if (producer is IAmAMessageProducerSync producerSync)
                     {
@@ -1101,7 +1130,8 @@ namespace Paramore.Brighter
             //Chunk into Topics
             try
             {
-                if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
+                if (_asyncOutbox is null)
+                    throw new ArgumentException(NoAsyncOutboxError);
                 // Group by (wire topic, producer-lookup topic) so a batch is guaranteed to
                 // resolve to a single producer — messages with the same wire topic but
                 // different ProducerTopic bag values land in separate batches.
@@ -1125,7 +1155,7 @@ namespace Paramore.Brighter
                     {
                         var messages = topicBatch.ToArray();
 
-                        Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key.WireTopic.Value);
+                        Log.BulkDispatchingMessages(_logger, messages.Length, topicBatch.Key.WireTopic.Value);
 
                         foreach (var batch in await bulkMessageProducer.CreateBatchesAsync(messages, cancellationToken))
                         {
@@ -1183,19 +1213,21 @@ namespace Paramore.Brighter
 
             try
             {
-                if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
+                if (_asyncOutbox is null)
+                    throw new ArgumentException(NoAsyncOutboxError);
                 foreach (var message in posts)
                 {
                     // Log the wire topic (Header.Topic) — where the message is going. Producer
                     // lookup uses GetProducerLookupTopic, which may differ from Header.Topic when
                     // a mapper overrode it (e.g. Reply messages routed to a dynamic reply address).
-                    Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic.Value, message.Id.Value);
+                    Log.DecoupledInvocationOfMessage(_logger, message.Header.Topic.Value, message.Id.Value);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan,
                         _instrumentationOptions);
                     producer.Span = span;
-                    if (span != null) producerSpans.TryAdd(message.Id.Value, span);
+                    if (span != null)
+                        producerSpans.TryAdd(message.Id.Value, span);
 
                     if (producer is IAmAMessageProducerAsync producerAsync)
                     {
@@ -1220,7 +1252,8 @@ namespace Paramore.Brighter
                             );
                         }
 
-                        if(!sent) TripTopic(message.Header.Topic);
+                        if (!sent)
+                            TripTopic(message.Header.Topic);
                     }
                     else
                         throw new InvalidOperationException("No async message producer defined.");
@@ -1266,7 +1299,7 @@ namespace Paramore.Brighter
             return message;
         }
 
-        private static void ReleasePipeline(IDisposable pipeline, Id requestId)
+        private void ReleasePipeline(IDisposable pipeline, Id requestId)
         {
             try
             {
@@ -1274,11 +1307,11 @@ namespace Paramore.Brighter
             }
             catch (Exception releaseException)
             {
-                Log.FailedToReleasePipeline(s_logger, releaseException, requestId.Value);
+                Log.FailedToReleasePipeline(_logger, releaseException, requestId.Value);
             }
         }
 
-        private static async ValueTask ReleasePipelineAsync(IAsyncDisposable pipeline, Id requestId)
+        private async ValueTask ReleasePipelineAsync(IAsyncDisposable pipeline, Id requestId)
         {
             try
             {
@@ -1286,7 +1319,7 @@ namespace Paramore.Brighter
             }
             catch (Exception releaseException)
             {
-                Log.FailedToReleasePipeline(s_logger, releaseException, requestId.Value);
+                Log.FailedToReleasePipeline(_logger, releaseException, requestId.Value);
             }
         }
 
@@ -1334,7 +1367,7 @@ namespace Paramore.Brighter
             s_checkOutstandingSemaphoreToken.Wait();
 
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
-            Log.BeginCountOfOutstandingMessages(s_logger);
+            Log.BeginCountOfOutstandingMessages(_logger);
             try
             {
                 if (_outBox != null)
@@ -1367,12 +1400,12 @@ namespace Paramore.Brighter
             catch (Exception ex)
             {
                 //if we can't talk to the outbox, swallow the exception on this thread
-                Log.ErrorGettingOutstandingMessageCount(s_logger, ex);
+                Log.ErrorGettingOutstandingMessageCount(_logger, ex);
                 _outStandingCount = 0;
             }
             finally
             {
-                Log.CurrentOutstandingCount(s_logger, _outStandingCount);
+                Log.CurrentOutstandingCount(_logger, _outStandingCount);
                 s_checkOutstandingSemaphoreToken.Release();
             }
         }
@@ -1396,7 +1429,7 @@ namespace Paramore.Brighter
             }
             catch (Exception ex)
             {
-                Log.ExceptionWhilstTryingToPublishMessage(s_logger, ex);
+                Log.ExceptionWhilstTryingToPublishMessage(_logger, ex);
                 CheckOutstandingMessages(requestContext);
                 return false;
             }
@@ -1428,7 +1461,7 @@ namespace Paramore.Brighter
             }
             catch (Exception ex)
             {
-                Log.ExceptionWhilstTryingToPublishMessage(s_logger, ex);
+                Log.ExceptionWhilstTryingToPublishMessage(_logger, ex);
                 CheckOutstandingMessages(requestContext);
                 return false;
             }
@@ -1436,7 +1469,7 @@ namespace Paramore.Brighter
 
         private void TripTopic(RoutingKey? routingKey)
         {
-            if(!RoutingKey.IsNullOrEmpty(routingKey))
+            if (!RoutingKey.IsNullOrEmpty(routingKey))
                 _outboxCircuitBreaker?.TripTopic(routingKey);
         }
         

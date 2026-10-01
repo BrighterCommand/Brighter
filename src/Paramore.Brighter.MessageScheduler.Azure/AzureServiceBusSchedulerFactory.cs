@@ -1,4 +1,5 @@
 using Azure.Messaging.ServiceBus;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.MessageScheduler.Azure;
@@ -8,7 +9,8 @@ namespace Paramore.Brighter.MessageScheduler.Azure;
 /// </summary>
 /// <param name="client"></param>
 /// <param name="topic"></param>
-public class AzureServiceBusSchedulerFactory(IServiceBusClientProvider client, RoutingKey topic)
+/// <param name="loggerFactory">The factory used to create loggers.</param>
+public class AzureServiceBusSchedulerFactory(IServiceBusClientProvider client, RoutingKey topic, ILoggerFactory loggerFactory)
     : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
 {
     private readonly object _lock = new();
@@ -57,6 +59,6 @@ public class AzureServiceBusSchedulerFactory(IServiceBusClientProvider client, R
             }
         }
         
-        return new AzureServiceBusScheduler(_sender, Topic, TimeProvider);
+        return new AzureServiceBusScheduler(_sender, Topic, TimeProvider, loggerFactory);
     }
 }

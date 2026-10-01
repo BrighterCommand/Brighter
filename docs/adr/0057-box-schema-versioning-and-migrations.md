@@ -557,3 +557,7 @@ Considered splitting into three ADRs (numbering, runner, idempotency). Rejected 
 - Spec 0023 code review: [specs/0023-box_database_migration/review-code.md](../../specs/0023-box_database_migration/review-code.md) — finding R1 motivates this spec; R2 and R4 concurrency fixes are coordinated here
 - PRs introducing schema changes: #1401, #2560, #3042, #3464, #3633, #3693, #3790; inbox ContextKey in `787c31c52`
 - Design principles: [.agent_instructions/design_principles.md](../../.agent_instructions/design_principles.md)
+
+## Logging amendment proposed for V11
+
+[ADR 0077](0077-instance-scoped-logging.md) supersedes only this record's logging dependency decision. The original decision above remains as historical context.

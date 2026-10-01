@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
 using System.Threading.Tasks;
@@ -76,7 +78,7 @@ public class MqttPublisherPumpContextConstructionTests : IDisposable
         // when a Proactor handler defers or rejects a message.
         var construction = Task.Run(() => BrighterAsyncContext.Run(() =>
         {
-            var publisher = new MqttMessagePublisher(config);
+            var publisher = new MqttMessagePublisher(config, loggerFactory: NullLoggerFactory.Instance);
             return Task.FromResult(publisher);
         }));
 

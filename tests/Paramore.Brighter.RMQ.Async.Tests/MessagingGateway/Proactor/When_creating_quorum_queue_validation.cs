@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -49,7 +51,7 @@ public class RmqMessageConsumerQuorumValidationTests
             new RmqMessageConsumer(rmqConnection, queueName, routingKey,
                 isDurable: false, // This should cause the exception
                 highAvailability: false,
-                queueType: QueueType.Quorum));
+                queueType: QueueType.Quorum, loggerFactory: NullLoggerFactory.Instance));
 
         Assert.Contains("Quorum queues require durability to be enabled", exception.Message);
     }
@@ -70,7 +72,7 @@ public class RmqMessageConsumerQuorumValidationTests
             new RmqMessageConsumer(rmqConnection, queueName, routingKey,
                 isDurable: true,
                 highAvailability: true, // This should cause the exception
-                queueType: QueueType.Quorum));
+                queueType: QueueType.Quorum, loggerFactory: NullLoggerFactory.Instance));
 
         Assert.Contains("Quorum queues do not support high availability mirroring", exception.Message);
     }
@@ -91,7 +93,7 @@ public class RmqMessageConsumerQuorumValidationTests
         using var consumer = new RmqMessageConsumer(rmqConnection, queueName, routingKey,
             isDurable: true, // Required for quorum
             highAvailability: false, // Must be false for quorum
-            queueType: QueueType.Quorum);
+            queueType: QueueType.Quorum, loggerFactory: NullLoggerFactory.Instance);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(routingKey), isDurable: true, queueType: QueueType.Quorum)
             .CreateAsync()
@@ -117,8 +119,8 @@ public class RmqMessageConsumerQuorumValidationTests
         using var consumer = new RmqMessageConsumer(rmqConnection, queueName, routingKey,
             isDurable: true,
             highAvailability: true,
-            queueType: QueueType.Classic);
-        
+            queueType: QueueType.Classic, loggerFactory: NullLoggerFactory.Instance);
+
         var message = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
         Assert.Equal(MessageType.MT_NONE, message.Single().Header.MessageType);
 

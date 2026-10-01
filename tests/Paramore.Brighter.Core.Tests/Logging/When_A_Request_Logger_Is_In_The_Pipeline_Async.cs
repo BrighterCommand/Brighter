@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Core.Tests.Logging
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyLoggedHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyLoggedHandlerAsync, MyLoggedHandlerAsync>();
             container.AddTransient(typeof(RequestLoggingHandlerAsync<>), typeof(RequestLoggingHandlerAsync<>));
 
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.Logging
 
             var commandProcessor = new CommandProcessor(registry, handlerFactory,
                 new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory());
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
             await commandProcessor.SendAsync(myCommand);
 

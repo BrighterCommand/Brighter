@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
@@ -23,7 +23,7 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
 
         return new DynamoDbOutbox(
             Const.DynamoDbClient,
-            new DynamoDbConfiguration { TableName = _tableName }
+            new DynamoDbConfiguration(timeout: 10_000) { TableName = _tableName }
         );
     }
 
@@ -36,7 +36,7 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
 
         return new DynamoDbOutbox(
             Const.DynamoDbClient,
-            new DynamoDbConfiguration { TableName = _tableName }
+            new DynamoDbConfiguration(timeout: 10_000) { TableName = _tableName }
         );
     }
 
@@ -92,7 +92,7 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
 
         var outbox = new DynamoDbOutbox(
             Const.DynamoDbClient,
-            new DynamoDbConfiguration { TableName = _tableName! }
+            new DynamoDbConfiguration(timeout: 10_000) { TableName = _tableName! }
         );
 
         var client = Const.DynamoDbClient;

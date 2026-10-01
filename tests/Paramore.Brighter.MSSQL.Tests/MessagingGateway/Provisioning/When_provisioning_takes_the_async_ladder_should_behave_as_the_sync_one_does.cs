@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -56,7 +58,7 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
     public async Task When_the_async_channel_creates_a_missing_queue_should_create_the_table_and_index()
     {
         //Arrange
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         using var channel = await channelFactory.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Create));
@@ -77,7 +79,7 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
             new List<Publication>
             {
                 new() { Topic = new RoutingKey("create.topic"), MakeChannels = OnMissingChannel.Create }
-            });
+            }, loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         var producers = await producerFactory.CreateAsync();
@@ -92,7 +94,7 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
     public async Task When_validating_a_missing_queue_asynchronously_should_throw_a_configuration_exception()
     {
         //Arrange -- nothing has created _queueTable.
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = await Record.ExceptionAsync(
@@ -108,9 +110,9 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
     {
         //Arrange -- the control for the fact above, on the async ladder: same call, same name, the
         //only difference being that the table now exists.
-        var creating = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var creating = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
         using (await creating.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Create))) { }
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = await Record.ExceptionAsync(
@@ -128,7 +130,7 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         var configuration = new RelationalDatabaseConfiguration(
             MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString,
             queueStoreTable: "Queue]; DROP TABLE Users--");
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = await Record.ExceptionAsync(
@@ -148,7 +150,7 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         var configuration = new RelationalDatabaseConfiguration(
             MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString,
             queueStoreTable: new string('Q', 120));
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = await Record.ExceptionAsync(
@@ -166,7 +168,7 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         var configuration = new RelationalDatabaseConfiguration(
             MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString,
             queueStoreTable: "QueueThatIsManagedElsewhere");
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = await Record.ExceptionAsync(
@@ -183,7 +185,7 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         var configuration = new RelationalDatabaseConfiguration(
             MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString,
             queueStoreTable: "QueueThatIsManagedElsewhere");
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = await Record.ExceptionAsync(

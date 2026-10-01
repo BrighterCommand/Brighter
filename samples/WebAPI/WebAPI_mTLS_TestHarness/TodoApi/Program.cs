@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -32,8 +34,10 @@ builder.Services.AddBrighter(options =>
     {
         options.HandlerLifetime = ServiceLifetime.Scoped;
     })
-    .AddProducers(configure =>
+    .AddProducers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var configure = new ProducersConfiguration();
         configure.ProducerRegistry = new RmqProducerRegistryFactory(
             rmqConnection,
             new[]
@@ -46,15 +50,19 @@ builder.Services.AddBrighter(options =>
                     MakeChannels = OnMissingChannel.Create
                 }
             }
-        ).Create();
+,
+            loggerFactory: loggerFactory).Create();
+        return configure;
     })
     .AutoFromAssemblies([typeof(TodoCreatedHandler).Assembly])
     .ValidatePipelines()
     .DescribePipelines();
 
 // Configure Service Activator to consume messages
-builder.Services.AddConsumers(options =>
+builder.Services.AddConsumers(provider =>
 {
+    var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+    var options = new ConsumersOptions();
     options.Subscriptions = new[]
     {
         new RmqSubscription<TodoCreated>(
@@ -68,8 +76,9 @@ builder.Services.AddConsumers(options =>
         )
     };
     options.DefaultChannelFactory = new ChannelFactory(
-        new RmqMessageConsumerFactory(rmqConnection)
+        new RmqMessageConsumerFactory(rmqConnection,loggerFactory:loggerFactory)
     );
+    return options;
 })
 .AutoFromAssemblies();
 

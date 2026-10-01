@@ -37,7 +37,7 @@ public class PipelineValidatorHandlerAndProducerTests
         // Arrange — handler path: internal handler triggers visibility error
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyInternalHandler));
-        var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
+        var pipelineBuilder = new PipelineBuilder<IRequest>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         // Producer path: null RequestType triggers producer error

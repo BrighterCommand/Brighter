@@ -39,7 +39,7 @@ public class PipelineDiagnosticWriterSummaryTests
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyPublicSyncHandler));
         registry.Add(typeof(MyDescribableCommand), typeof(MyPublicAsyncHandler));
-        var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
+        var pipelineBuilder = new PipelineBuilder<IRequest>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         var publications = new[]

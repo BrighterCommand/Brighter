@@ -43,7 +43,7 @@ public class ScopeAffinityOverrideRegistrationTests
     public void When_an_affinity_override_is_registered_it_should_reach_the_resolved_brighter_options()
     {
         // Arrange - AddBrighter(Action<BrighterOptions>), override carries JoinAmbient
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton(new ScopeAffinityOverride(ScopeAffinity.JoinAmbient));
         services.AddBrighter(options =>
         {
@@ -63,7 +63,7 @@ public class ScopeAffinityOverrideRegistrationTests
     public void When_add_brighter_action_already_sets_join_ambient_the_registered_override_should_still_win_with_always_new()
     {
         // Arrange - falsifiable direction
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddBrighter(options =>
         {
             options.HandlerLifetime = ServiceLifetime.Scoped;
@@ -84,7 +84,7 @@ public class ScopeAffinityOverrideRegistrationTests
     public void When_an_affinity_override_is_registered_with_add_brighter_func_it_should_reach_the_resolved_brighter_options()
     {
         // Arrange - AddBrighter(Func<IServiceProvider, BrighterOptions>), override carries JoinAmbient
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton(new ScopeAffinityOverride(ScopeAffinity.JoinAmbient));
         services.AddBrighter(_ => new BrighterOptions
         {
@@ -104,7 +104,7 @@ public class ScopeAffinityOverrideRegistrationTests
     public void When_add_brighter_func_already_sets_join_ambient_the_registered_override_should_still_win_with_always_new()
     {
         // Arrange - falsifiable direction
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddBrighter(_ => new BrighterOptions
         {
             HandlerLifetime = ServiceLifetime.Scoped,
@@ -125,7 +125,7 @@ public class ScopeAffinityOverrideRegistrationTests
     public void When_an_affinity_override_is_registered_with_add_consumers_action_it_should_reach_the_resolved_brighter_options()
     {
         // Arrange - AddConsumers(Action<ConsumersOptions>) alone, override carries JoinAmbient
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton(new ScopeAffinityOverride(ScopeAffinity.JoinAmbient));
         services.AddConsumers(options =>
         {
@@ -145,7 +145,7 @@ public class ScopeAffinityOverrideRegistrationTests
     public void When_add_consumers_action_already_sets_join_ambient_the_registered_override_should_still_win_with_always_new()
     {
         // Arrange - falsifiable direction
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddConsumers(options =>
         {
             options.HandlerLifetime = ServiceLifetime.Scoped;
@@ -166,7 +166,7 @@ public class ScopeAffinityOverrideRegistrationTests
     public void When_an_affinity_override_is_registered_with_add_consumers_func_it_should_reach_the_resolved_brighter_options()
     {
         // Arrange - AddConsumers(Func<IServiceProvider, ConsumersOptions>) alone, override carries JoinAmbient
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton(new ScopeAffinityOverride(ScopeAffinity.JoinAmbient));
         services.AddConsumers(_ => new ConsumersOptions
         {
@@ -186,7 +186,7 @@ public class ScopeAffinityOverrideRegistrationTests
     public void When_add_consumers_func_already_sets_join_ambient_the_registered_override_should_still_win_with_always_new()
     {
         // Arrange - falsifiable direction
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddConsumers(_ => new ConsumersOptions
         {
             HandlerLifetime = ServiceLifetime.Scoped,

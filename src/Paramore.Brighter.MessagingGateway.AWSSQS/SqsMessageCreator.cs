@@ -34,7 +34,6 @@ using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transforms.Transformers;
 
@@ -55,7 +54,12 @@ internal enum ARNAmazonSNS
 
 internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageCreator>();
+    private readonly ILogger _logger;
+
+    public SqsMessageCreator(ILoggerFactory loggerFactory)
+    {
+        _logger = loggerFactory.CreateBrighterLogger<SqsMessageCreator>();
+    }
 
     public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
     {
@@ -92,7 +96,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
                 messageId: messageId.Result ?? Id.Empty,
                 topic: topic.Result ?? RoutingKey.Empty,
                 messageType.Result,
-                source:  source.Result,
+                source: source.Result,
                 type: type.Result,
                 timeStamp: timeStamp.Result,
                 correlationId: correlationId.Success ? correlationId.Result : Id.Empty,
@@ -117,7 +121,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         }
         catch (Exception e)
         {
-            Log.FailedToCreateMessageFromAmqpMessage(s_logger, e);
+            Log.FailedToCreateMessageFromAmqpMessage(_logger, e);
             return Message.FailureMessage(topic.Result, messageId.Success ? messageId.Result : Id.Empty);
         }
     }
@@ -162,7 +166,8 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
             catch (Exception)
             {
                 //we weill just suppress conversion errors, and return an empty bag
-            }        }
+            }
+        }
 
         return new Dictionary<string, string>();
     }
@@ -184,7 +189,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<Uri?>(null, false);
     }
     
-    private static HeaderResult<string> ReadCloudEventsSpecVersion(Dictionary<string,string> cloudEventHeaders)
+    private static HeaderResult<string> ReadCloudEventsSpecVersion(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.SpecVersion, out var value))
         {
@@ -203,7 +208,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<CloudEventsType?>(CloudEventsType.Empty, false);
     }
     
-    private static HeaderResult<TraceParent> ReadCloudEventsTraceParent(Dictionary<string,string> cloudEventHeaders)
+    private static HeaderResult<TraceParent> ReadCloudEventsTraceParent(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.TraceParent, out var value))
         {
@@ -213,7 +218,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<TraceParent>(null, true);
     }
     
-    private static HeaderResult<TraceState> ReadCloudEventsTraceState(Dictionary<string,string> cloudEventHeaders)
+    private static HeaderResult<TraceState> ReadCloudEventsTraceState(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.TraceState, out var value))
         {
@@ -222,7 +227,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<TraceState>(null, true);
     }
     
-    private static HeaderResult<Baggage> ReadCloudEventsBaggage(Dictionary<string,string> cloudEventHeaders)
+    private static HeaderResult<Baggage> ReadCloudEventsBaggage(Dictionary<string, string> cloudEventHeaders)
     {
         var baggage = new Baggage();
         if (cloudEventHeaders.TryGetValue(HeaderNames.Baggage, out var value))

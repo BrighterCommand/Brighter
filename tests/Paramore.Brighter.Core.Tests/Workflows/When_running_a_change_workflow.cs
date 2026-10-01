@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
-public class MediatorChangeStepFlowTests 
+public class MediatorChangeStepFlowTests
 {
     private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
@@ -27,14 +27,14 @@ public class MediatorChangeStepFlowTests
         CommandProcessor? commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor));
 
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
-        PipelineBuilder<MyCommand>.ClearPipelineCache();    
-        
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
+        PipelineBuilder<MyCommand>.ClearPipelineCache();
+
         var workflowData= new WorkflowTestData { Bag = { ["MyValue"] = "Test" } };
 
         _job = new Job<WorkflowTestData>(workflowData) ;
-        
+
         var firstStep = new Sequential<WorkflowTestData>(
             "Test of Job",
             new ChangeAsync<WorkflowTestData>( (data) =>
@@ -45,22 +45,22 @@ public class MediatorChangeStepFlowTests
                 return tcs.Task;
             }),
             () => { _stepCompleted = true; },
-            null
-            );
-        
+            null,
+            loggerFactory: Initializer.TestLoggerFactory);
+
         _job.InitSteps(firstStep);
-        
-        var store = new InMemoryStateStoreAsync ();
-        _channel = new InMemoryJobChannel<WorkflowTestData>();
+
+        var store = new InMemoryStateStoreAsync (loggerFactory: Initializer.TestLoggerFactory);
+        _channel = new InMemoryJobChannel<WorkflowTestData>(loggerFactory: Initializer.TestLoggerFactory);
 
         _scheduler = new Scheduler<WorkflowTestData>(
             _channel,
             store
         );
 
-        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler);
+        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler, loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact]
     public async Task When_running_a_change_workflow()
     {

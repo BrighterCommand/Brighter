@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -197,10 +199,10 @@ public sealed class MsSqlLegacySchemaCausationCompatibilityTests : IDisposable
             _connectionString,
             databaseName: "brightertests",
             outBoxTableName: tableName,
-            binaryMessagePayload: false));
+            binaryMessagePayload: false), logger: NullLoggerFactory.Instance.CreateLogger<MsSqlOutbox>());
 
     private IAmAnInboxSync InboxFor(string tableName)
-        => new MsSqlInbox(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName));
+        => new MsSqlInbox(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName), logger: NullLoggerFactory.Instance.CreateLogger<MsSqlInbox>());
 
     private static Message CreateMessage()
         => new(

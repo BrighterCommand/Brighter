@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
@@ -13,7 +13,7 @@ using MyEventHandlerAsync = Paramore.Brighter.Core.Tests.Workflows.TestDoubles.M
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
-public class MediatorReplyStepFlowTests  
+public class MediatorReplyStepFlowTests
 {
     private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
@@ -32,48 +32,48 @@ public class MediatorReplyStepFlowTests
         IAmACommandProcessor? commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync((handlerType) =>
              handlerType switch
-            { 
+            {
                 _ when handlerType == typeof(MyCommandHandlerAsync) => new MyCommandHandlerAsync(commandProcessor),
                 _ when handlerType == typeof(MyEventHandlerAsync) => new MyEventHandlerAsync(_scheduler),
                 _ => throw new InvalidOperationException($"The handler type {handlerType} is not supported")
             });
 
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         var workflowData= new WorkflowTestData();
         workflowData.Bag["MyValue"] = "Test";
-        
+
          _job = new Job<WorkflowTestData>(workflowData) ;
-         
+
          var firstStep = new Sequential<WorkflowTestData>(
              "Test of Job",
             new RequestAndReactionAsync<MyCommand, MyEvent, WorkflowTestData>(
                 (data) => new MyCommand { Value = (data.Bag["MyValue"] as string)! },
                 (reply,data) => { data.Bag["MyReply"] = reply!.Value; }),
             () => { _stepCompleted = true; },
-            null);
-         
+            null, loggerFactory: Initializer.TestLoggerFactory);
+
          _job.InitSteps(firstStep);
-        
-         InMemoryStateStoreAsync store = new();
-         _channel = new InMemoryJobChannel<WorkflowTestData>();
+
+         InMemoryStateStoreAsync store = new(loggerFactory: Initializer.TestLoggerFactory);
+         _channel = new InMemoryJobChannel<WorkflowTestData>(loggerFactory: Initializer.TestLoggerFactory);
 
          _scheduler = new Scheduler<WorkflowTestData>(
              _channel,
              store
          );
 
-         _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler);
+         _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler, loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact]
     public async Task When_running_a_workflow_with_reply()
     {
         MyCommandHandlerAsync.ReceivedCommands.Clear();
         MyEventHandlerAsync.ReceivedEvents.Clear();
-        
+
         await _scheduler.ScheduleAsync(_job);
         _channel.Stop();
 

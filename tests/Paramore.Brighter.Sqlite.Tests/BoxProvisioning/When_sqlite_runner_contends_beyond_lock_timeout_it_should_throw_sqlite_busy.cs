@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -76,7 +78,7 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
         _connectionString = $"Data Source={_dbPath}";
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         _runner = new SqliteBoxMigrationRunner(
-            new SingleV1Catalog(_config), _config, TightLockTimeout);
+            new SingleV1Catalog(_config), _config, TightLockTimeout, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

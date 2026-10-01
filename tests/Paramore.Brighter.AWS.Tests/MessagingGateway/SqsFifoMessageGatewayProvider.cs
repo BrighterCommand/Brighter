@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -25,7 +27,7 @@ public class SqsFifoMessageGatewayProvider
     private IDisposable? RepublishToSqs(Message message)
     {
         var publication = CreatePublication(message.Header.Topic, OnMissingChannel.Validate);
-        var producer = new SqsMessageProducer(_awsConnection, publication);
+        var producer = new SqsMessageProducer(_awsConnection, publication, loggerFactory: NullLoggerFactory.Instance);
         return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
@@ -163,7 +165,7 @@ public class SqsFifoMessageGatewayProvider
         IAmAChannelAsync? invalidChannel = null;
         try
         {
-            invalidChannel = await new ChannelFactory(_awsConnection)
+            invalidChannel = await new ChannelFactory(_awsConnection, loggerFactory: NullLoggerFactory.Instance)
                 .CreateAsyncChannelAsync(invalidSubscription, cancellationToken);
 
             var message = await invalidChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
@@ -248,7 +250,7 @@ public class SqsFifoMessageGatewayProvider
 
     public IAmAChannelSync CreateChannel(SqsSubscription subscription)
     {
-        var channel = new ChannelFactory(_awsConnection)
+        var channel = new ChannelFactory(_awsConnection, loggerFactory: NullLoggerFactory.Instance)
             .CreateSyncChannel(subscription);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -263,7 +265,7 @@ public class SqsFifoMessageGatewayProvider
         SqsSubscription subscription,
         CancellationToken cancellationToken = default)
     {
-        var channel = await new ChannelFactory(_awsConnection)
+        var channel = await new ChannelFactory(_awsConnection, loggerFactory: NullLoggerFactory.Instance)
             .CreateAsyncChannelAsync(subscription, cancellationToken);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -283,7 +285,7 @@ public class SqsFifoMessageGatewayProvider
             connection = GatewayFactory.CreateFactory();
         }
 
-        var producer = new SqsMessageProducer(connection, publication);
+        var producer = new SqsMessageProducer(connection, publication, loggerFactory: NullLoggerFactory.Instance);
         producer.Scheduler = Scheduler;
         return new FifoMetadataProducer(producer);
     }
@@ -299,7 +301,7 @@ public class SqsFifoMessageGatewayProvider
             connection = GatewayFactory.CreateFactory();
         }
 
-        var producer = new SqsMessageProducer(connection, publication);
+        var producer = new SqsMessageProducer(connection, publication, loggerFactory: NullLoggerFactory.Instance);
         producer.Scheduler = Scheduler;
         return new FifoMetadataProducer(producer);
     }
@@ -318,7 +320,7 @@ public class SqsFifoMessageGatewayProvider
             queueAttributes: new SqsAttributes(type: SqsType.Fifo)
         );
 
-        var dlqChannel = await new ChannelFactory(_awsConnection)
+        var dlqChannel = await new ChannelFactory(_awsConnection, loggerFactory: NullLoggerFactory.Instance)
             .CreateAsyncChannelAsync(dlqSubscription, cancellationToken);
 
         try

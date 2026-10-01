@@ -25,7 +25,7 @@ public class When_a_non_fatal_producer_error_follows_a_fatal_error_should_log_as
             {
                 Topic = new RoutingKey("test.topic"),
                 MakeChannels = OnMissingChannel.Assume
-            });
+            }, loggerFactory: Initializer.TestLoggerFactory);
         // No Init()/Send() required: HandleError only sets the latch and logs, so the producer never
         // needs to contact a broker for this test.
     }

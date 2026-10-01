@@ -57,7 +57,7 @@ public class NestedPipelineSuppressionTests
         var scopeProvider = new AsyncLocalScopeProvider();
         CommandProcessor commandProcessor = null!;
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddScoped<IUnitOfWork, UnitOfWork>();
         collection.AddSingleton(recorder);
         collection.AddScoped<NestedPipelineSubscriber>();
@@ -88,7 +88,7 @@ public class NestedPipelineSuppressionTests
         var routingKey = new RoutingKey("test");
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(AmbientAdoptionPostCommand) }) }
+            { routingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(AmbientAdoptionPostCommand) }) }
         });
 
         var timeProvider = new FakeTimeProvider();
@@ -103,7 +103,7 @@ public class NestedPipelineSuppressionTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+Initializer.Factory,            new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         commandProcessor = new CommandProcessor(
@@ -113,8 +113,8 @@ public class NestedPipelineSuppressionTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory()
-        );
+new InMemorySchedulerFactory(loggerFactory: Initializer.Factory)
+,loggerFactory:Initializer.Factory        );
 
         // Act - establish the ambient, capture its own IUnitOfWork, then Publish
         using var ambientScope = rootProvider.CreateScope();
@@ -151,7 +151,7 @@ public class NestedPipelineSuppressionTests
         var scopeProvider = new AsyncLocalScopeProvider();
         CommandProcessor commandProcessor = null!;
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddScoped<IUnitOfWork, UnitOfWork>();
         collection.AddSingleton(recorder);
         collection.AddScoped<NestedPipelineSubscriberAsync>();
@@ -182,7 +182,7 @@ public class NestedPipelineSuppressionTests
         var routingKey = new RoutingKey("test");
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(AmbientAdoptionPostCommand) }) }
+            { routingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(AmbientAdoptionPostCommand) }) }
         });
 
         var timeProvider = new FakeTimeProvider();
@@ -197,7 +197,7 @@ public class NestedPipelineSuppressionTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+Initializer.Factory,            new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         commandProcessor = new CommandProcessor(
@@ -207,8 +207,8 @@ public class NestedPipelineSuppressionTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory()
-        );
+new InMemorySchedulerFactory(loggerFactory: Initializer.Factory)
+,loggerFactory:Initializer.Factory        );
 
         // Act - establish the ambient, capture its own IUnitOfWork, then PublishAsync
         using var ambientScope = rootProvider.CreateScope();

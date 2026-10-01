@@ -78,7 +78,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyStoredCommandToReplayHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyStoredCommandToReplayHandlerAsync>();
             container.AddSingleton<IAmAnInboxAsync>(_inbox);
             container.AddSingleton<IAmACausationTrackingOutbox>(_outbox);
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             _context = new RequestContext();
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

@@ -22,7 +22,7 @@ public class HandlerLifetimeCallChainScopeTests
     public void When_two_handlers_share_a_lifetime_the_scoped_lifetime_shares_a_dependency()
     {
         //arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddScoped<ScopedDependency>();
         collection.AddTransient<FirstHandler>();
         collection.AddTransient<SecondHandler>();
@@ -44,7 +44,7 @@ public class HandlerLifetimeCallChainScopeTests
     public void When_two_handlers_share_a_lifetime_the_transient_lifetime_isolates_a_dependency()
     {
         //arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddScoped<ScopedDependency>();
         collection.AddTransient<FirstHandler>();
         collection.AddTransient<SecondHandler>();
@@ -67,7 +67,7 @@ public class HandlerLifetimeCallChainScopeTests
     {
         //arrange — Transient handlers, but IsolateHandlerScope turned off (the pre-#4254 model):
         //the pipeline shares one DI scope, so a scoped dependency is one instance across the chain
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddScoped<ScopedDependency>();
         collection.AddTransient<FirstHandler>();
         collection.AddTransient<SecondHandler>();
@@ -96,7 +96,7 @@ public class HandlerLifetimeCallChainScopeTests
     {
         //arrange — count scopes created and disposed so we can tell "restored the old scoping" apart from
         //"restored the old leak": in either mode, releasing the pipeline must dispose exactly what it created
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddScoped<ScopedDependency>();
         collection.AddTransient<FirstHandler>();
         collection.AddTransient<SecondHandler>();

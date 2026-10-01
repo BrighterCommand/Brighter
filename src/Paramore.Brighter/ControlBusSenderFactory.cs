@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Transactions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Monitoring.Events;
@@ -36,7 +37,8 @@ namespace Paramore.Brighter
     /// <summary>
     /// Class ControlBusSenderFactory. Helper for creating instances of a control bus (which requires messaging, but not subscribers).
     /// </summary>
-    public class ControlBusSenderFactory : IAmAControlBusSenderFactory
+    /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
+    public class ControlBusSenderFactory(ILoggerFactory loggerFactory) : IAmAControlBusSenderFactory
     {
         /// <summary>
         /// Creates the specified configuration.
@@ -66,8 +68,9 @@ namespace Paramore.Brighter
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: tracer,
                 outbox: outbox,
-                outboxCircuitBreaker: new InMemoryOutboxCircuitBreaker(),
-                publicationFinder: publicationFinder ?? new FindPublicationByPublicationTopicOrRequestType()
+                outboxCircuitBreaker: new InMemoryOutboxCircuitBreaker(loggerFactory.CreateBrighterLogger<InMemoryOutboxCircuitBreaker>()),
+                publicationFinder: publicationFinder ?? new FindPublicationByPublicationTopicOrRequestType(),
+                loggerFactory: loggerFactory
                 ); 
             
             return new ControlBusSender(
@@ -77,7 +80,8 @@ namespace Paramore.Brighter
                 .ExternalBus(ExternalBusType.FireAndForget, mediator)   
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
-                .RequestSchedulerFactory(requestSchedulerFactory ?? new InMemorySchedulerFactory())
+                .RequestSchedulerFactory(requestSchedulerFactory ?? new InMemorySchedulerFactory(loggerFactory))
+                .ConfigureLogging(loggerFactory)
                 .Build()
                 );
         }

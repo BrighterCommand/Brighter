@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Linq;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
@@ -22,7 +24,7 @@ public class InMemoryConsumerAcknowledgeTests
         bus.Enqueue(expectedMessage);
 
         var timeProvider = new FakeTimeProvider();
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000));
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: NullLoggerFactory.Instance);
         
         //act
         var receivedMessage = consumer.Receive().Single();
@@ -49,7 +51,7 @@ public class InMemoryConsumerAcknowledgeTests
         bus.Enqueue(expectedMessage);
 
         var timeProvider = new FakeTimeProvider();
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000));
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: NullLoggerFactory.Instance);
         
         //act
         var receivedMessage = consumer.Receive().Single();

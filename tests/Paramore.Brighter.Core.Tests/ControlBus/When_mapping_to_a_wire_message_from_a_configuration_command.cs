@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
@@ -16,7 +16,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _mapper = new ConfigurationCommandMessageMapper();
 
             _command = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL, new SubscriptionName("getallthethings"));
-            
+
             _publication = new Publication { Topic = new RoutingKey("ConfigurationCommand") };
         }
 

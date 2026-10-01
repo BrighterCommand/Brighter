@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
     public class ConfirmationObservabilityIsolationTests
     {
         private readonly RoutingKey _topic = new("Confirmation.Observability.Throws.Topic");
-        private readonly InMemoryOutboxCircuitBreaker _circuitBreaker = new();
+        private readonly InMemoryOutboxCircuitBreaker _circuitBreaker = new(logger: LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>( Initializer.TestLoggerFactory ));
         private readonly InMemoryMessageProducer _producer;
         private readonly Message _message;
 
@@ -49,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // Arrange: a confirmation that always fails, wired to a mediator whose tracer throws from
             // CreateConfirmationSpan — modelling an observability fault inside the callback.
             var bus = new InternalBus();
-            _producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
+            _producer = new InMemoryMessageProducer(bus, Initializer.TestLoggerFactory, new Publication { Topic = _topic })
             {
                 UseAsyncPublishConfirmation = true,
                 PublishFailurePredicate = _ => true
@@ -68,7 +70,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer: new ThrowingConfirmationTracer(),
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outboxCircuitBreaker: _circuitBreaker);
+                outboxCircuitBreaker: _circuitBreaker, loggerFactory: Initializer.TestLoggerFactory);
 
             _message = new Message(
                 new MessageHeader(new Id(Guid.NewGuid().ToString()), _topic, MessageType.MT_EVENT),

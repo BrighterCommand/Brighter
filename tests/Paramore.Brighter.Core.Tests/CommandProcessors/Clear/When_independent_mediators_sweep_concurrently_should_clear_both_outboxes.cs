@@ -95,7 +95,7 @@ public class IndependentOutboxSweepTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer: null,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox);
+            Initializer.TestLoggerFactory, outbox);
     }
 
     private sealed class IndependentOutboxSweepTransaction

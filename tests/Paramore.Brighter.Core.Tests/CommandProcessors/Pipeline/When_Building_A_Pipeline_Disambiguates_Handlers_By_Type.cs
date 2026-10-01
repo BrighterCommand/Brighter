@@ -98,14 +98,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var registry = new SubscriberRegistry();
             registry.Register<Reuse.ReuseCommand, Reuse.ReuseHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<Reuse.ReuseHandler>();
             container.AddTransient<MyValidationHandler<Reuse.ReuseCommand>>();
             container.AddTransient<MyLoggingHandler<Reuse.ReuseCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             var factory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            var builder = new PipelineBuilder<Reuse.ReuseCommand>(registry, (IAmAHandlerFactorySync)factory);
+            var builder = new PipelineBuilder<Reuse.ReuseCommand>(registry, (IAmAHandlerFactorySync)factory, loggerFactory: Initializer.TestLoggerFactory);
 
             // Act — build the same handler twice (single-threaded)
             string firstTrace =
@@ -131,7 +131,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var registryB = new SubscriberRegistry();
             registryB.Register<MyCommand, SyncB.CollidingHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<SyncA.CollidingHandler>();
             container.AddTransient<SyncB.CollidingHandler>();
             container.AddTransient<MyValidationHandler<MyCommand>>();
@@ -141,8 +141,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var factory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             return (
-                new PipelineBuilder<MyCommand>(registryA, (IAmAHandlerFactorySync)factory),
-                new PipelineBuilder<MyCommand>(registryB, (IAmAHandlerFactorySync)factory));
+                new PipelineBuilder<MyCommand>(registryA, (IAmAHandlerFactorySync)factory, loggerFactory: Initializer.TestLoggerFactory),
+                new PipelineBuilder<MyCommand>(registryB, (IAmAHandlerFactorySync)factory, loggerFactory: Initializer.TestLoggerFactory));
         }
 
         private static (PipelineBuilder<MyCommand>, PipelineBuilder<MyCommand>) CreateAsyncBuilders()
@@ -153,7 +153,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var registryB = new SubscriberRegistry();
             registryB.RegisterAsync<MyCommand, AsyncB.CollidingHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<AsyncA.CollidingHandler>();
             container.AddTransient<AsyncB.CollidingHandler>();
             container.AddTransient<MyValidationHandlerAsync<MyCommand>>();
@@ -163,8 +163,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var factory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             return (
-                new PipelineBuilder<MyCommand>(registryA, (IAmAHandlerFactoryAsync)factory),
-                new PipelineBuilder<MyCommand>(registryB, (IAmAHandlerFactoryAsync)factory));
+                new PipelineBuilder<MyCommand>(registryA, (IAmAHandlerFactoryAsync)factory, loggerFactory: Initializer.TestLoggerFactory),
+                new PipelineBuilder<MyCommand>(registryB, (IAmAHandlerFactoryAsync)factory, loggerFactory: Initializer.TestLoggerFactory));
         }
 
         private static PipelineTracer TracePipeline(IHandleRequests<MyCommand> firstInPipeline)

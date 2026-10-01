@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Npgsql;
@@ -43,7 +45,7 @@ public class PostgreSqlRunnerFreshPathRecheckTests : IAsyncLifetime
     public PostgreSqlRunnerFreshPathRecheckTests()
     {
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        _runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
+        _runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

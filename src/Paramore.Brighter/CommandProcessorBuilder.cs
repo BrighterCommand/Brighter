@@ -23,7 +23,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Observability;
@@ -85,6 +87,7 @@ namespace Paramore.Brighter
         INeedInstrumentation,
         INeedARequestContext,
         INeedARequestSchedulerFactory,
+        INeedCommandProcessorLogging,
         IAmACommandProcessorBuilder
     {
         private IAmARequestContextFactory? _requestContextFactory;
@@ -103,6 +106,7 @@ namespace Paramore.Brighter
         private InstrumentationOptions? _instrumetationOptions;
         private IAmABrighterTracer? _tracer;
         private IAmARequestSchedulerFactory _requestSchedulerFactory = null!;
+        private ILoggerFactory? _loggerFactory;
 
         private CommandProcessorBuilder()
         {
@@ -285,9 +289,17 @@ namespace Paramore.Brighter
         }
 
         /// <inheritdoc />
-        public IAmACommandProcessorBuilder RequestSchedulerFactory(IAmARequestSchedulerFactory messageSchedulerFactory)
+        public INeedCommandProcessorLogging RequestSchedulerFactory(IAmARequestSchedulerFactory messageSchedulerFactory)
         {
             _requestSchedulerFactory = messageSchedulerFactory;
+            return this;
+        }
+
+        /// <inheritdoc />
+        /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
+        public IAmACommandProcessorBuilder ConfigureLogging(ILoggerFactory loggerFactory)
+        {
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             return this;
         }
 
@@ -297,6 +309,9 @@ namespace Paramore.Brighter
         /// <returns>CommandProcessor.</returns>
         public CommandProcessor Build()
         {
+            var loggerFactory = _loggerFactory ?? throw new ConfigurationException(
+                "A logger factory is required. Call ConfigureLogging before Build.");
+
             if (_registry == null)
                 throw new ConfigurationException(
                     "A SubscriberRegistry must be provided to construct a command processor");
@@ -326,7 +341,8 @@ namespace Paramore.Brighter
                     featureSwitchRegistry: _featureSwitchRegistry,
                     inboxConfiguration: _inboxConfiguration,
                     instrumentationOptions: _instrumetationOptions.Value,
-                    requestSchedulerFactory: _requestSchedulerFactory);
+                    requestSchedulerFactory: _requestSchedulerFactory,
+                    loggerFactory: loggerFactory);
             }
 
             if (!_useRequestReplyQueues)
@@ -342,7 +358,8 @@ namespace Paramore.Brighter
                     inboxConfiguration: _inboxConfiguration,
                     tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions.Value,
-                    requestSchedulerFactory: _requestSchedulerFactory
+                    requestSchedulerFactory: _requestSchedulerFactory,
+                    loggerFactory: loggerFactory
                 );
 
             if (_useRequestReplyQueues)
@@ -360,7 +377,8 @@ namespace Paramore.Brighter
                     responseChannelFactory: _responseChannelFactory,
                     tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions.Value,
-                    requestSchedulerFactory: _requestSchedulerFactory
+                    requestSchedulerFactory: _requestSchedulerFactory,
+                    loggerFactory: loggerFactory
                 );
 
             throw new ConfigurationException(
@@ -488,15 +506,28 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messageSchedulerFactory"></param>
         /// <returns></returns>
-        IAmACommandProcessorBuilder RequestSchedulerFactory(IAmARequestSchedulerFactory messageSchedulerFactory);
+        INeedCommandProcessorLogging RequestSchedulerFactory(IAmARequestSchedulerFactory messageSchedulerFactory);
     }
 
 
     /// <summary>
     /// Interface IAmACommandProcessorBuilder
     /// </summary>
+    public interface INeedCommandProcessorLogging
+    {
+        /// <summary>
+        /// Supplies the <see cref="ILoggerFactory"/> used to create instance-scoped loggers for the <see cref="CommandProcessor"/>
+        /// and the object graph it constructs. This must be called before <see cref="IAmACommandProcessorBuilder.Build"/>.
+        /// </summary>
+        /// <param name="loggerFactory">The logger factory.</param>
+        /// <returns>IAmACommandProcessorBuilder.</returns>
+        IAmACommandProcessorBuilder ConfigureLogging(ILoggerFactory loggerFactory);
+    }
+
+    /// <summary>Builds an instance after all required configuration stages.</summary>
     public interface IAmACommandProcessorBuilder
     {
+
         /// <summary>
         /// Builds this instance.
         /// </summary>

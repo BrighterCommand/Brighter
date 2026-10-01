@@ -65,7 +65,7 @@ namespace Paramore.Brighter.AsyncAPI.NJsonSchema
         /// <param name="logger">The logger used to record schema generation failures.</param>
         public NJsonSchemaGenerator(ILogger<NJsonSchemaGenerator> logger)
         {
-            _logger = logger;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <inheritdoc />

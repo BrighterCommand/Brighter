@@ -1,4 +1,6 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Data.SqlClient;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MsSql;
 
@@ -13,7 +15,7 @@ public class MsSqlTextInboxTest : RelationalDatabaseInboxTests
 
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
-        return new MsSqlInbox(configuration);
+        return new MsSqlInbox(configuration, logger: NullLoggerFactory.Instance.CreateLogger<MsSqlInbox>());
     }
 
     protected override void CreateInboxTable(RelationalDatabaseConfiguration configuration)

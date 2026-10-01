@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -44,10 +44,10 @@ public class ScannedSchedulerRequestTests
         //Arrange
         var timeProvider = new FakeTimeProvider();
         var handler = new ScannedSchedulerCommandHandler();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton(handler);
         var builder = addConsumers ? services.AddConsumers() : services.AddBrighter();
-        builder.UseScheduler(new InMemorySchedulerFactory { TimeProvider = timeProvider })
+        builder.UseScheduler(new InMemorySchedulerFactory(Initializer.Factory) { TimeProvider = timeProvider })
             .AutoFromAssemblies();
         await using var provider = services.BuildServiceProvider();
         var processor = provider.GetRequiredService<IAmACommandProcessor>();

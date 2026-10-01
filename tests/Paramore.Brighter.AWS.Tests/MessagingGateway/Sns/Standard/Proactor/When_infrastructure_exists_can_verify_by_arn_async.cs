@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Mime;
@@ -52,12 +54,12 @@ public class AwsValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
         var awsConnection = GatewayFactory.CreateFactory(credentials, region);
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
         var topicArn = FindTopicArn(awsConnection, routingKey.Value).Result;
         var routingKeyArn = new RoutingKey(topicArn);
-        
+
         subscription.MakeChannels = OnMissingChannel.Validate;
         subscription.RoutingKey = routingKeyArn;
         subscription.FindTopicBy = TopicFindBy.Arn;
@@ -70,9 +72,9 @@ public class AwsValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
                 TopicArn = topicArn,
                 FindTopicBy = TopicFindBy.Arn,
                 MakeChannels = OnMissingChannel.Validate
-            });
+            }, loggerFactory: NullLoggerFactory.Instance);
 
-        _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
+        _consumer = new SqsMessageConsumerFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance).CreateAsync(subscription);
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-﻿using Amazon;
+using Amazon;
 using Amazon.Runtime;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Google;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transforms.Storage;
 
@@ -16,6 +15,8 @@ namespace Paramore.Brighter.Transformers.Gcp;
 /// A Google Cloud Storage (GCS) implementation of the <see cref="IAmAStorageProvider"/> and <see cref="IAmAStorageProviderAsync"/> interfaces for the Brighter framework.
 /// Provides synchronous and asynchronous storage operations for message "luggage" (payloads) using GCP's Cloud Storage buckets.
 /// </summary>
+/// <param name="options">The bucket and object storage settings.</param>
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
 /// <remarks>
 /// <para>
 /// This class enables Brighter to store, retrieve, and manage message payloads in Google Cloud Storage. 
@@ -39,10 +40,10 @@ namespace Paramore.Brighter.Transformers.Gcp;
 /// Integrates with Brighter's tracing via <see cref="IAmABrighterTracer"/> and provides structured logging through <see cref="ILogger"/>.
 /// </para>
 /// </remarks>
-public partial class GcsLuggageStore(GcsLuggageOptions options) : IAmAStorageProvider, IAmAStorageProviderAsync
+public partial class GcsLuggageStore(GcsLuggageOptions options, ILoggerFactory loggerFactory) : IAmAStorageProvider, IAmAStorageProviderAsync
 {
     private const string ClaimCheckProvider = "gcp_gcs";
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcsLuggageStore>();
+    private readonly ILogger _logger = loggerFactory.CreateBrighterLogger<GcsLuggageStore>();
     private static readonly Dictionary<string, string> s_spanAttributes = new();
     
     /// <inheritdoc cref="IAmAStorageProvider.Tracer" />
@@ -80,9 +81,9 @@ public partial class GcsLuggageStore(GcsLuggageOptions options) : IAmAStoragePro
             
             await client.CreateBucketAsync(options.ProjectId, options.BucketName, options.CreateBucketOptions, cancellationToken);
         }
-        catch(Exception e)
+        catch (Exception e)
         {
-            Log.ErrorCreatingValidatingLuggageStore(s_logger, options.BucketName, e);
+            Log.ErrorCreatingValidatingLuggageStore(_logger, options.BucketName, e);
             throw;   
         }
     }
@@ -98,7 +99,7 @@ public partial class GcsLuggageStore(GcsLuggageOptions options) : IAmAStoragePro
         }
         catch (GoogleApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
         {
-            Log.CouldNotDeleteLuggage(s_logger, claimCheck, options.BucketName);
+            Log.CouldNotDeleteLuggage(_logger, claimCheck, options.BucketName);
         }
         finally
         {
@@ -122,7 +123,7 @@ public partial class GcsLuggageStore(GcsLuggageOptions options) : IAmAStoragePro
         }
         catch (Exception e)
         {
-            Log.UnableToRead(s_logger, claimCheck, options.BucketName, e);
+            Log.UnableToRead(_logger, claimCheck, options.BucketName, e);
             throw;
         }
         finally
@@ -219,12 +220,12 @@ public partial class GcsLuggageStore(GcsLuggageOptions options) : IAmAStoragePro
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Delete, ClaimCheckProvider, options.BucketName, claimCheck, s_spanAttributes));
         try
         {
-            var client =  options.CreateStorageClient();
+            var client = options.CreateStorageClient();
             client.DeleteObject(options.BucketName, claimCheck, options.DeleteObjectOptions);
         }
         catch (GoogleApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
         {
-            Log.CouldNotDeleteLuggage(s_logger, claimCheck, options.BucketName);
+            Log.CouldNotDeleteLuggage(_logger, claimCheck, options.BucketName);
         }
         finally
         {
@@ -248,7 +249,7 @@ public partial class GcsLuggageStore(GcsLuggageOptions options) : IAmAStoragePro
         }
         catch (Exception e)
         {
-            Log.UnableToRead(s_logger, claimCheck, options.BucketName, e);
+            Log.UnableToRead(_logger, claimCheck, options.BucketName, e);
             throw;
         }
         finally
@@ -319,7 +320,7 @@ public partial class GcsLuggageStore(GcsLuggageOptions options) : IAmAStoragePro
         public static partial void CouldNotDownload(ILogger logger, string claimCheck, string bucketName);
 
         [LoggerMessage(LogLevel.Error, "Unable to read {ClaimCheck} from {Bucket}")]
-        public static partial void UnableToRead(ILogger logger, string claimCheck, string bucket,  Exception exception);
+        public static partial void UnableToRead(ILogger logger, string claimCheck, string bucket, Exception exception);
 
         [LoggerMessage(LogLevel.Information, "Uploading {ClaimCheck} to {Bucket}")]
         public static partial void Uploading(ILogger logger, string claimCheck, string bucket);
