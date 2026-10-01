@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Observability;
 /// </summary>
 public class BrighterTracer : IAmABrighterTracer
 {
+    internal const string RECEIVED_MESSAGE = "Paramore.Brighter.ReceivedMessage";
     private const string PreviousActivityCustomPropertyName = "Paramore.Brighter.PreviousActivity";
     private readonly TimeProvider _timeProvider;
 
@@ -281,7 +282,12 @@ public class BrighterTracer : IAmABrighterTracer
         Message message,
         InstrumentationOptions options = InstrumentationOptions.All)
     {
-        if (span is null) return null;
+        if (span is null || message is null) return null;
+
+#pragma warning disable CS0618 // Message types still identify pump control signals.
+        span.SetCustomProperty(RECEIVED_MESSAGE,
+            !message.IsEmpty && message.Header.MessageType != MessageType.MT_QUIT);
+#pragma warning restore CS0618
 
         if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {

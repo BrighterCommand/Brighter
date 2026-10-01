@@ -34,14 +34,18 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     /// <summary>
     /// Read messages from an SQS queue
     /// </summary>
-    public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
     {
+        /// <inheritdoc />
+        public MessagingSystem MessagingSystem => MessagingSystem.AWSSQS;
+
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageConsumer>();
 
         private readonly AWSMessagingGatewayConnection _connection;
