@@ -30,14 +30,18 @@ using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 
 /// <summary>
 /// Implementation of <see cref="IAmAMessageConsumerSync"/> using Azure Service Bus for Transport.
 /// </summary>
-public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
 {
+    /// <inheritdoc />
+    public MessagingSystem MessagingSystem => MessagingSystem.ServiceBus;
+
     protected abstract string SubscriptionName { get; }
     protected abstract ILogger Logger { get; }
 

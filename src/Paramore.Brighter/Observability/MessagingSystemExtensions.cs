@@ -46,6 +46,10 @@ public static class MessagingSystemExtensions
         MessagingSystem.RabbitMQ => "rabbitmq",
         MessagingSystem.RocketMQ => "rocketmq",
         MessagingSystem.ServiceBus => "servicebus",
+        MessagingSystem.Mqtt => "mqtt",
+        MessagingSystem.Redis => "redis",
+        MessagingSystem.PostgreSql => "postgres",
+        MessagingSystem.MsSql => "microsoft_sql_server",
         _ => throw new ArgumentOutOfRangeException(nameof(messagingSystem), messagingSystem, null)
     };
 }
