@@ -894,7 +894,7 @@
     - Change `RocketMessageConsumer.RefreshMetadata` (`:248`, early return `:254`) to stamp `RejectionReason.None.ToString()` when `reason` is null
   - Depends on: 1.3
 
-- [ ] **7.3 TEST + IMPLEMENT: The RocketMQ publisher's header-owned properties win over same-named bag entries, so a dead-letter copy carries its stamped HandledCount**
+- [x] **7.3 TEST + IMPLEMENT: The RocketMQ publisher's header-owned properties win over same-named bag entries, so a dead-letter copy carries its stamped HandledCount**
   - **USE COMMAND**: `/test-first when publishing a rocketmq message whose bag holds a stale handled count should send the header handled count`
   - Test location: "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Reactor" and "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Proactor"
   - Test file: `When_publishing_a_rocketmq_message_with_stale_bag_handled_count_should_send_header_value.cs` (Proactor: `…_async.cs`)
