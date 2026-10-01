@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Net.Mime;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -52,6 +53,7 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
     /// When it is absent, wrappers implementing <see cref="IBrokeredMessageWithSubject"/> supply the native subject.
     /// Likewise, when the CloudEvents partition key is absent, wrappers implementing
     /// <see cref="IBrokeredMessageWithPartitionKey"/> supply the native partition key.
+    /// When the CloudEvents trace parent is absent, a valid W3C <c>Diagnostic-Id</c> supplies the trace parent.
     /// </remarks>
     /// <param name="azureServiceBusMessage">The Azure Service Bus Message to map to a Brighter <see cref="Message"/></param>
     /// <returns></returns>
@@ -354,6 +356,13 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             )
         )
         {
+            if (azureServiceBusMessage.ApplicationProperties.TryGetValue("Diagnostic-Id", out var diagnosticProperty)
+                && diagnosticProperty is string diagnosticId
+                && ActivityContext.TryParse(diagnosticId, null, out _))
+            {
+                return new TraceParent(diagnosticId);
+            }
+
             Log.NoTraceParentFound(s_logger, _topic, subscription.Name);
             return new TraceParent(string.Empty);
         }
