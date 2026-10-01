@@ -77,6 +77,8 @@ namespace Paramore.Brighter
         private readonly ConcurrentDictionary<int, Activity> _spans = new();
 
         public RequestContext() { }
+
+        internal MessageDelivery? Delivery { get; set; }
         
         private RequestContext(ConcurrentDictionary<string, object> bag)
         {
