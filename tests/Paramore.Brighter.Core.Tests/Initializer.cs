@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Logging;
 using Serilog;
 
@@ -16,6 +17,12 @@ namespace Paramore.Brighter.Core.Tests
             RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<ResilienceContextProbe>).TypeHandle);
             RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<ResilienceContextProbe>).TypeHandle);
             RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<ResilienceContextProbe>).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<RequeueFailureCommand>).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<RequeueFailureCommand>).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<RequeueFailureCommand>).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<RequeueFailureEvent>).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<RequeueFailureEvent>).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<RequeueFailureEvent>).TypeHandle);
         }
     }
 }
