@@ -556,6 +556,13 @@ failures (real-GCP-only) by name. The Stream suite
 25 skipped. The conformance audits (42) re-ran green against the new ledger. The dated notes below record
 how the cells got here. Their "stays `Deferred`" statements are superseded by this note.
 
+⭐ **Repeatability (2026-10-01, spec 0037 task 6.31, AC-22, R-21): the GCP rejection-routing behaviours and
+FR-23 gave identical results on two clean-emulator runs, with no gcp-ci.** The behaviours run were FR-4,
+FR-5, FR-6, FR-8, FR-17 and FR-23, across all four configurations and both variants: 48 generated tests,
+selected by template name. The emulator was reset (`docker-compose -f docker-compose-gcp.yaml down -v; up -d`)
+before each run. Run 1 was 48 passed, 0 failed, 0 skipped (34.7 s). Run 2 was 48 passed, 0 failed, 0 skipped
+(34.4 s). A per-test diff of the two runs' outcomes was empty.
+
 ⭐ **Evidence (2026-09-28, spec 0037 task 5.11): the twenty rejection-routing cells (FR-4, FR-5, FR-6,
 FR-8, FR-17 × four configurations) moved to `Fixed (#4386)`, and this paragraph's blocker does not
 apply to them.** This section's two-API blocker (below) is specific to **FR-23**: FR-23 dead-letters
