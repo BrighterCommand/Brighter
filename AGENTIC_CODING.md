@@ -15,6 +15,7 @@ We welcome code authored with an agent. **You remain responsible for the code yo
   - [Shifting Gear with /spec:gear](#shifting-gear-with-specgear)
   - [Worked Example](#worked-example)
 - [The Bugfix Workflow](#the-bugfix-workflow)
+- [Working Across Sessions: PROMPT.md](#working-across-sessions-promptmd)
 - [Smaller Changes: /test-first and /tidy-first](#smaller-changes-test-first-and-tidy-first)
 - [Reviewing Agent-Authored Pull Requests](#reviewing-agent-authored-pull-requests)
 
@@ -29,6 +30,7 @@ We welcome code authored with an agent. **You remain responsible for the code yo
 | `.github/copilot-instructions.md` | The same entry point for GitHub Copilot. |
 | `.agent_instructions/` | An agent-oriented version of our contribution guidelines: build, code style, design principles, testing, documentation and dependency management. |
 | `.claude/commands/` | Slash commands that drive our preferred workflows: `/spec:*`, `/bugfix:*`, `/test-first`, `/tidy-first` and `/adr`. See the [commands README](.claude/commands/README.md). |
+| `PROMPT.md` | Not provided: you create it. A gitignored file of session state that lets work continue across agent sessions. See [Working Across Sessions](#working-across-sessions-promptmd). |
 | `.slopwatch/` | Configuration and a legacy baseline for [SlopWatch](https://github.com/Aaronontheweb/dotnet-slopwatch), which we are trialing to catch agents reward-hacking (for example, weakening a test to make it pass). |
 
 Because our instructions live in plain Markdown under `.agent_instructions/`, any agent can use them.
@@ -159,7 +161,7 @@ There are two gear settings. The low/medium/high distinction above comes from co
 
 - **A reason is required.** A gear change is a judgement about certainty; the reason records it.
 - **Scope an upshift where you can.** Name a heading in `tasks.md` (or a range such as `tasks 6-11`) and the gear applies only there; tasks outside it, and the tasks after it, fall back to `review-before`. A scoped upshift expires on its own. This is why task phases with clear, stable names are worth having.
-- **The gear is working state, not a decision record.** It lives in `specs/{spec}/.current-gear`, which is gitignored, and it applies only to that spec. `/spec:gear` adds a pointer to `PROMPT.md` so a fresh session can find it. If the file is missing, can't be read, or names a scope that doesn't match, the gear is `review-before`; it fails safe.
+- **The gear is working state, not a decision record.** It lives in `specs/{spec}/.current-gear`, which is gitignored, and it applies only to that spec. `/spec:gear` adds a pointer to [`PROMPT.md`](#working-across-sessions-promptmd) so a fresh session can find it. If the file is missing, can't be read, or names a scope that doesn't match, the gear is `review-before`; it fails safe.
 - **`/test-first` and `/bugfix:test` are always gated.** Only the spec drivers read the gear.
 
 **What `review-after` does *not* remove.** It removes the human pause and nothing else. In either gear the agent must:
@@ -229,6 +231,48 @@ Bugs differ from features in one important way: **the root cause is a hypothesis
 - **The regression test is always gated.** `/bugfix:test` delegates to `/test-first` and always waits for you to approve the test. Bugfixes do not use gears.
 - **Fixes stay minimal.** If the fix needs restructuring first, `/bugfix:fix` hands that to `/tidy-first`, giving a separate `refactor:` commit before the `fix:` commit.
 - **State lives in `bugfixes/NNNN-slug/bugfix.md`**, filled in as you go: symptom, hypothesis, confirmed cause, evidence, test and fix. `/bugfix:status` lists open bugs; `/bugfix:switch` changes the active one.
+
+---
+
+## Working Across Sessions: PROMPT.md
+
+A spec or a bugfix rarely fits in one agent session. The context window fills up, compaction drops detail, you stop for the day, or you `/clear` to give the agent a clean start on the next phase. The repository already holds the durable state: `requirements.md`, the ADRs, the ticks in `tasks.md`, and `bugfix.md`. It does not hold the *working* state: what you were in the middle of, what you agreed in conversation but have not yet written down, and what the agent should leave alone. We keep that in `PROMPT.md`.
+
+**What it is.** `PROMPT.md` is a Markdown file at the root of your checkout, or of your worktree if you use one. It is gitignored, along with any `PROMPT-*.md` companions, so it is never committed or reviewed, and each worktree has its own. It belongs to you. `CLAUDE.md` tells the agent to keep cross-session state here rather than in its private memory, where you cannot see or edit it.
+
+**The loop.**
+
+```
+ work ──► "update PROMPT.md" ──► /clear, compaction, or tomorrow ──► "read PROMPT.md and continue"
+   ▲                                                                              │
+   └──────────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Update it at natural breaks**: a phase approved, a review round finished, a PR opened, or just before you `/clear`. Ask the agent to do it; it knows what it has been doing.
+- **Start the next session with "read PROMPT.md and continue".** The agent should tell you where it thinks it is before it does anything. Check that it matches your understanding.
+- **Rewrite it; don't append to it.** It is a snapshot of where the work stands now, not a log. When the work ships, cut that work down to a line or two.
+
+**What goes in it.** Keep it short, because the agent reads it at the start of every session.
+
+| Section | Holds |
+| --- | --- |
+| Where we are | Branch, worktree, current spec or bugfix, phase, PR number. |
+| Done | What is complete, with commit SHAs, so the agent does not redo it. |
+| Decisions | Choices made in conversation that are not yet written down anywhere else, and instructions such as "the report is approved; do not regenerate it". |
+| Review gear | A pointer to `specs/{spec}/.current-gear` when a spec runs in `review-after`. `/spec:gear` writes and removes this line for you. |
+| Leave alone | Untracked or unrelated files in the checkout that the agent must not touch or commit. |
+| Next | The next step, or "the user has a new task". |
+
+If one topic needs more room, such as a long hand-over, put it in a `PROMPT-<topic>.md` companion and link to it from `PROMPT.md`.
+
+**What does not go in it.**
+
+- **Anything that should outlive the work.** A decision that shapes the code belongs in the requirements, an ADR or `bugfix.md`, where reviewers will see it. If you find `PROMPT.md` holding a design decision, move it there.
+- **Progress the repository already records.** The ticks in `tasks.md` (and `/spec:status`) are the authority for which tasks are done, and `bugfix.md` is the authority for a bugfix's phase. `PROMPT.md` points at them rather than duplicating them. If they disagree, the repository wins.
+- **Waivers.** Never use `PROMPT.md` to switch off the approval gate or any other rule in `CLAUDE.md`. Before `/spec:gear` existed, a prose waiver in `PROMPT.md` was how gears were shifted, and nothing enforced it or showed it to anyone else ([ADR 0071](docs/adr/0071-tdd-review-gear.md)). Now `PROMPT.md` only points at the gear file.
+- **Links from durable artifacts.** Never cite `PROMPT.md` in code comments, ADRs, commit messages or pull request descriptions; nobody else can read it ([documentation.md](.agent_instructions/documentation.md)). `/spec:review` flags such references, and `/spec:show-me` deliberately never reads `PROMPT.md`.
+
+Nothing here is specific to Claude Code: any agent that can read a file can work this way.
 
 ---
 
