@@ -5,8 +5,8 @@
 ## Summary
 
 - **Adoption came in five stages over 16 months:** an assistant with a `CLAUDE.md` (June 2025), the `/spec` workflow and automatic AI review (October 2025), agent-authored commits becoming the norm alongside the Ralph loop (February 2026), the `/bugfix` workflow (June 2026), and the review gear plus opt-in AI review (September 2026). `/spec` was used lightly at first; ADRs show it became routine in February 2026, when 28 were written in one month.
-- **Delivery roughly doubled, then quadrupled, but mostly as fixes.** Merged human PRs rose from 9.3 a month before agents to 17 a month in the first half of 2026 and 36.7 a month since July. Feature PRs held steady at 7–11 a month throughout; the growth is in fix PRs, up from 2.4 to 27.3 a month.
-- **Bugs are found and closed far faster.** Median time to close a bug fell from 84.5 days before agents to 4–14 days. Since `/bugfix` arrived, 48 bugs have gone through a recorded triage → confirm → test → fix → verify cycle.
+- **Delivery roughly doubled, then jumped in a September stability push.** Merged human PRs rose from 9.3 a month before agents to 11–18 a month in the agent eras. Feature PRs stayed at about 5–6 a month but became much larger, as specs land as a few big PRs. September's 88 PRs were mostly fixes for the 10.8.0 stability release, made with agents by a larger group: two contributors joined the push, and 69 of the 90 fix PRs since June went through `/bugfix`.
+- **Bugs are found and closed far faster.** Median time to close a bug fell from 84.5 days before agents to 4–14 days. Since `/bugfix` arrived, about 83 bugs have gone through its triage → confirm → test → fix → verify cycle, 48 of them with committed records.
 - **More bugs are being reported, but mostly in older code.** Most of the recent rise is bugs we found ourselves, through conformance tests and audits (66 of 81 since July). Issues from outside the core team also rose: counting all labels, to avoid the change in how consistently `Bug` is applied, there are about 8 per 10 feature PRs in 2026 against 3–5 in 2024. But tracing each fix to the code it repaired shows that 32 of 37 outside-reported bugs were in code written before 2026.
 - **Agent-authored code shows a lower early defect rate.** Comparing like with like (defects found within 120 days of the code being written), code written since February 2026 has 0.15 defects per 1,000 lines, against 0.23 at baseline and 0.33 in the assistants era. The numbers are small, so treat this as a direction rather than a measurement.
 - **The test suite grew four times faster than the source.** Test files went from 996 to 4,424 since May 2025, while source files went from 656 to 1,110. The ratio of test files to source files rose from 1.5 to 4.0.
@@ -69,7 +69,7 @@ Specs got larger and fewer over time. Early specs were 5–30 tasks and often on
 
 ### `/bugfix` usage
 
-There are 48 bugfix records between 2026-06-25 and 2026-09-29. 46 passed the Confirm gate, and all have reached Fixed or Verified (one was superseded).
+There are 48 bugfix records between 2026-06-25 and 2026-09-29. 46 passed the Confirm gate, and all have reached Fixed or Verified (one was superseded). This undercounts use: `gabisonia` works through `/bugfix` without committing its records, which adds 35 fixes in September, so about 83 bugs have gone through the workflow.
 
 | Month | Bugfixes | Notes |
 | --- | --- | --- |
@@ -95,19 +95,39 @@ The early automatic review was unreliable: in October 2025 the workflows recorde
 
 Eras run from one milestone to the next. Figures are per-month averages over the era. Bot PRs (Dependabot and similar) are excluded.
 
-| Era | Months | Merged PRs | Feature PRs | Fix PRs | Median PR open→merge | Releases |
-| --- | --- | --- | --- | --- | --- | --- |
-| Baseline, before agents (2024-06 → 2025-05) | 12 | 9.3 | 6.9 | 2.4 | 2.0 days | 0.8 |
-| Assistants (2025-06 → 2025-09) | 4 | 17.8 | 10.8 | 7.0 | 1.7 days | 2.5 |
-| `/spec` + automatic AI review (2025-10 → 2026-01) | 4 | 11.2 | 7.5 | 3.8 | 0.8 days | 2.0 |
-| Agent-authored, Ralph (2026-02 → 2026-06) | 5 | 17.0 | 9.2 | 7.8 | 1.8 days | 2.4 |
-| `/bugfix` (2026-07 → 2026-09) | 3 | 36.7 | 9.3 | 27.3 | 0.4 days | 0.3 |
+PRs are classified by title. A conventional prefix (`feat:`, `fix:`, `docs:` and so on) decides the kind; for PRs without one, which were the majority before agents, the wording decides it ("Redis fixes" is a fix, "Add support to MongoDB" is a feature). **Features** include improvements to existing capabilities; **maintenance** is docs, tests, CI, samples, refactoring and chores.
+
+| Era | Months | Merged PRs | Features and improvements | Fixes | Maintenance | Median PR open→merge | Releases |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Baseline, before agents (2024-06 → 2025-05) | 12 | 9.3 | 5.4 | 3.2 | 0.8 | 2.0 days | 0.8 |
+| Assistants (2025-06 → 2025-09) | 4 | 17.8 | 10.8 | 6.5 | 0.5 | 1.7 days | 2.5 |
+| `/spec` + automatic AI review (2025-10 → 2026-01) | 4 | 11.2 | 5.0 | 4.8 | 1.5 | 0.8 days | 2.0 |
+| Agent-authored, Ralph (2026-02 → 2026-06) | 5 | 17.0 | 6.0 | 7.6 | 3.4 | 1.8 days | 2.4 |
+| `/bugfix` (2026-07 → 2026-09) | 3 | 36.7 | 3.3 | 26.7 | 6.7 | 0.4 days | 0.3 |
+
+An earlier version of this table classified PRs by title prefix alone. Because unprefixed PRs were the norm before agents, it counted fixes such as "Mqtt fixes" as features, which overstated the growth in fixes.
 
 Observations:
 
-- **Feature throughput is flat in PR count but not in size.** Feature PRs barely moved (about 7 → 9 a month), but lines changed rose from about 14k a month to 50k in the first half of 2026 and 138k a month since July. Specs now land as a few large PRs rather than many small ones.
-- **The growth in PR count is fix work.** Since July, three in four merged PRs are fixes, most of them from `/bugfix`.
-- **Agent authorship became the norm in February 2026.** From then on, 87% of non-merge commits on master carry a `Co-Authored-By: Claude` trailer, up from 0% before 2026.
+- **Throughput roughly doubled before September.** Excluding the September push (below), the agent eras ran at 11–18 merged PRs a month against 9.3 before agents.
+- **Feature PRs did not grow in number, but they grew in size.** About 5–6 feature PRs a month throughout, except the busier assistants period and the stability-focused third quarter of 2026. But lines changed rose from about 14k a month to 50k in the first half of 2026: specs land as a few large PRs (scoped lifetimes, pipeline validation, box migrations) rather than many small ones. Issues labelled `feature request` and closed as completed went from 1.3 a month before agents to 3.0 a month in the agent-authored era, and 1.3 a month since July.
+- **Maintenance work grew fourfold.** Docs, samples, tutorials, CI and test work rose from under one PR a month to 3–7 a month.
+- **Agent authorship became the norm in February 2026.** From then on, 87% of non-merge commits on master carry a `Co-Authored-By: Claude` trailer, up from 0% before 2026. That understates agent use: `gabisonia`, `AVTUNEY` and `DevJonny` all work with agents, and not every agent leaves a trailer.
+
+### The September stability push
+
+September 2026 had 88 merged PRs, more than the previous three months together. It was a push to clear the bug backlog for 10.8.0, and more people took part:
+
+| Author | Merged PRs | Fix PRs | How |
+| --- | --- | --- | --- |
+| `gabisonia` | 36 | 35 | Agent-assisted through `/bugfix`; records not committed |
+| `iancooper` | 29 | 13 | Claude; 10 of the 13 through `/bugfix` |
+| `AVTUNEY` | 18 | 18 | Agent-assisted through `/bugfix`; each PR matches a `bugfixes/` record |
+| Others | 5 | 4 | |
+| **Total** | **88** | **70** | 65 of the 70 fixes through `/bugfix` |
+
+- **The surge is fix work, done with agents, by more people.** Every major contributor that month worked with an agent, but the jump in volume comes from two contributors joining the push as much as from the tooling.
+- **`/bugfix` is the main route for fixes.** Of the 90 fix PRs merged from June to September, 69 (77%) went through `/bugfix`: 34 can be traced to a committed `bugfixes/` record, and 35 are `gabisonia`'s, who uses `/bugfix` but does not commit its records. In September alone, 65 of 70 fixes went through it.
 - **Release cadence tripled from the baseline, then paused deliberately.** There were about 2–2.5 releases a month from mid-2025 to June 2026. Since 10.7.0 (2026-07-29) the fixes have been held for **10.8.0, a major stability release** that ships once the bug backlog is cleared. The release count for 2026 Q3 therefore understates what has been delivered.
 
 > **Caveat: commit counts are not comparable over time.** From 2026 Q2, most PRs land as merge commits that keep their full history rather than being squashed (128 merge commits on master in 2026 Q2–Q3, against 0–4 a quarter before). Commit counts per month jumped from about 20 to 829 for this reason, so this report measures delivery by PRs, lines and releases.
@@ -240,7 +260,7 @@ Agent-authored code written with `/spec` shows a lower early defect rate than co
 - **The numbers are small.** The exposure-matched comparison rests on 5–11 defects per era. It is a direction, not a measurement, and one or two more defects would move the rates noticeably.
 - **Blame attributes defects to the last change, not the original mistake.** In a squash-merged PR the whole PR is one commit, and a defect in old code that a later refactor touched is blamed on the refactor. The median fix attributes only half its blamed lines to its top commit.
 - **A few large changes dominate.** Three PRs account for 44 of the 156 traced fixes: Sync Over Async Improvements (#3409, 23), OTel Transports (#3605, 13) and AWS SDK v4 (#3641, 8). Large cross-cutting rewrites are where defects concentrate, whoever writes them.
-- **"No Claude trailer" does not mean human-written.** Before 2026, assistants were in use without commit trailers, so the assistants era may include agent-written code.
+- **"No Claude trailer" does not mean human-written.** Before 2026, assistants were in use without commit trailers, so the assistants era may include agent-written code. In 2026, several contributors (`gabisonia`, `AVTUNEY`, `DevJonny`) worked with agents that don't always leave a trailer, so "Claude co-authored" undercounts agent-written code. That cuts against the agent era: some of its defects may be filed under "no trailer".
 - **Fixes that only add code**, such as a missing guard, are blamed on the line next to the insertion, which is a weaker signal.
 
 ---
@@ -248,7 +268,7 @@ Agent-authored code written with `/spec` shows a lower early defect rate than co
 ## Method
 
 - **Git:** `origin/master` at `9ccd22af4`. Non-merge commits, excluding Dependabot. Lines are insertions plus deletions from `--shortstat`. File counts are taken from the tree at each month end.
-- **Pull requests:** merged PRs from the GitHub REST API (1,592 in total), excluding bot authors. A PR counts as a fix if its title starts with `fix` or `bug`, or it is labelled `Bug`. Cycle time is from creation to merge.
+- **Pull requests:** merged PRs from the GitHub REST API (1,592 in total), excluding bot authors. Section 2 classifies PRs by title prefix, or by wording where there is no prefix. Sections 3 and 5 use the simpler rule (a fix's title starts with `fix` or `bug`, or it is labelled `Bug`; everything else counts as a feature), so their "per 10 feature PRs" figures count some fixes as features. Cycle time is from creation to merge. A PR is linked to `/bugfix` when its branch starts with `bugfix/`, or it names an issue that has a `bugfixes/` record. `gabisonia`'s fix PRs also count as `/bugfix`, on the maintainer's confirmation that he uses the workflow without committing its records.
 - **Issues:** 675 issues from the GitHub REST API, 234 labelled `Bug`.
 - **AI review:** runs of `claude-code-review.yml` and `claude.yml`, and comments by `claude[bot]` since 2025-10-01.
 - **Specs and bugfixes:** directory first-commit dates, `.issue-number`, `.confirm-approved`, and checkbox counts in `tasks.md`.
