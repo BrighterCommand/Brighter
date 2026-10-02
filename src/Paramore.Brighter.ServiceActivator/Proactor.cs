@@ -110,6 +110,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             Log.DispatchingMessage(s_logger, request.Id.Value, Thread.CurrentThread.ManagedThreadId, Channel.Name);
             requestContext.Span?.AddEvent(new ActivityEvent("Dispatch Message"));
+            requestContext.RequireHandlerForNextDispatch();
 
             switch (request)
             {
