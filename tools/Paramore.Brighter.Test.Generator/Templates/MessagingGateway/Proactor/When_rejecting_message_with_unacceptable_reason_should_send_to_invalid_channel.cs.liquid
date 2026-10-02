@@ -64,7 +64,10 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds({{ ReceiveMessageTimeoutInMilliseconds }}));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
-        await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message"));
+        var rejected = await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message"));
+
+        // Assert — RejectAsync returns true when the copy was routed
+        Assert.True(rejected, "RejectAsync should return true when the message was routed");
 
         // Assert — the message reaches the invalid-message channel: poll every 500 ms, give up after 60 s
         var invalidMessage = new Message();

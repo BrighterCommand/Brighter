@@ -59,7 +59,10 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlq : IDisposable
         var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
-        _channel.Reject(received, new MessageRejectionReason(RejectionReason.None, "Test unknown rejection reason"));
+        var rejected = _channel.Reject(received, new MessageRejectionReason(RejectionReason.None, "Test unknown rejection reason"));
+
+        // Assert — Reject returns true when the copy was routed
+        Assert.True(rejected, "Reject should return true when the message was routed");
 
         // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
         var dlqMessage = new Message();
