@@ -1095,7 +1095,7 @@
   - **Output:** the checklist item ticked with the build reference.
   - Depends on: 1.1, Phases 2–7
 
-- [ ] **8.5 GATE: Release notes and dead-letter documentation for the visible contract changes (ADR 0077 edge cases 2 and 3, Consequences → Negative; ADR 0078)**
+- [x] **8.5 GATE: Release notes and dead-letter documentation for the visible contract changes (ADR 0077 edge cases 2 and 3, Consequences → Negative; ADR 0078)**
   - Update `release_notes.md`, and the relevant page under `docs/transports/` if dead-lettering is described there, to cover:
     - A broker counter now overrides a producer-set `HandledCount` on SQS, GCP (AC-19) and RocketMQ (AC-24)
     - A null-reason Reject stamps `rejectionReason = "None"`
