@@ -1067,7 +1067,7 @@
 
 ## Phase 8 — Samples, audits, ledger and exit criteria
 
-- [ ] **8.1 GATE: ADR document reviews (AC-33 second clause, AC-34 first clause, AC-41 final clause)**
+- [x] **8.1 GATE: ADR document reviews (AC-33 second clause, AC-34 first clause, AC-41 final clause)**
   - Confirm in ADR 0077:
     - "First delivery on an approximate counter" states the residual risk and the exposed cells (AC-33)
     - The four-row exact/approximate table classifies AWSSQS, AWSSQS.V4, GcpPubSub and RocketMQ with evidence, including any 7.1 reclassification. If none is exact, AC-34's second clause binds nothing; say so.
