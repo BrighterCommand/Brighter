@@ -1075,7 +1075,7 @@
   - **Output:** a dated review note in `specs/0037-delivery-count-and-rejection-routing/README.md` Status Checklist.
   - Depends on: 6.7, 7.1
 
-- [ ] **8.2 GATE: Broker-call enumeration equals the base revision on receive and requeue paths (AC-28, NFR-1, NFR-3)**
+- [x] **8.2 GATE: Broker-call enumeration equals the base revision on receive and requeue paths (AC-28, NFR-1, NFR-3)**
   - Enumerate broker-call sites on the receive and requeue paths from the PR diff for AWSSQS/V4, GcpPubSub pull and stream, and RocketMQ.
   - Compare with the base revision.
   - **Output:** ADR 0077's "AC-28 broker-call enumeration" table confirmed or corrected by a dated note, with diff references. Any added call is a defect.
