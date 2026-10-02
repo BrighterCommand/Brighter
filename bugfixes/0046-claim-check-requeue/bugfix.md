@@ -139,3 +139,17 @@ Release validation after the correction:
 All three suites have zero failures. ServiceActivator and core build for netstandard2.0, net8.0, net9.0 and net10.0 with zero warnings or errors. The existing Service Bus verification limits above still apply.
 
 Local evidence: `/tmp/brighter-4497-scope-red-isolated.log`, `/tmp/brighter-4497-extensions-green.log`, `/tmp/brighter-4497-core-green.log`, `/tmp/brighter-4497-transforms-green.log`, and `/tmp/brighter-4497-serviceactivator-build.log`.
+
+### Merge with upstream transport metrics fix
+
+Merged upstream master `7e897fdf2` into the PR branch, preserving the published commit history. The conflicts in Reactor and Proactor were at process-span creation: upstream uses the channel's messaging system, while this branch introduces delivery cleanup state beside the span. Both pumps now keep the transport-specific span and all claim-check delivery state. The Service Bus consumer auto-merge retains both its transport identity and acknowledgement exception propagation.
+
+Release validation after the merge:
+
+- Full Core suite: 1,546 passed, seven skipped, zero failures on each of net9.0 and net10.0, including the upstream transport metrics tests and all claim-check regressions.
+- Full Extensions suite: 645 passed on net9.0 and 642 passed on net10.0, with zero failures.
+- Service Bus acknowledgement regression tests: eight passed on each framework; these cases require no live broker.
+- ServiceActivator and core: netstandard2.0, net8.0, net9.0 and net10.0 builds pass with zero warnings or errors.
+- No unresolved merge entries or conflict markers remain; `git diff --check` passes.
+
+Evidence: `/tmp/brighter-4497-merge-core.log`, `/tmp/brighter-4497-merge-extensions.log`, `/tmp/brighter-4497-merge-asb.log`, and `/tmp/brighter-4497-merge-build.log`. The previously documented live Service Bus limitation still applies.
