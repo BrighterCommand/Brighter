@@ -355,6 +355,24 @@ Bespoke tests (constructed subscriptions, not provider-supplied): AC-1, AC-5, AC
 | GcpPubSub stream | streaming pull (no per-message RPC) | local Nack on the stream |
 | RocketMQ | `SimpleConsumer.Receive` | none |
 
+##### Confirmation (2026-10-02): task 8.2, AC-28 enumeration against the base revision
+
+**The table above is confirmed, unchanged.** I enumerated it from `git diff f906efc0b..3c9e8c010` (merge base with `master` → the branch after 8.1) over `src/Paramore.Brighter.MessagingGateway.{AWSSQS,AWSSQS.V4,GcpPubSub,RocketMQ}`. No broker call was added to or removed from any receive or requeue path.
+
+| Transport | Receive path in the diff | Requeue path in the diff |
+|---|---|---|
+| AWSSQS / V4 | `SqsMessageConsumer.Receive`/`ReceiveAsync`: no hunk. The creators' `ReadHandledCount` (v3 `SqsMessageCreator.cs:323`, `SqsInlineMessageCreator.cs:350`; V4 `:330`, `:317`) now reads `sqsMessage.Attributes["ApproximateReceiveCount"]` from the `ReceiveMessage` response already in hand and calls `DeliveryCount.Resolve`. No client call. | `Requeue`/`RequeueAsync`: no hunk. Still one `ChangeMessageVisibility`. |
+| GcpPubSub pull | `GcpPullMessageConsumer.Receive`: no hunk. `Parser.ToBrighterMessage(ReceivedMessage)` (`:146`) reads `ReceivedMessage.DeliveryAttempt` from the `Pull` response. | `Requeue`/`RequeueAsync` (`:397-449`): the `ModifyAckDeadline(…, 0)` call and its client lookup (`GetOrCreateSubscriberServiceApiClient` / `CreateSubscriberServiceApiClientAsync`) moved verbatim into `ReleaseByHandle`/`ReleaseByHandleAsync` (`:484-503`). Still one `ModifyAckDeadline`. |
+| GcpPubSub stream | `GcpPubSubStreamMessageConsumer.Receive`: no hunk. `Parser.ToBrighterMessage(GcpStreamMessage)` (`:86`) reads `PubsubExtensions.GetDeliveryAttempt` from the message's own attributes. | `Requeue` (`:287`): `gcpStreamMessage.Reject()` became `Nack(gcpStreamMessage)`, a one-line helper (`:333`) that calls the same `gcpStreamMessage.Reject()`. Still one local Nack on the stream. |
+| RocketMQ | `RocketMessageConsumer.Receive`: no hunk. `CreateMessage` (`:344`) reads `MessageView.DeliveryAttempt` from the view `SimpleConsumer.Receive` returned. | `Requeue`: no hunk. Still no broker call. |
+
+Per channel, not per message: each factory now calls `DeliveryBudgetDiagnostics.WarnIfUnenforceable` once at channel creation. It reads `DeliveryBudgetUnenforceableReason`/`NativeRedriveLimit`, which are pure properties of the subscription on all four transports. The GCP consumer factory passes the routing keys to a `GcpRejectionRouter` built per consumer. Neither issues a broker call.
+
+**Broker-call changes the diff makes outside these two paths.** They are recorded so the review sees them, and none is part of the delivery-count mechanism:
+- **GCP Reject, pull and stream (ADR 0078, R-16 to R-19):** one routing `Publish` to `deadLetterRoutingKey`/`invalidMessageRoutingKey` when a destination is configured. When that publish fails, the original is released (pull `ModifyAckDeadline(…, 0)`; stream `Reject()`) **instead of** acknowledged, so the release replaces the ack rather than adding to it. SQS and RocketMQ `Reject` changed only in `RefreshMetadata` (no call).
+- **GCP stream `Nack` (`GcpPubSubStreamMessageConsumer.cs:84`, `a576dc0f3`, bugfix 0024 / #4449):** it was a no-op and now calls `gcpStreamMessage.Reject()`, the same local Nack the requeue path makes. This is the pump's `DontAckAction` path, not `Requeue`. Before the fix, the base revision never settled such a message, so the client kept extending its lease. The change fixes that defect; it is not part of R-1's mechanism.
+- **GCP stream shutdown (`GcpStreamConsumer.cs:55`, `a010129ea`, bugfix 0023 / #4479):** `StopAsync` uses `ShutdownMode.NackImmediately` instead of `WaitForProcessing`. This is once per consumer stop, not per message.
+
 ## Consequences
 
 ### Positive
