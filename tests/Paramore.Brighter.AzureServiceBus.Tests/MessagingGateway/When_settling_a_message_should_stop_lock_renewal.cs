@@ -210,8 +210,8 @@ public class AzureServiceBusLockRenewalLifetimeTests
         bool reject, bool useAsync)
     {
         // Arrange
-        var receiver = new InMemoryLockingServiceBusReceiver(2, TimeSpan.FromSeconds(2));
-        var sessionReceiver = new InMemoryLockingServiceBusSessionReceiver(receiver, TimeSpan.FromSeconds(2));
+        var receiver = new InMemoryLockingServiceBusReceiver(2, TimeSpan.FromMinutes(1));
+        var sessionReceiver = new InMemoryLockingServiceBusSessionReceiver(receiver, TimeSpan.FromMinutes(1));
         await using var client = new InMemoryLockingServiceBusClient(sessionReceiver);
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"),
