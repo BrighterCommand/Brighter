@@ -1037,7 +1037,7 @@
 > across every transport. Never edit the generated files. This section is outside the Phase 7 gear scope, so it runs
 > `review-before` unless the user re-scopes it with `/spec:gear`.
 
-- [ ] **7A.1 CHARACTERISE: A routed reject copy keeps the original message body**
+- [x] **7A.1 CHARACTERISE: A routed reject copy keeps the original message body**
   - **USE COMMAND**: `/test-first when a rejected message is routed to the dlq or invalid channel the routed copy should keep the original body`
   - Templates: the `When_rejecting_message_with_delivery_error_should_send_to_dlq`, `…_should_include_metadata`, `…_unacceptable_reason_should_send_to_invalid_channel`, `…_unacceptable_and_no_invalid_channel_should_fallback_to_dlq` and `…_unknown_reason_should_send_to_dlq` templates, in both Reactor and Proactor
   - Test should verify:
