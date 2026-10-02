@@ -118,6 +118,22 @@ abandoned with a Warning instead of failing channel creation:
 The subscription is still created. **If you see this Warning**, grant the forwarding roles yourself,
 or native dead-lettering will not move messages. Any other status still fails channel creation.
 
+### GCP Pub/Sub stream: `Nack` releases the message for redelivery (#4449)
+
+`GcpPubSubStreamMessageConsumer.Nack`/`NackAsync` did nothing, on the assumption that not
+acknowledging a message is enough for Pub/Sub to redeliver it. That holds for Pull, but not for the
+streaming client, which keeps extending the lease on a message it is still holding. A message the pump
+declined to acknowledge (`DontAckAction`) was therefore never redelivered, and at the default
+`BufferSize: 1` it could stall the consumer for up to `MaxTotalAckExtension` (60 minutes by default).
+`Nack` now releases the message, as `Requeue` already did, and it is redelivered promptly.
+
+### GCP Pub/Sub stream: disposing a channel no longer waits for unsettled messages (#4479)
+
+Stopping the stream consumer waited for every message it had delivered to be acknowledged or nacked.
+A message that was never settled blocked `Dispose`, and with it shutdown, for up to about an hour. The
+consumer now stops with `ShutdownMode.NackImmediately`. A message still held at shutdown is nacked and
+redelivered, and `Dispose` returns promptly.
+
 ### Replay Outbox Messages on Inbox Duplicate (spec 0027)
 
 When an inbox detects a duplicate request, Brighter can now optionally **replay** the outbox messages that were produced under that request's causation, rather than silently dropping the duplicate. The feature is opt-in (`OnceOnlyAction.Replay` on the inbox attribute) and non-breaking: it requires a causation-tracking inbox and outbox (`IAmACausationTrackingInbox` / `IAmACausationTrackingOutbox`), and the relational stores gate the causation-aware write on a memoized column probe so un-migrated schemas keep depositing unchanged. Startup pipeline validation fails fast if a `Replay` pipeline is configured without causation tracking. See [ADR 0057](docs/adr/0057-replay-outbox-on-inbox-duplicate.md) and [spec 0027](specs/0027-replay-matching-outbox-events-when-inbox-has-already-seen/) for full details.
