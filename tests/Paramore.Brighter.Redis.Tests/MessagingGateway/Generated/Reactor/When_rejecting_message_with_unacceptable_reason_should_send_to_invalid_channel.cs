@@ -59,7 +59,10 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
-        _channel.Reject(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message"));
+        var rejected = _channel.Reject(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message"));
+
+        // Assert — Reject returns true when the copy was routed
+        Assert.True(rejected, "Reject should return true when the message was routed");
 
         // Assert — the message reaches the invalid-message channel: poll every 500 ms, give up after 60 s
         var invalidMessage = new Message();
@@ -75,6 +78,7 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         }
 
         Assert.NotEqual(MessageType.MT_NONE, invalidMessage.Header.MessageType);
+        Assert.Equal(message.Body.Value, invalidMessage.Body.Value);
 
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
         Assert.True(invalidMessage.Header.Bag.ContainsKey(keys.OriginalTopic));

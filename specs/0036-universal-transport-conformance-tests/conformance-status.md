@@ -1037,6 +1037,62 @@ docker volume rm generator-transport-tests_rabbitmq_data generator-transport-tes
 
 CI is unaffected — GitHub Actions `services:` mount no volume.
 
+## The routing reject tests now check the routed body and `Reject`'s return value
+
+Spec 0037 Phase 7A (tasks 7A.1, 7A.2) added two assertions to the five routing reject templates, Reactor and
+Proactor: FR-4 (`delivery_error_should_send_to_dlq`), FR-5 (`unacceptable_reason_should_send_to_invalid_channel`),
+FR-6 (`unacceptable_and_no_invalid_channel_should_fallback_to_dlq`), FR-8 (`should_include_metadata`) and FR-17
+(`unknown_reason_should_send_to_dlq`). They now assert that:
+
+- the copy read from the DLQ or invalid channel has the sent message's `Body.Value` (7A.1, `170ec0012`); and
+- `Reject` / `RejectAsync` returned `true` (7A.2, `487a9e554`). FR-7's `no_channels_configured` template
+  already asserted this.
+
+The deletion of the hand-written RocketMQ reject tests (`ec2071bb0`) had exposed both gaps. **No ledger cell
+changed.** The new assertions passed wherever the old ones did.
+
+⭐ **Run record (2026-10-02, spec 0037 task 7A.3).** All 17 projects with a `test-configuration.json` were
+regenerated. The diff was 190 generated files in ten projects (AWS 40, AzureServiceBus 10, Gcp 40, Kafka 30, MQTT
+10, MSSQL 10, PostgresSQL 10, Redis 10, RMQ.Async 20, RMQ.Sync 10), each `+5/-1`, all routing reject tests.
+RocketMQ and AWS.V4 had already been regenerated in 7A.1/7A.2 and did not change again. The outbox-only projects
+(DynamoDB, DynamoDB.V4, MongoDb, MySQL, Sqlite) generate no reject tests and did not change. The generated reject
+tests (filter `FullyQualifiedName~.WhenRejectingMessage`, net10.0) were then run against local infrastructure:
+
+| Project | Passed / Failed / Skipped | Infrastructure |
+|---|---|---|
+| AWS | 48 / 0 / 0 | Floci (`LiveAWS!=true`) |
+| AWS.V4 | 48 / 0 / 0 | Floci (`LiveAWS!=true`); see the note below |
+| Gcp | 40 / 0 / 8 | Pub/Sub emulator (`Fragile!=CI`); the 8 are FR-7 `Deferred` × 4 configurations × 2 variants |
+| Kafka | 36 / 0 / 0 | `docker-compose-kafka.yaml` (RocketMQ stack stopped first: port 8081) |
+| MQTT | 12 / 0 / 0 | `docker-compose-mqtt.yaml` |
+| MSSQL | 12 / 0 / 0 | `docker-compose-mssql.yaml` |
+| PostgresSQL | 12 / 0 / 0 | `docker-compose-postgres.yaml` |
+| Redis | 12 / 0 / 0 | `docker-compose-redis.yaml` |
+| RMQ.Async | 20 / 0 / 4 | `docker-compose-rmq.yaml`; the 4 are FR-5 `Deferred` × 2 configurations × 2 variants |
+| RMQ.Sync | 10 / 0 / 2 | `docker-compose-rmq.yaml`; the 2 are FR-5 `Deferred` × 2 variants |
+| RocketMQ | 12 / 0 / 0 | `docker-compose-rocketmq.yaml`, from `down -v` (100/100 topics) |
+
+**Not run locally:** AzureServiceBus. It has no local emulator or compose file. Two of its 12 reject tests are
+skipped by the ledger (FR-5 `Deferred`). The other ten compiled but did not run.
+
+**AWS.V4 note:** the first AWS.V4 run went alongside the AWS run against the same Floci container and took
+4 m 36 s. One test failed: SnsFifo Proactor `unacceptable_reason_should_send_to_invalid_channel_async`, after
+2 m 48 s, with `AmazonSQSException: … ReceiptHandle is invalid. Reason: The receipt handle has expired`. That is
+the visibility timeout lapsing under load, not a new assertion. Run alone, the same 48 tests passed in 1 m 22 s.
+They had also passed in four earlier runs that day (7A.1 and 7A.2). Run the two AWS projects one after the other
+against one Floci container.
+
+**RED under mutation (7A.1, 7A.2):** RocketMQ (`RocketMessageConsumer.RejectAsync`) and SQS V4
+(`SqsMessageConsumer.RejectAsync`) were mutated:
+
+- **Routed copy sent with body `"mutated-body"`:** RocketMQ 10/10 and SQS V4 40/40 generated tests failed on the
+  body assertion.
+- **`return false` after a successful route:** the same counts failed on the return-value assertion.
+
+An **empty** body is not a usable mutation. RocketMQ and Floci both refuse to send it, so nothing is routed and
+the tests fail on arrival (`MT_NONE`) instead. On a RocketMQ store that has had a run on it, the DLQ read returns
+a stale message, which can pass for a body-assertion failure.
+
 ## Conformance Matrix
 
 | Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 | FR-23 |

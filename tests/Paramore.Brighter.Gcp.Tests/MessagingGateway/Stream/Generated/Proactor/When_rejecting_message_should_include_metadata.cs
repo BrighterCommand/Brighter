@@ -65,7 +65,10 @@ public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
-        await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, REJECTION_DESCRIPTION));
+        var rejected = await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, REJECTION_DESCRIPTION));
+
+        // Assert — RejectAsync returns true when the copy was routed
+        Assert.True(rejected, "RejectAsync should return true when the message was routed");
 
         // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
         var dlqMessage = new Message();
@@ -81,6 +84,7 @@ public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
         }
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
 
         // The message must reach the DLQ (routing, asserted above). The rejection-metadata fields are
         // asserted only when the provider's gateway stamps Brighter metadata; a native-dead-letter

@@ -63,7 +63,10 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncL
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
-        await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
+        var rejected = await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
+
+        // Assert — RejectAsync returns true when the copy was routed
+        Assert.True(rejected, "RejectAsync should return true when the message was routed");
 
         // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
         var dlqMessage = new Message();
@@ -79,6 +82,7 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncL
         }
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
 
         // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
         // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.
