@@ -1047,7 +1047,7 @@
   - Implementation should (only if a transport is unexpectedly RED on arrival): fix that transport's routed copy, as its own bugfix if the cause is not obvious.
   - Depends on: none within the phase
 
-- [ ] **7A.2 CHARACTERISE: `Reject` returns `true` after a successful route**
+- [x] **7A.2 CHARACTERISE: `Reject` returns `true` after a successful route**
   - **USE COMMAND**: `/test-first when a rejected message is routed successfully reject should return true`
   - Templates: the same five templates as 7A.1, both variants (no-channels already asserts the return value)
   - Test should verify:
