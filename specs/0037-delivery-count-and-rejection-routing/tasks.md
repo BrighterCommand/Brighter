@@ -1124,7 +1124,7 @@
   - **Output:** the ledger edits, plus the checklist item "AC-30/AC-31 ledger audited" ticked in `specs/0037-delivery-count-and-rejection-routing/README.md`.
   - Depends on: 4.11, 5.11, 6.16/6.21, 6.30, 7.13/7.21
 
-- [ ] **8.7 GATE: Final regression and C-7 residual-risk record (R-22, R-23, AC-26 re-run)**
+- [x] **8.7 GATE: Final regression and C-7 residual-risk record (R-22, R-23, AC-26 re-run)**
   - Re-run the scoped conformance suites for the nine AC-26 configurations and for all in-scope configurations, both variants.
   - Record any flaky first-delivery identity failure (an approximate counter over-counting on a first delivery; ADR 0077 "First delivery on an approximate counter") against ADR 0077 as a dated observation. Report it; do not mask it.
   - **Output:** a dated final run record in `conformance-status.md`, and a C-7 observation note (or "none observed") in ADR 0077.
