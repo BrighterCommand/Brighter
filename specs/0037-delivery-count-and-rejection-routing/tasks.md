@@ -1021,7 +1021,7 @@
 
 ### Phase 7 common — after the branch
 
-- [ ] **7.30 GATE: RocketMQ's nine `Fixed` cells still pass on the chosen branch (AC-38, R-22, R-23)**
+- [x] **7.30 GATE: RocketMQ's nine `Fixed` cells still pass on the chosen branch (AC-38, R-22, R-23)**
   - From `down -v`, run the scoped RocketMQ suite in both variants.
   - FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-16, FR-17 and FR-22 all pass. FR-16 and FR-22 depend on 3.1 on the AC-24 branch.
   - **Output:** a dated run record in the RocketMQ paragraph of `conformance-status.md`.
