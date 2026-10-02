@@ -1107,7 +1107,7 @@
   - **Output:** the doc diff in the PR.
   - Depends on: 6.7, 7.1, Phases 4–7
 
-- [ ] **8.6 GATE: Ledger audit — 33 cells moved on evidence, and the cells this spec could not move are stated (AC-30, AC-31)**
+- [x] **8.6 GATE: Ledger audit — 33 cells moved on evidence, and the cells this spec could not move are stated (AC-30, AC-31)**
   - Check each moved cell:
     - 8 AWS FR-23 cells (4.11)
     - 20 GCP routing cells (5.11)
