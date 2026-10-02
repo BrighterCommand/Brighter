@@ -1132,6 +1132,69 @@ a stale message, which can pass for a body-assertion failure.
 whose rejection routing kept failing reached the native `DeadLetterPolicy` subscription in 12–17 s
 (`38c91413f`). R-19's native-cap bound therefore held on the emulator, and no cell carries a refutation.
 
+## Final run record — 2026-10-02 (spec 0037 task 8.7)
+
+**Revision:** `5e7d78ef8`. The last code change is `30828b1c7` (7A.3's reject regeneration); everything after it
+is docs-only. Every test project with an in-scope or AC-26 configuration was run whole, net10.0, against local
+infrastructure, one project at a time. Two counts are reported per project:
+
+- **Project**: every test in the project.
+- **Generated**: tests whose class is declared under a `Generated/` folder. These are the conformance suites.
+
+That scope differs from the 3.1–3.4 run record above, whose "generated suite" counts were taken with narrower
+filters. So the comparison below is made by test name, not by count.
+
+| Group | Project | Infrastructure | Project P / F / S | Generated P / F / S, per configuration | FR-23 |
+|---|---|---|---|---|---|
+| AC-26 | Redis | `docker-compose-redis.yaml` | 71 / 0 / 4 | Redis 30 / 0 / 4 | 2 / 2 |
+| AC-26 | Kafka | `docker-compose-kafka.yaml` (RocketMQ stopped: :8081) | 198 / 4 / 0, then the 4 re-run: 4 / 0 / 0 | Classic 39 / 1 / 0 → 40 / 0 / 0 on re-run; Consumer 38 / 0 / 0; PartitionKey 40 / 0 / 0 | 6 / 6 |
+| AC-26 | MSSQL | `docker-compose-mssql.yaml` | 343 / 0 / 4 | MSSQL 34 / 0 / 4 (plus the outbox suites: Binary 31 / 0 / 0, Text 31 / 0 / 0) | 2 / 2 |
+| AC-26 | PostgresSQL | `docker-compose-postgres.yaml` | 261 / 0 / 0 | Postgres 38 / 0 / 0 (plus the outbox suites: Binary 31 / 0 / 0, Text 31 / 0 / 0) | 2 / 2 |
+| AC-26 | RMQ.Async | `docker-compose-rmq.yaml` | 145 / 9 / 6 | Classic 40 / 0 / 2; Quorum 40 / 0 / 2 | 4 / 4 |
+| AC-26 | RMQ.Sync | `docker-compose-rmq.yaml` | 81 / 9 / 3 | RMQ.Sync 40 / 0 / 2 | 2 / 2 |
+| in scope | AWS | Floci, `LiveAWS!=true` | 286 / 0 / 2 | SnsFifo 40 / 0 / 0; SnsStandard 40 / 0 / 0; SqsFifo 38 / 0 / 2; SqsStandard 40 / 0 / 0 | 8 / 8 |
+| in scope | AWS.V4 | Floci, `LiveAWS!=true`, after the AWS run | 286 / 0 / 2 | SnsFifo 40 / 0 / 0; SnsStandard 40 / 0 / 0; SqsFifo 38 / 0 / 2; SqsStandard 40 / 0 / 0 | 8 / 8 |
+| in scope | Gcp, CI filter | Pub/Sub emulator, from `down -v` | 155 / 50 / 30 | Pull 26 / 0 / 14; PullOrdering 26 / 0 / 14 | 4 / 4 |
+| in scope | Gcp, stream filter | Pub/Sub emulator, from `down -v` | 122 / 0 / 25 | Stream 30 / 0 / 10; StreamOrdering 30 / 0 / 10 | 4 / 4 |
+| in scope | RocketMQ | `docker-compose-rocketmq.yaml`, from `down -v` (100 / 100 topics) | 67 / 0 / 6 | RocketMQ 34 / 0 / 4 | 2 / 2 |
+
+FR-23 is counted as Reactor + Proactor over the project's configurations. The GCP filters are
+`Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Fragile!=CI` and
+`(Category=GcpPubSubStream|Category=GcpPubSubStreamOrdering)&Fragile!=CI`. Every skipped generated test is a
+`Deferred` cell emitted as Skip.
+
+**No conformance test failed, and no Pass or Fixed cell regressed.** Each failure, by name:
+
+- **Kafka, 4: a cold broker.** The suite started six seconds after `up -d`. Three tests failed on
+  `ChannelFailureException: Error finding topic …`: generated Classic Proactor
+  `When_sending_a_message_should_propagate_activity_context_async`, and the hand-written
+  `KafkaMessageConsumerFactoryDLQTests.When_creating_channel_with_dlq_subscription_should_pass_routing_keys` and
+  `ConsumerConfigHookTests.When_using_a_consumer_config_hook`. The fourth was hand-written
+  `KafkaMessageConsumerUpdateOffsetAsync.When_a_message_is_acknowledged_update_offset`, the arm that also failed in
+  3.x. Re-run on the warm broker, all four passed (4 / 0 / 0, 17 s). This time `schema-registry` was up, so the two
+  `KafkaMessageProducerHeaderBytesSendTests` arms passed.
+- **RMQ.Async 9, RMQ.Sync 9: no mTLS broker.** These are the hand-written `Acceptance/*mtls*` tests
+  (`RmqMutualTlsAcceptanceTests`, `RmqMutualTls[Quorum]Observability[Async]Tests`). All are tagged
+  `Requires=Docker-mTLS` and need an `amqps://localhost:5671` broker that `docker-compose-rmq.yaml` does not provide.
+  They fail on `BrokerUnreachableException` or `ChannelFailureException`, and CI excludes them
+  (`Requires!=Docker-mTLS`). None is generated.
+- **Gcp CI filter, 50: no real GCP.** These are the Firestore outbox (30 generated) and inbox tests, plus the GCS
+  luggage-store tests. That is the known baseline of 50, and no messaging test is among them.
+
+**Against the session baselines:**
+
+- AWS and AWS.V4: 286 / 0 / 2 each, as at 4.11 and `181abd588`.
+- GCP CI filter: 155 / 30 / 50, as before.
+- GCP stream filter: 122 / 25 / 0 against 121 / 25 / 0–1. The StreamOrdering two-message Nack flake did not fire.
+- RocketMQ: 67 / 0 / 6, as at `181abd588`. The FR-9 Proactor delay watch item
+  (`When_sending_a_delayed_message_should_deliver_after_delay_async`) passed.
+- Reject tests: all 264 results from 7A.3's runs (the ten projects above, compared by test name) have the same
+  outcome here. None is missing, and none changed from pass to fail or from skip to run. MQTT and AzureServiceBus
+  were not run (they are outside 8.7's scope).
+
+**C-7 (ADR 0077, "First delivery on an approximate counter"): none observed.** No first-delivery identity
+assertion failed in any run, on the exposed AWS, AWS.V4 and RocketMQ cells or anywhere else.
+
 ## Conformance Matrix
 
 | Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 | FR-23 |

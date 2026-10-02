@@ -167,6 +167,15 @@ The three document clauses pass; the full review is in the spec README's Status 
 - **Why GCP is not among the exposed cells.** 6.7 selected AC-19, and the R-13 branch rule below says the first-delivery residual risk "applies as on SQS". That holds for any GCP subscription with a native `DeadLetterPolicy`, which is the only kind where `DeliveryAttempt` is non-zero. It exposes no conformance cell, though. The GCP conformance providers set a native policy only when a `deadLetterRoutingKey` is given (`GcpPullMessageGatewayProvider.cs:142-157`, and the same shape in the other three providers). The templates that pass one (the five reject templates and `When_requeuing_a_message_too_many_times…`) never call `_messageAssertion.Assert`. Every other GCP template reads a `DeliveryAttempt` of `0`, so `Resolve` keeps the header count. The exposed-cell list above is therefore complete as written. 7.1 selected AC-24, so its RocketMQ clause is live.
 - **Line citations that have drifted with the implementation** (the decisions they support are unchanged): `Parser.cs:307` (`HandledCount` attribute) → `:323`; `Parser.cs:352` (`!headers.ContainsKey`) → `:368`; `Parser.ToBrighterMessage(GcpStreamMessage)` `:33` → `:34`; pull `ToBrighterMessage` `~:84` → `:93`; `ReadHandleCount` `:167` → `:183`; `RocketMqMessagePublisher.cs:103` (stamped `HandledCount`) → `:119`; the publisher bag loop `:54-59` → `:55-59`; `RocketMessageConsumer.cs:292`/`:422` (`ReadHandledCount` call/definition) → `:296`/`:433`; its bag copy `:328-331` → `:332-334`; `ReceiptHandle` `:333` → `:337`; `Resolve` (formerly "after the bag loop, `:328`") → `:344`. `rejectionReason` is still stamped at `RocketMessageConsumer.cs:256`/`:260`; on SQS it is now stamped at `SqsMessageConsumer.cs:508`/`:512`.
 
+##### C-7 observation (2026-10-02): task 8.7, final regression
+
+**None observed.** The final regression ran at `5e7d78ef8` (code as of `30828b1c7`). It ran every exposed cell's project whole, net10.0, both variants:
+
+- AWS and AWS.V4 on Floci: 286 / 0 / 2 each.
+- RocketMQ on a clean store: 67 / 0 / 6.
+
+No first-delivery identity assertion failed. No test anywhere failed with a first delivery presenting `HandledCount >= 1`. The only generated test that failed in any of the 8.7 runs was a Kafka activity-context test, on a cold broker (`Error finding topic`). It passed on re-run, and Kafka is not an approximate counter. One clean pass does not retire a residual risk that is flaky by nature, so it stays as recorded above. The run record is in the conformance ledger, under "Final run record — 2026-10-02 (spec 0037 task 8.7)".
+
 #### R-13 (GCP): the branch rule
 
 Mechanism: the broker counter above. Input: AC-39's measurement (the selector is this ADR's amended conclusion under the rule below), run on the emulator once 0078/R-20 make DLQ-backed channels creatable; this ADR is then amended with a dated *Measurement outcome* entry (AC-39(b)/(c)).
