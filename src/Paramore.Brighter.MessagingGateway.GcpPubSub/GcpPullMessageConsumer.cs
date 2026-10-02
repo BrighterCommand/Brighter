@@ -5,6 +5,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
@@ -18,8 +19,11 @@ public partial class GcpPullMessageConsumer(
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
     int batchSize,
     TimeProvider timeProvider)
-    : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
+    : IAmAMessageConsumerAsync, IAmAMessageConsumerSync, IHaveAMessagingSystem
 {
+    /// <inheritdoc />
+    public MessagingSystem MessagingSystem => MessagingSystem.PubSub;
+
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPullMessageConsumer>();
     
     /// <summary>

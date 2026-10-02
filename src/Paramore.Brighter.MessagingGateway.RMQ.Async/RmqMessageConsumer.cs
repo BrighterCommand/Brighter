@@ -34,6 +34,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
+using Paramore.Brighter.Observability;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client.Exceptions;
 
@@ -45,8 +46,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching, 
 /// result sending, and error handling.
 /// </summary>
-public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
 {
+    /// <inheritdoc />
+    public MessagingSystem MessagingSystem => MessagingSystem.RabbitMQ;
+
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
     private PullConsumer? _consumer;
