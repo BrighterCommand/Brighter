@@ -1089,7 +1089,7 @@
   - **Output:** a table of medians in a dated note in ADR 0077 (Implementation Approach → Testing). Any increase is a defect in the reader (`int?`, `TryGetValue`, `int.TryParse` on an existing string).
   - Depends on: Phases 4–7
 
-- [ ] **8.4 GATE: The V10 compatibility samples still compile against the final assemblies (AC-27, R-24)**
+- [x] **8.4 GATE: The V10 compatibility samples still compile against the final assemblies (AC-27, R-24)**
   - Build the solution. The five samples from 1.1 compile with no new errors or obsoletion warnings, with no `#pragma`, no new project and no new reference.
   - Confirm `Subscription.RequeueCount` still defaults to `-1`.
   - **Output:** the checklist item ticked with the build reference.
