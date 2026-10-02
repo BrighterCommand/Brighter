@@ -234,6 +234,21 @@ cell remains `Unknown`.
     assertion compares the source topic via the preserved `originalTopic` bag entry for dead-lettered
     messages. **Reference-env fix**: `docker-compose-rocketmq.yaml` broker/proxy heap raised
     (`-Xmx128m`/`-Xmx64m` → `2g`/`1g`) so the broker sustains the suite instead of degrading under load.
+  - ⭐ **Run record (2026-10-02, spec 0037 task 7.30, AC-38, R-22, R-23): the nine `Fixed` cells still pass on
+    the AC-24 branch.** The store was reset (`docker-compose -f docker-compose-rocketmq.yaml down -v; up -d`, all
+    100 compose topics created), then the whole RocketMQ test project ran at `52523c32f`'s code (net10.0): **67
+    passed / 0 failed / 6 skipped**. Every generated test for the nine cells passed in both variants: FR-4
+    (`delivery_error_should_send_to_dlq`), FR-5 (`unacceptable_reason_should_send_to_invalid_channel`), FR-6
+    (`unacceptable_and_no_invalid_channel_should_fallback_to_dlq`), FR-7 (`no_channels_configured`), FR-8
+    (`should_include_metadata`), FR-9 (`sending_a_delayed_message`), FR-16 (`nacking_a_message_it_should_be_redelivered`
+    and `nacking_first_of_two_messages`), FR-17 (`unknown_reason_should_send_to_dlq`) and FR-22
+    (`requeuing_a_failed_message_should_be_redelivered`). FR-16 and FR-22 still pass with 7.10's broker-count
+    `Resolve` in the consumer: the redelivery comes from the invisibility lease. The 6 skips are FR-2 and FR-15
+    (`Deferred -> #4240`), both variants, plus the two Skip-marked facts in 7.1's measurement fixture. FR-23 (`Fixed (#4353)`, 7.13)
+    passed in the same run. **A watch item:** the FR-9 Proactor test
+    (`When_sending_a_delayed_message_should_deliver_after_delay_async`) passed here but has failed twice on a
+    clean store this month (in 7.11's run on 2026-10-01, and earlier on `6b19023fa`): the message was received
+    inside the test's 2 s "before delay" window. Not investigated.
 - `MQTT / MqttMessagingGateway` — **10 `Fixed (#4240)` + FR-16 `Deferred -> #4240`**, both variants,
   on a live Mosquitto broker. **Evidence run with every cell un-skipped** (the state that earned the FR-16
   deferral): Reactor **14 pass / 2 fail (FR-16)** + Proactor **16 pass / 2 fail (FR-16)** for the generated
