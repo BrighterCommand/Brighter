@@ -396,6 +396,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         var lockToken = token.ToString();
         if (string.IsNullOrEmpty(lockToken) || receiver.IsLockValid(lockToken)) return true;
 
+        Log.SkippingMessageWithInvalidLock(Logger, message.Id.Value, Topic, Subscription.ChannelName.Value);
         await receiver.ForgetAsync(lockToken).ConfigureAwait(false);
         await CloseSessionIfIdleAsync().ConfigureAwait(false);
         return false;
@@ -424,6 +425,9 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
     private static partial class Log
     {
+        [LoggerMessage(LogLevel.Warning, "Skipping Service Bus message with id {Id} from {Topic} via {ChannelName} because its lock has expired or been lost; the message will not be dispatched")]
+        public static partial void SkippingMessageWithInvalidLock(ILogger logger, string id, string topic, string channelName);
+
         [LoggerMessage(LogLevel.Debug, "Acknowledging Message with Id {Id} Lock Token : {LockToken}")]
         public static partial void AcknowledgingMessage(ILogger logger, string id, string lockToken);
 

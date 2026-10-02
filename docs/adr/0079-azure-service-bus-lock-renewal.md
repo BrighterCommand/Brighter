@@ -118,6 +118,13 @@ Paramore.Brighter
 The budget starts at batch reception and includes waiting in the buffer.
 Messages in a session batch share one budget.
 The budget ending does not revoke a lock already granted by the broker.
+When the budget elapses while a delivery is still pending, log a warning with the message or session
+identifier, entity path, configured duration, and last known lock deadline. If the next renewal would
+fall outside the budget, wait cancellably until that budget elapses before warning. Normal settlement,
+disposal, and disabled renewal do not produce budget warnings. The warning does not imply that the
+last successfully acquired lock has already expired.
+Skipping a message whose lock has expired or been lost also logs a warning with its message id,
+topic, and channel so an otherwise silent delivery loss can be investigated.
 
 #### Where each type is touched
 

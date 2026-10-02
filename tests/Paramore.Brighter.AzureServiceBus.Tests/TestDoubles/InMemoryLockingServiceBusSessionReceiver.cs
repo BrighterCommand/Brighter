@@ -35,6 +35,9 @@ public class InMemoryLockingServiceBusSessionReceiver(InMemoryLockingServiceBusR
     private long _lockedUntilTicks = (DateTimeOffset.UtcNow + lockDuration).UtcTicks;
     private int _renewals;
 
+    public override string SessionId { get; } = Guid.NewGuid().ToString();
+    public override string EntityPath => receiver.EntityPath;
+
     public int RenewalCount => Volatile.Read(ref _renewals);
     public override DateTimeOffset SessionLockedUntil => new(Interlocked.Read(ref _lockedUntilTicks), TimeSpan.Zero);
     public override bool IsClosed => receiver.IsClosed;

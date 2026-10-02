@@ -41,6 +41,8 @@ public class InMemoryLockingServiceBusReceiver(int messageCount, TimeSpan lockDu
     private int _abandoned;
     private int _deadLettered;
 
+    public override string EntityPath { get; } = Guid.NewGuid().ToString();
+
     public string? ContentType { get; set; }
     public Exception? ReceiveException { get; set; }
     public bool BlockRenewal { get; set; }

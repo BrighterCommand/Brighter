@@ -133,6 +133,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             if (_messageReceiver is ServiceBusSessionReceiver session)
             {
                 _sessionLock ??= new ServiceBusLock(session.SessionLockedUntil, _maxAutoLockRenewalDuration,
+                    session.EntityPath, "session", session.SessionId,
                     async cancellationToken =>
                     {
                         await session.RenewSessionLockAsync(cancellationToken).ConfigureAwait(false);
@@ -143,6 +144,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             else
             {
                 _locks[message.LockToken] = new ServiceBusLock(message.LockedUntil, _maxAutoLockRenewalDuration,
+                    _messageReceiver.EntityPath, "message", message.MessageId,
                     async cancellationToken =>
                     {
                         await _messageReceiver.RenewMessageLockAsync(message, cancellationToken).ConfigureAwait(false);

@@ -37,15 +37,21 @@ internal sealed class ServiceBusLock
     private readonly CancellationTokenSource _stop = new();
     private readonly object _gate = new();
     private readonly Task _renewal;
+    private readonly string _entityPath;
+    private readonly string _lockType;
+    private readonly string _lockId;
     private readonly Stopwatch _elapsed = Stopwatch.StartNew();
     private long _lockedUntilTicks;
     private int _lost;
     private Task? _stopping;
 
     public ServiceBusLock(DateTimeOffset lockedUntil, TimeSpan maxDuration,
-        Func<CancellationToken, Task<DateTimeOffset>> renew)
+        string entityPath, string lockType, string lockId, Func<CancellationToken, Task<DateTimeOffset>> renew)
     {
         _lockedUntilTicks = lockedUntil.UtcTicks;
+        _entityPath = entityPath;
+        _lockType = lockType;
+        _lockId = lockId;
         _renewal = maxDuration == TimeSpan.Zero || lockedUntil == default
             ? Task.CompletedTask
             : Task.Run(() => RenewAsync(maxDuration, renew));
@@ -74,16 +80,30 @@ internal sealed class ServiceBusLock
             while (!_stop.IsCancellationRequested && IsValid)
             {
                 var budget = maxDuration - _elapsed.Elapsed;
-                if (budget <= TimeSpan.Zero) return;
+                if (budget <= TimeSpan.Zero)
+                {
+                    LogRenewalBudgetReached(maxDuration);
+                    return;
+                }
 
                 var remainingLock = new DateTimeOffset(Interlocked.Read(ref _lockedUntilTicks), TimeSpan.Zero) - DateTimeOffset.UtcNow;
                 var buffer = Math.Min(remainingLock.TotalMilliseconds / 2, 10000);
                 var delay = TimeSpan.FromMilliseconds(Math.Max(1, remainingLock.TotalMilliseconds - buffer));
-                if (delay >= budget) return;
+                if (delay >= budget)
+                {
+                    await Task.Delay(budget, _stop.Token).ConfigureAwait(false);
+                    LogRenewalBudgetReached(maxDuration);
+                    return;
+                }
                 await Task.Delay(delay, _stop.Token).ConfigureAwait(false);
 
                 budget = maxDuration - _elapsed.Elapsed;
-                if (budget <= TimeSpan.Zero || !IsValid) return;
+                if (budget <= TimeSpan.Zero)
+                {
+                    LogRenewalBudgetReached(maxDuration);
+                    return;
+                }
+                if (!IsValid) return;
 
                 using var attempt = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token);
                 attempt.CancelAfter(TimeSpan.FromMilliseconds(Math.Min(budget.TotalMilliseconds, int.MaxValue)));
@@ -94,6 +114,7 @@ internal sealed class ServiceBusLock
                 }
                 catch (OperationCanceledException) when (attempt.IsCancellationRequested)
                 {
+                    LogRenewalBudgetReached(maxDuration);
                     return;
                 }
                 catch (ServiceBusException exception) when (exception.IsTransient)
@@ -105,11 +126,22 @@ internal sealed class ServiceBusLock
         }
         catch (OperationCanceledException) when (_stop.IsCancellationRequested || _elapsed.Elapsed >= maxDuration)
         {
+            LogRenewalBudgetReached(maxDuration);
         }
         catch (Exception exception)
         {
             Interlocked.Exchange(ref _lost, 1);
             s_logger.LogWarning(exception, "Service Bus lock renewal stopped after a failure");
         }
+    }
+
+    private void LogRenewalBudgetReached(TimeSpan maxDuration)
+    {
+        if (_stop.IsCancellationRequested) return;
+
+        s_logger.LogWarning(
+            "Stopped automatic Service Bus {LockType} lock renewal for {LockId} on {EntityPath}: MaxAutoLockRenewalDuration {MaxAutoLockRenewalDuration} has been reached. Last known lock expiry is {LockedUntil}; processing is not cancelled",
+            _lockType, _lockId, _entityPath, maxDuration,
+            new DateTimeOffset(Interlocked.Read(ref _lockedUntilTicks), TimeSpan.Zero));
     }
 }
