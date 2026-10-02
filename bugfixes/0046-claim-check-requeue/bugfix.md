@@ -93,7 +93,7 @@ Preparation validation: Core and AzureServiceBus test projects compiled for net1
 - `MessageDelivery` and an internal association on `RequestContext` hold cleanup for one received delivery. Successful dispatch plus final acknowledgement triggers cleanup; disposal discards pending cleanup on all other paths. Request-context copying does not copy delivery ownership.
 - Both unwrap pipelines use an independent envelope during pump delivery. Internal copies retain all header fields, bag comparer, baggage, content type and persistence. The existing public `MessageHeader.Copy()` contract remains unchanged.
 - ClaimCheckTransformer registers non-retained luggage cleanup during pump delivery. Standalone unwrap still deletes immediately; asynchronous deletion uses the asynchronous storage API.
-- Reactor and Proactor retain the unwrap pipeline through dispatch, settlement and cleanup. Their outer finally releases the pipeline on every exit and logs release failures without reclassifying delivery.
+- Reactor and Proactor retain the unwrap pipeline through dispatch, settlement and cleanup only when cleanup is pending; otherwise they release it before the handler starts. Their outer finally releases the pipeline on every exit and logs release failures without reclassifying delivery.
 - AzureServiceBusConsumer logs and rethrows acknowledgement failures, including aggregate-wrapped ServiceBusException, so unsuccessful settlement cannot trigger cleanup.
 - RetrieveClaimAttribute documents the deletion boundary. [ADR 0079](../../docs/adr/0079-claim-check-cleanup-after-acknowledgement.md) records the cross-assembly lifecycle contract, compatibility and failure windows.
 
@@ -116,8 +116,26 @@ Local evidence: TRX files under `/tmp/brighter-4480-results/`; logs `/tmp/bright
 
 - Broker acknowledgement and storage deletion are not atomic. A crash or cleanup failure after acknowledgement may leave orphan luggage; cleanup failures are logged. Storage expiry or operator cleanup remains necessary.
 - Other transports must also propagate acknowledgement failures to provide the same cleanup guarantee. The demonstrated Service Bus suppression is corrected here.
-- Mapper and transform scopes now remain alive through handler dispatch and settlement. Standalone pipeline lifetimes remain controlled by their callers.
+- Mapper and transform scopes with pending claim-check cleanup remain alive through handler dispatch and settlement. Pipelines without pending cleanup retain their original boundary before handler dispatch. Standalone pipeline lifetimes remain controlled by their callers.
 
 ### Upstream integration before publication
 
 The branch was rebased onto upstream master `44994d4a1`, including the merged fix for #4481. The failed-requeue case now expects the pump to nack and continue; its original-envelope and luggage-preservation assertions remain intact. After integration, the full Core suite passed with 1,538 passed and seven skipped per framework. Service Bus remained at 393 passed, six skipped and 38 missing-configuration failures per framework. All 40 new cases and all eight upstream requeue-failure cases pass. Updated evidence is in `/tmp/brighter-4480-core-rebased.log`, `/tmp/brighter-4480-asb-rebased.log` and the matching TRX files.
+
+### CI scope-lifetime regression
+
+PR #4497's first CI build failed the existing `TransformScopeEndsBeforeHandlerPipelineBeginsTests` in Extensions.Tests on both frameworks. Keeping every unwrap pipeline alive through dispatch broke the ordinary transform-scope boundary. The existing test also failed locally on net10.0 with `Assert.True` at handler entry before the correction; no test assertions were changed.
+
+`MessageDelivery.HasPendingCleanup` now lets both pumps retain the unwrap pipeline only when deferred claim-check deletion needs its scoped dependencies. Otherwise, the pipeline is released before dispatch and its reference cleared so final cleanup cannot release it twice. Non-retained claim cleanup still runs after successful acknowledgement; retained claims need no extended scope.
+
+Release validation after the correction:
+
+| Suite | net9.0 | net10.0 |
+| --- | --- | --- |
+| Core, including all 32 claim-check cases | 1,538 passed, 7 skipped | 1,538 passed, 7 skipped |
+| Extensions, including the existing scope-lifetime regression | 645 passed | 642 passed |
+| Transforms.Adaptors | 33 passed | 33 passed |
+
+All three suites have zero failures. ServiceActivator and core build for netstandard2.0, net8.0, net9.0 and net10.0 with zero warnings or errors. The existing Service Bus verification limits above still apply.
+
+Local evidence: `/tmp/brighter-4497-scope-red-isolated.log`, `/tmp/brighter-4497-extensions-green.log`, `/tmp/brighter-4497-core-green.log`, `/tmp/brighter-4497-transforms-green.log`, and `/tmp/brighter-4497-serviceactivator-build.log`.

@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Avtandil Ushikishvili"
 created: 2026-10-02
-summary: "Message pumps unwrap a separate envelope and defer non-retained claim-check deletion until successful dispatch and final acknowledgement. The unwrap pipeline stays alive through cleanup so scoped storage dependencies remain usable."
+summary: "Message pumps unwrap a separate envelope and defer non-retained claim-check deletion until successful dispatch and final acknowledgement. Unwrap pipelines with pending cleanup stay alive so scoped storage dependencies remain usable; other pipelines are released before dispatch."
 tags:
   - "claim-check"
   - "message-pump"
@@ -36,7 +36,7 @@ In scope:
 
 - Preserve the received envelope while mapping in Reactor and Proactor.
 - Defer non-retained luggage deletion until successful dispatch and final acknowledgement.
-- Keep the unwrap pipeline and its scoped dependencies alive through cleanup.
+- Keep the unwrap pipeline and its scoped dependencies alive when claim-check cleanup is pending; otherwise release it before dispatch.
 - Propagate Azure Service Bus acknowledgement failures so the pump can preserve luggage.
 
 Out of scope:
@@ -69,7 +69,7 @@ With retention enabled, luggage survives every outcome. Standalone unwrapping co
 
 **A pump preserves its received envelope and deletes non-retained luggage only after successful dispatch and final acknowledgement.**
 
-A delivery object associates cleanup with the request context. The unwrap pipeline uses a separate message envelope, and the pump retains that pipeline until delivery ends.
+A delivery object associates cleanup with the request context. The unwrap pipeline uses a separate message envelope, and the pump retains that pipeline until delivery ends only if claim-check cleanup is pending. Pipelines without pending cleanup, including retained claims, are released before the handler begins, preserving the ordinary transform-scope contract.
 
 ### The mechanism, end to end
 
@@ -80,6 +80,7 @@ sequenceDiagram
     participant Store
     participant Handler
     participant Broker
+    Note over Pump,Unwrap: Delivery with non-retained claim-check luggage
     Pump->>Unwrap: Map a copy within a delivery
     Unwrap->>Store: Retrieve luggage
     Store-->>Unwrap: Payload
@@ -141,10 +142,11 @@ flowchart LR
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
 | Constructor | RequestContext | Active delivery | Rejects null or an already active delivery |
+| HasPendingCleanup | Unwrapping complete | Whether the pipeline must remain alive for cleanup | None |
 | Complete / CompleteAsync | Confirmed successful dispatch and final acknowledgement | Attempts pending deletions once | Logs storage failures; does not retry an acknowledged message |
 | Dispose | Any delivery outcome | Removes association and discards pending cleanup | Does not delete luggage |
 
-MessageDelivery is public because ServiceActivator and core transforms coordinate across an assembly boundary. Cleanup registration and the context association remain internal. Tests exercise pumps rather than exposing implementation helpers.
+MessageDelivery is public because ServiceActivator and core transforms coordinate across an assembly boundary. The public HasPendingCleanup property lets the pumps preserve the usual scope boundary when no cleanup needs the scope. Cleanup registration and the context association remain internal. Tests exercise pumps rather than exposing implementation helpers.
 
 #### Where each type is touched
 
@@ -154,7 +156,7 @@ MessageDelivery is public because ServiceActivator and core transforms coordinat
 | Core | Message, MessageHeader | Internal copies preserve metadata, header comparer and persistence |
 | Core | Unwrap pipelines | Copy only when a delivery is active |
 | Core | ClaimCheckTransformer | Register cleanup during delivery; use asynchronous deletion on the async path |
-| ServiceActivator | Reactor, Proactor | Retain pipeline until settlement and cleanup finish |
+| ServiceActivator | Reactor, Proactor | Retain pipelines with pending cleanup until settlement; release others before dispatch |
 | Azure Service Bus | AzureServiceBusConsumer | Rethrow logged acknowledgement failures |
 
 The public MessageHeader.Copy behavior, storage interfaces, retention default and standalone unwrap semantics remain unchanged.
@@ -172,7 +174,7 @@ An internal copy retains every header field and creates independent bag, content
 ### Implementation Approach
 
 1. Add public-pump regression tests and Service Bus acknowledgement tests. Prove metadata and retention guards with temporary production mutations.
-2. Add the delivery association, envelope copies and deferred cleanup in core. Extend pipeline lifetime through settlement in both pumps.
+2. Add the delivery association, envelope copies and deferred cleanup in core. Extend pipeline lifetime through settlement in both pumps only when cleanup is pending.
 3. Propagate Service Bus acknowledgement exceptions, including aggregate-wrapped failures.
 4. Run targeted tests and full affected suites. Record results and infrastructure limits in the bugfix record.
 
@@ -186,7 +188,7 @@ An internal copy retains every header field and creates independent bag, content
 
 ### Negative
 
-- Mapper and transform scopes remain alive during handler dispatch and settlement.
+- Mapper and transform scopes with pending claim-check cleanup remain alive during handler dispatch and settlement. Other scopes still end before dispatch.
 - Envelope copying adds allocations per pump delivery.
 - Service Bus acknowledgement failures now propagate to callers that previously observed a normal return.
 
