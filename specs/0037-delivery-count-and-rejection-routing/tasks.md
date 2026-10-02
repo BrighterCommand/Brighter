@@ -1081,7 +1081,7 @@
   - **Output:** ADR 0077's "AC-28 broker-call enumeration" table confirmed or corrected by a dated note, with diff references. Any added call is a defect.
   - Depends on: Phases 4–7
 
-- [ ] **8.3 MEASURE: No new per-message allocation on the receive path (AC-37, NFR-2)**
+- [x] **8.3 MEASURE: No new per-message allocation on the receive path (AC-37, NFR-2)**
   - For each in-scope transport (AWSSQS, AWSSQS.V4, GcpPubSub pull and stream, RocketMQ):
     - Measure `GC.GetAllocatedBytesForCurrentThread()` around 1,000 receives
     - Take the median of 5 runs on the base revision (a separate worktree of the merge base) and on this branch
