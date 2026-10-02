@@ -94,7 +94,8 @@ namespace Paramore.Brighter.ServiceActivator
         /// <exception cref="Exception"></exception>
         public void Run()
         {
-            var pumpSpan = Tracer?.CreateMessagePumpSpan(MessagePumpSpanOperation.Begin, Channel.RoutingKey, MessagingSystem.InternalBus, InstrumentationOptions);
+            var messagingSystem = (Channel as IHaveAMessagingSystem)?.MessagingSystem ?? MessagingSystem.InternalBus;
+            var pumpSpan = Tracer?.CreateMessagePumpSpan(MessagePumpSpanOperation.Begin, Channel.RoutingKey, messagingSystem, InstrumentationOptions);
             try
             {
                 Status = MessagePumpStatus.MP_STARTED;
@@ -118,7 +119,7 @@ namespace Paramore.Brighter.ServiceActivator
                     {
                         try
                         {
-                            receiveSpan = Tracer?.CreateReceiveSpan(Channel.RoutingKey, MessagingSystem.InternalBus, InstrumentationOptions);
+                            receiveSpan = Tracer?.CreateReceiveSpan(Channel.RoutingKey, messagingSystem, InstrumentationOptions);
                             message = Channel.Receive(TimeOut);
                             headerJson = Tracer?.EnrichReceiveSpan(receiveSpan, message, InstrumentationOptions);
                             // only propagate consumer context when we have a receive span: baggage propagation was
@@ -196,7 +197,7 @@ namespace Paramore.Brighter.ServiceActivator
                         Tracer?.EndSpan(receiveSpan);
                     }
 
-                    Activity? processSpan = Tracer?.CreateSpan(MessagePumpSpanOperation.Process, message, MessagingSystem.InternalBus, InstrumentationOptions, headerJson);
+                    Activity? processSpan = Tracer?.CreateSpan(MessagePumpSpanOperation.Process, message, messagingSystem, InstrumentationOptions, headerJson);
                     try
                     {
                         RequestContext context = InitRequestContext(processSpan, message);
@@ -514,7 +515,31 @@ namespace Paramore.Brighter.ServiceActivator
 
             Log.RequeueingMessage(s_logger, message.Id.Value, Thread.CurrentThread.ManagedThreadId, Channel.Name, Channel.RoutingKey.Value);
 
-            return Channel.Requeue(message, delay ?? RequeueDelay);
+            try
+            {
+                return Channel.Requeue(message, delay ?? RequeueDelay);
+            }
+            catch (Exception exception)
+            {
+                Log.FailedToRequeueMessage(s_logger, exception, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                NackAfterRequeueFailure(message);
+                // Skip acknowledgment: the broker may still hold the original delivery.
+                return true;
+            }
+        }
+
+        private void NackAfterRequeueFailure(Message message)
+        {
+            try
+            {
+                Channel.Nack(message);
+            }
+            catch (Exception exception)
+            {
+                Log.FailedToNackAfterRequeue(s_logger, exception, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+            }
+
+            Thread.Sleep(DontAckDelay);
         }
         
         private IRequest TranslateMessage(Message message, RequestContext requestContext)
@@ -658,6 +683,12 @@ namespace Paramore.Brighter.ServiceActivator
             
             [LoggerMessage(LogLevel.Debug, "MessagePump: Re-queueing message {Id} from {ManagementThreadId} on thread # {ChannelName} with {RoutingKey}")]
             internal static partial void RequeueingMessage(ILogger logger, string id, int managementThreadId, string? channelName, string routingKey);
+
+            [LoggerMessage(LogLevel.Error, "MessagePump: Failed to requeue message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}; requesting redelivery")]
+            internal static partial void FailedToRequeueMessage(ILogger logger, Exception exception, string id, string? channelName, string routingKey, int managementThreadId);
+
+            [LoggerMessage(LogLevel.Error, "MessagePump: Failed to negatively acknowledge message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId} after requeue failure; leaving it unacknowledged")]
+            internal static partial void FailedToNackAfterRequeue(ILogger logger, Exception exception, string id, string? channelName, string routingKey, int managementThreadId);
             
             [LoggerMessage(LogLevel.Debug, "MessagePump: Translate message {Id} on thread # {ManagementThreadId}")]
             internal static partial void TranslateMessage(ILogger logger, string id, int managementThreadId);

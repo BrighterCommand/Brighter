@@ -132,7 +132,8 @@ namespace Paramore.Brighter.ServiceActivator
 
         private async Task EventLoop()
         {
-            var pumpSpan = Tracer?.CreateMessagePumpSpan(MessagePumpSpanOperation.Begin, Channel.RoutingKey, MessagingSystem.InternalBus, InstrumentationOptions);
+            var messagingSystem = (Channel as IHaveAMessagingSystem)?.MessagingSystem ?? MessagingSystem.InternalBus;
+            var pumpSpan = Tracer?.CreateMessagePumpSpan(MessagePumpSpanOperation.Begin, Channel.RoutingKey, messagingSystem, InstrumentationOptions);
             try
             {
 
@@ -156,7 +157,7 @@ namespace Paramore.Brighter.ServiceActivator
                     {
                         try
                         {
-                            receiveSpan = Tracer?.CreateReceiveSpan(Channel.RoutingKey, MessagingSystem.InternalBus, InstrumentationOptions);
+                            receiveSpan = Tracer?.CreateReceiveSpan(Channel.RoutingKey, messagingSystem, InstrumentationOptions);
                             message = await Channel.ReceiveAsync(TimeOut);
                             headerJson = Tracer?.EnrichReceiveSpan(receiveSpan, message, InstrumentationOptions);
                             // only propagate consumer context when we have a receive span: baggage propagation was
@@ -234,7 +235,7 @@ namespace Paramore.Brighter.ServiceActivator
                         Tracer?.EndSpan(receiveSpan);
                     }
 
-                    Activity? processSpan = Tracer?.CreateSpan(MessagePumpSpanOperation.Process, message, MessagingSystem.InternalBus, InstrumentationOptions, headerJson);
+                    Activity? processSpan = Tracer?.CreateSpan(MessagePumpSpanOperation.Process, message, messagingSystem, InstrumentationOptions, headerJson);
                     try
                     {
                         RequestContext context = InitRequestContext(processSpan, message);
@@ -498,7 +499,7 @@ namespace Paramore.Brighter.ServiceActivator
             return Channel.RejectAsync(message, reason);
         }
 
-        private Task<bool> RequeueMessage(Message message, TimeSpan? delay = null)
+        private async Task<bool> RequeueMessage(Message message, TimeSpan? delay = null)
         {
             message.Header.UpdateHandledCount();
 
@@ -514,7 +515,7 @@ namespace Paramore.Brighter.ServiceActivator
                             : $" (original message id {originalMessageId})", Channel.Name, Channel.RoutingKey.Value, Thread.CurrentThread.ManagedThreadId);
 
                     IncrementUnacceptableMessageCount();
-                    return RejectMessage(message, new MessageRejectionReason(
+                    return await RejectMessage(message, new MessageRejectionReason(
                         RejectionReason.DeliveryError,
                         $"Handle Count Exceeded for message {messageId}")
                     );
@@ -523,7 +524,31 @@ namespace Paramore.Brighter.ServiceActivator
 
             Log.ReQueueingMessage(s_logger, message.Id.Value, Thread.CurrentThread.ManagedThreadId, Channel.Name, Channel.RoutingKey.Value);
 
-            return Channel.RequeueAsync(message, delay ?? RequeueDelay);
+            try
+            {
+                return await Channel.RequeueAsync(message, delay ?? RequeueDelay);
+            }
+            catch (Exception exception)
+            {
+                Log.FailedToRequeueMessage(s_logger, exception, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                await NackAfterRequeueFailureAsync(message);
+                // Skip acknowledgment: the broker may still hold the original delivery.
+                return true;
+            }
+        }
+
+        private async Task NackAfterRequeueFailureAsync(Message message)
+        {
+            try
+            {
+                await Channel.NackAsync(message);
+            }
+            catch (Exception exception)
+            {
+                Log.FailedToNackAfterRequeue(s_logger, exception, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+            }
+
+            await Task.Delay(DontAckDelay);
         }
         
         private async Task<IRequest> TranslateMessage(Message message, RequestContext requestContext, CancellationToken cancellationToken = default)
@@ -672,6 +697,12 @@ namespace Paramore.Brighter.ServiceActivator
             
             [LoggerMessage(LogLevel.Debug, "MessagePump: Re-queueing message {Id} from {ManagementThreadId} on thread # {ChannelName} with {RoutingKey}")]
             public static partial void ReQueueingMessage(ILogger logger, string id, int managementThreadId, ChannelName channelName, string routingKey);
+
+            [LoggerMessage(LogLevel.Error, "MessagePump: Failed to requeue message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}; requesting redelivery")]
+            public static partial void FailedToRequeueMessage(ILogger logger, Exception exception, string id, string? channelName, string routingKey, int managementThreadId);
+
+            [LoggerMessage(LogLevel.Error, "MessagePump: Failed to negatively acknowledge message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId} after requeue failure; leaving it unacknowledged")]
+            public static partial void FailedToNackAfterRequeue(ILogger logger, Exception exception, string id, string? channelName, string routingKey, int managementThreadId);
             
             [LoggerMessage(LogLevel.Warning, "MessagePump: Not acknowledging message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void NotAcknowledgingMessage(ILogger logger, string id, string? channelName, string routingKey, int managementThreadId);

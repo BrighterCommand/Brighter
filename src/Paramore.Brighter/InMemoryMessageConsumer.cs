@@ -26,6 +26,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter;
 
@@ -36,8 +37,11 @@ namespace Paramore.Brighter;
 /// within the timeout. This is controlled by a background thread that checks the messages in the locked list
 /// and re-queues them if they have been locked for longer than the timeout.
 /// </summary>
-public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
 {
+    /// <inheritdoc />
+    public MessagingSystem MessagingSystem => MessagingSystem.InternalBus;
+
     private readonly ConcurrentDictionary<string, LockedMessage> _lockedMessages = new();
     private readonly RoutingKey _topic;
     private readonly RoutingKey? _deadLetterTopic;
