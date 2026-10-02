@@ -75,6 +75,7 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         }
 
         Assert.NotEqual(MessageType.MT_NONE, invalidMessage.Header.MessageType);
+        Assert.Equal(message.Body.Value, invalidMessage.Body.Value);
 
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
         Assert.True(invalidMessage.Header.Bag.ContainsKey(keys.OriginalTopic));

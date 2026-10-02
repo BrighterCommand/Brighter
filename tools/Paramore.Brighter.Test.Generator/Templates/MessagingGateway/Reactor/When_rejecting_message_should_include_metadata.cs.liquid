@@ -76,6 +76,7 @@ public class WhenRejectingMessageShouldIncludeMetadata : IDisposable
         }
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
 
         // The message must reach the DLQ (routing, asserted above). The rejection-metadata fields are
         // asserted only when the provider's gateway stamps Brighter metadata; a native-dead-letter
