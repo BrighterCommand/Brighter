@@ -991,7 +991,7 @@
     - A red points at 7.3's publisher change or 7.10's `Resolve` call.
   - Depends on: 7.3, 7.10
 
-- [ ] **7.13 GATE: RocketMQ FR-23 passes in both variants from a clean store; move the cell to `Fixed (#4353)` (AC-24, AC-3 on RocketMQ, AC-30 row 4)**
+- [x] **7.13 GATE: RocketMQ FR-23 passes in both variants from a clean store; move the cell to `Fixed (#4353)` (AC-24, AC-3 on RocketMQ, AC-30 row 4)**
   - From `down -v`, set the cell to `Fixed (#4353)`, regenerate, and run FR-23 in both variants.
   - The message reaches the DLQ in 60 s carrying `rejectionReason == "DeliveryError"`, with dispatch count `<= 3`.
   - **Output:** the cell reads `Fixed (#4353)` with evidence. Mark 7.20–7.21 `[!] not taken — AC-23 selected AC-24`.
