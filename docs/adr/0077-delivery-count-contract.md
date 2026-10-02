@@ -346,6 +346,28 @@ Structural and behavioural commits kept apart (Tidy First, C-10):
 
 Bespoke tests (constructed subscriptions, not provider-supplied): AC-1, AC-5, AC-6, AC-35, AC-8, AC-9, AC-41, AC-42. AC-37: allocated-bytes, median of 5 × 1,000 receives, `post <= base`; the new reads are value-typed (`int?`, `TryGetValue` on existing dictionaries, `int.TryParse` on an existing string, one ordinal string comparison). AC-27: compile-only samples in the five projects R-24 names.
 
+##### Measurement (2026-10-02): task 8.3, AC-37 / NFR-2 allocation on the receive path
+
+**Method.** A console harness, kept in the session scratchpad and not in the repo, was compiled twice from identical source: once against the merge base `f906efc0b` (a separate worktree) and once against this branch at `904655ae1`. The build was net10.0 Release with workstation GC. Every message was a fixed-shape `MT_COMMAND`: a 256-byte body and one bag entry. Two measurements were taken for each transport:
+
+- **End-to-end.** Brighter's own consumer (`…ConsumerFactory.Create`, `bufferSize: 1`, so every measured call returns exactly one message), with `GC.GetAllocatedBytesForCurrentThread()` around each `Receive`. The ack is outside the window, and calls that returned nothing are not counted. Each run was a 100-message warm-up and then 5 rounds of 1,000 receives, reporting the median round. Two passes, run base, post, base, post.
+- **Reader only.** 1,000 raw broker messages were captured once from a real receive with the native SDK (SQS `ReceiveMessage` with all attributes; Pub/Sub `Pull`; RocketMQ `SimpleConsumer.Receive`). The transport's reader was then run over them, bound by reflection to a delegate: `SqsMessageCreator`/`SqsInlineMessageCreator.CreateMessage`, `Parser.ToBrighterMessage` (pull, and stream via `GcpStreamMessage` with the `googclient_deliveryattempt` attribute `SubscriberClient` adds), and `RocketMessageConsumer.CreateMessage`. This was one warm-up pass then 5 measured rounds, reporting the median. This is exactly the code this branch changed, with no network in the window.
+- **Environment.** Floci for AWS; the Pub/Sub emulator with subscriptions created by raw admin clients carrying a native `DeadLetterPolicy` (so `delivery_attempt` is populated on both sides); a clean RocketMQ 5.5.0 store with a fresh topic per run. Every first delivery presented `HandledCount = 0` on both sides.
+
+| Transport (reader) | Reader only, bytes per 1,000 (base → post) | End-to-end median Δ post − base, pass 1 / pass 2 | End-to-end spread between rounds of one run |
+|---|---|---|---|
+| AWSSQS (`SqsMessageCreator`) | 5,168,600 → **5,168,600** | +3,928 / +2,248 (of ~68.16 MB) | ~14–18 KB |
+| AWSSQS (`SqsInlineMessageCreator`, SNS non-raw) | 15,457,200 → **15,457,200** | not run end-to-end | — |
+| AWSSQS.V4 (`SqsMessageCreator`) | 5,168,600 → **5,168,600** | +864 / −640 (of ~48.53 MB) | up to ~99 KB |
+| AWSSQS.V4 (`SqsInlineMessageCreator`, SNS non-raw) | 15,457,800 → **15,457,800** | not run end-to-end | — |
+| GcpPubSub pull (`Parser`) | 2,104,000 → **2,104,000** | −648 / +328 (of ~9.44 MB) | ~34 KB |
+| GcpPubSub stream (`Parser`) | 2,104,000 → **2,104,000** | +1,544 / −3,440 (of ~5.65 MB) | ~40–70 KB |
+| RocketMQ (`CreateMessage`) | 2,248,000 → **2,248,000** | +390,608 / +195,680 (of ~35 MB) | ~1.35 MB, rising with run order |
+
+- **Reader only: `post = base` on every transport and both SQS creators.** Each round was identical apart from a single 600-byte step that appears on both sides. The new reads (`TryGetValue` on the existing attribute dictionaries, `int.TryParse` on an existing string, the `int?` counter, `DeliveryCount.Resolve`) allocate nothing. Keeping `googclient_deliveryattempt` out of the stream message's bag (the new `s_ignoreHeaders` entry) made no measurable difference either. Base puts that entry in the bag, and its stream figure is still identical to the branch's. I did not investigate why.
+- **End-to-end: noise-bound, so it cannot decide a zero-tolerance gate.** The base/post difference is smaller than the spread between rounds of a single run, and its sign flips between passes on V4, GCP pull and GCP stream. An earlier single-pass AWSSQS smoke run went the other way (post 68,139,864 ≤ base 68,143,768). On RocketMQ the medians rise in run order whatever the revision (34.4 → 34.8 → 35.7 → 35.9 MB for base-p1, post-p1, base-p2, post-p2), which is drift in the broker or client, not a code difference. By a literal median comparison, post exceeded base in 7 of the 10 end-to-end pairs, by 0.002–1.1 %. None is attributable to the reader, as the reader-only figures show.
+- **Verdict: AC-37 / NFR-2 met, on the reader-only measurement** (Ian Cooper, 2026-10-02). It measures exactly the code task 8.3 names as the place an increase would be a defect, and there `post = base`. The end-to-end figures are recorded as context only. The harness is not committed; the method above is enough to rebuild it.
+
 **AC-28 broker-call enumeration — no call added or removed:**
 
 | Transport | Per delivery (before = after) | Per requeue (before = after) |
