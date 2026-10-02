@@ -652,7 +652,22 @@ DLQ is usually provisioned by infrastructure-as-code. Tolerating `Unimplemented`
 `PermissionDenied` there (log and continue, as the binding may already exist) would both fix that and
 make the emulator path usable.
 
-### `RocketMQ` was attempted and stays `Deferred` — `Requeue` is a no-op, so the budget never runs down
+### `RocketMQ` was `Deferred`; the cell is now `Fixed (#4353)` — the budget reads the broker's delivery counter
+
+⭐ **Evidence (2026-10-02, spec 0037 task 7.13, AC-24, AC-3 on RocketMQ, AC-30 row 4): the
+`RocketMQ / RocketMQMessagingGateway` FR-23 cell moved to `Fixed (#4353)`.** `Requeue` is still a broker no-op,
+as recorded below; R-14 allows that on the AC-24 branch. The budget runs down anyway: 7.10 resolves
+`HandledCount` from the broker's own `MessageView.DeliveryAttempt`, which 7.1 measured as 1, 2, 3 across
+lease-lapse redeliveries. Each 10 s lease lapse therefore presents a higher count, and the pump rejects once
+`RequeueCount` is reached. 7.3 makes the header-owned `HandledCount` win over a stale bag copy on the routed
+dead-letter copy, and `DeliveryCount.Resolve` keeps that stamped count because the copy carries
+`rejectionReason` (7.12). Regenerating `Paramore.Brighter.RocketMQ.Tests` un-skipped exactly the 2 FR-23 tests
+(Reactor/Proactor). On a clean store (`docker-compose -f docker-compose-rocketmq.yaml down -v; up -d`, all
+compose topics created) both passed, in 39 s and 41 s. Each one asserts that the handler was invoked at most
+`RequeueCount` (3) times, and that the Brighter DLQ copy arrived within 60 s with `HandledCount >= RequeueCount - 1`,
+carrying `rejectionReason == "DeliveryError"`. The full RocketMQ suite on a clean store (net10.0): 67 passed / 0 failed / 6 skipped. The
+conformance audits (42) re-ran green against the new ledger. The paragraphs below record how the cell got
+here. Their "stays `Deferred`" and "never dead-lettered" statements are superseded by this note.
 
 Measured 2026-09-12 against `docker-compose-rocketmq.yaml`, and tracked as
 [#4353](https://github.com/BrighterCommand/Brighter/issues/4353). Both variants fail the same way: the
@@ -1031,7 +1046,7 @@ CI is unaffected — GitHub Actions `services:` mount no volume.
 | Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass |
 | RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4353 (sign-off: @iancooper) |
+| RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4353) |
 | AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) |
 | MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4351 (sign-off: @iancooper) |
 | RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Pass |
