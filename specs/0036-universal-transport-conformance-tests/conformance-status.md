@@ -1093,6 +1093,45 @@ An **empty** body is not a usable mutation. RocketMQ and Floci both refuse to se
 the tests fail on arrival (`MT_NONE`) instead. On a RocketMQ store that has had a run on it, the DLQ read returns
 a stale message, which can pass for a body-assertion failure.
 
+## Spec 0037's cell moves, and the cells it did not move (AC-30, AC-31)
+
+**Audited 2026-10-02 (spec 0037 task 8.6).** Every cell below was checked against the matrix at
+`a4b30a329`, compared with the merge base `f906efc0b`.
+
+**Moved by spec 0037: 33 cells, each citing its run.**
+
+| Cells | Moved to | Evidence (dated note in this ledger) |
+|---|---|---|
+| FR-23 × the 8 `AWS` / `AWS.V4` configurations | `Fixed (#4341)` | task 4.11, run 2026-09-27: 286 / 0 / 2 per project, FR-23 8 / 8 per project ("The eight AWS cells are `Fixed (#4341)`") |
+| FR-4, FR-5, FR-6, FR-8, FR-17 × the 4 `GCP` configurations (20) | `Fixed (#4386)` | task 5.11, 2026-09-28: 40 / 40 on a clean emulator. Repeated by task 6.31, 2026-10-01: 48 / 48 twice, with an empty per-test diff (GCP FR-23 section) |
+| FR-23 × the 4 `GCP` configurations | `Fixed (#4386)` | task 6.16, 2026-10-01: 8 / 8 on a clean emulator (GCP FR-23 section) |
+| FR-23 × `RocketMQ` | `Fixed (#4353)` | task 7.13, 2026-10-02: 2 / 2 on a clean store, 67 / 0 / 6 suite (RocketMQ FR-23 section) |
+
+**Also moved on this branch, but not by spec 0037:** `GCP / Stream` and `GCP / StreamOrdering` FR-16 →
+`Fixed (#4449)`, by bugfix 0024 (2026-09-30). The evidence is in the Rules note for those two cells and in
+`bugfixes/0024-gcp-stream-nack-no-redelivery/bugfix.md`. So the branch moves 35 cells in all.
+
+**Not moved by spec 0037: every remaining `Deferred` cell, 36 in all.** Each moves only on its own evidence.
+
+- `MQTT` FR-23 (`Deferred -> #4351`): the Proactor pump deadlocks on the first requeue (see the MQTT note
+  in the FR-23 section).
+- `AzureServiceBus` FR-23, and its other `Deferred` cells, FR-5 and FR-9: there is no local emulator, and
+  Azure Service Bus dead-letters natively.
+- `GCP` FR-2, FR-7, FR-9, FR-15 and FR-22 on all four configurations, plus FR-16 on `GCP / Pull` and
+  `GCP / PullOrdering` (22 cells). Spec 0037 changed neither the requeue delay, the no-channels path, delayed
+  send, nor Pull `Nack`.
+- `AWS / SqsFifo` and `AWS.V4 / SqsFifo` FR-9: SQS FIFO queues refuse per-message delay.
+- `MSSQL`, `Redis` and `MQTT` FR-16.
+- `RMQ.Async / Classic`, `RMQ.Async / Quorum` and `RMQ.Sync` FR-5: there is no separate invalid-message
+  channel.
+- `RocketMQ` FR-2 and FR-15. `Requeue` is still a broker no-op on the AC-24 branch. Task 7.1 found that
+  `ChangeInvisibleDuration(view, 0)` works on client 5.2.1, so these two cells could now be made to pass,
+  but that is outside spec 0037.
+
+**A-6 refutations from task 6.30: none.** On all four `GCP` configurations and both variants, a message
+whose rejection routing kept failing reached the native `DeadLetterPolicy` subscription in 12–17 s
+(`38c91413f`). R-19's native-cap bound therefore held on the emulator, and no cell carries a refutation.
+
 ## Conformance Matrix
 
 | Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 | FR-23 |
