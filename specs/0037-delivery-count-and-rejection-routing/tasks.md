@@ -1057,7 +1057,7 @@
   - Implementation should (only if a transport is unexpectedly RED on arrival): fix that transport's return value.
   - Depends on: none within the phase
 
-- [ ] **7A.3 GATE: Regenerated reject tests pass on every generated transport**
+- [x] **7A.3 GATE: Regenerated reject tests pass on every generated transport**
   - Regenerate all 17 projects that carry a `test-configuration.json` (see `.agent_instructions/generated_tests.md`), and confirm the diff touches only the reject tests.
   - Run the reject tests for each transport that has local infrastructure, from a clean store where the transport needs one (RocketMQ: `down -v`). Record which transports could not be run locally.
   - **Output:** a dated run record in `conformance-status.md`, and no ledger cell changed.
