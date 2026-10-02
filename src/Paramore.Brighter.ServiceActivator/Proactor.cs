@@ -132,7 +132,8 @@ namespace Paramore.Brighter.ServiceActivator
 
         private async Task EventLoop()
         {
-            var pumpSpan = Tracer?.CreateMessagePumpSpan(MessagePumpSpanOperation.Begin, Channel.RoutingKey, MessagingSystem.InternalBus, InstrumentationOptions);
+            var messagingSystem = (Channel as IHaveAMessagingSystem)?.MessagingSystem ?? MessagingSystem.InternalBus;
+            var pumpSpan = Tracer?.CreateMessagePumpSpan(MessagePumpSpanOperation.Begin, Channel.RoutingKey, messagingSystem, InstrumentationOptions);
             try
             {
 
@@ -156,7 +157,7 @@ namespace Paramore.Brighter.ServiceActivator
                     {
                         try
                         {
-                            receiveSpan = Tracer?.CreateReceiveSpan(Channel.RoutingKey, MessagingSystem.InternalBus, InstrumentationOptions);
+                            receiveSpan = Tracer?.CreateReceiveSpan(Channel.RoutingKey, messagingSystem, InstrumentationOptions);
                             message = await Channel.ReceiveAsync(TimeOut);
                             headerJson = Tracer?.EnrichReceiveSpan(receiveSpan, message, InstrumentationOptions);
                             // only propagate consumer context when we have a receive span: baggage propagation was
@@ -234,7 +235,7 @@ namespace Paramore.Brighter.ServiceActivator
                         Tracer?.EndSpan(receiveSpan);
                     }
 
-                    Activity? processSpan = Tracer?.CreateSpan(MessagePumpSpanOperation.Process, message, MessagingSystem.InternalBus, InstrumentationOptions, headerJson);
+                    Activity? processSpan = Tracer?.CreateSpan(MessagePumpSpanOperation.Process, message, messagingSystem, InstrumentationOptions, headerJson);
                     object? unwrapPipeline = null;
                     MessageDelivery? delivery = null;
                     var dispatchSucceeded = false;

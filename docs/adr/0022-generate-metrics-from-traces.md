@@ -40,7 +40,7 @@ OpenTelemetry defines common metrics for several instrumentation domains, the on
 |------|----------------|-------------|-------------|
 | `messaging.client.operation.duration` | Histogram | `s` | Duration of messaging operation initiated by a producer or consumer client |
 | `messaging.client.sent.messages` | Counter | `{message}` | Number of messages producer attempted to send to the broker |
-| `messaging.client.received.messages` | Counter | `{message}` | Number of messages that were delivered to the application |
+| `messaging.client.consumed.messages` | Counter | `{message}` | Number of messages that were delivered to the application |
 | `messaging.process.duration` | Histogram | `s` | Duration of processing operation |
 
 #### Database metrics
@@ -50,6 +50,16 @@ OpenTelemetry defines common metrics for several instrumentation domains, the on
 | `db.client.operation.duration` | Histogram | `s` | Duration of database client operations |
 
 Brighter can implement a custom [processor](https://github.com/open-telemetry/opentelemetry-collector/blob/main/processor/README.md) to generate metrics from spans. The spans defined in [adr/0010-brighter-semantic-conventions](0010-brighter-semantic-conventions.md) lists operations that can be mapped to metrics. For example, a publish span will be mapped to both the `messaging.client.sent.messages` and `messaging.client.operation.duration` metrics.
+
+Only producer spans contribute to the sent-message counter. In-process event publication does not represent a broker send. Failed producer attempts still count.
+
+Receive-span enrichment records whether the channel delivered a message. Empty polls, failed receives and the pump's quit signal do not increment the consumed-message counter. Their receive spans still contribute to the client-operation duration histogram. Delivery state is stored as an internal activity property, independently of the optional exported message attributes.
+
+### Transport identity
+
+Consumers and channels can expose their transport through the optional `IHaveAMessagingSystem` interface. The built-in channels forward that identity to both pumps, which use it for begin, receive and process spans. The metrics retain the same `messaging.system` attribute.
+
+This adds a public metadata contract without adding required members to existing consumer or channel interfaces, including their .NET Standard 2.0 versions. Custom implementations without the capability retain the internal-bus telemetry default. The new enum values for MQTT, Redis, PostgreSQL and SQL Server use the same transport names as their producers.
 
 ### Enriching Metrics
 By design, common metric names are not namespaced by application. Metrics should be enriched with service data to enable filtering metrics by application. OpenTelemetry defines [resource attributes](https://opentelemetry.io/docs/specs/semconv/resource/#service) which can be used to identify the service:
@@ -80,6 +90,8 @@ All existing spans created by Brighter are will likely want to be toggled togeth
 
 ### Instrumentation
 `AddBrighterInstrumentation` is used to instrument both metrics and traces. A `BrighterMetricsFromTracesProcessor` is registered by default and is only enabled when the brighter meter is registered.
+
+Meter services are resolved when the tracer provider is built, after service registration is complete. `WithTracing` and `WithMetrics` can therefore be registered in either order, including through the combined instrumentation extension. Tracing without metrics remains supported. Consumers and producers must enable the relevant span instrumentation; setting `InstrumentationOptions.All` on `AddConsumers` and `AddProducers` enables the messaging attributes used here.
 ```
 services.AddOpenTelemetry()
   ...
