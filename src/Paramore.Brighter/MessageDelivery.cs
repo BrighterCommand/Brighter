@@ -36,7 +36,7 @@ namespace Paramore.Brighter;
 /// Coordinates claim-check cleanup with the outcome of one received message.
 /// </summary>
 /// <remarks>
-/// Keep the unwrap pipeline alive until this delivery ends. Call Complete or CompleteAsync only
+/// Keep the unwrap pipeline alive while HasPendingCleanup is true. Call Complete or CompleteAsync only
 /// after successful dispatch and final transport acknowledgement. Requeue, nack and rejection
 /// must dispose the delivery without completing it, so its luggage remains available for replay.
 /// Standalone unwrap pipelines without a delivery retain their immediate-cleanup behavior.
@@ -63,6 +63,10 @@ public sealed partial class MessageDelivery : IDisposable
 
     internal void OnAcknowledged(Action delete, Func<CancellationToken, Task> deleteAsync) =>
         _cleanup.Add((delete, deleteAsync));
+
+    /// <summary>Whether cleanup still needs the unwrap pipeline's scoped dependencies.</summary>
+    /// <remarks>After unwrapping, a pipeline with no pending cleanup can be released before dispatch.</remarks>
+    public bool HasPendingCleanup => _cleanup.Count > 0;
 
     /// <summary>Deletes non-retained luggage after successful dispatch and final acknowledgement.</summary>
     /// <remarks>Cleanup failures are logged; an acknowledged message cannot be redelivered to retry cleanup.</remarks>

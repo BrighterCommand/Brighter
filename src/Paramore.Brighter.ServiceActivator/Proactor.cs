@@ -247,6 +247,12 @@ namespace Paramore.Brighter.ServiceActivator
 
                             var request = await TranslateMessage(message, context, pipeline => unwrapPipeline = pipeline);
 
+                            if (!delivery.HasPendingCleanup)
+                            {
+                                await ReleasePipelineAsync(unwrapPipeline, message);
+                                unwrapPipeline = null;
+                            }
+
                             await InvokeDispatchRequest(request, context);
                             dispatchSucceeded = true;
 
