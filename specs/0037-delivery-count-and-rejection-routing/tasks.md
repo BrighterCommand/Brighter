@@ -977,7 +977,7 @@
     - A red points at 7.10's `CreateMessage` change.
   - Depends on: 7.10
 
-- [ ] **7.12 CHARACTERISE: The RocketMQ dead-letter copy of a budget rejection, read through a real channel, carries the stamped count and full rejection metadata**
+- [x] **7.12 CHARACTERISE: The RocketMQ dead-letter copy of a budget rejection, read through a real channel, carries the stamped count and full rejection metadata**
   - **USE COMMAND**: `/test-first when the rocketmq budget is exhausted the dead letter copy read through a channel should present the stamped handled count and rejection metadata`
   - Test location: "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Reactor" and "tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Proactor"
   - Test file: `When_rocketmq_budget_is_exhausted_dead_letter_copy_should_keep_stamped_count_and_metadata.cs` (Proactor: `…_async.cs`)
