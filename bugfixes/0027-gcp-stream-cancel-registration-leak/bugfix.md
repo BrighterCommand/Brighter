@@ -1,7 +1,7 @@
 # Bugfix: GCP Pub/Sub Stream per-message CancellationToken registration is never disposed, so every settled message stays reachable until the SubscriberClient stops
 
 **Linked Issue**: #4505
-**Status**: Confirmed
+**Status**: Verified
 
 ## Symptom
 **Observed (suspected, not yet reproduced):** On a stream-mode GCP Pub/Sub channel, every message the

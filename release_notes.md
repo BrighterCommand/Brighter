@@ -150,6 +150,14 @@ they then received nothing. Disposing the stream consumer is now idempotent.
 **Breaking change:** `GcpStreamConsumer.Start()` is replaced by `bool TryStart()`, which returns
 `false` once the consumer has stopped. Only `GcpPubSubConsumerFactory` called it in Brighter.
 
+### GCP Pub/Sub stream: settled messages are no longer kept in memory (#4505)
+
+For every message it delivered, the stream handler registered a callback on the `SubscriberClient`'s
+cancellation token and never removed it. That token lives as long as the client, so every message the
+client delivered, payload included, stayed in memory until the channel was disposed. A long-running
+stream consumer's memory grew with its throughput. Stopping the client also had to run one callback for
+every message ever delivered. The callback is now removed once the message is settled.
+
 ### Replay Outbox Messages on Inbox Duplicate (spec 0027)
 
 When an inbox detects a duplicate request, Brighter can now optionally **replay** the outbox messages that were produced under that request's causation, rather than silently dropping the duplicate. The feature is opt-in (`OnceOnlyAction.Replay` on the inbox attribute) and non-breaking: it requires a causation-tracking inbox and outbox (`IAmACausationTrackingInbox` / `IAmACausationTrackingOutbox`), and the relational stores gate the causation-aware write on a memoized column probe so un-migrated schemas keep depositing unchanged. Startup pipeline validation fails fast if a `Replay` pipeline is configured without causation tracking. See [ADR 0057](docs/adr/0057-replay-outbox-on-inbox-duplicate.md) and [spec 0027](specs/0027-replay-matching-outbox-events-when-inbox-has-already-seen/) for full details.
