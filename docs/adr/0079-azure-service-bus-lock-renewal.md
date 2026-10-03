@@ -9,7 +9,7 @@ summary: "Bound automatic message and session lock renewal, protect buffered del
 tags:
   - "transports"
   - "configuration"
-  - "service-activator"
+  - "message-pump"
 ---
 
 # 79. Renew Azure Service Bus locks while messages are pending
