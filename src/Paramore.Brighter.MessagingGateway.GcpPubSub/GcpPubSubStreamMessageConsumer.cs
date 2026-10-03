@@ -35,6 +35,8 @@ public partial class GcpPubSubStreamMessageConsumer(
         subscriptionName.ProjectId,
         timeProvider);
 
+    private int _disposed;
+
     /// <summary>
     /// Synchronously acknowledges a message, signalling the Pub/Sub service that the message
     /// has been successfully processed and can be discarded.
@@ -306,8 +308,17 @@ public partial class GcpPubSubStreamMessageConsumer(
     /// <summary>
     /// Disposes of the consumer's resources synchronously.
     /// </summary>
+    /// <remarks>
+    /// Idempotent: the streaming client is shared by every consumer on the subscription, so a repeated
+    /// dispose must not count as another consumer leaving and stop the client under the others.
+    /// </remarks>
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+        {
+            return;
+        }
+
         consumer.StopAsync().GetAwaiter().GetResult();
         _router.Dispose();
     }
@@ -315,9 +326,18 @@ public partial class GcpPubSubStreamMessageConsumer(
     /// <summary>
     /// Disposes of the consumer's resources asynchronously.
     /// </summary>
+    /// <remarks>
+    /// Idempotent: the streaming client is shared by every consumer on the subscription, so a repeated
+    /// dispose must not count as another consumer leaving and stop the client under the others.
+    /// </remarks>
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous disposal operation.</returns>
     public async ValueTask DisposeAsync()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+        {
+            return;
+        }
+
         await consumer.StopAsync();
         await _router.DisposeAsync();
     }

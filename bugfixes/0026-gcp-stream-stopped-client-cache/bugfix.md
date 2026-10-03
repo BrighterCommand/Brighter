@@ -263,7 +263,34 @@ written.
   `GcpStreamConsumer.Start()` (`GcpStreamConsumer.cs:37`), called from `GcpPubSubConsumerFactory.cs:102`.
 - The retry-after-throw variant can't be set up through public APIs once a reopen works, so these two tests cover it.
 
-**Behaviour 3: idempotent dispose of the stream consumer.** Pending; this gets its own `/test-first`.
+**Behaviour 3: idempotent dispose of the stream consumer.** Approved 2026-10-03.
+- `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream/When_a_gcp_stream_channel_is_disposed_twice_should_not_stop_another_channel_on_the_subscription.cs`
+  (sync only)
+- RED: `Assert.Equal` failed with an empty `Actual`, meaning the receive returned `MT_NONE` after 20 s. The second
+  dispose took the shared count from 1 to 0 and stopped the client under the remaining channel.
+- There is no async test. Through channels the double dispose can only happen on the sync path, because
+  `ChannelAsync` is guarded. The user chose to guard `DisposeAsync` as well, for symmetry, without a test of its own.
 
 ## Fix
-_(left blank — filled by /bugfix:fix)_
+1. **`f87f16bac`, behaviour 1.**
+   - `GcpStreamConsumer.Start()` is replaced by `bool TryStart()`. Under a lock, it refuses once the consumer has
+     stopped.
+   - `StopAsync` marks the consumer stopped, under the same lock, when the last handler leaves.
+   - `GcpPubSubConsumerFactory` evicts a stopped consumer. The eviction is a compare-remove through
+     `ICollection<KeyValuePair>.Remove`, because netstandard2.0 has no `TryRemove(KeyValuePair)`. It then creates a
+     fresh consumer and client, so flow control is recomputed from the current `NoOfPerformers`.
+   - **Public API change, accepted by the user:** `GcpStreamConsumer.Start()` has been removed. Add this to the
+     release notes at Verify.
+   - The rollback of the increment on a throw was **not** written. `StartAsync` can no longer hit "start once", so no
+     test could make that code fail first.
+2. **Behaviour 3.**
+   - `GcpPubSubStreamMessageConsumer.Dispose` and `DisposeAsync` are now idempotent. They share an `_disposed` flag
+     set with `Interlocked.Exchange`.
+   - The core `Channel` is unchanged; its guard is defect 3.
+
+**Regression runs** on the emulator (not reset), net10.0. The new tests passed 3/3.
+- Stream: **125/0/25**, which is the baseline's 122 plus 3. No test changed outcome against the 8.7 TRX, compared by
+  name.
+- CI filter: **156/49/30**. No test is missing. One test changed: the GCS test
+  `LuggageStoreExistsTests.When_checking_store_that_does_not_exist` went from Failed to Passed, and it is unrelated
+  to this fix.
