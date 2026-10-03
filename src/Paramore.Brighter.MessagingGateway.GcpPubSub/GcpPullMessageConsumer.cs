@@ -144,8 +144,10 @@ public partial class GcpPullMessageConsumer(
     /// </summary>
     /// <param name="timeOut">
     /// How long to wait for messages. Bounds the Pull call, so an empty subscription returns after
-    /// this window rather than long-polling until a message arrives. When null the client's own
-    /// default expiration applies.
+    /// this window rather than long-polling until a message arrives — raised to
+    /// <see cref="MinimumPullDeadline"/> if shorter, to avoid losing a message to a real-Pub/Sub
+    /// redelivery race on a too-short deadline (#4321). When null the client's own default
+    /// expiration applies.
     /// </param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that returns an array of received Brighter messages. Returns an array containing a single empty message if no messages are available.</returns>
@@ -204,15 +206,26 @@ public partial class GcpPullMessageConsumer(
         return response.ReceivedMessages.Select(Parser.ToBrighterMessage).ToArray();
     }
 
-    // Bounds a Pull to the caller's timeout so an empty subscription returns after the requested
-    // window (as DeadlineExceeded) instead of long-polling. A null or non-positive timeout returns
-    // null, which leaves the client's own per-method expiration from SubscriberServiceApiSettings
-    // in force - the behaviour of the PullAsync(request, cancellationToken) overload this replaced.
-    // Returning Expiration.None here instead would override that default with no deadline at all,
-    // which is not what the caller who omitted a timeout asked for.
+    // A floor below ~2s risks losing a message to a real Pub/Sub race (#4321): the server can
+    // dispatch a message to this specific Pull RPC - including one redelivered by Requeue's
+    // ModifyAckDeadline(..., 0) - and start its lease just as a short client-side deadline cancels
+    // the call. The client never sees that delivery's ackId, so it cannot ack or re-modack it, and
+    // the message is stranded until a full fresh ack-deadline cycle elapses. Measured against real
+    // Pub/Sub: 500ms-1s callers lost the message reliably; 3s gave clear margin over the observed
+    // ~1.6-2.1s base latency. This trades idle-poll responsiveness (an empty subscription now takes
+    // up to this floor, not the caller's shorter request, to report empty) for not losing deliveries.
+    private static readonly TimeSpan MinimumPullDeadline = TimeSpan.FromSeconds(3);
+
+    // Bounds a Pull to the caller's timeout (raised to MinimumPullDeadline, see above) so an empty
+    // subscription returns after the requested window (as DeadlineExceeded) instead of long-polling.
+    // A null or non-positive timeout returns null, which leaves the client's own per-method
+    // expiration from SubscriberServiceApiSettings in force - the behaviour of the
+    // PullAsync(request, cancellationToken) overload this replaced. Returning Expiration.None here
+    // instead would override that default with no deadline at all, which is not what the caller who
+    // omitted a timeout asked for.
     private static CallSettings? BuildPullCallSettings(TimeSpan? timeOut) =>
         timeOut is { } window && window > TimeSpan.Zero
-            ? CallSettings.FromExpiration(Expiration.FromTimeout(window))
+            ? CallSettings.FromExpiration(Expiration.FromTimeout(window < MinimumPullDeadline ? MinimumPullDeadline : window))
             : null;
 
     
@@ -221,8 +234,10 @@ public partial class GcpPullMessageConsumer(
     /// </summary>
     /// <param name="timeOut">
     /// How long to wait for messages. Bounds the Pull call, so an empty subscription returns after
-    /// this window rather than long-polling until a message arrives. When null the client's own
-    /// default expiration applies.
+    /// this window rather than long-polling until a message arrives — raised to
+    /// <see cref="MinimumPullDeadline"/> if shorter, to avoid losing a message to a real-Pub/Sub
+    /// redelivery race on a too-short deadline (#4321). When null the client's own default
+    /// expiration applies.
     /// </param>
     /// <returns>An array of received Brighter messages. Returns an array containing a single empty message if no messages are available.</returns>
 
