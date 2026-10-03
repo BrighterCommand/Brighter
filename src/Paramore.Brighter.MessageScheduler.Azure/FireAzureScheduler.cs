@@ -19,6 +19,11 @@ public class FireAzureScheduler() : Command(Id.Random())
     public string? RequestType { get; set; }
 
     /// <summary>
+    /// The serialized supported request metadata, or null for requests scheduled without a context.
+    /// </summary>
+    public string? RequestContextData { get; set; }
+
+    /// <summary>
     /// The request data
     /// </summary>
     public string? RequestData { get; set; }

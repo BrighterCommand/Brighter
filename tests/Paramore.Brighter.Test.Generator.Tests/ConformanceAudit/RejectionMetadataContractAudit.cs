@@ -75,6 +75,9 @@ public static class RejectionMetadataContractAudit
         new(System.StringComparer.Ordinal)
         {
             "RMQ.Async / Classic",
+            "RMQ.Async / NativeClassic",
+            "RMQ.Async / NativeQuorum",
+            "RMQ.Sync / NativeClassic",
             "RMQ.Async / Quorum",
             "RMQ.Sync / RmqSyncMessagingGateway",
             "AzureServiceBus / AzureServiceBusMessagingGateway"

@@ -31,31 +31,23 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
+using Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Classic;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
 
 public class RmqSyncMessageGatewayProvider
-    : Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor.IAmAMessageGatewayReactorProvider,
-      Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Proactor.IAmAMessageGatewayProactorProvider
+    : Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Classic.Reactor.IAmAMessageGatewayReactorProvider,
+      Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Classic.Proactor.IAmAMessageGatewayProactorProvider
 {
     private static readonly Uri s_amqpUri = new("amqp://guest:guest@localhost:5672/%2f");
     private readonly RmqMessagingGatewayConnection _connection;
 
-    // Delayed requeue and delayed send: prove RMQ.Sync's delay via the scheduler-delegation seam
-    // (the same mechanism proven for RMQ.Async / Classic / Kafka / Redis / MSSQL), not the
-    // native x-delayed-message exchange plugin. We present a plain (non-delay) exchange so
-    // RmqMessageProducer reports DelaySupported == false and routes a non-zero delay to
-    // IAmAMessageProducer.Scheduler — producer.Scheduler for send-with-delay, and the
-    // consumer factory's scheduler for a delayed requeue (forwarded to the requeue
-    // producer). One shared wall-clock scheduler re-publishes to the topic. Lazily created;
-    // disposed in CleanUp.
-    //
-    // RMQ.Sync is the V6 blocking API (classic queues only). It declares a single Classic
-    // configuration — there is no QueueType.Quorum in this assembly.
+    // Default configurations exercise scheduler delegation. Native variants use the plugin
+    // broker and never install a scheduler.
     private ConformanceHarnessMessageScheduler? _scheduler;
 
-    private ConformanceHarnessMessageScheduler Scheduler =>
-        _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToRmq);
+    private ConformanceHarnessMessageScheduler? Scheduler =>
+        _connection.Exchange!.SupportDelay ? null : _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToRmq);
 
     // The only part of scheduling that is RMQ's: build a producer, send, and hand it back for the
     // scheduler to dispose.
@@ -65,12 +57,16 @@ public class RmqSyncMessageGatewayProvider
         return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
-    public RmqSyncMessageGatewayProvider()
+    public RmqSyncMessageGatewayProvider() : this(false) { }
+
+    protected RmqSyncMessageGatewayProvider(bool nativeDelay)
     {
         _connection = new RmqMessagingGatewayConnection
         {
-            AmpqUri = new AmqpUriSpecification(s_amqpUri),
-            Exchange = new Exchange("paramore.brighter.gentest.sync.exchange"),
+            AmpqUri = new AmqpUriSpecification(nativeDelay
+                ? new Uri(Environment.GetEnvironmentVariable("RMQ_NATIVE_DELAY_URI") ?? "amqp://guest:guest@localhost:5673/%2f")
+                : s_amqpUri),
+            Exchange = new Exchange(nativeDelay ? "paramore.brighter.gentest.sync.exchange.native" : "paramore.brighter.gentest.sync.exchange", durable: nativeDelay, supportDelay: nativeDelay),
             DeadLetterExchange = new Exchange("paramore.brighter.gentest.sync.exchange.dlq"),
         };
     }
@@ -85,7 +81,14 @@ public class RmqSyncMessageGatewayProvider
     {
         if (channel != null)
         {
-            channel.Purge();
+            try
+            {
+                channel.Purge();
+            }
+            catch (ObjectDisposedException exception) when (exception.ObjectName == nameof(RmqMessageConsumer))
+            {
+                // The message pump may already have disposed its channel.
+            }
             channel.Dispose();
         }
 
@@ -164,7 +167,10 @@ public class RmqSyncMessageGatewayProvider
                 deadLetterChannelName: new ChannelName(deadLetterRoutingKey.Value),
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 requeueCount: 3
-            );
+            )
+            {
+                InvalidMessageRoutingKey = invalidMessageRoutingKey
+            };
         }
 
         return new RmqSubscription<MyCommand>(
@@ -173,7 +179,10 @@ public class RmqSyncMessageGatewayProvider
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: makeChannel
-        );
+        )
+        {
+            InvalidMessageRoutingKey = invalidMessageRoutingKey
+        };
     }
 
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)
@@ -215,13 +224,6 @@ public class RmqSyncMessageGatewayProvider
         }
     }
 
-    // Unacceptable rejections: RMQ.Sync has no invalid-message channel. Its path is a native BasicReject
-    // that dead-letters through the single configured DLX (x-dead-letter-routing-key), and neither
-    // RmqMessageConsumer nor RmqSubscription models a separate invalid destination. This hook makes
-    // a GENUINE bounded read against an invalid queue bound (by the {topic}.Invalid convention the
-    // canonical test uses) so the harness is complete: because the gateway never routes an
-    // unacceptable rejection to that routing key, the read observes MT_NONE — evidencing an
-    // architectural src gap (no Brighter-managed invalid routing), not a stubbed harness hook.
     public Message GetMessageFromInvalidChannel(RmqSubscription subscription)
     {
         var invalidConsumer = CreateInvalidChannelConsumer(subscription);
@@ -266,7 +268,14 @@ public class RmqSyncMessageGatewayProvider
     {
         if (channel != null)
         {
-            await channel.PurgeAsync();
+            try
+            {
+                await channel.PurgeAsync();
+            }
+            catch (ObjectDisposedException exception) when (exception.ObjectName == nameof(RmqMessageConsumer))
+            {
+                // The message pump may already have disposed its channel.
+            }
             channel.Dispose();
         }
 
@@ -370,7 +379,6 @@ public class RmqSyncMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
-        // Genuine bounded read; see GetMessageFromInvalidChannel for rationale.
         var invalidConsumer = CreateInvalidChannelConsumer(subscription);
         try
         {
@@ -394,7 +402,7 @@ public class RmqSyncMessageGatewayProvider
 
     private RmqMessageConsumer CreateInvalidChannelConsumer(RmqSubscription subscription)
     {
-        var invalidRoutingKey = new RoutingKey($"{subscription.RoutingKey.Value}.Invalid");
+        var invalidRoutingKey = subscription.InvalidMessageRoutingKey!;
         return new RmqMessageConsumer(
             connection: _connection,
             queueName: new ChannelName(invalidRoutingKey.Value),

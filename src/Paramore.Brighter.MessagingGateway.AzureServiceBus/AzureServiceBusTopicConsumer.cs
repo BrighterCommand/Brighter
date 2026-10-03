@@ -72,6 +72,7 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
     {
         Log.PurgingMessagesFromSubscriptionOnTopic(s_logger, SubscriptionName, Topic);
 
+        await ResetReceiverAsync();
         await AdministrationClientWrapper.DeleteTopicAsync(Topic);
         await EnsureChannelAsync();
     }
@@ -85,6 +86,11 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         {
             if (await AdministrationClientWrapper.SubscriptionExistsAsync(Topic, _subscriptionName))
             {
+                if (Subscription.MakeChannels.Equals(OnMissingChannel.Create) && SubscriptionConfiguration.GetRuleOptions() is not null)
+                {
+                    await AdministrationClientWrapper.CreateSubscriptionAsync(Topic, _subscriptionName, SubscriptionConfiguration);
+                }
+
                 _subscriptionCreated = true;
                 return;
             }

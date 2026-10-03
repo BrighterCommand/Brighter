@@ -11,6 +11,7 @@ using MQTTnet.Packets;
 using MQTTnet.Protocol;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
@@ -20,10 +21,14 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// The <see cref="MqttMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of
     /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching.
     /// </summary>
-    public partial class MqttMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    public partial class MqttMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
     {
+        /// <inheritdoc />
+        public MessagingSystem MessagingSystem => MessagingSystem.Mqtt;
+
         private readonly string _topic;
         private readonly MqttMessagingGatewayConsumerConfiguration _configuration;
+        private readonly InstrumentationOptions _instrumentationOptions;
         // Buffers arrivals and signals waiters from the same piece of state, so the two cannot
         // drift apart: a reader is woken by the message itself, and there is no separate count to
         // run ahead of the buffer when a receive takes several messages at once.
@@ -57,7 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// </summary>
         /// <param name="configuration">
         /// The configuration settings for the MQTT message consumer, including connection details,
-        /// topic prefix, client credentials, and other options.
+        /// topic prefix, client credentials, and instrumentation options for internal producers.
         /// </param>
         /// <param name="scheduler">
         /// Optional scheduler for delayed message redelivery. When provided, the lazily-created
@@ -96,6 +101,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             }
 
             _batchSize = batchSize;
+            _instrumentationOptions = configuration.InstrumentationOptions;
             _scheduler = scheduler;
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
@@ -492,7 +498,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                         Username = _configuration.Username,
                         Password = _configuration.Password
                     });
-                    return new MqttMessageProducer(publisher, new Publication())
+                    return new MqttMessageProducer(publisher, new Publication(), _instrumentationOptions)
                     {
                         Scheduler = _scheduler
                     };
@@ -503,7 +509,9 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         {
             message.Header.Bag["originalTopic"] = message.Header.Topic.Value;
             message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
 
             if (reason == null) return;
 
@@ -545,7 +553,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                     TopicPrefix = _deadLetterRoutingKey.Value
                 };
                 var publisher = new MqttMessagePublisher(config);
-                return new MqttMessageProducer(publisher, new Publication { Topic = _deadLetterRoutingKey });
+                return new MqttMessageProducer(publisher, new Publication { Topic = _deadLetterRoutingKey }, _instrumentationOptions);
             }
             catch (Exception ex)
             {
@@ -571,7 +579,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                     TopicPrefix = _invalidMessageRoutingKey.Value
                 };
                 var publisher = new MqttMessagePublisher(config);
-                return new MqttMessageProducer(publisher, new Publication { Topic = _invalidMessageRoutingKey });
+                return new MqttMessageProducer(publisher, new Publication { Topic = _invalidMessageRoutingKey }, _instrumentationOptions);
             }
             catch (Exception ex)
             {

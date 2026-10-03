@@ -90,7 +90,8 @@ internal sealed partial class RmqMessagePublisher
     /// <param name="message">The message.</param>
     /// <param name="delay">The delay in ms. 0 is no delay. Defaults to 0</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/> that cancels the Publish operation</param>
-    public async Task PublishMessageAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default)
+    /// <param name="mandatory">Return the message if no queue matches its routing key.</param>
+    public async Task PublishMessageAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default, bool mandatory = false)
     {
         if (_connection.Exchange is null)
             throw new InvalidOperationException("RMQMessagingGateway: No Exchange specified");
@@ -107,7 +108,7 @@ internal sealed partial class RmqMessagePublisher
         await _channel.BasicPublishAsync(
             _connection.Exchange.Name,
             message.Header.Topic.Value,
-            false,
+            mandatory,
             CreateBasicProperties(
                 messageId.Value,
                 message.Header.TimeStamp,
@@ -137,13 +138,13 @@ internal sealed partial class RmqMessagePublisher
 
         AddUserDefinedHeaders(message, headers);
 
-        AddDeliveryHeaders(TimeSpan.Zero, deliveryTag, headers);
+        AddDeliveryHeaders(timeOut, deliveryTag, headers);
 
         AddOriginalMessageIdOnRepublish(message, headers);
 
-        // To send it to the right queue use the default (empty) exchange
+        // Immediate retries use the default exchange; delayed retries use queue-specific bindings.
         await _channel.BasicPublishAsync(
-            string.Empty,
+            timeOut > TimeSpan.Zero ? RmqDelayedRequeue.ExchangeName(_connection) : string.Empty,
             queueName.Value,
             false,
             CreateBasicProperties(
@@ -169,7 +170,9 @@ internal sealed partial class RmqMessagePublisher
             [HeaderNames.CLOUD_EVENTS_TIME] = message.Header.TimeStamp.ToRfc3339(),
 
             // Brighter custom headers
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             [HeaderNames.MESSAGE_TYPE] = message.Header.MessageType.ToString(),
+#pragma warning restore CS0618
             [HeaderNames.TOPIC] = message.Header.Topic.Value,
             [HeaderNames.HANDLED_COUNT] = message.Header.HandledCount,
         };

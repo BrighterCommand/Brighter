@@ -34,14 +34,18 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     /// <summary>
     /// Read messages from an SQS queue
     /// </summary>
-    public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
     {
+        /// <inheritdoc />
+        public MessagingSystem MessagingSystem => MessagingSystem.AWSSQS;
+
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageConsumer>();
 
         private readonly AWSMessagingGatewayConnection _connection;
@@ -498,7 +502,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             // Keys use camelCase because the bag is JSON-serialized with CamelCase naming policy
             message.Header.Bag[RejectionMetadataKeyNames.OriginalTopic] = message.Header.Topic.Value;
             message.Header.Bag[RejectionMetadataKeyNames.RejectionTimestamp] = DateTimeOffset.UtcNow.ToString("o");
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             message.Header.Bag[RejectionMetadataKeyNames.OriginalMessageType] = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
 
             // Remove SQS-specific headers that will be reset when sent to the DLQ
             message.Header.Bag.Remove("ReceiptHandle");

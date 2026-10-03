@@ -46,7 +46,9 @@ public class AsyncMessageWrapCleanupTests
     
     private sealed class MyReleaseTrackingTransformFactoryAsync : IAmAMessageTransformerFactoryAsync
     {
-        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType)
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType, IAmAScope? scope = null)
         {
             return new Lease<IAmAMessageTransformAsync>(new MySimpleTransformAsync());
         }

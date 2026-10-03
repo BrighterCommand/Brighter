@@ -229,7 +229,12 @@ RESOURCES=$(aws resourcegroupstaggingapi get-resources \
 - Use `resourcegroupstaggingapi` to find tagged resources across SQS and SNS
 - Delete subscriptions before topics (AWS requirement)
 - Log each action
-- Exit 0 even on individual deletion failures (log and continue)
+- Continue after individual deletion failures and report aggregate deletion-attempt outcomes.
+  `CLEANUP_MAX_DELETE_FAILURES` controls the tolerated failure count (default 0); exceeding it
+  returns nonzero. Recognized already-absent responses are counted separately and do not fail
+  the run. Counts describe CLI attempts, not unique resources or an immediately consistent
+  census of remaining resources. Worker and result-reporting failures are not covered by the
+  deletion tolerance. Offline regression tests run in CI without AWS credentials.
 
 #### 5. CI Workflow — Add Cleanup Step
 

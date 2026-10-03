@@ -58,12 +58,7 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
         IAmAMessageConsumerSync messageConsumer =
             _azureServiceBusConsumerFactory.Create(azureServiceBusSubscription);
 
-        return new Channel(
-            channelName: subscription.ChannelName,
-            routingKey: subscription.RoutingKey,
-            messageConsumer: messageConsumer,
-            maxQueueLength: subscription.BufferSize
-        );
+        return new AzureServiceBusChannel(subscription, (AzureServiceBusConsumer)messageConsumer);
     }
 
     /// <summary>
@@ -79,12 +74,7 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
         IAmAMessageConsumerAsync messageConsumer =
             _azureServiceBusConsumerFactory.CreateAsync(azureServiceBusSubscription);
 
-        return new ChannelAsync(
-            channelName: subscription.ChannelName,
-            routingKey: subscription.RoutingKey,
-            messageConsumer: messageConsumer,
-            maxQueueLength: subscription.BufferSize
-        );
+        return new AzureServiceBusChannelAsync(subscription, (AzureServiceBusConsumer)messageConsumer);
     }
 
     /// <summary>

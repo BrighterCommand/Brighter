@@ -86,6 +86,11 @@ Brighter contributors (sorted alphabeticaly)
 **[Eddie Li](https://github.com/xiaodili)**
   * Various fixes
 
+**[Rafael Lillo](https://github.com/lillo42)
+  * Various fixes
+  * Scheduler
+  * Generated Conformance Tests
+
 **[Tom Longhurst](https://github.com/thomhurst)**
  * DI improvements
  * Open Telemetry additions
@@ -198,6 +203,9 @@ Brighter contributors (sorted alphabeticaly)
 
 **[Yiannis Triantafyllopoulos](https://github.com/yiannistri)**  
   * Various Fixes
+
+**[Avtandil Ushikishvili](https://github.com/AVTUNEY)**
+  * Various fixes
   
 **[Tim van Wijk](https://github.com/timvw74)**
   * Kafka transport fixes  

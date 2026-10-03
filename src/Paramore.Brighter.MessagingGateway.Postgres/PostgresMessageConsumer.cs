@@ -10,6 +10,7 @@ using NpgsqlTypes;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.PostgreSql;
+using Paramore.Brighter.Observability;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Paramore.Brighter.MessagingGateway.Postgres;
@@ -23,8 +24,11 @@ public partial class PostgresMessageConsumer(
     PostgresSubscription subscription,
     RoutingKey? deadLetterRoutingKey = null,
     RoutingKey? invalidMessageRoutingKey = null
-    ) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
+    ) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync, IHaveAMessagingSystem
 {
+    /// <inheritdoc />
+    public MessagingSystem MessagingSystem => MessagingSystem.PostgreSql;
+
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresMessageConsumer>();
     private readonly RelationalDatabaseConfiguration _configuration = configuration;
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
@@ -544,7 +548,9 @@ public partial class PostgresMessageConsumer(
     {
         message.Header.Bag["originalTopic"] = message.Header.Topic.Value;
         message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
 
         if (reason == null) return;
 

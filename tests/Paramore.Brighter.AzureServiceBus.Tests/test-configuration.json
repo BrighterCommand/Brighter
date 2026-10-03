@@ -11,5 +11,8 @@
     "HasSupportToValidateBrokerExistence": true,
     "HasSupportToValidateInfrastructure": true,
     "ReceiveMessageTimeoutInMilliseconds": 5000
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusSubscription"
   }
 }

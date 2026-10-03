@@ -4,6 +4,8 @@
     <Description>Box provisioning for Paramore.Brighter. Provides interfaces and hosted service for automatic creation and migration of inbox and outbox database tables at application startup.</Description>
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <!-- Remove these XML documentation suppressions as the existing comments are corrected. -->
+    <NoWarn>$(NoWarn);CS1574</NoWarn>
     <PackageTags>Outbox;Inbox;Provisioning;Migration;Database;Command;Event;Command Processor;Messaging;Brighter</PackageTags>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>

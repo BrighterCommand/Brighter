@@ -42,7 +42,7 @@ The user can shift the gear for a spec with `/spec:gear`.
 both gears:
 
 - **RED first.** Write the test and observe it fail *for the right reason* before any production
-  code exists. Ungated is not test-after.
+  code exists — or, for a characterisation test, under its named mutation (see the RED phase). Ungated is not test-after.
 - **The full regression suite**, not just the new test's own `--filter`.
 - **The two-commit shape**: a `feat:`/`test:` commit for the behaviour, then a separate `docs:`
   commit for any task-list checkbox.
@@ -71,7 +71,14 @@ both gears:
 2. Determine which public class/method will provide this behavior
 3. Write the test following the xUnit BDD-style naming
 4. Run the test to verify it fails for the right reason
-5. Show the test code and failure message to the user
+   - **If it passes on first run**, the behaviour already exists. Do not weaken or rewrite the test
+     to force a failure. If the caller (a spec task labelled `CHARACTERISE`) names a **RED
+     mutation**, apply that temporary change to *production* code, confirm the test fails on the
+     assertion it is about, **revert the mutation**, and confirm green — that is RED observed
+     ([ADR 0071](../../../docs/adr/0071-tdd-review-gear.md), *Characterisation amendment*). With no
+     named mutation, stop and report the green test to the user.
+5. Show the test code and failure message to the user (for a characterisation test, the mutation
+   and the failure it produced)
 
 **After writing the test, proceed to the Approval Gate.**
 
@@ -88,6 +95,9 @@ Use the AskUserQuestion tool to ask:
 
 ```
 Question: "Should I proceed to implement the code to make this test pass?"
+For a characterisation test (green on arrival, RED observed under a named mutation, mutation
+reverted) there is nothing to implement. Ask instead: "Should I commit this characterisation test?"
+On approval, run the full suite for the affected project(s) and commit the test alone as `test:`.
 Options:
 1. "Yes, implement the code" - Proceed to GREEN phase
 2. "Modify the test first" - User will explain changes needed

@@ -104,7 +104,9 @@ public class TransformLifetimeScopePartialReleaseTests
         public void ThrowFor(IAmAMessageTransform transform) => _throwFor = transform;
         public int ReleaseCount(IAmAMessageTransform transform) => _counts.TryGetValue(transform, out var c) ? c : 0;
 
-        public Lease<IAmAMessageTransform>? Create(Type transformerType) => null;
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageTransform>? Create(Type transformerType, IAmAScope? scope = null) => null;
 
         public void Release(Lease<IAmAMessageTransform>? lease)
         {
@@ -122,7 +124,9 @@ public class TransformLifetimeScopePartialReleaseTests
         public void ThrowFor(IAmAMessageTransformAsync transform) => _throwFor = transform;
         public int ReleaseCount(IAmAMessageTransformAsync transform) => _counts.TryGetValue(transform, out var c) ? c : 0;
 
-        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => null;
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType, IAmAScope? scope = null) => null;
 
         public void Release(Lease<IAmAMessageTransformAsync>? lease)
         {

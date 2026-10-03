@@ -4,6 +4,7 @@ using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Scheduler;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessageScheduler.Azure;
@@ -18,7 +19,7 @@ public class AzureServiceBusScheduler(
     ServiceBusSender sender,
     RoutingKey schedulerTopic,
     TimeProvider timeProvider)
-    : IAmAMessageSchedulerAsync, IAmAMessageSchedulerSync, IAmARequestSchedulerAsync, IAmARequestSchedulerSync
+    : IAmAMessageSchedulerAsync, IAmAMessageSchedulerSync, IAmARequestSchedulerAsyncWithContext, IAmARequestSchedulerSyncWithContext
 {
     private static readonly ILogger Logger = ApplicationLogging.CreateLogger<AzureServiceBusScheduler>();
 
@@ -58,8 +59,14 @@ public class AzureServiceBusScheduler(
     }
 
     /// <inheritdoc />
-    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+    public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        => ScheduleAsync(request, type, at, null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext, CancellationToken cancellationToken)
+        where TRequest : class, IRequest
     {
         if (at < timeProvider.GetUtcNow())
         {
@@ -80,15 +87,22 @@ public class AzureServiceBusScheduler(
                         Async = true,
                         SchedulerType = type,
                         RequestType = typeof(TRequest).FullName!,
-                        RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                        RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
+                        RequestContextData = ScheduledRequestContext.Serialize(requestContext)
                     }, JsonSerialisationOptions.Options))
             }), at, cancellationToken);
         return seq.ToString();
     }
 
     /// <inheritdoc />
-    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+    public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
         CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest
+        => ScheduleAsync(request, type, delay, null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+        IRequestContext? requestContext, CancellationToken cancellationToken)
         where TRequest : class, IRequest
     {
         if (delay < TimeSpan.Zero)
@@ -96,7 +110,7 @@ public class AzureServiceBusScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+        return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), requestContext, cancellationToken);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)"/>
@@ -126,10 +140,12 @@ public class AzureServiceBusScheduler(
     {
         var azureServiceBusMessage = new ServiceBusMessage(message.Body.Memory);
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey,
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             message.Header.MessageType.ToString());
+#pragma warning restore CS0618
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey,
             message.Header.HandledCount);
-        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo);
+        azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo?.Value);
 
         foreach (var header in message.Header.Bag.Where(h =>
                      !ASBConstants.ReservedHeaders.Contains(h.Key)
@@ -205,6 +221,12 @@ public class AzureServiceBusScheduler(
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at)
         where TRequest : class, IRequest
+        => Schedule(request, type, at, null);
+
+    /// <inheritdoc />
+    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext)
+        where TRequest : class, IRequest
     {
         if (at < timeProvider.GetUtcNow())
         {
@@ -225,7 +247,8 @@ public class AzureServiceBusScheduler(
                         Async = true,
                         SchedulerType = type,
                         RequestType = typeof(TRequest).FullName!,
-                        RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                        RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
+                        RequestContextData = ScheduledRequestContext.Serialize(requestContext)
                     }, JsonSerialisationOptions.Options))
             }), at));
         return seq.ToString();
@@ -234,13 +257,19 @@ public class AzureServiceBusScheduler(
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay)
         where TRequest : class, IRequest
+        => Schedule(request, type, delay, null);
+
+    /// <inheritdoc />
+    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+        IRequestContext? requestContext)
+        where TRequest : class, IRequest
     {
         if (delay < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return Schedule(request, type, timeProvider.GetUtcNow().Add(delay));
+        return Schedule(request, type, timeProvider.GetUtcNow().Add(delay), requestContext);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>

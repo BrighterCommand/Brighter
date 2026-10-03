@@ -49,7 +49,7 @@ public class ValidationHostedServiceTests
 
         return new BrighterValidationHostedService(
             Options.Create(options),
-            validator,
+            new[] { validator },
             provider,
             NullLogger<BrighterValidationHostedService>.Instance);
     }
