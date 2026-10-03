@@ -102,6 +102,17 @@ cell remains `Unknown`.
   `channelName` at the rejection routing key (matching how the main `CreateSubscription` aligns
   `ChannelName` with the topic) makes all five behaviours `Pass`; the reject-to-DLQ routing itself was
   already conformant (Brighter-managed DLQ, ADR `0041`).
+- #4388 adds separate `RMQ.Async / NativeClassic`, `RMQ.Async / NativeQuorum`, and
+  `RMQ.Sync / NativeClassic` configurations. They use `SupportDelay = true` with no scheduler,
+  while the original configurations retain scheduler coverage. Native FR-2 and FR-9 are fixed
+  by queue-specific delayed requeue and clearing the consumed delay instruction. Like the original
+  RMQ configurations, all three use native DLX routing for FR-8, with empty Brighter rejection keys.
+  The generated native suites pass on the pinned RabbitMQ 4.2.6 / plugin 4.2.0-rc.1 broker with Mnesia
+  (84 async and 42 sync generated cases on .NET 10). Focused tests also cover subscriber isolation,
+  exchange-type preservation, nonpositive delays, and Validate/Assume retry provisioning.
+  See [native test setup](../../docker/RabbitMQ/README.md). The historical plugin-retirement notes
+  below describe the scheduler rollout; these supplementary configurations restore coverage of the
+  existing native API without changing the stock-broker suites or claiming RabbitMQ 4.3+ support.
 - `RMQ.Async / Classic` is `Pass` on **ten** behaviours and `Fixed (#4387)` on **FR-5**
   (a separate invalid channel). **⚠️ Reference-environment fix first:** `docker-compose-rmq.yaml` pointed
   at `rabbitmq:management` (now RabbitMQ 4.3), which **hard-rejects the transient non-exclusive queues the
@@ -1217,3 +1228,6 @@ assertion failed in any run, on the exposed AWS, AWS.V4 and RocketMQ cells or an
 | AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) |
 | MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4351 (sign-off: @iancooper) |
 | RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4387) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Pass |
+| RMQ.Async / NativeClassic | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass |
+| RMQ.Async / NativeQuorum | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass |
+| RMQ.Sync / NativeClassic | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass |

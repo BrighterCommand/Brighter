@@ -134,6 +134,40 @@ A message that was never settled blocked `Dispose`, and with it shutdown, for up
 consumer now stops with `ShutdownMode.NackImmediately`. A message still held at shutdown is nacked and
 redelivered, and `Dispose` returns promptly.
 
+### Message pumps reject received messages with no handler (#4500)
+
+`Reactor` and `Proactor` now reject a received message as `Unacceptable` when it maps successfully
+but runtime routing selects no handler. Previously, an event was acknowledged after an Information
+log reporting zero pipelines. A command raised an exception, but the pump still acknowledged it.
+The change also applies to registered routers that select no handler for a particular request.
+
+The existing rejection policy determines the destination: an invalid-message channel or dead-letter
+channel where supported and configured, or native dead-lettering on transports such as Azure Service
+Bus. Without a rejection destination, the transport determines whether the message is discarded.
+Subscriptions that deliberately ignore some types may therefore start sending them to a rejection
+destination. To intentionally acknowledge and ignore a type, register a handler that does nothing.
+
+**Unhandled events now count toward `UnacceptableMessageLimit`.** Each rejection increments the
+unacceptable-message count; unhandled commands already incremented it. A positive limit can now stop
+the pump after repeated unhandled events. Review the types handled by each subscription and its
+`UnacceptableMessageLimit` and `UnacceptableMessageLimitWindow` settings when upgrading. The default
+limit of zero remains unlimited.
+
+Both commands and events are logged as rejected, with their message ID and channel. The rejection
+metadata identifies the request type with no handler. Commands without handlers no longer enter the
+general dispatch-error logging path.
+
+Local `Publish`/`PublishAsync` calls, including calls inside handlers using the received context, can
+still have zero subscribers. Application-handler exception policy and command-handler cardinality
+checks retain their existing behavior.
+
+**New public API:** `RequestContext.RequireHandlerForNextDispatch()` requires a handler for the next
+immediate `Send`, `SendAsync`, `Publish`, or `PublishAsync` call using that context. CommandProcessor
+consumes the requirement before building pipelines. Context copies and scheduled dispatches do not
+carry it. Custom `IAmACommandProcessor` decorators must pass the pump's context instance through to
+CommandProcessor; substituting or omitting it loses the requirement and retains the previous
+acknowledgement behavior for messages without handlers.
+
 ### Azure Service Bus queue subscription settings (#4269)
 
 Queues created by a consumer now honor `AzureServiceBusSubscriptionConfiguration`, including sessions, delivery count, lock duration, default message lifetime and dead-lettering on expiration. Default consumer-created queues now use the subscription defaults (five deliveries, a three-day lifetime and dead-lettering on expiration) instead of the broker defaults. Existing queues and producer-created queues are unchanged.

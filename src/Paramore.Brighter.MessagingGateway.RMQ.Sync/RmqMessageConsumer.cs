@@ -437,6 +437,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     ; //-- pass, here for clarity on fall through to use of queue directly on assume
                 }
 
+                if (DelaySupported)
+                    RmqDelayedRequeue.EnsureTopology(Channel!, Connection, _queueName, _makeChannels);
+
                 CreateConsumer();
 
                 Log.CreatedChannel(s_logger, Channel!.ChannelNumber, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
