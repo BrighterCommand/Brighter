@@ -90,3 +90,20 @@ Changed production files:
 - `src/Paramore.Brighter/RequestContext.cs`
 
 The new public RequestContext.RequireHandlerForNextDispatch method carries this per-dispatch requirement across the Core/ServiceActivator assembly boundary. Both production pumps call it; tests reach the behavior through the pumps. The internal consumption method is not exposed to tests. No IAmACommandProcessor or IRequestContext interface change is required.
+
+## PR review follow-up
+
+PR #4501 requested an upstream merge and a release note. The merge from `9b2896dd9` preserves the
+claim-check delivery state added to RequestContext and both sets of test logging registrations.
+Reactor and Proactor retain upstream's delivery lifetime handling together with the missing-handler
+requirement for their initial dispatch.
+
+The release note under `Master` documents the acknowledgement-to-rejection change, transport-specific
+destinations, newly counted unhandled events and `UnacceptableMessageLimit`, logging, and context
+forwarding by custom command-processor decorators. Its logging description distinguishes the pump's
+rejection warning from the handler-specific reason carried in rejection metadata.
+
+Verification after the merge: the full Core suite passes on .NET 9 and .NET 10, with 1,564 passed,
+7 skipped, and zero failures on each. This includes the missing-handler, claim-check delivery, and
+existing unacceptable-message-limit tests. ServiceActivator and Core build for .NET Standard 2.0
+and .NET 8 with zero warnings or errors. `git diff --check` passes.
