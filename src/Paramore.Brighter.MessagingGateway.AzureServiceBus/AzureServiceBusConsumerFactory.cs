@@ -66,7 +66,10 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
             throw new ArgumentException("Subscription is not of type AzureServiceBusSubscription.",
                 nameof(subscription));
 
-        var receiverProvider = new ServiceBusReceiverProvider(_clientProvider);
+        if (sub.Configuration.MaxAutoLockRenewalDuration < TimeSpan.Zero)
+            throw new ConfigurationException("MaxAutoLockRenewalDuration must be zero or positive.");
+
+        var receiverProvider = new ServiceBusReceiverProvider(_clientProvider, sub.Configuration.MaxAutoLockRenewalDuration);
 
         if (sub.Configuration.UseServiceBusQueue)
         {

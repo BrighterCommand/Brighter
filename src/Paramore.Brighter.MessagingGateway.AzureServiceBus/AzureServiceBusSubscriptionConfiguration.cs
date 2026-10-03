@@ -47,6 +47,17 @@ public class AzureServiceBusSubscriptionConfiguration
     public TimeSpan LockDuration { get; set; } = TimeSpan.FromMinutes(1);
 
     /// <summary>
+    /// Maximum time to automatically renew a received message or session lock. Defaults to five minutes.
+    /// Zero disables renewal. Negative values are invalid.
+    /// </summary>
+    /// <remarks>
+    /// Renewal starts when the batch is received, including time spent waiting in the channel buffer.
+    /// A session shares one renewal budget across its batch. When the budget ends, the last renewed
+    /// lock remains valid until its broker deadline. Handlers already running are not cancelled.
+    /// </remarks>
+    public TimeSpan MaxAutoLockRenewalDuration { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>
     /// How long messages sit in the queue before they expire
     /// </summary>
     public TimeSpan DefaultMessageTimeToLive { get; set; } = TimeSpan.FromDays(3);
