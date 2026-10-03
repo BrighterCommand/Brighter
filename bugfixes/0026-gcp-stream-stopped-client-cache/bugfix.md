@@ -1,7 +1,7 @@
 # Bugfix: GCP Pub/Sub Stream consumer cache reuses a stopped, disposed SubscriberClient when a channel is reopened
 
 **Linked Issue**: #4502
-**Status**: Confirmed
+**Status**: Verified
 
 ## Symptom
 **Observed (as reported, not yet reproduced):** In `SubscriptionMode.Stream`, take one `GcpPubSubSubscription`

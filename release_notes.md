@@ -134,6 +134,22 @@ A message that was never settled blocked `Dispose`, and with it shutdown, for up
 consumer now stops with `ShutdownMode.NackImmediately`. A message still held at shutdown is nacked and
 redelivered, and `Dispose` returns promptly.
 
+### GCP Pub/Sub stream: reopening a channel on the same subscription works again (#4502)
+
+Channels on one stream subscription share a `SubscriberClient`, which stops when the last channel
+leaves. A `SubscriberClient` cannot be restarted. However, Brighter kept the stopped client cached
+against the subscription. So when the dispatcher reopened that subscription, after `Shut` then `Open`
+or after scaling performers to zero and back, channel creation threw `InvalidOperationException: Can
+only start an instance once.` A second attempt then silently gave a channel that never received
+anything. A stopped client is now replaced by a new one.
+
+A Reactor performer also disposed its stream consumer twice. With several performers on one
+subscription, that could stop the shared client while the others were still reading from it, and
+they then received nothing. Disposing the stream consumer is now idempotent.
+
+**Breaking change:** `GcpStreamConsumer.Start()` is replaced by `bool TryStart()`, which returns
+`false` once the consumer has stopped. Only `GcpPubSubConsumerFactory` called it in Brighter.
+
 ### Replay Outbox Messages on Inbox Duplicate (spec 0027)
 
 When an inbox detects a duplicate request, Brighter can now optionally **replay** the outbox messages that were produced under that request's causation, rather than silently dropping the duplicate. The feature is opt-in (`OnceOnlyAction.Replay` on the inbox attribute) and non-breaking: it requires a causation-tracking inbox and outbox (`IAmACausationTrackingInbox` / `IAmACausationTrackingOutbox`), and the relational stores gate the causation-aware write on a memoized column probe so un-migrated schemas keep depositing unchanged. Startup pipeline validation fails fast if a `Replay` pipeline is configured without causation tracking. See [ADR 0057](docs/adr/0057-replay-outbox-on-inbox-duplicate.md) and [spec 0027](specs/0027-replay-matching-outbox-events-when-inbox-has-already-seen/) for full details.
