@@ -1,0 +1,184 @@
+pr,merged,title,reporter,lines,origin,origin_date,origin_subject,origin_class,origin_era,origin_share,agent_line_share,lag_days
+4485,2026-09-30,fix: categorize Firestore inbox tests for infrastructure filtering,maintainer,,,,,,,,,
+4482,2026-09-29,fix: InMemoryBox cleanup loses compaction/expiry under contention; stop tests starving the,maintainer,36,cfca71e45,2021-02-14,Factor out common inmemorybox elements,human,pre-2024,0.56,0.19,2053
+4473,2026-09-30,fix: preserve total milliseconds in RMQ sync queue TTL,maintainer,1,daed3d3b9,2025-02-17,[Fix] RMQ Tests need fixing for changes in the Proactor/Reactor changes (#3476),human,baseline,1.0,0.0,590
+4470,2026-09-28,fix: wait for Kafka topic visibility before consumer subscribes,maintainer,11,35e995618,2021-03-29,Kafka Improvements (#1351),human,pre-2024,0.73,0.0,2009
+4469,2026-09-29,fix: preserve shared RabbitMQ connections during gateway disposal,outside,119,daed3d3b9,2025-02-17,[Fix] RMQ Tests need fixing for changes in the Proactor/Reactor changes (#3476),human,baseline,0.34,0.07,589
+4468,2026-09-29,fix: honor Azure Service Bus queue subscription settings,outside,4,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.25,0.0,639
+4467,2026-09-29,fix: match Control API subscription names exactly,maintainer,1,677d08f27,2023-06-19,Add Begnings of Control (#2700),human,pre-2024,1.0,0.0,1198
+4464,2026-09-29,fix: reuse relational outbox configuration in AddProducers,maintainer,4,1cdc04b60,2023-11-06,Binary payloads (#2560),human,pre-2024,0.25,0.25,1058
+4463,2026-09-29,fix: reconcile Azure Service Bus subscription rules,outside,18,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.33,0.0,639
+4462,2026-09-29,fix: expose Azure configuration fields as properties (rebuild required),maintainer,12,140e2c86c,2024-06-13,Add the ability to use ASB Queues #2262 (#3144),human,baseline,0.33,0.0,838
+4461,2026-09-28,fix: correct AWS CloudEvents source headers without dropping legacy reads,maintainer,16,61c829eff,2025-07-14,[Feature] Add support to AWS SDK v4 (#3641),human,assistants,0.38,0.12,441
+4460,2026-09-28,fix: exclude tripped topics from DynamoDB outbox reads,maintainer,50,525585072,2025-09-17,Add BatchGet method to outboxes,human,assistants,0.26,0.0,376
+4459,2026-09-28,fix: serialize monitoring exception diagnostics,maintainer,2,4865b3d8a,2021-03-29,Replaced NewtonSoft.Json with System.Text.Json #1457,human,pre-2024,0.5,0.0,2009
+4457,2026-09-28,test: handle absent PostgreSQL migration history,maintainer,,,,,,,,,
+4456,2026-09-28,fix: support async monitoring in control bus sender,maintainer,5,0ce753a1a,2017-03-16,missing files from first check in,human,pre-2024,0.4,0.0,3483
+4455,2026-09-28,"fix: resolve every registered IAmAPipelineValidator, not just the last one",maintainer,,,,,,,,,
+4452,2026-09-28,fix: honor tripped topics in Spanner outbox queries,maintainer,1,22fe24fbc,2025-10-02,feat: Add support to GCP (#3645),human,/spec,1.0,0.0,361
+4451,2026-09-28,fix: allow claim checks without a registered tracer,maintainer,2,ffa66e926,2025-06-11,feat: OTel for claim check (#3614),human,assistants,1.0,0.0,474
+4450,2026-09-28,fix: decompress messages produced by async compression,maintainer,4,bc93b511c,2025-06-14,OTel Transports (#3605),human,assistants,0.75,0.25,471
+4448,2026-09-28,"fix: Kafka consumer commits the highest offset per partition, and revoke actually commits",maintainer,19,1a3877c7e,2024-04-21,"Revoke Partitions generating errors, when doing unneeded work (#3063)",human,baseline,0.63,0.0,890
+4445,2026-09-28,fix: warm ASB conformance test channels to avoid cold-start racing scheduled delivery,maintainer,,,,,,,,,
+4442,2026-09-28,fix: allow cancellation and rescheduling of in-memory scheduled requests,maintainer,6,ce1fd61b3,2025-02-27,Add support to scheduler message  (#3487),human,baseline,0.83,0.17,578
+4441,2026-09-27,fix: prevent MqttMessagePublisher constructor from deadlocking under the Proactor pump,maintainer,1,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,1.0,0.0,637
+4440,2026-09-27,Validate a subscription against its channel factory's ChannelFactoryType at startup,maintainer,12,22fe24fbc,2025-10-02,feat: Add support to GCP (#3645),human,/spec,0.17,0.5,360
+4438,2026-09-27,fix: route unacceptable RabbitMQ messages to the invalid channel,maintainer,29,daed3d3b9,2025-02-17,[Fix] RMQ Tests need fixing for changes in the Proactor/Reactor changes (#3476),human,baseline,0.28,0.28,587
+4436,2026-09-27,fix: keep publish resilience behavior independent of handler count,maintainer,13,0353f1f85,2025-07-15,Command Processor Dispatching Strategy (#3652),human,assistants,0.31,0.0,439
+4435,2026-09-27,fix: preserve explicit pump actions in backstop handlers,outside,36,2b39fe7ad,2026-02-23,Defer Message Action Should Have an Attribute as a Backstop (#4028),agent (Claude co-authored),agent-authored,0.33,1.0,216
+4434,2026-09-27,fix: honor DynamoDB outbox operation timeouts,no linked issue,62,61c829eff,2025-07-14,[Feature] Add support to AWS SDK v4 (#3641),human,assistants,0.4,0.06,440
+4431,2026-09-27,fix: make AWS cleanup progress before its deadline,maintainer,,,,,,,,,
+4430,2026-09-26,fix: stop S3 luggage tests leaking buckets,maintainer,,,,,,,,,
+4429,2026-09-26,fix: preserve explicit pump actions through resilience pipelines,outside,53,c536f9a39,2025-08-06,feat:  Add  support to Polly Resilience Pipeline (#3677),human,assistants,0.21,0.25,416
+4428,2026-09-27,"fix: preserve request context in scheduled Send, Publish and Post",outside,119,ce1fd61b3,2025-02-27,Add support to scheduler message  (#3487),human,baseline,0.67,0.03,577
+4427,2026-09-26,fix: map native Azure Service Bus partition keys,outside,7,53d4edaee,2026-09-21,fix: map native Azure Service Bus subjects,"post-adoption, no Claude trailer",/bugfix,0.71,0.0,5
+4425,2026-09-26,fix: forward resilience cancellation tokens in async outbox operations,maintainer,8,bec0523d0,2024-07-29,Add Sweeper to WebApi_ samples (#3178),human,baseline,0.38,0.0,789
+4424,2026-09-27,fix: warn about Kafka Assume limitations during startup validation,maintainer,10,c73e93221,2026-07-23,GH-4190 Add support to KIP-848 (#4233),agent (Claude co-authored),/bugfix,0.5,0.5,66
+4423,2026-09-26,fix: tolerate Azure Service Bus destination creation races,maintainer,10,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.4,0.0,636
+4422,2026-09-25,fix: handle SQS delayed-send scheduler configuration,maintainer,12,61c829eff,2025-07-14,[Feature] Add support to AWS SDK v4 (#3641),human,assistants,0.5,0.0,438
+4421,2026-09-25,fix(tests): tolerate DynamoDB GSI lag in causation replay tests,maintainer,,,,,,,,,
+4419,2026-09-25,fix: avoid duplicate handler registration during assembly scanning,maintainer,2,140d1f1e5,2022-12-16,Large Message Payloads (#2199),human,pre-2024,0.5,0.5,1379
+4418,2026-09-25,fix: report AWS cleanup deletion failures,maintainer,,,,,,,,,
+4417,2026-09-25,fix: schedule delayed SQS FIFO messages,maintainer,4,4e26a477a,2025-11-14,Fixes found bug on Messaging Gateway (#3905),human,/spec,0.5,0.0,315
+4416,2026-09-25,fix: use the shared default CloudEvents source,maintainer,2,bc93b511c,2025-06-14,OTel Transports (#3605),human,assistants,0.5,0.0,468
+4413,2026-09-25,fix: correct default mapper docs and preserve sample greetings,maintainer,17,69a8f6a64,2025-08-04,Dynamic Request Type (#3669),human,assistants,0.88,0.0,417
+4412,2026-09-24,fix: route mapped requests by command or event type,maintainer,152,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.21,0.15,634
+4409,2026-09-23,fix: make MQTT consumer producer instrumentation configurable,maintainer,9,4236c01d8,2024-06-23,feature: MQTT Messaging Gateway (#3159),human,baseline,0.22,0.56,822
+4408,2026-09-24,fix: scope XML documentation suppressions to projects with existing debt,maintainer,4,2c67b1946,2021-02-21,Add additional properties to SQS queue creation and SNS topic creation,human,pre-2024,0.5,0.0,2041
+4407,2026-09-23,fix: keep the active bugfix selection local,maintainer,,,,,,,,,
+4406,2026-09-27,test: cover channel factory subscription compatibility,maintainer,,,,,,,,,
+4405,2026-09-23,fix: propagate rollback failures on EF Core relational transaction providers,no linked issue,12,1cdc04b60,2023-11-06,Binary payloads (#2560),human,pre-2024,0.58,0.0,1052
+4402,2026-09-24,docs: add ADR for outbox circuit breaker trip logging,no linked issue,20,071deb55d,2025-01-03,feat: generate metrics from traces (#3453),human,baseline,0.3,0.2,629
+4401,2026-09-22,fix: propagate commit failures from relational transaction providers' CommitAsync,outside,25,1cdc04b60,2023-11-06,Binary payloads (#2560),human,pre-2024,0.96,0.0,1051
+4398,2026-09-23,fix: map native Azure Service Bus subjects,outside,7,bc93b511c,2025-06-14,OTel Transports (#3605),human,assistants,0.57,0.0,466
+4396,2026-09-21,fix: preserve Inbox configuration for consumer-only applications,maintainer,3,bec0523d0,2024-07-29,Add Sweeper to WebApi_ samples (#3178),human,baseline,0.33,0.0,784
+4395,2026-09-21,fix: filter mapper assembly scans by visibility,maintainer,4,a46eedd48,2021-08-09,Split Bus App Lifetime Dependencies from CommandProcessor Instance Lifetime Dependencies (,human,pre-2024,0.5,0.0,1869
+4394,2026-09-21,fix: respect global inbox scope,maintainer,8,c05582d5b,2019-03-03,Add a global inbox to the pipeline,human,pre-2024,0.38,0.38,2759
+4391,2026-09-21,fix: invoke the delegate on the sync outbox resilience path,maintainer,1,c536f9a39,2025-08-06,feat:  Add  support to Polly Resilience Pipeline (#3677),human,assistants,1.0,0.0,411
+4385,2026-09-20,fix: poll for PostgreSQL requeue test redelivery,maintainer,,,,,,,,,
+4384,2026-09-20,fix: honor collection names in generated outbox tests,maintainer,,,,,,,,,
+4383,2026-09-20,fix: coordinate MSSQL test database setup across processes,maintainer,,,,,,,,,
+4382,2026-09-20,fix: escape MSSQL queue builder names,maintainer,19,4e26a477a,2025-11-14,Fixes found bug on Messaging Gateway (#3905),human,/spec,0.74,0.26,310
+4377,2026-09-20,fix: parameterize MSSQL queue topic counts,maintainer,2,e605ef111,2021-05-09,MSSQL messaging gateway Tests #1409 (#1526),human,pre-2024,0.5,0.0,1960
+4375,2026-09-20,fix: exclude credentials from MSSQL queue logs,maintainer,3,0741b9ef1,2025-04-08,feature: Use source generated logging (#3579),human,baseline,1.0,0.0,530
+4374,2026-09-21,fix: include message ID when rejecting exhausted requeues,outside,4,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.5,0.5,631
+4373,2026-09-18,fix: report response type for missing reply subscriptions,maintainer,1,262c7d758,2024-11-06,Archiver Observability (#3353),human,baseline,1.0,0.0,681
+4328,2026-09-10,fix(justsaying): stop mutating Brighter's shared serialisation options,maintainer,52,005c44f2d,2025-07-18,[Feature] Create Adaptors for other messaging integration (#3634),human,assistants,0.96,0.04,419
+4325,2026-09-10,fix(rocketmq): stop adding the Type property twice on every message,no linked issue,5,43741616b,2025-07-21,feat: Add support to Apache RocketMQ (#3650),human,assistants,1.0,0.0,416
+4311,2026-09-07,fix(asb): accept a relative CloudEvents source and dataschema,maintainer,20,8277436ec,2025-06-17,Otel Transports (#3630),human,assistants,0.55,0.05,447
+4306,2026-09-07,fix: move the RocketMQ partition-key test out of Generated/,no linked issue,,,,,,,,,
+4300,2026-09-08,fix: generate the Sync outbox suite for a singular Outbox configuration,maintainer,,,,,,,,,
+4298,2026-09-07,fix(aws): stop generated gateway tests leaking SNS topics and SQS queues,no linked issue,,,,,,,,,
+4283,2026-08-29,fix/4253 Kafka timestamp timezone lossy,maintainer,7,bc93b511c,2025-06-14,OTel Transports (#3605),human,assistants,0.71,0.0,441
+4254,2026-07-29,fix: release per-message transformers and mappers to their factories,outside,459,39c88f73e,2024-02-06,Allow for Async Message Mapper Pipelines (#2936),human,baseline,0.23,0.29,904
+4245,2026-07-22,Await in-memory publish confirmation handling,outside,121,9eac61471,2026-06-14,feat(spec-0034): isolate observability faults in confirmation callback (P6-S1 / NFR-4 / AC,agent (Claude co-authored),agent-authored,0.11,0.56,38
+4242,2026-07-20,Fix outbox clear isolation between mediators,outside,3,bec0523d0,2024-07-29,Add Sweeper to WebApi_ samples (#3178),human,baseline,0.33,0.0,721
+4229,2026-07-13,fix: latch Kafka fatal-error flag so error bursts cannot mask it (#4227),maintainer,21,c8b6c01f4,2024-05-07,Reduces the noise from the librdkafka library; exits the consumer if there has been a fata,human,baseline,0.38,0.0,797
+4225,2026-07-14,fix: honour Spanner emulator detection in outbox/inbox connections (#4162),maintainer,4,22fe24fbc,2025-10-02,feat: Add support to GCP (#3645),human,/spec,1.0,0.0,285
+4215,2026-07-03,fix: preserve MessageHeader.Bag keys verbatim through serialization (#4151),outside,8,09c61001f,2021-05-21,Fix the final 'red' tests (#1531),human,pre-2024,0.75,0.0,1869
+4212,2026-07-03,GH-4202 Resolve trace resolver,no linked issue,2,300fd1815,2024-06-15,Add better OTel information into Brighter (#3096),human,baseline,1.0,0.0,748
+4211,2026-07-01,GH-4208 fix GCP Pub/Sub tracer,no linked issue,4,22fe24fbc,2025-10-02,feat: Add support to GCP (#3645),human,/spec,1.0,0.0,272
+4207,2026-07-01,"fix: message-pump observability fixes (#4086, #4089, #4090)",outside,34,5cb3410c1,2026-05-13,fix: receive span covers broker call; add process span (#4085) (#4091),"post-adoption, no Claude trailer",agent-authored,0.44,0.06,49
+4205,2026-07-03,fix: case-insensitive SessionId and reserved-header handling for ASB (#4054),outside,5,bc93b511c,2025-06-14,OTel Transports (#3605),human,assistants,0.6,0.2,384
+4201,2026-07-13,fix(#4196): forward dead-letter reason and description to Azure Service Bus native fields,outside,4,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.25,0.0,561
+4197,2026-06-20,fix concurrency issue in OutboxProducerMediator,no linked issue,18,7fd7c089e,2024-06-29,Add Batching into the External Bus (#3176),human,baseline,0.72,0.0,721
+4195,2026-06-19,fix: stamp scheduler fire-envelopes as MT_COMMAND,no linked issue,7,ce1fd61b3,2025-02-27,Add support to scheduler message  (#3487),human,baseline,0.86,0.0,477
+4194,2026-06-19,fix(#4192): key pipeline caches by runtime Type to fix simple-name collision,outside,24,140d1f1e5,2022-12-16,Large Message Payloads (#2199),human,pre-2024,0.42,0.0,1281
+4187,2026-06-17,fix(asb): add SequenceNumber to ReservedHeaders to prevent duplicate key on redelivery,no linked issue,1,bc93b511c,2025-06-14,OTel Transports (#3605),human,assistants,1.0,0.0,368
+4178,2026-06-15,fix: trim optional whitespace in W3C baggage delimiters (#4173),outside,1,bc93b511c,2025-06-14,OTel Transports (#3605),human,assistants,1.0,0.0,366
+4166,2026-06-15,Fix consumer OTel trace isolation,no linked issue,24,5cb3410c1,2026-05-13,fix: receive span covers broker call; add process span (#4085) (#4091),"post-adoption, no Claude trailer",agent-authored,0.46,0.0,33
+4165,2026-06-04,[Feat] Message Mapping Errors should use the Reject path and an invalid message queue if a,maintainer,4,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.5,0.0,522
+4158,2026-06-01,fix: Newtonsoft.Json compatibility on MessageHeader and Baggage (#4149),no linked issue,6,bc93b511c,2025-06-14,OTel Transports (#3605),human,assistants,1.0,0.0,352
+4137,2026-05-18,"fix(#3828): dedup duplicate publications and subscriptions by (channel, action)",no linked issue,,,,,,,,,
+4132,2026-05-14,fix(cloud-events): preserve message header values in CloudEventsTransformer,no linked issue,,,,,,,,,
+4130,2026-05-13,fix(aws): surface unknown SNS/SQS message attributes into MessageHeader.Bag,outside,35,61c829eff,2025-07-14,[Feature] Add support to AWS SDK v4 (#3641),human,assistants,0.46,0.0,303
+4128,2026-05-13,fix(aws): handle null MessageAttributes/Attributes in V4 SQS message creators,outside,16,61c829eff,2025-07-14,[Feature] Add support to AWS SDK v4 (#3641),human,assistants,0.81,0.0,303
+4122,2026-05-06,fix(aws): add Environment=Test tag to FIFO SNS topics so cleanup scri…,no linked issue,,,,,,,,,
+4119,2026-05-13,fix: MsSqlOutbox archiver never deletes rows when total row count exceeds batch size,no linked issue,1,cff67fd5e,2025-01-15,Outbox Improvements for Relation Database (#3464),human,baseline,1.0,0.0,483
+4110,2026-05-06,Fix RMQ producer channel disposal,outside,32,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.28,0.09,493
+4107,2026-05-13,Fix : preserve json serializer options,no linked issue,5,7c921c7b4,2022-11-23,Create Extensions to allow for easier edition of the Json Seraliser inside of Brighter (#2,human,pre-2024,1.0,0.0,1267
+4103,2026-05-06,fix: each RedisMessageGateway owns its own pool (#4023),maintainer,39,b42887af4,2026-02-22,feat: Universal scheduler delay support for all transports (#3995),agent (Claude co-authored),agent-authored,0.41,0.41,73
+4101,2026-05-01,fix: populate s_postAttributesMemento in PipelineBuilder (#4100),outside,2,0ce753a1a,2017-03-16,missing files from first check in,human,pre-2024,1.0,0.0,3333
+4099,2026-04-29,fix: InternalBus.Enqueue loses messages under concurrent first-write contention (#4098),outside,8,a7d83dd09,2024-06-26,Add In-Memory Consumer  (#3158),human,baseline,0.5,0.0,672
+4091,2026-05-13,fix: receive span covers broker call; add process span (#4085),outside,75,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.73,0.23,500
+4088,2026-04-26,fix: use TimeProvider for span end time in BrighterTracer (#4087),outside,2,bc93b511c,2025-06-14,OTel Transports (#3605),human,assistants,1.0,0.0,316
+4081,2026-04-26,fix: Dispatcher shutdown race leaves late-opened Reactor consumers running (#4075),outside,40,4df0908ef,2014-04-21,First version of dispatcher - lots more to do,human,pre-2024,0.15,0.0,4388
+4080,2026-04-26,fix: Mediator Runner/Waker RunAsync awaits inner work (#4078),outside,28,7e16d0610,2025-07-07,Add a Mediator to Brighter (#3370),human,assistants,0.93,0.0,293
+4079,2026-04-26,fix: pin Task.Factory.StartNew to TaskScheduler.Default (#4071),outside,7,7e16d0610,2025-07-07,Add a Mediator to Brighter (#3370),human,assistants,0.29,0.0,293
+4076,2026-04-26,refactor: rewrite BrighterAsyncContext for correctness and modernization,no linked issue,542,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.67,0.0,483
+4074,2026-04-26,fix: replace sync-over-async Task.Delay with Thread.Sleep in sync pumps (#4073),outside,15,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.67,0.0,483
+4070,2026-04-27,fix: resolve producer lookup failure when posting Reply messages,no linked issue,30,bc93b511c,2025-06-14,OTel Transports (#3605),human,assistants,0.1,0.03,317
+4066,2026-04-15,fix: TimedOutboxArchiver falls back to sync when no async outbox (#3670),outside,6,3c8364480,2023-02-13,Outbox archiver (#2468),human,pre-2024,0.33,0.0,1157
+4061,2026-04-26,fix: move inbox attribute addition outside static pipeline cache,no linked issue,18,a34d836ae,2019-03-12,Add a process-wide cache for handler pipeline construction to prevent reflection on each c,human,pre-2024,0.28,0.0,2602
+4059,2026-04-04,fix: generate all NuGet packages on CI builds,no linked issue,,,,,,,,,
+4057,2026-03-31,FIX: synchronize offset commits during Kafka partition revoke,no linked issue,13,e0cb8774e,2024-04-19,Remove spurious StoreOffset and drop support for Co-operative Sticky load balancing (#3059,human,baseline,0.23,0.08,711
+4053,2026-03-24,Kafka Nack Fix,maintainer,16,7042d4f7a,2026-02-22,Dont Ack Action (#4019),agent (Claude co-authored),agent-authored,0.75,0.75,30
+4047,2026-03-16,[Fix] Shutdown Issues on Rabbit MQ,maintainer,41,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.78,0.0,442
+4046,2026-03-13,Resilience Pipeline Can Be Reused,outside,10,c536f9a39,2025-08-06,feat:  Add  support to Polly Resilience Pipeline (#3677),human,assistants,1.0,0.0,219
+4045,2026-03-24,[Fix] RMQ event handlers not removed (#4044),outside,6,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.83,0.0,450
+4043,2026-03-11,fix(samples): make CommandProcessor handlers and commands public (fixes #4041),outside,,,,,,,,,
+4040,2026-03-04,[Fix] Handle Expired SQS Receipt Handles To Prevent Dispatcher Crash,outside,8,7042d4f7a,2026-02-22,Dont Ack Action (#4019),agent (Claude co-authored),agent-authored,0.25,0.5,10
+4027,2026-02-23,Error Examples,no linked issue,,,,,,,,,
+4026,2026-02-23,Unacceptable message limit,no linked issue,54,69a8f6a64,2025-08-04,Dynamic Request Type (#3669),human,assistants,0.31,0.15,203
+3945,2025-12-18,Use Type FullName when calling deposit,no linked issue,12,3db024c30,2025-02-27,[Issue 3112] Use the configured transaction provider when no override is supplied (#3525),human,baseline,0.42,0.0,294
+3931,2025-12-12,Fix MongoDbUnitOfWork,no linked issue,2,76076f1d8,2025-07-17,Register the Connection and Transaction provider interfaces (#3668),human,assistants,1.0,0.0,148
+3929,2025-12-08,Fixes Kafka Sweeper in V10,no linked issue,13,35e995618,2021-03-29,Kafka Improvements (#1351),human,pre-2024,0.31,0.0,1715
+3912,2025-11-20,Use ConcurrentDictionary In InMemoryLock to avoid race conditions,no linked issue,8,75cb8eb9d,2025-03-04,Avoid some string & List allocations (#3550),human,baseline,0.38,0.0,261
+3905,2025-11-14,Fixes found bug on Messaging Gateway,no linked issue,455,61c829eff,2025-07-14,[Feature] Add support to AWS SDK v4 (#3641),human,assistants,0.29,0.0,123
+3881,2025-10-24,fix: update request scheduler factory type in UseRequestScheduler method,no linked issue,1,ce1fd61b3,2025-02-27,Add support to scheduler message  (#3487),human,baseline,1.0,0.0,239
+3865,2025-10-25,fix: Resilience Pipeline was not propertly set,no linked issue,1,0ce753a1a,2017-03-16,missing files from first check in,human,pre-2024,1.0,0.0,3145
+3846,2025-10-12,fix: MongoDBUnitOfWork implement IAmABoxTransactionProvider<IClientSessionHandle>,no linked issue,6,76076f1d8,2025-07-17,Register the Connection and Transaction provider interfaces (#3668),human,assistants,0.83,0.0,87
+3842,2025-10-09,fix: GCP Firestore unit test,no linked issue,,,,,,,,,
+3839,2025-10-07,fix: Rename GCP project,no linked issue,12,69a8f6a64,2025-08-04,Dynamic Request Type (#3669),human,assistants,0.83,0.0,64
+3838,2025-10-07,Fix a typo in the value of CloudEventsSource in ASBConstants,no linked issue,1,bc93b511c,2025-06-14,OTel Transports (#3605),human,assistants,1.0,0.0,115
+3826,2025-10-02,fix: GCP CI,no linked issue,,,,,,,,,
+3824,2025-10-03,Fix IoC for outboxes,no linked issue,7,82736a67e,2025-02-26,Throw an exception if the user has configured an outbox with no transaction provider of a ,human,baseline,1.0,0.0,219
+3822,2025-09-30,Callback Registration should check async then sync interfaces,no linked issue,10,0ce753a1a,2017-03-16,missing files from first check in,human,pre-2024,0.4,0.0,3120
+3809,2025-09-26,[Bug] fixes RabbitMQ requeuing message,no linked issue,14,bc93b511c,2025-06-14,OTel Transports (#3605),human,assistants,0.71,0.0,104
+3790,2025-09-25,[Fix] Sample Fixes ,no linked issue,101,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.58,0.0,270
+3777,2025-09-15,[Bug] Fixes Reactor mode not respecting empty channel delay,no linked issue,1,ca38d9174,2021-04-08,Async Eventloop (#1474),human,pre-2024,1.0,0.0,1621
+3773,2025-09-11,"fix: When timeout is less than 1s, the received message never return",no linked issue,23,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.48,0.0,256
+3772,2025-09-10,fix: quartz sample,no linked issue,,,,,,,,,
+3770,2025-09-11,fix: DynamoDB and MongoDB outbox when dataschema/source is not URL absolute,no linked issue,30,b740a68ed,2025-06-25,Otel Transports (#3633),human,assistants,0.7,0.0,78
+3761,2025-10-03,Optimise Dynamo DB outbox usage,no linked issue,977,61c829eff,2025-07-14,[Feature] Add support to AWS SDK v4 (#3641),human,assistants,0.42,0.0,81
+3754,2025-09-11,Transaction Provider Scope,no linked issue,190,3db024c30,2025-02-27,[Issue 3112] Use the configured transaction provider when no override is supplied (#3525),human,baseline,0.24,0.0,196
+3742,2025-08-20,Make `SqsSubscription` constructors public,maintainer,4,69a8f6a64,2025-08-04,Dynamic Request Type (#3669),human,assistants,0.5,0.0,16
+3713,2025-08-13,fix: Outbox registration when used with Sweeper & Archiver,no linked issue,1,82736a67e,2025-02-26,Throw an exception if the user has configured an outbox with no transaction provider of a ,human,baseline,1.0,0.0,168
+3712,2025-08-13,fix: RabbitMQ Async pulling,no linked issue,1,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,1.0,0.0,227
+3711,2025-08-13,fix: correctly wrapping/unwrapping servicebus message user properties,no linked issue,23,bc93b511c,2025-06-14,OTel Transports (#3605),human,assistants,0.91,0.0,60
+3698,2025-08-07,fix: Use CancellationToken from ResiliencePipeline,no linked issue,1,c536f9a39,2025-08-06,feat:  Add  support to Polly Resilience Pipeline (#3677),human,assistants,1.0,0.0,1
+3696,2025-08-05,fix: RocketMQ,no linked issue,27,43741616b,2025-07-21,feat: Add support to Apache RocketMQ (#3650),human,assistants,1.0,0.0,15
+3690,2025-08-01,fix: Outbox Archive registration,no linked issue,22,3c8364480,2023-02-13,Outbox archiver (#2468),human,pre-2024,0.27,0.0,900
+3689,2025-08-01,feat: Update ServiceLifetime,no linked issue,6,1cdc04b60,2023-11-06,Binary payloads (#2560),human,pre-2024,0.5,0.0,634
+3686,2025-07-27,fix: Unwrap Cloudevent,no linked issue,1,4682359fc,2024-05-17,Add Cloud Events Attributes to Message Header and Publication. (#3067),human,baseline,1.0,0.0,436
+3685,2025-07-26,fix: error to stop RabbitMQ Async,no linked issue,6,39c88f73e,2024-02-06,Allow for Async Message Mapper Pipelines (#2936),human,baseline,0.33,0.0,536
+3683,2025-07-24,fix: NullReference with outbox sweeper,no linked issue,5,300fd1815,2024-06-15,Add better OTel information into Brighter (#3096),human,baseline,0.6,0.0,404
+3676,2025-07-20,Fix Nullable,no linked issue,263,1cdc04b60,2023-11-06,Binary payloads (#2560),human,pre-2024,0.22,0.0,622
+3666,2025-07-15,feat: Allow SqsPublication set QueueAttribute and channel type,no linked issue,21,61c829eff,2025-07-14,[Feature] Add support to AWS SDK v4 (#3641),human,assistants,0.43,0.0,1
+3632,2025-06-23,fix: AWS S3 claim-check,no linked issue,16,140d1f1e5,2022-12-16,Large Message Payloads (#2199),human,pre-2024,0.62,0.0,920
+3622,2025-06-10,Fix typo in `ToRcf3339`,no linked issue,10,e1f261bf4,2025-03-19,Improve support to Cloud events (#3551),human,baseline,0.6,0.0,83
+3619,2025-06-03,bug: Defer Exception causes ASB to Attempt a Reject then Complete,outside,74,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.49,0.0,156
+3618,2025-06-02,feat: Update Kafka publication default values,no linked issue,2,35e995618,2021-03-29,Kafka Improvements (#1351),human,pre-2024,1.0,0.0,1526
+3614,2025-06-11,feat: OTel for claim check,no linked issue,977,140d1f1e5,2022-12-16,Large Message Payloads (#2199),human,pre-2024,0.4,0.0,908
+3523,2025-04-09,fix: Errors in AWS Tests,no linked issue,838,de05cfef7,2025-01-15,Improve support to AWS SQS/SNS (#3437),human,baseline,0.53,0.0,84
+3500,2025-02-19,Fix/issues with running commandprocessor samples,no linked issue,1,0ce753a1a,2017-03-16,missing files from first check in,human,pre-2024,1.0,0.0,2897
+3489,2025-01-22,Fix ASB Transport Tests for V10,no linked issue,83,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.42,0.0,24
+3488,2025-01-20,Fixes DefaultMapper & SNS/SQS Publish,no linked issue,23,b440178db,2024-12-30,Add Default Message Mapper (#3407),human,baseline,0.43,0.0,21
+3475,2025-01-15,Fixes HasOpenTransaction for MySQL & MS SQL,no linked issue,2,1cdc04b60,2023-11-06,Binary payloads (#2560),human,pre-2024,0.5,0.0,436
+3452,2025-01-02,fix: incorrect number of operationstartedcalls,no linked issue,255,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.85,0.0,4
+3451,2024-12-31,fix: Task Scheduler Queue Task called when SychronizationContext disposed,no linked issue,3,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,1.0,0.0,2
+3450,2024-12-31,fix: BrighterTaskScheduler Queue Task When Complete,no linked issue,3,e291baa03,2024-12-31,fix: try executing on the thread pool (#3449),human,baseline,1.0,0.0,0
+3449,2024-12-31,fix: try executing on the thread pool,no linked issue,16,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,0.88,0.0,2
+3448,2024-12-31,"fix: update method signatures, and minor fixes",no linked issue,37,9af3c0b15,2024-12-29,Fix: Sync Over Async Improvements (#3409),human,baseline,1.0,0.0,2
+3447,2025-01-15,Fixes for Kafka Tests following the Proactor/Reactor split,no linked issue,76,35e995618,2021-03-29,Kafka Improvements (#1351),human,pre-2024,0.45,0.0,1388
+3409,2024-12-29,Fix: Sync Over Async Improvements,no linked issue,3118,0ce753a1a,2017-03-16,missing files from first check in,human,pre-2024,0.07,0.0,2845
+3390,2024-11-21,[Bug] Omit item from DynamoDb Delivered index when undelivered v10,outside,2,84f8af4e4,2022-10-22,Pass through the args for outbox to support Dynamo and Event Store (#2332),human,pre-2024,0.5,0.0,761
+3335,2024-09-30,"[Fix] Redis test failing, needs to check value",no linked issue,,,,,,,,,
+3322,2024-09-28,Fixes for issues in the RMQ transport post refactoring out primitives,no linked issue,210,0ce753a1a,2017-03-16,missing files from first check in,human,pre-2024,0.3,0.0,2753
+3320,2024-09-27,Fix Outbox Unit Tests,no linked issue,4,1cdc04b60,2023-11-06,Binary payloads (#2560),human,pre-2024,0.75,0.0,326
+3298,2024-09-11,Fixes around datetime and outboxes in V10,no linked issue,35,79100f509,2021-02-24,fix: Store/Retrieve missing fields to/from the Outbox (#1401),human,pre-2024,0.2,0.0,1295
+3297,2024-09-05,Fix `Docker` folder casing [v10],no linked issue,,,,,,,,,
+3274,2024-08-28,bug: Support async sns/sqs message publishing v10,no linked issue,34,192dee396,2021-04-29,ListTopics is rate limited at 30 calls per second. In large deployments that can mean the ,human,pre-2024,0.44,0.0,1217
+3219,2024-07-19,Fixes unlock resource on Postgres ,no linked issue,2,2a77c4978,2024-07-17,Add support for Postgres Locking (#3107),human,baseline,1.0,0.0,2
+3185,2024-07-05,Fix MySQL Outbox to close connections if there is no transactions,no linked issue,13,aac1134b0,2022-10-02,Intial Plumb in of Bulk Deposit Async (#2264),human,pre-2024,0.31,0.0,642
+3180,2024-07-09,Introduce paging to Dynamo DB outbox methods & fix runtime exceptions,outside,115,e6fd580a7,2024-03-11,Fix Warnings (#3027),human,baseline,0.35,0.0,120

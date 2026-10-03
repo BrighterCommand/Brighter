@@ -9,6 +9,9 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// </summary>
 public class PostgresSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
 {
+    /// <inheritdoc />
+    public override Type ChannelFactoryType => typeof(PostgresChannelFactory);
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PostgresSubscription"/> class.
     /// </summary>

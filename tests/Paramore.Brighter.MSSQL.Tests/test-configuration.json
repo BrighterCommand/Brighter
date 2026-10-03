@@ -23,5 +23,8 @@
     "LedgerKey": "MSSQL / MSSQLMessagingGateway",
     "HasSupportToPublishConfirmation": false,
     "HasSupportToValidateBrokerExistence": false
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.MsSql.MsSqlSubscription"
   }
 }

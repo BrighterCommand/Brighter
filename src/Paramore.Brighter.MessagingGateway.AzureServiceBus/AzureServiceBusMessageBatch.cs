@@ -35,13 +35,15 @@ public class AzureServiceBusMessageBatch : IAmAMessageBatch<ServiceBusMessageBat
 
     public bool IsEmpty => Content.Count == 0;
 
-    public bool TryAddMessage(Message message)
+    public bool TryAddMessage(Message message) => TryAddMessage(message, null);
+
+    internal bool TryAddMessage(Message message, TimeSpan? timeToLive)
     {
         if (!RoutingKey.Equals(message.Header.Topic))
             throw new InvalidOperationException(
                 $"AzureServiceBusMessageBatch can only contain messages for the same routing key {RoutingKey}, {message.Header.Topic}");
 
-        if (!Content.TryAddMessage(AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message)))
+        if (!Content.TryAddMessage(AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message, timeToLive)))
             return false;
 
         _ids.Add(message.Id);

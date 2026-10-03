@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Net.Mime;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -47,6 +48,13 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
     /// <summary>
     /// Maps an Azure Service Bus message to a Brighter <see cref="Message"/>.
     /// </summary>
+    /// <remarks>
+    /// The CloudEvents subject application property takes precedence over the native subject.
+    /// When it is absent, wrappers implementing <see cref="IBrokeredMessageWithSubject"/> supply the native subject.
+    /// Likewise, when the CloudEvents partition key is absent, wrappers implementing
+    /// <see cref="IBrokeredMessageWithPartitionKey"/> supply the native partition key.
+    /// When the CloudEvents trace parent is absent, a valid W3C <c>Diagnostic-Id</c> supplies the trace parent.
+    /// </remarks>
     /// <param name="azureServiceBusMessage">The Azure Service Bus Message to map to a Brighter <see cref="Message"/></param>
     /// <returns></returns>
     public Message MapToBrighterMessage(IBrokeredMessageWrapper? azureServiceBusMessage)
@@ -184,11 +192,15 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             )
         )
         {
+            if (azureServiceBusMessage is IBrokeredMessageWithSubject messageWithSubject
+                && !string.IsNullOrEmpty(messageWithSubject.Subject))
+                return messageWithSubject.Subject;
+
             Log.NoCloudEventsSubject(s_logger, _topic, subscription.Name);
             return string.Empty;
         }
 
-        var subject = property.ToString() ?? string.Empty;
+        var subject = property?.ToString() ?? string.Empty;
 
         return subject;
     }
@@ -229,11 +241,15 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             )
         )
         {
+            if (azureServiceBusMessage is IBrokeredMessageWithPartitionKey messageWithPartitionKey
+                && !string.IsNullOrEmpty(messageWithPartitionKey.PartitionKey))
+                return new PartitionKey(messageWithPartitionKey.PartitionKey);
+
             Log.NoCloudEventsPartitionKey(s_logger, _topic, subscription.Name);
             return PartitionKey.Empty;
         }
 
-        return new PartitionKey(property.ToString() ?? string.Empty);
+        return new PartitionKey(property?.ToString() ?? string.Empty);
     }
 
     private CloudEventsType GetCloudEventsType(IBrokeredMessageWrapper azureServiceBusMessage)
@@ -340,6 +356,13 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             )
         )
         {
+            if (azureServiceBusMessage.ApplicationProperties.TryGetValue("Diagnostic-Id", out var diagnosticProperty)
+                && diagnosticProperty is string diagnosticId
+                && ActivityContext.TryParse(diagnosticId, null, out _))
+            {
+                return new TraceParent(diagnosticId);
+            }
+
             Log.NoTraceParentFound(s_logger, _topic, subscription.Name);
             return new TraceParent(string.Empty);
         }

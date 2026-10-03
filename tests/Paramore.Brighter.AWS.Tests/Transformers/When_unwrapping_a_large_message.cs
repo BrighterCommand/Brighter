@@ -16,10 +16,9 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.Transformers;
 
 [Trait("Category", "AWS")]
-public class LargeMessagePaylodUnwrapTests : IAsyncDisposable 
+public class LargeMessagePaylodUnwrapTests : IAsyncLifetime
 {
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
-    private readonly AmazonS3Client _client;
     private readonly string _bucketName;
     private readonly S3LuggageStore _luggageStore;
 
@@ -49,8 +48,6 @@ public class LargeMessagePaylodUnwrapTests : IAsyncDisposable
             ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }]
         });
-            
-        _luggageStore.EnsureStoreExists();
 
         var messageTransformerFactory =
             new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
@@ -61,6 +58,9 @@ public class LargeMessagePaylodUnwrapTests : IAsyncDisposable
     [Fact]
     public async Task When_unwrapping_a_large_message()
     {
+        // xUnit v2 does not run async teardown when InitializeAsync fails.
+        await _luggageStore.EnsureStoreExistsAsync();
+
         //arrange
         await Task.Delay(3000); //allow bucket definition to propagate
 
@@ -101,9 +101,7 @@ public class LargeMessagePaylodUnwrapTests : IAsyncDisposable
         Assert.False((await _luggageStore.HasClaimAsync(id)));
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await _client.DeleteBucketAsync(_bucketName);
-        _client.Dispose();
-    }
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public Task DisposeAsync() => S3TestBucketCleanup.DeleteAsync(_bucketName);
 }

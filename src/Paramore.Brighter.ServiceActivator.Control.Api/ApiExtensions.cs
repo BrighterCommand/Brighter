@@ -19,7 +19,7 @@ public static class ApiExtensions
             {
                 var status = dispatcher.GetState();
 
-                if (!status.Any(s => s.Name.Equals(subscriptionName, StringComparison.InvariantCultureIgnoreCase)))
+                if (!status.Any(s => s.Name.Equals(subscriptionName, StringComparison.Ordinal)))
                     return Results.BadRequest($"No such subscription {subscriptionName}");
 
                 dispatcher.SetActivePerformers(subscriptionName, numberOfPerformers);

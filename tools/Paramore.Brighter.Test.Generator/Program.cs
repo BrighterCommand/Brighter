@@ -92,6 +92,9 @@ try
     await new MessagingGatewayGenerator(
         factory.CreateLogger<MessagingGatewayGenerator>()
     ).GenerateAsync(configuration);
+    await new GatewayConformanceGenerator(
+        factory.CreateLogger<GatewayConformanceGenerator>()
+    ).GenerateAsync(configuration);
 
     return 0;
 }

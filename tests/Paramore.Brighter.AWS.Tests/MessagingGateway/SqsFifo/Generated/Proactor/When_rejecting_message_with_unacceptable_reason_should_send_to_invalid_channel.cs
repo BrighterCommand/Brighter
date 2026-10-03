@@ -86,10 +86,13 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         Assert.Equal(message.Body.Value, invalidMessage.Body.Value);
 
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
-        Assert.True(invalidMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
-        Assert.Equal(_publication.Topic!.Value, invalidMessage.Header.Bag[keys.OriginalTopic].ToString());
-        Assert.True(invalidMessage.Header.Bag.ContainsKey(keys.RejectionReason));
-        Assert.Equal(RejectionReason.Unacceptable.ToString(), invalidMessage.Header.Bag[keys.RejectionReason].ToString());
+        if (keys.StampsRejectionMetadata)
+        {
+            Assert.True(invalidMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
+            Assert.Equal(_publication.Topic!.Value, invalidMessage.Header.Bag[keys.OriginalTopic].ToString());
+            Assert.True(invalidMessage.Header.Bag.ContainsKey(keys.RejectionReason));
+            Assert.Equal(RejectionReason.Unacceptable.ToString(), invalidMessage.Header.Bag[keys.RejectionReason].ToString());
+        }
 
         // Assert — nothing reached the dead-letter queue. A single receive rather than a poll
         // loop: the claim is that no message arrives, so polling could only wait out the ceiling.

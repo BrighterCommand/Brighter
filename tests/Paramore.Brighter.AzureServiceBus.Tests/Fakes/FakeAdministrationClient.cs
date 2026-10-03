@@ -46,6 +46,9 @@ public class FakeAdministrationClient : IAdministrationClientWrapper
         return Task.CompletedTask;
     }
 
+    public Task CreateQueueAsync(string queueName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
+        => CreateQueueAsync(queueName, subscriptionConfiguration.QueueIdleBeforeDelete);
+
     public Task CreateTopicAsync(string topicName, TimeSpan? autoDeleteOnIdle = null, long? maxMessageSizeInKilobytes = default)
     {
         CreateCount++;

@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 
@@ -29,8 +29,11 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
     RocketMessagingGatewayConnection? connection = null,
     RoutingKey? deadLetterRoutingKey = null,
     RoutingKey? invalidMessageRoutingKey = null)
-    : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
+    : IAmAMessageConsumerAsync, IAmAMessageConsumerSync, IHaveAMessagingSystem
 {
+    /// <inheritdoc />
+    public MessagingSystem MessagingSystem => MessagingSystem.RocketMQ;
+
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RocketMessageConsumer>();
 
     private readonly RocketMessagingGatewayConnection? _connection = connection;
@@ -249,7 +252,9 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
     {
         message.Header.Bag[RejectionMetadataKeyNames.OriginalTopic] = message.Header.Topic.Value;
         message.Header.Bag[RejectionMetadataKeyNames.RejectionTimestamp] = DateTimeOffset.UtcNow.ToString("o");
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         message.Header.Bag[RejectionMetadataKeyNames.OriginalMessageType] = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
 
         if (reason == null)
         {

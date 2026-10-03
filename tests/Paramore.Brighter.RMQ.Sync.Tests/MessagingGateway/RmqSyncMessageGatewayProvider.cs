@@ -85,7 +85,14 @@ public class RmqSyncMessageGatewayProvider
     {
         if (channel != null)
         {
-            channel.Purge();
+            try
+            {
+                channel.Purge();
+            }
+            catch (ObjectDisposedException exception) when (exception.ObjectName == nameof(RmqMessageConsumer))
+            {
+                // The message pump may already have disposed its channel.
+            }
             channel.Dispose();
         }
 
@@ -164,7 +171,10 @@ public class RmqSyncMessageGatewayProvider
                 deadLetterChannelName: new ChannelName(deadLetterRoutingKey.Value),
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 requeueCount: 3
-            );
+            )
+            {
+                InvalidMessageRoutingKey = invalidMessageRoutingKey
+            };
         }
 
         return new RmqSubscription<MyCommand>(
@@ -173,7 +183,10 @@ public class RmqSyncMessageGatewayProvider
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: makeChannel
-        );
+        )
+        {
+            InvalidMessageRoutingKey = invalidMessageRoutingKey
+        };
     }
 
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)
@@ -215,13 +228,6 @@ public class RmqSyncMessageGatewayProvider
         }
     }
 
-    // Unacceptable rejections: RMQ.Sync has no invalid-message channel. Its path is a native BasicReject
-    // that dead-letters through the single configured DLX (x-dead-letter-routing-key), and neither
-    // RmqMessageConsumer nor RmqSubscription models a separate invalid destination. This hook makes
-    // a GENUINE bounded read against an invalid queue bound (by the {topic}.Invalid convention the
-    // canonical test uses) so the harness is complete: because the gateway never routes an
-    // unacceptable rejection to that routing key, the read observes MT_NONE — evidencing an
-    // architectural src gap (no Brighter-managed invalid routing), not a stubbed harness hook.
     public Message GetMessageFromInvalidChannel(RmqSubscription subscription)
     {
         var invalidConsumer = CreateInvalidChannelConsumer(subscription);
@@ -266,7 +272,14 @@ public class RmqSyncMessageGatewayProvider
     {
         if (channel != null)
         {
-            await channel.PurgeAsync();
+            try
+            {
+                await channel.PurgeAsync();
+            }
+            catch (ObjectDisposedException exception) when (exception.ObjectName == nameof(RmqMessageConsumer))
+            {
+                // The message pump may already have disposed its channel.
+            }
             channel.Dispose();
         }
 
@@ -370,7 +383,6 @@ public class RmqSyncMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
-        // Genuine bounded read; see GetMessageFromInvalidChannel for rationale.
         var invalidConsumer = CreateInvalidChannelConsumer(subscription);
         try
         {
@@ -394,7 +406,7 @@ public class RmqSyncMessageGatewayProvider
 
     private RmqMessageConsumer CreateInvalidChannelConsumer(RmqSubscription subscription)
     {
-        var invalidRoutingKey = new RoutingKey($"{subscription.RoutingKey.Value}.Invalid");
+        var invalidRoutingKey = subscription.InvalidMessageRoutingKey!;
         return new RmqMessageConsumer(
             connection: _connection,
             queueName: new ChannelName(invalidRoutingKey.Value),

@@ -35,6 +35,8 @@ namespace Greetings.Ports.Mappers
     {
         public IRequestContext Context { get; set; }
 
+        //256 KB matches the SNS default topic limit. If you raise the topic's SnsAttributes.MaximumMessageSize (up to 1 MiB)
+        //you can raise this threshold too, but leave headroom: message attributes (headers) count against the topic limit.
         [ClaimCheck(step:0, thresholdInKb: 256)]
         public Message MapToMessage(GreetingEvent request, Publication publication)
         {

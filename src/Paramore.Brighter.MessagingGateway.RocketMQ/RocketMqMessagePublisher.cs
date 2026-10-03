@@ -117,7 +117,9 @@ public static class RocketMqMessagePublisher
         Add(HeaderNames.MessageId, messageId);
         Add(HeaderNames.Topic, header.Topic.Value);
         Add(HeaderNames.HandledCount, header.HandledCount.ToString());
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         Add(HeaderNames.MessageType, header.MessageType.ToString());
+#pragma warning restore CS0618
         Add(HeaderNames.TimeStamp, header.TimeStamp.ToRfc3339());
         Add(HeaderNames.Source, header.Source.ToString());
         Add(HeaderNames.SpecVersion, header.SpecVersion);

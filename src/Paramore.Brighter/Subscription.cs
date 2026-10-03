@@ -81,7 +81,11 @@ namespace Paramore.Brighter
         /// A typical strategy is to use the <see cref="MessageHeader"/> to read the Cloud Event Type and use that to look up the <see cref="Type"/>.
         /// We default to a Datatype Channel, where the <see cref="RequestType"/> is the type of the <see cref="IRequest"/> that the channel will read.
         /// </summary>
-        /// <remarks>We recommend using a RequestType channel, as it is operationally easier to reason about, but we support other strategies if needed</remarks>
+        /// <remarks>
+        /// The mapped request must implement <see cref="ICommand"/> or <see cref="IEvent"/>. Its runtime type
+        /// determines whether the message pump sends to one handler or publishes to subscribers.
+        /// We recommend using a RequestType channel, as it is operationally easier to reason about, but we support other strategies if needed.
+        /// </remarks>
         public Func<Message, Type> MapRequestType { get; set; } 
 
         /// <summary>

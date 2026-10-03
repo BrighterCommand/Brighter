@@ -283,8 +283,20 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         {
             return new HeaderResult<Uri>(uri, true);
         }
+
+        if (_messageAttributes.TryGetValue(HeaderNames.LEGACY_SOURCE, out source)
+            && Uri.TryCreate(source.GetValueInString(), UriKind.RelativeOrAbsolute, out uri))
+        {
+            return new HeaderResult<Uri>(uri, true);
+        }
         
         if (headers.TryGetValue(HeaderNames.Source, out var val)
+            && Uri.TryCreate(val, UriKind.RelativeOrAbsolute, out uri))
+        {
+            return new HeaderResult<Uri>(uri, true);
+        }
+
+        if (headers.TryGetValue(HeaderNames.LEGACY_SOURCE, out val)
             && Uri.TryCreate(val, UriKind.RelativeOrAbsolute, out uri))
         {
             return new HeaderResult<Uri>(uri, true);
