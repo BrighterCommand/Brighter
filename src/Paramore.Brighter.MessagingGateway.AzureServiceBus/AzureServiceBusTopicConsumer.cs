@@ -72,6 +72,7 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
     {
         Log.PurgingMessagesFromSubscriptionOnTopic(s_logger, SubscriptionName, Topic);
 
+        await ResetReceiverAsync();
         await AdministrationClientWrapper.DeleteTopicAsync(Topic);
         await EnsureChannelAsync();
     }
