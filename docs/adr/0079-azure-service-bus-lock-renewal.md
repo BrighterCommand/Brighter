@@ -75,8 +75,8 @@ Azure-specific channel subclasses check that validity before handing a message t
 | --- | --- |
 | Batch received | Track each token and start renewal; session messages share one renewal task |
 | Renewal due | Renew before expiry, using the current broker deadline |
-| Transient renewal failure | Retry with a delay while the lock and budget remain valid |
-| Permanent renewal failure | Mark the lock lost and stop renewal |
+| Transient renewal failure | Retry with a delay while the renewal budget remains available |
+| Permanent renewal failure | Stop renewal; mark the lock lost only for broker-reported message or session lock loss |
 | Renewal budget exhausted | Stop renewal; preserve the last successful lock deadline |
 | Buffered message requested | Return only a delivery with a valid lock |
 | Complete, abandon, or dead-letter | Cancel and await the message renewal before settlement |
@@ -86,6 +86,25 @@ Azure-specific channel subclasses check that validity before handing a message t
 Each task uses a monotonic clock for its renewal budget and broker UTC timestamps for lock validity.
 The SDK updates the received message or session deadline after successful renewal.
 Cancellation also reaches an in-flight renewal request.
+An apparently expired local deadline does not stop the renewal loop: while budget remains,
+attempt renewal and let the broker accept it or report lock loss. Dispatch still checks the
+last known deadline against the local clock, so this does not guarantee delivery under clock skew.
+Transient and terminal renewal failures log the lock type, message or session identifier, entity
+path, configured renewal duration, and last known deadline alongside the exception. An unexpected transport cancellation is a
+failure; elapsed time alone does not classify it as renewal-budget exhaustion.
+Other terminal renewal failures preserve the last granted deadline for dispatch.
+
+Consecutive transient failures use exponential retry backoff from 100 milliseconds to one second,
+capped by the remaining renewal budget and, while positive, the remaining lock time. The normal
+renewal scheduling delay still applies. Only the first failure in an episode logs a warning;
+subsequent failures log at Debug until a successful renewal resets the episode.
+
+Stopping publishes one shared completion task before cancelling, without holding a lifecycle lock
+while cancellation callbacks execute. Receiver close similarly snapshots its renewals and marks
+itself closing under its gate, then stops renewals and closes the broker receiver outside that gate.
+The last session message detaches the shared session lock under the gate before awaiting its stop,
+so a receive already in progress cannot attach new messages to a stopped renewal. The old renewal
+remains tracked until stopping finishes so concurrent disposal still waits for it.
 
 ### Where the pieces live
 
