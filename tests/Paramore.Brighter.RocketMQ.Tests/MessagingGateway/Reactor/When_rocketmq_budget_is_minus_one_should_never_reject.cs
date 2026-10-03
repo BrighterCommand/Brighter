@@ -45,8 +45,11 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Brighter's RocketMQ <c>Requeue</c> is a broker no-op (<c>RocketMessageConsumer.Requeue</c>) —
-/// redelivery only happens when the subscription's invisibility lease lapses. The default
+/// When this test was written, Brighter's RocketMQ <c>Requeue</c> was a broker no-op and redelivery
+/// came only when the subscription's invisibility lease lapsed; the timings described here assume that.
+/// Since bugfix 0025 <c>Requeue</c> sets the invisible duration on the broker, so redelivery comes
+/// sooner. The assertions do not depend on the lease timing.
+/// The default
 /// <c>InvisibilityTimeout</c> (30 s) would give only ~2 deliveries in a 60 s run, so this test uses
 /// 10 s (as task 7.1's measurement did) to get ~5-6 deliveries in 60 s. RocketMQ's own consumer-group
 /// max-retry (default 16) is nowhere near reached by that many deliveries, so no broker-level
@@ -115,8 +118,8 @@ public class RocketMqBudgetMinusOneNeverRejectsReactorTests
 
             producer.Send(message);
 
-            // Act — run the pump with budget -1; pump for 60 s, then quit and await it. With a
-            // 10 s invisibility lease the message redelivers roughly every 10 s, so the dispatch
+            // Act — run the pump with budget -1; pump for 60 s, then quit and await it. The
+            // message redelivers within seconds of each requeue, so the dispatch
             // count will exceed 3. Under the RED mutation (DiscardRequeuedMessagesEnabled
             // returns true), HandledCountReached(-1) is true on the first deferral (HandledCount
             // 0 >= -1), so dispatch count stays at 1 and the message is rejected to the DLQ instead
