@@ -25,6 +25,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.Logging;
@@ -38,6 +39,173 @@ public class AzureServiceBusLockLoggingTests
     private static readonly InMemoryServiceBusLogProvider s_logs = new();
 
     static AzureServiceBusLockLoggingTests() => ApplicationLogging.LoggerFactory.AddProvider(s_logs);
+
+    [Fact]
+    public async Task When_transient_failures_continue_until_lock_loss_should_warn_once_and_log_retries_at_debug()
+    {
+        // Arrange
+        var receiver = new InMemoryLockingServiceBusReceiver(1, TimeSpan.FromSeconds(2))
+        {
+            RenewalFailuresRemaining = int.MaxValue,
+            RenewalFailureIsTransient = true
+        };
+        await using var client = new InMemoryLockingServiceBusClient(receiver);
+        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(CreateSubscription(TimeSpan.FromSeconds(30)));
+        var message = Assert.Single(await consumer.ReceiveAsync());
+
+        // Act
+        var elapsed = Stopwatch.StartNew();
+        while (elapsed.Elapsed < TimeSpan.FromSeconds(5) && !s_logs.Entries.Any(entry =>
+            entry.Message.Contains("stopped after a failure") &&
+            entry.Properties.TryGetValue("LockId", out var id) && Equals(id, message.Id.Value)))
+            await Task.Delay(20);
+        await consumer.DisposeAsync();
+
+        // Assert
+        var logs = s_logs.Entries.Where(entry => entry.Properties.TryGetValue("LockId", out var id) && Equals(id, message.Id.Value)).ToArray();
+        Assert.Single(logs, entry => entry.Level == LogLevel.Warning && entry.Message.Contains("Transient failure"));
+        Assert.Contains(logs, entry => entry.Level == LogLevel.Debug && entry.Message.Contains("Transient failure"));
+        Assert.Single(logs, entry => entry.Level == LogLevel.Warning && entry.Message.Contains("stopped after a failure"));
+        Assert.True(receiver.RenewalAttemptCount >= 3);
+        Assert.Equal(0, receiver.RenewalCount);
+    }
+
+    [Fact]
+    public async Task When_renewal_stops_without_broker_lock_loss_should_preserve_dispatch_until_the_deadline()
+    {
+        // Arrange
+        var receiver = new InMemoryLockingServiceBusReceiver(2, TimeSpan.FromSeconds(4))
+        {
+            RenewalException = new InvalidOperationException("The transport cannot renew.")
+        };
+        await using var client = new InMemoryLockingServiceBusClient(receiver);
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client));
+        await using var channel = factory.CreateAsyncChannel(CreateSubscription(TimeSpan.FromSeconds(30)));
+        var first = await channel.ReceiveAsync(null);
+        await channel.AcknowledgeAsync(first);
+
+        // Act
+        var elapsed = Stopwatch.StartNew();
+        while (elapsed.Elapsed < TimeSpan.FromSeconds(3) && !s_logs.Entries.Any(entry =>
+            entry.Message.Contains("stopped after a failure") &&
+            entry.Properties.TryGetValue("EntityPath", out var entity) && Equals(entity, receiver.EntityPath)))
+            await Task.Delay(20);
+        var second = await channel.ReceiveAsync(null);
+        if (!second.IsEmpty) await channel.AcknowledgeAsync(second);
+
+        // Assert
+        Assert.False(second.IsEmpty);
+        Assert.Equal(2, receiver.CompletedCount);
+        AssertFailureWarning(second.Id.Value, receiver.EntityPath, transient: false);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task When_renewal_fails_should_log_the_lock_identity(bool transient)
+    {
+        // Arrange
+        var receiver = new InMemoryLockingServiceBusReceiver(1, TimeSpan.FromSeconds(2))
+        {
+            RenewalFailuresRemaining = 1,
+            RenewalFailureIsTransient = transient
+        };
+        await using var client = new InMemoryLockingServiceBusClient(receiver);
+        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(CreateSubscription(TimeSpan.FromSeconds(30)));
+        var message = Assert.Single(await consumer.ReceiveAsync());
+
+        // Act
+        await WaitForFailureLogAsync(message.Id.Value);
+        await consumer.DisposeAsync();
+
+        // Assert
+        AssertFailureWarning(message.Id.Value, receiver.EntityPath, transient);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task When_the_reported_deadline_has_passed_should_let_the_broker_decide_whether_to_renew(bool brokerRejects)
+    {
+        // Arrange
+        var receiver = new InMemoryLockingServiceBusReceiver(1, TimeSpan.FromSeconds(2))
+        {
+            FirstRenewalReportedLockDuration = TimeSpan.FromSeconds(-1),
+            RenewalExceptionAfterFirstSuccess = brokerRejects
+                ? new ServiceBusException("The broker has lost the lock.", ServiceBusFailureReason.MessageLockLost)
+                : null
+        };
+        await using var client = new InMemoryLockingServiceBusClient(receiver);
+        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(CreateSubscription(TimeSpan.FromSeconds(30)));
+        var message = Assert.Single(await consumer.ReceiveAsync());
+
+        // Act
+        if (brokerRejects)
+            await WaitForFailureLogAsync(message.Id.Value);
+        else
+        {
+            var elapsed = Stopwatch.StartNew();
+            while (receiver.RenewalCount < 2 && elapsed.Elapsed < TimeSpan.FromSeconds(5))
+                await Task.Delay(20);
+            await consumer.AcknowledgeAsync(message);
+        }
+        await consumer.DisposeAsync();
+
+        // Assert
+        Assert.True(receiver.RenewalAttemptCount >= 2, "A local deadline must not prevent asking the broker to renew.");
+        if (brokerRejects)
+            AssertFailureWarning(message.Id.Value, receiver.EntityPath, transient: false);
+        else
+        {
+            Assert.True(receiver.RenewalCount >= 2);
+            Assert.Equal(1, receiver.CompletedCount);
+        }
+    }
+
+    [Fact]
+    public async Task When_renewal_is_cancelled_unexpectedly_should_log_failure_instead_of_budget_exhaustion()
+    {
+        // Arrange
+        var receiver = new InMemoryLockingServiceBusReceiver(1, TimeSpan.FromSeconds(2))
+        {
+            RenewalException = new OperationCanceledException("The transport cancelled the operation.")
+        };
+        await using var client = new InMemoryLockingServiceBusClient(receiver);
+        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(CreateSubscription(TimeSpan.FromSeconds(30)));
+        var message = Assert.Single(await consumer.ReceiveAsync());
+
+        // Act
+        await WaitForFailureLogAsync(message.Id.Value);
+        await consumer.DisposeAsync();
+
+        // Assert
+        AssertFailureWarning(message.Id.Value, receiver.EntityPath, transient: false);
+        Assert.DoesNotContain(s_logs.Entries, entry => entry.Message.Contains("has been reached") &&
+            entry.Properties.TryGetValue("LockId", out var value) && Equals(value, message.Id.Value));
+        Assert.Equal(1, receiver.RenewalAttemptCount);
+    }
+
+    private static async Task WaitForFailureLogAsync(string lockId)
+    {
+        var elapsed = Stopwatch.StartNew();
+        while (elapsed.Elapsed < TimeSpan.FromSeconds(5) && !s_logs.Entries.Any(entry =>
+            entry.Message.Contains("failure", StringComparison.OrdinalIgnoreCase) &&
+            entry.Properties.TryGetValue("LockId", out var value) && Equals(value, lockId)))
+            await Task.Delay(20);
+    }
+
+    private static void AssertFailureWarning(string lockId, string entityPath, bool transient)
+    {
+        var warning = Assert.Single(s_logs.Entries, entry =>
+            entry.Message.Contains("failure", StringComparison.OrdinalIgnoreCase) &&
+            entry.Properties.TryGetValue("LockId", out var value) && Equals(value, lockId));
+        Assert.Equal(LogLevel.Warning, warning.Level);
+        Assert.Equal("message", warning.Properties["LockType"]);
+        Assert.Equal(entityPath, warning.Properties["EntityPath"]);
+        Assert.IsType<DateTimeOffset>(warning.Properties["LockedUntil"]);
+        Assert.Equal(TimeSpan.FromSeconds(30), warning.Properties["MaxAutoLockRenewalDuration"]);
+        Assert.Contains(transient ? "Transient failure" : "stopped after a failure", warning.Message);
+    }
 
     [Theory]
     [InlineData(false, false)]
@@ -155,7 +323,7 @@ public class AzureServiceBusLockLoggingTests
         await Task.Delay(500);
 
         // Assert
-        Assert.DoesNotContain(s_logs.Entries, entry => entry.Properties.ContainsKey("MaxAutoLockRenewalDuration") &&
+        Assert.DoesNotContain(s_logs.Entries, entry => entry.Message.Contains("has been reached") &&
             entry.Properties.TryGetValue("LockId", out var value) && Equals(value, message.Id.Value));
         Assert.Equal(0, receiver.RenewalAttemptCount);
         Assert.Equal(dispose ? 0 : 1, receiver.CompletedCount);
@@ -181,7 +349,7 @@ public class AzureServiceBusLockLoggingTests
         await Task.Delay(TimeSpan.FromMilliseconds(700));
 
         // Assert
-        Assert.DoesNotContain(s_logs.Entries, entry => entry.Properties.ContainsKey("MaxAutoLockRenewalDuration") &&
+        Assert.DoesNotContain(s_logs.Entries, entry => entry.Message.Contains("has been reached") &&
             entry.Properties.TryGetValue("LockId", out var value) && Equals(value, message.Id.Value));
         Assert.Equal(0, receiver.RenewalsInFlight);
     }
@@ -199,7 +367,7 @@ public class AzureServiceBusLockLoggingTests
     {
         var elapsed = Stopwatch.StartNew();
         while (elapsed.Elapsed < TimeSpan.FromSeconds(3) && !s_logs.Entries.Any(entry =>
-            entry.Properties.ContainsKey("MaxAutoLockRenewalDuration") &&
+            entry.Message.Contains("has been reached") &&
             entry.Properties.TryGetValue("LockId", out var value) && Equals(value, lockId)))
             await Task.Delay(20);
     }
@@ -207,7 +375,7 @@ public class AzureServiceBusLockLoggingTests
     private static void AssertBudgetWarning(string lockId, string lockType, string entityPath, TimeSpan duration)
     {
         var warning = Assert.Single(s_logs.Entries, entry =>
-            entry.Properties.ContainsKey("MaxAutoLockRenewalDuration") &&
+            entry.Message.Contains("has been reached") &&
             entry.Properties.TryGetValue("LockId", out var value) && Equals(value, lockId));
         Assert.Equal(LogLevel.Warning, warning.Level);
         Assert.Equal(lockType, warning.Properties["LockType"]);

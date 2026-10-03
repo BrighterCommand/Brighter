@@ -85,19 +85,36 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         public Task CloseAsync()
         {
+            TaskCompletionSource<bool> completion;
+            ServiceBusLock[] locks;
             lock (_gate)
-                return _closing ??= CloseCoreAsync();
+            {
+                if (_closing is not null) return _closing;
+                completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _closing = completion.Task;
+                locks = _renewals.ToArray();
+                _locks.Clear();
+                _renewals.Clear();
+                _sessionLock = null;
+            }
+            _ = CloseCoreAsync(locks, completion);
+            return completion.Task;
         }
 
-        private async Task CloseCoreAsync()
+        private async Task CloseCoreAsync(ServiceBusLock[] locks, TaskCompletionSource<bool> completion)
         {
-            Log.ClosingMessageReceiverConnection(s_logger);
-            var locks = _renewals.ToArray();
-            _locks.Clear();
-            _renewals.Clear();
-            await Task.WhenAll(locks.Select(messageLock => messageLock.StopAsync())).ConfigureAwait(false);
-            await _messageReceiver.CloseAsync().ConfigureAwait(false);
-            Log.MessageReceiverConnectionStopped(s_logger);
+            try
+            {
+                Log.ClosingMessageReceiverConnection(s_logger);
+                await Task.WhenAll(locks.Select(messageLock => messageLock.StopAsync())).ConfigureAwait(false);
+                await _messageReceiver.CloseAsync().ConfigureAwait(false);
+                Log.MessageReceiverConnectionStopped(s_logger);
+                completion.TrySetResult(true);
+            }
+            catch (Exception exception)
+            {
+                completion.TrySetException(exception);
+            }
         }
 
         public bool HasPendingMessages
@@ -120,6 +137,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 if (!_locks.TryGetValue(lockToken, out messageLock)) return;
                 _locks.Remove(lockToken);
                 stopRenewal = _sessionLock is null || _locks.Count == 0;
+                if (stopRenewal && ReferenceEquals(messageLock, _sessionLock))
+                    _sessionLock = null;
             }
             if (stopRenewal)
             {
@@ -235,4 +254,3 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         }
     }
 }
-

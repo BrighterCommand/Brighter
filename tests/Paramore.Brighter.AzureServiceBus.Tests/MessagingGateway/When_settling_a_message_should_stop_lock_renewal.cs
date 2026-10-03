@@ -22,6 +22,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
@@ -31,6 +33,83 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusLockRenewalLifetimeTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task When_cancellation_callbacks_request_disposal_should_not_hold_lifecycle_gates(bool settleFirst)
+    {
+        // Arrange
+        var receiver = new InMemoryLockingServiceBusReceiver(1, TimeSpan.FromSeconds(4)) { BlockRenewal = true };
+        await using var client = new InMemoryLockingServiceBusClient(receiver);
+        var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
+            channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"), makeChannels: OnMissingChannel.Assume);
+        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        Task nestedDisposal = Task.CompletedTask;
+        var callbackEnteredDisposal = false;
+        receiver.RenewalCancellationCallback = () =>
+        {
+            var entry = Task.Factory.StartNew(() => { nestedDisposal = consumer.DisposeAsync().AsTask(); },
+                CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            callbackEnteredDisposal = entry.Wait(TimeSpan.FromSeconds(3));
+        };
+        var message = Assert.Single(await consumer.ReceiveAsync());
+        await receiver.RenewalStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Act
+        if (settleFirst) await consumer.AcknowledgeAsync(message);
+        else await consumer.DisposeAsync();
+        await nestedDisposal.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        Assert.True(callbackEnteredDisposal, "Cancellation callbacks must be able to enter disposal from another thread.");
+        Assert.Equal(0, receiver.RenewalsInFlight);
+        Assert.True(receiver.IsClosed);
+    }
+
+    [Fact]
+    public async Task When_receive_overlaps_last_session_settlement_should_start_a_fresh_renewal()
+    {
+        // Arrange
+        var receiver = new InMemoryLockingServiceBusReceiver(2, TimeSpan.FromSeconds(4));
+        var session = new InMemoryLockingServiceBusSessionReceiver(receiver, TimeSpan.FromSeconds(4));
+        await using var client = new InMemoryLockingServiceBusClient(session);
+        var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
+            channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"),
+            bufferSize: 1, makeChannels: OnMissingChannel.Assume,
+            subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { RequireSession = true });
+        await using var consumer = new AzureServiceBusConsumerFactory(client).CreateAsync(subscription);
+        var first = Assert.Single(await consumer.ReceiveAsync());
+        receiver.BlockReceive = true;
+        receiver.BlockCompletion = true;
+        var pendingReceive = consumer.ReceiveAsync();
+        await receiver.BlockedReceiveStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Act
+        try
+        {
+            var settlement = consumer.AcknowledgeAsync(first);
+            await receiver.CompletionStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var renewalsBeforeReceive = session.RenewalCount;
+            receiver.AllowReceive.TrySetResult(true);
+            var second = Assert.Single(await pendingReceive);
+            receiver.AllowCompletion.TrySetResult(true);
+            await settlement;
+            var elapsed = Stopwatch.StartNew();
+            while (session.RenewalCount == renewalsBeforeReceive && elapsed.Elapsed < TimeSpan.FromSeconds(5))
+                await Task.Delay(20);
+            await consumer.AcknowledgeAsync(second);
+
+            // Assert
+            Assert.True(session.RenewalCount > renewalsBeforeReceive, "The new batch must not reuse the stopped session renewal.");
+            Assert.Equal(2, receiver.CompletedCount);
+        }
+        finally
+        {
+            receiver.AllowReceive.TrySetResult(true);
+            receiver.AllowCompletion.TrySetResult(true);
+        }
+    }
+
     [Theory]
     [InlineData("complete", false)]
     [InlineData("complete", true)]

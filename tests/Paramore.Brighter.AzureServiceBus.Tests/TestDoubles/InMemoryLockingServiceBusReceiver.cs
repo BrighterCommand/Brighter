@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -47,10 +48,20 @@ public class InMemoryLockingServiceBusReceiver(int messageCount, TimeSpan lockDu
     public Exception? ReceiveException { get; set; }
     public bool BlockRenewal { get; set; }
     public bool HoldCancelledRenewal { get; set; }
+    public Action? RenewalCancellationCallback { get; set; }
+    public bool BlockReceive { get; set; }
+    public bool BlockCompletion { get; set; }
+    public TaskCompletionSource<bool> BlockedReceiveStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource<bool> AllowReceive { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource<bool> CompletionStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource<bool> AllowCompletion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public TaskCompletionSource<bool> RenewalCancellationStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public TaskCompletionSource<bool> AllowRenewalToFinish { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public int RenewalFailuresRemaining { get; set; }
     public bool RenewalFailureIsTransient { get; set; }
+    public TimeSpan? FirstRenewalReportedLockDuration { get; set; }
+    public Exception? RenewalException { get; set; }
+    public Exception? RenewalExceptionAfterFirstSuccess { get; set; }
     public TaskCompletionSource<bool> RenewalStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public TaskCompletionSource<bool> RenewalSucceeded { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public int RenewalAttemptCount => Volatile.Read(ref _renewalAttempts);
@@ -74,11 +85,16 @@ public class InMemoryLockingServiceBusReceiver(int messageCount, TimeSpan lockDu
         get { lock (_gate) return _closed; }
     }
 
-    public override Task<IReadOnlyList<ServiceBusReceivedMessage>> ReceiveMessagesAsync(
+    public override async Task<IReadOnlyList<ServiceBusReceivedMessage>> ReceiveMessagesAsync(
         int maxMessages, TimeSpan? maxWaitTime = null, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (ReceiveException is not null) throw ReceiveException;
+        if (BlockReceive)
+        {
+            BlockedReceiveStarted.TrySetResult(true);
+            await AllowReceive.Task.WaitAsync(cancellationToken);
+        }
         lock (_gate)
         {
             if (_closed) throw new ObjectDisposedException(nameof(InMemoryLockingServiceBusReceiver));
@@ -100,7 +116,7 @@ public class InMemoryLockingServiceBusReceiver(int messageCount, TimeSpan lockDu
                 _remaining--;
             }
 
-            return Task.FromResult<IReadOnlyList<ServiceBusReceivedMessage>>(messages);
+            return messages;
         }
     }
 
@@ -109,6 +125,7 @@ public class InMemoryLockingServiceBusReceiver(int messageCount, TimeSpan lockDu
     {
         Interlocked.Increment(ref _renewalAttempts);
         Interlocked.Increment(ref _renewalsInFlight);
+        using var registration = cancellationToken.Register(() => RenewalCancellationCallback?.Invoke());
         RenewalStarted.TrySetResult(true);
         try
         {
@@ -118,6 +135,9 @@ public class InMemoryLockingServiceBusReceiver(int messageCount, TimeSpan lockDu
             lock (_gate)
             {
                 EnsureLockIsHeld(message.LockToken);
+                if (RenewalException is not null) throw RenewalException;
+                if (_renewals > 0 && RenewalExceptionAfterFirstSuccess is not null)
+                    throw RenewalExceptionAfterFirstSuccess;
                 if (RenewalFailuresRemaining > 0)
                 {
                     RenewalFailuresRemaining--;
@@ -127,7 +147,10 @@ public class InMemoryLockingServiceBusReceiver(int messageCount, TimeSpan lockDu
 
                 var lockedUntil = DateTimeOffset.UtcNow + lockDuration;
                 _locks[message.LockToken] = lockedUntil;
-                message.GetRawAmqpMessage().MessageAnnotations["x-opt-locked-until"] = lockedUntil.UtcDateTime;
+                var reportedLockedUntil = _renewals == 0 && FirstRenewalReportedLockDuration is { } reportedDuration
+                    ? DateTimeOffset.UtcNow + reportedDuration
+                    : lockedUntil;
+                message.GetRawAmqpMessage().MessageAnnotations["x-opt-locked-until"] = reportedLockedUntil.UtcDateTime;
                 _renewals++;
                 RenewalSucceeded.TrySetResult(true);
             }
@@ -153,16 +176,20 @@ public class InMemoryLockingServiceBusReceiver(int messageCount, TimeSpan lockDu
         }
     }
 
-    public override Task CompleteMessageAsync(ServiceBusReceivedMessage message,
+    public override async Task CompleteMessageAsync(ServiceBusReceivedMessage message,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (BlockCompletion)
+        {
+            CompletionStarted.TrySetResult(true);
+            await AllowCompletion.Task.WaitAsync(cancellationToken);
+        }
         lock (_gate)
         {
             EnsureLockIsHeld(message.LockToken);
             _locks.Remove(message.LockToken);
             _completed.Add(message.LockToken);
-            return Task.CompletedTask;
         }
     }
 
