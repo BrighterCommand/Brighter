@@ -25,6 +25,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Xunit;
@@ -39,7 +40,11 @@ public class AzureServiceBusLockRenewalLifetimeTests
     public async Task When_cancellation_callbacks_request_disposal_should_not_hold_lifecycle_gates(bool settleFirst)
     {
         // Arrange
-        var receiver = new InMemoryLockingServiceBusReceiver(1, TimeSpan.FromSeconds(4)) { BlockRenewal = true };
+        var receiver = new InMemoryLockingServiceBusReceiver(1, TimeSpan.FromSeconds(4))
+        {
+            BlockRenewal = true,
+            BlockCompletion = settleFirst
+        };
         await using var client = new InMemoryLockingServiceBusClient(receiver);
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             channelName: new ChannelName("locks"), routingKey: new RoutingKey("locks"), makeChannels: OnMissingChannel.Assume);
@@ -56,7 +61,21 @@ public class AzureServiceBusLockRenewalLifetimeTests
         await receiver.RenewalStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Act
-        if (settleFirst) await consumer.AcknowledgeAsync(message);
+        if (settleFirst)
+        {
+            var settlement = consumer.AcknowledgeAsync(message);
+            try
+            {
+                await nestedDisposal.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                receiver.AllowCompletion.TrySetResult(true);
+            }
+            var exception = await Assert.ThrowsAsync<ServiceBusException>(
+                () => settlement.WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.Equal(ServiceBusFailureReason.MessageLockLost, exception.Reason);
+        }
         else await consumer.DisposeAsync();
         await nestedDisposal.WaitAsync(TimeSpan.FromSeconds(5));
 
@@ -246,7 +265,8 @@ public class AzureServiceBusLockRenewalLifetimeTests
         var receiver = new InMemoryLockingServiceBusReceiver(1, TimeSpan.FromSeconds(2))
         {
             BlockRenewal = true,
-            HoldCancelledRenewal = true
+            HoldCancelledRenewal = true,
+            BlockCompletion = true
         };
         await using var client = new InMemoryLockingServiceBusClient(receiver);
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
@@ -266,11 +286,16 @@ public class AzureServiceBusLockRenewalLifetimeTests
             closedBeforeRenewalFinished = receiver.IsClosed;
             disposalFinishedEarly = disposal.IsCompleted;
             receiver.AllowRenewalToFinish.TrySetResult(true);
-            await Task.WhenAll(settlement, disposal).WaitAsync(TimeSpan.FromSeconds(5));
+            await disposal.WaitAsync(TimeSpan.FromSeconds(5));
+            receiver.AllowCompletion.TrySetResult(true);
+            var exception = await Assert.ThrowsAsync<ServiceBusException>(
+                () => settlement.WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.Equal(ServiceBusFailureReason.MessageLockLost, exception.Reason);
         }
         finally
         {
             receiver.AllowRenewalToFinish.TrySetResult(true);
+            receiver.AllowCompletion.TrySetResult(true);
         }
 
         // Assert
