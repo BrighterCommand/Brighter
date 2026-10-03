@@ -33,6 +33,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         Task CreateQueueAsync(string queueName, TimeSpan? autoDeleteOnIdle = null, long? maxMessageSizeInKilobytes = default);
 
         /// <summary>
+        /// Creates a queue using the consumer's subscription configuration.
+        /// </summary>
+        /// <param name="queueName">The name of the queue.</param>
+        /// <param name="subscriptionConfiguration">The queue settings declared by the subscription.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        Task CreateQueueAsync(string queueName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration);
+
+        /// <summary>
         /// Create a Topic
         /// </summary>
         /// <param name="topicName">The name of the Topic</param>
@@ -61,7 +69,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         Task<bool> SubscriptionExistsAsync(string topicName, string subscriptionName);
 
         /// <summary>
-        /// Create a Subscription.
+        /// Create a subscription, or reconcile its explicitly configured rule if it already exists.
         /// </summary>
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription.</param>

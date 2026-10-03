@@ -30,6 +30,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -44,8 +45,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// This dual strategy prevents low traffic topics having batches that are 'pending' for long periods, causing a risk that the consumer
     /// will end before committing its offsets.
     /// </summary>
-    public partial class KafkaMessageConsumer : KafkaMessagingGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    public partial class KafkaMessageConsumer : KafkaMessagingGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
     {
+        /// <inheritdoc />
+        public MessagingSystem MessagingSystem => MessagingSystem.Kafka;
+
         private readonly KafkaMessagingGatewayConfiguration _configuration;
         private readonly IConsumer<string, byte[]> _consumer;
         private readonly KafkaMessageCreator _creator;
@@ -234,32 +238,43 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 SweepOffsets();
             }, null, _sweepUncommittedInterval, _sweepUncommittedInterval);
 
+            // Configure and ensure the topic before subscribing: EnsureTopic (for Create) waits for
+            // the topic to become visible in broker metadata, and that wait only protects this
+            // consumer if it runs before Subscribe, not after.
+            MakeChannels = makeChannels;
+            Topic = routingKey;
+            NumPartitions = numPartitions;
+            ReplicationFactor = replicationFactor;
+            TopicFindTimeout = topicFindTimeout.Value;
+
+            EnsureTopic();
+
             _consumer = new ConsumerBuilder<string, byte[]>(_consumerConfig)
                 .SetPartitionsAssignedHandler((_, list) =>
                 {
                     var partitions = list.Select(p => $"{p.Topic} : {p.Partition.Value}");
-                    
+
                     Log.PartitionAdded(s_logger, String.Join(",", partitions));
-                    
+
                     _partitions.AddRange(list);
                 })
                 .SetPartitionsRevokedHandler((_, list) =>
                 {
                     //We should commit any offsets we have stored for these partitions
                     CommitOffsetsFor(list);
-                    
+
                     var revokedPartitionInfo = list.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
-                    
+
                     Log.PartitionsRevoked(s_logger, string.Join(",", revokedPartitionInfo));
-                    
+
                     _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
                 })
                 .SetPartitionsLostHandler((_, list) =>
                 {
                     var lostPartitions = list.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
-                    
+
                     Log.PartitionsLost(s_logger, string.Join(",", lostPartitions));
-                    
+
                     _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
                 })
                 .SetErrorHandler((_, error) => HandleError(error))
@@ -269,14 +284,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _consumer.Subscribe([Topic.Value]);
 
             _creator = new KafkaMessageCreator();
-            
-            MakeChannels = makeChannels;
-            Topic = routingKey;
-            NumPartitions = numPartitions;
-            ReplicationFactor = replicationFactor;
-            TopicFindTimeout = topicFindTimeout.Value;
-            
-            EnsureTopic();
         }
 
         /// <summary>

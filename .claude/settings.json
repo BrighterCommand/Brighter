@@ -39,6 +39,7 @@
       "Bash(dotnet --version)",
       "Bash(dotnet --info)",
       "Bash(dotnet --list-sdks)",
+      "Bash(dotnet run .claude/commands/spec/show_me_facts.cs -- specs/:*)",
       "Bash(dotnet --list-runtimes)"
     ],
     "deny": [

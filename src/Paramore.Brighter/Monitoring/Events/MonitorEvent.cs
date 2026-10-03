@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Text.Json.Serialization;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Monitoring.Handlers;
 
 namespace Paramore.Brighter.Monitoring.Events
@@ -71,6 +72,13 @@ namespace Paramore.Brighter.Monitoring.Events
         /// <summary>
         /// Any exception that was thrown when processing the handler pipeline
         /// </summary>
+        /// <remarks>
+        /// JSON contains the exception type name, message, stack trace and inner exception details.
+        /// Reflection members, custom properties and <see cref="System.Exception.Data"/> are omitted.
+        /// Deserialization creates plain <see cref="System.Exception"/> instances with the messages
+        /// and inner exception chain; it does not restore the original CLR types or stack traces.
+        /// </remarks>
+        [JsonConverter(typeof(MonitorEventExceptionConverter))]
         public Exception? Exception { get; set; } = exception;
 
         /// <summary>

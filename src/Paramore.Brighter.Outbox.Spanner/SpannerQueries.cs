@@ -9,7 +9,7 @@ public class SpannerQueries : IRelationDatabaseOutboxQueries, IRelationalDatabas
     public string PagedReadCommand => "SELECT * FROM `{0}` ORDER BY `Timestamp` ASC LIMIT @Take OFFSET @Skip";
     
     /// <inheritdoc />
-    public string PagedOutstandingCommand => "SELECT * FROM `{0}` WHERE `Dispatched` IS NULL AND `Timestamp` < @TimestampSince ORDER BY `Timestamp` DESC LIMIT @Take OFFSET @Skip";
+    public string PagedOutstandingCommand => "SELECT * FROM `{0}` WHERE `Dispatched` IS NULL AND `Timestamp` < @TimestampSince {1} ORDER BY `Timestamp` DESC LIMIT @Take OFFSET @Skip";
 
     /// <inheritdoc />
     public string PagedOutstandingCommandInStatement => "AND `Topic` NOT IN ( {0} )";

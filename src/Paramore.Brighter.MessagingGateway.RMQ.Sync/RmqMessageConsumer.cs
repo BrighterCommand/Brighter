@@ -33,6 +33,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
@@ -48,11 +49,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// the package Paramore.Brighter.MessagingGateway.RMQ.Async.
     /// </remarks>
     /// </summary>
-    public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync
+    public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IHaveAMessagingSystem
     {
+        /// <inheritdoc />
+        public MessagingSystem MessagingSystem => MessagingSystem.RabbitMQ;
+
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
         private PullConsumer? _consumer;
+        private int _disposed;
         private RmqMessageProducer? _requeueProducer;
         private volatile bool _requeueProducerInitialized;
         private object? _requeueProducerLock;
@@ -158,6 +163,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
+            ThrowIfDisposed();
             var deliveryTag = message.DeliveryTag;
             try
             {
@@ -178,6 +184,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// </summary>
         public void Purge()
         {
+            ThrowIfDisposed();
             try
             {
                 //Why bind a queue? Because we use purge to initialize a queue for RPC
@@ -206,6 +213,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="message">The message.</param>
         public void Nack(Message message)
         {
+            ThrowIfDisposed();
             var deliveryTag = message.DeliveryTag;
             try
             {
@@ -228,6 +236,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <returns>Message.</returns>
         public Message[] Receive(TimeSpan? timeOut = null)
         {
+            ThrowIfDisposed();
            
             if (Connection.Exchange is null)
                 throw new InvalidOperationException("RmqMessageConsumer.Receive - value of Connection.Exchange cannot be null");
@@ -298,6 +307,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
         public bool Reject(Message message, MessageRejectionReason? reason = null)
         {
+            ThrowIfDisposed();
             try
             {
                 EnsureBroker(_queueName);
@@ -348,6 +358,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// </remarks>
         public bool Requeue(Message message, TimeSpan? timeout = null)
         {
+            ThrowIfDisposed();
             timeout ??= TimeSpan.Zero;
 
             try
@@ -434,14 +445,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         private void CancelConsumer()
         {
-            if (_consumer != null)
+            var consumer = _consumer;
+            _consumer = null;
+            if (consumer != null)
             {
-                if (_consumer.IsRunning && Channel != null)
+                if (consumer.IsRunning && Channel != null)
                 {
                     Channel.BasicCancel(_consumerTag);
                 }
-
-                _consumer = null;
             }
         }
 
@@ -577,7 +588,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             if (_ttl.HasValue)
             {
-                arguments.Add("x-message-ttl", _ttl.Value.Milliseconds);
+                arguments.Add("x-message-ttl", Convert.ToInt32(_ttl.Value.TotalMilliseconds));
             }
 
             if (_maxQueueLength.HasValue)
@@ -602,10 +613,29 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// </summary>
         public override void Dispose()
         {
-            CancelConsumer();
-            _requeueProducer?.Dispose();
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+            try
+            {
+                CancelConsumer();
+            }
+            finally
+            {
+                try
+                {
+                    _requeueProducer?.Dispose();
+                }
+                finally
+                {
+                    base.Dispose();
+                }
+            }
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (Volatile.Read(ref _disposed) != 0)
+                throw new ObjectDisposedException(nameof(RmqMessageConsumer));
         }
 
         ~RmqMessageConsumer()

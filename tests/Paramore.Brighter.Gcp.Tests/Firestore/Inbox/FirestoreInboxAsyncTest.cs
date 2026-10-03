@@ -6,6 +6,7 @@ using Paramore.Brighter.Inbox.Firestore;
 
 namespace Paramore.Brighter.Gcp.Tests.Firestore.Inbox;
 
+[Trait("Category", "Firestore")]
 public class FirestoreInboxAsyncTest : InboxAsyncTest
 {
     private FirestoreInbox? _inbox;
