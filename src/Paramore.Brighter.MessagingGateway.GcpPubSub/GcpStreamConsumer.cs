@@ -105,7 +105,9 @@ public class BrighterStreamHandler(ChannelWriter<GcpStreamMessage> writer) :  Su
         try
         {
             var streamMessage = new GcpStreamMessage(message);
-            cancellationToken.Register(() => streamMessage.Cancel(cancellationToken));
+            // The token lives as long as the client, so the registration must go once the message is settled,
+            // or the token keeps every message the client ever delivers reachable
+            using var registration = cancellationToken.Register(() => streamMessage.Cancel(cancellationToken));
             
             await writer.WriteAsync(streamMessage, cancellationToken);
             return await streamMessage.WaitForCompleteAsync();
