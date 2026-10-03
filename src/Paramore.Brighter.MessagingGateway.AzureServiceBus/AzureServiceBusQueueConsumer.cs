@@ -82,6 +82,7 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
     {
         Log.PurgingMessagesFromQueueAsync(s_logger, Topic);
 
+        await ResetReceiverAsync();
         await AdministrationClientWrapper.DeleteQueueAsync(Topic);
         await EnsureChannelAsync();
     }
@@ -104,7 +105,7 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
                 throw new ChannelFailureException($"Queue {Topic} does not exist and missing channel mode set to Validate.");
             }
 
-            await AdministrationClientWrapper.CreateQueueAsync(Topic, SubscriptionConfiguration.QueueIdleBeforeDelete);
+            await AdministrationClientWrapper.CreateQueueAsync(Topic, SubscriptionConfiguration);
             _queueCreated = true;
         }
         catch (ServiceBusException ex)

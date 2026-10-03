@@ -34,7 +34,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// </summary>
     public class ServiceProviderTransformerFactoryAsync : IAmAMessageTransformerFactoryAsync, IDisposable
     {
+        private readonly IServiceProvider _serviceProvider;
         private readonly ServiceProviderLifetimeScope _lifetimeScope;
+        private readonly IAmAScopeProvider? _scopeProvider;
+        private readonly ScopeAffinityPolicy _scopeAffinityPolicy;
+        private readonly AmbientScopeDiagnostics? _diagnostics;
 
         /// <summary>
         /// Constructs a transformer factory
@@ -42,9 +46,32 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="serviceProvider">The IoC container we use to satisfy requests for transforms</param>
         public ServiceProviderTransformerFactoryAsync(IServiceProvider serviceProvider)
         {
+            _serviceProvider = serviceProvider;
             var options = (IBrighterOptions?)serviceProvider.GetService(typeof(IBrighterOptions));
             var lifetime = options?.TransformerLifetime ?? ServiceLifetime.Singleton;
             _lifetimeScope = new ServiceProviderLifetimeScope(serviceProvider, lifetime);
+            _scopeProvider = (IAmAScopeProvider?)serviceProvider.GetService(typeof(IAmAScopeProvider));
+            _scopeAffinityPolicy = new ScopeAffinityPolicy(options);
+            _diagnostics = (AmbientScopeDiagnostics?)serviceProvider.GetService(typeof(AmbientScopeDiagnostics));
+        }
+
+        /// <summary>
+        /// Offers a pipeline scope when this factory's configured lifetime is <c>Scoped</c>, so the
+        /// pipeline's transforms (and, once offered by the mapper factory too, its mapper) resolve from
+        /// one DI scope per pipeline rather than a factory-wide one. Any other lifetime offers none and
+        /// asks nothing - only a <c>Scoped</c> pipeline ever asks for an ambient.
+        /// </summary>
+        /// <exception cref="AmbientScopeSourceException">
+        /// A registered <see cref="IAmAScopeProvider"/>'s <c>GetAmbient</c> threw. The calling pipeline
+        /// builder recognises this type and rethrows the inner exception unwrapped.
+        /// </exception>
+        public IAmAScope? CreatePipelineScope()
+        {
+            if (_lifetimeScope.Lifetime != ServiceLifetime.Scoped) return null;
+
+            var affinity = AmbientScopeSuppression.IsSuppressed ? ScopeAffinity.AlwaysNew : _scopeAffinityPolicy.ForTransformPipeline();
+            var borrowed = AmbientScopeQuery.Ask(_scopeProvider, affinity, _serviceProvider, _diagnostics);
+            return borrowed ?? new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, ServiceLifetime.Scoped));
         }
 
         /// <summary>
@@ -52,9 +79,26 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Lifetime is determined by <see cref="IBrighterOptions.TransformerLifetime"/>.
         /// </summary>
         /// <param name="transformerType">The type of transformer to create</param>
+        /// <param name="scope">
+        /// The pipeline scope this factory offered via <see cref="CreatePipelineScope"/>. Resolved through
+        /// when supplied and this factory's lifetime is <c>Scoped</c>; otherwise resolution falls back to
+        /// this factory's own lifetime scope.
+        /// </param>
         /// <returns>The created transformer instance</returns>
-        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType)
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType, IAmAScope? scope = null)
         {
+            if (scope is ServiceProviderPipelineScope pipelineScope && _lifetimeScope.Lifetime == ServiceLifetime.Scoped)
+            {
+                var scopedTransform = pipelineScope.Create<IAmAMessageTransformAsync>(transformerType, out var scopedReleaseToken);
+                return scopedTransform is null ? null : new Lease<IAmAMessageTransformAsync>(scopedTransform, scopedReleaseToken);
+            }
+
+            if (_lifetimeScope.Lifetime == ServiceLifetime.Scoped)
+            {
+                var freshTransform = _lifetimeScope.GetOrCreateIsolated<IAmAMessageTransformAsync>(transformerType, out var freshReleaseToken);
+                return freshTransform is null ? null : new Lease<IAmAMessageTransformAsync>(freshTransform, freshReleaseToken);
+            }
+
             var transform = _lifetimeScope.GetOrCreate<IAmAMessageTransformAsync>(transformerType, out var releaseToken);
             return transform is null ? null : new Lease<IAmAMessageTransformAsync>(transform, releaseToken);
         }

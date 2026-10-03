@@ -49,6 +49,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - name: AWS Cleanup Offline Tests
+        run: bash test_clean_failed_tests_aws_assets_offline.sh
       - uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
@@ -67,12 +69,41 @@ jobs:
         # question already answered. net10.0 matches what generate-test.sh runs.
         run: dotnet test tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build -f net10.0
 
+      # Every shipped gateway's channel factory declaration sweep (ADR 0073). Construction-only and
+      # needs no broker, so it runs here rather than in a transport job - MQTT's job filters to
+      # Category=MQTT, Kafka's to Category=Kafka, and the RocketMQ job is commented out entirely, so
+      # an untagged test in those projects would never run there. This step's non-vacuity depends on
+      # the generated-tree audit above: a --filter that matches nothing does not fail the run, so a
+      # missing generated file would leave this step green while guarding eleven assemblies instead
+      # of twelve - do not remove or reorder that step.
+      - name: Gateway Channel Factory Declaration Sweeps
+        run: |
+          dotnet test tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+
       # The RocketMQ gateway's broker-free tests. rocketmq-ci is commented out below, so without
       # this step the whole RocketMQ suite - and with it the builder-block extraction in
       # RocketMqMessagePublisher - is executed by nothing in CI. The filter is what keeps the step
       # honest: the other 47 tests in that project need a live broker and would fail here.
       - name: RocketMQ Broker-Free Tests
         run: dotnet test tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "Category=RocketMQBrokerFree" -c Release --logger GitHubActions --no-restore --no-build
+
+      # These producer race tests use in-memory clients and do not need the Azure job's secrets.
+      - name: Azure Service Bus Creation Race Tests
+        run: dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "FullyQualifiedName~AzureServiceBusProducerCreationRaceTests" -c Release --logger GitHubActions --no-restore --no-build
+
+      - name: Azure Configuration Tests
+        run: dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "FullyQualifiedName~Paramore.Brighter.AzureServiceBus.Tests.Configuration." -c Release --logger GitHubActions --no-restore --no-build
 
       - name: Core Tests
         run: |
@@ -258,7 +289,7 @@ jobs:
             9.0.x
             10.0.x
       - name: RMQ Async Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS&Category!=RMQNativeDelay" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
   rabbitmq-sync-ci:
     runs-on: ubuntu-latest
@@ -286,7 +317,32 @@ jobs:
             9.0.x
             10.0.x
       - name: RMQ Sync Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS&Category!=RMQNativeDelay" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+
+  rabbitmq-native-delay-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+      - name: Start RabbitMQ with the delayed-message plugin
+        run: docker compose -f docker-compose-rmq-native-delay.yaml up --build -d --wait
+      - name: Native delay transport tests
+        run: |
+          dotnet test tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Category=RMQNativeDelay" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
+          dotnet test tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Category=RMQNativeDelay" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
+      - name: Broker logs
+        if: failure()
+        run: docker compose -f docker-compose-rmq-native-delay.yaml logs
+      - name: Stop broker
+        if: always()
+        run: docker compose -f docker-compose-rmq-native-delay.yaml down -v
 
   kafka-ci:
     runs-on: ubuntu-latest

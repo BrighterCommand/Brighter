@@ -30,14 +30,16 @@ cell remains `Unknown`.
   `Fixed (#4353)`. GCP's four remain.)
 - The cleanup gate is evaluated over all twelve targeted transports, not over whichever rows happen
   to exist.
-- `AWS / SqsFifo` **and `AWS.V4 / SqsFifo`** FR-9 (delayed send) are `Deferred -> #4240`: SQS **FIFO
-  queues do not support per-message delay** — `SendMessage` with `DelaySeconds` returns
-  `AmazonSQSException: … not valid for this queue type`. Delayed send is proven natively for
-  `AWS / SqsStandard` (and `AWS.V4 / SqsStandard`); on FIFO it would require an external scheduler
-  (re-publish after the delay, as wired for Kafka), which is beyond this configuration's localized fix
-  boundary. The V4 gateway shares the same AWS SQS platform limit, so the deferral applies identically.
-  Requeue-with-delay (FR-2) conforms on FIFO because it uses `ChangeMessageVisibility`, which FIFO does
-  support.
+- `AWS / SqsFifo` **and `AWS.V4 / SqsFifo`** FR-9 (delayed send) are `Fixed (7a0ec644f)` for #4390:
+  SQS FIFO does not support per-message `DelaySeconds`, so both producers delegate positive FIFO
+  delays to the configured `Scheduler`. Zero and null delays remain immediate sends; Standard queues
+  continue to use native delays up to 15 minutes and the scheduler for longer delays. Both FIFO
+  providers wire the generated `ConformanceHarnessMessageScheduler`, which waits before publishing
+  the already-stamped message directly through `SqsMessageProducer`, preserving its group and
+  deduplication identifiers. Reactor and Proactor delayed-send tests pass against Floci 1.5.19;
+  this verification does not include real AWS. Before the fix, Floci delivered immediately rather
+  than reproducing AWS's parameter rejection, and both variants failed the before-delay assertion.
+  Requeue-with-delay (FR-2) remains native via `ChangeMessageVisibility` and is unchanged.
 - `AWS / SnsStandard` **and `AWS.V4 / SnsStandard`** FR-9 (delayed send) are `Fixed (#4240)`: SNS has
   **no native delayed publish** — `SnsMessageProducer.SendWithDelay` delegates a non-zero delay to the
   `IAmAMessageProducer.Scheduler` seam (as Kafka does). Two changes were needed: (1) a localized `src`
@@ -50,11 +52,9 @@ cell remains `Unknown`.
   delay by wall-clock and re-publishes to the SNS topic once it elapses (the V4 test project got its own
   copy). Requeue-with-delay (FR-2) is `Pass` natively — it is consumer-side `ChangeMessageVisibility` on
   the subscribed SQS queue, not an SNS publish, so it needs no scheduler.
-- `AWS / SnsFifo` **and `AWS.V4 / SnsFifo`** FR-9 (delayed send) are `Fixed (#4240)` — and, unlike
-  `AWS / SqsFifo` (+ `AWS.V4 / SqsFifo`), they are **not**
-  deferred. SqsFifo's deferral was because SQS FIFO **rejects native per-message `DelaySeconds`**; SNS
-  FIFO never uses that path — the SNS producer delegates the delay to the `Scheduler` seam, so the FIFO
-  platform limit does not apply. The `SnsHarnessMessageScheduler` re-publishes to the FIFO topic after
+- `AWS / SnsFifo` **and `AWS.V4 / SnsFifo`** FR-9 (delayed send) are `Fixed (#4240)`. Like SQS FIFO,
+  SNS FIFO delegates delayed sends to the `Scheduler` seam rather than using native per-message
+  `DelaySeconds`. The harness scheduler re-publishes to the FIFO topic after
   the delay, and the delayed message keeps the FIFO `MessageGroupId`/`MessageDeduplicationId` that
   `FifoMetadataProducer` stamped, so the re-publish is a valid FIFO publish. Reuses the same
   `SnsMessageProducer` sync `SendWithDelay` src fix as `AWS / SnsStandard` (hence `Fixed`). FR-2 is
@@ -104,7 +104,18 @@ cell remains `Unknown`.
   `channelName` at the rejection routing key (matching how the main `CreateSubscription` aligns
   `ChannelName` with the topic) makes all five behaviours `Pass`; the reject-to-DLQ routing itself was
   already conformant (Brighter-managed DLQ, ADR `0041`).
-- `RMQ.Async / Classic` is `Pass` on **ten** behaviours and `Deferred -> #4240` on **FR-5 only**
+- #4388 adds separate `RMQ.Async / NativeClassic`, `RMQ.Async / NativeQuorum`, and
+  `RMQ.Sync / NativeClassic` configurations. They use `SupportDelay = true` with no scheduler,
+  while the original configurations retain scheduler coverage. Native FR-2 and FR-9 are fixed
+  by queue-specific delayed requeue and clearing the consumed delay instruction. Like the original
+  RMQ configurations, all three use native DLX routing for FR-8, with empty Brighter rejection keys.
+  The generated native suites pass on the pinned RabbitMQ 4.2.6 / plugin 4.2.0-rc.1 broker with Mnesia
+  (84 async and 42 sync generated cases on .NET 10). Focused tests also cover subscriber isolation,
+  exchange-type preservation, nonpositive delays, and Validate/Assume retry provisioning.
+  See [native test setup](../../docker/RabbitMQ/README.md). The historical plugin-retirement notes
+  below describe the scheduler rollout; these supplementary configurations restore coverage of the
+  existing native API without changing the stock-broker suites or claiming RabbitMQ 4.3+ support.
+- `RMQ.Async / Classic` is `Pass` on **ten** behaviours and `Fixed (#4387)` on **FR-5**
   (a separate invalid channel). **⚠️ Reference-environment fix first:** `docker-compose-rmq.yaml` pointed
   at `rabbitmq:management` (now RabbitMQ 4.3), which **hard-rejects the transient non-exclusive queues the
   gateway declares** (`INTERNAL_ERROR - Feature 'transient_nonexcl_queues' is deprecated`) — every test
@@ -173,14 +184,13 @@ cell remains `Unknown`.
   stamps the real `RejectionMetadataKeyNames` keys via ADR 0078's `RejectionMetadataKeys` implementation
   in each provider (`:588-595`), so GCP was never a routing-only candidate for the audit's declared-relaxation
   set above — see the dated evidence note under the GCP FR-23 paragraph below for the full cell move.
-  **⛔ FR-5 (a *separate* invalid channel)
-  stays `Deferred -> #4240`:** neither `RmqMessageConsumer` nor `RmqSubscription` models an invalid
-  destination — an unacceptable rejection dead-letters to the *DLQ*, not a distinct invalid channel (the
-  real invalid read hook observes `MT_NONE`). This is not relaxed by FR-8 (it is a routing gap, not a
-  metadata gap); conforming requires Brighter-managed invalid routing in `src/…RMQ.Async` (three deferral
-  preconditions met: evidence recorded, the invalid read hook was implemented, the residual is a
-  substantial src change).
-- `RMQ.Async / Quorum` mirrors `RMQ.Async / Classic` exactly: **10 `Pass` + FR-5 `Deferred -> #4240`**.
+  **FR-5 is `Fixed (#4387)`**: the subscription exposes an
+  invalid routing key, and unacceptable messages are forwarded with publisher confirmations before
+  the original is acknowledged. Other rejection reasons and the fallback when no invalid destination
+  is configured retain the native DLX behavior. The generated FR-5 test always asserts invalid-channel
+  arrival and DLQ absence; dedicated gateway tests additionally assert all five metadata fields on the
+  Brighter-managed invalid route. The empty provider keys still describe the native DLQ route.
+- `RMQ.Async / Quorum` mirrors `RMQ.Async / Classic` exactly: **10 `Pass` + FR-5 `Fixed (#4387)`**.
   Quorum queues use the same RabbitMQ AMQP gateway (`src/Paramore.Brighter.MessagingGateway.RMQ.Async`),
   so every conformance argument that applies to Classic applies to Quorum. **Delay (FR-2/FR-9) `Pass` via
   the same wired `RmqHarnessMessageScheduler`** — the Quorum provider presents a plain (non-delay) durable
@@ -189,11 +199,8 @@ cell remains `Unknown`.
   via the native DLX under the FR-8 relaxation** — Quorum queues support `x-dead-letter-exchange` /
   `x-dead-letter-routing-key` identically to Classic queues; `RejectionMetadataKeys` is empty → routing
   only asserted (same as Classic). **FR-16 `Pass`** — `RmqMessageConsumer.NackAsync` → `BasicNackAsync(requeue:
-  true)` → broker redelivers, same mechanism as Classic. **FR-7/15/22 `Pass`** natively. **⛔ FR-5 (a
-  *separate* invalid channel) stays `Deferred -> #4240`** — same architectural src gap as Classic: an
-  unacceptable rejection dead-letters to the DLX, not a distinct invalid channel; the real invalid read
-  hook observes `MT_NONE` (evidence from the Quorum test run on a live 4.2 broker, both variants); the
-  residual is a substantial src change to `src/…RMQ.Async` (three deferral preconditions met).
+  true)` → broker redelivers, same mechanism as Classic. **FR-7/15/22 `Pass`** natively. **FR-5 is `Fixed (#4387)`** via the same confirmed
+  invalid-message forwarding as Classic.
 - `RocketMQ / RocketMQMessagingGateway` — **9 `Fixed (#4240)` + FR-2 / FR-15 `Deferred -> #4240`**, both
   variants, on a live RocketMQ 5.5.0 broker (Reactor + Proactor each **21 pass / 2 skip / 0 fail**).
   Every passing cell is `Fixed` (not `Pass`) because of a required `src` fix: `RocketMqMessageProducer`
@@ -278,7 +285,7 @@ cell remains `Unknown`.
     after nack on a 30 s ceiling — same root cause as Redis (destructive BLPOP) and MSSQL (row deleted on
     read). Three deferral preconditions met: evidence recorded (live Mosquitto broker, both variants),
     fix is not localized (requires a redelivery buffer or QoS-level redesign in `src`), maintainer sign-off.
-- `RMQ.Sync / RmqSyncMessagingGateway` — **10 `Fixed (#4240)` + FR-5 `Deferred -> #4240`**, both
+- `RMQ.Sync / RmqSyncMessagingGateway` — **10 `Fixed (#4240)` + FR-5 `Fixed (#4387)`**, both
   variants, on a live RabbitMQ 4.2 broker with management + delay plugin image (Reactor + Proactor each
   **19 pass / 1 skip / 0 fail** in the canonical generated suite). Every passing cell is `Fixed` (not
   `Pass`) because of a required `src` fix: `RmqMessageProducer.DisposeAsync()` created a
@@ -292,11 +299,9 @@ cell remains `Unknown`.
   dead-letters to the configured DLX; `RejectionMetadataKeys` is empty → routing only asserted (same
   mechanism as RMQ.Async). **FR-15 (explicit zero-delay requeue) `Fixed`** — `RequeueMessage`
   republishes with a new AMQP message ID (original stored in `OriginalMessageIdHeaderName`); asserted
-  correctly by `RmqMessageAssertion`. **FR-16/22 `Fixed`** natively. **⛔ FR-5 (a *separate* invalid
-  channel) `Deferred -> #4240`** — same architectural src gap as RMQ.Async: an unacceptable rejection
-  calls `BasicReject` which dead-letters to the DLX, not a distinct invalid channel; the real invalid
-  read hook observes `MT_NONE` (evidence from live 4.2 broker, both variants); the residual is a
-  substantial src change to `src/…RMQ.Sync` (three deferral preconditions met).
+  correctly by `RmqMessageAssertion`. **FR-16/22 `Fixed`** natively. **FR-5 is `Fixed (#4387)`** via
+  confirmed invalid-message forwarding. A mandatory return or failed confirmation leaves the original
+  unacknowledged. The native DLX path remains in use for other rejection reasons and fallback.
   - **Test-isolation fix (harness, required):** the generated suite originally declared its own xUnit
     collection (`RmqSyncMessagingGateway`) while the hand-written broker tests use `RMQ`. **xUnit runs
     distinct collections in PARALLEL**, so the two suites hit the same broker concurrently and two tests
@@ -1242,11 +1247,11 @@ assertion failed in any run, on the exposed AWS, AWS.V4 and RocketMQ cells or an
 | AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
 | AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
 | AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4341) |
-| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (7a0ec644f) | Pass | Pass | Pass | Pass | Fixed (#4341) |
 | AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
 | AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
 | AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4341) |
-| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (7a0ec644f) | Pass | Pass | Pass | Pass | Fixed (#4341) |
 | GCP / Pull | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) |
 | GCP / PullOrdering | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) |
 | GCP / Stream | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4449) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) |
@@ -1257,9 +1262,12 @@ assertion failed in any run, on the exposed AWS, AWS.V4 and RocketMQ cells or an
 | MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass |
 | PostgresSQL / PostgresMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass |
-| RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
+| RMQ.Async / Classic | Pass | Pass | Fixed (#4387) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
+| RMQ.Async / Quorum | Pass | Pass | Fixed (#4387) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RocketMQ / RocketMQMessagingGateway | Fixed (#4353) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4353) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4353) |
 | AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) |
 | MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4351 (sign-off: @iancooper) |
-| RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Pass |
+| RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4387) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Pass |
+| RMQ.Async / NativeClassic | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass |
+| RMQ.Async / NativeQuorum | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass |
+| RMQ.Sync / NativeClassic | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass |

@@ -47,6 +47,11 @@ Generated output is checked in. A change to a template is not finished until eve
 regenerated and the new files committed — `GeneratedTreeAudit` in the `build` job fails on a tree
 that disagrees with the templates.
 
+For outboxes with eventually consistent indexes, set `ReadConsistencyTimeoutInMilliseconds` in
+the outbox configuration. Causation-tracking tests then poll outstanding-message reads until all
+expected IDs are present or absent, or the timeout expires. Assertions still fail if the expected
+state never appears. The default is zero, preserving immediate assertions for other stores.
+
 ## The twelve canonical transport behaviours
 
 Each has a Reactor and a Proactor template, and a column in the conformance ledger.

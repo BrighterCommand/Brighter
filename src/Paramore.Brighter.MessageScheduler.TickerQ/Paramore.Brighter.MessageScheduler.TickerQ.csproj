@@ -4,6 +4,8 @@
     <Description>TikcerQ integration for Paramore.Brighter Command Processor. Provides advanced message scheduling capabilities using TikcerQ for background job processing, delayed message delivery, and complex recurring task scheduling.</Description>
     <Authors>Aboubakr Nasef</Authors>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <!-- Remove these XML documentation suppressions as the existing comments are corrected. -->
+    <NoWarn>$(NoWarn);CS1573</NoWarn>
     <PackageTags>TikcerQ;Scheduler;Message Scheduling;Delayed Messages;Command Processor;Brighter</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

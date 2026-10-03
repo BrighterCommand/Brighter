@@ -21,6 +21,12 @@
     "Category": "PostgresSql",
     "CollectionName": "PostgresMessagingGateway",
     "LedgerKey": "PostgresSQL / PostgresMessagingGateway",
-    "HasSupportToPublishConfirmation": false
+    "HasSupportToPublishConfirmation": false,
+    "HasSupportToDeadLetterQueue": false,
+    "HasSupportToDelayedMessages": false,
+    "HasSupportToRequeue": true
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.Postgres.PostgresSubscription"
   }
 }

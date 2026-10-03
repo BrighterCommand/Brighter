@@ -53,6 +53,8 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
     /// </summary>
     /// <param name="connectionFactory"></param>
     /// <returns></returns>
+    /// <remarks>The returned connection is borrowed and does not acquire a gateway reference.
+    /// Pool reset, removal or gateway disposal can close it.</remarks>
     public IConnection GetConnection(ConnectionFactory connectionFactory) => BrighterAsyncContext.Run(() => GetConnectionAsync(connectionFactory));
 
     /// <summary>
@@ -62,7 +64,15 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
     /// <param name="connectionFactory">A <see cref="ConnectionFactory"/> to create new connections</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/> to cancel the operation</param>
     /// <returns></returns>
-    public async Task<IConnection> GetConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
+    /// <remarks>The returned connection is borrowed and does not acquire a gateway reference.
+    /// Pool reset, removal or gateway disposal can close it.</remarks>
+    public Task<IConnection> GetConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
+        => GetConnectionAsync(connectionFactory, false, cancellationToken);
+
+    internal Task<IConnection> AcquireConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken)
+        => GetConnectionAsync(connectionFactory, true, cancellationToken);
+
+    private async Task<IConnection> GetConnectionAsync(ConnectionFactory connectionFactory, bool acquire, CancellationToken cancellationToken)
     {
         var connectionId = GetConnectionId(connectionFactory);
 
@@ -76,6 +86,8 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
             {
                 pooledConnection = await CreateConnectionAsync(connectionFactory, cancellationToken).ConfigureAwait(false);
             }
+
+            if (acquire) pooledConnection.ReferenceCount++;
 
             return pooledConnection.Connection;
         }
@@ -120,6 +132,26 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
         try
         {
             await TryRemoveConnectionAsync(connectionId).ConfigureAwait(false);
+        }
+        finally
+        {
+            s_lock.Release();
+        }
+    }
+
+    internal async Task ReleaseConnectionAsync(ConnectionFactory connectionFactory, IConnection connection)
+    {
+        var connectionId = GetConnectionId(connectionFactory);
+        await s_lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (!s_connectionPool.TryGetValue(connectionId, out var pooledConnection)) return;
+
+            if (ReferenceEquals(pooledConnection.Connection, connection)) pooledConnection.ReferenceCount--;
+            if (pooledConnection.ReferenceCount == 0)
+            {
+                await TryRemoveConnectionAsync(connectionId).ConfigureAwait(false);
+            }
         }
         finally
         {
@@ -187,9 +219,9 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
     {
         if (s_connectionPool.TryGetValue(connectionId, out PooledConnection? pooledConnection))
         {
+            s_connectionPool.Remove(connectionId);
             pooledConnection.Connection.ConnectionShutdownAsync -= pooledConnection.ShutdownHandler;
             await pooledConnection.Connection.DisposeAsync().ConfigureAwait(false);
-            s_connectionPool.Remove(connectionId);
         }
     }
 
@@ -198,7 +230,10 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
             $"{connectionFactory.UserName}.{connectionFactory.Password}.{connectionFactory.HostName}.{connectionFactory.Port}.{connectionFactory.VirtualHost}"
                 .ToLowerInvariant();
 
-    private sealed record PooledConnection(IConnection Connection, AsyncEventHandler<ShutdownEventArgs> ShutdownHandler);
+    private sealed record PooledConnection(IConnection Connection, AsyncEventHandler<ShutdownEventArgs> ShutdownHandler)
+    {
+        public int ReferenceCount { get; set; }
+    }
 
     private static partial class Log
     {

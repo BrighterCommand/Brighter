@@ -27,6 +27,9 @@ THE SOFTWARE. */
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.CircuitBreaker;
 
@@ -36,8 +39,15 @@ namespace Paramore.Brighter.CircuitBreaker;
 /// cool down count.
 /// </summary>
 /// <param name="options"></param>
-public class InMemoryOutboxCircuitBreaker(OutboxCircuitBreakerOptions? options = null) : IAmAnOutboxCircuitBreaker
+/// <param name="tracer">Optional tracer used to export a span for each trip/re-trip/reset transition</param>
+/// <param name="instrumentationOptions">How verbose should the exported spans be</param>
+public partial class InMemoryOutboxCircuitBreaker(
+    OutboxCircuitBreakerOptions? options = null,
+    IAmABrighterTracer? tracer = null,
+    InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IAmAnOutboxCircuitBreaker
 {
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryOutboxCircuitBreaker>();
+
     private readonly OutboxCircuitBreakerOptions _outboxCircuitBreakerOptions = options ?? new OutboxCircuitBreakerOptions();
 
     private readonly ConcurrentDictionary<RoutingKey, int> _trippedTopics = new();
@@ -64,12 +74,27 @@ public class InMemoryOutboxCircuitBreaker(OutboxCircuitBreakerOptions? options =
             // removed the key.
             var cooled = _trippedTopics.AddOrUpdate(trippedTopicsKey, -1, (_, count) => count - 1);
 
-            // Conditional remove: only evict while the value is still the cooled value we computed. An
-            // interleaved TripTopic re-trip changes it, and the remove then leaves the fresh trip in place.
-            if (cooled < 0)
-                ((ICollection<KeyValuePair<RoutingKey, int>>)_trippedTopics)
-                    .Remove(new KeyValuePair<RoutingKey, int>(trippedTopicsKey, cooled));
+            TryEvictAndAnnounceReset(trippedTopicsKey, cooled);
         }
+    }
+
+    private void TryEvictAndAnnounceReset(RoutingKey topic, int cooledValue)
+    {
+        if (cooledValue >= 0)
+            return;
+
+        // Conditional remove: only evict while the value is still the cooled value we computed. An
+        // interleaved TripTopic re-trip changes it, and the remove then leaves the fresh trip in place.
+        var removed = ((ICollection<KeyValuePair<RoutingKey, int>>)_trippedTopics)
+            .Remove(new KeyValuePair<RoutingKey, int>(topic, cooledValue));
+
+        if (!removed)
+            return;
+
+        var span = tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(CircuitBreakerSpanOperation.Reset, topic, 0), instrumentationOptions);
+        tracer?.EndSpan(span);
+
+        Log.Reset(s_logger, topic.Value);
     }
 
     /// <summary>
@@ -77,6 +102,38 @@ public class InMemoryOutboxCircuitBreaker(OutboxCircuitBreakerOptions? options =
     /// </summary>
     /// <param name="topic">Name of the entity to circuit break</param>
     public void TripTopic(RoutingKey topic)
-        => _trippedTopics[topic] = _outboxCircuitBreakerOptions.CooldownCount;
+    {
+        var cooldownCount = _outboxCircuitBreakerOptions.CooldownCount;
+        var isReTrip = false;
+
+        _trippedTopics.AddOrUpdate(topic,
+            addValueFactory: _ => cooldownCount,
+            updateValueFactory: (_, _) =>
+            {
+                isReTrip = true;
+                return cooldownCount;
+            });
+
+        var operation = isReTrip ? CircuitBreakerSpanOperation.ReTrip : CircuitBreakerSpanOperation.Trip;
+        var span = tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(operation, topic, cooldownCount), instrumentationOptions);
+        tracer?.EndSpan(span);
+
+        if (isReTrip)
+            Log.ReTripped(s_logger, topic.Value, cooldownCount);
+        else
+            Log.Tripped(s_logger, topic.Value, cooldownCount);
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning, "Circuit breaker tripped for topic {Topic}; suppressing publish for {CooldownCount} cooldown cycle(s)")]
+        public static partial void Tripped(ILogger logger, string topic, int cooldownCount);
+
+        [LoggerMessage(LogLevel.Debug, "Circuit breaker re-tripped for topic {Topic}; cooldown extended to {CooldownCount} cycle(s)")]
+        public static partial void ReTripped(ILogger logger, string topic, int cooldownCount);
+
+        [LoggerMessage(LogLevel.Information, "Circuit breaker reset for topic {Topic}; publish suppression lifted")]
+        public static partial void Reset(ILogger logger, string topic);
+    }
 }
 

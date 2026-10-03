@@ -215,7 +215,9 @@ internal sealed partial class GcpRejectionRouter : IDisposable, IAsyncDisposable
         TimeProvider timeProvider)
     {
         message.Header.Bag[RejectionMetadataKeyNames.OriginalTopic] = message.Header.Topic.Value;
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         message.Header.Bag[RejectionMetadataKeyNames.OriginalMessageType] = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
         message.Header.Bag[RejectionMetadataKeyNames.RejectionTimestamp] = timeProvider.GetUtcNow().ToString("o");
         message.Header.Bag.Remove("ReceiptHandle");
 

@@ -73,7 +73,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 rmqSubscription.Ttl,
                 rmqSubscription.MaxQueueLength,
                 subscription.MakeChannels,
-                scheduler: _scheduler);
+                scheduler: _scheduler)
+            {
+                InvalidMessageRoutingKey = rmqSubscription.InvalidMessageRoutingKey
+            };
         }
 
         /// <summary>

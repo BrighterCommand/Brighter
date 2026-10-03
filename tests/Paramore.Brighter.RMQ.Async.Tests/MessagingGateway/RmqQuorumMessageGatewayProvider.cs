@@ -20,25 +20,12 @@ public class RmqQuorumMessageGatewayProvider
     private static readonly Uri s_amqpUri = new("amqp://guest:guest@localhost:5672/%2f");
     private readonly RmqMessagingGatewayConnection _connection;
 
-    // Delayed requeue and delayed send: prove Quorum's delay via the scheduler-delegation seam (the same
-    // mechanism proven for Classic / Kafka / Redis / MSSQL), not the native x-delayed-message
-    // exchange plugin. We present a plain (non-delay) exchange so RmqMessageProducer reports
-    // DelaySupported == false and routes a non-zero delay to IAmAMessageProducer.Scheduler —
-    // producer.Scheduler for send-with-delay, and the consumer factory's scheduler for
-    // a delayed requeue (forwarded to the requeue producer). One shared wall-clock scheduler
-    // re-publishes to the topic. Lazily created; disposed in CleanUp.
-    //
-    // The native plugin path is deliberately NOT exercised here because it is not yet conformant:
-    // RmqMessagePublisher.RequeueMessageAsync hardcodes TimeSpan.Zero and publishes to the
-    // default exchange, dropping a requeue delay (it redelivers immediately); and a
-    // plugin-delivered send arrives carrying Header.Delayed == the applied delay, tripping the
-    // universal message-equivalence assertion (Delayed == TimeSpan.Zero). Both are larger src
-    // fixes tracked as follow-up; the scheduler seam is a real, gateway-supported delay path
-    // that delivers conformant semantics.
+    // Default configurations exercise scheduler delegation. Native variants use the plugin
+    // broker and never install a scheduler.
     private ConformanceHarnessMessageScheduler? _scheduler;
 
-    private ConformanceHarnessMessageScheduler Scheduler =>
-        _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToRmq);
+    private ConformanceHarnessMessageScheduler? Scheduler =>
+        _connection.Exchange!.SupportDelay ? null : _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToRmq);
 
     // The only part of scheduling that is RMQ's: build a producer, send, and hand it back for the
     // scheduler to dispose.
@@ -48,12 +35,16 @@ public class RmqQuorumMessageGatewayProvider
         return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
-    public RmqQuorumMessageGatewayProvider()
+    public RmqQuorumMessageGatewayProvider() : this(false) { }
+
+    protected RmqQuorumMessageGatewayProvider(bool nativeDelay)
     {
         _connection = new RmqMessagingGatewayConnection
         {
-            AmpqUri = new AmqpUriSpecification(s_amqpUri),
-            Exchange = new Exchange("paramore.brighter.gentest.quorum.exchange", durable: true),
+            AmpqUri = new AmqpUriSpecification(nativeDelay
+                ? new Uri(Environment.GetEnvironmentVariable("RMQ_NATIVE_DELAY_URI") ?? "amqp://guest:guest@localhost:5673/%2f")
+                : s_amqpUri),
+            Exchange = new Exchange(nativeDelay ? "paramore.brighter.gentest.quorum.exchange.native" : "paramore.brighter.gentest.quorum.exchange", durable: true, supportDelay: nativeDelay),
             DeadLetterExchange = new Exchange("paramore.brighter.gentest.quorum.exchange.dlq", durable: true),
         };
     }
@@ -66,7 +57,14 @@ public class RmqQuorumMessageGatewayProvider
     {
         if (channel != null)
         {
-            channel.Purge();
+            try
+            {
+                channel.Purge();
+            }
+            catch (ObjectDisposedException exception) when (exception.ObjectName == nameof(RmqMessageConsumer))
+            {
+                // The message pump may already have disposed its channel.
+            }
             channel.Dispose();
         }
 
@@ -84,7 +82,14 @@ public class RmqQuorumMessageGatewayProvider
     {
         if (channel != null)
         {
-            await channel.PurgeAsync();
+            try
+            {
+                await channel.PurgeAsync();
+            }
+            catch (ObjectDisposedException exception) when (exception.ObjectName == nameof(RmqMessageConsumer))
+            {
+                // The message pump may already have disposed its channel.
+            }
             channel.Dispose();
         }
 
@@ -214,7 +219,10 @@ public class RmqQuorumMessageGatewayProvider
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 requeueCount: 3,
                 queueType: QueueType.Quorum
-            );
+            )
+            {
+                InvalidMessageRoutingKey = invalidMessageRoutingKey
+            };
         }
 
         return new RmqSubscription<MyCommand>(
@@ -225,7 +233,10 @@ public class RmqQuorumMessageGatewayProvider
             isDurable: true,
             makeChannels: makeChannel,
             queueType: QueueType.Quorum
-        );
+        )
+        {
+            InvalidMessageRoutingKey = invalidMessageRoutingKey
+        };
     }
 
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)
@@ -297,13 +308,6 @@ public class RmqQuorumMessageGatewayProvider
         }
     }
 
-    // Unacceptable rejections: RMQ.Async / Quorum has no invalid-message channel. Its path is a native
-    // BasicReject that dead-letters through the single configured DLX (x-dead-letter-routing-key),
-    // and neither RmqMessageConsumer nor RmqSubscription models a separate invalid destination.
-    // This hook makes a GENUINE bounded read against an invalid queue bound (by the {topic}.Invalid
-    // convention the canonical test uses) so the harness is complete: because the gateway never
-    // routes an unacceptable rejection to that routing key, the read observes MT_NONE — evidencing
-    // an architectural src gap (no Brighter-managed invalid routing), not a stubbed harness hook.
     public async Task<Message> GetMessageFromInvalidChannelAsync(
         RmqSubscription subscription,
         CancellationToken cancellationToken = default
@@ -351,7 +355,7 @@ public class RmqQuorumMessageGatewayProvider
 
     private RmqMessageConsumer CreateInvalidChannelConsumer(RmqSubscription subscription)
     {
-        var invalidRoutingKey = new RoutingKey($"{subscription.RoutingKey.Value}.Invalid");
+        var invalidRoutingKey = subscription.InvalidMessageRoutingKey!;
         return new RmqMessageConsumer(
             connection: _connection,
             queueName: new ChannelName(invalidRoutingKey.Value),

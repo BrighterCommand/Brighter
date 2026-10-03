@@ -124,6 +124,7 @@ and gives the heavy work a focused, single-purpose context.
 | `/spec:ralph-implement` (per-task sub-agent) | Yes — `general-purpose` (writes source) | **sonnet** | Mechanical TDD implementation, kept off the opus loop context for cost |
 | `/spec:implement` | No | **sonnet** (Step 0 prompts to switch) | Implementation work; runs in the main agent, so set the session model |
 | `/spec:new`, `/spec:switch`, `/spec:approve`, `/spec:status`, `/spec:gear` | No | — | Mechanical bookkeeping |
+| `/spec:show-me`, `/spec:write_release_notes` | No | — | Run entirely in the main agent; the former delegates counting to `show_me_facts.cs`, not to a sub-agent |
 
 The planning commands use the `Plan` agent so the "return as text, don't write the file"
 rule is much harder to violate accidentally (it has no `Write`/`Edit`/`NotebookEdit`; the
@@ -300,6 +301,11 @@ Shows requirements.md with checklist.
 /spec:review design 0043
 ```
 Shows only ADR 0043 with detailed checklist.
+
+**Working the findings:** fix *issues*, not lines. Name the concept each finding is about, edit
+every place the document (or the ADR set) states it, re-sweep the old wording, and run a quick
+contradiction-only sub-agent check of the diff before committing. See Step 8 of
+[`review.md`](review.md).
 
 ---
 
@@ -644,6 +650,105 @@ touch RALPH_STOP              # unattended kill-switch (halts after current task
 
 Optionally drive it with the built-in `/loop` instead, e.g. `/loop /spec:ralph-implement`
 (self-paced) — the same command, repeated by `/loop`.
+
+---
+
+### `/spec:show-me [spec-id]`
+
+Summarise a **finished** spec — not part of the TDD loop above — into `specs/{spec}/show-me.md`: what
+changed and why, breaking changes, a requirements reconciliation, how it was built, blast radius, an
+advisory Low/Medium/High merge-risk read, where to look first, and a provenance table.
+
+```bash
+/spec:show-me                          # the current spec
+/spec:show-me 0036-scoped-lifetime-per-pipeline
+```
+
+**Not a review.** It does not re-check correctness, security, TDD compliance, CI status or PR review
+outcomes — it explains what the spec did and gives an advisory risk read, nothing more.
+
+**What it reads**: `requirements.md`, `tasks.md`, `.adr-list` and the ADRs it names, `.issue-number`,
+a marked `release_notes.md` section (if any), `git`/`gh` history against the spec's branch, and the
+diff itself — falling back gracefully, and saying so, wherever a source is unavailable (e.g. a spec
+branch that can no longer be resolved).
+
+**Output sections**: `## What changed and why`, `## Breaking changes`, `## Did it ship what it
+said?`, `## How it was built`, `## Blast radius`, `## Risk assessment (advisory)`, `## Where to look
+first`, `## Inputs used`.
+
+Backed by a measurement script — see *Supporting scripts* below.
+
+---
+
+### `/spec:write_release_notes [spec-id]`
+
+Write, or replace in place, the release-notes section for a spec into `release_notes.md`'s marked
+form.
+
+```bash
+/spec:write_release_notes                          # the current spec
+/spec:write_release_notes 0033-pg-advisory-lock-sha256
+```
+
+Locates the section marked for the target spec (or the correctly-formed unmarked heading it should
+replace), judges breaking-change items from the spec's resolved ADRs' *Consequences* bullets
+(consumer-affecting only) and `requirements.md`, and writes the section — never touching any other
+spec's section. **Stops rather than guessing** whenever proceeding would mean picking among several
+candidates: no usable `.current-spec`, an ambiguous or unresolvable target, more than one section
+already marked for it, and so on.
+
+Recommended by `/spec:design` (Step 7.8) when the ADR just written records a breaking change, and
+flagged by `/spec:review`'s design criteria when one is missing — never run automatically by either.
+
+---
+
+### Supporting scripts
+
+`/spec:show-me` delegates every mechanically countable value to a sibling **measurement script**,
+`show_me_facts.cs` — a plain, dependency-free C# file-based app (`dotnet run <path> -- <args>`, no
+build, project file or install step). **A user never invokes it directly**; `/spec:show-me`'s own
+steps call it via the one whitelisted
+`Bash(dotnet run .claude/commands/spec/show_me_facts.cs -- specs/:*)` entry in `.claude/settings.json`.
+
+```bash
+# The measurement mode /spec:show-me itself uses
+dotnet run .claude/commands/spec/show_me_facts.cs -- specs/0036-scoped-lifetime-per-pipeline
+dotnet run .claude/commands/spec/show_me_facts.cs -- specs/0036-scoped-lifetime-per-pipeline --pinned <base-sha> <head-sha>
+
+# A second, unrelated mode: word-counts a single file, no spec target involved
+dotnet run .claude/commands/spec/show_me_facts.cs -- some/file.md --word-count
+```
+
+**What it emits**:
+- On success (exit `0`): a JSON **ledger** written atomically to `{target}/.show-me-ledger.json`
+  (serialised in full, then a single `File.Move` — never a partial write) — ref/diff fields, task and
+  requirement-id counts, `.adr-list` resolution, the release-notes section count, and every `git`/`gh`
+  command it ran, so `/spec:show-me` never repeats one. Refuses to write at all (exit `1`) rather than
+  truncate a ledger over its 65,536 B cap.
+- On the completeness gate failing (`tasks.md` absent, zero checkboxes, or any box left unchecked):
+  no ledger; one `show-me-gate: {…}` line on stderr naming the case and, for the unchecked case, the
+  count and the first unchecked task's own title; exit `2` — the one status that distinguishes this
+  stop from a tooling fault.
+- In `--word-count` mode (`{file} --word-count`, unrelated to the grammar above — no spec target, no
+  ledger): a `show-me-wordcount: {"total": …, "excluded_fence_lines": …, "in_range": …}` line on
+  stderr, exit `0`; a missing file exits non-zero with no line at all.
+- Any other malformed invocation exits `1` and writes nothing.
+
+Its sibling, `show_me_facts_tests.cs`, is a plain file-based test script — **no test framework, no
+project, nothing added under `src/` or `tests/`**, matching this whole family's existing status quo
+(the only other executable artefact under `.claude/` is `generate_adr_index.awk`, which also has no
+tests). It shells out to the measurement script against the tracked fixtures in
+`.claude/test-fixtures/show-me/` (plus the real, pinned calibration spec
+`0036-scoped-lifetime-per-pipeline`), asserts on the emitted ledger and stderr records, restores any
+ledger it disturbed, and prints `N row(s) passed.` or a `FAIL …` line per failed assertion — exiting
+non-zero if any fails.
+
+```bash
+dotnet run .claude/commands/spec/show_me_facts_tests.cs
+```
+
+**It is not part of CI** — no CI workflow lints or tests anything under `.claude/`, and this script
+doesn't change that. Run it by hand after editing either script.
 
 ---
 

@@ -30,14 +30,18 @@ using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 
 /// <summary>
 /// Implementation of <see cref="IAmAMessageConsumerSync"/> using Azure Service Bus for Transport.
 /// </summary>
-public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
 {
+    /// <inheritdoc />
+    public MessagingSystem MessagingSystem => MessagingSystem.ServiceBus;
+
     protected abstract string SubscriptionName { get; }
     protected abstract ILogger Logger { get; }
 
@@ -115,13 +119,15 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
             await ServiceBusReceiver!.CompleteAsync(lockToken);
                 
-            if (SubscriptionConfiguration.RequireSession)
-                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+            await CloseSessionIfIdleAsync();
         }
         catch (AggregateException ex)
         {
             if (ex.InnerException is ServiceBusException asbException)
+            {
                 HandleAsbException(asbException, message.Id.Value);
+                throw;
+            }
             else
             {
                 Log.ErrorCompletingPeekLock(Logger, ex, message.Id.Value);
@@ -131,6 +137,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         catch (ServiceBusException ex)
         {
             HandleAsbException(ex, message.Id.Value);
+            throw;
         }
         catch (Exception ex)
         {
@@ -180,8 +187,10 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
         try
         {
-            if (SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
+            if (ServiceBusReceiver == null || (SubscriptionConfiguration.RequireSession &&
+                ServiceBusReceiver is not ServiceBusReceiverWrapper { HasPendingMessages: true }))
             {
+                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
                 await GetMessageReceiverProviderAsync();
                 if (ServiceBusReceiver == null)
                 {
@@ -209,18 +218,28 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
             Log.FailingToReceiveMessages(Logger, e);
 
             //The connection to Azure Service bus may have failed so we re-establish the connection.
-            if(!SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
-                await GetMessageReceiverProviderAsync();
+            await ResetReceiverAsync();
+            await GetMessageReceiverProviderAsync();
 
             throw new ChannelFailureException("Failing to receive messages.", e);
         }
 
-        foreach (IBrokeredMessageWrapper azureServiceBusMessage in messages)
+        try
         {
-            Message message = _azureServiceBusMesssageCreator.MapToBrighterMessage(azureServiceBusMessage);
-            messagesToReturn.Add(message);
+            foreach (IBrokeredMessageWrapper azureServiceBusMessage in messages)
+            {
+                Message message = _azureServiceBusMesssageCreator.MapToBrighterMessage(azureServiceBusMessage);
+                if (await CanDispatchAsync(message)) messagesToReturn.Add(message);
+            }
+        }
+        catch
+        {
+            await ResetReceiverAsync();
+            throw;
         }
 
+        if (ServiceBusReceiver is ServiceBusReceiverWrapper)
+            await CloseSessionIfIdleAsync();
         return messagesToReturn.ToArray();
     }
                
@@ -253,8 +272,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
             await ServiceBusReceiver!.AbandonAsync(lockToken);
 
-            if (SubscriptionConfiguration.RequireSession)
-                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+            await CloseSessionIfIdleAsync();
         }
         catch (AggregateException ex)
         {
@@ -312,8 +330,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
                 await GetMessageReceiverProviderAsync();
 
             await ServiceBusReceiver!.DeadLetterAsync(lockToken, reasonString, description);
-            if (SubscriptionConfiguration.RequireSession)
-                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+            await CloseSessionIfIdleAsync();
         }
         catch (Exception ex)
         {
@@ -367,6 +384,35 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         return true;
     }
 
+    internal async Task ResetReceiverAsync()
+    {
+        var receiver = ServiceBusReceiver;
+        ServiceBusReceiver = null;
+        if (receiver is not null) await receiver.CloseAsync().ConfigureAwait(false);
+    }
+
+    internal async Task<bool> CanDispatchAsync(Message message)
+    {
+        if (ServiceBusReceiver is not ServiceBusReceiverWrapper receiver ||
+            !message.Header.Bag.TryGetValue(ASBConstants.LockTokenHeaderBagKey, out var token))
+            return true;
+
+        var lockToken = token.ToString();
+        if (string.IsNullOrEmpty(lockToken) || receiver.IsLockValid(lockToken)) return true;
+
+        Log.SkippingMessageWithInvalidLock(Logger, message.Id.Value, Topic, Subscription.ChannelName.Value);
+        await receiver.ForgetAsync(lockToken).ConfigureAwait(false);
+        await CloseSessionIfIdleAsync().ConfigureAwait(false);
+        return false;
+    }
+
+    private async Task CloseSessionIfIdleAsync()
+    {
+        if (SubscriptionConfiguration.RequireSession && ServiceBusReceiver is not null &&
+            ServiceBusReceiver is not ServiceBusReceiverWrapper { HasPendingMessages: true })
+            await ServiceBusReceiver.CloseAsync().ConfigureAwait(false);
+    }
+
     protected abstract Task GetMessageReceiverProviderAsync();
 
     protected abstract Task EnsureChannelAsync();
@@ -383,6 +429,9 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
     private static partial class Log
     {
+        [LoggerMessage(LogLevel.Warning, "Skipping Service Bus message with id {Id} from {Topic} via {ChannelName} because its lock has expired or been lost; the message will not be dispatched")]
+        public static partial void SkippingMessageWithInvalidLock(ILogger logger, string id, string topic, string channelName);
+
         [LoggerMessage(LogLevel.Debug, "Acknowledging Message with Id {Id} Lock Token : {LockToken}")]
         public static partial void AcknowledgingMessage(ILogger logger, string id, string lockToken);
 

@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Async
 {
-    public class RmqSubscription : Subscription
+    public class RmqSubscription : Subscription, IUseBrighterInvalidMessageSupport
     {
 
         /// <summary>
@@ -38,7 +38,16 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// The routing key for dead letter messages
         /// </summary>
         public RoutingKey? DeadLetterRoutingKey { get; }
-        
+
+        /// <summary>
+        /// The routing key for unacceptable messages. When null or empty, rejections use the native dead-letter route.
+        /// </summary>
+        /// <remarks>
+        /// With <see cref="OnMissingChannel.Create"/>, a queue named after this routing key is created and bound
+        /// to the subscription's exchange. Forwarding is confirmed before the original message is acknowledged.
+        /// </remarks>
+        public RoutingKey? InvalidMessageRoutingKey { get; set; }
+
         /// <summary>
         /// Is the channel mirrored across node in the cluster
         /// Required when the API for queue creation in the Message Oriented Middleware needs us to set the value

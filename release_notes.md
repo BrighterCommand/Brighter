@@ -134,6 +134,226 @@ A message that was never settled blocked `Dispose`, and with it shutdown, for up
 consumer now stops with `ShutdownMode.NackImmediately`. A message still held at shutdown is nacked and
 redelivered, and `Dispose` returns promptly.
 
+### Message pumps reject received messages with no handler (#4500)
+
+`Reactor` and `Proactor` now reject a received message as `Unacceptable` when it maps successfully
+but runtime routing selects no handler. Previously, an event was acknowledged after an Information
+log reporting zero pipelines. A command raised an exception, but the pump still acknowledged it.
+The change also applies to registered routers that select no handler for a particular request.
+
+The existing rejection policy determines the destination: an invalid-message channel or dead-letter
+channel where supported and configured, or native dead-lettering on transports such as Azure Service
+Bus. Without a rejection destination, the transport determines whether the message is discarded.
+Subscriptions that deliberately ignore some types may therefore start sending them to a rejection
+destination. To intentionally acknowledge and ignore a type, register a handler that does nothing.
+
+**Unhandled events now count toward `UnacceptableMessageLimit`.** Each rejection increments the
+unacceptable-message count; unhandled commands already incremented it. A positive limit can now stop
+the pump after repeated unhandled events. Review the types handled by each subscription and its
+`UnacceptableMessageLimit` and `UnacceptableMessageLimitWindow` settings when upgrading. The default
+limit of zero remains unlimited.
+
+Both commands and events are logged as rejected, with their message ID and channel. The rejection
+metadata identifies the request type with no handler. Commands without handlers no longer enter the
+general dispatch-error logging path.
+
+Local `Publish`/`PublishAsync` calls, including calls inside handlers using the received context, can
+still have zero subscribers. Application-handler exception policy and command-handler cardinality
+checks retain their existing behavior.
+
+**New public API:** `RequestContext.RequireHandlerForNextDispatch()` requires a handler for the next
+immediate `Send`, `SendAsync`, `Publish`, or `PublishAsync` call using that context. CommandProcessor
+consumes the requirement before building pipelines. Context copies and scheduled dispatches do not
+carry it. Custom `IAmACommandProcessor` decorators must pass the pump's context instance through to
+CommandProcessor; substituting or omitting it loses the requirement and retains the previous
+acknowledgement behavior for messages without handlers.
+
+### Azure Service Bus queue subscription settings (#4269)
+
+Queues created by a consumer now honor `AzureServiceBusSubscriptionConfiguration`, including sessions, delivery count, lock duration, default message lifetime and dead-lettering on expiration. Default consumer-created queues now use the subscription defaults (five deliveries, a three-day lifetime and dead-lettering on expiration) instead of the broker defaults. Existing queues and producer-created queues are unchanged.
+
+For session-enabled queues, provision the queue before producers start, or let the configured consumer create it first. Azure Service Bus does not allow sessions to be enabled on an existing queue.
+
+**Compatibility:** custom `IAdministrationClientWrapper` implementations must add `CreateQueueAsync(string, AzureServiceBusSubscriptionConfiguration)`. The original overload remains available. Calls passing a literal `null` as the second argument must use the `autoDeleteOnIdle` parameter name to select the original overload.
+
+### RabbitMQ shared connection lifetime
+
+Disposing a RabbitMQ producer or consumer now releases only its own use of the pooled connection.
+Other gateways sharing that connection can continue sending and receiving. Both RabbitMQ gateways
+close the connection when its last gateway releases it, including when channel cleanup throws.
+After a reset, disposing an old gateway preserves a replacement held by another gateway and closes
+an unused replacement. Explicit pool reset and removal still close connections immediately.
+
+Dispose every producer and consumer to release its connection reference. An undisposed gateway can
+keep the connection open for the lifetime of the process. Consumer operations after disposal now
+throw `ObjectDisposedException`.
+
+### Relational outbox configuration registration (#4279)
+
+`AddProducers(Action<ProducersConfiguration>, ...)` now registers a relational outbox's database configuration when `IAmARelationalDatabaseConfiguration` is missing.
+The fallback reuses the outbox's configuration instance. Existing explicit registrations and provider lifetimes remain unchanged.
+A later ordinary registration overrides the fallback for single-service resolution; a later `TryAdd` does not.
+
+The deferred `AddProducers(Func<IServiceProvider, ProducersConfiguration>, ...)` overload still requires explicit configuration registration when a provider needs it.
+Non-relational outboxes do not register database configuration.
+### Azure configuration options: rebuild and test when upgrading (#4285)
+
+Six Azure configuration fields are now public read/write properties, so property-based tooling can discover them:
+
+| Type | Members |
+| --- | --- |
+| `AzureServiceBusSubscriptionConfiguration` | `SqlFilter`, `UseServiceBusQueue` |
+| `AzureServiceBusPublication` | `UseServiceBusQueue` (also inherited by `AzureServiceBusPublication<T>`) |
+| `AzureBlobLockingProviderOptions` | `StorageLocationFunc` |
+| `AzureBlobArchiveProviderOptions` | `StorageLocationFunc`, `TagsFunc` |
+
+Names, types, defaults, and post-construction assignment are unchanged. Property-based configuration binding now applies the Service Bus scalar options.
+Delegate-valued Blob options remain configured in code; this change does not make delegates bindable from text configuration.
+
+**Rebuild and test applications and dependent libraries when upgrading.** Ordinary reads, assignments, and object initializers remain source-compatible after recompilation.
+Already compiled code that accesses these fields is not binary-compatible with the new properties; replacing Brighter assemblies without rebuilding is not sufficient.
+Code using field reflection or passing these members by reference needs source changes. Property-based serializers may now encounter delegate values they previously ignored.
+
+### Scoped lifetime per pipeline (spec 0036, #4256)
+
+`HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` now govern a **pipeline-scoped** DI scope: a `Scoped` handler, mapper or transform resolves from one DI scope shared by every `Scoped` participant on that pipeline, and disposed when the pipeline ends. An ASP.NET Core host can additionally opt a pipeline in to **adopting** an ambient request scope instead of creating its own, through a new `Paramore.Brighter.Extensions.AspNetCore` package (`AddBrighterRequestScope(...)`), and `ValidatePipelines()` gained seven new startup checks for common lifetime and scope-registration mistakes. See [docs/guides/lifetimes-and-scoping.md](docs/guides/lifetimes-and-scoping.md) for the full model, decision guide and troubleshooting, and [ADR 0070](docs/adr/0070-per-pipeline-di-scope-for-mapper-and-transform-factories.md) through [ADR 0076](docs/adr/0076-scope-affinity-option-and-write-through.md) for the design.
+
+This is a substantial change with fourteen breaking-change items, catalogued here in one list rather than split across each ADR that introduced one:
+
+- **`MapperLifetime.Scoped` no longer caches for the life of the process** *(behavioural)* — it now means one instance per pipeline, disposed when the pipeline ends, like every other `Scoped` lifetime. Nothing at compile time warns of this, and **there is no compatibility flag**. If your mapper relied on the old process-wide caching, migrate to `MapperLifetime = Singleton`, which states the same intent explicitly — check first that it has no container-`Scoped` constructor dependency (see the captive-dependency item below). This is a different destination from actually wanting per-pipeline *sharing*: because the three lifetimes are validated as one joint choice once `ValidatePipelines()` is called, a per-pipeline-shared `Scoped` mapper requires `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` set together — `{Scoped, Scoped, Transient}` is **not** a valid destination.
+- **`IAmAMessageMapperFactory`, `IAmAMessageMapperFactoryAsync`, `IAmAMessageTransformerFactory`, `IAmAMessageTransformerFactoryAsync`, `IAmAMessageMapperRegistry` and `IAmAMessageMapperRegistryAsync` all gain `IAmAScope? CreatePipelineScope()`, and their creation methods gain a scope parameter** *(source and binary)* — `Create(Type, IAmAScope? scope = null)` on the four factories, `Get<T>`/`GetAsync<T>` on the two registries. A hand-rolled implementation of any of these six must add `CreatePipelineScope()` (returning `null` is legitimate for a factory or registry with no container to scope) and accept the new scope parameter, even if it ignores it.
+- **A `Scoped` mapper or transformer factory no longer caches at factory level** *(behavioural)* — calling `Create(type)` directly, outside a pipeline scope, now resolves a fresh instance on every call rather than returning one cached for the process.
+- **The six transform-pipeline constructors gain a defaulted trailing `IAmAScope?` parameter** *(binary)* — `WrapPipeline`, `UnwrapPipeline`, `WrapPipelineAsync`, `UnwrapPipelineAsync`, and the two abstract bases `TransformPipeline`/`TransformPipelineAsync`. Source-compatible for a caller that recompiles; binary-breaking for one that does not.
+- **A pipeline scope's disposal failure is no longer swallowed inside the DI package** *(behavioural)* — it is now reported at `Error` as `FailedToDisposePipelineScope` or `FailedToDisposePipelineScopeAfterFailedBuild`, then swallowed one layer up exactly as before. Only an operator's log output changes; no exception reaches a caller that did not already see one.
+- **`IAmAHandlerFactory` gains `CreatePipelineScope()`, and `IAmALifetime` gains `PipelineScope`** *(source and binary)* — bringing the total to **eight** broken interfaces across the two ADRs behind this and the previous item, three of which are not mapper/transform factories at all: the two mapper registries above, and `IAmALifetime`.
+- **`IAmALifetime` also gains `IAsyncDisposable`** *(source and binary)* — so the handler pipeline scope can be disposed asynchronously rather than blocking a thread on an async-only DI scope's `DisposeAsync()`. A hand-rolled implementation must add `DisposeAsync()`; a `netstandard2.0` target has no default-interface-member escape hatch for this, the same constraint the other seven broken interfaces already carry.
+- **`HandlerLifetimeScope.Dispose()` is repaired to survive a throwing handler `Release`** *(behavioural)* — an exception a caller catches today from `Dispose()` now only reaches the log afterwards, rather than propagating.
+- **`ServiceProviderHandlerFactory` stops keeping a DI scope of its own** *(behavioural)* — `Create` now throws `ConfigurationException` when given a lifetime whose `PipelineScope` is `null` on a non-`Singleton` handler lifetime, rather than silently falling back to a scope it owned itself.
+- **The `Scoped` artefact cache stops publishing a faulted `Lazy`, on the owned path as well as the borrowed one** *(behavioural)* — a resolution failure now reaches a host that never opted in to ambient adoption, closing the `Scoped` half of issue [#4260](https://github.com/BrighterCommand/Brighter/issues/4260) (the `Singleton` cache is unchanged).
+- **`PipelineBuilder<TRequest>`'s two public dispatch constructors gain a defaulted `bool isolateSubscribers`** *(binary)* — source-compatible for a recompiling caller.
+- **`IBrighterOptions` gains `DefaultScopeAffinity`** *(source and binary)* — breaking a hand-rolled implementation of `IBrighterOptions`, which must add the member.
+- **Both validation hosted services resolve every registered `IAmAPipelineValidator` and combine the results** *(behavioural, and source and binary)* — an application that registers its own `IAmAPipelineValidator` no longer replaces Brighter's validation wholesale; both are now run and their findings combined. The source and binary half: `BrighterValidationHostedService`'s public constructor now takes `IEnumerable<IAmAPipelineValidator>` in place of `IAmAPipelineValidator`, so any caller constructing it directly must migrate. `ServiceActivatorHostedService`'s constructor is unchanged — it resolves its validators inside `StartAsync`.
+- **An application that calls `ValidatePipelines()` and mixes `Transient` with `Scoped` across `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` now fails to start** *(compatibility)* — such a configuration runs today, with the mixed pair simply not sharing pipeline-scoped dependencies; calling `ValidatePipelines()` against this version reports it as an error. The remedy is to pick one lifetime for all three (`Transient` or `Scoped`), with any of the three optionally `Singleton` instead. This break only lands for an application that opts in to validation.
+
+**For each of `IAmAMessageMapperFactory`, `IAmAMessageMapperFactoryAsync`, `IAmAMessageTransformerFactory`, `IAmAMessageTransformerFactoryAsync`, `IAmAHandlerFactorySync`, `IAmAHandlerFactoryAsync`, `IAmAHandlerFactory` and `IAmALifetime`** — what changed, and how a hand-rolled implementation migrates:
+
+- `IAmAMessageMapperFactory` / `IAmAMessageMapperFactoryAsync` — gain `IAmAScope? CreatePipelineScope()`; `Create` gains a trailing `IAmAScope? scope = null` parameter. Migration: add `CreatePipelineScope()` returning `null` unless the factory has a container to scope; ignore the new `scope` parameter unless the factory means to resolve from it.
+- `IAmAMessageTransformerFactory` / `IAmAMessageTransformerFactoryAsync` — the same two additions, on `Create` for a transformer type. Same migration.
+- `IAmAHandlerFactorySync` / `IAmAHandlerFactoryAsync` — inherit `IAmAHandlerFactory`'s new `CreatePipelineScope()` member (below); their own `Create`/`Release` signatures are unchanged. Migration: a type implementing either interface directly must add `CreatePipelineScope()`, returning `null` unless it has a container to scope.
+- `IAmAHandlerFactory` — gains `IAmAScope? CreatePipelineScope()`, creating a DI scope for one handler pipeline to resolve from. Migration: implement it, returning `null` for a factory with nothing to scope.
+- `IAmALifetime` — gains `IAmAScope? PipelineScope { get; }`, carrying the handler pipeline's own scope handle (distinct from this interface's existing job of tracking handler instances so they can be released). Migration: implement the property, returning `null` if the implementation has no pipeline scope of its own. **Also gains `IAsyncDisposable`**, so `CommandProcessor`'s async send/publish paths can `await using` the pipeline scope instead of blocking on a synchronous `Dispose()`. Migration: `public ValueTask DisposeAsync() => PipelineScope?.DisposeAsync() ?? default;`.
+
+### Validate subscription channel factory compatibility (spec 0037, #4334)
+
+Brighter now validates, at `ValidatePipelines()` time, that every subscription's declared
+`ChannelFactoryType` is compatible with the channel factory it will actually be handed at startup —
+turning "compiles, then dies deep in Dispatcher start" into a named, `ValidationSeverity.Error`
+startup finding. Landing the rule also corrected five transports whose `ChannelFactoryType` was
+wrong or missing: GCP Pub/Sub and MQTT previously declared a *consumer* factory rather than their
+own, and AWS SQS, AWS SQS V4 and Postgres declared none at all — so those three transports are, for
+the first time, routable through a `CombinedChannelFactory`. See
+[ADR 0072](docs/adr/0072-subscription-channel-factory-compatibility.md),
+[ADR 0073](docs/adr/0073-gateway-channel-factory-type-regression-guard.md) and
+[spec 0037](specs/0037-validate-subscription-channel-factory/) for full details.
+
+#### Breaking change: a subscription type with no `ChannelFactoryType` override now fails validation
+
+Any out-of-repo `Subscription` subclass that does not override `ChannelFactoryType` inherits the base
+class's default, `InMemoryChannelFactory` — previously invisible, now reported. Symptom:
+`ValidatePipelines` returns an `Error` citing `Paramore.Brighter.InMemoryChannelFactory` as the
+declared type. Remedy:
+
+```csharp
+public override Type ChannelFactoryType => typeof(MyChannelFactory);
+```
+
+Interim workaround: `ValidatePipelines(throwOnError: false)`.
+
+#### Breaking change: MQTT via a plain `Subscription<T>` now fails validation
+
+A plain `Subscription<T>` used with MQTT works today, because nothing previously checked the declared
+type against the gateway it is handed. Symptom: `ValidatePipelines` returns an `Error` citing
+`Paramore.Brighter.InMemoryChannelFactory` as the declared type against
+`Paramore.Brighter.MessagingGateway.MQTT.ChannelFactory`. Remedy: use `MqttSubscription<T>`.
+Suppressible with `ValidatePipelines(throwOnError: false)`.
+
+#### Breaking change: AWS SQS, AWS SQS V4 and Postgres subscriptions routed through an in-memory `CombinedChannelFactory` slot now fail at Dispatcher start, not just at validation
+
+Because AWS SQS, AWS SQS V4 and Postgres subscriptions previously declared no `ChannelFactoryType` at
+all, they inherited the base default, `InMemoryChannelFactory`. A `CombinedChannelFactory` that
+included an `InMemoryChannelFactory` inner factory therefore matched these subscriptions by exact
+type and silently routed them to the in-memory bus instead of failing. The subscriptions now declare
+their real factory type, so that in-memory match no longer occurs: if the `CombinedChannelFactory` has
+no inner factory of the subscription's real type, routing now fails with a `ConfigurationException`
+(`No channel factory found for subscription {name}`) when the `Dispatcher` starts. **This is caused by
+the transport corrections, not by the new validation rule, so `ValidatePipelines(throwOnError: false)`
+does NOT avoid it** — it is a routing change, not a validation verdict. Remedy: add the transport's
+real channel factory to the `CombinedChannelFactory`, or stop relying on the in-memory route.
+
+#### Breaking change: a `ChannelFactoryType` override returning `null` now fails validation
+
+An out-of-repo `ChannelFactoryType` override that returns `null` in a single-factory (non-combined)
+configuration previously went unchecked. Symptom: a startup `Error` reading `declares no
+ChannelFactoryType`. Remedy: return a real channel factory type from the override. Unlike the
+`CombinedChannelFactory` case above, this one **is** suppressible with
+`ValidatePipelines(throwOnError: false)`.
+
+### Backstop handlers preserve explicit message-pump actions
+
+`DeferMessageOnError`, `RejectMessageOnError`, `DontAckOnError`, and their async variants now preserve explicit `DeferMessageAction`, `RejectMessageAction`, `DontAckAction`, and `InvalidMessageAction` exceptions instead of replacing them with the backstop's configured action. A non-empty `AggregateException` whose direct inner exceptions are all pump actions is also preserved for the pump to handle. Mixed, empty, or nested aggregates still use the configured fallback. Application failures, including `OperationCanceledException` and `TaskCanceledException` from dependency timeouts, continue to use that fallback.
+
+If a pipeline has multiple backstops, the innermost backstop now determines the action for an application failure; outer backstops preserve it. For example, `[RejectMessageOnError(step: 0)]` wrapping `[DeferMessageOnError(step: 1)]` now defers the message instead of rejecting it. Lower step numbers are outer wrappers. Review pipelines with stacked backstops if they relied on the previous outermost-backstop behavior.
+### DynamoDB outbox: configured operation timeouts now take effect (#4434)
+
+Both `Paramore.Brighter.Outbox.DynamoDB` (AWS SDK v3) and `Paramore.Brighter.Outbox.DynamoDB.V4` now honour `DynamoDbConfiguration.Timeout` and per-call outbox timeouts. Previously, these values were ignored.
+
+**Upgrade impact: the existing default of 500 ms now takes effect.** Operations that previously completed after that deadline may now throw `OperationCanceledException`. Review your timeout settings before upgrading, especially for batches and queries: one deadline covers the entire operation, including all batch items or query pages.
+
+To allow a longer deadline, set the configuration's `timeout` constructor argument (in milliseconds), for example:
+
+```csharp
+new DynamoDbConfiguration(timeout: 5000);
+```
+
+To disable the outbox deadline, use `new DynamoDbConfiguration(timeout: 0)`; a configured value of `-1` also disables it. Caller cancellation and the AWS SDK client's own timeouts still apply.
+
+For methods accepting a per-call timeout:
+
+* `-1` (the default) uses `DynamoDbConfiguration.Timeout`; it does **not** independently disable the deadline.
+* `0` disables the outbox deadline for that call.
+* A positive value overrides the configured deadline, in milliseconds.
+
+Cancellation is cooperative. Synchronous AWS SDK table-metadata discovery remains governed by the SDK client's timeout. Adding a message to a transaction queues the write; the later commit must be cancelled through the transaction provider. Public signatures and default parameter values are unchanged, but applications that relied on the previously ignored deadlines may need configuration changes.
+
+### AWS: configurable `MaximumMessageSize` for SNS topics and SQS queues
+
+Amazon SNS now accepts message payloads up to 1 MiB, but only if you raise the topic's `MaximumMessageSize` attribute — the default is still 256 KiB. Brighter's send path never assumed a fixed limit, but the provisioning path had no way to set the attribute, so a topic Brighter created with `OnMissingChannel.Create` was stuck at 256 KiB.
+
+SQS is the other way round. A queue created today already defaults to the full 1 MiB, so `SqsAttributes.MaximumMessageSize` is there for when you want a queue to *reject* anything over a size you pick, not to unlock headroom you'd otherwise be missing.
+
+`SnsAttributes` and `SqsAttributes` (both the V3 and V4 packages) gain an optional `maximumMessageSize` constructor parameter, in bytes:
+
+```csharp
+new SnsPublication
+{
+    Topic = new RoutingKey("my-topic"),
+    MakeChannels = OnMissingChannel.Create,
+    TopicAttributes = new SnsAttributes(maximumMessageSize: 1_048_576)
+};
+```
+
+For SNS the value is applied with a `SetTopicAttributes` call after `CreateTopic`, because SNS rejects `CreateTopic` when a supplied attribute differs from the existing topic's. That means the setting also raises the limit of a topic Brighter created earlier at the default size. For SQS the attribute joins the `CreateQueue` request, which already re-applies attributes to an existing queue.
+
+#### Before you raise a topic
+
+AWS puts some sharp edges around a topic above 256 KiB, and they are worth reading before you turn this on:
+
+* It only supports Amazon SQS, AWS Lambda and Amazon Data Firehose subscriptions. HTTP/S, email, SMS and mobile push are not, so raising the limit on a topic that has those subscribers will cost you them.
+* It is capped at 100 subscriptions, rather than the usual 12.5 million.
+* SNS measures the message body and its message attributes together, so your headers count against the limit.
+* The subscribed queue does **not** need raising to match. A message delivered through an SNS subscription is bounded by the topic's limit, not by the queue's `MaximumMessageSize` — a 500 KiB message on a 1 MiB topic arrives intact on a queue still sitting at 256 KiB. A direct `SqsMessageProducer` send is bounded by the queue's limit as normal.
+* The `[Compress]` and `[ClaimCheck]` thresholds compare the uncompressed body only. A compressed body goes out base64-encoded, which inflates it by roughly a third, so leave yourself headroom under the topic's maximum.
+
 ### Replay Outbox Messages on Inbox Duplicate (spec 0027)
 
 When an inbox detects a duplicate request, Brighter can now optionally **replay** the outbox messages that were produced under that request's causation, rather than silently dropping the duplicate. The feature is opt-in (`OnceOnlyAction.Replay` on the inbox attribute) and non-breaking: it requires a causation-tracking inbox and outbox (`IAmACausationTrackingInbox` / `IAmACausationTrackingOutbox`), and the relational stores gate the causation-aware write on a memoized column probe so un-migrated schemas keep depositing unchanged. Startup pipeline validation fails fast if a `Replay` pipeline is configured without causation tracking. See [ADR 0057](docs/adr/0057-replay-outbox-on-inbox-duplicate.md) and [spec 0027](specs/0027-replay-matching-outbox-events-when-inbox-has-already-seen/) for full details.

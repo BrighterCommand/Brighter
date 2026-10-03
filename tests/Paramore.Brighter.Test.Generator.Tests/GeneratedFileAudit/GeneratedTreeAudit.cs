@@ -47,8 +47,9 @@ namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 /// </para>
 /// <para>
 /// The expected set comes from the generators themselves, through
-/// <see cref="Generators.OutboxGenerator.Plan"/> and
-/// <see cref="Generators.MessagingGatewayGenerator.Plan"/>, rather than from a description of them
+/// <see cref="Generators.OutboxGenerator.Plan"/>,
+/// <see cref="Generators.MessagingGatewayGenerator.Plan"/> and
+/// <see cref="Generators.GatewayConformanceGenerator.Plan"/>, rather than from a description of them
 /// kept here. A second description would be a second thing to keep in step, and would agree with
 /// the generator exactly until the day it mattered.
 /// </para>
@@ -158,6 +159,8 @@ public sealed class GeneratedTreeAudit
             NullLogger<Generators.OutboxGenerator>.Instance);
         var messagingGatewayGenerator = new Generators.MessagingGatewayGenerator(
             NullLogger<Generators.MessagingGatewayGenerator>.Instance);
+        var gatewayConformanceGenerator = new Generators.GatewayConformanceGenerator(
+            NullLogger<Generators.GatewayConformanceGenerator>.Instance);
 
         var expected = new HashSet<string>(StringComparer.Ordinal);
         foreach (var projectFolder in Directory.EnumerateDirectories(testsRoot))
@@ -182,6 +185,7 @@ public sealed class GeneratedTreeAudit
 
             expected.UnionWith(outboxGenerator.Plan(configuration)
                 .Concat(messagingGatewayGenerator.Plan(configuration))
+                .Concat(gatewayConformanceGenerator.Plan(configuration))
                 .Select(plannedFile => Path.GetFullPath(plannedFile.DestinationPath))
                 .Where(path => IsUnderAGeneratedFolder(path, testsRoot)));
         }
