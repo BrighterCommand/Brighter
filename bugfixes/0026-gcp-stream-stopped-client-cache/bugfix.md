@@ -294,3 +294,13 @@ written.
 - CI filter: **156/49/30**. No test is missing. One test changed: the GCS test
   `LuggageStoreExistsTests.When_checking_store_that_does_not_exist` went from Failed to Passed, and it is unrelated
   to this fix.
+
+**Real Pub/Sub** (2026-10-03, project `brighter-gcp-diag-51720`, `PUBSUB_EMULATOR_HOST` unset, ADC, net10.0). The
+user asked that GCP stream fixes are also verified against real Pub/Sub.
+- **At HEAD:** the 3 new tests passed **3/3**, in two separate runs.
+- **With the three src files temporarily reset to `34db6c64e`,** the commit before the fix, they **failed 3/3** for
+  the same reasons as on the emulator:
+  - both reopen tests: `InvalidOperationException: Can only start an instance once.`
+  - the double-dispose test: `Assert.Equal` values differ (`MT_NONE`).
+- The source was restored to HEAD afterwards, and the working tree was clean.
+- The full Stream suite has **not** been run on real Pub/Sub.
