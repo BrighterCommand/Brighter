@@ -124,7 +124,10 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         catch (AggregateException ex)
         {
             if (ex.InnerException is ServiceBusException asbException)
+            {
                 HandleAsbException(asbException, message.Id.Value);
+                throw;
+            }
             else
             {
                 Log.ErrorCompletingPeekLock(Logger, ex, message.Id.Value);
@@ -134,6 +137,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         catch (ServiceBusException ex)
         {
             HandleAsbException(ex, message.Id.Value);
+            throw;
         }
         catch (Exception ex)
         {

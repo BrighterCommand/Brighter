@@ -81,7 +81,7 @@ namespace Paramore.Brighter
             if(requestContext is not null)
                 requestContext.Span ??= Activity.Current;
             
-            var msg = message;
+            var msg = requestContext?.Delivery is null ? message : message.CopyForDelivery();
             Transforms.Each(transform =>
             {
                 transform.Context = requestContext;
