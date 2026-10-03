@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- Standalone diagnostic, not part of the shipped product: opt out of the repo's central
+         package management so it can pin its own versions without touching Directory.Packages.props. -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Cloud.PubSub.V1" Version="3.36.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reused so the diagnostic exercises the exact Requeue/Receive code under investigation,
+         not a hand-rolled re-implementation of it. -->
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.GcpPubSub\Paramore.Brighter.MessagingGateway.GcpPubSub.csproj" />
+  </ItemGroup>
+
+</Project>
