@@ -213,7 +213,8 @@ namespace Paramore.Brighter
         
         /// <summary>
         /// OPTIONAL
-        /// Internal usage. Gets the period the message was instructed to be delayed for
+        /// Internal usage. Gets or sets the requested delivery delay.
+        /// RabbitMQ clears this instruction on receipt; its elapsed native delay remains in Bag["x-delay"].
         /// </summary>
         /// <value>The delay.</value>
         public TimeSpan Delayed { get; set; }

@@ -74,7 +74,6 @@ internal sealed partial class RmqMessageCreator
     {
         var timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
         var handledCount = ReadHandledCount(headers);
-        var delay = ReadDelay(headers);
         var messageType = ReadMessageType(headers);
         var replyTo = ReadReplyTo(fromQueue.BasicProperties);
         var correlationId = ReadCorrelationId(headers);
@@ -108,7 +107,7 @@ internal sealed partial class RmqMessageCreator
             handledCount: handledCount.Result,
             dataSchema: dataSchema.Result,
             subject: subject.Result,
-            delayed: delay.Result,
+            delayed: TimeSpan.Zero,
             traceParent: traceParent.Result,
             traceState: traceState.Result,
             baggage: baggage
@@ -224,56 +223,6 @@ internal sealed partial class RmqMessageCreator
             default:
                 return new HeaderResult<int>(0, true);
         }
-    }
-
-    private static HeaderResult<TimeSpan> ReadDelay(IDictionary<string, object?> headers)
-    {
-        if (headers.TryGetValue(HeaderNames.DELAYED_MILLISECONDS, out var delayedMsHeader) == false)
-        {
-            return new HeaderResult<TimeSpan>(TimeSpan.Zero, true);
-        }
-
-        int delayedMilliseconds;
-
-        // on 32 bit systems the x-delay value will be a int and on 64 bit it will be a long, thank you erlang
-        // The number will be negative after a message has been delayed
-        // sticking with an int as you should not be delaying for more than 49 days
-        switch (delayedMsHeader)
-        {
-            case byte[] value:
-            {
-                if (!int.TryParse(Encoding.UTF8.GetString(value), out var handledCount))
-                    delayedMilliseconds = 0;
-                else
-                {
-                    if (handledCount < 0)
-                        handledCount = Math.Abs(handledCount);
-                    delayedMilliseconds = handledCount;
-                }
-
-                break;
-            }
-            case int value:
-            {
-                if (value < 0)
-                    value = Math.Abs(value);
-
-                delayedMilliseconds = value;
-                break;
-            }
-            case long value:
-            {
-                if (value < 0)
-                    value = Math.Abs(value);
-
-                delayedMilliseconds = (int)value;
-                break;
-            }
-            default:
-                return new HeaderResult<TimeSpan>(TimeSpan.Zero, false);
-        }
-
-        return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds(delayedMilliseconds), true);
     }
 
     private static HeaderResult<RoutingKey?> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object?> headers)
