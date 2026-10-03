@@ -33,6 +33,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
@@ -48,8 +49,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// the package Paramore.Brighter.MessagingGateway.RMQ.Async.
     /// </remarks>
     /// </summary>
-    public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync
+    public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IHaveAMessagingSystem
     {
+        /// <inheritdoc />
+        public MessagingSystem MessagingSystem => MessagingSystem.RabbitMQ;
+
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
         private PullConsumer? _consumer;
@@ -587,7 +591,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             if (_ttl.HasValue)
             {
-                arguments.Add("x-message-ttl", _ttl.Value.Milliseconds);
+                arguments.Add("x-message-ttl", Convert.ToInt32(_ttl.Value.TotalMilliseconds));
             }
 
             if (_maxQueueLength.HasValue)

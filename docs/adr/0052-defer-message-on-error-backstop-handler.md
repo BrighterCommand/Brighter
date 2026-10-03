@@ -207,6 +207,14 @@ private bool RequeueMessage(Message message, TimeSpan? delay = null)
 }
 ```
 
+#### Transport failures during requeue
+
+If the channel throws while requeueing, both pumps log the exception with the message and channel identifiers and request redelivery through the channel's negative-acknowledgment operation. This uses each transport's recovery mechanism, such as releasing a RabbitMQ delivery or seeking back to a Kafka offset. If negative acknowledgment also throws, that failure is logged without escaping the loop. The pumps wait for `DontAckDelay` before continuing to avoid a tight redelivery loop.
+
+The pumps do not acknowledge or reject the original delivery on this path: the requeue has not been confirmed, and the transport may still hold the original message. Actual redelivery depends on the transport and whether recovery succeeds. This applies to both a command's `DeferMessageAction` and an event handler's action wrapped in `AggregateException`.
+
+The existing handled-count limit and successful requeue behavior are unchanged. A failure while rejecting a message that has exhausted its delivery budget is outside this requeue-failure policy.
+
 ### 5. Source-Generated Logging
 
 The handler uses source-generated logging matching the pattern from `RejectMessageOnErrorHandler`:

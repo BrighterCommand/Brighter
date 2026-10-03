@@ -478,6 +478,17 @@ namespace Paramore.Brighter
 
             return newHeader;
         }
+
+        internal MessageHeader CopyForDelivery()
+        {
+            var copy = (MessageHeader)MemberwiseClone();
+            copy.Bag = new Dictionary<string, object>(Bag, Bag.Comparer);
+            copy.ContentType = new ContentType(ContentType.ToString());
+            copy.Baggage = new Baggage();
+            foreach (var entry in Baggage)
+                copy.Baggage.Add(entry.Key, entry.Value!);
+            return copy;
+        }
         
         /// <summary>
         /// We return an MT_UNACCEPTABLE message because we cannot process. Really this should go on to an

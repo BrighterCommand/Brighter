@@ -38,6 +38,13 @@ public enum MessagingSystem
     PubSub,
     RabbitMQ,
     RocketMQ,
-    ServiceBus
+    ServiceBus,
+    /// <summary>An MQTT broker.</summary>
+    Mqtt,
+    /// <summary>A Redis message queue.</summary>
+    Redis,
+    /// <summary>A PostgreSQL message queue.</summary>
+    PostgreSql,
+    /// <summary>A Microsoft SQL Server message queue.</summary>
+    MsSql
 }
-

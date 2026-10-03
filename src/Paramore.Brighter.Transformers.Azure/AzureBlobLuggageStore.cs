@@ -64,13 +64,15 @@ public class AzureBlobLuggageStore : IAmAStorageProvider, IAmAStorageProviderAsy
         {
             _blobClient = new BlobContainerClient(options.ContainerUri, options.Credential);
         }
-        else if (string.IsNullOrEmpty(options.ContainerName) && string.IsNullOrEmpty(options.ConnectionString))
+        else if (!string.IsNullOrEmpty(options.ContainerName) && !string.IsNullOrEmpty(options.ConnectionString))
         {
             _blobClient = new BlobContainerClient(options.ConnectionString, options.ContainerName);
         }
         else
         {
-            throw new ArgumentException("", nameof(options));
+            throw new ArgumentException(
+                "Provide either ContainerUri and Credential, or ConnectionString and ContainerName.",
+                nameof(options));
         }
     }
     
