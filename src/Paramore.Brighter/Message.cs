@@ -165,6 +165,11 @@ namespace Paramore.Brighter
             return Header.HandledCount >= requeueCount;
         }
 
+        internal Message CopyForDelivery() => new(Header.CopyForDelivery(),
+            new MessageBody(Body.Memory,
+                Body.ContentType is null ? null : new System.Net.Mime.ContentType(Body.ContentType.ToString()),
+                Body.CharacterEncoding)) { Persist = Persist };
+
         /// <summary>
         /// Propogates the trace context for the message, when being sent across a trace boundary.
         /// We set this value in the headers of the message

@@ -79,6 +79,8 @@ namespace Paramore.Brighter
 
         public RequestContext() { }
 
+        internal MessageDelivery? Delivery { get; set; }
+
         private RequestContext(ConcurrentDictionary<string, object> bag)
         {
             Bag = new ConcurrentDictionary<string, object>(bag);

@@ -32,6 +32,12 @@ namespace Paramore.Brighter.Core.Tests
             RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<UnhandledNestedEvent>).TypeHandle);
             RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<UnhandledNestedEvent>).TypeHandle);
             RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<UnhandledNestedEvent>).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<ClaimCheckDeliveryCommand>).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<ClaimCheckDeliveryCommand>).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<ClaimCheckDeliveryCommand>).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<RetainedClaimCheckDeliveryCommand>).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<RetainedClaimCheckDeliveryCommand>).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<RetainedClaimCheckDeliveryCommand>).TypeHandle);
         }
     }
 }
