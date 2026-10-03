@@ -508,6 +508,9 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
                 //-- pass, here for clarity on fall through to use of queue directly on assume
             }
 
+            if (DelaySupported)
+                await RmqDelayedRequeue.EnsureTopologyAsync(Channel!, Connection, _queueName, _makeChannels, cancellationToken);
+
             await CreateConsumerAsync(cancellationToken);
             
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
