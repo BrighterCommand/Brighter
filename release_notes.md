@@ -202,6 +202,41 @@ consumer that had created a requeue or rejection producer, the second dispose th
 `ObjectDisposedException` from the already-disposed producer's `Flush`. `Channel.Dispose` is now
 idempotent, as `ChannelAsync` already was, so the consumer is disposed once.
 
+### GCP Pub/Sub: subscription and publication client configuration now adds to the connection's (#4516)
+
+A `GcpPubSubSubscription`'s `streamingConfiguration` used to **replace** the connection's
+`StreamConfiguration`, and a `GcpPublication`'s `PublisherClientConfiguration` used to replace the
+connection's `PublisherConfiguration`. Any connection-wide setting, such as `EmulatorDetection`, an
+endpoint or channel credentials, was dropped for that subscription or publication. On the emulator, the
+client then went to production Pub/Sub and failed with `Unauthenticated`. Now the connection's
+configuration runs first, then the subscription's or publication's. Where both set the same builder
+property, the more specific one wins. A configuration that assigns a new `Settings` object still replaces
+whatever `Settings` the connection's configuration set.
+
+#### Behaviour change: the connection's configuration now also runs
+
+If a connection sets `StreamConfiguration` or `PublisherConfiguration`, that action now runs for every
+subscription or publication, including those with their own configuration. If you repeated connection
+settings in each per-entity configuration to work around the old behaviour, you can remove the
+repetition. If a connection setting must not apply to one subscription or publication, override it in
+that subscription's or publication's configuration.
+
+#### Message ordering survives a configuration that replaces `Settings`
+
+A publisher configuration that assigned a new `PublisherClient.Settings` switched off the message
+ordering an ordered `GcpPublication` asked for. Brighter sends each message with a partition key using
+an ordering key, so every such send then threw `InvalidOperationException` ("Message ordering must be
+enabled…"). This also broke dead-letter and invalid-message forwarding of keyed messages under a
+connection `PublisherConfiguration` that replaced `Settings`. After the configurations have run, Brighter
+now switches ordering back on for a publication with `EnableMessageOrdering = true`. A publication
+without it keeps whatever the configuration set.
+
+#### Stream configurations can set `Settings` values directly
+
+A stream configuration that set a value such as `builder.Settings.AckDeadline` threw
+`NullReferenceException`, because `Settings` was still null when the configuration ran. Brighter now
+creates `Settings` before running the configurations, as it already did for the publisher.
+
 ### Message pumps reject received messages with no handler (#4500)
 
 `Reactor` and `Proactor` now reject a received message as `Unacceptable` when it maps successfully

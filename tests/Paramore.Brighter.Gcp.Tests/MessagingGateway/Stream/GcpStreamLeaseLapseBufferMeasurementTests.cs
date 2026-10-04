@@ -165,8 +165,8 @@ file static class LeaseLapseMeasurement
             },
             makeChannels: OnMissingChannel.Create,
             subscriptionMode: SubscriptionMode.Stream,
-            // A subscription's StreamingConfiguration replaces the connection's (GcpPubSubConsumerFactory
-            // uses one or the other), so it must repeat the connection's emulator detection too.
+            // The connection's StreamConfiguration runs before this one (#4516), so repeating its
+            // emulator detection here is redundant but harmless.
             streamingConfiguration: builder =>
             {
                 builder.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
