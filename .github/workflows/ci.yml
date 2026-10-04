@@ -763,9 +763,46 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
         
+      # The Pull and PullOrdering messaging tests run in gcp-emulator-ci instead: against real Pub/Sub
+      # their DLQ, requeue and delivery-count tests take over an hour, far past this job's cap.
       - name: GCP Tests
-        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --blame-hang-timeout 15min --framework net10.0
-        
+        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Fragile!=CI&Requires!=PubSubEmulator&FullyQualifiedName!~Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.&FullyQualifiedName!~Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering." --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --blame-hang-timeout 15min --framework net10.0
+
+  gcp-emulator-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [build]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            10.0.x
+
+      - name: Start the Pub/Sub emulator
+        run: |
+          docker run -d --name gcp-pubsub-emulator -p 8085:8085 \
+            gcr.io/google.com/cloudsdktool/cloud-sdk:emulators \
+            gcloud beta emulators pubsub start --host-port=0.0.0.0:8085 --project=brighter-test
+          for i in $(seq 1 60); do
+            docker logs gcp-pubsub-emulator 2>&1 | grep -q "Server started" && exit 0
+            sleep 2
+          done
+          docker logs gcp-pubsub-emulator
+          exit 1
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      - name: GCP Pull Tests (emulator)
+        env:
+          PUBSUB_EMULATOR_HOST: localhost:8085
+          GOOGLE_CLOUD_PROJECT: brighter-test
+        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "(FullyQualifiedName~Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.|FullyQualifiedName~Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering.)&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --blame-hang-timeout 15min --framework net10.0
+
 #  TODO: Rafael Andrade is working on how to run RocketMQ on GHA
 #  rocketmq-ci:
 #    runs-on: ubuntu-latest

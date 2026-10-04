@@ -6,8 +6,8 @@
 #   export PUBSUB_EMULATOR_HOST=localhost:8085
 #   export GOOGLE_CLOUD_PROJECT=brighter-test
 #
-# CI runs the GCP tests against *real* GCP (see .github/workflows/ci.yml gcp-ci job),
-# so this compose file is for local conformance runs only.
+# CI runs most GCP tests against *real* GCP (the gcp-ci job in .github/workflows/ci.yml). The Pull and
+# PullOrdering messaging tests run against this same emulator image in the gcp-emulator-ci job.
 services:
   pubsub-emulator:
     image: gcr.io/google.com/cloudsdktool/cloud-sdk:emulators
