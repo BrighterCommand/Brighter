@@ -63,8 +63,8 @@ public class ValidatePipelinesZeroBudgetTests
         var provider = services.BuildServiceProvider();
 
         // Act
-        var validator = provider.GetRequiredService<IAmAPipelineValidator>();
-        var result = validator.Validate();
+        var result = PipelineValidationResult.Combine(
+            provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
 
         // Assert — zero budget produces exactly one Warning; no Errors; IsValid is true (host starts)
         Assert.True(result.IsValid);

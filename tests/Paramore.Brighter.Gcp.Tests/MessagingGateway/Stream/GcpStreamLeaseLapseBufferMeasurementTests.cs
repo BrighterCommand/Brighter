@@ -161,7 +161,7 @@ file static class LeaseLapseMeasurement
             {
                 AckDeadlineSeconds = 60,
                 MaxDeliveryAttempts = 5,
-                PublisherMember = "serviceAccount:brighter-pubsub@brighter-test.iam.gserviceaccount.com",
+                PublisherMember = GcpEmulatorIamMember.Value,
             },
             makeChannels: OnMissingChannel.Create,
             subscriptionMode: SubscriptionMode.Stream,
@@ -173,7 +173,7 @@ file static class LeaseLapseMeasurement
                 builder.Settings = new SubscriberClient.Settings { MaxTotalAckExtension = TimeSpan.FromSeconds(10) };
                 if (clientAckDeadlineTenSeconds) builder.Settings.AckDeadline = TimeSpan.FromSeconds(10);
             },
-            subscriberMember: "serviceAccount:brighter-pubsub@brighter-test.iam.gserviceaccount.com");
+            subscriberMember: GcpEmulatorIamMember.Value);
 
     /// <summary>
     /// Publishes one message, receives and holds m1 unsettled, then polls <c>Receive</c> every

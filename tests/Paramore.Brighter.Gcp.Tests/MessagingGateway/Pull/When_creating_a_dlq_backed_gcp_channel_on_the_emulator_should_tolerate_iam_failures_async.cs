@@ -152,6 +152,7 @@ public class DlqBackedGcpChannelIamToleranceAsyncTests
     /// Members set (C-11): no Resource Manager call is issued. GetIamPolicyAsync on the emulator
     /// returns Unimplemented (tolerated). Exactly two Warnings are logged, one per helper.
     /// </summary>
+    [Trait("Requires", "PubSubEmulator")]
     [Fact]
     public async Task When_creating_a_dlq_backed_gcp_channel_on_the_emulator_with_members_set_should_succeed_and_log_two_warnings_async()
     {

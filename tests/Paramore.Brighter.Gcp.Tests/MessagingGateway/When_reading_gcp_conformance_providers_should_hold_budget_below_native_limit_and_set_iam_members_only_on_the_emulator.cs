@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 using Xunit;
 
@@ -30,8 +31,9 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 /// Verifies that every DLQ-backed GCP conformance provider (GcpPull, GcpPullOrdering,
 /// GcpStream, GcpStreamOrdering) routes rejections through Brighter (R-27(a)(b), AC-36),
 /// keeps a native delivery policy M=5 on a distinct .native topic and subscription
-/// (ADR 0078 step 5), sets both IAM members (C-11) so emulator runs tolerate
-/// Unimplemented from GetIamPolicyAsync, and declares Brighter rejection-metadata keys.
+/// (ADR 0078 step 5), sets both IAM members only on the emulator (C-11) so emulator runs skip the
+/// Cloud Resource Manager call while real Pub/Sub derives its own service agent, and declares Brighter
+/// rejection-metadata keys.
 /// All assertions are made on the constructed <see cref="GcpPubSubSubscription"/> without
 /// touching the broker.
 /// </summary>
@@ -39,7 +41,7 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
 public class GcpConformanceProviderBudgetAndIamMembersTests
 {
     [Fact]
-    public void When_reading_gcp_pull_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members()
+    public void When_reading_gcp_pull_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members_only_on_the_emulator()
     {
         // Arrange
         var provider = new GcpPullMessageGatewayProvider();
@@ -59,7 +61,7 @@ public class GcpConformanceProviderBudgetAndIamMembersTests
     }
 
     [Fact]
-    public void When_reading_gcp_pull_ordering_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members()
+    public void When_reading_gcp_pull_ordering_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members_only_on_the_emulator()
     {
         // Arrange
         var provider = new GcpPullOrderingMessageGatewayProvider();
@@ -79,7 +81,7 @@ public class GcpConformanceProviderBudgetAndIamMembersTests
     }
 
     [Fact]
-    public void When_reading_gcp_stream_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members()
+    public void When_reading_gcp_stream_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members_only_on_the_emulator()
     {
         // Arrange
         var provider = new GcpStreamMessageGatewayProvider();
@@ -99,7 +101,7 @@ public class GcpConformanceProviderBudgetAndIamMembersTests
     }
 
     [Fact]
-    public void When_reading_gcp_stream_ordering_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members()
+    public void When_reading_gcp_stream_ordering_conformance_provider_should_hold_budget_below_native_limit_and_set_iam_members_only_on_the_emulator()
     {
         // Arrange
         var provider = new GcpStreamOrderingMessageGatewayProvider();
@@ -142,11 +144,18 @@ public class GcpConformanceProviderBudgetAndIamMembersTests
             $"{subscription.DeadLetterRoutingKey}.native",
             subscription.DeadLetter.Subscription.Value);
 
-        // Both IAM members are set (C-11) so emulator runs tolerate GetIamPolicyAsync Unimplemented
-        Assert.False(string.IsNullOrEmpty(subscription.DeadLetter.PublisherMember));
-        Assert.StartsWith("serviceAccount:", subscription.DeadLetter.PublisherMember);
-        Assert.False(string.IsNullOrEmpty(subscription.SubscriberMember));
-        Assert.StartsWith("serviceAccount:", subscription.SubscriberMember);
+        // Both IAM members are set on the emulator only (C-11), where they skip the Cloud Resource Manager
+        // call. Real Pub/Sub validates IAM members, so there they are left unset for the gateway to derive
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PUBSUB_EMULATOR_HOST")))
+        {
+            Assert.Null(subscription.DeadLetter.PublisherMember);
+            Assert.Null(subscription.SubscriberMember);
+        }
+        else
+        {
+            Assert.StartsWith("serviceAccount:", subscription.DeadLetter.PublisherMember);
+            Assert.StartsWith("serviceAccount:", subscription.SubscriberMember);
+        }
 
         // Gateway stamps Brighter rejection metadata (R-27(b), AC-36)
         Assert.True(stampsRejectionMetadata);
