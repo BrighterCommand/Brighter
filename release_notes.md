@@ -171,6 +171,15 @@ client may already have delivered some messages into Brighter's local buffer, an
 returned by the next `Receive`. A purge now also acknowledges every buffered message published before
 the purge started. Messages published after it are kept.
 
+### Reactor: a channel disposes its message consumer only once (#4511)
+
+When a Reactor performer stopped, its sync `Channel` was disposed twice: once by the pump when it
+received the quit message, and again when the dispatcher disposed the performer. `Channel` passed both
+calls on, so every transport's sync message consumer was disposed twice on each shutdown. For a Kafka
+consumer that had created a requeue or rejection producer, the second dispose threw
+`ObjectDisposedException` from the already-disposed producer's `Flush`. `Channel.Dispose` is now
+idempotent, as `ChannelAsync` already was, so the consumer is disposed once.
+
 ### Message pumps reject received messages with no handler (#4500)
 
 `Reactor` and `Proactor` now reject a received message as `Unacceptable` when it maps successfully
