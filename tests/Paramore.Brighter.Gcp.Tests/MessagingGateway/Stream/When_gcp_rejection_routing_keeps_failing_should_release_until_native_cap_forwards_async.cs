@@ -50,8 +50,7 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 [Collection("Stream")]
 public class GcpStreamRejectionRoutingReleaseUntilNativeCapProactorTests
 {
-    private const string ServiceAccount =
-        "serviceAccount:brighter-pubsub@brighter-test.iam.gserviceaccount.com";
+    private static readonly string? ServiceAccount = GcpEmulatorIamMember.Value;
 
     [Fact]
     public async Task When_gcp_rejection_routing_keeps_failing_should_release_until_native_dead_letter_policy_forwards_the_message_without_rejection_metadata_async()
@@ -227,8 +226,7 @@ public class GcpStreamRejectionRoutingReleaseUntilNativeCapProactorTests
 [Collection("StreamOrdering")]
 public class GcpStreamOrderingRejectionRoutingReleaseUntilNativeCapProactorTests
 {
-    private const string ServiceAccount =
-        "serviceAccount:brighter-pubsub@brighter-test.iam.gserviceaccount.com";
+    private static readonly string? ServiceAccount = GcpEmulatorIamMember.Value;
 
     [Fact]
     public async Task When_gcp_stream_ordering_rejection_routing_keeps_failing_should_release_until_native_dead_letter_policy_forwards_the_message_without_rejection_metadata_async()

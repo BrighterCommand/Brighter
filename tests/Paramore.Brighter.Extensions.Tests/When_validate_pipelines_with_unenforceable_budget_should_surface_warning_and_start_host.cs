@@ -65,8 +65,8 @@ public class ValidatePipelinesUnenforceableBudgetTests
         var provider = services.BuildServiceProvider();
 
         // Act
-        var validator = provider.GetRequiredService<IAmAPipelineValidator>();
-        var result = validator.Validate();
+        var result = PipelineValidationResult.Combine(
+            provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
 
         // Assert — unenforceable budget produces exactly one Warning; no Errors; host starts
         Assert.True(result.IsValid);

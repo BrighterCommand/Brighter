@@ -155,11 +155,11 @@ public class GcpStreamMessageGatewayProvider
                 {
                     AckDeadlineSeconds = 60,
                     MaxDeliveryAttempts = 5,
-                    PublisherMember = "serviceAccount:brighter-pubsub@brighter-test.iam.gserviceaccount.com",
+                    PublisherMember = GcpEmulatorIamMember.Value,
                 },
                 makeChannels: makeChannel,
                 subscriptionMode: SubscriptionMode.Stream,
-                subscriberMember: "serviceAccount:brighter-pubsub@brighter-test.iam.gserviceaccount.com",
+                subscriberMember: GcpEmulatorIamMember.Value,
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 invalidMessageRoutingKey: invalidMessageRoutingKey
             );

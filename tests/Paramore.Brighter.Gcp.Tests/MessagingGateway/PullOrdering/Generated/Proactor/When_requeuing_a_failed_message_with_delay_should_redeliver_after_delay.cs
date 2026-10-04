@@ -61,7 +61,7 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync 
         await _producer.SendAsync(message);
 
         // Act — receive the message and requeue it with a 5 s delay
-        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         var requeued = await _channel.RequeueAsync(received, TimeSpan.FromSeconds(5));

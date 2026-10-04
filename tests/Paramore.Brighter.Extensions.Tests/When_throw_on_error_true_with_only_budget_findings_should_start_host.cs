@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -104,9 +105,9 @@ public class ThrowOnErrorTrueWithOnlyBudgetFindingsTests
         // Assert — primary: host starts without a PipelineValidationException (R-25, R-26, AC-32)
         Assert.Null(exception);
 
-        // Supporting evidence: the real validator sees three Warning findings and no Errors
-        var validator = provider.GetRequiredService<IAmAPipelineValidator>();
-        var result = validator.Validate();
+        // Supporting evidence: the registered validators see three Warning findings and no Errors
+        var result = PipelineValidationResult.Combine(
+            provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
         Assert.True(result.IsValid);
         Assert.Equal(3, result.Warnings.Count);
         Assert.Empty(result.Errors);

@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// </summary>
 [Trait("Category", "GcpPubSubPull")]
 [Collection("Pull")]
+[Trait("Requires", "PubSubEmulator")]
 public class GcpPullDeliveryAttemptAttributeTests
 {
     private const string DeliveryAttemptAttrKey = "googclient_deliveryattempt";
