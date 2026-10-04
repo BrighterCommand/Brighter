@@ -1,7 +1,7 @@
 # Bugfix: ASB channel factory does not provision the topic subscription eagerly, so the first sent message is lost
 
 **Linked Issue**: #4309
-**Status**: Fixed
+**Status**: Verified
 
 ## Symptom
 
