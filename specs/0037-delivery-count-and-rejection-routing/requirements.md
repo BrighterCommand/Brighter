@@ -919,6 +919,13 @@ one way to set the members and still reach the path R-27(b) exists to avoid. Thi
 it: R-20 governs what happens to an application that does *not* set them, which is the default
 a user meets.
 
+> *Amended 2026-10-03 (PR #4506).* The members are set **only when `PUBSUB_EMULATOR_HOST` is set**.
+> Real Pub/Sub validates IAM members, so the placeholder account failed channel creation with
+> `InvalidArgument: Service account … does not exist` in `gcp-ci`, which runs against real GCP. There,
+> the providers leave both members unset and the gateway derives the project's own Pub/Sub service agent.
+> Tests that can only run on the emulator carry `[Trait("Requires", "PubSubEmulator")]`, and `gcp-ci`
+> excludes them.
+
 **(c) The shared conformance harness counts deliveries, and both FR-23 templates assert the count.**
 R-4's obligation — that a message is not delivered again once its budget is spent — is only
 observable if the harness can say how many times the message was dispatched to a handler. It cannot
@@ -1639,8 +1646,9 @@ single finding, and a subscription that trips two rules is expected to produce t
 **AC-36** (R-27) — **Given** the eight AWS/AWS.V4 gateway providers and the four GCP gateway
 providers named in R-27, **When** their configured values are read, **Then** every one satisfies
 `R < M`: `requeueCount: 3` against a native limit of `5` on both families; **And Given** the four GCP
-providers, **When** they are read, **Then** each sets `DeadLetter.PublisherMember` and
-`SubscriberMember` to a non-empty `serviceAccount:…`-shaped string. **And Given** an FR-23 run on any of the twelve, **When** the budget is
+providers, **When** they are read on the emulator, **Then** each sets `DeadLetter.PublisherMember` and
+`SubscriberMember` to a non-empty `serviceAccount:…`-shaped string, and on real Pub/Sub leaves both
+unset (R-27(b) amendment). **And Given** an FR-23 run on any of the twelve, **When** the budget is
 exhausted, **Then** the message reaches the Brighter-managed dead-letter destination carrying
 `rejectionReason == "DeliveryError"` — the native redrive target is not the route taken.
 **And Given** R-27(c), **When** any generated FR-23 test is run, **Then** it asserts the harness's
