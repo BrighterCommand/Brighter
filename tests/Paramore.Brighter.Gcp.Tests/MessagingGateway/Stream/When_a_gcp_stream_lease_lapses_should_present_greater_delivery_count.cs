@@ -92,9 +92,8 @@ public class GcpStreamLeaseLapseDeliveryCountTests
             },
             makeChannels: OnMissingChannel.Create,
             subscriptionMode: SubscriptionMode.Stream,
-            // A subscription's StreamingConfiguration replaces the connection's
-            // (GcpPubSubConsumerFactory.cs:110-121), so it must repeat the connection's emulator
-            // detection too, or the client goes to production Pub/Sub and fails Unauthenticated.
+            // The connection's StreamConfiguration runs before this one (#4516), so repeating its
+            // emulator detection here is redundant but harmless.
             // MaxTotalAckExtension alone is not enough (6.13): the client leases each message for
             // its own stream AckDeadline (default 60 s) regardless of the subscription's
             // AckDeadlineSeconds, so Settings.AckDeadline must also be set to 10 s.

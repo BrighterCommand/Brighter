@@ -121,7 +121,7 @@ public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection)
         new(CreateSubscriberClient(
             subscriptionName,
             subscription.BufferSize * subscription.NoOfPerformers,
-            subscription.StreamingConfiguration ?? _connection.StreamConfiguration));
+            subscription.StreamingConfiguration));
 
     private Google.Cloud.PubSub.V1.SubscriberClient CreateSubscriberClient(Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
         long maxInFlightMessages,
@@ -130,9 +130,12 @@ public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection)
         var builder = new SubscriberClientBuilder
         {
             SubscriptionName = subscriptionName,
-            Credential = _connection.Credential
+            Credential = _connection.Credential,
+            Settings = new SubscriberClient.Settings()
         };
 
+        // The connection's configuration applies to every subscription; the subscription's own runs after it, so it wins
+        _connection.StreamConfiguration?.Invoke(builder);
         configure?.Invoke(builder);
 
         builder.Settings ??= new SubscriberClient.Settings();

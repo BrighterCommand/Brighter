@@ -82,9 +82,9 @@ public class GcpStreamLeaseLapseDeliveryCountAsyncTests
             },
             makeChannels: OnMissingChannel.Create,
             subscriptionMode: SubscriptionMode.Stream,
-            // See the sync twin: the StreamingConfiguration hook replaces the connection's, so it
-            // must repeat emulator detection, and the client's own stream AckDeadline (not just
-            // MaxTotalAckExtension) must be capped at 10 s (6.13).
+            // See the sync twin: repeating the connection's emulator detection is redundant since
+            // #4516, and the client's own stream AckDeadline (not just MaxTotalAckExtension) must be
+            // capped at 10 s (6.13).
             streamingConfiguration: builder =>
             {
                 builder.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;

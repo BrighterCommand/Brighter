@@ -112,6 +112,11 @@ public class GcpPubSubSubscription : Subscription, IUseBrighterDeadLetterSupport
     /// Gets an action to configure the <see cref="SubscriberClientBuilder"/> used for the streaming consumer.
     /// This allows for advanced customization of the underlying streaming client configuration.
     /// </summary>
+    /// <remarks>
+    /// Runs after the connection's <see cref="GcpMessagingGatewayConnection.StreamConfiguration"/>, so this configuration
+    /// wins where both set the same property. Assigning a new <c>Settings</c> replaces any the connection's configuration
+    /// set. Brighter sets the flow control limits after both have run.
+    /// </remarks>
     public Action<SubscriberClientBuilder>? StreamingConfiguration { get; }
 
     /// <summary>
