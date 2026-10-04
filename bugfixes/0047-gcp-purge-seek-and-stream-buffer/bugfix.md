@@ -1,7 +1,7 @@
 # Bugfix: GCP Purge sends a Seek with no subscription and leaves the stream's local buffer in place
 
 **Linked Issue**: #4508
-**Status**: Tested
+**Status**: Verified
 
 ## Symptom
 - **Observed (claimed, unverified):** `Purge`/`PurgeAsync` on a GCP Pub/Sub channel may not remove messages.
@@ -294,4 +294,32 @@ later ones back.
 - GREEN after the drain: 2/2 in each of 5 emulator runs and 5 real Pub/Sub runs.
 
 ## Fix
-_(left blank — filled by /bugfix:fix)_
+Applied in the GREEN phase of each `/test-first` cycle.
+- **`729d7acb3` (Pull, `Refs #4508`).** `GcpPullMessageConsumer.Purge`/`PurgeAsync` set
+  `SubscriptionAsSubscriptionName = subscriptionName` on the `SeekRequest`, as the consumer's `PullRequest`
+  already does.
+- **`4cd6f34ce` (Stream, `Fixes #4508`).**
+  - `GcpPubSubStreamMessageConsumer.Purge`/`PurgeAsync` record `purgeStarted` from `TimeProvider`. They Seek the
+    named subscription to `purgeStarted + 1 min`, as before, then call `consumer.PurgeBuffered(purgeStarted)`.
+  - New public `GcpStreamConsumer.PurgeBuffered(DateTimeOffset publishedBefore)`:
+    - It `TryRead`s the local channel dry.
+    - It calls `Accepted()` (Ack) on each message whose `PublishTime` is before the cutoff.
+    - It writes the rest back.
+  - Seek first, then drain, so the client cannot refill the buffer with pre-purge messages after the drain.
+  - Ack, not drop: an unsettled message would keep its flow-control slot and lease for ever.
+- **Not changed (by design or out of scope):**
+  - The Seek's `+1 min`. The probe showed that messages published after the Seek still arrive.
+  - Another performer's concurrent `Receive` during a purge. There is no purge barrier.
+  - RMQ.Async parity (Scope Notes 5).
+  - Messages written back after the drain are reordered, a minor issue for ordered subscriptions.
+
+**Verification (2026-10-04, at `4cd6f34ce`, net10.0)**
+- The four regression tests are GREEN in 5 emulator runs and 5 real Pub/Sub runs.
+- The GCP transport builds on all TFMs with 0 errors.
+- Emulator:
+  - Pull and PullOrdering scope: 136/0/30.
+  - Stream suite: 127/0/25.
+  - CI filter: 190/49/30. The 49 are the Firestore and GCS tests that need real GCP.
+  - Each run is the earlier baseline plus 2 new tests, and no other test changed outcome.
+- Real Pub/Sub `gcp-ci` scope (`brighter-gcp-diag-51720`): 160/1/30. The 1 is the known PullOrdering
+  delivery-count flake, which passed 2/2 on re-run.

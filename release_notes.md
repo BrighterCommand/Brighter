@@ -158,6 +158,19 @@ client delivered, payload included, stayed in memory until the channel was dispo
 stream consumer's memory grew with its throughput. Stopping the client also had to run one callback for
 every message ever delivered. The callback is now removed once the message is settled.
 
+### GCP Pub/Sub: `Purge` now clears the subscription (#4508)
+
+`Purge` and `PurgeAsync` on a GCP channel, Pull or Stream, never worked. They purge by seeking the
+subscription to a future time, but the Seek request did not name the subscription, so Pub/Sub
+rejected it with `InvalidArgument` and `Purge` always threw. The Seek now names the consumer's
+subscription. This also affects `CommandProcessor.Call` over GCP, which purges the reply channel before
+sending the request.
+
+On a Stream subscription, a Seek clears only the messages still held by the service. The streaming
+client may already have delivered some messages into Brighter's local buffer, and those were still
+returned by the next `Receive`. A purge now also acknowledges every buffered message published before
+the purge started. Messages published after it are kept.
+
 ### Message pumps reject received messages with no handler (#4500)
 
 `Reactor` and `Proactor` now reject a received message as `Unacceptable` when it maps successfully
