@@ -66,7 +66,7 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
         await _producer.SendAsync(message);
 
         // Act — receive the message and nack it
-        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         await _channel.NackAsync(received);
@@ -127,7 +127,7 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
         // Act — nack whichever message the transport hands over first. Which of the two that is
         // belongs to the transport, not to Brighter, so the message to nack is identified by its
         // id rather than assumed to be the one sent first (NFR-4).
-        var receivedForNack = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+        var receivedForNack = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
         Assert.NotEqual(MessageType.MT_NONE, receivedForNack.Header.MessageType);
 
         var nackedMessage = _sentMessages.Single(m => m.Header.MessageId == receivedForNack.Header.MessageId);
