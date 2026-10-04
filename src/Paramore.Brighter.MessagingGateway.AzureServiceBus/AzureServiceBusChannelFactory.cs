@@ -102,8 +102,27 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
     /// <exception cref="ConfigurationException">Thrown when the subscription is incorrect</exception>
     public Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription,
         CancellationToken ct = default)
-        => Task.FromResult(CreateAsyncChannel(subscription));
-    
+    {
+        var azureServiceBusSubscription = GetAndCheckSubscription(subscription);
+        return CreateAsyncChannelAsync(azureServiceBusSubscription);
+    }
+
+    private async Task<IAmAChannelAsync> CreateAsyncChannelAsync(AzureServiceBusSubscription subscription)
+    {
+        IAmAMessageConsumerAsync messageConsumer =
+            _azureServiceBusConsumerFactory.CreateAsync(subscription);
+
+        if (messageConsumer is AzureServiceBusConsumer azureServiceBusConsumer)
+            await azureServiceBusConsumer.EnsureChannelExistsAsync();
+
+        return new ChannelAsync(
+            channelName: subscription.ChannelName,
+            routingKey: subscription.RoutingKey,
+            messageConsumer: messageConsumer,
+            maxQueueLength: subscription.BufferSize
+        );
+    }
+
     private AzureServiceBusSubscription GetAndCheckSubscription(Subscription subscription)
     {
         if (subscription is not AzureServiceBusSubscription azureServiceBusSubscription)
