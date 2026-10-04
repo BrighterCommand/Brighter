@@ -204,6 +204,88 @@ public static class ConsumerValidationRules
     }
 
     /// <summary>
+    /// Validates that the subscription's <see cref="Subscription.RequeueCount"/> is not a zero-budget
+    /// value (R-7, ADR 0077). A <see cref="Subscription.RequeueCount"/> of <c>0</c> or below <c>-1</c>
+    /// means the budget is effectively zero: the pump rejects the first deferral, which is almost certainly
+    /// not the operator's intent. The two likely intents are <c>-1</c> (requeue for ever) and <c>1</c>
+    /// (reject after one delivery). Reports a single <see cref="ValidationSeverity.Warning"/> naming the
+    /// subscription, the problematic value, and both likely intents.
+    /// </summary>
+    /// <returns>A simple specification that reports a Warning for a zero-budget subscription.</returns>
+    public static ISpecification<Subscription> ZeroBudget()
+        => new Specification<Subscription>(
+            s => s.RequeueCount == -1 || s.RequeueCount >= 1,
+            s => new ValidationError(
+                ValidationSeverity.Warning,
+                $"Subscription '{s.Name}'",
+                $"Subscription '{s.Name}' has requeueCount {s.RequeueCount}, which is a zero-budget value " +
+                $"(the first deferral is immediately rejected). " +
+                $"Did you mean -1 (requeue for ever) or 1 (reject after one delivery)?"));
+
+    /// <summary>
+    /// Validates that a subscription's configured delivery budget (<see cref="Subscription.RequeueCount"/>)
+    /// will fire ahead of its visible native redrive limit (R-10, ADR 0077). When both are configured
+    /// and <c>R &gt;= M</c>, the native limit fires first and the budget is ineffective — this is
+    /// reported as a <see cref="ValidationSeverity.Warning"/> naming the subscription, the budget, the
+    /// native limit, and that the effective limit is the native one. Vacuously passes for subscriptions
+    /// that do not implement <see cref="IAmADeliveryCountingSubscription"/> (R-22), when <c>R == -1</c>
+    /// (budget disabled), or when <see cref="IAmADeliveryCountingSubscription.NativeRedriveLimit"/> is
+    /// <c>null</c>.
+    /// </summary>
+    /// <returns>A simple specification that reports a Warning when the budget meets or exceeds the native redrive limit.</returns>
+    public static ISpecification<Subscription> BudgetAtNativeRedriveLimit()
+        => new Specification<Subscription>(
+            s =>
+            {
+                if (s is not IAmADeliveryCountingSubscription counting) return true;
+                if (s.RequeueCount == -1) return true;
+                if (counting.NativeRedriveLimit is not int m) return true;
+                return s.RequeueCount < m;
+            },
+            s =>
+            {
+                var counting = (IAmADeliveryCountingSubscription)s;
+                var m = counting.NativeRedriveLimit!.Value;
+                return new ValidationError(
+                    ValidationSeverity.Warning,
+                    $"Subscription '{s.Name}'",
+                    $"Subscription '{s.Name}' has requeueCount {s.RequeueCount} which meets or exceeds " +
+                    $"the native redrive limit of {m}. The effective limit is the native limit ({m}); " +
+                    $"the Brighter budget will not fire first.");
+            });
+
+    /// <summary>
+    /// Validates that a subscription's configured delivery budget (<see cref="Subscription.RequeueCount"/>)
+    /// can actually run down — that is, the transport can advance its delivery count (R-11, ADR 0077).
+    /// When <c>R != -1</c> and <see cref="IAmADeliveryCountingSubscription.DeliveryBudgetUnenforceableReason"/>
+    /// is non-null, the budget will never exhaust because the broker counter cannot advance; this is
+    /// reported as a <see cref="ValidationSeverity.Warning"/> naming the subscription, <c>R</c>, and the
+    /// reason. Vacuously passes for subscriptions that do not implement
+    /// <see cref="IAmADeliveryCountingSubscription"/> (R-22), when <c>R == -1</c> (budget disabled),
+    /// or when <see cref="IAmADeliveryCountingSubscription.DeliveryBudgetUnenforceableReason"/> is
+    /// <c>null</c> (budget is enforceable).
+    /// </summary>
+    /// <returns>A simple specification that reports a Warning when the delivery budget cannot run down.</returns>
+    public static ISpecification<Subscription> UnenforceableBudget()
+        => new Specification<Subscription>(
+            s =>
+            {
+                if (s is not IAmADeliveryCountingSubscription counting) return true;
+                if (s.RequeueCount == -1) return true;
+                return counting.DeliveryBudgetUnenforceableReason is null;
+            },
+            s =>
+            {
+                var counting = (IAmADeliveryCountingSubscription)s;
+                var reason = counting.DeliveryBudgetUnenforceableReason!;
+                return new ValidationError(
+                    ValidationSeverity.Warning,
+                    $"Subscription '{s.Name}'",
+                    $"Subscription '{s.Name}' has requeueCount {s.RequeueCount} but the delivery count " +
+                    $"cannot advance: {reason}. The budget will not run down.");
+            });
+
+    /// <summary>
     /// Which routing arm <see cref="ChannelFactoryCompatible"/> is evaluating: a single factory
     /// directly, or the inner factories of a <see cref="CombinedChannelFactory"/>.
     /// </summary>

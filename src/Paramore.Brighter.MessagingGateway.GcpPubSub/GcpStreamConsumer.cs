@@ -40,13 +40,19 @@ public class GcpStreamConsumer(SubscriberClient client)
     /// <summary>
     /// Stops the Pub/Sub streaming client and disposes of resources when the last outstanding handler calls this method.
     /// </summary>
+    /// <remarks>
+    /// Stops with <see cref="SubscriberClient.ShutdownMode.NackImmediately"/>: a message already delivered to a
+    /// callback but not settled by Brighter (buffered unread in the channel, or received and never acknowledged,
+    /// rejected or requeued) is nacked for redelivery. <see cref="SubscriberClient.ShutdownMode.WaitForProcessing"/>
+    /// would wait on such a message until the client's own timeout, by default about an hour.
+    /// </remarks>
     /// <returns>A task representing the asynchronous stop operation.</returns>
     public async Task StopAsync()
     {
         var decrement = Interlocked.Decrement(ref _handlers);
         if (decrement == 0)
         {
-            await client.StopAsync(new SubscriberClient.ShutdownOptions() {Mode = SubscriberClient.ShutdownMode.WaitForProcessing}, CancellationToken.None);
+            await client.StopAsync(new SubscriberClient.ShutdownOptions() {Mode = SubscriberClient.ShutdownMode.NackImmediately}, CancellationToken.None);
             await client.DisposeAsync();
         }
     }

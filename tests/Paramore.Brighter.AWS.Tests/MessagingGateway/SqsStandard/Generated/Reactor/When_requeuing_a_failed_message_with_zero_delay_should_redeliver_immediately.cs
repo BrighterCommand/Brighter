@@ -83,6 +83,11 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediately 
         Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
         Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5),
             $"Expected redelivery within 5 s of Requeue(M, TimeSpan.Zero) returning; elapsed: {stopwatch.Elapsed}");
+        // R-1 vs R-23 (ADR 0077): the redelivered count must be >= the sent count; normalise
+        // it back so the transport's equality assertion can still compare the rest of the header.
+        Assert.True(redelivered.Header.HandledCount >= message.Header.HandledCount,
+            $"Redelivered HandledCount {redelivered.Header.HandledCount} must be >= sent {message.Header.HandledCount} (R-1)");
+        redelivered.Header.HandledCount = message.Header.HandledCount;
         _messageAssertion.Assert(message, redelivered);
     }
 }

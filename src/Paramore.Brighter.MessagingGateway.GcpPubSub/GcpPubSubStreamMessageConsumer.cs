@@ -20,13 +20,24 @@ public partial class GcpPubSubStreamMessageConsumer(
     GcpMessagingGatewayConnection connection,
     GcpStreamConsumer consumer,
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-    TimeProvider timeProvider) : IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
+    TimeProvider timeProvider,
+    RoutingKey? deadLetterRoutingKey = null,
+    RoutingKey? invalidMessageRoutingKey = null,
+    OnMissingChannel makeChannels = OnMissingChannel.Assume) : IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
 {
     /// <inheritdoc />
     public MessagingSystem MessagingSystem => MessagingSystem.PubSub;
 
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPubSubStreamMessageConsumer>();
-    
+
+    private readonly GcpRejectionRouter _router = new GcpRejectionRouter(
+        connection,
+        deadLetterRoutingKey,
+        invalidMessageRoutingKey,
+        makeChannels,
+        subscriptionName.ProjectId,
+        timeProvider);
+
     /// <summary>
     /// Synchronously acknowledges a message, signalling the Pub/Sub service that the message
     /// has been successfully processed and can be discarded.
@@ -38,8 +49,8 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             return;
         }
-        
-        gcpStreamMessage.Accepted();
+
+        Accept(gcpStreamMessage);
         Log.AcknowledgeSuccess(s_logger, message.Id.Value, "", subscriptionName.ToString());
     }
     
@@ -57,56 +68,108 @@ public partial class GcpPubSubStreamMessageConsumer(
     }
 
     /// <summary>
-    /// Nacks the specified message. For GCP Pub/Sub (stream-based), this is a no-op because not
-    /// acknowledging the message is sufficient to allow redelivery.
+    /// Nacks the specified message by calling <see cref="GcpStreamMessage.Reject"/> on the receipt
+    /// handle, releasing it to the service for immediate redelivery.
     /// </summary>
-    /// <param name="message">The message.</param>
+    /// <remarks>
+    /// Not acknowledging is not enough on a stream: the <see cref="SubscriberClient"/> keeps the
+    /// message's flow-control slot and extends its lease until the handler replies, so an unsettled
+    /// message is never redelivered and, at the default flow control of one, stalls the subscription.
+    /// </remarks>
+    /// <param name="message">The message, containing the receipt handle in its header bag.</param>
     public void Nack(Message message)
     {
-        // No-op for GCP Pub/Sub: not acknowledging is sufficient for redelivery
+        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle) || receiptHandle is not GcpStreamMessage gcpStreamMessage)
+        {
+            return;
+        }
+
+        Nack(gcpStreamMessage);
+        Log.NackComplete(s_logger, message.Id.Value);
     }
 
     /// <summary>
-    /// Nacks the specified message. For GCP Pub/Sub (stream-based), this is a no-op because not
-    /// acknowledging the message is sufficient to allow redelivery.
+    /// Nacks the specified message by calling <see cref="GcpStreamMessage.Reject"/> on the receipt
+    /// handle, releasing it to the service for immediate redelivery.
     /// </summary>
-    /// <param name="message">The message.</param>
+    /// <param name="message">The message, containing the receipt handle in its header bag.</param>
     /// <param name="cancellationToken">Cancel the nack operation</param>
+    /// <returns>A completed task.</returns>
     public Task NackAsync(Message message, CancellationToken cancellationToken = default)
     {
+        Nack(message);
         return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Synchronously rejects a message. In this implementation, it calls <see cref="GcpStreamMessage.Accepted"/>
-    /// to signal processing completion and prevents redelivery, while logging the rejection.
+    /// Synchronously rejects a message, routing a stamped copy to the configured dead-letter or
+    /// invalid-message destination before accepting the original stream handle.
     /// </summary>
     /// <param name="message">The message to reject.</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
-    /// <returns>Always returns <c>true</c> indicating the operation was processed.</returns>
+    /// <returns>Always <see langword="true"/>: the message is settled by this call.</returns>
     public bool Reject(Message message, MessageRejectionReason? reason = null)
     {
-        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle) || receiptHandle is not GcpStreamMessage gcpStreamMessage)
+        // Copy the handle before the router strips it from the bag.
+        message.Header.Bag.TryGetValue("ReceiptHandle", out var handler);
+        var gcpStreamMessage = handler as GcpStreamMessage;
+
+        var outcome = _router.Route(message, reason);
+
+        if (gcpStreamMessage == null)
         {
+            // Missing handle: routing still ran, but we cannot settle the original.
+            Log.RejectMissingHandle(s_logger, message.Id.Value);
             return true;
         }
-        
-        gcpStreamMessage.Accepted();
+
+        if (outcome == RoutingOutcome.Failed)
+        {
+            // The routing publish failed: Nack the original for prompt redelivery instead of
+            // accepting it (R-19). GcpRejectionRouter has already logged the Error.
+            gcpStreamMessage.Reject();
+            return true;
+        }
+
+        Accept(gcpStreamMessage);
         Log.RejectMessage(s_logger, message.Id.Value, "", subscriptionName.ToString());
         return true;
     }
-    
+
     /// <summary>
-    /// Asynchronously rejects a message. In this implementation, it calls <see cref="GcpStreamMessage.Accepted"/>
-    /// to signal processing completion and prevents redelivery, while logging the rejection.
+    /// Asynchronously rejects a message, routing a stamped copy to the configured dead-letter or
+    /// invalid-message destination before accepting the original stream handle.
     /// </summary>
     /// <param name="message">The message to reject.</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task that returns <c>true</c>.</returns>
-    public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
+    /// <returns>A task that always returns <see langword="true"/>: the message is settled by this call.</returns>
+    public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(Reject(message, reason));
+        // Copy the handle before the router strips it from the bag.
+        message.Header.Bag.TryGetValue("ReceiptHandle", out var handler);
+        var gcpStreamMessage = handler as GcpStreamMessage;
+
+        var outcome = await _router.RouteAsync(message, reason, cancellationToken);
+
+        if (gcpStreamMessage == null)
+        {
+            // Missing handle: routing still ran, but we cannot settle the original.
+            Log.RejectMissingHandle(s_logger, message.Id.Value);
+            return true;
+        }
+
+        if (outcome == RoutingOutcome.Failed)
+        {
+            // The routing publish failed: Nack the original for prompt redelivery instead of
+            // accepting it (R-19). GcpRejectionRouter has already logged the Error.
+            gcpStreamMessage.Reject();
+            return true;
+        }
+
+        Accept(gcpStreamMessage);
+        Log.RejectMessage(s_logger, message.Id.Value, "", subscriptionName.ToString());
+        return true;
     }
 
     /// <summary>
@@ -223,8 +286,8 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             return true;
         }
-        
-        gcpStreamMessage.Reject();
+
+        Nack(gcpStreamMessage);
         Log.RequeueComplete(s_logger, message.Id.Value);
         return true;
     }
@@ -249,8 +312,9 @@ public partial class GcpPubSubStreamMessageConsumer(
     public void Dispose()
     {
         consumer.StopAsync().GetAwaiter().GetResult();
+        _router.Dispose();
     }
-    
+
     /// <summary>
     /// Disposes of the consumer's resources asynchronously.
     /// </summary>
@@ -258,8 +322,19 @@ public partial class GcpPubSubStreamMessageConsumer(
     public async ValueTask DisposeAsync()
     {
         await consumer.StopAsync();
+        await _router.DisposeAsync();
     }
-    
+
+    /// <summary>
+    /// Signals that the stream message was successfully processed and should be acknowledged.
+    /// </summary>
+    private static void Accept(GcpStreamMessage gcpStreamMessage) => gcpStreamMessage.Accepted();
+
+    /// <summary>
+    /// Signals that the stream message failed processing and should be negatively acknowledged for redelivery.
+    /// </summary>
+    private static void Nack(GcpStreamMessage gcpStreamMessage) => gcpStreamMessage.Reject();
+
     private static partial class Log
     {
         [LoggerMessage(LogLevel.Information, "GcpStreamMessageConsumer: The message {Id} acknowledged with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]
@@ -276,6 +351,10 @@ public partial class GcpPubSubStreamMessageConsumer(
         public static partial void RejectError(ILogger logger, Exception ex, string id, string receiptHandle,
             string subscriptionName);
 
+        [LoggerMessage(LogLevel.Error,
+            "GcpStreamMessageConsumer: Message {Id} has no receipt handle; routed copy published but the original cannot be settled")]
+        public static partial void RejectMissingHandle(ILogger logger, string id);
+
         [LoggerMessage(LogLevel.Information, "GcpStreamMessageConsumer: Purging the subscription {SubscriptionName}")]
         public static partial void PurgeStart(ILogger logger, string subscriptionName);
 
@@ -287,5 +366,8 @@ public partial class GcpPubSubStreamMessageConsumer(
 
         [LoggerMessage(LogLevel.Information, "PullPubSubConsumer: re-queued the message {Id}")]
         public static partial void RequeueComplete(ILogger logger, string id);
+
+        [LoggerMessage(LogLevel.Information, "GcpStreamMessageConsumer: nacked the message {Id}")]
+        public static partial void NackComplete(ILogger logger, string id);
     }
 }

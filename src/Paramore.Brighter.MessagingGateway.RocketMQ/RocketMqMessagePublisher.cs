@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Extensions;
 
@@ -37,7 +38,7 @@ public static class RocketMqMessagePublisher
             .SetBody(message.Body.ToByteArray())
             .SetTopic(publication.Topic!.Value);
 
-        AddHeaderProperties(builder, message.Id, message.Header);
+        var headerOwnedKeys = AddHeaderProperties(builder, message.Id, message.Header);
 
         if (publication.TopicType == TopicType.Delay || delay.HasValue && delay.Value != TimeSpan.Zero)
         {
@@ -54,7 +55,8 @@ public static class RocketMqMessagePublisher
         foreach (var (key, val) in message.Header.Bag
                      .Where(x => x.Key != HeaderNames.Keys
                                  && x.Key != HeaderNames.Tag
-                                 && !MessageHeader.IsLocalHeader(x.Key)))
+                                 && !MessageHeader.IsLocalHeader(x.Key)
+                                 && !headerOwnedKeys.Contains(x.Key)))
         {
             builder.AddProperty(key, val.ToString());
         }
@@ -90,71 +92,87 @@ public static class RocketMqMessagePublisher
     /// <summary>
     /// Copies <paramref name="header"/> onto <paramref name="builder"/> as RocketMQ properties.
     /// </summary>
+    /// <returns>
+    /// The property keys this call wrote, so the bag loop in <see cref="CreateRocketMqMessage"/>
+    /// can skip them (GCP's <c>!headers.ContainsKey</c> shape, <c>Parser.cs:368</c>) rather than
+    /// overwrite them with a same-named, possibly stale, bag entry - RocketMQ's
+    /// <see cref="Org.Apache.Rocketmq.Message.Builder.AddProperty"/> is last-write-wins.
+    /// </returns>
     /// <remarks>
     /// RocketMQ's <c>AddProperty</c> rejects an empty value with <see cref="ArgumentException"/>,
     /// so every optional header has to be checked before it is written - a header that simply is
     /// not set would otherwise fail the send rather than be omitted.
     /// </remarks>
-    private static void AddHeaderProperties(
+    private static HashSet<string> AddHeaderProperties(
         Org.Apache.Rocketmq.Message.Builder builder, Id messageId, MessageHeader header)
     {
-        builder.AddProperty(HeaderNames.MessageId, messageId)
-            .AddProperty(HeaderNames.Topic, header.Topic.Value)
-            .AddProperty(HeaderNames.HandledCount, header.HandledCount.ToString())
+        var writtenKeys = new HashSet<string>(StringComparer.Ordinal);
+
+        void Add(string key, string? value)
+        {
+            builder.AddProperty(key, value);
+            writtenKeys.Add(key);
+        }
+
+        Add(HeaderNames.MessageId, messageId);
+        Add(HeaderNames.Topic, header.Topic.Value);
+        Add(HeaderNames.HandledCount, header.HandledCount.ToString());
 #pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
-            .AddProperty(HeaderNames.MessageType, header.MessageType.ToString())
+        Add(HeaderNames.MessageType, header.MessageType.ToString());
 #pragma warning restore CS0618
-            .AddProperty(HeaderNames.TimeStamp, header.TimeStamp.ToRfc3339())
-            .AddProperty(HeaderNames.Source, header.Source.ToString())
-            .AddProperty(HeaderNames.SpecVersion, header.SpecVersion);
+        Add(HeaderNames.TimeStamp, header.TimeStamp.ToRfc3339());
+        Add(HeaderNames.Source, header.Source.ToString());
+        Add(HeaderNames.SpecVersion, header.SpecVersion);
 
         var baggage = header.Baggage.ToString();
         if (!string.IsNullOrEmpty(baggage))
         {
-            builder.AddProperty(HeaderNames.Baggage, baggage);
+            Add(HeaderNames.Baggage, baggage);
         }
 
         if (header.Type != CloudEventsType.Empty)
         {
-            builder.AddProperty(HeaderNames.Type, header.Type);
+            Add(HeaderNames.Type, header.Type);
         }
 
         if (!string.IsNullOrEmpty(header.Subject))
         {
-            builder.AddProperty(HeaderNames.Subject, header.Subject);
+            Add(HeaderNames.Subject, header.Subject);
         }
 
         if (header.DataSchema != null)
         {
-            builder.AddProperty(HeaderNames.DataSchema, header.DataSchema.ToString());
+            Add(HeaderNames.DataSchema, header.DataSchema.ToString());
         }
 
-        builder.AddProperty(HeaderNames.ContentType, header.ContentType.ToString());
-        builder.AddProperty(HeaderNames.DataContentType, header.ContentType.ToString());
+        Add(HeaderNames.ContentType, header.ContentType.ToString());
+        Add(HeaderNames.DataContentType, header.ContentType.ToString());
 
         if (!string.IsNullOrEmpty(header.CorrelationId))
         {
-            builder.AddProperty(HeaderNames.CorrelationId, header.CorrelationId);
+            Add(HeaderNames.CorrelationId, header.CorrelationId);
         }
 
         if (!RoutingKey.IsNullOrEmpty(header.ReplyTo))
         {
-            builder.AddProperty(HeaderNames.ReplyTo, header.ReplyTo);
+            Add(HeaderNames.ReplyTo, header.ReplyTo);
         }
 
         if (!string.IsNullOrEmpty(header.DataRef))
         {
-            builder.AddProperty(HeaderNames.DataRef, header.DataRef);
+            Add(HeaderNames.DataRef, header.DataRef);
         }
 
         if (!TraceParent.IsNullOrEmpty(header.TraceParent))
         {
-            builder.AddProperty(HeaderNames.TraceParent, header.TraceParent.Value);
+            Add(HeaderNames.TraceParent, header.TraceParent.Value);
         }
 
         if (!TraceState.IsNullOrEmpty(header.TraceState))
         {
-            builder.AddProperty(HeaderNames.TraceState, header.TraceState.Value);
+            Add(HeaderNames.TraceState, header.TraceState.Value);
         }
+
+        return writtenKeys;
     }
 }

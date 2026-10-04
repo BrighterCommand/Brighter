@@ -36,7 +36,7 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — fallback: unacceptable, DLQ-only not yet conformant for GCP / Stream (maintainer sign-off)")]
+    [Fact]
     public void When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq()
     {
         // Arrange — a dead-letter queue is configured, but no invalid-message channel
@@ -58,7 +58,10 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
         var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
-        _channel.Reject(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message — no invalid channel"));
+        var rejected = _channel.Reject(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message — no invalid channel"));
+
+        // Assert — Reject returns true when the copy was routed
+        Assert.True(rejected, "Reject should return true when the message was routed");
 
         // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
         var dlqMessage = new Message();
@@ -74,6 +77,7 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
         }
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
 
         // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
         // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.

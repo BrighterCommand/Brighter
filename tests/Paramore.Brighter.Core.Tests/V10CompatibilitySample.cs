@@ -1,0 +1,68 @@
+#region Licence
+
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+
+namespace Paramore.Brighter.Core.Tests;
+
+/// <summary>
+/// Compile-only V10 compatibility sample for <see cref="Subscription{T}"/>, <see cref="MessageHeader"/>,
+/// and <see cref="Message"/>. Constructs the types with the argument shapes a V10 application uses today.
+/// This file is intentionally not a test: it asserts nothing and requires no broker infrastructure.
+/// </summary>
+internal static class V10CompatibilitySample
+{
+    internal static void BuildSamples()
+    {
+        // Subscription<T> — named-argument style, including requeueCount
+        _ = new Subscription<MyCommand>(
+            subscriptionName: new SubscriptionName("my-sub"),
+            channelName: new ChannelName("my-channel"),
+            routingKey: new RoutingKey("my-topic"),
+            requeueCount: 3,
+            messagePumpType: MessagePumpType.Reactor);
+
+        // Subscription<T> — positional-argument style
+        _ = new Subscription<MyCommand>(
+            new SubscriptionName("my-sub-2"),
+            new ChannelName("my-channel-2"),
+            new RoutingKey("my-topic-2"),
+            requeueCount: 3);
+
+        // MessageHeader — named-argument style
+        _ = new MessageHeader(
+            messageId: Id.Random(),
+            topic: new RoutingKey("my-topic"),
+            messageType: MessageType.MT_COMMAND,
+            handledCount: 0);
+
+        // MessageHeader — positional-argument style
+        var header = new MessageHeader(Id.Random(), new RoutingKey("my-topic-2"), MessageType.MT_EVENT);
+
+        // Message — using a header constructed above
+        var body = new MessageBody("hello world");
+        _ = new Message(header, body);
+    }
+}

@@ -176,9 +176,13 @@ cell remains `Unknown`.
   configurations allowed to claim FR-8 on routing alone — `RMQ.Async / Classic`, `RMQ.Async / Quorum`,
   `RMQ.Sync` and `AzureServiceBus` — and fails the build if a fifth acquires empty keys while claiming
   FR-8, or if one of the four starts stamping metadata and this note goes stale. **Measured: 24 providers,
-  8 with all-empty keys; the other four (GCP ×4) leave FR-8 `Deferred`, so they claim nothing.** So
-  FR-4/6/8/17 `Pass` for RMQ (routing) while metadata-stamping transports (SQS/Redis/Postgres/MSSQL, ADRs
-  `0038`/`0039`/`0040`/`0041`) still assert the full metadata. **FR-5 is `Fixed (#4387)`**: the subscription exposes an
+  8 with all-empty keys.** So FR-4/6/8/17 `Pass` for RMQ (routing) while metadata-stamping transports
+  (SQS/Redis/Postgres/MSSQL/**GCP ×4**, ADRs `0038`/`0039`/`0040`/`0041`/**0078**) still assert the full
+  metadata — **GCP's four consumers joined this group 2026-09-28** (spec 0037 task 5.11): `GcpRejectionRouter`
+  stamps the real `RejectionMetadataKeyNames` keys via ADR 0078's `RejectionMetadataKeys` implementation
+  in each provider (`:588-595`), so GCP was never a routing-only candidate for the audit's declared-relaxation
+  set above — see the dated evidence note under the GCP FR-23 paragraph below for the full cell move.
+  **FR-5 is `Fixed (#4387)`**: the subscription exposes an
   invalid routing key, and unacceptable messages are forwarded with publisher confirmations before
   the original is acknowledged. Other rejection reasons and the fallback when no invalid destination
   is configured retain the native DLX behavior. The generated FR-5 test always asserts invalid-channel
@@ -237,6 +241,21 @@ cell remains `Unknown`.
     assertion compares the source topic via the preserved `originalTopic` bag entry for dead-lettered
     messages. **Reference-env fix**: `docker-compose-rocketmq.yaml` broker/proxy heap raised
     (`-Xmx128m`/`-Xmx64m` → `2g`/`1g`) so the broker sustains the suite instead of degrading under load.
+  - ⭐ **Run record (2026-10-02, spec 0037 task 7.30, AC-38, R-22, R-23): the nine `Fixed` cells still pass on
+    the AC-24 branch.** The store was reset (`docker-compose -f docker-compose-rocketmq.yaml down -v; up -d`, all
+    100 compose topics created), then the whole RocketMQ test project ran at `52523c32f`'s code (net10.0): **67
+    passed / 0 failed / 6 skipped**. Every generated test for the nine cells passed in both variants: FR-4
+    (`delivery_error_should_send_to_dlq`), FR-5 (`unacceptable_reason_should_send_to_invalid_channel`), FR-6
+    (`unacceptable_and_no_invalid_channel_should_fallback_to_dlq`), FR-7 (`no_channels_configured`), FR-8
+    (`should_include_metadata`), FR-9 (`sending_a_delayed_message`), FR-16 (`nacking_a_message_it_should_be_redelivered`
+    and `nacking_first_of_two_messages`), FR-17 (`unknown_reason_should_send_to_dlq`) and FR-22
+    (`requeuing_a_failed_message_should_be_redelivered`). FR-16 and FR-22 still pass with 7.10's broker-count
+    `Resolve` in the consumer: the redelivery comes from the invisibility lease. The 6 skips are FR-2 and FR-15
+    (`Deferred -> #4240`), both variants, plus the two Skip-marked facts in 7.1's measurement fixture. FR-23 (`Fixed (#4353)`, 7.13)
+    passed in the same run. **A watch item:** the FR-9 Proactor test
+    (`When_sending_a_delayed_message_should_deliver_after_delay_async`) passed here but has failed twice on a
+    clean store this month (in 7.11's run on 2026-10-01, and earlier on `6b19023fa`): the message was received
+    inside the test's 2 s "before delay" window. Not investigated.
 - `MQTT / MqttMessagingGateway` — **10 `Fixed (#4240)` + FR-16 `Deferred -> #4240`**, both variants,
   on a live Mosquitto broker. **Evidence run with every cell un-skipped** (the state that earned the FR-16
   deferral): Reactor **14 pass / 2 fail (FR-16)** + Proactor **16 pass / 2 fail (FR-16)** for the generated
@@ -392,6 +411,22 @@ cell remains `Unknown`.
     `schema-registry` up. ⚠️ Running `kafka` alone fails the two hand-written
     `KafkaMessageProducerHeaderBytesSendTests` arms on `Connection refused (localhost:8081)` — they need
     the schema registry; that is infra, not conformance.
+- `GCP / Stream` **and `GCP / StreamOrdering`** FR-16 (Nack redelivers) are `Fixed (#4449)`
+  (2026-09-30, bugfix 0024). The Stream consumer's `Nack`/`NackAsync` were no-ops. On a stream that
+  left the `SubscriberClient` callback parked: the message was never redelivered, and at the default
+  flow control of one the whole subscription stalled. `Nack` now replies `Nack` to the client
+  (`GcpStreamMessage.Reject()`, the same path as `Requeue`), which releases the message for immediate
+  redelivery. `GCP / Pull` and `/ PullOrdering` FR-16 stay `Deferred`: Pull `Nack` is still a no-op that
+  waits out the ack deadline, recorded as a follow-up.
+  ⚠️ **`GCP / StreamOrdering`'s two-message fact is intermittent on the Pub/Sub emulator.** Two messages
+  share one ordering key, and the first is nacked. In about 5 of 12 probe runs, the second message was
+  acked and the nacked one was never redelivered within 60 s; the acked second message came back at
+  about the client's 60 s lease instead. Brighter's call path is the same in every run, so this looks
+  like the emulator's ordering-key redelivery, not the fix. That is **UNVERIFIED** until it is run
+  against real GCP, which is pending the non-emulator run from #4321. `GCP / Stream` (no ordering)
+  passed 20/20. CI is unaffected: `ci.yml` excludes `Category=GcpPubSubStream` and
+  `GcpPubSubStreamOrdering`, so it runs no Stream tests. Evidence is in
+  `bugfixes/0024-gcp-stream-nack-no-redelivery/bugfix.md`.
 
 ## FR-23 — requeue budget exhausted to DLQ
 
@@ -434,6 +469,51 @@ redelivered for ever would pass every other DLQ behaviour in this suite.
   cloud projects, are the only evidence that can move those five. So **no** FR-23 cell is still
   reachable by a local broker run: all 15 are either blocked on a product defect (10) or reachable only
   through CI against real cloud infrastructure (5).
+  *Superseded for the eight `AWS` / `AWS.V4` cells by the 2026-09-27 evidence note, "The eight AWS
+  cells are `Fixed (#4341)`", below: #4341 is fixed and those cells now pass.*
+
+### Run record — 2026-09-26 (tasks 3.1–3.4 regenerated tree, AC-26, R-22, R-23)
+
+Regenerated tree audit: `dotnet test tests/Paramore.Brighter.Test.Generator.Tests -f net10.0` — **307 pass / 0 fail**. `git status --short` after `./generate-test.sh` reported no diff (tree was committed with each task as required).
+
+**FR-23 — all nine already-conformant configurations re-verified against the regenerated templates:**
+
+| Configuration | compose file | Generated suite (Reactor+Proactor) | FR-23 Reactor | FR-23 Proactor |
+|---|---|---|---|---|
+| Redis / RedisMessagingGateway | `docker-compose-redis.yaml` | 71 pass / 0 fail / 4 skip | Pass | Pass |
+| Kafka / Classic | `docker-compose-kafka.yaml` | *(see Kafka row below)* | Pass | Pass |
+| Kafka / Consumer | `docker-compose-kafka.yaml` | *(see Kafka row below)* | Pass | Pass |
+| Kafka / PartitionKey | `docker-compose-kafka.yaml` | *(see Kafka row below)* | Pass | Pass |
+| Kafka (all three, combined) | `docker-compose-kafka.yaml` | 118 pass / 0 fail / 0 skip | — | — |
+| MSSQL / MSSQLMessagingGateway | `docker-compose-mssql.yaml` | 141 pass / 0 fail / 4 skip | Pass | Pass |
+| PostgresSQL / PostgresMessagingGateway | `docker-compose-postgres.yaml` | 55 pass / 0 fail / 0 skip | Pass | Pass |
+| RMQ.Async / Classic | `docker-compose-rmq.yaml` | *(see RMQ.Async row below)* | Pass | Pass |
+| RMQ.Async / Quorum | `docker-compose-rmq.yaml` | *(see RMQ.Async row below)* | Pass | Pass |
+| RMQ.Async (Classic+Quorum, combined) | `docker-compose-rmq.yaml` | 80 pass / 0 fail / 4 skip | — | — |
+| RMQ.Sync / RmqSyncMessagingGateway | `docker-compose-rmq.yaml` | 62 pass / 0 fail / 3 skip | Pass | Pass |
+
+FR-23 passes on all nine; no Pass/Fixed cell regressed. The RMQ republish path's `x-original-message-id` fallback (from 3.2) is exercised in the RMQ.Async and RMQ.Sync runs and stays green.
+
+Kafka notes: `schema-registry` could not start (port 8081 held by the pre-existing `rmqproxy` container). The two hand-written `KafkaMessageProducerHeaderBytesSendTests` arms fail on `Connection refused (localhost:8081)` — documented infra, not conformance. One further hand-written `KafkaMessageConsumerUpdateOffsetAsync` arm also failed; this is not in the generated suite and not a ledger regression. All 118 generated-suite tests pass.
+
+**AWS (Floci) and RocketMQ — FR-2/15/16/22 re-run to verify the 3.1 relaxation keeps Pass cells green:**
+
+| Project | Transport | FR-2 (with_delay) | FR-15 (zero_delay) | FR-16 (nacking) | FR-22 (requeuing_redelivered) | Notes |
+|---|---|---|---|---|---|---|
+| AWS.Tests | all four configs × Reactor+Proactor | 44 pass (total) | — | — | — | Filter matched FR-2/15/16/22 together: 44 pass / 0 fail / 0 skip |
+| AWS.V4.Tests | all four configs × Reactor+Proactor | 44 pass (total) | — | — | — | Same result |
+| RocketMQ.Tests | RocketMQMessagingGateway | Skip (Deferred) | Skip (Deferred) | 6 fail | 6 fail | See noise note below |
+
+AWS (total filter: `with_delay OR zero_delay OR nacking OR requeuing_a_failed_message_should_be_redelivered`): **44 pass / 0 fail / 0 skip** for `AWS.Tests`; **44 pass / 0 fail / 0 skip** for `AWS.V4.Tests`. All Pass/Fixed cells remain green. Tested against `generator-transport-tests-floci-1` (port 4566) with `AWS_SERVICE_URL=http://localhost:4566`.
+
+**RocketMQ — FR-16 and FR-22 pass after a clean broker reset.** The first run failed all six FR-16/FR-22 tests at the first receive, and failed them identically on `82f28ff01`, the commit before 3.1. The broker was at fault: even the basic posting test failed, and the rejection tests reported `No topic route info in name server`. The fix, in order:
+1. `docker-compose -f docker-compose-rocketmq.yaml down -v && up -d`.
+2. `docker start rmqproxy`. The proxy exits on first start because the broker is not ready yet.
+3. Create the missing topics by hand with `mqadmin updateTopic`. `create-topic` in the compose file makes only a subset of the topics `RocketMqMessageGatewayProvider` maps (for example, `gen_{r,p}_nack`, `gen_{r,p}_nack2` and `gen_{r,p}_rq_redeliver` are absent), and RocketMQ 5 does not auto-create topics through the gRPC proxy. All 40 mapped `gen_*` topics were created, plus their `_DLQ`/`_Invalid` siblings (120 in all), typed as `GetTopicType` does: `partition_key` FIFO; `delayed_msg`/`requeue_delay`/`rq_delay` DELAY; the rest NORMAL.
+
+After that, **FR-16 passes on all four tests** (`nacking_a_message` and `nacking_first_of_two`, Reactor and Proactor) and **FR-22 on both** (`requeuing_a_failed_message_should_be_redelivered`, Reactor and Proactor), about 12 s each on the 10 s invisibility lease. The 3.1 relaxation keeps both `Fixed` cells green. The compose file's incomplete topic list is a pre-existing local-infra gap. It is out of scope here and not changed.
+
+FR-2 and FR-15 are `Deferred` for RocketMQ and emitted as Skip — as expected.
 
 ### `MQTT` was attempted and stays `Deferred` — the Proactor pump deadlocks on the first requeue
 
@@ -477,7 +557,76 @@ Either half of the fix unblocks the cell: stop connecting in the constructor (an
 lazy connect on first publish), or create the requeue producer eagerly with the consumer so it is
 never built on the pump thread.
 
-### `GCP` ×4 was attempted and stays `Deferred` — the emulator cannot create a DLQ subscription
+### `GCP` ×4 was `Deferred`; the four cells are now `Fixed (#4386)` — the budget reads the broker's delivery counter
+
+⭐ **Evidence (2026-10-01, spec 0037 task 6.16, AC-19, AC-3 on GCP, AC-30 row 3, NFR-7): the four `GCP / *`
+FR-23 cells moved to `Fixed (#4386)`.** The two blockers recorded below no longer stand. The first was the
+emulator refusing the IAM calls a native `DeadLetterPolicy` needs; 5.3 now tolerates those failures, so a
+DLQ-backed subscription is creatable on the emulator. The second was the header-carried `HandledCount`
+never advancing; 6.10/6.11 now resolve it from the broker's own delivery counter (`DeliveryAttempt` on Pull,
+`GetDeliveryAttempt()` on Stream), which 6.7 measured as 1, 2, 3. Regenerating `Paramore.Brighter.Gcp.Tests`
+un-skipped exactly the 8 FR-23 tests (4 configurations × Reactor/Proactor). On a clean emulator
+(`docker-compose -f docker-compose-gcp.yaml down -v; up -d`) all 8 passed, in 4–9 s each. Each one
+asserts that the handler was invoked at most `RequeueCount` (3) times, and that the Brighter DLQ copy
+arrived within 60 s carrying `rejectionReason == "DeliveryError"`. The full scoped GCP suite
+(`Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Fragile!=CI`) showed
+151 passed / 50 failed / 30 skipped. The 50 failures match the pre-existing Firestore + GCS baseline
+failures (real-GCP-only) by name. The Stream suite
+(`(Category=GcpPubSubStream|Category=GcpPubSubStreamOrdering)&Fragile!=CI`) showed 118 passed / 0 failed /
+25 skipped. The conformance audits (42) re-ran green against the new ledger. The dated notes below record
+how the cells got here. Their "stays `Deferred`" statements are superseded by this note.
+
+⭐ **Repeatability (2026-10-01, spec 0037 task 6.31, AC-22, R-21): the GCP rejection-routing behaviours and
+FR-23 gave identical results on two clean-emulator runs, with no gcp-ci.** The behaviours run were FR-4,
+FR-5, FR-6, FR-8, FR-17 and FR-23, across all four configurations and both variants: 48 generated tests,
+selected by template name. The emulator was reset (`docker-compose -f docker-compose-gcp.yaml down -v; up -d`)
+before each run. Run 1 was 48 passed, 0 failed, 0 skipped (34.7 s). Run 2 was 48 passed, 0 failed, 0 skipped
+(34.4 s). A per-test diff of the two runs' outcomes was empty.
+
+⭐ **Evidence (2026-09-28, spec 0037 task 5.11): the twenty rejection-routing cells (FR-4, FR-5, FR-6,
+FR-8, FR-17 × four configurations) moved to `Fixed (#4386)`, and this paragraph's blocker does not
+apply to them.** This section's two-API blocker (below) is specific to **FR-23**: FR-23 dead-letters
+by a message exhausting its delivery budget under the subscription's own native `DeadLetterPolicy`,
+which `EnsureSubscriptionExistsAsync` provisions via `UpdateIAmRoleForDeadLetterAsync`, and that call
+is what needs the two APIs the emulator refuses. FR-4/5/6/8/17 are a different mechanism entirely
+(ADR 0078): an explicit `Reject` routes a stamped copy to a Brighter-managed dead-letter or
+invalid-message topic addressed by `deadLetterRoutingKey`/`invalidMessageRoutingKey`, published by an
+ordinary lazy producer — no native `DeadLetterPolicy`, no `UpdateIAmRoleForDeadLetterAsync` call, and
+so no dependency on Resource Manager or the emulator's absent IAM surface. Ledger regeneration
+un-skipped 40 generated tests (20 cells × Reactor/Proactor); all 40 passed on a clean emulator
+(`docker-compose -f docker-compose-gcp.yaml down -v; up -d`), and the full scoped GCP suite
+(`Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Fragile!=CI`) showed
+120 passed / 50 failed / 32 skipped — the 50 failures are exactly the pre-existing 45 Firestore + 5 GCS
+baseline failures (real-GCP-only), zero in `MessagingGateway`, so no cell was reverted.
+`RejectionMetadataContractAudit`/`LedgerSkipCrossCheckAudit` (44 tests) re-ran green against the new
+ledger. **FR-23 itself stays `Deferred` here** — this paragraph's blocker is unaffected and still
+applies; it is Phase 6/7 territory (ADR 0077, delivery count), not this task's scope.
+
+⭐ **Measurement (2026-09-29, spec 0037 task 6.7, AC-39): the emulator's broker delivery counter is
+populated and advances on a DLQ-backed subscription.** This was run on a clean emulator. The
+subscription carried a native `DeadLetterPolicy` (`MaxDeliveryAttempts = 5`), which Brighter's channel
+factory can now create on the emulator because 5.3 tolerates the IAM failures described below. One
+message was deferred on its first two deliveries and acknowledged on the third, and the raw counter
+was read on each delivery:
+- **Pull:** `ReceivedMessage.DeliveryAttempt` = **1, 2, 3**, with the deferral as `ModifyAckDeadline(…, 0)`,
+  the same call `GcpPullMessageConsumer.Requeue` makes.
+- **Stream:** `GetDeliveryAttempt()` = **1, 2, 3**, with the deferral as `SubscriberClient.Reply.Nack`.
+
+Both sequences repeated on a second run. Fixture:
+`tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull/GcpDeliveryAttemptMeasurementTests.cs`
+(committed Skip-marked). ADR 0077's *Measurement outcome* under "R-13 (GCP): the branch rule" records
+that A-2 held and claims **AC-19**. The broker counter advances where the header-carried `HandledCount`
+cannot (see the second blocker below), and that is the mechanism 6.10/6.11 wire in. **The four FR-23
+cells stay `Deferred` until 6.16 moves them.**
+
+⭐ **Lease-lapse evidence (2026-09-30, spec 0037 tasks 6.13/6.14, AC-42): `GCP / StreamOrdering` uses the
+keyless alternative.** 6.13 measured that a message published with an ordering key is not redelivered while
+its first delivery is held (none in 90 s), because ordered delivery withholds a same-key redelivery behind an
+outstanding predecessor. So on `GCP / StreamOrdering`, 6.14 publishes **without** an ordering key on the same
+ordering-enabled subscription, as ADR 0077's stream lease-lapse procedure allows. `GCP / Stream` uses the
+primary procedure. Both need the client's own `AckDeadline` set to 10 s as well as the subscription's (lapse at
+~15 s rather than ~60 s). See ADR 0077's 6.13 amendment. Tests:
+`tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream/When_a_gcp_stream_lease_lapses_should_present_greater_delivery_count{,_async}.cs`.
 
 Measured 2026-09-12 against `docker-compose-gcp.yaml` (the `cloud-sdk:emulators` Pub/Sub emulator on
 `localhost:8085`, with `PUBSUB_EMULATOR_HOST` and `GOOGLE_CLOUD_PROJECT` exported). All eight tests —
@@ -523,7 +672,22 @@ DLQ is usually provisioned by infrastructure-as-code. Tolerating `Unimplemented`
 `PermissionDenied` there (log and continue, as the binding may already exist) would both fix that and
 make the emulator path usable.
 
-### `RocketMQ` was attempted and stays `Deferred` — `Requeue` is a no-op, so the budget never runs down
+### `RocketMQ` was `Deferred`; the cell is now `Fixed (#4353)` — the budget reads the broker's delivery counter
+
+⭐ **Evidence (2026-10-02, spec 0037 task 7.13, AC-24, AC-3 on RocketMQ, AC-30 row 4): the
+`RocketMQ / RocketMQMessagingGateway` FR-23 cell moved to `Fixed (#4353)`.** `Requeue` is still a broker no-op,
+as recorded below; R-14 allows that on the AC-24 branch. The budget runs down anyway: 7.10 resolves
+`HandledCount` from the broker's own `MessageView.DeliveryAttempt`, which 7.1 measured as 1, 2, 3 across
+lease-lapse redeliveries. Each 10 s lease lapse therefore presents a higher count, and the pump rejects once
+`RequeueCount` is reached. 7.3 makes the header-owned `HandledCount` win over a stale bag copy on the routed
+dead-letter copy, and `DeliveryCount.Resolve` keeps that stamped count because the copy carries
+`rejectionReason` (7.12). Regenerating `Paramore.Brighter.RocketMQ.Tests` un-skipped exactly the 2 FR-23 tests
+(Reactor/Proactor). On a clean store (`docker-compose -f docker-compose-rocketmq.yaml down -v; up -d`, all
+compose topics created) both passed, in 39 s and 41 s. Each one asserts that the handler was invoked at most
+`RequeueCount` (3) times, and that the Brighter DLQ copy arrived within 60 s with `HandledCount >= RequeueCount - 1`,
+carrying `rejectionReason == "DeliveryError"`. The full RocketMQ suite on a clean store (net10.0): 67 passed / 0 failed / 6 skipped. The
+conformance audits (42) re-ran green against the new ledger. The paragraphs below record how the cell got
+here. Their "stays `Deferred`" and "never dead-lettered" statements are superseded by this note.
 
 Measured 2026-09-12 against `docker-compose-rocketmq.yaml`, and tracked as
 [#4353](https://github.com/BrighterCommand/Brighter/issues/4353). Both variants fail the same way: the
@@ -558,6 +722,34 @@ so neither can spend a Brighter-side budget either. But both of those have a bro
 FR-23 tests reach the DLQ and fail on the *count*. RocketMQ has no such policy wired, so its message
 is never dead-lettered by anyone. **The common requirement this column keeps finding: a transport
 whose requeue does not persist the delivery count cannot exhaust the pump's budget.**
+
+**2026-10-01: AC-23 measured (spec 0037, task 7.1). R-14's condition holds, so AC-24 is claimed.** Two runs
+with the Skip-marked fixture `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Reactor/RocketMqDeliveryAttemptMeasurementTests.cs`,
+broker `apache/rocketmq:5.5.0`, RocketMQ.Client 5.2.1. Run 1 used a freshly created topic. Run 2 used a store reset
+with `down -v; up -d`. Setup: `requeueCount: 3`, Reactor, 10 s invisibility lease, and no `Requeue`, `Nack` or
+`ChangeInvisibleDuration` call. The raw `MessageView.DeliveryAttempt` was read from `Header.Bag["ReceiptHandle"]`.
+**The consumer was disposed and a new one created in the same consumer group before delivery 3.**
+
+| Run | Delivery 1 | Delivery 2 | Delivery 3 (new client) | `HandledCount` as received |
+|---|---|---|---|---|
+| 1 (fresh topic) | **1** (t+0.1 s) | **2** (t+13.3 s) | **3** (t+25.4 s) | 0, 0, 0 |
+| 2 (clean store) | **1** (t+0.2 s) | **2** (t+12.3 s) | **3** (t+24.3 s) | 0, 0, 0 |
+
+The sequence is strictly increasing, and it survives a new client, so the increment is broker-supplied, not the
+client-local `IncrementAndGetDeliveryAttempt`. AC-25 is not applicable on the strength of this measurement. The
+counter stays classified **approximate** (ADR 0077): the Apache RocketMQ retry documentation describes the retry
+mechanism but makes no statement that the attempt count is exact. The `HandledCount` column shows the defect
+above as measured: the received header stays at its published value.
+
+**`ChangeInvisibleDuration` works on client 5.2.1.** This is a probe in the same fixture, prompted by PR #4263,
+which calls it from `Nack`. `SimpleConsumer.ChangeInvisibleDuration(view, TimeSpan.Zero)` returned without error,
+and the message was redelivered after **2.9 s / 2.3 s** (runs 1 / 2) rather than after the 10 s lease (the
+lease-lapse control above took 12–13 s). `DeliveryAttempt` still advanced, 1 → 2. So the "upstream blocker" in the
+`Requeue` comment ("Waiting for next RocketMQ C# version") no longer exists. R-14 lets `Requeue` stay a broker
+no-op on AC-24, so enabling it is a follow-up, not part of this spec.
+
+#4353 was updated with this measurement:
+[#4353 (comment)](https://github.com/BrighterCommand/Brighter/issues/4353#issuecomment-5930270994).
 
 ### ⚠️ Running `RocketMQ` locally — what the compose file now handles, and what it cannot
 
@@ -730,46 +922,79 @@ above without adding it there leaves that row unguarded.** Editing that list dow
 tree silences the audit by construction — the list and this table are meant to be changed together,
 and in review.
 
-### Why the eight AWS cells stay `Deferred`: the budget is inert on SQS (#4341)
+### The eight AWS cells are `Fixed (#4341)`: the budget now reads SQS's own receive count
 
-`AWS` and `AWS.V4` were run against LocalStack and are **not** promoted. The test does not fail on a
-timing wobble or a harness gap — it fails because **Brighter's delivery budget cannot be exhausted on
-SQS**, and the message reaches the dead-letter queue by a different mechanism entirely.
+**Evidence, run 2026-09-27** (spec 0037 task 4.11). Both variants (Reactor and Proactor) of every
+`AWS` and `AWS.V4` configuration, against the **Floci** emulator (`floci/floci:1.5.19`,
+`docker-compose-aws.yaml`, port 4566; LocalStack is no longer used locally), net10.0,
+`--filter "LiveAWS!=true"`, the two projects run one after the other:
 
-The measurement. The dead-lettered message arrives carrying `handled-count=0`, the original message
-id, and **no rejection metadata at all**. Rejection metadata is stamped by `RefreshMetadata` inside
-`SqsMessageConsumer.RejectAsync`, so its absence says plainly that Brighter never rejected this
-message: SQS's own redrive policy moved its stored copy.
+| Project | Passed | Failed | Skipped | FR-23 (Reactor + Proactor × 4 configurations) |
+|---|---|---|---|---|
+| `AWS.Tests` | 286 | 0 | 2 | 8 / 8 pass |
+| `AWS.V4.Tests` | 286 | 0 | 2 | 8 / 8 pass |
 
-The cause is structural. `SqsMessageConsumer.RequeueAsync` requeues by calling
-`ChangeMessageVisibilityAsync` — it makes the stored message visible again and never rewrites it.
-`handled-count` is written only on *send* (`SqsMessageSender`, `SnsMessagePublisher`). So the count
-does not survive a requeue: every redelivery arrives reading 0, the pump increments it to 1 in
-memory, `HandledCountReached(3)` is false, and it requeues again. The budget never runs down, however
-many times the message is delivered. What eventually dead-letters it is the queue's `maxReceiveCount`.
+The only skips are `SqsFifo` FR-9 (Reactor and Proactor) in each project, which is still `Deferred -> #4240`.
+Every previously `Pass`/`Fixed` cell stayed green. The eight FR-23 tests per project are the
+difference from the previous baseline (278 passed / 10 skipped).
 
-This is consistent with how the AWS suite already treats the question:
-`When_throwing_defer_action_respect_redrive` sets `requeueCount: -1` and relies on `maxReceiveCount`,
-which is the supported route to a DLQ on SQS and has its own coverage.
+**What was wrong, for the record.** Before #4341, `SqsMessageConsumer.RequeueAsync` requeued by
+`ChangeMessageVisibilityAsync`, which never rewrites the stored message, and `handled-count` was
+written only on send. Every redelivery therefore read `0`, `HandledCountReached(3)` never fired, and
+the message reached the DLQ only via the queue's `maxReceiveCount` redrive. It arrived with
+`handled-count=0` and **no** rejection metadata, so `requeueCount` was silently inert on SQS.
 
-Raising the harness's `maxReceiveCount` above `requeueCount` was tried, to stop the broker answering
-for the pump. It does not help, and could not: with the count resetting on every delivery there is no
-budget to exhaust, so the only effect is that redrive takes longer to fire. That change was reverted
-rather than left in place looking like a fix.
+**What fixed it** ([ADR 0077](../../docs/adr/0077-delivery-count-contract.md)): both SQS message
+creators read the broker's `ApproximateReceiveCount` on receive, minus 1, through the core
+`DeliveryCount.Resolve`. The harness keeps the budget below the native limit (`requeueCount: 3`,
+`RedrivePolicy` `maxReceiveCount: 5`, assumption A-5), so the pump rejects first. The message then
+reaches the Brighter DLQ through `Reject` ([ADR 0038](../../docs/adr/0038-aws-sqs-dlq-direct-send.md)'s
+direct send), carrying its stamped count and ADR 0036's rejection metadata. The count is
+**approximate** (SQS's counter is), so FR-23 asserts it only as bounded, never as exact.
 
-This is not a quarrel with SQS's DLQ strategy. [ADR 0038](../../docs/adr/0038-aws-sqs-dlq-direct-send.md)
-already settled that: when `DeadLetterRoutingKey` is configured, `Reject` sends directly to the
-Brighter DLQ and deletes the original, and the ADR explicitly considered and rejected leaning on
-redrive instead. That path is healthy — FR-4, an explicit `Reject`, is `Pass` on all eight AWS
-configurations. What is unreachable is getting there by spending the budget.
+#### v3 and v4 are indistinguishable on the FR-23 run (AC-13, NFR-6; spec 0037 task 4.12)
 
-⚠️ **The consequence is that `requeueCount` is silently inert on SQS** — configured, accepted, and
-without effect. A user who sets it gets unbounded redelivery bounded only by `maxReceiveCount`, and
-messages arriving by redrive carry none of ADR 0036's rejection metadata. Raised as
-[#4341](https://github.com/BrighterCommand/Brighter/issues/4341), which also notes the cooperative
-fix: `ApproximateReceiveCount` is already requested on every receive
-(`MessageSystemAttributeNames = ["All"]`) and read nowhere in `src`. These eight cells stay
-`Deferred` until that is answered.
+**Evidence, run 2026-09-27**, Floci, net10.0. The generated FR-23 test asserts only a bound on
+`HandledCount` and `rejectionReason`, so a throwaway, uncommitted probe re-ran the generated FR-23
+scenario unchanged for each configuration and variant. After the pump stopped, it recorded the
+dead-lettered message's header and bag, plus every Warning-or-above log entry from a capturing
+`ApplicationLogging.LoggerFactory`. It ran with collection parallelism off, so the logs are per test.
+All 16 runs passed their FR-23 assertions.
+
+| Configuration | Variant | Reason | Destination | Metadata key set | `rejectionReason` / `rejectionMessage` / `originalMessageType` | Warning+ logs | Count (v3 / v4), R = 3 | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| SnsStandard | Reactor | DeliveryError | Brighter DLQ | 13 keys, equal | equal | equal | 3 / 3 | same |
+| SnsStandard | Proactor | DeliveryError | Brighter DLQ | 13 keys, equal | equal | equal | 3 / 3 | same |
+| SnsFifo | Reactor | DeliveryError | Brighter DLQ | 14 keys, equal | equal | equal | 3 / 3 | same |
+| SnsFifo | Proactor | DeliveryError | Brighter DLQ | 14 keys, equal | equal | equal | 3 / 3 | same |
+| SqsStandard | Reactor | DeliveryError | Brighter DLQ | 13 keys, equal | equal | equal | 3 / 3 | same |
+| SqsStandard | Proactor | DeliveryError | Brighter DLQ | 13 keys, equal | equal | equal | 3 / 3 | same |
+| SqsFifo | Reactor | DeliveryError | Brighter DLQ | 14 keys, equal | equal | equal | 3 / 3 | same |
+| SqsFifo | Proactor | DeliveryError | Brighter DLQ | 14 keys, equal | equal | equal | 3 / 3 | same |
+
+- **Values compared for equality**, identical in every pair: `rejectionReason` = `DeliveryError`;
+  `rejectionMessage` = `Handle count of messages reached; rejecting at limit`; `originalMessageType` =
+  `MT_COMMAND`; the legacy `RejectionReason` summary string; `handled-count`.
+- **The key set**: `handled-count`, `header1`–`header5` (the test's own), `originalMessageType`,
+  `originalTopic`, `ReceiptHandle`, `rejectionMessage`, `rejectionReason`, `RejectionReason`,
+  `rejectionTimestamp`, plus `messageDeduplicationId` on the two FIFO configurations.
+- **Compared for presence and shape only**, all matching in every pair: `originalTopic` equals the
+  source topic; the destination is `{topic}.DLQ` (`{topic}-DLQ` on the wire, `.fifo` kept on FIFO);
+  `rejectionTimestamp` has the same format. `ReceiptHandle` and `messageDeduplicationId` are per-run
+  values (a fresh GUID minted on the DLQ send, in both variants).
+- **Warning+ logs**, identical once per-run names and thread ids are removed: one pump Error
+  (`Have tried 3 times to handle this message … dropping message`) and one pump Warning
+  (`Rejecting message …`). Neither consumer logged a Warning.
+- **Delivery count**: `HandledCount` = 3 in all 16 runs, which meets `<= R`. The pump dispatched 3 times
+  in all 16 runs.
+
+**No divergence, so nothing to fix.** Three things hold in **both** variants alike. They are not
+v3/v4 divergences, but they are recorded so they are not rediscovered:
+
+- `rejectionTimestamp` is written in a culture-dependent format (`27/09/2026 19:03:31`), not ISO 8601.
+- The bag carries both the ADR 0036 `rejectionReason` key and the older `RejectionReason` summary string.
+- On the SQS configurations the pump's log line reads `from <queue> with  on thread`, with an empty topic.
+
 
 ## The delay plugin is retired — all three RMQ configurations run on stock images
 
@@ -817,22 +1042,180 @@ docker volume rm generator-transport-tests_rabbitmq_data generator-transport-tes
 
 CI is unaffected — GitHub Actions `services:` mount no volume.
 
+## The routing reject tests now check the routed body and `Reject`'s return value
+
+Spec 0037 Phase 7A (tasks 7A.1, 7A.2) added two assertions to the five routing reject templates, Reactor and
+Proactor: FR-4 (`delivery_error_should_send_to_dlq`), FR-5 (`unacceptable_reason_should_send_to_invalid_channel`),
+FR-6 (`unacceptable_and_no_invalid_channel_should_fallback_to_dlq`), FR-8 (`should_include_metadata`) and FR-17
+(`unknown_reason_should_send_to_dlq`). They now assert that:
+
+- the copy read from the DLQ or invalid channel has the sent message's `Body.Value` (7A.1, `170ec0012`); and
+- `Reject` / `RejectAsync` returned `true` (7A.2, `487a9e554`). FR-7's `no_channels_configured` template
+  already asserted this.
+
+The deletion of the hand-written RocketMQ reject tests (`ec2071bb0`) had exposed both gaps. **No ledger cell
+changed.** The new assertions passed wherever the old ones did.
+
+⭐ **Run record (2026-10-02, spec 0037 task 7A.3).** All 17 projects with a `test-configuration.json` were
+regenerated. The diff was 190 generated files in ten projects (AWS 40, AzureServiceBus 10, Gcp 40, Kafka 30, MQTT
+10, MSSQL 10, PostgresSQL 10, Redis 10, RMQ.Async 20, RMQ.Sync 10), each `+5/-1`, all routing reject tests.
+RocketMQ and AWS.V4 had already been regenerated in 7A.1/7A.2 and did not change again. The outbox-only projects
+(DynamoDB, DynamoDB.V4, MongoDb, MySQL, Sqlite) generate no reject tests and did not change. The generated reject
+tests (filter `FullyQualifiedName~.WhenRejectingMessage`, net10.0) were then run against local infrastructure:
+
+| Project | Passed / Failed / Skipped | Infrastructure |
+|---|---|---|
+| AWS | 48 / 0 / 0 | Floci (`LiveAWS!=true`) |
+| AWS.V4 | 48 / 0 / 0 | Floci (`LiveAWS!=true`); see the note below |
+| Gcp | 40 / 0 / 8 | Pub/Sub emulator (`Fragile!=CI`); the 8 are FR-7 `Deferred` × 4 configurations × 2 variants |
+| Kafka | 36 / 0 / 0 | `docker-compose-kafka.yaml` (RocketMQ stack stopped first: port 8081) |
+| MQTT | 12 / 0 / 0 | `docker-compose-mqtt.yaml` |
+| MSSQL | 12 / 0 / 0 | `docker-compose-mssql.yaml` |
+| PostgresSQL | 12 / 0 / 0 | `docker-compose-postgres.yaml` |
+| Redis | 12 / 0 / 0 | `docker-compose-redis.yaml` |
+| RMQ.Async | 20 / 0 / 4 | `docker-compose-rmq.yaml`; the 4 are FR-5 `Deferred` × 2 configurations × 2 variants |
+| RMQ.Sync | 10 / 0 / 2 | `docker-compose-rmq.yaml`; the 2 are FR-5 `Deferred` × 2 variants |
+| RocketMQ | 12 / 0 / 0 | `docker-compose-rocketmq.yaml`, from `down -v` (100/100 topics) |
+
+**Not run locally:** AzureServiceBus. It has no local emulator or compose file. Two of its 12 reject tests are
+skipped by the ledger (FR-5 `Deferred`). The other ten compiled but did not run.
+
+**AWS.V4 note:** the first AWS.V4 run went alongside the AWS run against the same Floci container and took
+4 m 36 s. One test failed: SnsFifo Proactor `unacceptable_reason_should_send_to_invalid_channel_async`, after
+2 m 48 s, with `AmazonSQSException: … ReceiptHandle is invalid. Reason: The receipt handle has expired`. That is
+the visibility timeout lapsing under load, not a new assertion. Run alone, the same 48 tests passed in 1 m 22 s.
+They had also passed in four earlier runs that day (7A.1 and 7A.2). Run the two AWS projects one after the other
+against one Floci container.
+
+**RED under mutation (7A.1, 7A.2):** RocketMQ (`RocketMessageConsumer.RejectAsync`) and SQS V4
+(`SqsMessageConsumer.RejectAsync`) were mutated:
+
+- **Routed copy sent with body `"mutated-body"`:** RocketMQ 10/10 and SQS V4 40/40 generated tests failed on the
+  body assertion.
+- **`return false` after a successful route:** the same counts failed on the return-value assertion.
+
+An **empty** body is not a usable mutation. RocketMQ and Floci both refuse to send it, so nothing is routed and
+the tests fail on arrival (`MT_NONE`) instead. On a RocketMQ store that has had a run on it, the DLQ read returns
+a stale message, which can pass for a body-assertion failure.
+
+## Spec 0037's cell moves, and the cells it did not move (AC-30, AC-31)
+
+**Audited 2026-10-02 (spec 0037 task 8.6).** Every cell below was checked against the matrix at
+`a4b30a329`, compared with the merge base `f906efc0b`.
+
+**Moved by spec 0037: 33 cells, each citing its run.**
+
+| Cells | Moved to | Evidence (dated note in this ledger) |
+|---|---|---|
+| FR-23 × the 8 `AWS` / `AWS.V4` configurations | `Fixed (#4341)` | task 4.11, run 2026-09-27: 286 / 0 / 2 per project, FR-23 8 / 8 per project ("The eight AWS cells are `Fixed (#4341)`") |
+| FR-4, FR-5, FR-6, FR-8, FR-17 × the 4 `GCP` configurations (20) | `Fixed (#4386)` | task 5.11, 2026-09-28: 40 / 40 on a clean emulator. Repeated by task 6.31, 2026-10-01: 48 / 48 twice, with an empty per-test diff (GCP FR-23 section) |
+| FR-23 × the 4 `GCP` configurations | `Fixed (#4386)` | task 6.16, 2026-10-01: 8 / 8 on a clean emulator (GCP FR-23 section) |
+| FR-23 × `RocketMQ` | `Fixed (#4353)` | task 7.13, 2026-10-02: 2 / 2 on a clean store, 67 / 0 / 6 suite (RocketMQ FR-23 section) |
+
+**Also moved on this branch, but not by spec 0037:** `GCP / Stream` and `GCP / StreamOrdering` FR-16 →
+`Fixed (#4449)`, by bugfix 0024 (2026-09-30). The evidence is in the Rules note for those two cells and in
+`bugfixes/0024-gcp-stream-nack-no-redelivery/bugfix.md`. So the branch moves 35 cells in all.
+
+**Not moved by spec 0037: every remaining `Deferred` cell, 36 in all.** Each moves only on its own evidence.
+
+- `MQTT` FR-23 (`Deferred -> #4351`): the Proactor pump deadlocks on the first requeue (see the MQTT note
+  in the FR-23 section).
+- `AzureServiceBus` FR-23, and its other `Deferred` cells, FR-5 and FR-9: there is no local emulator, and
+  Azure Service Bus dead-letters natively.
+- `GCP` FR-2, FR-7, FR-9, FR-15 and FR-22 on all four configurations, plus FR-16 on `GCP / Pull` and
+  `GCP / PullOrdering` (22 cells). Spec 0037 changed neither the requeue delay, the no-channels path, delayed
+  send, nor Pull `Nack`.
+- `AWS / SqsFifo` and `AWS.V4 / SqsFifo` FR-9: SQS FIFO queues refuse per-message delay.
+- `MSSQL`, `Redis` and `MQTT` FR-16.
+- `RMQ.Async / Classic`, `RMQ.Async / Quorum` and `RMQ.Sync` FR-5: there is no separate invalid-message
+  channel.
+- `RocketMQ` FR-2 and FR-15. `Requeue` is still a broker no-op on the AC-24 branch. Task 7.1 found that
+  `ChangeInvisibleDuration(view, 0)` works on client 5.2.1, so these two cells could now be made to pass,
+  but that is outside spec 0037.
+
+**A-6 refutations from task 6.30: none.** On all four `GCP` configurations and both variants, a message
+whose rejection routing kept failing reached the native `DeadLetterPolicy` subscription in 12–17 s
+(`38c91413f`). R-19's native-cap bound therefore held on the emulator, and no cell carries a refutation.
+
+## Final run record — 2026-10-02 (spec 0037 task 8.7)
+
+**Revision:** `5e7d78ef8`. The last code change is `30828b1c7` (7A.3's reject regeneration); everything after it
+is docs-only. Every test project with an in-scope or AC-26 configuration was run whole, net10.0, against local
+infrastructure, one project at a time. Two counts are reported per project:
+
+- **Project**: every test in the project.
+- **Generated**: tests whose class is declared under a `Generated/` folder. These are the conformance suites.
+
+That scope differs from the 3.1–3.4 run record above, whose "generated suite" counts were taken with narrower
+filters. So the comparison below is made by test name, not by count.
+
+| Group | Project | Infrastructure | Project P / F / S | Generated P / F / S, per configuration | FR-23 |
+|---|---|---|---|---|---|
+| AC-26 | Redis | `docker-compose-redis.yaml` | 71 / 0 / 4 | Redis 30 / 0 / 4 | 2 / 2 |
+| AC-26 | Kafka | `docker-compose-kafka.yaml` (RocketMQ stopped: :8081) | 198 / 4 / 0, then the 4 re-run: 4 / 0 / 0 | Classic 39 / 1 / 0 → 40 / 0 / 0 on re-run; Consumer 38 / 0 / 0; PartitionKey 40 / 0 / 0 | 6 / 6 |
+| AC-26 | MSSQL | `docker-compose-mssql.yaml` | 343 / 0 / 4 | MSSQL 34 / 0 / 4 (plus the outbox suites: Binary 31 / 0 / 0, Text 31 / 0 / 0) | 2 / 2 |
+| AC-26 | PostgresSQL | `docker-compose-postgres.yaml` | 261 / 0 / 0 | Postgres 38 / 0 / 0 (plus the outbox suites: Binary 31 / 0 / 0, Text 31 / 0 / 0) | 2 / 2 |
+| AC-26 | RMQ.Async | `docker-compose-rmq.yaml` | 145 / 9 / 6 | Classic 40 / 0 / 2; Quorum 40 / 0 / 2 | 4 / 4 |
+| AC-26 | RMQ.Sync | `docker-compose-rmq.yaml` | 81 / 9 / 3 | RMQ.Sync 40 / 0 / 2 | 2 / 2 |
+| in scope | AWS | Floci, `LiveAWS!=true` | 286 / 0 / 2 | SnsFifo 40 / 0 / 0; SnsStandard 40 / 0 / 0; SqsFifo 38 / 0 / 2; SqsStandard 40 / 0 / 0 | 8 / 8 |
+| in scope | AWS.V4 | Floci, `LiveAWS!=true`, after the AWS run | 286 / 0 / 2 | SnsFifo 40 / 0 / 0; SnsStandard 40 / 0 / 0; SqsFifo 38 / 0 / 2; SqsStandard 40 / 0 / 0 | 8 / 8 |
+| in scope | Gcp, CI filter | Pub/Sub emulator, from `down -v` | 155 / 50 / 30 | Pull 26 / 0 / 14; PullOrdering 26 / 0 / 14 | 4 / 4 |
+| in scope | Gcp, stream filter | Pub/Sub emulator, from `down -v` | 122 / 0 / 25 | Stream 30 / 0 / 10; StreamOrdering 30 / 0 / 10 | 4 / 4 |
+| in scope | RocketMQ | `docker-compose-rocketmq.yaml`, from `down -v` (100 / 100 topics) | 67 / 0 / 6 | RocketMQ 34 / 0 / 4 | 2 / 2 |
+
+FR-23 is counted as Reactor + Proactor over the project's configurations. The GCP filters are
+`Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Fragile!=CI` and
+`(Category=GcpPubSubStream|Category=GcpPubSubStreamOrdering)&Fragile!=CI`. Every skipped generated test is a
+`Deferred` cell emitted as Skip.
+
+**No conformance test failed, and no Pass or Fixed cell regressed.** Each failure, by name:
+
+- **Kafka, 4: a cold broker.** The suite started six seconds after `up -d`. Three tests failed on
+  `ChannelFailureException: Error finding topic …`: generated Classic Proactor
+  `When_sending_a_message_should_propagate_activity_context_async`, and the hand-written
+  `KafkaMessageConsumerFactoryDLQTests.When_creating_channel_with_dlq_subscription_should_pass_routing_keys` and
+  `ConsumerConfigHookTests.When_using_a_consumer_config_hook`. The fourth was hand-written
+  `KafkaMessageConsumerUpdateOffsetAsync.When_a_message_is_acknowledged_update_offset`, the arm that also failed in
+  3.x. Re-run on the warm broker, all four passed (4 / 0 / 0, 17 s). This time `schema-registry` was up, so the two
+  `KafkaMessageProducerHeaderBytesSendTests` arms passed.
+- **RMQ.Async 9, RMQ.Sync 9: no mTLS broker.** These are the hand-written `Acceptance/*mtls*` tests
+  (`RmqMutualTlsAcceptanceTests`, `RmqMutualTls[Quorum]Observability[Async]Tests`). All are tagged
+  `Requires=Docker-mTLS` and need an `amqps://localhost:5671` broker that `docker-compose-rmq.yaml` does not provide.
+  They fail on `BrokerUnreachableException` or `ChannelFailureException`, and CI excludes them
+  (`Requires!=Docker-mTLS`). None is generated.
+- **Gcp CI filter, 50: no real GCP.** These are the Firestore outbox (30 generated) and inbox tests, plus the GCS
+  luggage-store tests. That is the known baseline of 50, and no messaging test is among them.
+
+**Against the session baselines:**
+
+- AWS and AWS.V4: 286 / 0 / 2 each, as at 4.11 and `181abd588`.
+- GCP CI filter: 155 / 30 / 50, as before.
+- GCP stream filter: 122 / 25 / 0 against 121 / 25 / 0–1. The StreamOrdering two-message Nack flake did not fire.
+- RocketMQ: 67 / 0 / 6, as at `181abd588`. The FR-9 Proactor delay watch item
+  (`When_sending_a_delayed_message_should_deliver_after_delay_async`) passed.
+- Reject tests: all 264 results from 7A.3's runs (the ten projects above, compared by test name) have the same
+  outcome here. None is missing, and none changed from pass to fail or from skip to run. MQTT and AzureServiceBus
+  were not run (they are outside 8.7's scope).
+
+**C-7 (ADR 0077, "First delivery on an approximate counter"): none observed.** No first-delivery identity
+assertion failed in any run, on the exposed AWS, AWS.V4 and RocketMQ cells or anywhere else.
+
 ## Conformance Matrix
 
 | Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 | FR-23 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (7a0ec644f) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (7a0ec644f) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| GCP / Pull | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
-| GCP / PullOrdering | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
-| GCP / Stream | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
-| GCP / StreamOrdering | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
+| AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (7a0ec644f) | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (7a0ec644f) | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| GCP / Pull | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) |
+| GCP / PullOrdering | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) |
+| GCP / Stream | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4449) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) |
+| GCP / StreamOrdering | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4449) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) |
 | Kafka / Classic | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / Consumer | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
@@ -841,7 +1224,7 @@ CI is unaffected — GitHub Actions `services:` mount no volume.
 | Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass |
 | RMQ.Async / Classic | Pass | Pass | Fixed (#4387) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RMQ.Async / Quorum | Pass | Pass | Fixed (#4387) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4353 (sign-off: @iancooper) |
+| RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4353) |
 | AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) |
 | MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4351 (sign-off: @iancooper) |
 | RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4387) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Pass |

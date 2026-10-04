@@ -2,6 +2,138 @@
 
 ## Master
 
+### AWS SQS, GCP Pub/Sub and RocketMQ: `requeueCount` now runs down (#4341, spec 0037)
+
+On these transports the broker re-serves its own stored copy of a requeued message, and Brighter never
+rewrote that copy, so every redelivery presented the same `HandledCount`. A subscription's
+`requeueCount` therefore never ran down. A message that kept failing was requeued for ever, never
+dead-lettered by Brighter. The consumers now read the broker's own delivery counter on receive
+(SQS `ApproximateReceiveCount`, Pub/Sub `delivery_attempt`, RocketMQ `DeliveryAttempt`) and present it
+so that a first delivery reads `0`. The message pump is unchanged and still decides when the budget is
+spent. No broker call is added. See [ADR 0077](docs/adr/0077-delivery-count-contract.md).
+
+All three counters are approximate, so a budget of `R` rejects **on or before** delivery `R`, and the
+v3 and v4 SQS packages may reject on different deliveries.
+
+**GCP needs a `DeadLetterPolicy`.** Pub/Sub only populates `delivery_attempt` on a subscription that
+has one. Without it, `requeueCount` still cannot run down, and Brighter warns (see "New Warnings"
+below).
+
+#### Behaviour change: the broker's count overrides a producer-set `HandledCount`
+
+Where a broker counter is available (SQS, GCP with a `DeadLetterPolicy`, RocketMQ), the
+`HandledCount` carried in the message header is now ignored on delivery from the source channel. A
+producer that sends `HandledCount = N` sees `0` on the first delivery. The header count no longer
+carries earlier budget spend into a new delivery.
+
+The exception is a message Brighter routed to a dead-letter or invalid-message destination. A message
+whose bag carries the `rejectionReason` key keeps the `HandledCount` stamped on it at rejection. A
+dead-letter read therefore shows how many deliveries the message took, not the dead-letter queue's own
+counter.
+
+#### Behaviour change: a null-reason `Reject` stamps `rejectionReason = "None"`
+
+On AWS SQS (both packages), GCP Pub/Sub and RocketMQ, a `Reject(message, null)` now stamps
+`rejectionReason = "None"` on the routed copy. Before, the key was left off. `rejectionMessage` stays
+absent. Any code that reads dead-lettered messages and tests for the presence of `rejectionReason`
+will now find it on these copies. The other Brighter-managed transports are unchanged.
+
+#### The rejection-metadata keys are reserved for Brighter
+
+`rejectionReason`, `rejectionMessage`, `originalTopic`, `originalMessageType` and
+`rejectionTimestamp` are reserved for Brighter's use. They are now named once in
+`Paramore.Brighter.RejectionMetadataKeyNames`. **Don't set them on an ordinary message.** A message
+that carries `rejectionReason` is treated as a routed copy: its stamped count is kept, and on a
+transport above it can be rejected on its first delivery.
+
+#### Replaying dead-lettered messages: strip the rejection metadata
+
+A tool that puts a dead-lettered message back on its source (a DLQ redrive, a replay script, a manual
+move) **must remove the rejection metadata** above, and may reset `HandledCount` to `0`. If it leaves
+`rejectionReason` in place, the message is still treated as a routed copy. Its stamped count is at
+least the budget that dead-lettered it, so the pump rejects it again on its first delivery whenever
+the source's budget is no larger than that stamped count plus one. If the source's budget is larger,
+the count stays where it was, and only a native broker limit bounds the message.
+
+#### RocketMQ: header-owned properties win over same-named bag entries
+
+When it publishes, the RocketMQ producer now skips any `Header.Bag` entry whose key it has already
+written from the header: `HandledCount`, `MessageId`, `Topic`, `MessageType`, `TimeStamp`, `Source`,
+`SpecVersion` and the other header-owned properties. Before, the bag was written last, so a stale
+bag entry overwrote the header value (RocketMQ's `AddProperty` is last-write-wins). That is how a
+dead-letter copy lost its stamped `HandledCount`. **If you forward a received message, or set one of
+these keys in the bag to override a header**, the header value now wins on every publish.
+
+#### New Warnings
+
+Three startup validation rules (reported by `ValidatePipelines`, at Warning, once per subscription):
+
+- **A zero budget, on any transport.** A `requeueCount` of `0`, or below `-1`, rejects the first deferral. The Warning
+  asks whether you meant `-1` (requeue for ever) or `1` (reject after one delivery).
+- **A budget at or above a native redrive limit.** When `requeueCount` meets or exceeds a native
+  limit Brighter can see (SQS `RedrivePolicy.maxReceiveCount`, GCP
+  `DeadLetterPolicy.MaxDeliveryAttempts`), the native limit fires first. The Warning names both values.
+  A policy configured outside Brighter is invisible to it and isn't warned about.
+- **A budget that cannot run down.** For example, a GCP subscription with no `DeadLetterPolicy`. The
+  same Warning is also logged once when the channel is created:
+  `Subscription '…' has requeueCount … but the delivery count cannot advance: …. The budget will not run down.`
+
+`requeueCount: -1` (the default) disables the budget and none of these fire.
+
+### GCP Pub/Sub: `Reject` routes to a dead-letter and an invalid-message topic (#4341, spec 0037)
+
+GCP `Reject` used to acknowledge the message and discard it. `GcpPubSubSubscription` now takes
+`deadLetterRoutingKey` and `invalidMessageRoutingKey` (new optional constructor parameters, at the
+end of both constructors; callers must recompile). `Reject` then publishes a copy carrying the
+rejection metadata, as SQS and RocketMQ do: `Unacceptable` goes to the invalid-message topic, falling
+back to the dead-letter topic; every other reason, and a null reason, goes to the dead-letter topic.
+The existing `DeadLetter` (`DeadLetterPolicy`) setting is unchanged, and native dead-lettering still
+works alongside it. See [ADR 0078](docs/adr/0078-gcp-rejection-routing-and-dlq-channel-creation.md).
+
+#### Behaviour changes
+
+- **A subscription with no routing keys logs a Warning on every `Reject`:**
+  `GcpRejectionRouter: no destination configured for rejected message {Id} with reason {Reason}; message acknowledged without publishing`.
+  The message is still acknowledged.
+- **A failed routing publish releases the message instead of acknowledging it.** It comes back
+  promptly for another attempt, and an Error names the message id. With a native `DeadLetterPolicy`
+  that loop ends at its `MaxDeliveryAttempts`. Without one, a publish that keeps failing loops for as
+  long as it fails.
+- **`Reject` always returns `true` and never throws.** The pull consumer's `Reject` with no receipt
+  handle now returns `true` instead of `false`. A failed pull acknowledgement is logged instead of
+  rethrown, and the message stays leased until its ack deadline, so the destination may receive a
+  duplicate.
+- **A destination topic with no subscription drops messages.** The destination producer follows the
+  subscription's `MakeChannels`. Under `Create` it creates the topic but not a subscription, and Pub/Sub
+  discards messages published to a topic nothing subscribes to. **Create a subscription on each
+  destination topic** before relying on it.
+
+#### DLQ-backed channels without project IAM rights: new Warning
+
+Creating a subscription with a `DeadLetterPolicy` grants Pub/Sub's service account the forwarding
+roles through two IAM helpers. When the caller lacks project-level IAM rights (`PermissionDenied`,
+`Unauthenticated`, `Unimplemented` on the emulator, or no resolvable credentials), the helper is now
+abandoned with a Warning instead of failing channel creation:
+`{Helper} abandoned: {Rpc} on {Resource} failed with {Status}; native dead-lettering may be inactive`.
+The subscription is still created. **If you see this Warning**, grant the forwarding roles yourself,
+or native dead-lettering will not move messages. Any other status still fails channel creation.
+
+### GCP Pub/Sub stream: `Nack` releases the message for redelivery (#4449)
+
+`GcpPubSubStreamMessageConsumer.Nack`/`NackAsync` did nothing, on the assumption that not
+acknowledging a message is enough for Pub/Sub to redeliver it. That holds for Pull, but not for the
+streaming client, which keeps extending the lease on a message it is still holding. A message the pump
+declined to acknowledge (`DontAckAction`) was therefore never redelivered, and at the default
+`BufferSize: 1` it could stall the consumer for up to `MaxTotalAckExtension` (60 minutes by default).
+`Nack` now releases the message, as `Requeue` already did, and it is redelivered promptly.
+
+### GCP Pub/Sub stream: disposing a channel no longer waits for unsettled messages (#4479)
+
+Stopping the stream consumer waited for every message it had delivered to be acknowledged or nacked.
+A message that was never settled blocked `Dispose`, and with it shutdown, for up to about an hour. The
+consumer now stops with `ShutdownMode.NackImmediately`. A message still held at shutdown is nacked and
+redelivered, and `Dispose` returns promptly.
+
 ### Message pumps reject received messages with no handler (#4500)
 
 `Reactor` and `Proactor` now reject a received message as `Unacceptable` when it maps successfully

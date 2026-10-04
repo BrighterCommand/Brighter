@@ -77,9 +77,9 @@ public class ValidatePipelinesWithConsumersTests
         // Act — resolve consumer validation specs
         var specs = provider.GetServices<ISpecification<Subscription>>().ToList();
 
-        // Assert — AddConsumers should register 5 consumer validation specs, including the
-        // channel-factory compatibility rule (AC-16, FR-6)
-        Assert.Equal(5, specs.Count);
+        // Assert — AddConsumers should register 8 consumer validation specs, including the
+        // channel-factory compatibility rule (AC-16, FR-6) and the three delivery-budget rules (ADR 0077)
+        Assert.Equal(8, specs.Count);
     }
 
     [Fact]

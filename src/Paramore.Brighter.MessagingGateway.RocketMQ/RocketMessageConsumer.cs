@@ -250,17 +250,21 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
     private static void RefreshMetadata(Message message, MessageRejectionReason? reason)
     {
-        message.Header.Bag["originalTopic"] = message.Header.Topic.Value;
-        message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
+        message.Header.Bag[RejectionMetadataKeyNames.OriginalTopic] = message.Header.Topic.Value;
+        message.Header.Bag[RejectionMetadataKeyNames.RejectionTimestamp] = DateTimeOffset.UtcNow.ToString("o");
 #pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
-        message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
+        message.Header.Bag[RejectionMetadataKeyNames.OriginalMessageType] = message.Header.MessageType.ToString();
 #pragma warning restore CS0618
 
-        if (reason == null) return;
+        if (reason == null)
+        {
+            message.Header.Bag[RejectionMetadataKeyNames.RejectionReason] = RejectionReason.None.ToString();
+            return;
+        }
 
-        message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
+        message.Header.Bag[RejectionMetadataKeyNames.RejectionReason] = reason.RejectionReason.ToString();
         if (!string.IsNullOrEmpty(reason.Description))
-            message.Header.Bag["rejectionMessage"] = reason.Description ?? string.Empty;
+            message.Header.Bag[RejectionMetadataKeyNames.RejectionMessage] = reason.Description ?? string.Empty;
     }
 
     private (RoutingKey? routingKey, bool foundProducer, bool isFallingBackToDlq) DetermineRejectionRoute(
@@ -336,7 +340,14 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
         }
 
         header.Bag["ReceiptHandle"] = message;
-        
+
+        // R-1/R-2/R-3 (ADR 0077): present the broker's own delivery counter, normalised so a first
+        // delivery reads 0, unless the message is a Brighter-routed rejection copy (R-28), in which
+        // case the stamped header count is kept. Runs after the bag is filled so the rejectionReason
+        // discriminator (if present) is visible to Resolve. No allocation, no RPC (NFR-1, NFR-2):
+        // DeliveryAttempt is already on the MessageView this Receive call returned.
+        header.HandledCount = DeliveryCount.Resolve(header.HandledCount, message.DeliveryAttempt, header.Bag);
+
         var body = new MessageBody(message.Body, header.ContentType);
         
         return new Message(header, body);
