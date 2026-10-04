@@ -1,7 +1,7 @@
 # Bugfix: ASB channel factory does not provision the topic subscription eagerly, so the first sent message is lost
 
 **Linked Issue**: #4309
-**Status**: Tested
+**Status**: Fixed
 
 ## Symptom
 
@@ -241,13 +241,34 @@ hand-written tests.
 
 ## Regression Test
 
-- `tests/Paramore.Brighter.AzureServiceBus.Tests/MessagingGateway/When_creating_a_sync_channel_with_create_should_create_the_topic_subscription.cs`
-  (`CreateSyncChannel` under `Create` records the `("orders", "orders-channel")` subscription). RED observed
-  on net9.0 and net10.0: `Assert.Contains() Failure: Item not found in collection / Collection: []`.
-- Test doubles: `TestDoubles/InMemoryServiceBusAdministrationClient.cs` (now records created
-  topics and subscriptions) and `TestDoubles/InMemoryServiceBusClientProvider.cs` (new; shares one admin client).
-- Further behaviours to add, one `/test-first` each: `CreateAsyncChannel`, `CreateAsyncChannelAsync`,
-  `Validate` throws when the subscription is missing, `Assume` makes no admin calls, queue mode creates the queue.
+All in `tests/Paramore.Brighter.AzureServiceBus.Tests/MessagingGateway/`, network-free, through the public
+`AzureServiceBusChannelFactory` with `TestDoubles/InMemoryServiceBusAdministrationClient` (records created
+topics, subscriptions and queues; counts requests) supplied by `TestDoubles/InMemoryServiceBusClientProvider`
+(new; hands out one shared admin client).
+
+| Test | How RED was observed |
+|---|---|
+| `When_creating_a_sync_channel_with_create_should_create_the_topic_subscription` | failed before the fix (`Collection: []`) |
+| `When_creating_an_async_channel_with_create_should_create_the_topic_subscription` | failed before the fix (`Collection: []`) |
+| `When_creating_an_async_channel_asynchronously_with_create_should_create_the_topic_subscription` | characterisation; failed with `CreateAsyncChannel`'s provisioning call removed |
+| `When_creating_a_channel_with_validate_for_a_missing_subscription_should_throw` | characterisation; failed (no exception) with `CreateSyncChannel`'s provisioning call removed |
+| `When_creating_a_channel_with_assume_should_make_no_administration_requests` | characterisation; failed (4 requests) with the `Assume` early return removed from `AzureServiceBusTopicConsumer.EnsureChannelAsync` |
+| `When_creating_a_queue_channel_with_create_should_create_the_queue` | characterisation; failed with `CreateSyncChannel`'s provisioning call removed |
 
 ## Fix
-_(left blank — filled by /bugfix:fix)_
+
+- `AzureServiceBusConsumer`: `internal Task EnsureChannelExistsAsync()` exposes the existing
+  `EnsureChannelAsync` (Create creates, Validate throws `ChannelFailureException`, Assume does nothing; topic
+  and queue consumers alike) to the channel factory. No public API change.
+- `AzureServiceBusChannelFactory`: after `GetAndCheckSubscription` (so the type and timeout checks still
+  throw before any I/O) and creating the consumer, each method ensures the channel before returning it.
+  `CreateSyncChannel` and `CreateAsyncChannel` use `BrighterAsyncContext.Run`; `CreateAsyncChannelAsync`
+  validates synchronously and then awaits in a private async method.
+- Pre-creates removed: the conformance harness's `EnsureSubscriptionExistsAsync`, and the subscription
+  pre-creates in `When_posting_a_message_via_the_producer` and `When_posting_a_large_message_via_the_producer`
+  (whose 3000 KB queue/topic pre-creates stay). `When_consuming_a_message_via_the_consumer` now passes its
+  custom configuration into the subscription instead of pre-creating with it.
+- Release note: `release_notes.md`, "Azure Service Bus: the channel factory provisions the subscription before
+  handing out a channel (#4309)", including the startup failure-mode change.
+- Not verified locally against a broker: the 38 broker-backed tests in the project need ASB credentials;
+  the `azure-ci` job is their check.
