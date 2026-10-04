@@ -156,6 +156,52 @@ A message that was never settled blocked `Dispose`, and with it shutdown, for up
 consumer now stops with `ShutdownMode.NackImmediately`. A message still held at shutdown is nacked and
 redelivered, and `Dispose` returns promptly.
 
+### GCP Pub/Sub stream: reopening a channel on the same subscription works again (#4502)
+
+Channels on one stream subscription share a `SubscriberClient`, which stops when the last channel
+leaves. A `SubscriberClient` cannot be restarted. However, Brighter kept the stopped client cached
+against the subscription. So when the dispatcher reopened that subscription, after `Shut` then `Open`
+or after scaling performers to zero and back, channel creation threw `InvalidOperationException: Can
+only start an instance once.` A second attempt then silently gave a channel that never received
+anything. A stopped client is now replaced by a new one.
+
+A Reactor performer also disposed its stream consumer twice. With several performers on one
+subscription, that could stop the shared client while the others were still reading from it, and
+they then received nothing. Disposing the stream consumer is now idempotent.
+
+**Breaking change:** `GcpStreamConsumer.Start()` is replaced by `bool TryStart()`, which returns
+`false` once the consumer has stopped. Only `GcpPubSubConsumerFactory` called it in Brighter.
+
+### GCP Pub/Sub stream: settled messages are no longer kept in memory (#4505)
+
+For every message it delivered, the stream handler registered a callback on the `SubscriberClient`'s
+cancellation token and never removed it. That token lives as long as the client, so every message the
+client delivered, payload included, stayed in memory until the channel was disposed. A long-running
+stream consumer's memory grew with its throughput. Stopping the client also had to run one callback for
+every message ever delivered. The callback is now removed once the message is settled.
+
+### GCP Pub/Sub: `Purge` now clears the subscription (#4508)
+
+`Purge` and `PurgeAsync` on a GCP channel, Pull or Stream, never worked. They purge by seeking the
+subscription to a future time, but the Seek request did not name the subscription, so Pub/Sub
+rejected it with `InvalidArgument` and `Purge` always threw. The Seek now names the consumer's
+subscription. This also affects `CommandProcessor.Call` over GCP, which purges the reply channel before
+sending the request.
+
+On a Stream subscription, a Seek clears only the messages still held by the service. The streaming
+client may already have delivered some messages into Brighter's local buffer, and those were still
+returned by the next `Receive`. A purge now also acknowledges every buffered message published before
+the purge started. Messages published after it are kept.
+
+### Reactor: a channel disposes its message consumer only once (#4511)
+
+When a Reactor performer stopped, its sync `Channel` was disposed twice: once by the pump when it
+received the quit message, and again when the dispatcher disposed the performer. `Channel` passed both
+calls on, so every transport's sync message consumer was disposed twice on each shutdown. For a Kafka
+consumer that had created a requeue or rejection producer, the second dispose threw
+`ObjectDisposedException` from the already-disposed producer's `Flush`. `Channel.Dispose` is now
+idempotent, as `ChannelAsync` already was, so the consumer is disposed once.
+
 ### Message pumps reject received messages with no handler (#4500)
 
 `Reactor` and `Proactor` now reject a received message as `Unacceptable` when it maps successfully

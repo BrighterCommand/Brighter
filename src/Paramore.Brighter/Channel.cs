@@ -42,7 +42,8 @@ namespace Paramore.Brighter
         private ConcurrentQueue<Message> _queue = new();
         private readonly int _maxQueueLength;
         private static readonly Message s_noneMessage = new();
-        
+        private bool _disposed;
+
         /// <summary>
         /// The name of a channel is its identifier
         /// See Topic for the broker routing key
@@ -200,6 +201,9 @@ namespace Paramore.Brighter
 
         private void Dispose(bool disposing)
         {
+            if (_disposed) return;
+            _disposed = true;
+
             if (disposing)
             {
                 _messageConsumer.Dispose();

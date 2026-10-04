@@ -114,8 +114,11 @@ public partial class GcpPullMessageConsumer(
             var client = connection.GetOrCreateSubscriberServiceApiClient();
 
             Log.PurgeStart(s_logger, subscriptionName.ToString());
-            client.Seek(
-                new SeekRequest { Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)) });
+            client.Seek(new SeekRequest
+            {
+                SubscriptionAsSubscriptionName = subscriptionName,
+                Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1))
+            });
             Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
@@ -140,7 +143,11 @@ public partial class GcpPullMessageConsumer(
             Log.PurgeStart(s_logger, subscriptionName.ToString());
 
             await client.SeekAsync(
-                new SeekRequest { Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)) },
+                new SeekRequest
+                {
+                    SubscriptionAsSubscriptionName = subscriptionName,
+                    Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1))
+                },
                 cancellationToken);
 
             Log.PurgeComplete(s_logger, subscriptionName.ToString());
