@@ -586,10 +586,11 @@ jobs:
 
   aws-ci:
     runs-on: ubuntu-latest
-    # Two projects, run one after the other, and each carries live teardown tests that poll a
-    # deletion to a deadline — SQS documents a deleted queue as visible for up to sixty seconds,
-    # so the waiting is the test rather than slack in it. 8 minutes no longer leaves room, and
-    # the conformance suite takes the AWS generated files from 168 to 312, so 12 does not either.
+    # AWS.Tests (v3) only; AWS.V4.Tests runs in aws-v4-ci, in parallel. Each project carries live
+    # teardown tests that poll a deletion to a deadline — SQS documents a deleted queue as visible
+    # for up to sixty seconds, so the waiting is the test rather than slack in it. With spec 0037's
+    # delivery-budget conformance tests each project takes about 13 minutes against real AWS, so the
+    # two no longer fit one after the other inside 20.
     timeout-minutes: 20
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
@@ -620,9 +621,41 @@ jobs:
       # LiveAWS!=true is aws-mock-ci's filter, not this job's: the tests it excludes are the ones
       # that need a real account, which is exactly what this job has. Only Fragile!=CI applies here.
       - name: AWS SNS, SQS and S3 Tests
-        run: |
-          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+
+  aws-v4-ci:
+    runs-on: ubuntu-latest
+    # AWS.V4.Tests, split out of aws-ci so the two SDK suites run in parallel; see aws-ci.
+    timeout-minutes: 20
+    if: |
+      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
+    needs: [build]
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: eu-west-1
+      AWS_DEFAULT_OUTPUT: json
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+      # Only Fragile!=CI applies here, as in aws-ci: this job has a real account.
+      - name: AWS V4 SNS, SQS and S3 Tests
+        run: dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
   aws-scheduler-ci:
     runs-on: ubuntu-latest
