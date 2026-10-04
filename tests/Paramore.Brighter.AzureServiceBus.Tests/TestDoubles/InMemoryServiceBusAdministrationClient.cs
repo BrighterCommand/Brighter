@@ -22,8 +22,42 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Azure;
 using Azure.Messaging.ServiceBus.Administration;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 
-public class InMemoryServiceBusAdministrationClient : ServiceBusAdministrationClient;
+/// <summary>
+/// An in-memory stand-in for the Service Bus management API: entities exist only once they have been
+/// created through it, and every subscription it creates is recorded so a test can see when provisioning happened.
+/// </summary>
+public class InMemoryServiceBusAdministrationClient : ServiceBusAdministrationClient
+{
+    private readonly HashSet<string> _topics = [];
+
+    public List<(string Topic, string Subscription)> CreatedSubscriptions { get; } = [];
+
+    public override Task<Response<bool>> TopicExistsAsync(string name, CancellationToken cancellationToken = default)
+        => Task.FromResult(Response.FromValue(_topics.Contains(name), null!));
+
+    public override Task<Response<bool>> SubscriptionExistsAsync(string topicName, string subscriptionName,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(Response.FromValue(CreatedSubscriptions.Contains((topicName, subscriptionName)), null!));
+
+    public override Task<Response<TopicProperties>> CreateTopicAsync(CreateTopicOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        _topics.Add(options.Name);
+        return Task.FromResult(Response.FromValue<TopicProperties>(null!, null!));
+    }
+
+    public override Task<Response<SubscriptionProperties>> CreateSubscriptionAsync(CreateSubscriptionOptions options,
+        CreateRuleOptions rule, CancellationToken cancellationToken = default)
+    {
+        CreatedSubscriptions.Add((options.TopicName, options.SubscriptionName));
+        return Task.FromResult(Response.FromValue<SubscriptionProperties>(null!, null!));
+    }
+}
