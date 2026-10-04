@@ -47,8 +47,11 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Brighter's RocketMQ <c>Requeue</c> is a broker no-op (<c>RocketMessageConsumer.Requeue</c>) —
-/// redelivery only happens when the subscription's invisibility lease lapses. Under mutation (a)
+/// When this test was written, Brighter's RocketMQ <c>Requeue</c> was a broker no-op and redelivery
+/// came only when the subscription's invisibility lease lapsed; the timings described here assume that.
+/// Since bugfix 0025 <c>Requeue</c> sets the invisible duration on the broker, so redelivery comes
+/// sooner. The assertions do not depend on the lease timing.
+/// Under mutation (a)
 /// (<c>DiscardRequeuedMessagesEnabled</c> returns <c>RequeueCount &gt; 0</c> instead of
 /// <c>RequeueCount != -1</c>), the <c>0</c> and <c>-3</c> rows requeue instead of rejecting — but
 /// the requeue itself is observed immediately by the recording consumer's <c>Requeue</c> call, so
@@ -157,8 +160,8 @@ public class RocketMqBudgetOneZeroOrBelowMinusOneRejectsOnFirstDeferralReactorTe
             var requeueCountActual = ConformanceDeferredPump.GetRequeueCount(key);
             Assert.Equal(0, requeueCountActual);
 
-            // Under mutation (a) the 0 and -3 rows requeue instead of rejecting, and the 10 s lease
-            // lapse redelivers them within the 30 s poll window, so the dispatch count exceeds 1.
+            // Under mutation (a) the 0 and -3 rows requeue instead of rejecting, and the requeue
+            // redelivers them within the 30 s poll window, so the dispatch count exceeds 1.
             var dispatchCount = ConformanceDeferredPump.GetDispatchCount(key);
             Assert.Equal(1, dispatchCount);
 

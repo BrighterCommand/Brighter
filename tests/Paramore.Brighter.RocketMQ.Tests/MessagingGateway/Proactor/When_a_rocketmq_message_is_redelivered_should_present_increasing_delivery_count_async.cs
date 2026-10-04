@@ -46,8 +46,11 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Brighter's RocketMQ <c>Requeue</c> is a broker no-op (<c>RocketMessageConsumer.Requeue</c>) —
-/// redelivery only happens when the subscription's invisibility lease lapses. <c>requeueCount: -1</c>
+/// When this test was written, Brighter's RocketMQ <c>Requeue</c> was a broker no-op and redelivery
+/// came only when the subscription's invisibility lease lapsed; the timings described here assume that.
+/// Since bugfix 0025 <c>Requeue</c> sets the invisible duration on the broker, so redelivery comes
+/// sooner. The assertions do not depend on the lease timing.
+/// <c>requeueCount: -1</c>
 /// disables Brighter's own delivery budget (see <c>RocketMqBudgetMinusOneNeverRejectsProactorTests</c>,
 /// task 7.5), so no DLQ is needed here: the pump simply keeps requeuing forever and the test quits it
 /// once the handler has dispatched three times.
@@ -86,7 +89,7 @@ public class RocketMqRedeliveryDeliveryCountProactorTests
         var publication = provider.CreatePublication(routingKey);
 
         // Subscription: budget = -1 (Brighter's own budget disabled, task 7.5), 10 s invisibility
-        // lease so a lapse redelivers roughly every 10 s. A fresh consumer group avoids picking up
+        // lease. A fresh consumer group avoids picking up
         // any message an earlier run left on the topic.
         var subscription = new RocketMqSubscription<ConformanceDeferredCommand>(
             subscriptionName: new SubscriptionName($"delivery-count-{Guid.NewGuid():N}"),
@@ -119,8 +122,8 @@ public class RocketMqRedeliveryDeliveryCountProactorTests
             await producer.SendAsync(message);
 
             // Act — run the production pump with no Brighter-side budget (requeueCount: -1); the
-            // RocketMQ Requeue is a broker no-op, so redelivery happens only when the 10 s
-            // invisibility lease lapses. Quit once the handler has been invoked 3 times.
+            // RocketMQ Requeue sets the invisible duration to zero, so the broker redelivers within
+            // seconds. Quit once the handler has been invoked 3 times.
             var pump = ConformanceDeferredPump.CreateProactor(channel, -1, TimeSpan.FromMilliseconds(5000));
             var pumping = Task.Factory.StartNew(() => pump.Run(), TaskCreationOptions.LongRunning);
 
