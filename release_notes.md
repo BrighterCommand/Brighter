@@ -815,6 +815,41 @@ Provisioning refuses such a name up front with a message that explains the arith
 `Validate` builds no identifier and keeps the full 128, so a longer table that already exists can
 still be used.
 
+### Azure Service Bus: the channel factory provisions the subscription before handing out a channel (#4309)
+
+`AzureServiceBusChannelFactory` now honours `OnMissingChannel` on an `AzureServiceBusSubscription` as
+it creates a channel, from `CreateSyncChannel`, `CreateAsyncChannel` and `CreateAsyncChannelAsync`
+alike, in the same way as the AWS and GCP channel factories:
+
+| `MakeChannels` | Behaviour |
+|---|---|
+| `Create` (the default) | the topic subscription (or, with `UseServiceBusQueue`, the queue) is created if absent, using the subscription's `AzureServiceBusSubscriptionConfiguration` |
+| `Validate` | a missing subscription or queue throws `ChannelFailureException` from channel creation |
+| `Assume` | nothing happens and no management-API call is made |
+
+Before this, the factory ignored the setting and created nothing on the broker. The subscription was
+created by the consumer's first receive, so a message published to the topic between the channel
+being created and that first receive arrived at a topic with no subscription, and Azure Service Bus
+silently discarded it. Nothing logged and nothing threw. The queue path did not lose messages, because
+the producer creates the same queue on send.
+
+#### Behaviour change: provisioning failures now surface at startup
+
+The management-API calls that used to happen on the first receive now happen when the
+`ServiceActivator` creates its channels. With `Create` or `Validate`, a missing subscription under
+`Validate`, a management API that cannot be reached, or a credential without **Manage** rights on the
+namespace now throws `ChannelFailureException` from channel creation, which is to say from
+`Dispatcher.Receive()` at startup. Before, the same exception came from the first receive, where the
+message pump caught it and retried after `ChannelFailureDelay`. There is no retry around channel
+creation.
+
+**If your subscriptions are provisioned by infrastructure-as-code, or your application's credential
+has only Send/Listen rights, set `MakeChannels` to `Assume`.** `Validate` also needs Manage rights,
+because checking whether a subscription exists is itself a management-API call.
+
+`AzureServiceBusConsumerFactory`, used on its own without the channel factory, is unchanged: its
+consumers still provision on first use.
+
 ## 10.7.0
 
 ### Azure Service Bus: dead-letter reason and description (#4196)
