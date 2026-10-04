@@ -511,6 +511,8 @@ redelivered for ever would pass every other DLQ behaviour in this suite.
   through CI against real cloud infrastructure (5).
   *Superseded for the eight `AWS` / `AWS.V4` cells by the 2026-09-27 evidence note, "The eight AWS
   cells are `Fixed (#4341)`", below: #4341 is fixed and those cells now pass.*
+  *Superseded for `MQTT` by the 2026-10-04 evidence note at the head of the MQTT section below: #4351 is
+  fixed (#4441) and the cell is `Fixed (#4441)`.*
 
 ### Run record — 2026-09-26 (tasks 3.1–3.4 regenerated tree, AC-26, R-22, R-23)
 
@@ -555,7 +557,20 @@ After that, **FR-16 passes on all four tests** (`nacking_a_message` and `nacking
 
 FR-2 and FR-15 are `Deferred` for RocketMQ and emitted as Skip — as expected.
 
-### `MQTT` was attempted and stays `Deferred` — the Proactor pump deadlocks on the first requeue
+### `MQTT` was `Deferred`; the cell is now `Fixed (#4441)` — the Proactor no longer deadlocks on the first requeue
+
+⭐ **Evidence (2026-10-04): the `MQTT / MqttMessagingGateway` FR-23 cell moved from `Deferred -> #4351` to
+`Fixed (#4441)`.** [#4441](https://github.com/BrighterCommand/Brighter/pull/4441) (`bb10b8fae`, merged
+2026-09-27, closing #4351) fixed the deadlock described below at its source. `MqttMessagePublisher`'s
+constructor now connects through a nested `BrighterAsyncContext.Run(ConnectAsync)` rather than
+`ConnectAsync().GetAwaiter().GetResult()`, so the connect's continuation no longer waits on the blocked pump
+thread. That one constructor covers the requeue, DLQ and invalid-message producers. The cell was left
+pointing at the closed #4351 until this note. Regenerating `Paramore.Brighter.MQTT.Tests` un-skipped exactly the
+2 FR-23 tests (Reactor/Proactor). Against `docker-compose-mqtt.yaml`, both passed in 5 s each on net9.0 and
+net10.0, including the Proactor variant that previously hung. The full MQTT suite: 79 passed / 0 failed / 4
+skipped on each framework. The conformance audits re-ran green against the new ledger
+(`Paramore.Brighter.Test.Generator.Tests`, 312 passed). The paragraphs below record how the cell got here.
+Their "stays `Deferred`" statements are superseded by this note.
 
 Measured 2026-09-12 against `docker-compose-mqtt.yaml`, and tracked as
 [#4351](https://github.com/BrighterCommand/Brighter/issues/4351). The two variants disagree, and
@@ -1159,7 +1174,7 @@ a stale message, which can pass for a body-assertion failure.
 **Not moved by spec 0037: every remaining `Deferred` cell, 36 in all.** Each moves only on its own evidence.
 
 - `MQTT` FR-23 (`Deferred -> #4351`): the Proactor pump deadlocks on the first requeue (see the MQTT note
-  in the FR-23 section).
+  in the FR-23 section). *Since moved, 2026-10-04: `Fixed (#4441)`.*
 - `AzureServiceBus` FR-23, and its other `Deferred` cells, FR-5 and FR-9: there is no local emulator, and
   Azure Service Bus dead-letters natively.
 - `GCP` FR-2, FR-7, FR-9, FR-15 and FR-22 on all four configurations, plus FR-16 on `GCP / Pull` and
@@ -1266,7 +1281,7 @@ assertion failed in any run, on the exposed AWS, AWS.V4 and RocketMQ cells or an
 | RMQ.Async / Quorum | Pass | Pass | Fixed (#4387) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RocketMQ / RocketMQMessagingGateway | Fixed (#4353) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4353) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4353) |
 | AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) |
-| MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4351 (sign-off: @iancooper) |
+| MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4441) |
 | RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4387) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Pass |
 | RMQ.Async / NativeClassic | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass |
 | RMQ.Async / NativeQuorum | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass |
