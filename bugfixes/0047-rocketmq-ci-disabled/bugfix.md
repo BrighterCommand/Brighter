@@ -489,6 +489,15 @@ is not escalated to a new bugfix absent further evidence.
      failing delayed-delivery tests (5s each). Every other PR check passed except `dynamo-ci`,
      unrelated to this work (no DynamoDB files touched) and already failing independent of this
      branch's changes.
+- **PR fell behind master** (another RocketMQ PR, #4507 "RocketMQ Requeue and Nack acting on the
+  broker", merged first) and needed updating before GitHub would allow a merge. Merged `master` in
+  (clean auto-merge, no conflicts in `docker-compose-rocketmq.yaml` — #4507 added new topics to the
+  compose file and `s_topicMap` together, so there was nothing to reconcile). Re-verified:
+  broker-free suite still 6/6 green; re-ran the real CI on the merge commit —
+  **`rocketmq-ci` green again** (and `dynamo-ci`, flaky on the prior run, passed this time too,
+  confirming it was never related to this work). PR is `MERGEABLE`, no failing checks; blocked only
+  on `Analyze (csharp)` (CodeQL, still running) and `reviewDecision: REVIEW_REQUIRED` — a human
+  review, not something this session can resolve.
 
 ### Critical Files for Implementation
 - .github/workflows/ci.yml
