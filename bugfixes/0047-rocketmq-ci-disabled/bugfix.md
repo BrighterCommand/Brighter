@@ -395,6 +395,18 @@ Per the decision at `/bugfix:test`, this is proven by an actual CI run on the pu
 to show 2 failures** (the new finding below), not a clean pass — this is expected and not a
 regression introduced by this fix.
 
+**First real CI run (PR #4509) caught a genuine defect in this fix itself, not the predicted
+finding.** `rocketmq-ci` failed at the "Wait for the proxy to serve" step — all 30 attempts of
+`curl -s -o /dev/null http://localhost:8081/` failed, and the proxy's own logs showed repeated
+`INFO: Transport failed … Http2Exception.connectionError`, not "connection refused". Port 8081 is
+the proxy's gRPC/HTTP2 endpoint, not plain HTTP, so a bare `curl` GET gets a real (rejected)
+response rather than ever reporting ready — the same class of mistake as `curl` against the
+broker's binary-protocol port 10911, caught locally earlier in this same Fix step, but not carried
+over to this wait step in `ci.yml` (it was written, and validated only for YAML syntax, before that
+lesson was re-applied here). Fixed by replacing the `curl` check with the same bare TCP-connect
+idiom already used for the compose healthchecks: `until echo > /dev/tcp/localhost/8081 2>/dev/null;
+do … done`. Pushed as a follow-up commit on the same PR; awaiting the next CI run.
+
 ### New finding, out of scope — native delayed-delivery defect
 
 Both the Reactor and Proactor variants of `When_sending_a_delayed_message_should_deliver_after_delay`

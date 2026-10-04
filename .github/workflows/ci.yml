@@ -867,7 +867,11 @@ jobs:
           echo "Waiting for the RocketMQ proxy..."
           max_attempts=30
           attempt=0
-          until curl -s -o /dev/null http://localhost:8081/; do
+          # Port 8081 is the proxy's gRPC/HTTP2 endpoint, not plain HTTP - a curl GET gets a real
+          # response (Http2Exception, confirmed live) rather than "connection refused", so it never
+          # reports ready. A bare TCP connect, as used for the compose healthchecks, is enough to
+          # know the proxy is accepting connections.
+          until echo > /dev/tcp/localhost/8081 2>/dev/null; do
             attempt=$((attempt + 1))
             if [ $attempt -ge $max_attempts ]; then
               echo "Proxy failed to become ready after $max_attempts attempts"
