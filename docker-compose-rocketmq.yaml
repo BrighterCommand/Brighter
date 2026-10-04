@@ -10,7 +10,7 @@ services:
       - "9876:9876"  # Nameserver port
     command: sh mqnamesrv
     healthcheck: # Health check to ensure Nameserver is ready
-      test: [ "CMD", "sh", "-c", "netstat -an | grep 9876" ]
+      test: [ "CMD", "bash", "-c", "echo > /dev/tcp/localhost/9876" ]
       interval: 5s
       timeout: 10s
       retries: 10
@@ -32,26 +32,34 @@ services:
       - BROKER_NAME=broker-a
       - BROKER_ID=0
       - AUTO_CREATE_TOPIC_ENABLE=true  # Auto-create topics
-      # Local-only: rocketmq-ci is commented out in .github/workflows/ci.yml, so nothing in CI
-      # runs this file. Broker 2g + proxy 1g asks roughly 3.5 GB of a dev machine; turn these
-      # down if that is too much locally.
+      # Broker 2g + proxy 1g asks roughly 3.5 GB of a dev machine; turn these down if that is too
+      # much locally.
       - JAVA_OPT_EXT=-Xms2g -Xmx2g -Xmn512m -XX:MaxDirectMemorySize=1g -XX:MaxMetaspaceSize=256m
     command: sh mqbroker
     depends_on:
-      - nameserver
+      nameserver:
+        condition: service_healthy
     healthcheck:
-      test: [ "CMD", "sh", "-c", "netstat -an | grep 10911" ]
+      test: [ "CMD", "bash", "-c", "echo > /dev/tcp/localhost/10911" ]
       interval: 5s
       timeout: 10s
       retries: 10
-  
+
   proxy:
     image: apache/rocketmq:5.5.0
     platform: linux/amd64
     container_name: rmqproxy
     depends_on:
-      - broker
-      - nameserver
+      broker:
+        condition: service_healthy
+      nameserver:
+        condition: service_healthy
+    # The broker's healthcheck only proves its port is listening, not that it has registered with
+    # the nameserver yet (that takes longer). The proxy crashes if it starts before registration
+    # ("create system broadcast topic … failed") and otherwise has no way to come back - restarting
+    # lets it come up again once the broker has registered, which it reliably has within a few
+    # retries.
+    restart: on-failure:5
     ports:
       - "8081:8081"   # HTTP endpoint (for REST API)
       - "9877:9877"   # gRPC endpoint (for clients)
@@ -59,8 +67,8 @@ services:
       - NAMESRV_ADDR=nameserver:9876
       - JAVA_OPT_EXT=-Xms1g -Xmx1g -Xmn256m -XX:MaxDirectMemorySize=512m -XX:MaxMetaspaceSize=256m
     command: sh mqproxy
-    healthcheck: 
-      test: [ "CMD", "sh", "-c", "netstat -an | grep 8081" ]
+    healthcheck:
+      test: [ "CMD", "bash", "-c", "echo > /dev/tcp/localhost/8081" ]
       interval: 5s
       timeout: 10s
       retries: 10
@@ -70,11 +78,11 @@ services:
     image: apache/rocketmq:5.5.0 # Use the same RocketMQ image to get mqadmin tool
     platform: linux/amd64
     command: > # Multi-line command to create the topic
-      sh -c "
+      bash -c "
             echo 'Waiting for broker to be healthy...' &&
-            until curl -s http://broker:10911/ &>/dev/null; do
-              echo 'Broker not fully ready yet, retrying in 60 seconds...'
-                sleep 60
+            until echo > /dev/tcp/broker/10911 2>/dev/null; do
+              echo 'Broker not fully ready yet, retrying in 5 seconds...'
+                sleep 5
             done;
             MQADMIN=$$(ls -d /home/rocketmq/rocketmq-*/bin/mqadmin | head -1) &&
             echo 'Waiting for the broker to register with the nameserver...' &&
@@ -204,8 +212,10 @@ services:
             echo 'done'
         "
     depends_on: # Ensure broker is healthy before attempting topic creation
-      - broker
-      - nameserver
+      broker:
+        condition: service_healthy
+      nameserver:
+        condition: service_healthy
     restart: "no" # This service should run once and then exit
     
   # RocketMQ Dashboard (Web UI - Optional)
