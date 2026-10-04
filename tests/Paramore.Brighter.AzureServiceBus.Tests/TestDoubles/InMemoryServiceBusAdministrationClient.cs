@@ -32,7 +32,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 
 /// <summary>
 /// An in-memory stand-in for the Service Bus management API: entities exist only once they have been
-/// created through it, and every subscription it creates is recorded so a test can see when provisioning happened.
+/// created through it, and every queue and subscription it creates is recorded so a test can see when provisioning happened.
 /// <see cref="RequestCount"/> counts every call made to the management API.
 /// </summary>
 public class InMemoryServiceBusAdministrationClient : ServiceBusAdministrationClient
@@ -40,6 +40,8 @@ public class InMemoryServiceBusAdministrationClient : ServiceBusAdministrationCl
     private readonly HashSet<string> _topics = [];
 
     public List<(string Topic, string Subscription)> CreatedSubscriptions { get; } = [];
+
+    public List<string> CreatedQueues { get; } = [];
 
     public int RequestCount { get; private set; }
 
@@ -54,6 +56,20 @@ public class InMemoryServiceBusAdministrationClient : ServiceBusAdministrationCl
     {
         RequestCount++;
         return Task.FromResult(Response.FromValue(CreatedSubscriptions.Contains((topicName, subscriptionName)), null!));
+    }
+
+    public override Task<Response<bool>> QueueExistsAsync(string name, CancellationToken cancellationToken = default)
+    {
+        RequestCount++;
+        return Task.FromResult(Response.FromValue(CreatedQueues.Contains(name), null!));
+    }
+
+    public override Task<Response<QueueProperties>> CreateQueueAsync(CreateQueueOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        RequestCount++;
+        CreatedQueues.Add(options.Name);
+        return Task.FromResult(Response.FromValue<QueueProperties>(null!, null!));
     }
 
     public override Task<Response<TopicProperties>> CreateTopicAsync(CreateTopicOptions options,
