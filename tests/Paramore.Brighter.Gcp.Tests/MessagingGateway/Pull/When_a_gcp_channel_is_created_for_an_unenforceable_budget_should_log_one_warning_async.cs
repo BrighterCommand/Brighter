@@ -120,6 +120,7 @@ public class GcpChannelUnenforceableBudgetWarningAsyncTests
         }
     }
 
+    [Trait("Requires", "PubSubEmulator")]
     [Theory]
     [InlineData(0, 5)] // R-7: requeueCount 0 — a pipeline-validation concern, not logged here
     [InlineData(5, 5)] // R-10: budget at the native redrive limit — also pipeline-validation only
