@@ -118,6 +118,28 @@ abandoned with a Warning instead of failing channel creation:
 The subscription is still created. **If you see this Warning**, grant the forwarding roles yourself,
 or native dead-lettering will not move messages. Any other status still fails channel creation.
 
+### RocketMQ: `Requeue` and `Nack` now act on the broker (#4353)
+
+`RocketMessageConsumer.Requeue` and `Nack` never called the broker. A requeued or nacked message came
+back only when its receive-time invisibility lease lapsed (30 s by default), and the delay passed to
+`Requeue` was ignored. Both now call `ChangeInvisibleDuration` on the message:
+
+- `Requeue(message, delay)` hides the message for `delay`, so it is redelivered after about that long.
+  A zero or missing delay redelivers it at once.
+- `Nack(message)` releases the message for redelivery at once.
+
+#### Behaviour changes
+
+- **A requeued or nacked message comes back sooner.** Before, every requeue and nack waited for the
+  subscription's invisibility lease. A handler that relied on that wait as a back-off should pass an
+  explicit delay to `Requeue`, or use a `DeferMessageAction` with a delay.
+- **The requeue delay is clamped to the broker's range of 0 to 12 hours.** A negative delay is treated
+  as zero. A delay above 12 hours is held for 12 hours and logs a Warning:
+  `Requeue delay {RequestedDelay} for message {MessageId} is above the broker's maximum invisible duration; holding it for {MaximumDelay}`.
+- **If the broker call fails, the message is not lost.** The consumer logs a Warning,
+  `Could not change the invisible duration of message {MessageId} to {InvisibleDuration}; it will reappear when its invisibility timeout lapses`,
+  and `Requeue` still returns `true`. The message comes back when its lease lapses, as before.
+
 ### GCP Pub/Sub stream: `Nack` releases the message for redelivery (#4449)
 
 `GcpPubSubStreamMessageConsumer.Nack`/`NackAsync` did nothing, on the assumption that not

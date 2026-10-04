@@ -143,6 +143,7 @@ services:
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_r_rq_again -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_r_rq_delay_again -c DefaultCluster -r 1 -w 1 -a +message.type=DELAY &&
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_r_rq_zero -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t gen_r_rq_after -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_r_nack -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_r_nack2 -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_r_rej_de -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
@@ -164,6 +165,7 @@ services:
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_p_rq_again -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_p_rq_delay_again -c DefaultCluster -r 1 -w 1 -a +message.type=DELAY &&
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_p_rq_zero -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t gen_p_rq_after -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_p_nack -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_p_nack2 -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t gen_p_rej_de -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
@@ -208,6 +210,16 @@ services:
             $$MQADMIN updateTopic -n nameserver:9876 -t rmq_dlq_count_r_DLQ -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t rmq_dlq_count_p -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             $$MQADMIN updateTopic -n nameserver:9876 -t rmq_dlq_count_p_DLQ -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_requeue_beyond_lease_r -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_requeue_beyond_lease_p -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_nack_r -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_nack_p -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_requeue_over_max_r -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_requeue_over_max_p -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_requeue_negative_r -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_requeue_negative_p -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_broker_call_fails_r -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            $$MQADMIN updateTopic -n nameserver:9876 -t rmq_broker_call_fails_p -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
 
             echo 'done'
         "

@@ -25,7 +25,9 @@ cell remains `Unknown`.
 - Five cells in the FR-2 column carry a pre-identified non-conformance annotation. GCP's four
   consumers redeliver immediately (the delay argument is ignored); RocketMQ's requeue is a no-op
   holding the message under the native invisibility timeout with no delay applied. These are seeded
-  ahead of any generation run rather than discovered late.
+  ahead of any generation run rather than discovered late. (RocketMQ's has since been fixed: on
+  2026-10-03 bugfix 0025 made `Requeue` set the invisible duration to the delay, and its FR-2 cell is
+  `Fixed (#4353)`. GCP's four remain.)
 - The cleanup gate is evaluated over all twelve targeted transports, not over whichever rows happen
   to exist.
 - `AWS / SqsFifo` **and `AWS.V4 / SqsFifo`** FR-9 (delayed send) are `Fixed (7a0ec644f)` for #4390:
@@ -220,19 +222,21 @@ cell remains `Unknown`.
     rewrites `Header.Topic` to the DLQ/invalid topic (so the message routes there) while preserving the
     source in the `originalTopic` bag entry; the requeue-exhaustion test's full-message assertion
     compares against that preserved entry.
-  - **FR-7/16/22 (no-channels ack / nack redelivery / plain requeue) `Fixed`** — plain requeue and nack
-    are no-ops that rely on the invisibility lease (RocketMQ enforces a **10 s minimum**); the message
-    redelivers when the lease expires, which the canonical retry loops (30 s ceilings) observe.
-  - **⛔ FR-2 (requeue *with delay*) `Deferred -> #4240`** — `RocketMessageConsumer.Requeue` is a no-op
-    (`ChangeInvisibleDuration(view, TimeSpan.Zero)` commented out pending an upstream RocketMQ C# client
-    release), so a requeued message redelivers at the fixed ~10 s invisibility **regardless of the
-    requested delay** — the delay is never honoured. The canonical FR-2 test can pass *by accident*
-    (10 s falls inside its 2 s–30 s window) but the capability is genuinely absent, so it is a
-    maintainer-signed `Deferred` (do-not-chase-a-green rule). Three deferral preconditions met.
-  - **⛔ FR-15 (explicit zero-delay requeue, redeliver within 5 s) `Deferred -> #4240`** — same upstream
-    cause: the no-op requeue can only redeliver via the 10 s invisibility lease, so redelivery within the
-    asserted 5 s is impossible (`ChangeInvisibleDuration(view, TimeSpan.Zero)` is exactly the commented-out
-    call that would fix it). Genuine failure, three preconditions met.
+  - **FR-7/16/22 (no-channels ack / nack redelivery / plain requeue) `Fixed`** — when these cells were
+    certified, plain requeue and nack were no-ops that relied on the invisibility lease: the message
+    redelivered when the lease expired, which the canonical retry loops (30 s ceilings) observe. Since
+    bugfix 0025 (2026-10-03) `Nack` and `Requeue` set the invisible duration on the broker, so redelivery
+    comes in about 2–3 s; the cells are unchanged.
+  - **FR-2 (requeue *with delay*): was `Deferred -> #4240`, now `Fixed (#4353)` (2026-10-03, bugfix
+    0025).** `RocketMessageConsumer.Requeue` was a no-op: the `ChangeInvisibleDuration` call was commented
+    out pending an upstream RocketMQ C# client release. So a requeued message redelivered at the fixed
+    ~10 s invisibility **regardless of the requested delay**. The canonical FR-2 test could pass *by
+    accident* (10 s falls inside its 2 s–30 s window), so the cell was a maintainer-signed `Deferred`
+    (do-not-chase-a-green rule). See the bugfix 0025 note in Rules for the fix; FR-2 was also unmapped in
+    the provider until then.
+  - **FR-15 (explicit zero-delay requeue, redeliver within 5 s): was `Deferred -> #4240`, now
+    `Fixed (#4353)` (2026-10-03, bugfix 0025).** Same cause: the no-op requeue could only redeliver via the
+    10 s invisibility lease, so redelivery within 5 s was impossible. See the bugfix 0025 note in Rules.
   - **Harness (test-project) adaptations, no non-Baggage `src` change**: `rq_delay`/`exhaust` topics use
     a longer consumer poll so the genuine ~10 s invisibility redelivery is observed by their single-poll
     receive arms (the redelivery is real; only the observation window is widened — delay/FR-9 topics keep
@@ -427,6 +431,42 @@ cell remains `Unknown`.
   passed 20/20. CI is unaffected: `ci.yml` excludes `Category=GcpPubSubStream` and
   `GcpPubSubStreamOrdering`, so it runs no Stream tests. Evidence is in
   `bugfixes/0024-gcp-stream-nack-no-redelivery/bugfix.md`.
+- `RocketMQ / RocketMQMessagingGateway` FR-2 (requeue with delay) and FR-15 (zero-delay requeue) are
+  `Fixed (#4353)` (2026-10-03, bugfix 0025).
+  - **The defect.** `RocketMessageConsumer.Requeue` and `Nack` were broker no-ops. The
+    `ChangeInvisibleDuration` call was commented out, pending a client fix that RocketMQ.Client 5.2.1
+    already has (spec 0037 task 7.1). So a requeued or nacked message came back only when the
+    receive-time invisibility lease lapsed (10 s here), and any requested delay was ignored.
+  - **The fix.** `Requeue` / `RequeueAsync` set the invisible duration to the delay. `Nack` / `NackAsync`
+    set it to zero.
+    - A negative delay counts as zero. A delay above the broker's 12 h maximum is held at 12 h. The
+      broker rejects both with response code 40011.
+    - If the broker call fails, the consumer logs a warning, `Requeue` returns `true`, and the message
+      comes back when its lease lapses. A throw would stop the pump, and `false` would make the pump ack,
+      and so lose, the message.
+  - **Measured on broker 5.5.0** with a 10 s lease: `Requeue(0)`, `Requeue(3 s)` and `Nack` all
+    redelivered at about 12.9 s before the fix. A direct `ChangeInvisibleDuration` of 1 s, 5 s or 25 s
+    redelivered at 5.7 s, 7.1 s and 27.4 s. `DeliveryAttempt` still advances, so the FR-23 cell is
+    unaffected.
+  - **FR-2** was not in the provider's topic map, so it ran against a non-existent topic. It is now mapped
+    to `gen_{r,p}_rq_after` (NORMAL), and **passed on arrival**: the lease alone fell inside its
+    2 s–30 s window. FR-2 is not a regression test for this fix.
+  - **FR-15 is the regression test.** Before the fix it failed at 12.1 s and 13.1 s, against a 5 s limit.
+  - **Hand-written tests** pin what the templates cannot, Reactor and Proactor:
+    - a delay longer than the lease is honoured;
+    - `Nack` redelivers within 6 s;
+    - a 13 h delay is held, not dropped to the lease;
+    - a negative delay redelivers as zero;
+    - a failed broker call neither throws nor returns `false`.
+  - The FR-15 template reads the first message on its topic, not its own by id. Like the generated reject
+    tests, it is only valid on a clean RocketMQ store. Evidence is in
+    `bugfixes/0025-rocketmq-requeue-nack-broker-noop/bugfix.md`.
+  - **Run (2026-10-03, net10.0):** a clean store (`down -v`, 112/112 topics), full
+    `Paramore.Brighter.RocketMQ.Tests`.
+    - Result: **83 / 0 / 2**. The 2 skips are the 7.1 measurement facts.
+    - Compared by name with the 8.7 run, the only change is FR-2 and FR-15 (Reactor and Proactor) going from
+      skipped to passed.
+    - FR-23 2 / 2.
 
 ## FR-23 — requeue budget exhausted to DLQ
 
@@ -1224,7 +1264,7 @@ assertion failed in any run, on the exposed AWS, AWS.V4 and RocketMQ cells or an
 | Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass |
 | RMQ.Async / Classic | Pass | Pass | Fixed (#4387) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RMQ.Async / Quorum | Pass | Pass | Fixed (#4387) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4353) |
+| RocketMQ / RocketMQMessagingGateway | Fixed (#4353) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4353) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4353) |
 | AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) |
 | MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4351 (sign-off: @iancooper) |
 | RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4387) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Pass |

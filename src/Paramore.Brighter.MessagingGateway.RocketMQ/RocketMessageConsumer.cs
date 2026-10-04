@@ -35,6 +35,8 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
     public MessagingSystem MessagingSystem => MessagingSystem.RocketMQ;
 
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RocketMessageConsumer>();
+    // The broker rejects a longer invisible duration (response code 40011)
+    private static readonly TimeSpan s_maxInvisibleDuration = TimeSpan.FromHours(12);
 
     private readonly RocketMessagingGatewayConnection? _connection = connection;
     private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;
@@ -102,15 +104,21 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
     
     /// <inheritdoc />
     public void Nack(Message message)
-    {
-        // No-op for RocketMQ: invisibility timeout will expire and message will become available for redelivery
-    }
+        => BrighterAsyncContext.Run(() => NackAsync(message));
 
     /// <inheritdoc />
-    public Task NackAsync(Message message, CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// Sets the message's invisible duration to zero, so the broker makes it available on the next receive
+    /// instead of waiting for the receive-time invisibility timeout to lapse.
+    /// </remarks>
+    public async Task NackAsync(Message message, CancellationToken cancellationToken = default)
     {
-        // No-op for RocketMQ: invisibility timeout will expire and message will become available for redelivery
-        return Task.CompletedTask;
+        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not MessageView view)
+        {
+            return;
+        }
+
+        await ChangeInvisibleDurationSafeAsync(view, message.Id, TimeSpan.Zero);
     }
 
     /// <inheritdoc />
@@ -180,20 +188,54 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
     
     /// <inheritdoc />
     public bool Requeue(Message message, TimeSpan? delay = null)
+        => BrighterAsyncContext.Run(() => RequeueAsync(message, delay));
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Sets the message's invisible duration to <paramref name="delay"/>, so the broker redelivers it once
+    /// the delay has passed, whether that is shorter or longer than the receive-time invisibility timeout.
+    /// </remarks>
+    public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not MessageView view)
         {
             return false;
         }
-        
-        // Waiting for next RocketMQ C# version, due an issue on ChangeInvisibleDuration
-        // consumer.ChangeInvisibleDuration(view, TimeSpan.Zero);
+
+        await ChangeInvisibleDurationSafeAsync(view, message.Id, InvisibleDurationFor(message.Id, delay ?? TimeSpan.Zero));
         return true;
     }
 
-    /// <inheritdoc />
-    public Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Requeue(message, delay));
+    /// <summary>
+    /// Brings a requeue delay within the range the broker accepts for an invisible duration: a negative
+    /// delay becomes zero, and one above the broker's maximum is held at that maximum, the closest it allows.
+    /// </summary>
+    private static TimeSpan InvisibleDurationFor(Id messageId, TimeSpan delay)
+    {
+        if (delay < TimeSpan.Zero) return TimeSpan.Zero;
+        if (delay <= s_maxInvisibleDuration) return delay;
+
+        Log.RequeueDelayAboveMaximum(s_logger, messageId.Value, delay, s_maxInvisibleDuration);
+        return s_maxInvisibleDuration;
+    }
+
+    /// <summary>
+    /// Changes how long the message stays invisible, logging rather than throwing on failure. The
+    /// message still holds its receive-time invisibility timeout, so on failure it reappears when that
+    /// lapses: throwing would stop the message pump, and reporting failure would make the pump
+    /// acknowledge, and so lose, the message.
+    /// </summary>
+    private async Task ChangeInvisibleDurationSafeAsync(MessageView view, Id messageId, TimeSpan invisibleDuration)
+    {
+        try
+        {
+            await consumer.ChangeInvisibleDuration(view, invisibleDuration);
+        }
+        catch (Exception ex)
+        {
+            Log.ErrorChangingInvisibleDuration(s_logger, ex, messageId.Value, invisibleDuration);
+        }
+    }
 
     /// <summary>
     /// Acknowledges the source message, returning <c>false</c> on failure so that an ACK
@@ -572,6 +614,12 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
         [LoggerMessage(LogLevel.Warning, "RocketMessageConsumer: Falling back to DLQ for message {MessageId}")]
         public static partial void FallingBackToDlq(ILogger logger, string messageId);
+
+        [LoggerMessage(LogLevel.Warning, "RocketMessageConsumer: Could not change the invisible duration of message {MessageId} to {InvisibleDuration}; it will reappear when its invisibility timeout lapses")]
+        public static partial void ErrorChangingInvisibleDuration(ILogger logger, Exception ex, string messageId, TimeSpan invisibleDuration);
+
+        [LoggerMessage(LogLevel.Warning, "RocketMessageConsumer: Requeue delay {RequestedDelay} for message {MessageId} is above the broker's maximum invisible duration; holding it for {MaximumDelay}")]
+        public static partial void RequeueDelayAboveMaximum(ILogger logger, string messageId, TimeSpan requestedDelay, TimeSpan maximumDelay);
 
         [LoggerMessage(LogLevel.Error, "RocketMessageConsumer: Error sending message {MessageId} to rejection channel, reason: {RejectionReason}")]
         public static partial void ErrorSendingToRejectionChannel(ILogger logger, Exception ex, string messageId, string rejectionReason);

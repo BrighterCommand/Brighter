@@ -302,6 +302,18 @@ was disposed and recreated in the same group before delivery 3. Two runs, the se
   nothing here changes. Making `Requeue`/`Nack` act on the broker (as PR #4263 does for `Nack`) is a follow-up
   outside this spec. On this measurement it would not disturb the counter AC-24 relies on.
 
+##### Follow-up (2026-10-03): bugfix 0025, #4353
+
+The follow-up above is done. `Requeue` / `RequeueAsync` now set the invisible duration to the requeue delay. A
+negative delay counts as zero, and a delay above the broker's 12 h maximum is held at 12 h. `Nack` / `NackAsync`
+set it to zero. A failed call is logged and falls back to the receive lease. "`Requeue` stays a broker no-op" in
+the AC-24 branch above no longer holds.
+
+The counter AC-24 relies on is unaffected. `DeliveryAttempt` advanced 1 → 2 across every
+`ChangeInvisibleDuration` redelivery measured (1 s, 5 s, 25 s and 0). The broker counter is still read on
+receive, by `DeliveryCount.Resolve`. The RocketMQ FR-2 and FR-15 cells are `Fixed (#4353)`. Evidence is in
+`bugfixes/0025-rocketmq-requeue-nack-broker-noop/bugfix.md`.
+
 #### Budget rules: which rung (R-25)
 
 All three rules take the **lower rung** — `ISpecification<Subscription>`, registered alongside the existing four in `RegisterConsumerValidationSpecs` (`ServiceActivator.Extensions.DependencyInjection/ServiceCollectionExtensions.cs:199-215`) and harvested at `BrighterPipelineValidationExtensions.cs:79`. **No dependency on #4282.**

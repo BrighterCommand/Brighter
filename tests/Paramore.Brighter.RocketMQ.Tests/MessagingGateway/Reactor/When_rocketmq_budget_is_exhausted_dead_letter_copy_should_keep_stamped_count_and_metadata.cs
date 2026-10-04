@@ -51,8 +51,11 @@ namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 /// the stamped count is asserted as <c>&gt;= 3</c> (and not <c>0</c>), not exactly <c>3</c>.
 /// </para>
 /// <para>
-/// Brighter's RocketMQ <c>Requeue</c> is a broker no-op (<c>RocketMessageConsumer.Requeue</c>) —
-/// redelivery only happens when the subscription's invisibility lease lapses. With a 10 s
+/// When this test was written, Brighter's RocketMQ <c>Requeue</c> was a broker no-op and redelivery
+/// came only when the subscription's invisibility lease lapsed; the timings described here assume that.
+/// Since bugfix 0025 <c>Requeue</c> sets the invisible duration on the broker, so redelivery comes
+/// sooner. The assertions do not depend on the lease timing.
+/// With a 10 s
 /// invisibility timeout, exhausting a budget of 3 needs three deliveries, roughly 20-30 s apart; the
 /// wait below is bounded at 90 s.
 /// </para>
