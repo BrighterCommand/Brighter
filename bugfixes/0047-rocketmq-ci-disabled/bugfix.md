@@ -405,7 +405,29 @@ broker's binary-protocol port 10911, caught locally earlier in this same Fix ste
 over to this wait step in `ci.yml` (it was written, and validated only for YAML syntax, before that
 lesson was re-applied here). Fixed by replacing the `curl` check with the same bare TCP-connect
 idiom already used for the compose healthchecks: `until echo > /dev/tcp/localhost/8081 2>/dev/null;
-do … done`. Pushed as a follow-up commit on the same PR; awaiting the next CI run.
+do … done`. Pushed as a follow-up commit on the same PR.
+
+**Second real CI run caught a second, also genuine, also self-inflicted defect.** The proxy-wait
+fix worked - the job reached the `RocketMQ Tests` step - which then failed broadly: **105 total,
+first TFM pass 88 passed/15 failed/2 skipped, second TFM pass 81 passed/22 failed/2 skipped**, with
+message-ID mismatches (`Assert.Equal() Failure: Values differ`, completely unrelated expected/actual
+GUIDs) and `Sequence contains no matching element` on ordinary tests that pass trivially and fast
+locally (e.g. `When_posting_a_message_via_the_messaging_gateway_should_be_received`, 50ms locally).
+Cause: the `RocketMQ Tests` step's `dotnet test` had no `--framework`, so it ran **both net9.0 and
+net10.0 sequentially against the same live broker and the same fixed per-behaviour topic names** -
+exactly the "re-run against the same broker without tearing the stack down" pollution mode this
+bugfix's own Confirm phase documented as unsafe (Scope Notes, above). The second TFM pass showing
+more failures than the first (22 vs. 15) is consistent with pollution compounding on the second
+pass. `gcp-emulator-ci` and the GCP Pull jobs already pin `--framework net10.0` for the same
+reason, but that convention was omitted by oversight when the `rocketmq-ci` step was written.
+Fixed by adding `--framework net10.0` to match that established convention. Pushed as a second
+follow-up commit; awaiting the next CI run.
+
+**Both of these were authoring gaps in this PR's own `ci.yml` job, not design flaws in causes A or
+B's actual fix** - the compose file and its healthchecks/sequencing were never at fault in either
+case. Mentioned here in full because the pattern is worth naming: a lesson learned once locally
+(curl vs. a non-HTTP RocketMQ port; one TFM only against live infra) has to be applied everywhere
+the same risk recurs, not just where it was first found.
 
 ### New finding, out of scope — native delayed-delivery defect
 

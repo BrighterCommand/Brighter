@@ -893,8 +893,13 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
 
+      # --framework net10.0: every generated test uses a fixed topic name, so running both TFMs
+      # in turn against this same live broker is a re-run without tearing the stack down, which
+      # pollutes every topic's second pass (confirmed live: cross-run message-ID mismatches on
+      # the net9.0 → net10.0 transition). Pinned to one TFM, matching gcp-emulator-ci and the GCP
+      # Pull jobs for the same reason.
       - name: RocketMQ Tests
-        run: dotnet test ./tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --framework net10.0
 
       - name: Tear down the RocketMQ stack
         if: always()
