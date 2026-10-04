@@ -55,10 +55,12 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
     {
         var azureServiceBusSubscription = GetAndCheckSubscription(subscription);
 
-        IAmAMessageConsumerSync messageConsumer =
-            _azureServiceBusConsumerFactory.Create(azureServiceBusSubscription);
+        var messageConsumer =
+            (AzureServiceBusConsumer)_azureServiceBusConsumerFactory.Create(azureServiceBusSubscription);
 
-        return new AzureServiceBusChannel(subscription, (AzureServiceBusConsumer)messageConsumer);
+        BrighterAsyncContext.Run(() => messageConsumer.EnsureChannelExistsAsync());
+
+        return new AzureServiceBusChannel(subscription, messageConsumer);
     }
 
     /// <summary>
@@ -71,10 +73,12 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
     {
         var azureServiceBusSubscription = GetAndCheckSubscription(subscription);
 
-        IAmAMessageConsumerAsync messageConsumer =
-            _azureServiceBusConsumerFactory.CreateAsync(azureServiceBusSubscription);
+        var messageConsumer =
+            (AzureServiceBusConsumer)_azureServiceBusConsumerFactory.CreateAsync(azureServiceBusSubscription);
 
-        return new AzureServiceBusChannelAsync(subscription, (AzureServiceBusConsumer)messageConsumer);
+        BrighterAsyncContext.Run(() => messageConsumer.EnsureChannelExistsAsync());
+
+        return new AzureServiceBusChannelAsync(subscription, messageConsumer);
     }
 
     /// <summary>
@@ -86,8 +90,21 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
     /// <exception cref="ConfigurationException">Thrown when the subscription is incorrect</exception>
     public Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription,
         CancellationToken ct = default)
-        => Task.FromResult(CreateAsyncChannel(subscription));
-    
+    {
+        var azureServiceBusSubscription = GetAndCheckSubscription(subscription);
+        return CreateAsyncChannelAsync(azureServiceBusSubscription);
+    }
+
+    private async Task<IAmAChannelAsync> CreateAsyncChannelAsync(AzureServiceBusSubscription subscription)
+    {
+        var messageConsumer =
+            (AzureServiceBusConsumer)_azureServiceBusConsumerFactory.CreateAsync(subscription);
+
+        await messageConsumer.EnsureChannelExistsAsync();
+
+        return new AzureServiceBusChannelAsync(subscription, messageConsumer);
+    }
+
     private AzureServiceBusSubscription GetAndCheckSubscription(Subscription subscription)
     {
         if (subscription is not AzureServiceBusSubscription azureServiceBusSubscription)

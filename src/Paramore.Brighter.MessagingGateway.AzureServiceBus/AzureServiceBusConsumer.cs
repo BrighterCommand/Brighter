@@ -417,6 +417,12 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
     protected abstract Task EnsureChannelAsync();
 
+    /// <summary>
+    /// Provisions (or validates) the queue or subscription this consumer reads from, honouring
+    /// <see cref="Subscription.MakeChannels"/>, so that a channel factory can do so before handing out a channel.
+    /// </summary>
+    internal Task EnsureChannelExistsAsync() => EnsureChannelAsync();
+
     private void HandleAsbException(ServiceBusException ex, string messageId)
     {
         if (ex.Reason == ServiceBusFailureReason.MessageLockLost)
