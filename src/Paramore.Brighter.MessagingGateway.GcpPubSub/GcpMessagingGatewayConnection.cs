@@ -31,6 +31,11 @@ public class GcpMessagingGatewayConnection
     /// Action to configure the <see cref="PublisherClientBuilder"/> used to publish messages to a topic.
     /// This allows for advanced customization of the underlying publishing client.
     /// </summary>
+    /// <remarks>
+    /// Runs for every publication, before the publication's own <see cref="GcpPublication.PublisherClientConfiguration"/>,
+    /// so the publication's configuration wins where both set the same property. After both have run, Brighter enables
+    /// message ordering for a publication with <see cref="GcpPublication.EnableMessageOrdering"/> set.
+    /// </remarks>
     public Action<PublisherClientBuilder>? PublisherConfiguration { get; set; }
     
     /// <summary>
@@ -40,9 +45,15 @@ public class GcpMessagingGatewayConnection
     public Action<SubscriberServiceApiClientBuilder>? SubscriptionManagerConfiguration { get; set; }
     
     /// <summary>
-    /// Action to configure the <see cref="SubscriberClientBuilder"/> used for pull mode message consumption.
-    /// This allows for advanced customization of the underlying subscribe client.
+    /// Action to configure the <see cref="SubscriberClientBuilder"/> used for stream mode message consumption.
+    /// This allows for advanced customization of the underlying streaming subscriber client.
     /// </summary>
+    /// <remarks>
+    /// Runs for every stream subscription, before the subscription's own
+    /// <see cref="GcpPubSubSubscription.StreamingConfiguration"/>, so the subscription's configuration wins where both
+    /// set the same property. Brighter creates the builder's <c>Settings</c> before either runs, and sets the flow
+    /// control limits after both have run.
+    /// </remarks>
     public Action<SubscriberClientBuilder>? StreamConfiguration { get; set; }
     
     /// <summary>
