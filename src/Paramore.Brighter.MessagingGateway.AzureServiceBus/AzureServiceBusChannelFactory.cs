@@ -82,6 +82,9 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
         IAmAMessageConsumerAsync messageConsumer =
             _azureServiceBusConsumerFactory.CreateAsync(azureServiceBusSubscription);
 
+        if (messageConsumer is AzureServiceBusConsumer azureServiceBusConsumer)
+            BrighterAsyncContext.Run(() => azureServiceBusConsumer.EnsureChannelExistsAsync());
+
         return new ChannelAsync(
             channelName: subscription.ChannelName,
             routingKey: subscription.RoutingKey,
