@@ -1,7 +1,7 @@
 # Bugfix: GCP Purge sends a Seek with no subscription and leaves the stream's local buffer in place
 
 **Linked Issue**: #4508
-**Status**: Confirmed
+**Status**: Tested
 
 ## Symptom
 - **Observed (claimed, unverified):** `Purge`/`PurgeAsync` on a GCP Pub/Sub channel may not remove messages.
@@ -276,6 +276,22 @@ real Pub/Sub.
   - real Pub/Sub: `Invalid resource name given (name=)`
 - GREEN after the fix: 2/2 in each of 5 emulator runs and 5 real Pub/Sub runs. So far there's no sign of the
   Seek's eventual consistency, with no delay between `Purge` and `Receive`.
+
+**Behaviour 2: purging a Stream channel clears the published messages, including those already buffered locally
+(H1 for Stream, and H2).** Approved 2026-10-04. The user chose one behaviour with two fixes, because on a stream
+the client buffers messages as soon as they are published, so the Seek fix cannot be tested apart from the drain.
+The user also chose drain rule (b): drain only messages published before the purge started, Ack them, and put
+later ones back.
+- `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream/When_a_gcp_stream_channel_is_purged_should_receive_no_message_published_before_the_purge.cs`
+  (sync, `GcpStreamPurgeTests`, Reactor)
+- `…/When_a_gcp_stream_channel_is_purged_should_receive_no_message_published_before_the_purge_async.cs`
+  (async, `GcpStreamPurgeAsyncTests`, Proactor)
+- Setup: `bufferSize: 3`; publish three messages (a fresh id each); `Receive` and `Acknowledge` the first, which
+  shows the client is streaming. Then `Purge`, `Receive` with a 10 s window, and assert `MT_NONE`.
+- **RED 1** (no fix), 0/2 on both servers: `Purge` threw `InvalidArgument`, as in behaviour 1.
+- **RED 2** (Seek fix only), 0/2 on both servers: `Expected: MT_NONE, Actual: MT_EVENT`. A buffered pre-purge
+  message came back, which is H2.
+- GREEN after the drain: 2/2 in each of 5 emulator runs and 5 real Pub/Sub runs.
 
 ## Fix
 _(left blank — filled by /bugfix:fix)_

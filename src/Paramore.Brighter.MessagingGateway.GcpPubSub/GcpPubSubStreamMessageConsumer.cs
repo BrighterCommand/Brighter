@@ -187,10 +187,13 @@ public partial class GcpPubSubStreamMessageConsumer(
 
             Log.PurgeStart(s_logger, subscriptionName.ToString());
 
+            var purgeStarted = timeProvider.GetUtcNow();
             client.Seek(new SeekRequest
             {
-                Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1))
+                SubscriptionAsSubscriptionName = subscriptionName,
+                Time = Timestamp.FromDateTimeOffset(purgeStarted.AddMinutes(1))
             });
+            consumer.PurgeBuffered(purgeStarted);
 
             Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }
@@ -216,9 +219,15 @@ public partial class GcpPubSubStreamMessageConsumer(
 
             Log.PurgeStart(s_logger, subscriptionName.ToString());
 
+            var purgeStarted = timeProvider.GetUtcNow();
             await client.SeekAsync(
-                new SeekRequest { Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)) },
+                new SeekRequest
+                {
+                    SubscriptionAsSubscriptionName = subscriptionName,
+                    Time = Timestamp.FromDateTimeOffset(purgeStarted.AddMinutes(1))
+                },
                 cancellationToken);
+            consumer.PurgeBuffered(purgeStarted);
 
             Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }

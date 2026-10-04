@@ -82,6 +82,38 @@ public class GcpStreamConsumer(SubscriberClient client)
             await client.DisposeAsync();
         }
     }
+
+    /// <summary>
+    /// Removes from the local channel every buffered message published before <paramref name="publishedBefore"/>,
+    /// acknowledging each one, and puts the rest back.
+    /// </summary>
+    /// <remarks>
+    /// A Seek purges only the subscription's backlog on the service. Messages the streaming client has already
+    /// delivered into the channel are outside it, so a purge must remove them here too. They are acknowledged, not
+    /// dropped: an unsettled message keeps its flow-control slot and its lease is extended for ever. Messages
+    /// published from <paramref name="publishedBefore"/> on are kept, as the service would still deliver them.
+    /// </remarks>
+    /// <param name="publishedBefore">The time the purge started; older buffered messages are purged.</param>
+    public void PurgeBuffered(DateTimeOffset publishedBefore)
+    {
+        var kept = new List<GcpStreamMessage>();
+        while (_channel.Reader.TryRead(out var message))
+        {
+            if (message.Message.PublishTime.ToDateTimeOffset() < publishedBefore)
+            {
+                message.Accepted();
+            }
+            else
+            {
+                kept.Add(message);
+            }
+        }
+
+        foreach (var message in kept)
+        {
+            _channel.Writer.TryWrite(message);
+        }
+    }
 }
 
 
