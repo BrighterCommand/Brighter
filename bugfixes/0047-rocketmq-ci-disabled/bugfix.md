@@ -436,10 +436,19 @@ failed on the live-verified stack above (`Assert.NotEqual() Failure: Expected: N
 MT_NONE` — a message sent with a native RocketMQ delay never arrived). This is **not** cause A, B or
 C, and was never visible before: the full suite has never run against a correctly-sequenced live
 broker until this fix. **Decision (discussed with the user): land causes A and B as scoped; do not
-fold this into the current fix.** Flagged here for a separate `/bugfix:triage` — it covers FR-9
-(native delayed delivery), one of the ledger's nine `Fixed (#4240)` RocketMQ cells, so it is worth
-its own diagnosis rather than a speculative fix bundled into this one. The reinstated `rocketmq-ci`
-job will show 2 failing tests on its first real run until that separate bugfix lands.
+fold this into the current fix.** Flagged here for a possible separate `/bugfix:triage` — it covers
+FR-9 (native delayed delivery), one of the ledger's nine `Fixed (#4240)` RocketMQ cells.
+
+**Update: did not reproduce on the real `rocketmq-ci` run (third CI attempt, after the two `ci.yml`
+fixes above) — both variants passed, 5s each, in a fully green 105/103/0/2 run.** This defect was
+reproducible twice, consistently, on this machine's local Docker stack (`platform: linux/amd64`
+under ARM emulation - the same emulation the Confirm phase's evidence already flagged as ~8s/topic
+vs. an unverified native-runner speed). The most likely explanation is that it is a timing artifact
+of that local emulation rather than a genuine cross-environment RocketMQ defect - native delayed
+delivery may simply need longer than the emulated environment allows to land within the test's
+receive window. **Not escalating to a new bugfix on current evidence** - there is no live CI failure
+to drive one, and a fix chased from an unreproduced-on-the-target-environment symptom risks fixing
+the wrong thing. Worth a note if it resurfaces on a real run, local Apple Silicon, or under load.
 
 ### Regression test
 
@@ -450,8 +459,13 @@ binary-port defect was found — it no longer references `curl` at all, so it wa
 `&>` and (b) actually probes `broker`/`10911`, not just avoids the broken operator. Green on both
 `net9.0`/`net10.0`; the other 5 `Category=RocketMQBrokerFree` tests still pass.
 
-**Status**: Verified (causes A and B). Cause C required no change. A new, unrelated defect (native
-delayed delivery) was found during live verification and deliberately left out of scope — see above.
+**Status**: **Verified — PR #4509's real `rocketmq-ci` run is green** (105 total, 103 passed, 0
+failed, 2 skipped). Causes A and B fixed and confirmed on a real GHA runner, in addition to local
+live verification. Cause C required no change. Two further defects, both self-inflicted in this
+PR's own `ci.yml` authoring (not in causes A/B's actual design), were found and fixed across two
+follow-up commits during the real CI cycle — see the Fix section. The native-delayed-delivery defect
+found during local live verification did not reproduce on the real runner (see Fix section) and
+is not escalated to a new bugfix absent further evidence.
 
 ## Verify
 
@@ -459,17 +473,22 @@ delayed delivery) was found during live verification and deliberately left out o
   — **passed** on both `net9.0` and `net10.0`.
 - Broader suite for the touched project, `Category=RocketMQBrokerFree` (6 tests, no broker needed):
   **6/6 passed** on both TFMs — no regressions from the new test or the compose/ci.yml changes.
-- The full broker-dependent suite was exercised live as part of the Fix step, against the final
-  state of every change in this PR (the `ci.yml` edit was already in place before that run; nothing
-  in the repo has changed since): **93 total, 85 passed, 2 failed, 6 skipped**. The 2 failures are
-  the documented, out-of-scope native-delayed-delivery finding, not a regression — the same run is a
-  strict improvement over Confirm's pre-fix baseline (75 total, 42 passed, 27 failed, 6 skipped).
-  Not re-run for this Verify step since nothing has changed that would affect it; re-running would
-  cost another ~15-20 minutes to reproduce an already-known result.
-- `.github/workflows/ci.yml` parses as valid YAML (26 jobs, `rocketmq-ci` present and well-formed).
-  Cannot be exercised locally (GHA `services:`/jobs only run on a real Actions runner) — the real
-  proof is the first CI run on the pushed branch/PR, which is expected to show the same 2 failures
-  (by design, per the decision to push anyway and use the public failure to drive a follow-up fix).
+- The full broker-dependent suite was exercised live locally as part of the Fix step, against the
+  state of every compose/test change in this PR: **93 total, 85 passed, 2 failed, 6 skipped** — a
+  strict improvement over Confirm's pre-fix baseline (75/42/27/6). The 2 failures were the
+  native-delayed-delivery finding.
+- `.github/workflows/ci.yml` parsed as valid YAML throughout (26 jobs).
+- **Real CI, three attempts on PR #4509** (GHA `services:`/jobs can't be exercised any other way):
+  1. First run: failed at the proxy-readiness wait (`curl` against the proxy's gRPC/HTTP2 port
+     8081 got a real rejection, not "not ready yet") — fixed with a `/dev/tcp` TCP check.
+  2. Second run: reached the test step, failed broadly (105 total, 15 then 22 failed across the two
+     TFM passes) with cross-run message-ID pollution — `dotnet test` had no `--framework`, so
+     net9.0 and net10.0 ran sequentially against the same broker and fixed topic names. Fixed by
+     pinning `--framework net10.0`, matching `gcp-emulator-ci`'s existing convention.
+  3. Third run: **green** — 105 total, 103 passed, 0 failed, 2 skipped, including both previously-
+     failing delayed-delivery tests (5s each). Every other PR check passed except `dynamo-ci`,
+     unrelated to this work (no DynamoDB files touched) and already failing independent of this
+     branch's changes.
 
 ### Critical Files for Implementation
 - .github/workflows/ci.yml
