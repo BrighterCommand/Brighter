@@ -34,6 +34,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Actions;
 using Paramore.Brighter.BindingAttributes;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
@@ -305,6 +306,7 @@ namespace Paramore.Brighter
         /// </exception>
         public void Send<T>(T command, RequestContext? requestContext = null) where T : class, IRequest
         {
+            var requireHandler = requestContext?.ConsumeHandlerRequirement() ?? false;
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
@@ -320,7 +322,7 @@ namespace Paramore.Brighter
                 Log.BuildingSendPipelineForCommand(s_logger, command.GetType(), command.Id.Value);
                 var handlerChain = builder.Build(command, context);
 
-                AssertValidSendPipeline(command, handlerChain.Count());
+                AssertValidSendPipeline(command, handlerChain.Count(), requireHandler);
 
                 handlerChain.First().Handle(command);
             }
@@ -386,6 +388,7 @@ namespace Paramore.Brighter
         )
             where T : class, IRequest
         {
+            var requireHandler = requestContext?.ConsumeHandlerRequirement() ?? false;
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
@@ -401,7 +404,7 @@ namespace Paramore.Brighter
                 Log.BuildingSendAsyncPipelineForCommand(s_logger, command.GetType(), command.Id.Value);
                 var handlerChain = builder.BuildAsync(command, context, continueOnCapturedContext);
 
-                AssertValidSendPipeline(command, handlerChain.Count());
+                AssertValidSendPipeline(command, handlerChain.Count(), requireHandler);
                 
                 await handlerChain.First().HandleAsync(command, cancellationToken)
                     .ConfigureAwait(continueOnCapturedContext);
@@ -470,6 +473,7 @@ namespace Paramore.Brighter
         /// </remarks>
         public void Publish<T>(T @event, RequestContext? requestContext = null) where T : class, IRequest
         {
+            var requireHandler = requestContext?.ConsumeHandlerRequirement() ?? false;
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
             
@@ -489,6 +493,7 @@ namespace Paramore.Brighter
                 var handlerCount = handlerChain.Count();
 
                 Log.FoundHandlerCountForEvent(s_logger, handlerCount, @event.GetType(), @event.Id.Value);
+                AssertRequiredHandlerFound<T>(handlerCount, requireHandler);
 
                 var exceptions = new ConcurrentBag<Exception>();
                 Parallel.ForEach(handlerChain, (handleRequests) =>
@@ -589,6 +594,7 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default)
             where T : class, IRequest
         {
+            var requireHandler = requestContext?.ConsumeHandlerRequirement() ?? false;
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
@@ -608,6 +614,7 @@ namespace Paramore.Brighter
                 var handlerCount = handlerChain.Count();
 
                 Log.FoundAsyncHandlerCount(s_logger, handlerCount, @event.GetType(), @event.Id.Value);
+                AssertRequiredHandlerFound<T>(handlerCount, requireHandler);
 
                 var exceptions = new ConcurrentBag<Exception>();
 
@@ -1542,9 +1549,16 @@ namespace Paramore.Brighter
             // No-op: reflection caches are stateless and safe to share. Mediator state is instance-based since ADR 0034.
         }
 
-        private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
+        private static void AssertRequiredHandlerFound<T>(int handlerCount, bool requireHandler) where T : class, IRequest
+        {
+            if (requireHandler && handlerCount == 0)
+                throw new InvalidMessageAction($"No handler was found for request type '{typeof(T).FullName}'.");
+        }
+
+        private void AssertValidSendPipeline<T>(T command, int handlerCount, bool requireHandler) where T : class, IRequest
         {
             Log.FoundHandlerCountForCommand(s_logger, handlerCount, typeof(T), command.Id.Value);
+            AssertRequiredHandlerFound<T>(handlerCount, requireHandler);
 
             if (handlerCount > 1)
                 throw new ArgumentException(

@@ -7,7 +7,7 @@ namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 /// Represents a RocketMQ subscription configuration for Brighter integration.
 /// Implements RocketMQ's consumer group model and message visibility controls.
 /// </summary>
-public class RocketSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
+public class RocketSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport, IAmADeliveryCountingSubscription
 {
     /// <summary>
     /// Gets or sets the routing key for the dead letter queue topic.
@@ -20,6 +20,16 @@ public class RocketSubscription : Subscription, IUseBrighterDeadLetterSupport, I
     /// When set, rejected messages with <see cref="RejectionReason.Unacceptable"/> are forwarded to this topic.
     /// </summary>
     public RoutingKey? InvalidMessageRoutingKey { get; set; }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Always <c>null</c> for RocketMQ: the maximum retry count is configured server-side on the consumer
+    /// group, not on the subscription, so it is not visible to Brighter here (ADR 0077 budget-rules table).
+    /// </remarks>
+    public int? NativeRedriveLimit => null;
+
+    /// <inheritdoc/>
+    public string? DeliveryBudgetUnenforceableReason => null;
 
     /// <summary>
     /// Gets the consumer group name for RocketMQ message consumption.

@@ -125,7 +125,7 @@ public class SnsFifoMessageGatewayProvider
                 queueAttributes: new SqsAttributes(
                     type: SqsType.Fifo,
                     contentBasedDeduplication: false,
-                    redrivePolicy: new RedrivePolicy(deadLetterChannelName, 3)
+                    redrivePolicy: new RedrivePolicy(deadLetterChannelName, 5)
                 ),
                 topicAttributes: new SnsAttributes(type: SqsType.Fifo, contentBasedDeduplication: false),
                 deadLetterRoutingKey: deadLetterRoutingKey,

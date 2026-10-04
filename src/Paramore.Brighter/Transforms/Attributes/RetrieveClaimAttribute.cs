@@ -38,7 +38,8 @@ public class RetrieveClaimAttribute : UnwrapWithAttribute
     /// Retrieves 'luggage' matching a claim id from storage
     /// </summary>
     /// <param name="step">The order in which transformations are applied</param>
-    /// <param name="retain">Should we retain the 'luggage' in the store once deleted</param>
+    /// <param name="retain">Whether to keep the luggage after processing. When false, a message pump deletes
+    /// it after successful dispatch and final acknowledgement; standalone unwrapping deletes it immediately.</param>
     public RetrieveClaimAttribute(int step, bool retain = false) : base(step)
     {
         _retain = retain;

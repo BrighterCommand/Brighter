@@ -35,6 +35,8 @@ public bool Reject(Message message, MessageRejectionReason? reason) => Requeue(m
 
 However, `Requeue()` itself is effectively a no-op — the `ChangeInvisibleDuration` SDK call is commented out pending the next RocketMQ C# SDK version. This means rejected messages simply time out after the invisibility period and reappear on the queue, creating an infinite retry loop for messages that will never succeed.
 
+> **Note (2026-10-03, bugfix 0025, #4353):** `Requeue()` and `Nack()` now call `ChangeInvisibleDuration`, which works on RocketMQ.Client 5.2.1. `Requeue` sets the invisible duration to the requeue delay, and `Nack` sets it to zero. The context above describes the code when this ADR was decided.
+
 ### Message Lifecycle Model
 
 RocketMQ uses a **visibility timeout** pattern (similar to PostgreSQL and SQS):

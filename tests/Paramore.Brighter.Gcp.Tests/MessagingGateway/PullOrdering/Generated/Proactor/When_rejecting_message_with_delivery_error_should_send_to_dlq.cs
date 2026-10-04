@@ -41,7 +41,7 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncL
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — reject with delivery error to DLQ not yet conformant for GCP / PullOrdering (maintainer sign-off)")]
+    [Fact]
     public async Task When_rejecting_message_with_delivery_error_should_send_to_dlq_async()
     {
         // Arrange
@@ -60,10 +60,13 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncL
         await _producer.SendAsync(message);
 
         // Act
-        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
-        await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
+        var rejected = await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
+
+        // Assert — RejectAsync returns true when the copy was routed
+        Assert.True(rejected, "RejectAsync should return true when the message was routed");
 
         // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
         var dlqMessage = new Message();
@@ -79,6 +82,7 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncL
         }
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
 
         // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
         // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.

@@ -55,18 +55,12 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
     {
         var azureServiceBusSubscription = GetAndCheckSubscription(subscription);
 
-        IAmAMessageConsumerSync messageConsumer =
-            _azureServiceBusConsumerFactory.Create(azureServiceBusSubscription);
+        var messageConsumer =
+            (AzureServiceBusConsumer)_azureServiceBusConsumerFactory.Create(azureServiceBusSubscription);
 
-        if (messageConsumer is AzureServiceBusConsumer azureServiceBusConsumer)
-            BrighterAsyncContext.Run(() => azureServiceBusConsumer.EnsureChannelExistsAsync());
+        BrighterAsyncContext.Run(() => messageConsumer.EnsureChannelExistsAsync());
 
-        return new Channel(
-            channelName: subscription.ChannelName,
-            routingKey: subscription.RoutingKey,
-            messageConsumer: messageConsumer,
-            maxQueueLength: subscription.BufferSize
-        );
+        return new AzureServiceBusChannel(subscription, messageConsumer);
     }
 
     /// <summary>
@@ -79,18 +73,12 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
     {
         var azureServiceBusSubscription = GetAndCheckSubscription(subscription);
 
-        IAmAMessageConsumerAsync messageConsumer =
-            _azureServiceBusConsumerFactory.CreateAsync(azureServiceBusSubscription);
+        var messageConsumer =
+            (AzureServiceBusConsumer)_azureServiceBusConsumerFactory.CreateAsync(azureServiceBusSubscription);
 
-        if (messageConsumer is AzureServiceBusConsumer azureServiceBusConsumer)
-            BrighterAsyncContext.Run(() => azureServiceBusConsumer.EnsureChannelExistsAsync());
+        BrighterAsyncContext.Run(() => messageConsumer.EnsureChannelExistsAsync());
 
-        return new ChannelAsync(
-            channelName: subscription.ChannelName,
-            routingKey: subscription.RoutingKey,
-            messageConsumer: messageConsumer,
-            maxQueueLength: subscription.BufferSize
-        );
+        return new AzureServiceBusChannelAsync(subscription, messageConsumer);
     }
 
     /// <summary>
@@ -109,18 +97,12 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
 
     private async Task<IAmAChannelAsync> CreateAsyncChannelAsync(AzureServiceBusSubscription subscription)
     {
-        IAmAMessageConsumerAsync messageConsumer =
-            _azureServiceBusConsumerFactory.CreateAsync(subscription);
+        var messageConsumer =
+            (AzureServiceBusConsumer)_azureServiceBusConsumerFactory.CreateAsync(subscription);
 
-        if (messageConsumer is AzureServiceBusConsumer azureServiceBusConsumer)
-            await azureServiceBusConsumer.EnsureChannelExistsAsync();
+        await messageConsumer.EnsureChannelExistsAsync();
 
-        return new ChannelAsync(
-            channelName: subscription.ChannelName,
-            routingKey: subscription.RoutingKey,
-            messageConsumer: messageConsumer,
-            maxQueueLength: subscription.BufferSize
-        );
+        return new AzureServiceBusChannelAsync(subscription, messageConsumer);
     }
 
     private AzureServiceBusSubscription GetAndCheckSubscription(Subscription subscription)

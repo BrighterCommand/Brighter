@@ -45,7 +45,7 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — Nack redelivers not yet conformant for GCP / Stream (maintainer sign-off)")]
+    [Fact]
     public async Task When_nacking_a_message_it_should_be_redelivered_async()
     {
         // Arrange
@@ -84,10 +84,15 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
         }
 
         Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
+        // R-1 vs R-23 (ADR 0077): the redelivered count must be >= the sent count; normalise
+        // it back so the transport's equality assertion can still compare the rest of the header.
+        Assert.True(redelivered.Header.HandledCount >= message.Header.HandledCount,
+            $"Redelivered HandledCount {redelivered.Header.HandledCount} must be >= sent {message.Header.HandledCount} (R-1)");
+        redelivered.Header.HandledCount = message.Header.HandledCount;
         _messageAssertion.Assert(message, redelivered);
     }
 
-    [Fact(Skip = "Deferred: #4240 — Nack redelivers not yet conformant for GCP / Stream (maintainer sign-off)")]
+    [Fact]
     public async Task When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second_async()
     {
         // Arrange — two queued messages: the first is nacked and must come back, and the one

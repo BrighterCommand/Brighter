@@ -22,7 +22,7 @@
       "LedgerKey": "GCP / PullOrdering",
       "HasSupportToPublishConfirmation": false,
       "HasSupportToValidateBrokerExistence": true,
-      "ReceiveMessageTimeoutInMilliseconds": 5000
+      "ReceiveMessageTimeoutInMilliseconds": 15000
     },
     "Stream": {
       "Publication": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPublication",

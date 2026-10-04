@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
+using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
@@ -39,9 +40,9 @@ public class InMemoryServiceBusAdministrationClient : ServiceBusAdministrationCl
 {
     private readonly HashSet<string> _topics = [];
 
-    public List<(string Topic, string Subscription)> CreatedSubscriptions { get; } = [];
+    public Dictionary<string, CreateQueueOptions> Queues { get; } = new();
 
-    public List<string> CreatedQueues { get; } = [];
+    public List<(string Topic, string Subscription)> CreatedSubscriptions { get; } = [];
 
     public int RequestCount { get; private set; }
 
@@ -61,15 +62,26 @@ public class InMemoryServiceBusAdministrationClient : ServiceBusAdministrationCl
     public override Task<Response<bool>> QueueExistsAsync(string name, CancellationToken cancellationToken = default)
     {
         RequestCount++;
-        return Task.FromResult(Response.FromValue(CreatedQueues.Contains(name), null!));
+        return Task.FromResult(Response.FromValue(Queues.ContainsKey(name), null!));
     }
 
     public override Task<Response<QueueProperties>> CreateQueueAsync(CreateQueueOptions options,
         CancellationToken cancellationToken = default)
     {
         RequestCount++;
-        CreatedQueues.Add(options.Name);
-        return Task.FromResult(Response.FromValue<QueueProperties>(null!, null!));
+        Queues.Add(options.Name, options);
+        var properties = ServiceBusModelFactory.QueueProperties(
+            name: options.Name,
+            lockDuration: options.LockDuration,
+            maxSizeInMegabytes: options.MaxSizeInMegabytes,
+            requiresSession: options.RequiresSession,
+            defaultMessageTimeToLive: options.DefaultMessageTimeToLive,
+            autoDeleteOnIdle: options.AutoDeleteOnIdle,
+            deadLetteringOnMessageExpiration: options.DeadLetteringOnMessageExpiration,
+            duplicateDetectionHistoryTimeWindow: options.DuplicateDetectionHistoryTimeWindow,
+            maxDeliveryCount: options.MaxDeliveryCount,
+            userMetadata: options.UserMetadata ?? string.Empty);
+        return Task.FromResult(Response.FromValue(properties, null!));
     }
 
     public override Task<Response<TopicProperties>> CreateTopicAsync(CreateTopicOptions options,

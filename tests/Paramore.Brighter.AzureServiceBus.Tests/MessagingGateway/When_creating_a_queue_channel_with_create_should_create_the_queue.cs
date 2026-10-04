@@ -52,6 +52,6 @@ public class AzureServiceBusQueueChannelProvisioningTests
         using var channel = factory.CreateSyncChannel(subscription);
 
         // Assert
-        Assert.Contains("orders", administrationClient.CreatedQueues);
+        Assert.Contains("orders", administrationClient.Queues.Keys);
     }
 }

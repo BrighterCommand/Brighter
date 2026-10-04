@@ -45,7 +45,8 @@ public class AzureBlobLockingProviderOptions(
     public TimeSpan LeaseValidity { get; init; } = TimeSpan.FromMinutes(1);
     
     /// <summary>
-    /// The function to provide the location to store the locks inside of the Blob container
+    /// Gets or sets the function that selects the lock location inside the blob container.
     /// </summary>
-    public Func<string, string> StorageLocationFunc = (resource) => $"lock-{resource}";
+    /// <value>A function mapping a normalized resource name to a blob name. Defaults to prefixing the resource with <c>lock-</c>.</value>
+    public Func<string, string> StorageLocationFunc { get; set; } = (resource) => $"lock-{resource}";
 }

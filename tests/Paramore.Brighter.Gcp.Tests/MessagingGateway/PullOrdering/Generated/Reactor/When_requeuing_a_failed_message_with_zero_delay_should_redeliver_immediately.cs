@@ -55,7 +55,7 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediately 
         _producer.Send(message);
 
         // Act — receive the message and requeue it with an explicit TimeSpan.Zero
-        var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(15000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         var requeued = _channel.Requeue(received, TimeSpan.Zero);
@@ -83,6 +83,11 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediately 
         Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
         Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5),
             $"Expected redelivery within 5 s of Requeue(M, TimeSpan.Zero) returning; elapsed: {stopwatch.Elapsed}");
+        // R-1 vs R-23 (ADR 0077): the redelivered count must be >= the sent count; normalise
+        // it back so the transport's equality assertion can still compare the rest of the header.
+        Assert.True(redelivered.Header.HandledCount >= message.Header.HandledCount,
+            $"Redelivered HandledCount {redelivered.Header.HandledCount} must be >= sent {message.Header.HandledCount} (R-1)");
+        redelivered.Header.HandledCount = message.Header.HandledCount;
         _messageAssertion.Assert(message, redelivered);
     }
 }

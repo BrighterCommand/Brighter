@@ -43,7 +43,7 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync 
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — requeue with delay not yet conformant for RocketMQ / RocketMQMessagingGateway (maintainer sign-off)")]
+    [Fact]
     public async Task When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay_async()
     {
         // Arrange
@@ -88,6 +88,11 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync 
         }
 
         Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
+        // R-1 vs R-23 (ADR 0077): the redelivered count must be >= the sent count; normalise
+        // it back so the transport's equality assertion can still compare the rest of the header.
+        Assert.True(redelivered.Header.HandledCount >= message.Header.HandledCount,
+            $"Redelivered HandledCount {redelivered.Header.HandledCount} must be >= sent {message.Header.HandledCount} (R-1)");
+        redelivered.Header.HandledCount = message.Header.HandledCount;
         _messageAssertion.Assert(message, redelivered);
     }
 }

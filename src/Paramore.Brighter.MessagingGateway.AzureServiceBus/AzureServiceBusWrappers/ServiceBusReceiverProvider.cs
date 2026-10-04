@@ -21,13 +21,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    internal sealed class ServiceBusReceiverProvider(IServiceBusClientProvider clientProvider) : IServiceBusReceiverProvider
+    internal sealed class ServiceBusReceiverProvider(IServiceBusClientProvider clientProvider, TimeSpan maxAutoLockRenewalDuration) : IServiceBusReceiverProvider
     {
         private readonly ServiceBusClient _client = clientProvider.GetServiceBusClient();
 
@@ -45,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 try
                 {
                     return new ServiceBusReceiverWrapper(await _client.AcceptNextSessionAsync(queueName,
-                        new ServiceBusSessionReceiverOptions() {ReceiveMode = ServiceBusReceiveMode.PeekLock}));
+                        new ServiceBusSessionReceiverOptions() {ReceiveMode = ServiceBusReceiveMode.PeekLock}), maxAutoLockRenewalDuration);
                 }
                 catch (ServiceBusException e)
                 {
@@ -61,7 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             else
             {
                 return new ServiceBusReceiverWrapper(_client.CreateReceiver(queueName,
-                    new ServiceBusReceiverOptions { ReceiveMode = ServiceBusReceiveMode.PeekLock }));
+                    new ServiceBusReceiverOptions { ReceiveMode = ServiceBusReceiveMode.PeekLock }), maxAutoLockRenewalDuration);
             }
         }
 
@@ -80,7 +81,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 try
                 {
                     return new ServiceBusReceiverWrapper(await _client.AcceptNextSessionAsync(topicName, subscriptionName,
-                        new ServiceBusSessionReceiverOptions() {ReceiveMode = ServiceBusReceiveMode.PeekLock}));
+                        new ServiceBusSessionReceiverOptions() {ReceiveMode = ServiceBusReceiveMode.PeekLock}), maxAutoLockRenewalDuration);
                 }
                 catch (ServiceBusException e)
                 {
@@ -96,7 +97,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             else
             {
                 return new ServiceBusReceiverWrapper(_client.CreateReceiver(topicName, subscriptionName,
-                    new ServiceBusReceiverOptions { ReceiveMode = ServiceBusReceiveMode.PeekLock }));
+                    new ServiceBusReceiverOptions { ReceiveMode = ServiceBusReceiveMode.PeekLock }), maxAutoLockRenewalDuration);
             }
         }
     }

@@ -1,0 +1,131 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
+#nullable enable
+
+using System;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.MessagingGateway.GcpPubSub;
+using Xunit;
+
+namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
+
+/// <summary>
+/// Async (Proactor) twin of <see cref="GcpPullBudgetMinusOneNeverRejectsReactorTests"/> (NFR-8).
+/// Characterises R-6 / AC-5 on the GCP pull consumer: with <c>requeueCount: -1</c>, the budget is
+/// disabled, <c>DiscardRequeuedMessagesEnabled()</c> (<c>MessagePump.cs:171</c>) returns
+/// <c>false</c>, the message is requeued indefinitely, and no <c>DeliveryError</c> rejection is
+/// ever issued. After a 60-second run the dispatch count exceeds 3 and the Brighter DLQ is empty.
+/// This is the "-1" clause of AC-35 and is unguarded — it holds regardless of R-13's branch,
+/// because the guard lives in the pump (<c>MessagePump.cs:171</c>), not in the GCP consumers.
+/// </summary>
+[Trait("Category", "GcpPubSubPull")]
+[Collection("Pull")]
+public class GcpPullBudgetMinusOneNeverRejectsProactorTests
+{
+    /// <summary>
+    /// With <c>requeueCount: -1</c>, no native <c>DeadLetterPolicy</c>, and a Brighter DLQ routing
+    /// key, the pump runs for 60 s. The dispatch count exceeds 3, no <c>DeliveryError</c> rejection
+    /// is issued, and the Brighter DLQ is empty (R-6, AC-5).
+    /// </summary>
+    [Fact]
+    public async Task When_gcp_budget_is_minus_one_should_never_reject_async()
+    {
+        // Arrange
+        ConformanceDeferredPump.ResetDispatchCount();
+
+        var provider = new GcpPullMessageGatewayProvider();
+
+        var routingKey = provider.GetOrCreateRoutingKey();
+        var channelName = provider.GetOrCreateChannelName();
+        var dlqRoutingKey = new RoutingKey($"{routingKey.Value}.DLQ");
+
+        // Subscription: budget = -1 (disabled), no native DeadLetterPolicy, with a Brighter DLQ
+        // routing key. DiscardRequeuedMessagesEnabled() returns false, so HandledCountReached is
+        // never called and the message is requeued indefinitely.
+        var subscription = new GcpPubSubSubscription<ConformanceDeferredCommand>(
+            subscriptionName: new SubscriptionName(channelName),
+            channelName: channelName,
+            routingKey: routingKey,
+            messagePumpType: MessagePumpType.Proactor,
+            ackDeadlineSeconds: 10,
+            requeueCount: -1,
+            makeChannels: OnMissingChannel.Create,
+            subscriptionMode: SubscriptionMode.Pull,
+            deadLetterRoutingKey: dlqRoutingKey);
+
+        var publication = provider.CreatePublication(routingKey);
+
+        IAmAMessageProducerAsync? producer = null;
+        IAmAChannelAsync? channel = null;
+
+        try
+        {
+            producer = await provider.CreateProducerAsync(publication);
+            // CreateChannelAsync pre-provisions the Brighter DLQ topic/subscription because
+            // DeadLetterRoutingKey is set and MakeChannels == Create (ADR 0078 step 5), so there is
+            // somewhere to dead-letter to — and somewhere to read from below — even under the RED
+            // mutation.
+            channel = await provider.CreateChannelAsync(subscription);
+
+            var cmd = new ConformanceDeferredCommand { Value = "budget minus one never rejects test" };
+            var message = new Message(
+                new MessageHeader(cmd.Id, routingKey, MessageType.MT_COMMAND),
+                new MessageBody(JsonSerializer.Serialize(cmd, JsonSerialisationOptions.Options)));
+
+            await producer.SendAsync(message);
+
+            // Act — run the pump with budget -1; pump for 60 s, then quit and await it.
+            // The pull consumer's RequeueAsync issues ModifyAckDeadlineAsync(..., 0), which makes
+            // the message immediately redeliverable, so the dispatch count will far exceed 3 in
+            // 60 s. Under the RED mutation (DiscardRequeuedMessagesEnabled returns true),
+            // HandledCountReached(-1) is true on the first deferral (HandledCount 0 >= -1), so
+            // dispatch count stays at 1 and the DLQ receives the message — the test then fails on
+            // the "dispatch count > 3" assertion.
+            var pump = ConformanceDeferredPump.CreateProactor(channel, -1, TimeSpan.FromMilliseconds(5000));
+            var pumping = Task.Factory.StartNew(() => pump.Run(), TaskCreationOptions.LongRunning);
+
+            await Task.Delay(TimeSpan.FromSeconds(60));
+
+            channel.Enqueue(MessageFactory.CreateQuitMessage(routingKey));
+            await pumping;
+
+            var key = ConformanceDeferredPump.KeyOf(message);
+            var dispatchCount = ConformanceDeferredPump.GetDispatchCount(key);
+
+            // Assert — R-6 / AC-5: handler invoked more than 3 times with budget -1
+            Assert.True(dispatchCount > 3,
+                $"Expected dispatch count > 3 after 60 s with requeueCount: -1, but was {dispatchCount}");
+
+            // No DeliveryError rejection was issued — the Brighter DLQ must be empty
+            var dlqMessage = await provider.GetMessageFromDeadLetterQueueAsync(subscription);
+            Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        }
+        finally
+        {
+            await provider.CleanUpAsync(producer, channel, []);
+        }
+    }
+}

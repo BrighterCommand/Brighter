@@ -62,6 +62,7 @@ public class RocketMqMessageGatewayProvider
         ["When_requeuing_a_failed_message_should_receive_message_again"] = "gen_r_rq_again",
         ["When_requeuing_a_failed_message_with_delay_should_receive_message_again"] = "gen_r_rq_delay_again",
         ["When_requeuing_a_failed_message_with_zero_delay_should_redeliver_immediately"] = "gen_r_rq_zero",
+        ["When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay"] = "gen_r_rq_after",
         ["When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue"] = "gen_r_exhaust",
         ["When_nacking_a_message_it_should_be_redelivered"] = "gen_r_nack",
         ["When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second"] = "gen_r_nack2",
@@ -87,6 +88,7 @@ public class RocketMqMessageGatewayProvider
         ["When_requeuing_a_failed_message_should_receive_message_again_async"] = "gen_p_rq_again",
         ["When_requeuing_a_failed_message_with_delay_should_receive_message_again_async"] = "gen_p_rq_delay_again",
         ["When_requeuing_a_failed_message_with_zero_delay_should_redeliver_immediately_async"] = "gen_p_rq_zero",
+        ["When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay_async"] = "gen_p_rq_after",
         ["When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue_async"] = "gen_p_exhaust",
         ["When_nacking_a_message_it_should_be_redelivered_async"] = "gen_p_nack",
         ["When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second_async"] = "gen_p_nack2",
@@ -130,10 +132,10 @@ public class RocketMqMessageGatewayProvider
         };
     }
 
-    // Requeue/Nack are no-ops on RocketMQ; a message redelivers when its invisibility lease expires
-    // (like a Postgres/SQS visibility lease). RocketMQ enforces a 10 s minimum invisibility, so plain
-    // requeue / nack redelivery (30 s ceiling) is observable but a zero-delay "redeliver
-    // within 5 s" is not — that needs the commented-out ChangeInvisibleDuration (the delay gap).
+    // The receive-time invisibility lease. Requeue and Nack change it on the broker
+    // (ChangeInvisibleDuration), so a requeued or nacked message comes back after the requested delay,
+    // or at once for a zero delay, not when this lease lapses. An unsettled message still comes back
+    // when it lapses.
     private static readonly TimeSpan s_invisibilityTimeout = TimeSpan.FromSeconds(10);
 
     // Bound the consumer poll below the canonical delay (5 s) so the delayed-send before-D arm
@@ -141,12 +143,12 @@ public class RocketMqMessageGatewayProvider
     // long-polls for ReceiveMessageTimeout and ignores the per-call timeout, so this is the real bound.
     private static readonly TimeSpan s_receiveMessageTimeout = TimeSpan.FromSeconds(2);
 
-    // The requeue-exhaustion and delayed-requeue-sibling tests observe plain-requeue redelivery, which
-    // RocketMQ honours only through the invisibility lease (10 s enforced minimum). Their post-requeue
-    // receive arms are single polls with no inner retry loop, so the consumer poll must span the lease —
-    // a 2 s poll would miss the ~10 s redelivery and report a false MT_NONE. Give those topics a longer
-    // poll; delayed-send topics keep the short 2 s poll so their before-D arm still yields MT_NONE inside
-    // the 5 s delay window. (Genuine redelivery is exercised; only the observation window is widened.)
+    // The requeue-exhaustion and delayed-requeue-sibling tests observe redelivery through single polls
+    // with no inner retry loop. They were written when Requeue was a broker no-op and redelivery came only
+    // when the 10 s lease lapsed, so those topics keep a poll long enough to span it; a 2 s poll would
+    // have missed the redelivery and reported a false MT_NONE. Delayed-send topics keep the short 2 s poll
+    // so their before-D arm still yields MT_NONE inside the 5 s delay window. (Genuine redelivery is
+    // exercised; only the observation window is widened.)
     private static readonly TimeSpan s_invisibilityRedeliveryReceiveTimeout = TimeSpan.FromSeconds(15);
 
     private static TimeSpan ReceiveTimeoutFor(RoutingKey routingKey)

@@ -75,12 +75,33 @@ namespace Paramore.Brighter
     public class RequestContext : IRequestContext
     {
         private readonly ConcurrentDictionary<int, Activity> _spans = new();
+        private bool _requireHandler;
 
         public RequestContext() { }
-        
+
+        internal MessageDelivery? Delivery { get; set; }
+
         private RequestContext(ConcurrentDictionary<string, object> bag)
         {
             Bag = new ConcurrentDictionary<string, object>(bag);
+        }
+
+        /// <summary>
+        /// Requires a handler for the next immediate Send, SendAsync, Publish, or PublishAsync call using this context.
+        /// </summary>
+        /// <remarks>
+        /// Receiving pumps use this to reject a message when runtime routing selects no handlers.
+        /// The command processor consumes the requirement before building pipelines, so nested dispatches
+        /// and copies of the context retain normal in-process behavior. If no handler is selected, the dispatch
+        /// throws <see cref="Actions.InvalidMessageAction"/>. Scheduled dispatches do not capture this requirement.
+        /// </remarks>
+        public void RequireHandlerForNextDispatch() => _requireHandler = true;
+
+        internal bool ConsumeHandlerRequirement()
+        {
+            var requireHandler = _requireHandler;
+            _requireHandler = false;
+            return requireHandler;
         }
 
         /// <summary>

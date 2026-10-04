@@ -1,0 +1,512 @@
+---
+id: 0077-delivery-count-contract
+title: "Delivery Count Contract"
+status: Accepted
+author:
+  - "Ian Cooper"
+created: 2026-09-24
+summary: "SQS, Pub/Sub and RocketMQ consumers read the broker's own delivery counter on receive and subtract 1 so a first delivery presents 0, keeping the stamped handled count on a Brighter-routed rejection copy (one carrying the rejectionReason metadata key); the pump stays the only budget enforcer, budget findings are three lower-rung ISpecification<Subscription> rules plus a channel-creation log, and GCP and RocketMQ keep pre-registered conditional branches."
+tags:
+  - "transports"
+  - "retry"
+  - "dead-letter-queue"
+  - "message-pump"
+---
+
+# 77. Delivery Count Contract
+
+Date: 2026-09-24
+
+## Status
+
+Accepted
+
+## Context
+
+**Parent Requirement**: [specs/0037-delivery-count-and-rejection-routing/requirements.md](../../specs/0037-delivery-count-and-rejection-routing/requirements.md)
+
+**Scope**: This ADR decides the cross-transport delivery-count contract — Groups A–C and F–H (R-1 to R-15, R-22 to R-28) and the NFRs they touch — and how `AWSSQS` and `AWSSQS.V4` (kept in lockstep, `0038-aws-sqs-dlq-direct-send`), `GcpPubSub` (pull and stream consumers) and `RocketMQ` are bound to it. GCP rejection routing and DLQ channel creation without project IAM admin (R-16 to R-21, Groups D–E) belong to **ADR 0078, "GCP rejection routing and DLQ channel creation" ** (`0078-gcp-rejection-routing-and-dlq-channel-creation`, Proposed). R-15 is shared: this ADR relies only on its outcome (`GcpPubSubSubscription` exposes a dead-letter routing key); 0078 decides how.
+
+**The problem in one line.** The pump enforces `RequeueCount` by `UpdateHandledCount()` then `HandledCountReached(RequeueCount)` (`Reactor.cs:494-507`, `Proactor.cs:500-513`), which only runs down if a redelivered message presents a larger `HandledCount`. SQS, Pub/Sub and RocketMQ re-serve their own stored copy, which Brighter never rewrites, so on 13 configurations the budget is inert.
+
+**Settled inputs taken as given:** one spec (C-2); republish-on-requeue excluded (NFR-3, C-12); `0038-aws-sqs-dlq-direct-send`'s DLQ strategy stands (C-1); RocketMQ is conditional (R-14, C-5); budget findings go through `ValidatePipelines` (R-25/R-26); the GCP bar is the Pub/Sub emulator (R-21, C-4), A-1 verified, A-2/A-3 not.
+
+## Decision
+
+### Architecture Overview
+
+**On receive, each consumer reads the broker's own delivery counter and normalises it so that a first delivery presents `0` (R-2) — except when the received message is a Brighter-routed rejection copy, in which case the consumer keeps the handled count stamped in the message (R-28).** A message is a routed copy when its `Header.Bag` carries the `rejectionReason` metadata key. A message put back on its source with that metadata still attached is therefore treated as a routed copy and rejected again. Stripping the metadata is the replaying tool's responsibility (edge case 2). No broker call is added, no state is kept, and the pump is unchanged: it remains the only budget enforcer.
+
+```
+broker receive ──► transport creator/parser (per-transport seam)
+                     │ knows: raw broker counter, header-carried count, Header.Bag
+                     ▼
+                   DeliveryCount.Resolve(headerCount, brokerCount, bag)   ◄── core, decides the source
+                     ▼
+                   Message.Header.HandledCount ──► pump: UpdateHandledCount(); HandledCountReached(R) ──► Reject(DeliveryError)
+                                                    (enforces; unchanged)
+```
+
+**Why the budget fires on delivery `R` exactly (R-4).** Broker counter on delivery *n* is `b(n) ≥ n`, with `b(1) = 1` as the origin. The consumer presents `c(n) = b(n) − 1`; the pump increments to `c(n) + 1 = b(n)` and tests `b(n) ≥ R`.
+
+| delivery *n* | broker `b` (exact) | presented `c` | after `UpdateHandledCount` | `≥ R` for `R = 3`? |
+|---|---|---|---|---|
+| 1 | 1 | 0 | 1 | no → requeue |
+| 2 | 2 | 1 | 2 | no → requeue |
+| 3 | 3 | 2 | 3 | **yes → `Reject(DeliveryError)`** |
+
+Exact counter: rejection on delivery `R`, after `R − 1` requeues. Approximate (`b(n) ≥ n`): on or before delivery `R` — R-4's "at most `R`". `R = 1`: `0 → 1 ≥ 1`, rejected on first delivery. `R = 0` or `R < −1`: `1 ≥ R` true, first deferral rejects (R-7). `R = −1`: budget never consulted (`MessagePump.cs:171`, R-6).
+
+**What the dead-letter copy carries (R-5, R-28).** Brighter sends the in-memory header, whose count is `c(R) + 1 = b(R) ≥ R`; the senders serialise it (SQS `SqsMessageSender.cs:130` / `SnsMessagePublisher.cs:110`, RocketMQ `RocketMqMessagePublisher.cs:103` — kept only once its bag loop skips keys already written, below — GCP `Parser.cs:307`). The copy also carries `rejectionReason` (`SqsMessageConsumer.cs:508`, `RocketMessageConsumer.cs:256`), so on a DLQ read the discriminator keeps the stamped count (`≥ R`; exactly `R` on an exact counter), not the DLQ's own counter, which would normalise to `0`.
+
+### Key Components
+
+Roles (Responsibility-Driven Design):
+
+| Role | Object | Knowing | Doing | Deciding |
+|---|---|---|---|---|
+| **Counter reader** (per transport) | `SqsMessageCreator` / `SqsInlineMessageCreator` (both packages), `GcpPubSub/Parser`, `RocketMessageConsumer.CreateMessage` | raw broker counter, header-carried count, bag | extracts the inputs without allocating | nothing — delegates |
+| **Count resolver** | new `Paramore.Brighter.DeliveryCount` (static, core) | the normalisation rule and the discriminator | `Normalise`, `Resolve` | which count source wins |
+| **Metadata vocabulary** | new `Paramore.Brighter.RejectionMetadataKeyNames` (static, core) | the five rejection-metadata key names (`"rejectionReason"`, `"originalTopic"`, …) | — | — |
+| **Budget capability** | new core role interface `IAmADeliveryCountingSubscription`, implemented by `SqsSubscription` ×2, `GcpPubSubSubscription`, `RocketSubscription` | `NativeRedriveLimit` (M), `DeliveryBudgetUnenforceableReason` (R-11's predicate) | — | whether this subscription can advance its count |
+| **Budget rules** | three `ISpecification<Subscription>` rules in `ConsumerValidationRules` | — | report Warnings via `ValidatePipelines` | whether R-7 / R-10 / R-11 fires |
+| **Channel-creation diagnostic** | new core `DeliveryBudgetDiagnostics.WarnIfUnenforceable(Subscription)`, called by each in-scope channel factory | — | logs R-11 once per channel | — |
+| **Budget enforcer** | `Reactor` / `Proactor` | — | `UpdateHandledCount`, `HandledCountReached`, `RejectMessage` | **unchanged** |
+
+**Why `DeliveryCount` is a shared core helper, not four copies.** The rule must be identical across four transports and two AWS packages (NFR-6); a copy in `AWSSQS` and another in `AWSSQS.V4` is exactly the divergence NFR-6 calls a defect. Every in-scope assembly already references `Paramore.Brighter`, and the helper is pure arithmetic plus one dictionary lookup. The per-transport seams still decide *where the raw value comes from* — broker knowledge core must not have.
+
+**`DeliveryCount` contract:**
+
+```csharp
+public static class DeliveryCount
+{
+    // R-2/R-3/AC-33: 1→0, 2→1, 3→2; null, 0 or negative → 0; never negative.
+    public static int Normalise(int? brokerCount) => brokerCount is > 1 ? brokerCount.Value - 1 : 0;
+
+    // R-28: routed rejection copy → stamped count; broker counter unavailable → header count
+    // (today's behaviour); otherwise → normalised broker counter.
+    public static int Resolve(int headerCount, int? brokerCount, IDictionary<string, object> bag)
+        => bag.ContainsKey(RejectionMetadataKeyNames.RejectionReason) || brokerCount is null or < 1
+            ? headerCount
+            : Normalise(brokerCount);
+}
+```
+
+No copy of the bag is made (`MessageHeader.Bag` is a `Dictionary<string, object>`, `MessageHeader.cs:162`).
+
+**Error conditions** (none logs per message — NFR-2 forbids the allocation, NFR-4 the per-message noise):
+
+| Condition | Presented count | Logged |
+|---|---|---|
+| SQS `ApproximateReceiveCount` absent (`Attributes` null on V4, or key missing) or unparseable | header count (today's behaviour) | nothing |
+| Pub/Sub `DeliveryAttempt == 0` / `GetDeliveryAttempt == null` (no `DeadLetterPolicy`, A-1) | header count (normally `0`) | R-11 Warning once at channel creation (R-26) |
+| RocketMQ `DeliveryAttempt <= 0` | header count | R-11 at channel creation only on the AC-25 branch |
+| Routed rejection copy | stamped header count | nothing |
+
+#### Where each transport reads its counter
+
+| Transport | Raw counter | Seam | Note |
+|---|---|---|---|
+| `AWSSQS` | `sqsMessage.Attributes["ApproximateReceiveCount"]`, already on the wire (`MessageSystemAttributeNames = ["All"]`, `SqsMessageConsumer.cs:188-194`) | `SqsMessageCreator.ReadHandledCount` (`:323`, called `:80`, bag read `:70`); `SqsInlineMessageCreator.ReadHandledCount` (`:350`, called `:60`) | The inline creator reads the handled count **before** the bag (`:60` vs `:76`); the call order is swapped so `Resolve` can see it. |
+| `AWSSQS.V4` | same attribute; `Attributes` may be null in SDK v4 | `SqsMessageCreator.ReadHandledCount` (`:330`, called `:77`); `SqsInlineMessageCreator.ReadHandledCount` (`:317`, called `:60`) | lockstep twin; same call-order swap |
+| `GcpPubSub` pull | `ReceivedMessage.DeliveryAttempt` (`int`, 0 without a policy) | `Parser.ToBrighterMessage(ReceivedMessage)` (`~:84`; `ReadHandleCount` `:167`) | `Resolve` runs after the bag is filled from attributes |
+| `GcpPubSub` stream | `PubsubExtensions.GetDeliveryAttempt(PubsubMessage)` (`int?`) on `GcpStreamMessage.Message` (`GcpStreamConsumer.cs:93`) | `Parser.ToBrighterMessage(GcpStreamMessage)` (`:33`) | The library carries the value as attribute `googclient_deliveryattempt`. **Decided here:** add that key to `Parser.s_ignoreHeaders` so it never enters `Header.Bag` — otherwise it would be re-published on a routed copy (0078) and read back stale. |
+| `RocketMQ` | `MessageView.DeliveryAttempt` | `RocketMessageConsumer.ReadHandledCount` (`:422`, called `:292`) | implemented only on R-14's AC-24 branch (below) |
+
+**Why the discriminator is `"rejectionReason"`.** `"rejectionReason"` is the key every Brighter-managed route stamps, spelled identically (`SqsMessageConsumer.cs:508`, V4 `:501`, `RocketMessageConsumer.cs:256`, and the Redis, Postgres, MsSql and MQTT consumers); bag keys survive the wire verbatim and case-sensitive (`JsonSerialisationOptions.cs:11-14`; `DictionaryStringObjectJsonConverter.cs:22`). It is deliberately **not** the pump's `Message.RejectionReasonHeaderName = "RejectionReason"` (`Message.cs:51`, stamped at `Reactor.cs:426`), which is written only on pump-driven rejections — a direct `channel.Reject(...)`, as conformance FR-4/5/6/8/17 use, never carries it. `RejectionMetadataKeyNames` gives the literals one name; the in-scope `RefreshMetadata` methods adopt the constants in a separate structural commit (Tidy First).
+
+**A null-reason `Reject` stamps `rejectionReason = "None"`.** Today `RefreshMetadata` returns before stamping `rejectionReason` when `reason == null` (`SqsMessageConsumer.cs:506`, `RocketMessageConsumer.cs:254`), so a `channel.Reject(message, null)` copy carries no discriminator and a DLQ read would present the DLQ's own count. **Decided:** on the in-scope transports (`AWSSQS`, `AWSSQS.V4`, `RocketMQ`, and GCP via 0078), `RefreshMetadata` stamps `rejectionReason = RejectionReason.None.ToString()` when `reason` is null — consistent with the route `DetermineRejectionRoute` already selects for a null reason (`reason?.RejectionReason ?? RejectionReason.None`, `SqsMessageConsumer.cs:275`). `rejectionMessage` stays absent. This is an additive refinement of `0047-message-rejection-routing-strategy`'s metadata on the in-scope transports only; the other Brighter-managed transports are not changed here.
+
+#### R-28 per transport (AC-41's table)
+
+| Transport | How R-28 is satisfied | Discriminator |
+|---|---|---|
+| `AWSSQS` | The DLQ copy carries `rejectionReason` and `handled-count` (`SqsMessageSender.cs:130`); `Resolve` keeps the stamped count; the DLQ's own `ApproximateReceiveCount` is ignored. | `rejectionReason` present in `Header.Bag` |
+| `AWSSQS.V4` | identical | same |
+| `GcpPubSub` | same rule; the routed copy's metadata and `HandledCount` attribute (`Parser.cs:307`) are produced by 0078's routing, which must stamp `RejectionMetadataKeyNames` (constraint on 0078). | same |
+| `RocketMQ` | DLQ copy carries `rejectionReason` (`:256`) and `HandledCount` (`RocketMqMessagePublisher.cs:103`), provided the publisher's bag loop (`:54-59`) does not overwrite it with the received count the consumer copied into the bag (`RocketMessageConsumer.cs:328-331`) — the AC-24 change below. On the AC-25 branch the receive path is unchanged, so the header count is what is read already. | same (AC-24); not needed (AC-25) |
+
+Native dead-lettering (R-9) carries no `rejectionReason`, so the redrive target presents its own normalised count; R-28 does not bind that case and AC-9 asserts no count.
+
+**Discriminator edge cases:**
+1. **Null-reason `Reject`** — covered by stamping `"None"` (above).
+2. **Put back on its source with metadata intact** (a DLQ redrive, a replay tool, a manual move — all outside Brighter's control). The message still carries `rejectionReason`, so it is treated as a routed copy: its stamped count `S` is kept, and since `S ≥ R` for the budget that dead-lettered it, the pump rejects it again on its first delivery (whenever `R ≤ S + 1`). This is the intended behaviour, not a defect: **putting a message back for another attempt means resetting it, and that is the responsibility of the tool that puts it back** — it must remove the rejection metadata (`rejectionReason` and the other `RejectionMetadataKeyNames`) and may reset `HandledCount`. Brighter documents this (dead-letter documentation and release notes). If the source's budget is larger than the one that dead-lettered it (`R > S + 1`), the count stays at `S` and only a native limit bounds the message; also documented.
+3. **User-supplied `rejectionReason` bag key on an ordinary message** — treated as a routed copy, as in case 2. The keys are Brighter-reserved (`0047-message-rejection-routing-strategy`); release notes say so. Accepted.
+4. **R-17's no-destination case** — nothing is routed; not applicable.
+5. **Header-carried count on source channels** — where a broker counter is available, the header count is now ignored on source-channel deliveries: a producer that sends `HandledCount = N` sees `0` presented on first delivery. Follows from R-2; recorded as a negative consequence.
+
+#### Conformance oracle change for the redelivery arms (R-1 vs R-23)
+
+R-2 protects the identity assertion on a *first* delivery only. The FR-2, FR-15, FR-16 and FR-22 templates also assert identity on the **redelivered** message (`_messageAssertion.Assert(message, redelivered)` — e.g. `Templates/MessagingGateway/Reactor/When_requeuing_a_failed_message_should_be_redelivered.cs.liquid:77`, `…_with_zero_delay…:86`, `…_with_delay…:85`, `When_nacking_a_message_it_should_be_redelivered.cs.liquid:81`, and the Proactor twins), and the assertions compare `HandledCount` for equality (`AwsMessageAssertion.cs:58` in both AWS test projects, `RocketMqMessageAssertion.cs:74`, `DefaultMessageAssertion.cs.liquid:59`). R-1 *requires* that redelivered count to be `≥ 1`, so without a change today's AWS `Pass` cells (and RocketMQ FR-16/FR-22 on AC-24) would fail, breaking R-23.
+
+**Decided:** in those four behaviours' redelivery arms only, both pump variants, the generated test asserts `redelivered.Header.HandledCount >= message.Header.HandledCount`, then sets `redelivered.Header.HandledCount = message.Header.HandledCount` before calling the transport's message assertion. The transport assertion classes are untouched; these templates compare the redelivered message with the sent one only, so R-2 still bites through the other behaviours that assert a first receive; the change holds on all 24 configurations (republishing transports present `0 ≥ 0`). It is a change to the conformance oracle under `0067-conformance-rollout-and-deferral-governance`, made in the templates and regenerated, never hand-edited. The requirements record this in R-23 and C-7.
+
+### Technology Choices
+
+#### Counter classification (R-3, AC-34's table)
+
+| Transport | Classification | Evidence |
+|---|---|---|
+| `AWSSQS` | **approximate** | attribute is `ApproximateReceiveCount`; AWS documents it approximate (A-4) |
+| `AWSSQS.V4` | **approximate** | same attribute |
+| `GcpPubSub` | **approximate** | Google.Cloud.PubSub.V1 3.36.0 XML doc, `ReceivedMessage.DeliveryAttempt`: "calculated at best effort and is approximate … If a DeadLetterPolicy is not set … this will be 0" (A-1, verified) |
+| `RocketMQ` | **approximate** (conservative) | no vendor statement of exactness found for `MessageView.DeliveryAttempt` in RocketMQ.Client 5.2.1; absent evidence, approximate. AC-23 may reclassify by amendment. |
+
+Consequence: no transport is exact, so AC-34's second clause and AC-41's "exactly `3`" clause bind none; AC-13 compares v3/v4 bounds (`≤ R`), not equality.
+
+#### First delivery on an approximate counter (R-2, AC-33)
+
+`Normalise` maps the documented origin `1` to `0`. **If a broker reports `> 1` on what the test regards as a first delivery, no mechanism within NFR-1 to NFR-3 can reach `0`** — an SQS receive whose response was lost is a real, counted receive; a Pub/Sub over-count is indistinguishable from a real redelivery.
+
+**Residual risk against C-7:** an occasional, non-systematic first delivery presenting `≥ 1` (needs a lost response or a best-effort over-count). Exposed cells: every in-scope configuration whose template calls `_messageAssertion.Assert` on a first delivery — `Pass` behaviours on the 8 AWS/AWS.V4 configurations, and on `RocketMQ` under AC-24, that assert identity on a first receive (not FR-2/15/16/22, whose templates compare the redelivered message with the sent one only). It surfaces as a flaky, not systematic, failure; the mitigation is to report, not mask: observed failures are recorded against this ADR.
+
+##### Review note (2026-10-02): task 8.1, AC-33/AC-34/AC-41 document review
+
+The three document clauses pass; the full review is in the spec README's Status Checklist. Two clarifications follow; neither changes a decision.
+
+- **Why GCP is not among the exposed cells.** 6.7 selected AC-19, and the R-13 branch rule below says the first-delivery residual risk "applies as on SQS". That holds for any GCP subscription with a native `DeadLetterPolicy`, which is the only kind where `DeliveryAttempt` is non-zero. It exposes no conformance cell, though. The GCP conformance providers set a native policy only when a `deadLetterRoutingKey` is given (`GcpPullMessageGatewayProvider.cs:142-157`, and the same shape in the other three providers). The templates that pass one (the five reject templates and `When_requeuing_a_message_too_many_times…`) never call `_messageAssertion.Assert`. Every other GCP template reads a `DeliveryAttempt` of `0`, so `Resolve` keeps the header count. The exposed-cell list above is therefore complete as written. 7.1 selected AC-24, so its RocketMQ clause is live.
+- **Line citations that have drifted with the implementation** (the decisions they support are unchanged): `Parser.cs:307` (`HandledCount` attribute) → `:323`; `Parser.cs:352` (`!headers.ContainsKey`) → `:368`; `Parser.ToBrighterMessage(GcpStreamMessage)` `:33` → `:34`; pull `ToBrighterMessage` `~:84` → `:93`; `ReadHandleCount` `:167` → `:183`; `RocketMqMessagePublisher.cs:103` (stamped `HandledCount`) → `:119`; the publisher bag loop `:54-59` → `:55-59`; `RocketMessageConsumer.cs:292`/`:422` (`ReadHandledCount` call/definition) → `:296`/`:433`; its bag copy `:328-331` → `:332-334`; `ReceiptHandle` `:333` → `:337`; `Resolve` (formerly "after the bag loop, `:328`") → `:344`. `rejectionReason` is still stamped at `RocketMessageConsumer.cs:256`/`:260`; on SQS it is now stamped at `SqsMessageConsumer.cs:508`/`:512`.
+
+##### C-7 observation (2026-10-02): task 8.7, final regression
+
+**None observed.** The final regression ran at `5e7d78ef8` (code as of `30828b1c7`). It ran every exposed cell's project whole, net10.0, both variants:
+
+- AWS and AWS.V4 on Floci: 286 / 0 / 2 each.
+- RocketMQ on a clean store: 67 / 0 / 6.
+
+No first-delivery identity assertion failed. No test anywhere failed with a first delivery presenting `HandledCount >= 1`. The only generated test that failed in any of the 8.7 runs was a Kafka activity-context test, on a cold broker (`Error finding topic`). It passed on re-run, and Kafka is not an approximate counter. One clean pass does not retire a residual risk that is flaky by nature, so it stays as recorded above. The run record is in the conformance ledger, under "Final run record — 2026-10-02 (spec 0037 task 8.7)".
+
+#### R-13 (GCP): the branch rule
+
+Mechanism: the broker counter above. Input: AC-39's measurement (the selector is this ADR's amended conclusion under the rule below), run on the emulator once 0078/R-20 make DLQ-backed channels creatable; this ADR is then amended with a dated *Measurement outcome* entry (AC-39(b)/(c)).
+
+- **A-2 holds** (populated, strictly increasing, first value `1`): the mechanism satisfies R-1 to R-5 within NFR-1 to NFR-3. **AC-19 claimed; AC-40 not applicable.** The first-delivery residual risk applies as on SQS.
+- **A-2 refuted, or populated but not strictly increasing, or first value `> 1`:** the `delivery_attempt`-independent search below has been run and found nothing. **AC-40 claimed; AC-19 not applicable.** GCP is *bound but unimplemented*; `GcpPubSubSubscription.DeliveryBudgetUnenforceableReason` becomes non-null for every subscription; the four `GCP / *` FR-23 cells stay `Deferred`, re-pointed at the emulator limitation.
+
+**The `delivery_attempt`-independent search (R-13, A-2), run in advance:**
+
+| Candidate | Verdict |
+|---|---|
+| Header-carried `HandledCount` | never rewritten on `ModifyAckDeadline`/Nack — cannot advance (the defect itself) |
+| Republish on requeue | excluded (C-12, NFR-3) |
+| `GetSubscription` / any per-message lookup | excluded (NFR-1) |
+| Consumer-side in-memory map | rejected (Alternatives) |
+| Data encoded in `AckId` | opaque, undocumented — not a contract |
+| **Conclusion** | none fits; a refuted A-2 selects AC-40 |
+
+##### Measurement outcome (2026-09-29) — task 6.7, AC-39
+
+Measured on a **clean** local Pub/Sub emulator (`docker-compose -f docker-compose-gcp.yaml down -v; up -d`)
+with the Skip-marked fixture
+`tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull/GcpDeliveryAttemptMeasurementTests.cs` (unskip
+locally to reproduce; both facts stay `[Fact(Skip = "measurement — AC-39")]` in the committed tree). Each
+fact provisions its subscription through Brighter's own channel factory with a native `DeadLetterPolicy`
+(`MaxDeliveryAttempts = 5`, creatable on the emulator since 0078/R-20, task 5.3), confirms the policy
+with a raw `GetSubscription` before publishing, publishes one message, and defers it on the first two
+deliveries, acknowledging the third. The counter is read with raw Google clients, because Brighter's
+`Parser` does not surface it until 6.10/6.11:
+
+| Consumer | Counter read | Deferral | Observed on deliveries 1, 2, 3 |
+|---|---|---|---|
+| Pull | `ReceivedMessage.DeliveryAttempt` from `SubscriberServiceApiClient.Pull` | `ModifyAckDeadline(…, 0)` — the call `GcpPullMessageConsumer.Requeue` makes | **1, 2, 3** |
+| Stream | `PubsubExtensions.GetDeliveryAttempt()` in a `SubscriberClient` callback | `SubscriberClient.Reply.Nack` | **1, 2, 3** |
+
+Both were run twice (the first on the freshly reset emulator), with identical sequences each time.
+
+- **(b) A-2 held.** The counter is populated, strictly increasing and starts at `1` on both consumers.
+  No `delivery_attempt`-independent mechanism is needed; the pre-recorded search above stands as run,
+  but is not selected.
+- **(c) The broker-counter mechanism satisfies R-1 to R-5 within NFR-1 to NFR-3.** `Normalise` maps the
+  observed `1, 2, 3` to `0, 1, 2`, so R-2 (first delivery `0`) and R-1 (strictly greater on each
+  redelivery) hold. R-3 then holds under the approximate classification above. R-4/R-5 follow from R-1
+  through the pump's existing `HandledCountReached` check and Phase 5's routing. The value is a field
+  already on the receive response (pull) or an attribute already on the message (stream), so no extra
+  round trip per delivery (NFR-1) and none per requeue (NFR-3). NFR-2 is left to AC-37's allocation
+  measurement, as on every transport.
+- **(d) AC-19 claimed; AC-40 not applicable**, on the strength of (c) and this measurement. Tasks
+  6.10–6.16 are taken, and 6.20–6.21 are marked `[!] not taken — AC-39 selected AC-19`.
+
+**Caveat, not a refutation:** the stream deferral here is `SubscriberClient`'s own `Nack`, not Brighter's
+stream `Requeue` through a pump. A Brighter pump that requeues on a GCP Stream channel currently hangs
+([#4479](https://github.com/BrighterCommand/Brighter/issues/4479); related
+[#4449](https://github.com/BrighterCommand/Brighter/issues/4449)). That is a defect in the consumer's
+settle path, not in the counter this branch rule measures. It may still block the AC-19 stream tasks
+that drive redelivery through a deferring pump (6.11, and 6.16's `GCP / Stream*` rows) until it is
+fixed. 6.14 redelivers by lease lapse with no pump and no `Requeue`, so it is not on that path.
+
+#### GCP stream consumer lease-lapse procedure for AC-42 (first branch only)
+
+Both `GCP / Stream` and `GCP / StreamOrdering`, emulator, both variants (NFR-8), through `GcpPubSubStreamMessageConsumer`.
+
+- **Configuration:** `DeadLetterPolicy { MaxDeliveryAttempts = 5 }`; subscription `AckDeadlineSeconds = 10`; `bufferSize: 2`, `noOfPerformers: 1` (the factory derives the flow-control cap from `BufferSize × NoOfPerformers`, `GcpPubSubConsumerFactory.cs:89-92`, so a second slot exists while the first delivery is held); `StreamingConfiguration = b => b.Settings = new SubscriberClient.Settings { MaxTotalAckExtension = TimeSpan.FromSeconds(10) }` (survives because the hook runs before `builder.Settings ??= …`, `GcpPubSubConsumerFactory.cs:110-121`).
+- **Sequence:** (1) publish with `HandledCount = 0`; (2) `Receive`/`ReceiveAsync` returns m1 — record its count, do not ack, nack or requeue; (3) poll `Receive` every 500 ms for up to 45 s (lease extension stops at 10 s, lapses ~20 s); (4) assert the redelivery m2 presents a count strictly greater than m1's; (5) only then `Acknowledge` m2 and m1, so the `WaitForProcessing` shutdown (`GcpStreamConsumer.cs:49`) completes.
+- **Alternative test for `StreamOrdering`** if same-key serialisation blocks the primary (unverified, R-13): same procedure on the same ordering-enabled subscription with a message published **without** an ordering key. Ordered delivery withholds a same-key redelivery while its predecessor is outstanding by design, so "hold, then observe the lapse" is not drivable with a key; a keyless message still exercises the stream consumer's lease-lapse path on that configuration. The switch, if taken, is recorded in the ledger.
+- **On the AC-40 branch** this obligation lapses (R-13).
+
+##### Amendment (2026-09-30) — task 6.13 measurement: `bufferSize: 2` and the lease lapse
+
+Measured on the local Pub/Sub emulator with the configuration above (`bufferSize: 2`, `noOfPerformers: 1`,
+subscription `AckDeadlineSeconds = 10`, `DeadLetterPolicy` M = 5, `MaxTotalAckExtension = 10 s`), holding m1
+unsettled and polling `Receive` every 500 ms. The fixture is committed Skip-marked at
+`tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream/GcpStreamLeaseLapseBufferMeasurementTests.cs`; each
+case also ran with the client's own `SubscriberClient.Settings.AckDeadline` set to 10 s. The default-deadline
+cases were run twice, with the same result.
+
+| Case | Client `AckDeadline` default (60 s) | Client `AckDeadline` = 10 s |
+|---|---|---|
+| `Stream` | redelivered at 60.0 s, count 0 → 1 | redelivered at 15.0 s, count 0 → 1 |
+| `StreamOrdering`, no ordering key | redelivered at 60.0 s, count 0 → 1 | redelivered at 15.0 s, count 0 → 1 |
+| `StreamOrdering`, with an ordering key | no redelivery in 90 s | no redelivery in 90 s |
+
+- **`bufferSize: 2` admits the redelivery while the first delivery is held**, on `Stream` and on a keyless
+  `StreamOrdering` message. The redelivery presents a strictly greater count (6.11's parser change).
+- **The procedure's timing assumption was wrong.** `MaxTotalAckExtension` stops further extensions, but the
+  client leases each message for its own stream `AckDeadline` (default 60 s), whatever the subscription's
+  `AckDeadlineSeconds`. The lapse therefore lands at ~60 s, outside the 45 s poll. The procedure's
+  `StreamingConfiguration` must also set `Settings.AckDeadline = TimeSpan.FromSeconds(10)`. With both set, the
+  lapse lands at ~15 s.
+- **A subscription's `StreamingConfiguration` replaces the connection's** (`GcpPubSubConsumerFactory` passes
+  `sub.StreamingConfiguration ?? _connection.StreamConfiguration`), so the hook must repeat the connection's
+  `EmulatorDetection`. Otherwise the client goes to production Pub/Sub and fails `Unauthenticated`.
+- **Ordering blocks the primary procedure on `StreamOrdering`.** A keyed message's redelivery is withheld while
+  m1 is outstanding, so 6.14 takes the **keyless alternative** on `StreamOrdering`, and records the switch in the
+  ledger.
+- Incidental observation, not in scope here: with an ordering key and the default client deadline, disposing
+  the channel afterwards threw `TaskCanceledException` from `SubscriberClient.StopAsync` (`GcpStreamConsumer.cs:55`).
+
+#### RocketMQ conditional (R-14, AC-23..AC-25)
+
+**Measurement (AC-23):** from a clean store (`docker-compose -f docker-compose-rocketmq.yaml down -v; up -d`), `requeueCount: 3`, a deferring handler, Reactor variant. The test reads the raw `MessageView.DeliveryAttempt` from `message.Header.Bag["ReceiptHandle"]`, which is the `MessageView` (set at `RocketMessageConsumer.cs:333`) — no production change needed to observe it. Three deliveries across 10 s invisibility lapses, no `ChangeInvisibleDuration` call (commented out, `:186-187`). **Dispose the consumer and create a fresh one between deliveries 2 and 3**: the 5.2.1 assembly contains a client-side `IncrementAndGetDeliveryAttempt`, and a value that survives a fresh client proves the increment is broker-supplied, as R-14's condition requires.
+
+- **Condition holds (AC-24):** `HandledCount` is resolved after the bag loop (`RocketMessageConsumer.cs:328`), because `ReadHandledCount` (`:422`) runs before the header exists: `header.HandledCount = DeliveryCount.Resolve(header.HandledCount, view.DeliveryAttempt, header.Bag)`, as on GCP; the publisher's bag loop (`RocketMqMessagePublisher.cs:54-59`) skips any key `AddHeaderProperties` already wrote (GCP's `!headers.ContainsKey` shape, `Parser.cs:352`), so the stamped `HandledCount` (`:103`) reaches the DLQ copy instead of the stale bag entry; `Requeue` stays a broker no-op; `DeliveryBudgetUnenforceableReason` is null; the FR-23 cell moves to `Fixed`.
+- **Condition fails (AC-25):** receive path unchanged; `RocketSubscription.DeliveryBudgetUnenforceableReason` returns fixed text naming the upstream `ChangeInvisibleDuration` blocker; the cell stays `Deferred`, re-pointed; #4353 and the ledger record the three values. AC-38 protects the nine `Fixed` cells on both branches.
+
+##### Measurement outcome (2026-10-01): task 7.1, AC-23
+
+Measured with the Skip-marked fixture
+`tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Reactor/RocketMqDeliveryAttemptMeasurementTests.cs`
+(unskip locally to reproduce; both facts stay Skip-marked in the committed tree). Broker `apache/rocketmq:5.5.0`,
+RocketMQ.Client 5.2.1, `requeueCount: 3`, Reactor, a 10 s lease, and no `ChangeInvisibleDuration` call. The consumer
+was disposed and recreated in the same group before delivery 3. Two runs, the second from a `down -v` store:
+`DeliveryAttempt` **1, 2, 3** both times.
+
+- **The condition holds. AC-24 is claimed; AC-25 is not applicable.** Tasks 7.10–7.13 are taken, and 7.20–7.21
+  are marked `[!] not taken — AC-23 selected AC-24`. The "Condition holds" design above stands as written.
+- **Classification unchanged: approximate.** The Apache RocketMQ consumption-retry documentation describes the
+  retry mechanism (lease lapse, `ChangeInvisibleDuration`, a per-group maximum) but makes no exactness claim for
+  the attempt count. AC-34's second clause and AC-41's "exactly 3" are therefore **not** activated; 7.10 and 7.12
+  assert the approximate form.
+- **Finding outside the branch rule:** `SimpleConsumer.ChangeInvisibleDuration(view, TimeSpan.Zero)` works on
+  5.2.1. It redelivered in 2–3 s instead of after the 10 s lease, and `DeliveryAttempt` still advanced. The
+  "upstream blocker" this ADR and R-14 name for the AC-25 branch is therefore gone. That branch is not taken, so
+  nothing here changes. Making `Requeue`/`Nack` act on the broker (as PR #4263 does for `Nack`) is a follow-up
+  outside this spec. On this measurement it would not disturb the counter AC-24 relies on.
+
+##### Follow-up (2026-10-03): bugfix 0025, #4353
+
+The follow-up above is done. `Requeue` / `RequeueAsync` now set the invisible duration to the requeue delay. A
+negative delay counts as zero, and a delay above the broker's 12 h maximum is held at 12 h. `Nack` / `NackAsync`
+set it to zero. A failed call is logged and falls back to the receive lease. "`Requeue` stays a broker no-op" in
+the AC-24 branch above no longer holds.
+
+The counter AC-24 relies on is unaffected. `DeliveryAttempt` advanced 1 → 2 across every
+`ChangeInvisibleDuration` redelivery measured (1 s, 5 s, 25 s and 0). The broker counter is still read on
+receive, by `DeliveryCount.Resolve`. The RocketMQ FR-2 and FR-15 cells are `Fixed (#4353)`. Evidence is in
+`bugfixes/0025-rocketmq-requeue-nack-broker-noop/bugfix.md`.
+
+#### Budget rules: which rung (R-25)
+
+All three rules take the **lower rung** — `ISpecification<Subscription>`, registered alongside the existing four in `RegisterConsumerValidationSpecs` (`ServiceActivator.Extensions.DependencyInjection/ServiceCollectionExtensions.cs:199-215`) and harvested at `BrighterPipelineValidationExtensions.cs:79`. **No dependency on #4282.**
+
+```csharp
+public interface IAmADeliveryCountingSubscription
+{
+    int? NativeRedriveLimit { get; }                    // M; null when none configured or not visible to Brighter
+    string? DeliveryBudgetUnenforceableReason { get; }  // null when R-1 holds for this subscription
+}
+```
+
+- **R-7:** `RequeueCount == 0 || RequeueCount < -1` → Warning naming the subscription, the value, and the likely intents `-1` and `1`.
+- **R-10:** `R != -1 && NativeRedriveLimit is int m && R >= m` → Warning naming `R`, `M`, and that the effective limit is `M`.
+- **R-11:** `R != -1 && DeliveryBudgetUnenforceableReason is not null` → Warning naming the subscription, `R`, and the reason.
+- Subscriptions not implementing the interface pass R-10/R-11 vacuously — including the nine republishing configurations, so R-22 is untouched. Severity `ValidationSeverity.Warning`, per the `RequestTypeSubtype` precedent (`ConsumerValidationRules.cs:114-123`).
+
+| Subscription | `NativeRedriveLimit` | Shape that trips R-11 (AC-11) |
+|---|---|---|
+| `SqsSubscription` (both packages) | `QueueAttributes.RedrivePolicy?.MaxReceiveCount` (`SqsSubscription.cs:72`, `SqsAttributes.cs:110`, `RedrivePolicy.cs:34`) | **none** — `ApproximateReceiveCount` is always returned. A redrive policy configured outside Brighter is invisible, so R-10 cannot fire for it. |
+| `GcpPubSubSubscription` | `DeadLetter?.MaxDeliveryAttempts` (`GcpPubSubSubscription.cs:75`, `DeadLetterPolicy.cs:47`) | `DeadLetter == null` with `R != -1` (A-1); on the AC-40 branch every subscription with `R != -1` |
+| `RocketSubscription` (`RocketMqSubscription.cs:10`) | `null` — the broker's max-retry setting lives server-side on the consumer group, invisible to the client | none on AC-24; every `R != -1` on AC-25 |
+
+AC-11's first branch applies, since GCP has a tripping shape on both R-13 branches.
+
+**R-26:** `DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription)` is called once on each non-delegating channel-creation path of the in-scope channel factories — the method every public entry reaches, never a method that only delegates to another (`CreateAsyncChannel` → `CreateAsyncChannelAsync` on GCP `:54-55` and AWS `:82-83`, which would log twice): `AWSSQS/ChannelFactory.cs` `CreateSyncChannelAsync` (`:204`) and `CreateAsyncChannelAsync` (`:92`) and the V4 twins (uniform shape; a no-op for SQS), `GcpPubSubChannelFactory` `CreateSyncChannel` (`:26`) and `CreateAsyncChannelAsync` (`:65`), `RocketMqChannelFactory.cs:13`, `:28`, `:43`. The channel factory is the site both the dispatcher (`ConsumerFactory.cs:100`, `:124`) and direct users (conformance providers; AC-11/AC-25/AC-40) pass through; it logs once per channel, never on the receive path (NFR-4, AC-29).
+
+#### R-8 / R-9
+
+No code. **Brighter does not assume it is the one that dead-letters.** Queues and subscriptions are often provisioned outside Brighter, so a native redrive policy (SQS `RedrivePolicy.maxReceiveCount`, Pub/Sub `DeadLetterPolicy.MaxDeliveryAttempts`) may move a message before the budget is spent, and that is a legitimate outcome. `min(R, M)` emerges because whichever threshold is reached first acts; Brighter neither suppresses nor stamps a native redrive (R-9), so a natively redriven message arrives without rejection metadata and presents the destination's own count. R-10 is the only Brighter-side expression of R-8, and it can fire only where `M` is visible to Brighter (a policy Brighter created); a policy configured outside Brighter is invisible and is not warned about.
+
+### Implementation Approach
+
+Structural and behavioural commits kept apart (Tidy First, C-10):
+
+1. **Structural:** add `RejectionMetadataKeyNames`; swap the inline creators' call order; in-scope `RefreshMetadata` adopt the constants.
+2. **Core:** `DeliveryCount` (+ AC-33 unit tests, including the discriminator); `IAmADeliveryCountingSubscription`; `DeliveryBudgetDiagnostics`; the three rules (AC-7, AC-10, AC-11, AC-32 in `Paramore.Brighter.Core.Tests`).
+3. **Conformance oracle:** the redelivery-arm change in the FR-2/15/16/22 templates, regenerated — lands before or with step 4 so no `Pass` cell goes red.
+4. **SQS, both packages in one commit (NFR-6):** creators; null-reason `"None"` stamping in `RefreshMetadata`; interface on `SqsSubscription`; factory calls.
+5. **GCP:** parser (pull + stream, `googclient_deliveryattempt` ignore entry); interface; factory calls. FR-23 gated on AC-39, after 0078/R-20.
+6. **RocketMQ:** AC-23 measurement, then the AC-24 or AC-25 branch (null-reason stamping and the publisher bag-loop skip land on either branch).
+7. **Harness (R-27):** `R = 3, M = 5` on the 12 providers (GCP's native-policy shape: 0078 Implementation step 5); GCP IAM members; dispatch-count and recording consumer in `ConformanceDeferredPump.cs.liquid`; the `<= RequeueCount` assertion in both FR-23 templates.
+
+**Testing** follows `.agent_instructions/generated_tests.md` — templates edited, tests regenerated, never hand-edited.
+
+| Transport | Environment | Tests |
+|---|---|---|
+| AWS | LocalStack | FR-23 generated, both variants (AC-12); AC-13 v3/v4 comparison |
+| GCP | Pub/Sub emulator (`docker-compose-gcp.yaml`) | AC-39 → AC-19 or AC-40; AC-42 incl. the stream procedure |
+| RocketMQ | local compose | AC-23 → AC-24 or AC-25; AC-38 |
+
+Bespoke tests (constructed subscriptions, not provider-supplied): AC-1, AC-5, AC-6, AC-35, AC-8, AC-9, AC-41, AC-42. AC-37: allocated-bytes, median of 5 × 1,000 receives, `post <= base`; the new reads are value-typed (`int?`, `TryGetValue` on existing dictionaries, `int.TryParse` on an existing string, one ordinal string comparison). AC-27: compile-only samples in the five projects R-24 names.
+
+##### Measurement (2026-10-02): task 8.3, AC-37 / NFR-2 allocation on the receive path
+
+**Method.** A console harness, kept in the session scratchpad and not in the repo, was compiled twice from identical source: once against the merge base `f906efc0b` (a separate worktree) and once against this branch at `904655ae1`. The build was net10.0 Release with workstation GC. Every message was a fixed-shape `MT_COMMAND`: a 256-byte body and one bag entry. Two measurements were taken for each transport:
+
+- **End-to-end.** Brighter's own consumer (`…ConsumerFactory.Create`, `bufferSize: 1`, so every measured call returns exactly one message), with `GC.GetAllocatedBytesForCurrentThread()` around each `Receive`. The ack is outside the window, and calls that returned nothing are not counted. Each run was a 100-message warm-up and then 5 rounds of 1,000 receives, reporting the median round. Two passes, run base, post, base, post.
+- **Reader only.** 1,000 raw broker messages were captured once from a real receive with the native SDK (SQS `ReceiveMessage` with all attributes; Pub/Sub `Pull`; RocketMQ `SimpleConsumer.Receive`). The transport's reader was then run over them, bound by reflection to a delegate: `SqsMessageCreator`/`SqsInlineMessageCreator.CreateMessage`, `Parser.ToBrighterMessage` (pull, and stream via `GcpStreamMessage` with the `googclient_deliveryattempt` attribute `SubscriberClient` adds), and `RocketMessageConsumer.CreateMessage`. This was one warm-up pass then 5 measured rounds, reporting the median. This is exactly the code this branch changed, with no network in the window.
+- **Environment.** Floci for AWS; the Pub/Sub emulator with subscriptions created by raw admin clients carrying a native `DeadLetterPolicy` (so `delivery_attempt` is populated on both sides); a clean RocketMQ 5.5.0 store with a fresh topic per run. Every first delivery presented `HandledCount = 0` on both sides.
+
+| Transport (reader) | Reader only, bytes per 1,000 (base → post) | End-to-end median Δ post − base, pass 1 / pass 2 | End-to-end spread between rounds of one run |
+|---|---|---|---|
+| AWSSQS (`SqsMessageCreator`) | 5,168,600 → **5,168,600** | +3,928 / +2,248 (of ~68.16 MB) | ~14–18 KB |
+| AWSSQS (`SqsInlineMessageCreator`, SNS non-raw) | 15,457,200 → **15,457,200** | not run end-to-end | — |
+| AWSSQS.V4 (`SqsMessageCreator`) | 5,168,600 → **5,168,600** | +864 / −640 (of ~48.53 MB) | up to ~99 KB |
+| AWSSQS.V4 (`SqsInlineMessageCreator`, SNS non-raw) | 15,457,800 → **15,457,800** | not run end-to-end | — |
+| GcpPubSub pull (`Parser`) | 2,104,000 → **2,104,000** | −648 / +328 (of ~9.44 MB) | ~34 KB |
+| GcpPubSub stream (`Parser`) | 2,104,000 → **2,104,000** | +1,544 / −3,440 (of ~5.65 MB) | ~40–70 KB |
+| RocketMQ (`CreateMessage`) | 2,248,000 → **2,248,000** | +390,608 / +195,680 (of ~35 MB) | ~1.35 MB, rising with run order |
+
+- **Reader only: `post = base` on every transport and both SQS creators.** Each round was identical apart from a single 600-byte step that appears on both sides. The new reads (`TryGetValue` on the existing attribute dictionaries, `int.TryParse` on an existing string, the `int?` counter, `DeliveryCount.Resolve`) allocate nothing. Keeping `googclient_deliveryattempt` out of the stream message's bag (the new `s_ignoreHeaders` entry) made no measurable difference either. Base puts that entry in the bag, and its stream figure is still identical to the branch's. I did not investigate why.
+- **End-to-end: noise-bound, so it cannot decide a zero-tolerance gate.** The base/post difference is smaller than the spread between rounds of a single run, and its sign flips between passes on V4, GCP pull and GCP stream. An earlier single-pass AWSSQS smoke run went the other way (post 68,139,864 ≤ base 68,143,768). On RocketMQ the medians rise in run order whatever the revision (34.4 → 34.8 → 35.7 → 35.9 MB for base-p1, post-p1, base-p2, post-p2), which is drift in the broker or client, not a code difference. By a literal median comparison, post exceeded base in 7 of the 10 end-to-end pairs, by 0.002–1.1 %. None is attributable to the reader, as the reader-only figures show.
+- **Verdict: AC-37 / NFR-2 met, on the reader-only measurement** (Ian Cooper, 2026-10-02). It measures exactly the code task 8.3 names as the place an increase would be a defect, and there `post = base`. The end-to-end figures are recorded as context only. The harness is not committed; the method above is enough to rebuild it.
+
+**AC-28 broker-call enumeration — no call added or removed:**
+
+| Transport | Per delivery (before = after) | Per requeue (before = after) |
+|---|---|---|
+| AWSSQS / V4 | `ReceiveMessage` (system attribute already requested) | `ChangeMessageVisibility` |
+| GcpPubSub pull | `Pull` | `ModifyAckDeadline(…, 0)` |
+| GcpPubSub stream | streaming pull (no per-message RPC) | local Nack on the stream |
+| RocketMQ | `SimpleConsumer.Receive` | none |
+
+##### Confirmation (2026-10-02): task 8.2, AC-28 enumeration against the base revision
+
+**The table above is confirmed, unchanged.** I enumerated it from `git diff f906efc0b..3c9e8c010` (merge base with `master` → the branch after 8.1) over `src/Paramore.Brighter.MessagingGateway.{AWSSQS,AWSSQS.V4,GcpPubSub,RocketMQ}`. No broker call was added to or removed from any receive or requeue path.
+
+| Transport | Receive path in the diff | Requeue path in the diff |
+|---|---|---|
+| AWSSQS / V4 | `SqsMessageConsumer.Receive`/`ReceiveAsync`: no hunk. The creators' `ReadHandledCount` (v3 `SqsMessageCreator.cs:323`, `SqsInlineMessageCreator.cs:350`; V4 `:330`, `:317`) now reads `sqsMessage.Attributes["ApproximateReceiveCount"]` from the `ReceiveMessage` response already in hand and calls `DeliveryCount.Resolve`. No client call. | `Requeue`/`RequeueAsync`: no hunk. Still one `ChangeMessageVisibility`. |
+| GcpPubSub pull | `GcpPullMessageConsumer.Receive`: no hunk. `Parser.ToBrighterMessage(ReceivedMessage)` (`:146`) reads `ReceivedMessage.DeliveryAttempt` from the `Pull` response. | `Requeue`/`RequeueAsync` (`:397-449`): the `ModifyAckDeadline(…, 0)` call and its client lookup (`GetOrCreateSubscriberServiceApiClient` / `CreateSubscriberServiceApiClientAsync`) moved verbatim into `ReleaseByHandle`/`ReleaseByHandleAsync` (`:484-503`). Still one `ModifyAckDeadline`. |
+| GcpPubSub stream | `GcpPubSubStreamMessageConsumer.Receive`: no hunk. `Parser.ToBrighterMessage(GcpStreamMessage)` (`:86`) reads `PubsubExtensions.GetDeliveryAttempt` from the message's own attributes. | `Requeue` (`:287`): `gcpStreamMessage.Reject()` became `Nack(gcpStreamMessage)`, a one-line helper (`:333`) that calls the same `gcpStreamMessage.Reject()`. Still one local Nack on the stream. |
+| RocketMQ | `RocketMessageConsumer.Receive`: no hunk. `CreateMessage` (`:344`) reads `MessageView.DeliveryAttempt` from the view `SimpleConsumer.Receive` returned. | `Requeue`: no hunk. Still no broker call. |
+
+Per channel, not per message: each factory now calls `DeliveryBudgetDiagnostics.WarnIfUnenforceable` once at channel creation. It reads `DeliveryBudgetUnenforceableReason`/`NativeRedriveLimit`, which are pure properties of the subscription on all four transports. The GCP consumer factory passes the routing keys to a `GcpRejectionRouter` built per consumer. Neither issues a broker call.
+
+**Broker-call changes the diff makes outside these two paths.** They are recorded so the review sees them, and none is part of the delivery-count mechanism:
+- **GCP Reject, pull and stream (ADR 0078, R-16 to R-19):** one routing `Publish` to `deadLetterRoutingKey`/`invalidMessageRoutingKey` when a destination is configured. When that publish fails, the original is released (pull `ModifyAckDeadline(…, 0)`; stream `Reject()`) **instead of** acknowledged, so the release replaces the ack rather than adding to it. SQS and RocketMQ `Reject` changed only in `RefreshMetadata` (no call).
+- **GCP stream `Nack` (`GcpPubSubStreamMessageConsumer.cs:84`, `a576dc0f3`, bugfix 0024 / #4449):** it was a no-op and now calls `gcpStreamMessage.Reject()`, the same local Nack the requeue path makes. This is the pump's `DontAckAction` path, not `Requeue`. Before the fix, the base revision never settled such a message, so the client kept extending its lease. The change fixes that defect; it is not part of R-1's mechanism.
+- **GCP stream shutdown (`GcpStreamConsumer.cs:55`, `a010129ea`, bugfix 0023 / #4479):** `StopAsync` uses `ShutdownMode.NackImmediately` instead of `WaitForProcessing`. This is once per consumer stop, not per message.
+
+## Consequences
+
+### Positive
+
+- `requeueCount` enforces on all 8 AWS/AWS.V4 configurations, and conditionally on GCP and RocketMQ, with the existing pump code as the only enforcer.
+- One rule in one place; v3/v4 lockstep holds by construction.
+- No broker call, no state (NFR-1..NFR-3); restarts and competing consumers do not reset the count, because the broker keeps it.
+- R-28 holds without a new wire key; DLQ inspection keeps its evidence, including for null-reason rejections.
+- R-11 is never silent: validation Warning plus channel-creation log.
+
+### Negative
+
+- **The header-carried count is ignored on source channels where a broker counter exists** — a producer-set non-zero `HandledCount` no longer carries prior budget spend.
+- All counters are approximate: rejection may come before delivery `R`, and v3/v4 may reject on different deliveries.
+- GCP needs a `DeadLetterPolicy` to have a counter at all (A-1); without one the budget is unenforceable and only warned about.
+- The conformance oracle weakens from equality to `>=` on the `HandledCount` of four behaviours' redelivery arms.
+- A null-reason rejection now carries `rejectionReason = "None"` on the in-scope transports — a visible change to what a DLQ consumer sees, and a divergence from the out-of-scope Brighter-managed transports until they follow.
+- A message put back on its source with rejection metadata attached is rejected again; resetting it is left to the replaying tool, which Brighter can only document (edge case 2).
+- On RocketMQ, header-owned properties now take precedence over same-named `Header.Bag` entries on every publish (the bag-loop skip): a user who forwards a received message, or sets such a key in the bag to override a header, sees the header win.
+- RocketMQ and GCP may still end *bound but unimplemented* (C-12's recorded price).
+
+### Risks and Mitigations
+
+| Risk | Mitigation |
+|---|---|
+| A-2 refuted on the emulator | pre-registered branch rule (AC-40); independent search already recorded |
+| First-delivery over-count (C-7) | recorded residual risk; observed failures logged against this ADR |
+| `StreamOrdering` lapse blocked by ordering | confirmed 2026-09-30 (6.13): the keyless alternative defined above is required |
+| RocketMQ counter is client-local, not broker-supplied | fresh-client step in AC-23 |
+| Stale `googclient_deliveryattempt` travels on a routed GCP copy | excluded from the bag here; 0078 must not reintroduce it |
+| A replay tool puts messages back without stripping metadata, and they bounce straight back to the DLQ | documented as the tool's responsibility; the bounce is immediate and visible (a `DeliveryError` rejection on first delivery), not a silent loop |
+| Unverified library behaviours: whether `SubscriberClient` injects/overwrites `googclient_deliveryattempt`; whether `bufferSize: 2` admits the stream redelivery while the first is held | `SubscriberClient` half confirmed 2026-09-28, see amendment below; `bufferSize: 2` confirmed 2026-09-30 (6.13, amendment under the stream lease-lapse procedure), provided the client `AckDeadline` is also 10 s |
+
+### Amendment (2026-09-28) — task 5.5c measurement: `SubscriberClient` and `googclient_deliveryattempt`
+
+Measured on the local Pub/Sub emulator against a DLQ-backed stream subscription (`DeadLetterPolicy`
+set, per A-1), using a Skip-marked fixture committed at
+`tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream/GcpStreamDeliveryAttemptMeasurementTests.cs`
+(unskip locally to reproduce; both facts stay `[Fact(Skip = ...)]` in the committed tree).
+
+- **(i) `SubscriberClient` does inject the attribute.** A message received on first delivery carried
+  `googclient_deliveryattempt = "1"` in `Header.Bag` (Brighter's `Parser` copies every attribute not
+  in `s_ignoreHeaders` into the bag verbatim, so this is exactly what the raw `PubsubMessage.Attributes`
+  held). The value parses cleanly as `1`, consistent with `PubsubExtensions.GetDeliveryAttempt()` and
+  with assumption A-1 ("`delivery_attempt` is ... 1 on first delivery").
+- **(ii) The emulator accepts a publish carrying a stale `googclient_deliveryattempt` attribute, and
+  `SubscriberClient` overwrites it.** A message published with `googclient_deliveryattempt = "999"`
+  already set (simulating a routed copy that had not had the attribute stripped) was accepted by the
+  emulator without error. The value a receiver saw was `"1"` — the fresh delivery-attempt count — not
+  the stale `"999"`, so `SubscriberClient` overwrites rather than preserves a pre-existing value.
+
+**Consequence for 5.5d:** (ii) shows a stale value would **not** survive to a reader once the message
+passes back through `SubscriberClient` — so this is not flagged for 6.11 per the task's instruction.
+The residual concern the ignore-header entry (5.5d) still needs to cover is a **pull** consumer, which
+has no `SubscriberClient` in its path to perform this overwrite; and any reader that inspects the raw
+published attributes without going through a fresh `SubscriberClient` receive. 5.5d's Given is chosen
+under branch (a) of its Given list: since (ii) shows the emulator accepts an explicitly published
+`googclient_deliveryattempt` attribute, that publish can be used directly to test the stream and pull
+parser clauses.
+
+## Alternatives Considered
+
+1. **Consumer-side in-memory tracking** keyed by message id (incremented on `Requeue`, read on receive). *For:* no broker support needed, would work on RocketMQ today, exact, independent of A-1/A-2. *Against:* resets on restart and deploy — exactly when poison messages bite; invisible to competing consumers (N performers or pods → `N × R` deliveries); needs eviction for NFR-2, which makes the count forgettable, and leaks without it; does not advance on an expiry redelivery that never passes through `Requeue` (AC-42); invents state the broker already keeps. Rejected.
+2. **Republish on requeue** (the nine conforming transports' mechanism). **Excluded by requirement** (NFR-3, C-12): a net broker call per requeue; bypasses the user's visibility timeout / ack deadline; SQS FIFO content-based dedup would silently discard the copy, since `MessageDeduplicationId` is set only when the bag carries one (`SqsMessageSender.cs:100-102`). Listed so it is not re-opened.
+3. **`max(header count, normalised broker count)` everywhere, no discriminator.** Gives replayed messages a working budget, but lets a DLQ's own count override the stamped count on repeated DLQ redeliveries — violating R-28's "never that destination's own count". Rejected.
+4. **A new wire key (e.g. `x-brighter-routed`) as discriminator.** Every transport must write and read a new key, while `rejectionReason` is already stamped by every Brighter-managed route. Rejected (user's call).
+5. **Detect a return to the source and use the broker count there** — either `Header.Topic != originalTopic`, or `originalTopic` compared with the reading channel's own identity (queue URL, subscribed topic ARN). Would give a message put back with metadata a working budget. Rejected: putting a message back is outside Brighter's control and resetting it is the replaying tool's job; the message-`Topic` variant also fails on SQS's own redrive (`StartMessageMoveTask` keeps attributes, so `Topic` stays the DLQ URL, `SqsMessageSender.cs:115`), and the channel-identity variant would thread consumer identity into every creator/parser for an edge case Brighter should only document.
+6. **Leave null-reason rejections unstamped.** No change to `0047-message-rejection-routing-strategy`'s metadata, but a DLQ read of such a copy shows the DLQ's own count. Rejected (user's call).
+7. **Upper rung (`IAmAPipelineValidator` per transport) for R-10/R-11.** The inputs are an integer and a predicate on a subscription, which a core role interface carries; the upper rung adds a dependency on #4282 for nothing. Rejected, per `0074-lifetime-validation-evaluation-site`'s test.
+8. **Log R-11 in `ServiceActivator.ConsumerFactory` only.** One site, but misses channels created directly through a channel factory — where AC-11/AC-25/AC-40 create them. Rejected in favour of the channel factories calling a shared core helper.
+9. **Implement the SQS budget as native redrive** (`RedrivePolicy.maxReceiveCount = requeueCount` on queues Brighter creates). Rejected as *the* mechanism: the dead-lettered message loses the rejection metadata, `Unacceptable` cannot reach the invalid-message channel, it reverses `0038-aws-sqs-dlq-direct-send`, and it does nothing on queues Brighter does not create (`makeChannels: Assume`/`Validate`). Native redrive remains a legitimate *co-existing* route (R-8/R-9, above).
+
+## References
+
+- Requirements: [specs/0037-delivery-count-and-rejection-routing/requirements.md](../../specs/0037-delivery-count-and-rejection-routing/requirements.md)
+- Related ADRs:
+  - `0006-blocking-and-non-blocking-retries` — defer, requeue and the DLQ threshold this makes reachable.
+  - `0038-aws-sqs-dlq-direct-send` — the SQS direct-send route (C-1) and v3/v4 lockstep.
+  - `0042-rocketmq-dlq-brighter-managed` — RocketMQ `Reject` → DLQ producer + Ack.
+  - `0045-provide-dlq-where-missing`, `0046-kafka-dlq-producer-for-requeue`.
+  - `0047-message-rejection-routing-strategy` — routing by `RejectionReason` and the rejection metadata the discriminator reads; refined here for null reasons on the in-scope transports.
+  - `0053-pipeline-validation-at-startup` — the `ValidatePipelines` seam.
+  - `0061-reject_mapping_errors`.
+  - `0066-conformance-test-provider-and-ungating`, `0067-conformance-rollout-and-deferral-governance` — the FR-23 ledger cells this moves and the redelivery-arm oracle change.
+  - `0074-lifetime-validation-evaluation-site` (PR #4282, unmerged) — the two-rung ladder; lower rung taken, so no dependency.
+  - `0078-gcp-rejection-routing-and-dlq-channel-creation` (Proposed) — GCP rejection routing and DLQ channel creation.
+  - Supersedes none.
+- External references: Google.Cloud.PubSub.V1 3.36.0 (`ReceivedMessage.DeliveryAttempt`, `PubsubExtensions.GetDeliveryAttempt`); AWS SQS `ApproximateReceiveCount`; RocketMQ.Client 5.2.1 (`MessageView.DeliveryAttempt`).
+
+### Deferred to ADR 0078
+
+Not decided here: R-16 to R-21 (GCP routing; `Reject` composition per consumer — R-19's ADR MUSTs; evidencing the failed-ack and failed-release outcomes); the `makeChannels` of the GCP dead-letter producer (AC-18/AC-43); NFR-5's Resource Manager exception type (AC-21); R-20's IAM tolerance.
+
+**Constraints this ADR places on 0078:** the routed GCP copy stamps `RejectionMetadataKeyNames` (`rejectionReason` — `"None"` for a null reason) and carries `HandledCount`; it must not re-publish `googclient_deliveryattempt`.

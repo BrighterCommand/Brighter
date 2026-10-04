@@ -123,16 +123,16 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             AddUserDefinedHeaders(message, headers);
 
-            AddDeliveryHeaders(TimeSpan.Zero, headers, deliveryTag);
+            AddDeliveryHeaders(timeOut, headers, deliveryTag);
 
             AddOriginalMessageIdOnRepublish(message, headers);
 
             var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
             var bodyContentType = message.Body.ContentType ?? contentType;
 
-            // To send it to the right queue use the default (empty) exchange
+            // Immediate retries use the default exchange; delayed retries use queue-specific bindings.
             _channel.BasicPublish(
-                string.Empty,
+                timeOut > TimeSpan.Zero ? RmqDelayedRequeue.ExchangeName(_connection) : string.Empty,
                 queueName.Value,
                 false,
                 CreateBasicProperties(
