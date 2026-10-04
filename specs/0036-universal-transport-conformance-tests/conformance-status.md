@@ -346,6 +346,15 @@ cell remains `Unknown`.
     provider's own doc comment says so, and `CreateSubscription` records that `invalidMessageRoutingKey`
     has "no structural effect on the ASB subscription itself". This is a genuine platform difference, not
     an unfixed defect. Tracked under #4240.
+  - ⭐ **Superseded 2026-10-04: FR-9 is now `Pass`.** #4318 was diagnosed and closed by
+    [#4445](https://github.com/BrighterCommand/Brighter/pull/4445) (merged 2026-09-28): the gateway was not
+    ignoring the delay. The before-delay receive was the channel's first, and its one-time cold-start cost
+    (a new AMQP client, plus the subscription check) ran past the 5 s delay before the "2 s" receive began.
+    `AzureServiceBusMessageGatewayProvider` now warms each channel with one bounded receive before
+    returning it, and no production code changed, so the cell is `Pass`, not `Fixed`. #4445 left the two
+    tests skipped pending a live run. Flipping the cell un-skipped exactly the 2 FR-9 tests
+    (Reactor/Proactor), and **`azure-ci` against the real namespace is the evidence**: ASB has no local
+    emulator. The bullet below is the original diagnosis, kept as the record.
   - **FR-9 (delayed send) stays `Deferred` — a REAL, newly-visible defect. See #4318.** It was masked
     twice: first by #4309, then by the `UriFormatException` of #4310. With both cleared, the failure is
     `Assert.Equal() Failure: Expected MT_NONE, Actual MT_EVENT` on the **before-delay** arm — i.e. a
@@ -1176,7 +1185,7 @@ a stale message, which can pass for a body-assertion failure.
 - `MQTT` FR-23 (`Deferred -> #4351`): the Proactor pump deadlocks on the first requeue (see the MQTT note
   in the FR-23 section). *Since moved, 2026-10-04: `Fixed (#4441)`.*
 - `AzureServiceBus` FR-23, and its other `Deferred` cells, FR-5 and FR-9: there is no local emulator, and
-  Azure Service Bus dead-letters natively.
+  Azure Service Bus dead-letters natively. *Since moved, 2026-10-04: FR-9 → `Pass` (see the ASB FR-9 note).*
 - `GCP` FR-2, FR-7, FR-9, FR-15 and FR-22 on all four configurations, plus FR-16 on `GCP / Pull` and
   `GCP / PullOrdering` (22 cells). Spec 0037 changed neither the requeue delay, the no-channels path, delayed
   send, nor Pull `Nack`.
@@ -1280,7 +1289,7 @@ assertion failed in any run, on the exposed AWS, AWS.V4 and RocketMQ cells or an
 | RMQ.Async / Classic | Pass | Pass | Fixed (#4387) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RMQ.Async / Quorum | Pass | Pass | Fixed (#4387) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RocketMQ / RocketMQMessagingGateway | Fixed (#4353) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4353) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4353) |
-| AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) |
+| AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) |
 | MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4441) |
 | RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4387) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Pass |
 | RMQ.Async / NativeClassic | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass | Fixed (#4388) | Pass | Pass | Pass | Pass | Pass |
