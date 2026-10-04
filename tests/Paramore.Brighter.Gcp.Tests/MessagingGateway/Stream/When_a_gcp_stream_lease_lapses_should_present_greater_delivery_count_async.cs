@@ -78,7 +78,7 @@ public class GcpStreamLeaseLapseDeliveryCountAsyncTests
             {
                 AckDeadlineSeconds = 60,
                 MaxDeliveryAttempts = 5,
-                PublisherMember = "serviceAccount:brighter-pubsub@brighter-test.iam.gserviceaccount.com",
+                PublisherMember = GcpEmulatorIamMember.Value,
             },
             makeChannels: OnMissingChannel.Create,
             subscriptionMode: SubscriptionMode.Stream,
@@ -94,7 +94,7 @@ public class GcpStreamLeaseLapseDeliveryCountAsyncTests
                     AckDeadline = TimeSpan.FromSeconds(10),
                 };
             },
-            subscriberMember: "serviceAccount:brighter-pubsub@brighter-test.iam.gserviceaccount.com");
+            subscriberMember: GcpEmulatorIamMember.Value);
 
         IAmAMessageProducerAsync? producer = null;
         IAmAChannelAsync? channel = null;
@@ -182,7 +182,7 @@ public class GcpStreamOrderingLeaseLapseDeliveryCountAsyncTests
             {
                 AckDeadlineSeconds = 60,
                 MaxDeliveryAttempts = 5,
-                PublisherMember = "serviceAccount:brighter-pubsub@brighter-test.iam.gserviceaccount.com",
+                PublisherMember = GcpEmulatorIamMember.Value,
             },
             makeChannels: OnMissingChannel.Create,
             subscriptionMode: SubscriptionMode.Stream,
@@ -195,7 +195,7 @@ public class GcpStreamOrderingLeaseLapseDeliveryCountAsyncTests
                     AckDeadline = TimeSpan.FromSeconds(10),
                 };
             },
-            subscriberMember: "serviceAccount:brighter-pubsub@brighter-test.iam.gserviceaccount.com");
+            subscriberMember: GcpEmulatorIamMember.Value);
 
         IAmAMessageProducerAsync? producer = null;
         IAmAChannelAsync? channel = null;

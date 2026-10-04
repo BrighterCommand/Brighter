@@ -80,7 +80,7 @@ public class GcpStreamBudgetExhaustedDlqProactorTests
         // Brighter DLQ topic (named == dlqChannelName, ADR 0078 step 5) — see CAUTION in the task notes.
         var readingChannelName = new ChannelName($"{dlqChannelName.Value}-RdrA");
 
-        const string serviceAccount = "serviceAccount:brighter-pubsub@brighter-test.iam.gserviceaccount.com";
+        var serviceAccount = GcpEmulatorIamMember.Value;
 
         // Main subscription: Brighter budget 3, plus a native DeadLetterPolicy (M = 5) on .native
         // (per the task), and a Brighter DLQ routing key so RejectAsync() has a Brighter destination.
