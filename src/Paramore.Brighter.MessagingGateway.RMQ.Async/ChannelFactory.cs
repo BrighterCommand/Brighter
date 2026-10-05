@@ -116,17 +116,16 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
         return CreateAsyncChannelCoreAsync(rmqSubscription, ct);
     }
 
-    private Task<IAmAChannelAsync> CreateAsyncChannelCoreAsync(RmqSubscription subscription, CancellationToken ct)
+    private async Task<IAmAChannelAsync> CreateAsyncChannelCoreAsync(RmqSubscription subscription, CancellationToken ct)
     {
         var messageConsumer = _messageConsumerFactory.CreateAsync(subscription);
+        await ((RmqMessageConsumer)messageConsumer).EnsureChannelExistsAsync(ct);
 
-        var channel = new ChannelAsync(
+        return new ChannelAsync(
             channelName: subscription.ChannelName,
             routingKey: subscription.RoutingKey,
             messageConsumer: messageConsumer,
             maxQueueLength: subscription.BufferSize
         );
-
-        return Task.FromResult<IAmAChannelAsync>(channel);
     }
 }
