@@ -185,13 +185,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, ServiceLifetime.Singleton));
 
-            var builder =  new ServiceCollectionBrighterBuilder(
+            var builder = new ServiceCollectionBrighterBuilder(
                 services,
                 subscriberRegistry,
                 mapperRegistry,
                 transformRegistry,
                 null // PolicyRegistry resolved at runtime
             );
+
+            RegisterResiliencePipelineRegistry(builder);
 
             // Register built-in Brighter handlers, mappers, and transforms from Paramore.Brighter assemblies.
             // This is done here rather than in the constructor so that direct construction of the builder
@@ -251,8 +253,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             IServiceCollection services,
             Func<IServiceProvider, BrighterOptions> optionsFunc)
         {
-            if (services is null) throw new ArgumentNullException(nameof(services));
-            if (optionsFunc is null) throw new ArgumentNullException(nameof(optionsFunc));
+            if (services is null)
+                throw new ArgumentNullException(nameof(services));
+            if (optionsFunc is null)
+                throw new ArgumentNullException(nameof(optionsFunc));
 
             // TryAddSingleton spelled out, because the descriptor we add has to be one we can hand on:
             // a validator's rule asks whether the effective IBrighterOptions descriptor is this one.
@@ -273,6 +277,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             services.Add(descriptor);
             services.AddSingleton(new BrighterOptionsRegistration(descriptor));
+        }
+
+        private static void RegisterResiliencePipelineRegistry(IBrighterBuilder builder)
+        {
+            builder.Services.TryAddSingleton(sp => new BrighterResiliencePipelineRegistry(
+                sp.GetRequiredService<IBrighterOptions>(), builder.ResiliencePolicyRegistry));
         }
 
         /// <summary>
@@ -319,7 +329,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (busConfiguration.UseRpc && busConfiguration.ReplyQueueSubscriptions == null)
                 throw new ConfigurationException("If the you configure RPC, you must configure the ReplyQueueSubscriptions");
             
-            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType >();
+            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType>();
             brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
 
             //default to using System Transactions if nothing provided, so we always technically can share the outbox transaction
@@ -404,11 +414,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 brighterBuilder.Services.TryAddSingleton<IUseRpc>(new UseRpc(busConfiguration.UseRpc, busConfiguration.ReplyQueueSubscriptions!));
             
             brighterBuilder.Services.TryAddSingleton<IAmProducersConfiguration>(busConfiguration);
-            brighterBuilder.ResiliencePolicyRegistry ??= new ResiliencePipelineRegistry<string>().AddBrighterDefault();
+            RegisterResiliencePipelineRegistry(brighterBuilder);
            
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator),
                (serviceProvider) => BuildOutBoxProducerMediator(
-                   serviceProvider, transactionType, busConfiguration, brighterBuilder.ResiliencePolicyRegistry, outbox
+                   serviceProvider, transactionType, busConfiguration, outbox
                ) ?? throw new ConfigurationException("Unable to create an outbox producer mediator. Ensure IAmProducersConfiguration, IAmABoxTransactionProvider, and IAmAnOutbox are registered."),
                ServiceLifetime.Singleton));
 
@@ -467,7 +477,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return busConfiguration;
             });
 
-            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType >();
+            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType>();
 
             // Register producer registry with deferred resolution
             brighterBuilder.Services.TryAddSingleton<IAmAProducerRegistry>(sp =>
@@ -542,7 +552,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return null!;
             });
 
-            brighterBuilder.ResiliencePolicyRegistry ??= new ResiliencePipelineRegistry<string>().AddBrighterDefault();
+            RegisterResiliencePipelineRegistry(brighterBuilder);
 
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator), sp =>
             {
@@ -559,7 +569,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     {
                         ProducerRegistry = busConfiguration.ProducerRegistry,
                         Outbox = outbox
-                    }, brighterBuilder.ResiliencePolicyRegistry, outbox
+                    }, outbox
                 ) ?? throw new ConfigurationException("Unable to create an outbox producer mediator. Ensure IAmProducersConfiguration, IAmABoxTransactionProvider, and IAmAnOutbox are registered.");
             }, ServiceLifetime.Singleton));
 
@@ -715,7 +725,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             INeedInstrumentation? instrumentationBuilder = null;
             bool useRpc = useRequestResponse != null && useRequestResponse.RPC;
 
-            if (!hasEventBus) instrumentationBuilder = messagingBuilder.NoExternalBus();
+            if (!hasEventBus)
+                instrumentationBuilder = messagingBuilder.NoExternalBus();
 
             if (hasEventBus && !useRpc)
             {
@@ -785,9 +796,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             
             var pollyBuilder = handlerBuilder.Handlers(handlerConfiguration);
 
-            options.ResiliencePipelineRegistry ??= new ResiliencePipelineRegistry<string>().AddBrighterDefault();
+            var resiliencePipelineRegistry = provider.GetRequiredService<BrighterResiliencePipelineRegistry>().Registry;
 #pragma warning disable CS0618 // Type or member is obsolete
-            var messagingBuilder = pollyBuilder.Resilience(options.ResiliencePipelineRegistry, options.PolicyRegistry);
+            var messagingBuilder = pollyBuilder.Resilience(resiliencePipelineRegistry, options.PolicyRegistry);
 #pragma warning restore CS0618 // Type or member is obsolete
 
             
@@ -810,9 +821,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             IServiceProvider serviceProvider,
             Type transactionType,
             ProducersConfiguration busConfiguration,
-            ResiliencePipelineRegistry<string>? resiliencePipelineRegistry,
             IAmAnOutbox outbox) 
         {
+            var resiliencePipelineRegistry = serviceProvider.GetRequiredService<BrighterResiliencePipelineRegistry>().Registry;
             //Because the bus has specialized types as members, we need to create the bus type dynamically
             //again to prevent someone configuring Brighter from having to pass generic types
             var busType = typeof(OutboxProducerMediator<,>).MakeGenericType(typeof(Message), transactionType);
@@ -901,12 +912,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             ServiceLifetime serviceLifetime)
         {
             var connectionProviderInterface = GetConnectionProviderInterface(connectionProvider);
-            if(connectionProviderInterface != null)
+            if (connectionProviderInterface != null)
             {
                 brighterBuilder.Services.TryAdd(new ServiceDescriptor(connectionProviderInterface, connectionProvider, serviceLifetime));
                 
-                var transactionProviderInterface = GetTransactionInterface(transactionProvider, connectionProviderInterface );
-                if(transactionProviderInterface != null)
+                var transactionProviderInterface = GetTransactionInterface(transactionProvider, connectionProviderInterface);
+                if (transactionProviderInterface != null)
                 {
                     brighterBuilder.Services.TryAdd(new ServiceDescriptor(transactionProviderInterface, transactionProvider, serviceLifetime));
                 }
