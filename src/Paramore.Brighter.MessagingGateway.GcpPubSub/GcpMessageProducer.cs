@@ -9,12 +9,23 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// A message producer for Google Cloud Pub/Sub, responsible for sending messages to a specific topic.
 /// It implements synchronous, asynchronous, and bulk sending, and supports delayed messaging via a scheduler.
 /// </summary>
+/// <param name="client">The Google <see cref="PublisherClient"/> used to publish messages.</param>
+/// <param name="publication">The publication this producer sends to.</param>
+/// <param name="instrumentation">The instrumentation options for the producer's spans.</param>
+/// <param name="enableMessageOrdering">
+/// Whether <paramref name="client"/> was built with message ordering enabled. When <c>null</c>, the publication's
+/// <see cref="GcpPublication.EnableMessageOrdering"/> is used. A message's partition key is sent as the Pub/Sub ordering
+/// key only when ordering is enabled, as the client refuses an ordering key otherwise.
+/// </param>
 public class GcpMessageProducer(
     PublisherClient client,
     GcpPublication publication,
-    InstrumentationOptions instrumentation = InstrumentationOptions.None)
+    InstrumentationOptions instrumentation = InstrumentationOptions.None,
+    bool? enableMessageOrdering = null)
     : IAmAMessageProducerAsync, IAmAMessageProducerSync, IAmABulkMessageProducerAsync
 {
+    private readonly bool _enableMessageOrdering = enableMessageOrdering ?? publication.EnableMessageOrdering;
+
     /// <summary>
     /// Gets the publication configuration for this producer.
     /// </summary>
@@ -58,7 +69,7 @@ public class GcpMessageProducer(
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.PubSub, message, instrumentation);
             
             // Convert the Brighter message to a Google Pub/Sub message
-            var pubSubMessage = Parser.ToPubSubMessage(message);
+            var pubSubMessage = Parser.ToPubSubMessage(message, _enableMessageOrdering);
 
             // Publish the message to Google Cloud Pub/Sub
             await client.PublishAsync(pubSubMessage);
@@ -131,7 +142,7 @@ public class GcpMessageProducer(
         foreach (var message in messageBatch.Content)
         {
             // No explicit trace for bulk individual sends; rely on underlying client instrumentation
-            await client.PublishAsync(Parser.ToPubSubMessage(message));
+            await client.PublishAsync(Parser.ToPubSubMessage(message, _enableMessageOrdering));
         }
     }
 
