@@ -325,6 +325,7 @@ namespace Paramore.Brighter
                     resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     featureSwitchRegistry: _featureSwitchRegistry,
                     inboxConfiguration: _inboxConfiguration,
+                    tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions.Value,
                     requestSchedulerFactory: _requestSchedulerFactory);
             }
