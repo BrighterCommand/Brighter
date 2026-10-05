@@ -140,6 +140,7 @@ namespace Paramore.Brighter
         /// <param name="header">The header.</param>
         /// <param name="body">The body.</param>
         [JsonConstructor]
+        [Newtonsoft.Json.JsonConstructor]
         public Message(MessageHeader header, MessageBody body)
         {
             Body = body;

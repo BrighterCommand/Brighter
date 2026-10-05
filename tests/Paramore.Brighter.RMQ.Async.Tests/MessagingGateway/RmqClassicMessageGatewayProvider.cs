@@ -108,12 +108,6 @@ public class RmqClassicMessageGatewayProvider
             new RmqMessageConsumerFactory(_connection, Scheduler)
         ).CreateSyncChannel(subscription);
 
-        if (subscription.MakeChannels == OnMissingChannel.Create)
-        {
-            // Ensuring that the queue exists before return the channel
-            channel.Receive(TimeSpan.FromMilliseconds(100));
-        }
-
         if (subscription.DeadLetterChannelName != null && subscription.RequeueCount > 0)
         {
             return new RequeueTrackingChannelSync(channel);
@@ -130,12 +124,6 @@ public class RmqClassicMessageGatewayProvider
         var channel = await new ChannelFactory(
             new RmqMessageConsumerFactory(_connection, Scheduler)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
-
-        if (subscription.MakeChannels == OnMissingChannel.Create)
-        {
-            // Ensuring that the queue exists before return the channel
-            await channel.ReceiveAsync(TimeSpan.FromMilliseconds(100), cancellationToken);
-        }
 
         if (subscription.DeadLetterChannelName != null && subscription.RequeueCount > 0)
         {
