@@ -446,6 +446,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
         }
 
+        /// <summary>
+        /// Declares and binds (or validates) the queue this consumer reads from, honouring
+        /// <see cref="Subscription.MakeChannels"/>, so that a channel factory can do so before handing out a channel.
+        /// With <see cref="OnMissingChannel.Assume"/> this does no broker I/O.
+        /// </summary>
+        internal void EnsureChannelExists()
+        {
+            if (_makeChannels == OnMissingChannel.Assume) return;
+            EnsureChannel();
+        }
+
         private void CancelConsumer()
         {
             var consumer = _consumer;
