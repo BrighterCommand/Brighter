@@ -31,16 +31,44 @@ using Azure.Messaging.ServiceBus.Administration;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 
+/// <summary>
+/// An in-memory stand-in for the Service Bus management API: entities exist only once they have been
+/// created through it, and every queue and subscription it creates is recorded so a test can see when provisioning happened.
+/// <see cref="RequestCount"/> counts every call made to the management API.
+/// </summary>
 public class InMemoryServiceBusAdministrationClient : ServiceBusAdministrationClient
 {
+    private readonly HashSet<string> _topics = [];
+
     public Dictionary<string, CreateQueueOptions> Queues { get; } = new();
 
+    public List<(string Topic, string Subscription)> CreatedSubscriptions { get; } = [];
+
+    public int RequestCount { get; private set; }
+
+    public override Task<Response<bool>> TopicExistsAsync(string name, CancellationToken cancellationToken = default)
+    {
+        RequestCount++;
+        return Task.FromResult(Response.FromValue(_topics.Contains(name), null!));
+    }
+
+    public override Task<Response<bool>> SubscriptionExistsAsync(string topicName, string subscriptionName,
+        CancellationToken cancellationToken = default)
+    {
+        RequestCount++;
+        return Task.FromResult(Response.FromValue(CreatedSubscriptions.Contains((topicName, subscriptionName)), null!));
+    }
+
     public override Task<Response<bool>> QueueExistsAsync(string name, CancellationToken cancellationToken = default)
-        => Task.FromResult(Response.FromValue(Queues.ContainsKey(name), null!));
+    {
+        RequestCount++;
+        return Task.FromResult(Response.FromValue(Queues.ContainsKey(name), null!));
+    }
 
     public override Task<Response<QueueProperties>> CreateQueueAsync(CreateQueueOptions options,
         CancellationToken cancellationToken = default)
     {
+        RequestCount++;
         Queues.Add(options.Name, options);
         var properties = ServiceBusModelFactory.QueueProperties(
             name: options.Name,
@@ -54,5 +82,21 @@ public class InMemoryServiceBusAdministrationClient : ServiceBusAdministrationCl
             maxDeliveryCount: options.MaxDeliveryCount,
             userMetadata: options.UserMetadata ?? string.Empty);
         return Task.FromResult(Response.FromValue(properties, null!));
+    }
+
+    public override Task<Response<TopicProperties>> CreateTopicAsync(CreateTopicOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        RequestCount++;
+        _topics.Add(options.Name);
+        return Task.FromResult(Response.FromValue<TopicProperties>(null!, null!));
+    }
+
+    public override Task<Response<SubscriptionProperties>> CreateSubscriptionAsync(CreateSubscriptionOptions options,
+        CreateRuleOptions rule, CancellationToken cancellationToken = default)
+    {
+        RequestCount++;
+        CreatedSubscriptions.Add((options.TopicName, options.SubscriptionName));
+        return Task.FromResult(Response.FromValue<SubscriptionProperties>(null!, null!));
     }
 }

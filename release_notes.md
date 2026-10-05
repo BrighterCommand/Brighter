@@ -156,6 +156,116 @@ A message that was never settled blocked `Dispose`, and with it shutdown, for up
 consumer now stops with `ShutdownMode.NackImmediately`. A message still held at shutdown is nacked and
 redelivered, and `Dispose` returns promptly.
 
+### GCP Pub/Sub stream: reopening a channel on the same subscription works again (#4502)
+
+Channels on one stream subscription share a `SubscriberClient`, which stops when the last channel
+leaves. A `SubscriberClient` cannot be restarted. However, Brighter kept the stopped client cached
+against the subscription. So when the dispatcher reopened that subscription, after `Shut` then `Open`
+or after scaling performers to zero and back, channel creation threw `InvalidOperationException: Can
+only start an instance once.` A second attempt then silently gave a channel that never received
+anything. A stopped client is now replaced by a new one.
+
+A Reactor performer also disposed its stream consumer twice. With several performers on one
+subscription, that could stop the shared client while the others were still reading from it, and
+they then received nothing. Disposing the stream consumer is now idempotent.
+
+**Breaking change:** `GcpStreamConsumer.Start()` is replaced by `bool TryStart()`, which returns
+`false` once the consumer has stopped. Only `GcpPubSubConsumerFactory` called it in Brighter.
+
+### GCP Pub/Sub stream: settled messages are no longer kept in memory (#4505)
+
+For every message it delivered, the stream handler registered a callback on the `SubscriberClient`'s
+cancellation token and never removed it. That token lives as long as the client, so every message the
+client delivered, payload included, stayed in memory until the channel was disposed. A long-running
+stream consumer's memory grew with its throughput. Stopping the client also had to run one callback for
+every message ever delivered. The callback is now removed once the message is settled.
+
+### GCP Pub/Sub: `Purge` now clears the subscription (#4508)
+
+`Purge` and `PurgeAsync` on a GCP channel, Pull or Stream, never worked. They purge by seeking the
+subscription to a future time, but the Seek request did not name the subscription, so Pub/Sub
+rejected it with `InvalidArgument` and `Purge` always threw. The Seek now names the consumer's
+subscription. This also affects `CommandProcessor.Call` over GCP, which purges the reply channel before
+sending the request.
+
+On a Stream subscription, a Seek clears only the messages still held by the service. The streaming
+client may already have delivered some messages into Brighter's local buffer, and those were still
+returned by the next `Receive`. A purge now also acknowledges every buffered message published before
+the purge started. Messages published after it are kept.
+
+### Reactor: a channel disposes its message consumer only once (#4511)
+
+When a Reactor performer stopped, its sync `Channel` was disposed twice: once by the pump when it
+received the quit message, and again when the dispatcher disposed the performer. `Channel` passed both
+calls on, so every transport's sync message consumer was disposed twice on each shutdown. For a Kafka
+consumer that had created a requeue or rejection producer, the second dispose threw
+`ObjectDisposedException` from the already-disposed producer's `Flush`. `Channel.Dispose` is now
+idempotent, as `ChannelAsync` already was, so the consumer is disposed once.
+
+### GCP Pub/Sub: subscription and publication client configuration now adds to the connection's (#4516)
+
+A `GcpPubSubSubscription`'s `streamingConfiguration` used to **replace** the connection's
+`StreamConfiguration`, and a `GcpPublication`'s `PublisherClientConfiguration` used to replace the
+connection's `PublisherConfiguration`. Any connection-wide setting, such as `EmulatorDetection`, an
+endpoint or channel credentials, was dropped for that subscription or publication. On the emulator, the
+client then went to production Pub/Sub and failed with `Unauthenticated`. Now the connection's
+configuration runs first, then the subscription's or publication's. Where both set the same builder
+property, the more specific one wins. A configuration that assigns a new `Settings` object still replaces
+whatever `Settings` the connection's configuration set.
+
+#### Behaviour change: the connection's configuration now also runs
+
+If a connection sets `StreamConfiguration` or `PublisherConfiguration`, that action now runs for every
+subscription or publication, including those with their own configuration. If you repeated connection
+settings in each per-entity configuration to work around the old behaviour, you can remove the
+repetition. If a connection setting must not apply to one subscription or publication, override it in
+that subscription's or publication's configuration.
+
+#### Message ordering survives a configuration that replaces `Settings`
+
+A publisher configuration that assigned a new `PublisherClient.Settings` switched off the message
+ordering an ordered `GcpPublication` asked for. Brighter sends each message with a partition key using
+an ordering key, so every such send then threw `InvalidOperationException` ("Message ordering must be
+enabled…"). This also broke dead-letter and invalid-message forwarding of keyed messages under a
+connection `PublisherConfiguration` that replaced `Settings`. After the configurations have run, Brighter
+now switches ordering back on for a publication with `EnableMessageOrdering = true`. A publication
+without it keeps whatever the configuration set.
+
+#### Stream configurations can set `Settings` values directly
+
+A stream configuration that set a value such as `builder.Settings.AckDeadline` threw
+`NullReferenceException`, because `Settings` was still null when the configuration ran. Brighter now
+creates `Settings` before running the configurations, as it already did for the publisher.
+
+### GCP Pub/Sub: keyed messages can be sent through an unordered publication (#4517)
+
+Brighter used to send every message's partition key as the Pub/Sub ordering key. The Google client
+refuses an ordering key unless message ordering is enabled, so on a `GcpPublication` without
+`EnableMessageOrdering` (the default), every message with a partition key failed with
+`InvalidOperationException` ("Message ordering must be enabled in settings before using OrderingKey").
+This included the bulk send, and delayed sends when the scheduler fired them. A message mapper copies the
+partition key from the request context, so a message could have a key without your code setting one.
+
+Now Brighter sends the partition key as the ordering key only when the publisher client has message
+ordering enabled. That is either because the publication sets `EnableMessageOrdering`, or because a
+publisher configuration switched ordering on. A publisher configuration that enables ordering keeps working
+as before.
+
+#### The partition key now also travels as a `ce-partitionkey` attribute
+
+The ordering key used to be the only place the partition key travelled. Each message with a partition key
+now also carries a `ce-partitionkey` attribute, so a consumer receives the key whether or not the
+publication is ordered. A consumer reads the attribute first. If there is none, it falls back to the
+ordering key, so messages from producers on earlier versions still arrive with their key. The attribute is
+not copied into `Header.Bag`. A consumer on an earlier version reads the key from the ordering key as
+before, and sees the new attribute in its `Header.Bag`.
+
+#### `GcpMessageProducer` takes an optional `enableMessageOrdering`
+
+If you build a `GcpMessageProducer` yourself rather than through `GcpPubSubMessageProducerFactory`, you can
+pass `enableMessageOrdering` to say whether your `PublisherClient` was built with ordering enabled. If you
+leave it out, the producer uses the publication's `EnableMessageOrdering`.
+
 ### Message pumps reject received messages with no handler (#4500)
 
 `Reactor` and `Proactor` now reject a received message as `Unacceptable` when it maps successfully
@@ -733,6 +843,41 @@ Provisioning refuses such a name up front with a message that explains the arith
 
 `Validate` builds no identifier and keeps the full 128, so a longer table that already exists can
 still be used.
+
+### Azure Service Bus: the channel factory provisions the subscription before handing out a channel (#4309)
+
+`AzureServiceBusChannelFactory` now honours `OnMissingChannel` on an `AzureServiceBusSubscription` as
+it creates a channel, from `CreateSyncChannel`, `CreateAsyncChannel` and `CreateAsyncChannelAsync`
+alike, in the same way as the AWS and GCP channel factories:
+
+| `MakeChannels` | Behaviour |
+|---|---|
+| `Create` (the default) | the topic subscription (or, with `UseServiceBusQueue`, the queue) is created if absent, using the subscription's `AzureServiceBusSubscriptionConfiguration` |
+| `Validate` | a missing subscription or queue throws `ChannelFailureException` from channel creation |
+| `Assume` | nothing happens and no management-API call is made |
+
+Before this, the factory ignored the setting and created nothing on the broker. The subscription was
+created by the consumer's first receive, so a message published to the topic between the channel
+being created and that first receive arrived at a topic with no subscription, and Azure Service Bus
+silently discarded it. Nothing logged and nothing threw. The queue path did not lose messages, because
+the producer creates the same queue on send.
+
+#### Behaviour change: provisioning failures now surface at startup
+
+The management-API calls that used to happen on the first receive now happen when the
+`ServiceActivator` creates its channels. With `Create` or `Validate`, a missing subscription under
+`Validate`, a management API that cannot be reached, or a credential without **Manage** rights on the
+namespace now throws `ChannelFailureException` from channel creation, which is to say from
+`Dispatcher.Receive()` at startup. Before, the same exception came from the first receive, where the
+message pump caught it and retried after `ChannelFailureDelay`. There is no retry around channel
+creation.
+
+**If your subscriptions are provisioned by infrastructure-as-code, or your application's credential
+has only Send/Listen rights, set `MakeChannels` to `Assume`.** `Validate` also needs Manage rights,
+because checking whether a subscription exists is itself a management-API call.
+
+`AzureServiceBusConsumerFactory`, used on its own without the channel factory, is unchanged: its
+consumers still provision on first use.
 
 ## 10.7.0
 
