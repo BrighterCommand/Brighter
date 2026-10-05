@@ -84,6 +84,7 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
     /// <param name="subscription">The subscription details for the channel.</param>
     /// <returns>An asynchronous RabbitMQ channel instance.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an RmqSubscription.</exception>
+    /// <exception cref="ChannelFailureException">Thrown when the queue cannot be created, bound or validated, as the subscription's <see cref="Subscription.MakeChannels"/> requires.</exception>
     public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
     {
         RmqSubscription? rmqSubscription = subscription as RmqSubscription;
@@ -91,7 +92,7 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
             throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
 
         var messageConsumer = _messageConsumerFactory.CreateAsync(rmqSubscription);
-        BrighterAsyncContext.Run(() => ((RmqMessageConsumer)messageConsumer).EnsureChannelExistsAsync());
+        EnsureChannelExists((RmqMessageConsumer)messageConsumer, subscription);
 
         return new ChannelAsync(
             channelName: subscription.ChannelName,
