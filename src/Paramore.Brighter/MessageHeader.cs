@@ -180,6 +180,7 @@ namespace Paramore.Brighter
         /// Default value is "appliacation/json; charset=utf-8"
         /// </summary>
         /// <value>The content type.</value>
+        [Newtonsoft.Json.JsonConverter(typeof(NContentTypePropertyConverter))]
         public ContentType ContentType { get; set; }
 
         /// <summary>

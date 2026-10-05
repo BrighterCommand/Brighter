@@ -238,7 +238,7 @@ fixed. 6.14 redelivers by lease lapse with no pump and no `Requeue`, so it is no
 
 Both `GCP / Stream` and `GCP / StreamOrdering`, emulator, both variants (NFR-8), through `GcpPubSubStreamMessageConsumer`.
 
-- **Configuration:** `DeadLetterPolicy { MaxDeliveryAttempts = 5 }`; subscription `AckDeadlineSeconds = 10`; `bufferSize: 2`, `noOfPerformers: 1` (the factory derives the flow-control cap from `BufferSize × NoOfPerformers`, `GcpPubSubConsumerFactory.cs:89-92`, so a second slot exists while the first delivery is held); `StreamingConfiguration = b => b.Settings = new SubscriberClient.Settings { MaxTotalAckExtension = TimeSpan.FromSeconds(10) }` (survives because the hook runs before `builder.Settings ??= …`, `GcpPubSubConsumerFactory.cs:110-121`).
+- **Configuration:** `DeadLetterPolicy { MaxDeliveryAttempts = 5 }`; subscription `AckDeadlineSeconds = 10`; `bufferSize: 2`, `noOfPerformers: 1` (the factory derives the flow-control cap from `BufferSize × NoOfPerformers`, `GcpPubSubConsumerFactory.cs:123`, so a second slot exists while the first delivery is held); `StreamingConfiguration = b => b.Settings = new SubscriberClient.Settings { MaxTotalAckExtension = TimeSpan.FromSeconds(10) }` (survives because the hook runs before `builder.Settings ??= …`, `GcpPubSubConsumerFactory.cs:126-147`).
 - **Sequence:** (1) publish with `HandledCount = 0`; (2) `Receive`/`ReceiveAsync` returns m1 — record its count, do not ack, nack or requeue; (3) poll `Receive` every 500 ms for up to 45 s (lease extension stops at 10 s, lapses ~20 s); (4) assert the redelivery m2 presents a count strictly greater than m1's; (5) only then `Acknowledge` m2 and m1, so the `WaitForProcessing` shutdown (`GcpStreamConsumer.cs:49`) completes.
 - **Alternative test for `StreamOrdering`** if same-key serialisation blocks the primary (unverified, R-13): same procedure on the same ordering-enabled subscription with a message published **without** an ordering key. Ordered delivery withholds a same-key redelivery while its predecessor is outstanding by design, so "hold, then observe the lapse" is not drivable with a key; a keyless message still exercises the stream consumer's lease-lapse path on that configuration. The switch, if taken, is recorded in the ledger.
 - **On the AC-40 branch** this obligation lapses (R-13).
@@ -268,6 +268,8 @@ cases were run twice, with the same result.
 - **A subscription's `StreamingConfiguration` replaces the connection's** (`GcpPubSubConsumerFactory` passes
   `sub.StreamingConfiguration ?? _connection.StreamConfiguration`), so the hook must repeat the connection's
   `EmulatorDetection`. Otherwise the client goes to production Pub/Sub and fails `Unauthenticated`.
+  *(Fixed by #4516, bugfix 0049: the connection's configuration now runs first, then the subscription's, so the
+  repetition is no longer needed.)*
 - **Ordering blocks the primary procedure on `StreamOrdering`.** A keyed message's redelivery is withheld while
   m1 is outstanding, so 6.14 takes the **keyless alternative** on `StreamOrdering`, and records the switch in the
   ledger.
