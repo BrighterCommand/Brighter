@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 
@@ -66,6 +67,7 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
             throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
 
         var messageConsumer = _messageConsumerFactory.Create(rmqSubscription);
+        BrighterAsyncContext.Run(() => ((RmqMessageConsumer)messageConsumer).EnsureChannelExistsAsync());
 
         return new Channel(
             channelName: subscription.ChannelName,
