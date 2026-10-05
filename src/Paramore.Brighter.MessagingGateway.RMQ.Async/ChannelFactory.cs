@@ -60,6 +60,7 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
     /// <param name="subscription">The subscription details for the channel.</param>
     /// <returns>A synchronous RabbitMQ channel instance.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an RmqSubscription.</exception>
+    /// <exception cref="ChannelFailureException">Thrown when the queue cannot be created, bound or validated, as the subscription's <see cref="Subscription.MakeChannels"/> requires.</exception>
     public IAmAChannelSync CreateSyncChannel(Subscription subscription)
     {
         RmqSubscription? rmqSubscription = subscription as RmqSubscription;
@@ -67,7 +68,7 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
             throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
 
         var messageConsumer = _messageConsumerFactory.Create(rmqSubscription);
-        BrighterAsyncContext.Run(() => ((RmqMessageConsumer)messageConsumer).EnsureChannelExistsAsync());
+        EnsureChannelExists((RmqMessageConsumer)messageConsumer, subscription);
 
         return new Channel(
             channelName: subscription.ChannelName,
@@ -127,5 +128,20 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
             messageConsumer: messageConsumer,
             maxQueueLength: subscription.BufferSize
         );
+    }
+
+    private static void EnsureChannelExists(RmqMessageConsumer messageConsumer, Subscription subscription)
+    {
+        try
+        {
+            BrighterAsyncContext.Run(() => messageConsumer.EnsureChannelExistsAsync());
+        }
+        catch (Exception e)
+        {
+            messageConsumer.Dispose();
+            if (e is ConfigurationException) throw;
+            throw new ChannelFailureException(
+                $"RMQ ChannelFactory: could not provision channel {subscription.ChannelName.Value}, see inner exception for details", e);
+        }
     }
 }
