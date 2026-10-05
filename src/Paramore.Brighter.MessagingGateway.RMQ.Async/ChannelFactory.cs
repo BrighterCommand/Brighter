@@ -90,6 +90,7 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
             throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
 
         var messageConsumer = _messageConsumerFactory.CreateAsync(rmqSubscription);
+        BrighterAsyncContext.Run(() => ((RmqMessageConsumer)messageConsumer).EnsureChannelExistsAsync());
 
         return new ChannelAsync(
             channelName: subscription.ChannelName,
