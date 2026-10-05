@@ -108,11 +108,6 @@ public class RmqQuorumMessageGatewayProvider
             new RmqMessageConsumerFactory(_connection, Scheduler)
         ).CreateSyncChannel(subscription);
 
-        if (subscription.MakeChannels == OnMissingChannel.Create)
-        {
-            channel.Receive(TimeSpan.FromMilliseconds(100));
-        }
-
         if (subscription.DeadLetterChannelName != null && subscription.RequeueCount > 0)
         {
             return new RequeueTrackingChannelSync(channel);
@@ -129,11 +124,6 @@ public class RmqQuorumMessageGatewayProvider
         var channel = await new ChannelFactory(
             new RmqMessageConsumerFactory(_connection, Scheduler)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
-
-        if (subscription.MakeChannels == OnMissingChannel.Create)
-        {
-            await channel.ReceiveAsync(TimeSpan.FromMilliseconds(100), cancellationToken);
-        }
 
         if (subscription.DeadLetterChannelName != null && subscription.RequeueCount > 0)
         {

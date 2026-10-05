@@ -300,6 +300,40 @@ carry it. Custom `IAmACommandProcessor` decorators must pass the pump's context 
 CommandProcessor; substituting or omitting it loses the requirement and retains the previous
 acknowledgement behavior for messages without handlers.
 
+### RabbitMQ: channel factories declare the queue before returning the channel (#4519)
+
+The RabbitMQ `ChannelFactory` in both `Paramore.Brighter.MessagingGateway.RMQ.Async` and
+`Paramore.Brighter.MessagingGateway.RMQ.Sync` now honours `Subscription.MakeChannels` when it creates a
+channel. Previously, the queue was declared and bound only on the channel's first `Receive` or `Purge`.
+A message published to the exchange between creating the channel and that first receive matched no
+binding, so RabbitMQ dropped it. Because Brighter publishes with `mandatory: false`, nothing reported
+the loss, and with publisher confirms on the publish was still acknowledged.
+
+- **`Create`** declares and binds the queue, the invalid-message queue, the dead-letter queue and, where
+  native delay is configured, the delayed-requeue exchange, before the factory returns.
+- **`Validate`** checks that the queue exists. If it does not, the factory throws
+  `ChannelFailureException`.
+- **`Assume`** makes no broker connection.
+
+A message published before any subscriber has created its channel is still not delivered: the
+producer does not declare subscriber queues. That is ordinary publish/subscribe behaviour.
+
+#### Behaviour change: provisioning failures now surface when the channel is created
+
+The factory now connects to the broker, so connection, declaration and validation failures come out of
+channel creation as `ChannelFailureException`. In a Service Activator host that is dispatcher
+start-up (`Dispatcher.Receive()`), so the host fails to start. Previously the same failures surfaced on
+the message pump's first receive, which logged them and retried every `ChannelFailureDelay`.
+
+Connecting is retried when the broker is unreachable: `AmqpUriSpecification.ConnectionRetryCount`
+attempts (default 3) with exponential back-off from `RetryWaitInMilliseconds` (default 1000 ms; about
+14 s in total per channel), behind a circuit breaker that opens for `CircuitBreakTimeInMilliseconds`.
+Declaring, binding and validating the queue are not retried.
+
+The consumer also starts consuming when the channel is created rather than on the first receive, so
+up to `BufferSize` messages may be prefetched, unacknowledged, before the pump runs. They are returned
+to the queue if the channel is disposed or closed.
+
 ### Azure Service Bus queue subscription settings (#4269)
 
 Queues created by a consumer now honor `AzureServiceBusSubscriptionConfiguration`, including sessions, delivery count, lock duration, default message lifetime and dead-lettering on expiration. Default consumer-created queues now use the subscription defaults (five deliveries, a three-day lifetime and dead-lettering on expiration) instead of the broker defaults. Existing queues and producer-created queues are unchanged.
