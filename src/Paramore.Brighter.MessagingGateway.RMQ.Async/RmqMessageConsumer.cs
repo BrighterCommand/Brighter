@@ -524,6 +524,15 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         }
     }
 
+    /// <summary>
+    /// Declares and binds (or validates) the queue this consumer reads from, honouring
+    /// <see cref="Subscription.MakeChannels"/>, so that a channel factory can do so before handing out a channel.
+    /// With <see cref="OnMissingChannel.Assume"/> this does no broker I/O.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    internal Task EnsureChannelExistsAsync(CancellationToken cancellationToken = default)
+        => _makeChannels == OnMissingChannel.Assume ? Task.CompletedTask : EnsureChannelAsync(cancellationToken);
+
     private async Task CancelConsumerAsync(CancellationToken cancellationToken)
     {
         var consumer = _consumer;
