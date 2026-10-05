@@ -193,7 +193,7 @@ public partial class GcpPubSubStreamMessageConsumer(
                 SubscriptionAsSubscriptionName = subscriptionName,
                 Time = Timestamp.FromDateTimeOffset(purgeStarted.AddMinutes(1))
             });
-            consumer.PurgeBuffered(purgeStarted);
+            consumer.PurgeBuffered();
 
             Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }
@@ -227,7 +227,7 @@ public partial class GcpPubSubStreamMessageConsumer(
                     Time = Timestamp.FromDateTimeOffset(purgeStarted.AddMinutes(1))
                 },
                 cancellationToken);
-            consumer.PurgeBuffered(purgeStarted);
+            consumer.PurgeBuffered();
 
             Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }
