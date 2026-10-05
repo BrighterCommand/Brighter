@@ -567,12 +567,23 @@ explicitly, as the price of never discarding a message whose destination is conf
 emulator implements no IAM, so the second case does not arise on R-21's local bar, and A-6 is
 unaffected by it.
 
-`SqsMessageConsumer.RejectAsync` takes the opposite branch — on a failed DLQ send it deletes the
-source (`:307-316`), which its own code comment records as deliberate infinite-loop avoidance: SQS
-accepts a bounded loss where GCP accepts a retry that only a `DeadLetterPolicy` bounds. That
-behaviour predates this spec and is **not changed here**; whether it should change is recorded as an
-open question for a separate issue (see §Out of Scope). The two transports therefore differ on this
-path until that question is answered, and the difference is recorded rather than implicit.
+`SqsMessageConsumer.RejectAsync` used to take the opposite branch — on a failed DLQ send it deleted
+the source, which its own code comment recorded as deliberate infinite-loop avoidance: SQS accepted
+a bounded loss where GCP accepts a retry that only a `DeadLetterPolicy` bounds. That behaviour
+predated this spec and was left unchanged here; whether it should change was recorded as an open
+question for a separate issue (see former §Out of Scope entry). **That question is now answered:
+issue #4415 (PR #4523, merged 2026-10-05) changed SQS to match this requirement** — on a failed
+DLQ/invalid-message send it now releases the source for redelivery (`ChangeMessageVisibility(…, 0)`
+via a new `ReleaseSourceMessageAsync` helper, V3 `SqsMessageConsumer.cs:311-323`, V4 lockstep per
+ADR 0038) instead of deleting it, logs at Error, and still returns `true`. The two transports no
+longer differ on this path, on the same accepted trade-off: SQS has no runtime visibility into
+whether the *actual* queue carries a `RedrivePolicy` (only what Brighter itself configured when it
+created the queue), so a release can loop as long as a deterministic failure persists, bounded only
+by the queue's `MessageRetentionPeriod` if no redrive policy is in effect — see the ADR 0038
+amendment this change required. One path SQS does **not** yet close: a producer-creation failure
+(as opposed to a publish failure) for the DLQ/invalid-message channel still falls through to delete
+(`bugfixes/0048-sqs-reject-deletes-on-dlq-failure/bugfix.md`, Scope Notes Risk 2) — tracked as a
+follow-up, not resolved by #4415.
 
 > *Example.* `deadLetterRoutingKey` names a topic that does not exist and that the dead-letter
 > producer does not create. `Reject(message, new
@@ -593,15 +604,18 @@ source, which the ADR starts from:
   reply and throws nothing (`GcpStreamConsumer.cs:133-135`). Only the pull release can fail.
 - **The pump acknowledges on `false`.** `RequeueMessage` returns `Reject`'s result, and `false`
   falls through to the acknowledgement (`Reactor.cs:320` → `:367`; `Proactor.cs:354` → `:402`).
-  `true` means "settled by this call", as on SQS's failure path (`SqsMessageConsumer.cs:312-313`).
+  `true` means "settled by this call", as on SQS's failure path (`SqsMessageConsumer.cs:311-323`).
 - **Reusing `Requeue` as-is is a trap.**
   - The pull `Requeue` catches every exception and returns `false` (`GcpPullMessageConsumer.cs:354-358`,
     async `:394-398`). With no receipt handle, it returns `false` without logging (`:337-340`).
   - The stream `Requeue` returns `true` having done nothing when the handle is missing
     (`GcpPubSubStreamMessageConsumer.cs:219-222`).
-  - SQS's reference path strips the handle from the in-memory message before its send
-    (`SqsMessageConsumer.cs:504`, called at `:279`), and survives only because it copied the handle
-    first (`:257`).
+  - SQS strips the handle from the in-memory message before its send
+    (`SqsMessageConsumer.cs:515`, called at `:283`), and only survives because it copied the handle
+    first (`:261`). When SQS was changed to release rather than delete on a failed send (#4415), it
+    had to use that same pre-copy — a handle-taking private helper (`ReleaseSourceMessageAsync`),
+    not the public `Requeue`/`Nack` — for exactly this reason: both read the bag, which no longer
+    has the handle by the time the send fails.
 
   A port that strips the handle without copying it, or that returns `Requeue`'s result, produces the
   discard or the outstanding message R-16 and R-19 forbid.
@@ -1212,13 +1226,18 @@ Named explicitly so the boundary is deliberate rather than accidental.
 - **#4387 — RMQ invalid-message destination.** It should *follow* whatever R-15 to R-19 settle for
   GCP rather than invent a second pattern, but it is not implemented here.
 - **Changing ADR `0038-aws-sqs-dlq-direct-send`'s DLQ strategy** (C-1).
-- **Changing SQS's failed-DLQ-send behaviour to match R-19.** `SqsMessageConsumer.RejectAsync`
-  currently deletes the source message when the DLQ send throws (`:307-316`), which its own code
-  comment records as deliberate infinite-loop avoidance. R-19 takes the opposite branch for GCP,
-  which has no incumbent behaviour to unwind, and bounds the resulting loop only by the native
-  `MaxDeliveryAttempts`, not by the budget. **Whether the SQS branch should now change is an open
-  question, not a settled endorsement**: it is raised as its own issue when this spec's requirements
-  are approved, and the two transports differ on this path until that issue is answered.
+- **Changing SQS's failed-DLQ-send behaviour to match R-19 — resolved by #4415.** This entry
+  originally recorded an open question raised when this spec's requirements were approved:
+  `SqsMessageConsumer.RejectAsync` deleted the source message when the DLQ send threw, which its
+  own code comment recorded as deliberate infinite-loop avoidance, against R-19's opposite choice
+  for GCP. **That question is now answered**: issue #4415 (PR #4523, merged 2026-10-05) changed
+  both SQS packages (V3 and V4, lockstep per ADR 0038) to match R-19 — release for redelivery
+  instead of deleting, on the same accepted loop/retention trade-off (see the R-19 discussion
+  above and the ADR 0038 amendment). Full diagnosis, evidence and scope in
+  `bugfixes/0048-sqs-reject-deletes-on-dlq-failure/bugfix.md`. **Still open, not resolved by
+  #4415**: a DLQ/invalid-message *producer-creation* failure (as opposed to a publish failure)
+  still falls through to delete (bugfix.md, Scope Notes Risk 2) — low practical reachability, left
+  for a future issue.
 - **Azure Service Bus.** It dead-letters natively, has no emulator in this repo, and is not part of
   this defect family. Its `Deferred` cells do not move here.
 - **The RabbitMQ transports.** All three already satisfy FR-23 via the DLX; R-22 protects them and
