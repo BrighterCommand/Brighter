@@ -65,6 +65,7 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
             throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
 
         var messageConsumer = _messageConsumerFactory.Create(rmqSubscription);
+        ((RmqMessageConsumer)messageConsumer).EnsureChannelExists();
 
         return new Channel(
             channelName: subscription.ChannelName,
