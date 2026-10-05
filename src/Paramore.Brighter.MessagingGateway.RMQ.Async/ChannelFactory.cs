@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 
@@ -59,6 +60,7 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
     /// <param name="subscription">The subscription details for the channel.</param>
     /// <returns>A synchronous RabbitMQ channel instance.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an RmqSubscription.</exception>
+    /// <exception cref="ChannelFailureException">Thrown when the queue cannot be created, bound or validated, as the subscription's <see cref="Subscription.MakeChannels"/> requires.</exception>
     public IAmAChannelSync CreateSyncChannel(Subscription subscription)
     {
         RmqSubscription? rmqSubscription = subscription as RmqSubscription;
@@ -66,6 +68,7 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
             throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
 
         var messageConsumer = _messageConsumerFactory.Create(rmqSubscription);
+        EnsureChannelExists((RmqMessageConsumer)messageConsumer, subscription);
 
         return new Channel(
             channelName: subscription.ChannelName,
@@ -81,6 +84,7 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
     /// <param name="subscription">The subscription details for the channel.</param>
     /// <returns>An asynchronous RabbitMQ channel instance.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an RmqSubscription.</exception>
+    /// <exception cref="ChannelFailureException">Thrown when the queue cannot be created, bound or validated, as the subscription's <see cref="Subscription.MakeChannels"/> requires.</exception>
     public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
     {
         RmqSubscription? rmqSubscription = subscription as RmqSubscription;
@@ -88,6 +92,7 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
             throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
 
         var messageConsumer = _messageConsumerFactory.CreateAsync(rmqSubscription);
+        EnsureChannelExists((RmqMessageConsumer)messageConsumer, subscription);
 
         return new ChannelAsync(
             channelName: subscription.ChannelName,
@@ -104,21 +109,56 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
     /// <param name="ct">A token to cancel the operation.</param>
     /// <returns>A task representing the asynchronous operation, with an asynchronous RabbitMQ channel instance as the result.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an RmqSubscription.</exception>
+    /// <exception cref="ChannelFailureException">Thrown when the queue cannot be created, bound or validated, as the subscription's <see cref="Subscription.MakeChannels"/> requires.</exception>
     public Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription, CancellationToken ct = default)
     {
         RmqSubscription? rmqSubscription = subscription as RmqSubscription;
         if (rmqSubscription == null)
             throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
 
-        var messageConsumer = _messageConsumerFactory.CreateAsync(rmqSubscription);
+        return CreateAsyncChannelCoreAsync(rmqSubscription, ct);
+    }
 
-        var channel = new ChannelAsync(
+    private async Task<IAmAChannelAsync> CreateAsyncChannelCoreAsync(RmqSubscription subscription, CancellationToken ct)
+    {
+        var messageConsumer = _messageConsumerFactory.CreateAsync(subscription);
+        await EnsureChannelExistsAsync((RmqMessageConsumer)messageConsumer, subscription, ct);
+
+        return new ChannelAsync(
             channelName: subscription.ChannelName,
             routingKey: subscription.RoutingKey,
             messageConsumer: messageConsumer,
             maxQueueLength: subscription.BufferSize
         );
+    }
 
-        return Task.FromResult<IAmAChannelAsync>(channel);
+    private static void EnsureChannelExists(RmqMessageConsumer messageConsumer, Subscription subscription)
+    {
+        try
+        {
+            BrighterAsyncContext.Run(() => messageConsumer.EnsureChannelExistsAsync());
+        }
+        catch (Exception e)
+        {
+            messageConsumer.Dispose();
+            if (e is ConfigurationException) throw;
+            throw new ChannelFailureException(
+                $"RMQ ChannelFactory: could not provision channel {subscription.ChannelName.Value}, see inner exception for details", e);
+        }
+    }
+
+    private static async Task EnsureChannelExistsAsync(RmqMessageConsumer messageConsumer, Subscription subscription, CancellationToken ct)
+    {
+        try
+        {
+            await messageConsumer.EnsureChannelExistsAsync(ct);
+        }
+        catch (Exception e)
+        {
+            await messageConsumer.DisposeAsync();
+            if (e is ConfigurationException) throw;
+            throw new ChannelFailureException(
+                $"RMQ ChannelFactory: could not provision channel {subscription.ChannelName.Value}, see inner exception for details", e);
+        }
     }
 }
