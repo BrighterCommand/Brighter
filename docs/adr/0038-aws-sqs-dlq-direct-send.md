@@ -76,7 +76,7 @@ Users may have an SQS redrive policy configured independently of Brighter. Two s
 
 | Brighter DLQ Configured | Native Redrive Policy | Behaviour |
 |---|---|---|
-| Yes | Any | Brighter sends directly to its configured DLQ queue. Native policy is irrelevant for rejected messages. |
+| Yes | Any | Brighter sends directly to its configured DLQ queue. Native policy is irrelevant for rejected messages **that send successfully** — see the 2026-10-05 amendment below for the failed-send case, where it is not irrelevant: a release counts toward the native policy's `maxReceiveCount`. |
 | No | Exists | Message is deleted on reject (current fallback). The native policy only applies to visibility-timeout expiry, not explicit deletes. |
 | No | None | Message is deleted on reject, logged as warning. |
 
@@ -126,7 +126,62 @@ This follows the same `HeaderNames` constants used by the Kafka implementation.
 - **Mitigation**: Brighter DLQ is opt-in via `DeadLetterRoutingKey`. Without it, behaviour is unchanged (message deleted on reject).
 
 **Risk**: `SendMessage` to DLQ fails, then `DeleteMessage` also fails — message stuck.
-- **Mitigation**: Per ADR 0036, log the error and continue. The message becomes visible again after its visibility timeout, which is the same as current behaviour for transient failures.
+- **Mitigation** (superseded 2026-10-05, see amendment below): this risk assumed the failure
+  response to a failed `SendMessage` was itself a delete. It no longer is — a failed `SendMessage`
+  now releases the message for redelivery, so there is no second delete to fail.
+
+### Amendment (2026-10-05) — release instead of delete on a failed routing send (#4415, PR #4523)
+
+**What changed.** `SqsMessageConsumer.RejectAsync` (both packages, V3 `AWSSQS` and V4
+`AWSSQS.V4`, per the lockstep constraint above) no longer deletes the source message when the
+`SendMessage` to the DLQ or invalid-message queue fails. It now releases the source for immediate
+redelivery (`ChangeMessageVisibility(…, 0)`, via a new private `ReleaseSourceMessageAsync` helper
+that mirrors this ADR's existing `DeleteSourceMessageAsync` but never rethrows), logs the failure
+at Error, and `Reject`/`RejectAsync` still return `true` ("settled by this call"). This brings SQS
+into line with [spec 0037](../../specs/0037-delivery-count-and-rejection-routing/requirements.md)'s
+R-19, which this ADR's original Decision §2 and the Risk above had left as an unresolved divergence
+(spec 0037 recorded it explicitly as an open question, deferred to issue #4415).
+
+**Why.** The Decision above (§2, "Reject Sends Directly to DLQ Queue, Then Deletes Original") was
+written assuming the only two outcomes of a routing send were success or a message stuck forever
+if both the send and a follow-up delete failed. In practice this ADR's own Risks section already
+conceded the real failure mode was "log the error and continue" with the message lost — a bounded
+loss. Spec 0037 settled, for GCP, that a destination-configured message should never be discarded
+on a routing failure; the user's decision for #4415 was to make SQS consistent with that choice
+rather than carry the divergence indefinitely.
+
+**What stays true from the original Decision.** §§1, 3 (except the "irrelevant" claim corrected in
+the table above), 4, 5 and 6 are unaffected — this amendment only changes what happens *when the
+send itself fails*, not how the DLQ producer is created, resolved or how a *successful* send
+enriches and routes the message.
+
+**Consequence for the coexistence table (§3).** A released message is picked up again by the
+normal receive/dispatch cycle, so it **does** count toward a native `RedrivePolicy.maxReceiveCount`
+if one is configured on the real queue — unlike a message that reaches the DLQ by a successful
+send, which the source queue never sees again. The table above is corrected accordingly.
+
+**New risk this amendment accepts, not previously recorded.** Unlike GCP, the SQS consumer has no
+runtime visibility into the *actual* queue's `RedrivePolicy` — only what Brighter itself configured
+when it created the queue (`AWSMessagingGateway` applies one only when `MakeChannels: Create`). With
+`Assume`/`Validate`, or with no native redrive policy at all, a deterministic routing failure
+(missing DLQ, IAM denial) releases and redelivers indefinitely, each turn logging an Error. This is
+accepted unconditionally, matching spec 0037 R-19's own accepted trade-off for GCP, rather than
+guarded by falling back to delete (a guard would reintroduce the loss this amendment removes, and
+would key off a fact — Brighter's own configured attributes — that is not necessarily the real
+queue's state). Two mitigants bound the practical impact: the queue's own
+`MessageRetentionPeriod` (default 4 days, max 14) is a hard ceiling even with no redrive policy in
+effect, and on a **FIFO** queue a looping release blocks its whole message group (head-of-line)
+until the native `maxReceiveCount` or retention ends it — a SQS-specific consequence worth knowing
+operationally.
+
+**Deliberately not addressed by this amendment**, tracked as a separate, future issue: a
+DLQ/invalid-message *producer-creation* failure (as opposed to a publish failure) still falls
+through to the delete path. Reachability is low in practice (`SqsMessageProducer`'s constructor
+does no I/O; real queue-existence failures surface at `SendAsync` and are covered by this
+amendment, not this gap). Full detail, evidence and the regression tests pinning this amendment:
+`bugfixes/0048-sqs-reject-deletes-on-dlq-failure/bugfix.md`.
+
+- Supersedes none; amends this ADR's Decision §2/§3 and the Risk above in place.
 
 ## Alternatives Considered
 
@@ -148,3 +203,7 @@ Put rejection metadata in SQS message attributes rather than the message header 
 - [ADR 0036: Message Rejection Routing Strategy](0036-message-rejection-routing-strategy.md) — routing logic and metadata enrichment
 - [Spec 0001: Kafka Dead Letter Queue](../../specs/0001-kafka-dead-letter-queue/) — reference implementation
 - Requirements: [specs/0010-aws-sqs-dead-letter-queue/requirements.md](../../specs/0010-aws-sqs-dead-letter-queue/requirements.md)
+- [Spec 0037: Delivery Count and Rejection Routing](../../specs/0037-delivery-count-and-rejection-routing/requirements.md) —
+  R-19, the GCP requirement the 2026-10-05 amendment brings SQS into line with
+- `bugfixes/0048-sqs-reject-deletes-on-dlq-failure/bugfix.md` — the amendment's root-cause
+  diagnosis, evidence and regression tests (issue #4415, PR #4523)

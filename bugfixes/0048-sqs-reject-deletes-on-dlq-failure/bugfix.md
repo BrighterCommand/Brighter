@@ -384,7 +384,8 @@ the unconditional `DeleteSourceMessageAsync` now calls a new private
   untested production code. `else if (shouldRoute)` still falls through to
   `NoChannelsConfiguredForRejection` + delete when the `Lazy` producer resolves to `null`, unchanged.
 - The ADR 0038 amendment and spec 0037 Out-of-Scope update (Scope Notes Risk 4) — documentation
-  work, out of scope for `/bugfix:fix`; left for a follow-up before/with the PR.
+  work, out of scope for `/bugfix:fix`; done as a follow-up after #4523 merged, in PR #4529
+  (branch `docs/4415-adr-spec-update`).
 - The pre-existing success-path rethrow in `DeleteSourceMessageAsync` (Evidence item 6) and the
   RocketMQ parity gap — both explicitly flagged in Scope Notes as separate, future issues.
 

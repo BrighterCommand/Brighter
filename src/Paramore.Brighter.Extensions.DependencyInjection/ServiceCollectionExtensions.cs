@@ -844,15 +844,22 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// Config the Json Serializer that is used inside of Brighter
+        /// Configures a copy of Brighter's process-wide JSON serialization options.
         /// </summary>
-        /// <param name="brighterBuilder">The Brighter Builder</param>
-        /// <param name="configure">Action to configure the options</param>
-        /// <returns>Brighter Builder</returns>
+        /// <param name="brighterBuilder">The builder to continue configuring.</param>
+        /// <param name="configure">The action to apply to a mutable copy of the current options.</param>
+        /// <returns>The same builder for further configuration.</returns>
+        /// <remarks>
+        /// Existing settings and converters are preserved, even if the current options have already been used in serialization.
+        /// The copy replaces <see cref="JsonSerialisationOptions.Options"/> only after <paramref name="configure"/> succeeds.
+        /// Callers retaining an earlier options instance continue to use that instance and its settings.
+        /// </remarks>
         public static IBrighterBuilder ConfigureJsonSerialisation(this IBrighterBuilder brighterBuilder,
             Action<JsonSerializerOptions> configure)
         {
-            configure.Invoke(JsonSerialisationOptions.Options);
+            var options = new JsonSerializerOptions(JsonSerialisationOptions.Options);
+            configure.Invoke(options);
+            JsonSerialisationOptions.Options = options;
 
             return brighterBuilder;
         }
