@@ -72,7 +72,7 @@ public class GcpPubSubMessageProducerFactory : GcpPubSubMessageGateway, IAmAMess
             var topicName = GetTopicName(publication.TopicAttributes.ProjectId, publication.TopicAttributes.Name);
 
             // Create the Google PublisherClient which is used to send messages
-            var client = await CreatePublisherClient(topicName, 
+            var (client, enableMessageOrdering) = await CreatePublisherClient(topicName,
                 publication.EnableMessageOrdering,
                 publication.PublisherClientConfiguration);
 
@@ -80,14 +80,15 @@ public class GcpPubSubMessageProducerFactory : GcpPubSubMessageGateway, IAmAMess
             producers[new ProducerKey(publication.Topic!, publication.Type)] = new GcpMessageProducer(
                 client,
                 publication,
-                _instrumentation ?? InstrumentationOptions.None
+                _instrumentation ?? InstrumentationOptions.None,
+                enableMessageOrdering
             );
         }
 
         return producers;
     }
 
-    private async Task<PublisherClient> CreatePublisherClient(TopicName topicName, 
+    private async Task<(PublisherClient Client, bool EnableMessageOrdering)> CreatePublisherClient(TopicName topicName,
         bool enableMessageOrdering,
         Action<PublisherClientBuilder>? configure)
     {
@@ -113,6 +114,8 @@ public class GcpPubSubMessageProducerFactory : GcpPubSubMessageGateway, IAmAMess
             builder.Settings.EnableMessageOrdering = true;
         }
 
-        return await builder.BuildAsync();
+        // A configuration may also enable ordering the publication did not ask for; the producer needs the ordering
+        // the client was built with, as the client refuses an ordering key without it
+        return (await builder.BuildAsync(), builder.Settings.EnableMessageOrdering);
     }
 }

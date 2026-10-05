@@ -27,13 +27,14 @@ internal static class Parser
         HeaderNames.TraceParent,
         HeaderNames.TraceState,
         HeaderNames.Baggage,
+        HeaderNames.PartitionKey,
         "googclient_deliveryattempt"
     };
 
 
     public static Message ToBrighterMessage(GcpStreamMessage receivedMessage)
     {
-        var partitionKey = receivedMessage.Message.OrderingKey;
+        var partitionKey = ReadPartitionKey(receivedMessage.Message);
         var topic = ReadTopic(receivedMessage.Message.Attributes);
         var messageId = ReadMessageId(receivedMessage.Message.Attributes);
         var handleCount = ReadHandleCount(receivedMessage.Message.Attributes);
@@ -93,7 +94,7 @@ internal static class Parser
     public static Message ToBrighterMessage(ReceivedMessage receivedMessage)
     {
         var receiptHandle = receivedMessage.AckId;
-        var partitionKey = receivedMessage.Message.OrderingKey;
+        var partitionKey = ReadPartitionKey(receivedMessage.Message);
         var topic = ReadTopic(receivedMessage.Message.Attributes);
         var messageId = ReadMessageId(receivedMessage.Message.Attributes);
         var handleCount = ReadHandleCount(receivedMessage.Message.Attributes);
@@ -148,6 +149,17 @@ internal static class Parser
         var body = new MessageBody(receivedMessage.Message.Data.ToByteArray());
 
         return new Message(messageHeader, body);
+    }
+
+    private static string ReadPartitionKey(PubsubMessage message)
+    {
+        // A message from a producer that predates the partition key attribute carries its key only as the ordering key
+        if (message.Attributes.TryGetValue(HeaderNames.PartitionKey, out var partitionKey))
+        {
+            return partitionKey;
+        }
+
+        return message.OrderingKey;
     }
 
     private static RoutingKey ReadTopic(MapField<string, string> attributes)
@@ -305,11 +317,14 @@ internal static class Parser
         return baggage;
     }
 
-    public static PubsubMessage ToPubSubMessage(Message message)
+    public static PubsubMessage ToPubSubMessage(Message message, bool enableMessageOrdering)
     {
+        // The Google client refuses an ordering key unless message ordering is enabled; the partition key attribute
+        // carries the key either way
         var pubSubMessage = new PubsubMessage
         {
-            Data = ByteString.CopyFrom(message.Body.Memory.Span), OrderingKey = message.Header.PartitionKey
+            Data = ByteString.CopyFrom(message.Body.Memory.Span),
+            OrderingKey = enableMessageOrdering ? message.Header.PartitionKey : string.Empty
         };
 
         AddHeaders(pubSubMessage.Attributes, message);
@@ -363,6 +378,11 @@ internal static class Parser
         if (!TraceState.IsNullOrEmpty(message.Header.TraceState))
         {
             headers.Add(HeaderNames.TraceState, message.Header.TraceState.Value);
+        }
+
+        if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
+        {
+            headers.Add(HeaderNames.PartitionKey, message.Header.PartitionKey.Value);
         }
 
         message.Header.Bag.Each(header =>
