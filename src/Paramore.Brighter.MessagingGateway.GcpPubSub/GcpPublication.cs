@@ -18,6 +18,12 @@ public class GcpPublication : Publication
     /// Gets or sets a value indicating whether messages published to the topic are delivered in the order they were published,
     /// provided they were published with an ordering key.
     /// </summary>
+    /// <remarks>
+    /// Brighter sends a message's partition key as the Pub/Sub ordering key only when the publisher client has message
+    /// ordering enabled, either by this property or by a <see cref="PublisherClientConfiguration"/>, as the Google client
+    /// refuses an ordering key otherwise. The partition key always travels in its own attribute as well, so a consumer
+    /// receives it whether or not the publication is ordered.
+    /// </remarks>
     public bool EnableMessageOrdering { get; set; }
 
     /// <summary>

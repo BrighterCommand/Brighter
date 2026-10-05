@@ -237,6 +237,35 @@ A stream configuration that set a value such as `builder.Settings.AckDeadline` t
 `NullReferenceException`, because `Settings` was still null when the configuration ran. Brighter now
 creates `Settings` before running the configurations, as it already did for the publisher.
 
+### GCP Pub/Sub: keyed messages can be sent through an unordered publication (#4517)
+
+Brighter used to send every message's partition key as the Pub/Sub ordering key. The Google client
+refuses an ordering key unless message ordering is enabled, so on a `GcpPublication` without
+`EnableMessageOrdering` (the default), every message with a partition key failed with
+`InvalidOperationException` ("Message ordering must be enabled in settings before using OrderingKey").
+This included the bulk send, and delayed sends when the scheduler fired them. A message mapper copies the
+partition key from the request context, so a message could have a key without your code setting one.
+
+Now Brighter sends the partition key as the ordering key only when the publisher client has message
+ordering enabled. That is either because the publication sets `EnableMessageOrdering`, or because a
+publisher configuration switched ordering on. A publisher configuration that enables ordering keeps working
+as before.
+
+#### The partition key now also travels as a `ce-partitionkey` attribute
+
+The ordering key used to be the only place the partition key travelled. Each message with a partition key
+now also carries a `ce-partitionkey` attribute, so a consumer receives the key whether or not the
+publication is ordered. A consumer reads the attribute first. If there is none, it falls back to the
+ordering key, so messages from producers on earlier versions still arrive with their key. The attribute is
+not copied into `Header.Bag`. A consumer on an earlier version reads the key from the ordering key as
+before, and sees the new attribute in its `Header.Bag`.
+
+#### `GcpMessageProducer` takes an optional `enableMessageOrdering`
+
+If you build a `GcpMessageProducer` yourself rather than through `GcpPubSubMessageProducerFactory`, you can
+pass `enableMessageOrdering` to say whether your `PublisherClient` was built with ordering enabled. If you
+leave it out, the producer uses the publication's `EnableMessageOrdering`.
+
 ### Message pumps reject received messages with no handler (#4500)
 
 `Reactor` and `Proactor` now reject a received message as `Unacceptable` when it maps successfully
