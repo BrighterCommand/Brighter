@@ -1355,6 +1355,22 @@ namespace Paramore.Brighter
                     return;
                 }
 
+                if (_asyncOutbox != null)
+                {
+                    // Pool thread without a SynchronizationContext (see CheckOutstandingMessages), so blocking cannot deadlock
+                    _outStandingCount = _asyncOutbox
+                        .GetOutstandingMessageCountAsync(
+                            _maxOutStandingCheckInterval,
+                            requestContext,
+                            maxCount,
+                            args: _outBoxBag
+                        )
+                        .GetAwaiter()
+                        .GetResult();
+
+                    return;
+                }
+
                 _outStandingCount = 0;
             }
             catch (Exception ex)
