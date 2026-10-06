@@ -35,7 +35,6 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             
             var options = new ConsumersOptions();
             configure?.Invoke(options);
-            services.TryAddSingleton<IBrighterOptions>(options);
             services.TryAddSingleton<IAmConsumerOptions>(options);
             
             services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
@@ -85,7 +84,6 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 throw new ArgumentNullException(nameof(configure));
 
             // Register options with deferred resolution - ensure both interfaces resolve to the same instance
-            services.TryAddSingleton<IBrighterOptions>(configure);
             services.TryAddSingleton<IAmConsumerOptions>(sp =>
                 (IAmConsumerOptions)sp.GetRequiredService<IBrighterOptions>());
 
@@ -173,12 +171,14 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 }
             }
 
+            //the registry and transform factories are newed up above solely for this Dispatcher and are not
+            //container-registered, so the Dispatcher is their sole owner and disposes them at container teardown
             return dispatcherBuilder
                 .MessageMappers(messageMapperRegistry, messageMapperRegistry, messageTransformFactory, messageTransformFactoryAsync)
                 .ChannelFactory(channelFactory)
                 .Subscriptions(options.Subscriptions)
                 .ConfigureInstrumentation(tracer, options.InstrumentationOptions)
-                .Build();
+                .Build(ownsRegistry: true, ownsTransformerFactories: true, shutdownTimeout: options.ShutdownTimeout);
         }
 
         private static T BuildInbox<T>(IServiceProvider serviceProvider) where T : class, IAmAnInbox
@@ -210,6 +210,12 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             });
             services.AddSingleton<ISpecification<Subscription>>(_ =>
                 ConsumerValidationRules.RequestTypeSubtype());
+            services.AddSingleton<ISpecification<Subscription>>(_ =>
+                ConsumerValidationRules.ZeroBudget());
+            services.AddSingleton<ISpecification<Subscription>>(_ =>
+                ConsumerValidationRules.BudgetAtNativeRedriveLimit());
+            services.AddSingleton<ISpecification<Subscription>>(_ =>
+                ConsumerValidationRules.UnenforceableBudget());
             services.AddSingleton<ISpecification<Subscription>>(sp =>
             {
                 // The transformer-resolvability probe is registered by ValidatePipelines (a complete snapshot
@@ -222,8 +228,10 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                     return new Specification<Subscription>(_ => []);
 
                 return ConsumerValidationRules.UnwrapTransformResolvable(
-                    ServiceCollectionExtensions.MessageMapperRegistry(sp), probe);
+                    () => ServiceCollectionExtensions.MessageMapperRegistry(sp), probe);
             });
+            services.AddSingleton<ISpecification<Subscription>>(sp =>
+                ConsumerValidationRules.ChannelFactoryCompatible(sp.GetService<IAmConsumerOptions>()?.DefaultChannelFactory));
         }
     }
 }

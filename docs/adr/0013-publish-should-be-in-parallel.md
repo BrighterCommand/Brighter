@@ -1,4 +1,19 @@
-# 13. Record architecture decisions
+---
+id: 0013-publish-should-be-in-parallel
+title: "Publish Should Be In Parallel"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2024-07-06
+summary: "Changes CommandProcessor.Publish to invoke subscribed handlers in parallel using Parallel.ForEach (sync) and Task.WhenAll (async), requiring RequestContext to be made thread-safe via ConcurrentDictionary for span data and bag properties."
+tags:
+  - "publish"
+  - "concurrency"
+  - "async"
+  - "messaging"
+---
+
+# 13. Publish Should Be In Parallel
 
 Date: 2024-07-06
 

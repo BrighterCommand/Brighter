@@ -51,7 +51,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 .WithTcpServer(config.Hostname, config.Port)
                 .Build();
 
-            ConnectAsync().GetAwaiter().GetResult();
+            BrighterAsyncContext.Run(ConnectAsync);
         }
 
         /// <summary>

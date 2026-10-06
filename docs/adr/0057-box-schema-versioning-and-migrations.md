@@ -1,3 +1,18 @@
+---
+id: 0057-box-schema-versioning-and-migrations
+title: "Box Schema Versioning and Migrations"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-04-22
+summary: "Replaces ADR 0053's single-version provisioning model with a versioned migration chain (7 outbox versions, up to 2 inbox versions per backend) and a three-path provisioner (fresh install / bootstrap of existing unversioned tables / normal incremental upgrade) for all relational backends. Introduces discriminator-gated version detection, per-backend idempotent ALTER patterns, extends `IAmABoxMigration` with `LogicalColumns` for detection, and adds `IAmABoxMigrationCatalog` to separate the historical V1 DDL from the current live-builder DDL."
+tags:
+  - "outbox"
+  - "inbox"
+  - "migration"
+  - "provisioning"
+---
+
 # 57. Box Schema Versioning and Migrations
 
 Date: 2026-04-22

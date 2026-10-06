@@ -37,10 +37,34 @@ namespace Paramore.Brighter
     public interface IAmAMessageMapperFactory
     {
         /// <summary>
-        /// Creates the specified message mapper type.
+        /// Offers a DI scope for the transform pipeline being built to share across every mapper and
+        /// transform it creates. A factory with no container to scope returns <c>null</c>.
+        /// </summary>
+        /// <returns>A pipeline scope handle, or <c>null</c> if this factory offers none.</returns>
+        IAmAScope? CreatePipelineScope();
+
+        /// <summary>
+        /// Creates the specified message mapper type, returning a <see cref="Lease{T}"/> that identifies this
+        /// resolution so it can later be released back to this factory.
         /// </summary>
         /// <param name="messageMapperType">Type of the message mapper.</param>
-        /// <returns>IAmAMessageMapper.</returns>
-        IAmAMessageMapper? Create(Type messageMapperType);
+        /// <param name="scope">The pipeline scope to resolve from, if this factory offered one.</param>
+        /// <returns>A lease over the created mapper, or <c>null</c> if none could be created.</returns>
+        Lease<IAmAMessageMapper>? Create(Type messageMapperType, IAmAScope? scope = null);
+
+        /// <summary>
+        /// Releases the mapper resolution identified by <paramref name="lease"/> once the pipeline that owns it
+        /// has finished with it.
+        /// </summary>
+        /// <remarks>
+        /// A factory that creates a mapper per message must release it, or any resource the mapper holds
+        /// — and, for an IoC container, the scope the mapper was resolved from — is retained until the
+        /// factory itself is disposed at shutdown. Releasing by lease reclaims exactly this resolution's scope,
+        /// so a shared instance handed out under a transient lifetime is torn down one resolution at a time and
+        /// an over-release is a no-op. A factory that hands out a shared instance, or whose instances it does
+        /// not own, should make this a no-op.
+        /// </remarks>
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release.</param>
+        void Release(Lease<IAmAMessageMapper>? lease);
     }
 }

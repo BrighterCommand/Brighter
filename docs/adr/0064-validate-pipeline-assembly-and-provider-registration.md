@@ -1,3 +1,18 @@
+---
+id: 0064-validate-pipeline-assembly-and-provider-registration
+title: "Validate Pipeline Assembly Scanning and Validation-Provider Registration"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-06-16
+summary: "Extends ValidatePipelines() with two new ISpecification<T> rule families that emit startup Warning findings when a declared transform's transformer type is not registered in the DI container, or when a handler marked with ValidateRequest has no validation provider wired up."
+tags:
+  - "pipeline"
+  - "configuration"
+  - "request-validation"
+  - "di"
+---
+
 # 64. Validate Pipeline Assembly Scanning and Validation-Provider Registration
 
 Date: 2026-06-16

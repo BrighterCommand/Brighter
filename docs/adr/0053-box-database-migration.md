@@ -1,3 +1,18 @@
+---
+id: 0053-box-database-migration
+title: "Box Database Migration"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-03-01
+summary: "Introduces a modular `Paramore.Brighter.BoxProvisioning` library with database-backend-specific packages that create and migrate Inbox and Outbox tables at startup via `IAmABoxProvisioner`, `IAmABoxMigrationRunner`, and a `BoxProvisioningHostedService`, replacing ad-hoc sample-only schema creation code."
+tags:
+  - "outbox"
+  - "inbox"
+  - "migration"
+  - "provisioning"
+---
+
 # 53. Box Database Migration
 
 Date: 2026-03-01

@@ -1,3 +1,18 @@
+---
+id: 0002-use-a-single-threaded-message-pump
+title: "Use A Single Threaded Message Pump"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2019-08-01
+summary: "Brighter uses a single-threaded message pump (Reactor pattern) to preserve message ordering and ensure sequential access to shared resources, supporting multiple pump instances for throughput and asynchronous handlers (Proactor pattern) to avoid blocking on I/O."
+tags:
+  - "message-pump"
+  - "reactor"
+  - "proactor"
+  - "concurrency"
+---
+
 # 2. Use A Single Threaded Message Pump
 
 Date: 2019-08-01

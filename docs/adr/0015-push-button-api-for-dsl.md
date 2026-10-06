@@ -1,3 +1,17 @@
+---
+id: 0015-push-button-api-for-dsl
+title: "A Push Button API must underlie any Fluent Interface"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2024-07-16
+summary: "Decides that all Fluent (DSL) APIs in Brighter must be implemented as Fowler's Expression Builder over an underlying command-query (push-button) API, ensuring the underlying API can be used and tested independently of the fluent layer."
+tags:
+  - "dsl"
+  - "api-design"
+  - "architecture"
+---
+
 # 15. A Push Button API must underlie any Fluent Interface 
 
 Date: 2024-07-16

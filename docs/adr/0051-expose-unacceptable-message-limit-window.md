@@ -1,3 +1,18 @@
+---
+id: 0051-expose-unacceptable-message-limit-window
+title: "Expose UnacceptableMessageLimitWindow Through Configuration Pipeline"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-23
+summary: "Wires the missing `UnacceptableMessageLimitWindow` property through `ConsumerFactory` and all 13 transport-specific subscription constructors, following the identical pattern used by `UnacceptableMessageLimit` so that users can configure the window on any subscription type and have it take effect at runtime."
+tags:
+  - "configuration"
+  - "messaging"
+  - "message-pump"
+  - "dead-letter-queue"
+---
+
 # 51. Expose UnacceptableMessageLimitWindow Through Configuration Pipeline
 
 Date: 2026-02-23

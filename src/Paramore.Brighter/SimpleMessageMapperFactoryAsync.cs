@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -45,13 +46,40 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Offers no pipeline scope: the caller's factory method owns whatever it returns.
+        /// </summary>
+        public IAmAScope? CreatePipelineScope() => null;
+
+        /// <summary>
         /// Creates the specified message mapper type.
         /// </summary>
         /// <param name="messageMapperType">Type of the message mapper.</param>
+        /// <param name="scope">Ignored: this factory offers no pipeline scope.</param>
         /// <returns>IAmAMessageMapper.</returns>
-        public IAmAMessageMapperAsync Create(Type messageMapperType)
+        public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType, IAmAScope? scope = null)
         {
-            return _factoryMethod(messageMapperType);
+            var mapper = _factoryMethod(messageMapperType);
+            return mapper is null ? null : Lease<IAmAMessageMapperAsync>.Untracked(mapper);
+        }
+
+        /// <summary>
+        /// Releases the specified message mapper lease. A no-op: the factory method supplied by the caller
+        /// owns whatever it returns — it may legitimately hand back a shared instance — so this factory
+        /// must not dispose it, and the lease carries no release token.
+        /// </summary>
+        /// <param name="lease">The mapper lease to release.</param>
+        public void Release(Lease<IAmAMessageMapperAsync>? lease)
+        {
+        }
+
+        /// <summary>
+        /// Releases the specified message mapper lease asynchronously. A no-op for the same reason as
+        /// <see cref="Release"/>: the caller's factory method owns whatever it returns.
+        /// </summary>
+        /// <param name="lease">The mapper lease to release.</param>
+        public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync>? lease)
+        {
+            return default;
         }
     }
 }

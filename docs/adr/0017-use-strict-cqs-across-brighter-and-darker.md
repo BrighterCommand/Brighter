@@ -1,4 +1,18 @@
-# 18. Use Strict Command Query Separation Across Brighter and Darker 
+---
+id: 0017-use-strict-cqs-across-brighter-and-darker
+title: "Use Strict Command Query Separation Across Brighter and Darker"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2024-07-24
+summary: "Brighter treats all IRequest derivatives (Command, Event) as Commands in CQS terms — they mutate state and return no value; queries belong to Darker, enabling a full CQRS architecture when the two libraries are used together."
+tags:
+  - "cqrs"
+  - "architecture"
+  - "api-design"
+---
+
+# 17. Use Strict Command Query Separation Across Brighter and Darker 
 
 Date: 2024-07-24
 

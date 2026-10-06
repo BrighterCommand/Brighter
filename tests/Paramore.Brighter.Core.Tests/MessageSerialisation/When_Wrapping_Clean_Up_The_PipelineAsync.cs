@@ -46,17 +46,25 @@ public class AsyncMessageWrapCleanupTests
     
     private sealed class MyReleaseTrackingTransformFactoryAsync : IAmAMessageTransformerFactoryAsync
     {
-        public IAmAMessageTransformAsync Create(Type transformerType)
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType, IAmAScope? scope = null)
         {
-            return new MySimpleTransformAsync();
+            return new Lease<IAmAMessageTransformAsync>(new MySimpleTransformAsync());
         }
 
-        public void Release(IAmAMessageTransformAsync transformer)
+        public void Release(Lease<IAmAMessageTransformAsync>? lease)
         {
-            var disposable = transformer as IDisposable;
+            var disposable = lease!.Instance as IDisposable;
             disposable?.Dispose();
 
-            s_released += "|" + transformer.GetType().Name;
+            s_released += "|" + lease!.Instance.GetType().Name;
+        }
+
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease)
+        {
+            Release(lease);
+            return default;
         }
     }
 

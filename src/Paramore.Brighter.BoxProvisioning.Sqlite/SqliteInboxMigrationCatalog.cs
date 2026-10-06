@@ -61,6 +61,8 @@ public class SqliteInboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v2AddedColumns = ["ContextKey"];
 
+    private static readonly string[] s_v3AddedColumns = ["CausationId"];
+
     // Literal historical SQLite inbox DDL extracted from commit 695522367 (March 2019).
     // The original source was a concatenated string literal — preserved verbatim here. The
     // table first shipped with ContextKey already present — see the born-past-V1 note in
@@ -90,7 +92,7 @@ public class SqliteInboxMigrationCatalog : IAmABoxMigrationCatalog
     /// Returns all migrations for the SQLite inbox, ordered by version.
     /// </summary>
     /// <param name="configuration">The relational database configuration.</param>
-    /// <returns>An ordered list of migrations from V1 to V2.</returns>
+    /// <returns>An ordered list of migrations from V1 to V3.</returns>
     public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
     {
         var table = configuration.InBoxTableName;
@@ -111,7 +113,15 @@ public class SqliteInboxMigrationCatalog : IAmABoxMigrationCatalog
                 UpScript: $"ALTER TABLE [{table}] ADD COLUMN [ContextKey] TEXT NULL;",
                 LogicalColumns: Cumulative(2),
                 SourceReference: "787c31c52",
-                IdempotencyCheckSql: $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name='ContextKey';")
+                IdempotencyCheckSql: $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name='ContextKey';"),
+
+            new BoxMigration(
+                Version: 3,
+                Description: "Add CausationId column",
+                UpScript: $"ALTER TABLE [{table}] ADD COLUMN [CausationId] TEXT NULL;",
+                LogicalColumns: Cumulative(3),
+                SourceReference: "#2541",
+                IdempotencyCheckSql: $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name='CausationId';")
         ];
     }
 
@@ -120,6 +130,7 @@ public class SqliteInboxMigrationCatalog : IAmABoxMigrationCatalog
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (upToVersion >= 1) { set.UnionWith(s_v1Columns); }
         if (upToVersion >= 2) { set.UnionWith(s_v2AddedColumns); }
+        if (upToVersion >= 3) { set.UnionWith(s_v3AddedColumns); }
         return set;
     }
 }

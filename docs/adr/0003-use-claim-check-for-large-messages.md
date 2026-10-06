@@ -1,3 +1,17 @@
+---
+id: 0003-use-claim-check-for-large-messages
+title: "Use A Claim Check For Large or Sensitive Messages"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2022-07-18
+summary: "Brighter will implement the Claim Check pattern to handle large or sensitive messages by extracting the payload into an external backing store and placing a UUID-based claim check key in the message header, with Check-Luggage, Store-Luggage, and Data-Enricher components abstracting the storage."
+tags:
+  - "claim-check"
+  - "messaging"
+  - "message-mapping"
+---
+
 # 3. Use A Claim Check For Large or Sensitive Messages
 
 Date: 2022-07-18

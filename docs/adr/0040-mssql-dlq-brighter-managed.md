@@ -1,3 +1,18 @@
+---
+id: 0040-mssql-dlq-brighter-managed
+title: "MsSql Dead Letter Queue — Brighter-Managed"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-14
+summary: "Adds Brighter-managed DLQ support to the MsSql transport by implementing Reject()/RejectAsync() to forward rejected messages to a configurable dead letter topic using a lazy MsSqlMessageProducer, following the pattern established by Kafka, SQS, and Redis."
+tags:
+  - "dead-letter-queue"
+  - "mssql"
+  - "messaging"
+  - "error-handling"
+---
+
 # 40. MsSql Dead Letter Queue — Brighter-Managed
 
 Date: 2026-02-14

@@ -25,12 +25,18 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Inbox.Postgres
 {
-    public class PostgreSqlQueries : IRelationalDatabaseInboxQueries
+    public class PostgreSqlQueries : IRelationalDatabaseInboxQueries, IRelationalDatabaseInboxCausationQueries
     {
         public string AddCommand { get; } = "INSERT INTO {0} (CommandId, CommandType, CommandBody, Timestamp, ContextKey) VALUES (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
 
         public string ExistsCommand { get; } = "SELECT DISTINCT CommandId FROM {0} WHERE CommandId = @CommandID AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
 
         public string GetCommand { get; } = "SELECT * FROM {0} WHERE CommandId = @CommandID AND ContextKey = @ContextKey";
+
+        public string AddCausationCommand { get; } = "INSERT INTO {0} (CommandId, CommandType, CommandBody, Timestamp, ContextKey, CausationId) VALUES (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey, @CausationId)";
+
+        public string GetCausationIdCommand { get; } = "SELECT CausationId FROM {0} WHERE CommandId = @CommandID AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
+
+        public string CausationColumnExistsCommand { get; } = "SELECT 1 FROM pg_attribute WHERE attrelid = to_regclass('{0}') AND attname = 'causationid' AND NOT attisdropped";
     }
 }

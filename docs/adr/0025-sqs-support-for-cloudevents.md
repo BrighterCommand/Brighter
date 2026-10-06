@@ -1,3 +1,18 @@
+---
+id: 0025-sqs-support-for-cloudevents
+title: "SQS support for CloudEvents"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2025-08-04
+summary: "Decides to add CloudEvents support to the SQS transport; note: the decision body appears to contain incomplete placeholder content."
+tags:
+  - "cloudevents"
+  - "sqs"
+  - "aws"
+  - "transports"
+---
+
 # 25. SQS support for CloudEvents
 
 Date: 2025-08-04

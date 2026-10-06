@@ -36,15 +36,25 @@ namespace Paramore.Brighter
     public interface IAmAMessageTransformerFactory
     {
         /// <summary>
-        /// Creates the specified transformer type.
+        /// Offers a DI scope for the transform pipeline being built to share across every mapper and
+        /// transform it creates. A factory with no container to scope returns <c>null</c>.
+        /// </summary>
+        /// <returns>A pipeline scope handle, or <c>null</c> if this factory offers none.</returns>
+        IAmAScope? CreatePipelineScope();
+
+        /// <summary>
+        /// Creates the specified transformer type, returning a <see cref="Lease{T}"/> that identifies this
+        /// resolution so it can later be released back to this factory.
         /// </summary>
         /// <param name="transformerType">Type of the handler.</param>
-        /// <returns>IAmAMessageTransformAsync</returns>
-        IAmAMessageTransform? Create(Type transformerType);
+        /// <param name="scope">The pipeline scope to resolve from, if this factory offered one.</param>
+        /// <returns>A lease over the created transformer, or <c>null</c> if none could be created.</returns>
+        Lease<IAmAMessageTransform>? Create(Type transformerType, IAmAScope? scope = null);
         /// <summary>
-        /// Releases the specified transformer.
+        /// Releases the transformer resolution identified by <paramref name="lease"/>. Reclaims exactly this
+        /// resolution's scope; an over-release is a no-op.
         /// </summary>
-        /// <param name="transformer">The transformer</param>
-        void Release(IAmAMessageTransform transformer); 
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the transformer to release.</param>
+        void Release(Lease<IAmAMessageTransform>? lease);
     }
 }

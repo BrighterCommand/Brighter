@@ -74,6 +74,8 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v2AddedColumns = ["ContextKey"];
 
+    private static readonly string[] s_v3AddedColumns = ["CausationId"];
+
     // Literal historical MySQL inbox DDL extracted from commit b7f96957b (March 2019). The
     // table first shipped with ContextKey already present — see the born-past-V1 note in
     // the class remarks. {0} = table name (validated).
@@ -117,7 +119,7 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
     /// Returns all migrations for the MySQL inbox, ordered by version.
     /// </summary>
     /// <param name="configuration">The relational database configuration.</param>
-    /// <returns>An ordered list of migrations from V1 to V2.</returns>
+    /// <returns>An ordered list of migrations from V1 to V3.</returns>
     public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
     {
         var table = configuration.InBoxTableName;
@@ -142,7 +144,14 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
                 Description: "Add ContextKey column",
                 UpScript: AddColumn(schema, table, "ContextKey", "VARCHAR(256)"),
                 LogicalColumns: Cumulative(2),
-                SourceReference: "787c31c52")
+                SourceReference: "787c31c52"),
+
+            new BoxMigration(
+                Version: 3,
+                Description: "Add CausationId column",
+                UpScript: AddColumn(schema, table, "CausationId", "VARCHAR(256)"),
+                LogicalColumns: Cumulative(3),
+                SourceReference: "#2541")
         ];
     }
 
@@ -151,6 +160,7 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (upToVersion >= 1) { set.UnionWith(s_v1Columns); }
         if (upToVersion >= 2) { set.UnionWith(s_v2AddedColumns); }
+        if (upToVersion >= 3) { set.UnionWith(s_v3AddedColumns); }
         return set;
     }
 

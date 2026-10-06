@@ -22,8 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Actions;
 using Paramore.Brighter.Policies.Attributes;
 using Polly;
 using Polly.Registry;
@@ -40,6 +43,11 @@ namespace Paramore.Brighter.Policies.Handlers;
 /// The ExceptionPolicyHandler is instantiated by the pipeline when the <see cref="UsePolicyAttribute" /> is added to the <see cref="IHandleRequests{T}.Handle" /> method
 /// of the target handler implemented by the client.
 /// </summary>
+/// <remarks>
+/// Explicit reject, defer, don't-ack and invalid-message actions are propagated after the resilience
+/// pipeline completes, so exception-based retry and circuit-breaker strategies do not treat them as failures.
+/// Result-based predicates still evaluate the returned request according to their configuration.
+/// </remarks>
 /// <typeparam name="TRequest">The type of the t request.</typeparam>
 public class ResilienceExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsync<TRequest>, IAmAResilienceHandler
     where TRequest : class, IRequest
@@ -89,19 +97,39 @@ public class ResilienceExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsy
     /// <returns>AA Task<TRequest> that wraps the asynchronous call to the policy, which itself wraps the handler chain</TRequest></returns>
     public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
     {
+        ExceptionDispatchInfo? pumpAction = null;
+        TRequest result;
         if (_pipeline != ResiliencePipeline.Empty)
         {
-            return Context?.ResilienceContext != null
-                ? await _pipeline.ExecuteAsync(async context => await base.HandleAsync(command, context.CancellationToken).ConfigureAwait(ContinueOnCapturedContext), Context.ResilienceContext)
+            result = Context?.ResilienceContext != null
+                ? await _pipeline.ExecuteAsync(context => HandleRequestAsync(context.CancellationToken), Context.ResilienceContext)
                     .ConfigureAwait(ContinueOnCapturedContext)
-                : await _pipeline.ExecuteAsync(async ct => await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext), cancellationToken)
+                : await _pipeline.ExecuteAsync(HandleRequestAsync, cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+        }
+        else
+        {
+            result = Context?.ResilienceContext != null
+                ? await _typePipeline.ExecuteAsync(context => HandleRequestAsync(context.CancellationToken), Context.ResilienceContext)
+                    .ConfigureAwait(ContinueOnCapturedContext)
+                : await _typePipeline.ExecuteAsync(HandleRequestAsync, cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        return Context?.ResilienceContext != null
-            ? await _typePipeline.ExecuteAsync(async context => await base.HandleAsync(command, context.CancellationToken).ConfigureAwait(ContinueOnCapturedContext), Context.ResilienceContext)
-                .ConfigureAwait(ContinueOnCapturedContext)
-            : await _typePipeline.ExecuteAsync(async ct => await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext), cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
+        pumpAction?.Throw();
+        return result;
+
+        async ValueTask<TRequest> HandleRequestAsync(CancellationToken token)
+        {
+            try
+            {
+                return await base.HandleAsync(command, token).ConfigureAwait(ContinueOnCapturedContext);
+            }
+            catch (Exception ex) when (ex is RejectMessageAction or DeferMessageAction or DontAckAction or InvalidMessageAction)
+            {
+                pumpAction = ExceptionDispatchInfo.Capture(ex);
+                return command;
+            }
+        }
     }
 }

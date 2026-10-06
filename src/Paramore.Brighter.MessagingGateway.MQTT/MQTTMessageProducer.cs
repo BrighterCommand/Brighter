@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
@@ -15,16 +16,22 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     public class MqttMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducerSync
     {
         private readonly MqttMessagePublisher _mqttMessagePublisher;
+        private readonly InstrumentationOptions _instrumentationOptions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MqttMessageProducer" /> class.
         /// </summary>
         /// <param name="mqttMessagePublisher">The publisher used to send messages</param>
         /// <param name="publication">The <see cref="Publication"/> for this producer</param>
-        public MqttMessageProducer(MqttMessagePublisher mqttMessagePublisher, Publication publication)
+        /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+        public MqttMessageProducer(
+            MqttMessagePublisher mqttMessagePublisher,
+            Publication publication,
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _mqttMessagePublisher = mqttMessagePublisher;
             Publication = publication;
+            _instrumentationOptions = instrumentationOptions;
         }
 
         /// <summary>
@@ -129,6 +136,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             ArgumentNullException.ThrowIfNull(message);
 
+            BrighterTracer.WriteProducerEvent(Span, "mqtt", message, _instrumentationOptions);
             _mqttMessagePublisher.PublishMessage(message);
         }
 
@@ -161,6 +169,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             ArgumentNullException.ThrowIfNull(message);
 
+            BrighterTracer.WriteProducerEvent(Span, "mqtt", message, _instrumentationOptions);
             await _mqttMessagePublisher.PublishMessageAsync(message, cancellationToken);
         }
     }

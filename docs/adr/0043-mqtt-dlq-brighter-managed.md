@@ -1,3 +1,18 @@
+---
+id: 0043-mqtt-dlq-brighter-managed
+title: "MQTT Dead Letter Queue — Brighter-Managed"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-21
+summary: "Adds Brighter-managed DLQ support to the MQTT transport using Lazy<T> producers following the Redis pattern, and creates the missing MqttSubscription and MqttMessageConsumerFactory classes required for standard DLQ configuration."
+tags:
+  - "dead-letter-queue"
+  - "mqtt"
+  - "messaging"
+  - "error-handling"
+---
+
 # 43. MQTT Dead Letter Queue — Brighter-Managed
 
 Date: 2026-02-21

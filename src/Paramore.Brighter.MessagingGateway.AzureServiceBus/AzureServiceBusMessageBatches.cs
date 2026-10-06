@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,19 +23,22 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="message">message to add to the batch</param>
         /// <param name="cancellationToken">cancellation token</param>
         /// <returns></returns>
-        public async Task AddMessageToBatch(Message message, CancellationToken cancellationToken)
+        public Task AddMessageToBatch(Message message, CancellationToken cancellationToken)
+            => AddMessageToBatchAsync(message, null, cancellationToken);
+
+        internal async Task AddMessageToBatchAsync(Message message, TimeSpan? timeToLive, CancellationToken cancellationToken)
         {
-            if (!await TryAddToAzureServiceBusMessageBatch(message, cancellationToken))
+            if (!await TryAddToAzureServiceBusMessageBatch(message, timeToLive, cancellationToken))
             {
-                Add(AzureServiceBusSingleMessageBatch.CreateBatch(message));
+                Add(AzureServiceBusSingleMessageBatch.CreateBatch(message, timeToLive));
             }
         }
 
-        private async Task<bool> TryAddToAzureServiceBusMessageBatch(Message message, CancellationToken cancellationToken)
+        private async Task<bool> TryAddToAzureServiceBusMessageBatch(Message message, TimeSpan? timeToLive, CancellationToken cancellationToken)
         {
             _currentBatch ??= await CreateAzureServiceBusMessageBatch(cancellationToken);
             
-            if (_currentBatch.TryAddMessage(message))
+            if (_currentBatch.TryAddMessage(message, timeToLive))
             {
                 return true;
             }
@@ -46,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             _currentBatch = await CreateAzureServiceBusMessageBatch(cancellationToken);
 
-            return _currentBatch.TryAddMessage(message);
+            return _currentBatch.TryAddMessage(message, timeToLive);
         }
 
         private async Task<AzureServiceBusMessageBatch> CreateAzureServiceBusMessageBatch(CancellationToken cancellationToken)

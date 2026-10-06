@@ -48,8 +48,9 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// still distinguish a hypothetical pre-V2 table.
 /// </para>
 /// <para>
-/// The accumulated <c>LogicalColumns</c> across V1..V2 plus the MSSQL inbox housekeeping
-/// <c>Id</c> column equals the live builder's column set — verified by the drift test in
+/// V3 adds <c>CausationId</c> (Spec 0027, #2541) via the same idempotency-guarded
+/// <c>ALTER TABLE ADD</c> pattern. The accumulated <c>LogicalColumns</c> across V1..V3 plus the
+/// MSSQL inbox housekeeping <c>Id</c> column equals the live builder's column set — verified by the drift test in
 /// <c>tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning</c>.
 /// </para>
 /// </remarks>
@@ -61,6 +62,8 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         ["CommandId", "CommandType", "CommandBody", "Timestamp"];
 
     private static readonly string[] s_v2AddedColumns = ["ContextKey"];
+
+    private static readonly string[] s_v3AddedColumns = ["CausationId"];
 
     // Literal historical MSSQL inbox DDL extracted from commit b7f96957b (March 2019). The
     // table first shipped with ContextKey already present — see the born-past-V1 note in the
@@ -107,7 +110,7 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
     /// Returns all migrations for the MSSQL inbox, ordered by version.
     /// </summary>
     /// <param name="configuration">The relational database configuration.</param>
-    /// <returns>An ordered list of migrations from V1 to V2.</returns>
+    /// <returns>An ordered list of migrations from V1 to V3.</returns>
     public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
     {
         var schema = configuration.SchemaName ?? DefaultSchema;
@@ -129,7 +132,14 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
                 Description: "Add ContextKey column",
                 UpScript: AddColumns(schema, table, ("ContextKey", "NVARCHAR(256)")),
                 LogicalColumns: Cumulative(2),
-                SourceReference: "787c31c52")
+                SourceReference: "787c31c52"),
+
+            new BoxMigration(
+                Version: 3,
+                Description: "Add CausationId column",
+                UpScript: AddColumns(schema, table, ("CausationId", "NVARCHAR(256)")),
+                LogicalColumns: Cumulative(3),
+                SourceReference: "#2541")
         ];
     }
 
@@ -138,6 +148,7 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (upToVersion >= 1) { set.UnionWith(s_v1Columns); }
         if (upToVersion >= 2) { set.UnionWith(s_v2AddedColumns); }
+        if (upToVersion >= 3) { set.UnionWith(s_v3AddedColumns); }
         return set;
     }
 

@@ -59,6 +59,7 @@ public static class BrighterSpanExtensions
        BoxDbOperation.OutStandingMessages => "retrieve.outstanding_messages",
        BoxDbOperation.OutStandingMessageCount => "count.outstanding_messages",
        BoxDbOperation.Exists => "message.exists",
+       BoxDbOperation.Replay => "replay.causation",
        _ => throw new ArgumentOutOfRangeException(nameof(span), span, null)
    };
    
@@ -77,6 +78,17 @@ public static class BrighterSpanExtensions
        ClaimCheckOperation.Store => "store.message",
        ClaimCheckOperation.Retrieve => "retrieve.message",
        ClaimCheckOperation.HasClaim => "has_claim.message",
+       _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
+   };
+
+   ///<summary>
+   /// Provide a string representation of the circuit breaker operation
+   /// </summary>
+   public static string ToSpanName(this CircuitBreakerSpanOperation operation) => operation switch
+   {
+       CircuitBreakerSpanOperation.Trip => "trip",
+       CircuitBreakerSpanOperation.ReTrip => "re_trip",
+       CircuitBreakerSpanOperation.Reset => "reset",
        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
    };
 }

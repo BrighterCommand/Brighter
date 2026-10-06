@@ -21,6 +21,8 @@ Use this file to follow our coding guidelines when submitting to Brighter.
   - [Commit Messages](#commit-messages)
   - [Repository Branching Strategy](#repository-branching-strategy)
   - [Submitting Changes](#submitting-changes)
+- [Support for Agentic Coding](#support-for-agentic-coding)
+  - [Requesting an AI Code Review](#requesting-an-ai-code-review)
 - [Project Structure](#project-structure)
 
 ---
@@ -202,9 +204,38 @@ Welcome! Here's how to get started:
 
 ### Generated Tests
 
-- Brighter uses a test generation tool to ensure consistency across provider implementations (e.g., outbox/inbox implementations for different databases).
-- Generated tests provide a baseline test suite that all providers must pass, ensuring consistent behavior across implementations.
-- The test generator uses Liquid templates to create test code based on a `test-configuration.json` file in each test project.
+Brighter has many implementations of the same few roles — an outbox over eight stores, a messaging
+gateway over a dozen transports — and they must all behave the same way to an application. So the
+tests that prove that behaviour are **written once, as a Liquid template, and generated into every
+implementation's test project** from a `test-configuration.json` there. No per-implementation copy
+exists to drift, and no implementation quietly lacks one.
+
+Two families are generated:
+
+| Family | What it proves | Where |
+|---|---|---|
+| **Outbox** | Outbox store behaviour — sync, async, causation tracking | 8 test projects (MSSQL, PostgreSQL, MySQL, SQLite, DynamoDB ×2, MongoDB, GCP) |
+| **Messaging gateway** | **Transport conformance** — twelve canonical consumer/producer behaviours (requeue, requeue-with-delay, nack, the five reject-and-route behaviours, delayed send, dead-lettering), each in a synchronous **Reactor** and an asynchronous **Proactor** variant | 12 test projects, as **24 configurations** |
+
+The transport half has a **conformance matrix** —
+[`specs/0036-universal-transport-conformance-tests/conformance-status.md`](specs/0036-universal-transport-conformance-tests/conformance-status.md)
+— which is the single source of truth for what each transport is known to do. The generator reads
+it: a cell reading `Pass` or `Fixed` runs the test, and a cell reading
+`Deferred -> #NNNN (sign-off: @handle)` skips it while naming the issue. **Those `Deferred` cells
+are the work queue** — each is a known, accepted gap with a filed issue behind it.
+
+**Start with the guides** — they are the long-form answers, and the reference doc below is the
+lookup table:
+
+- [Transport conformance — getting started](docs/guides/transport-conformance-getting-started.md) —
+  what the suite proves, what it deliberately does **not** prove, how to read the matrix, how to run
+  one transport locally, and how to pick up work.
+- [Adding a new transport](docs/guides/transport-conformance-new-transport.md) — the end-to-end
+  checklist, the provider contract, and the audits that will fail you.
+- [Adding a new canonical behaviour](docs/guides/transport-conformance-new-behaviour.md) — every
+  file a thirteenth behaviour touches, and how its ledger column starts life as `Unknown`.
+- [`.agent_instructions/generated_tests.md`](.agent_instructions/generated_tests.md) — the full
+  reference: every template, every configuration key, every feature flag.
 
 #### How to Generate Tests
 
@@ -221,8 +252,15 @@ To generate tests for all test projects, run one of the following scripts from t
 ```
 
 **For a specific test project:**
+
+The generator uses the **current working directory** as its output root, so you must run it from
+inside the test project directory. Build the generator first — the build copies the Liquid templates
+into `bin/`, and without it the generator runs against stale cached templates.
+
 ```bash
-dotnet run --project tools/Paramore.Brighter.Test.Generator -- --file tests/[YourTestProject]/test-configuration.json
+dotnet build tools/Paramore.Brighter.Test.Generator
+cd tests/[YourTestProject]
+dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator
 ```
 
 #### When to Regenerate Tests
@@ -231,11 +269,24 @@ dotnet run --project tools/Paramore.Brighter.Test.Generator -- --file tests/[You
 - When adding a new provider implementation that needs the standard test suite
 - When updating test patterns to ensure all providers follow the new pattern
 
-#### Customizing Generated Tests
+#### Never Edit a Generated Test
 
-- Generated tests can be customized after generation for provider-specific edge cases
-- Each test project should have a `test-configuration.json` file specifying provider-specific details
-- See [ADR 0035](docs/adr/0035-geneated-test.md) for more details on the test generation architecture
+Generated test files are overwritten every time the generator runs, so any hand-edit is silently
+lost on the next `./generate-test.sh`. Provider-specific behaviour has three designated seams
+instead:
+
+- **The provider class.** Each test project hand-writes the provider implementing the generated
+  `IAmAMessageGatewayReactorProvider` / `…ProactorProvider` (or the outbox equivalents). This is
+  where transport-specific setup, cleanup and dead-letter reads belong.
+- **`test-configuration.json`.** Each test project has one; it carries the provider-specific
+  details and the feature flags that decide which templates are generated at all.
+- **The Liquid template.** If the change is to the behaviour under test rather than to one
+  transport's plumbing, edit the template and regenerate every project.
+
+See [ADR 0035](docs/adr/0035-generated-test.md) for the test generation architecture, and
+[`.agent_instructions/generated_tests.md`](.agent_instructions/generated_tests.md) for the full
+reference — every template, every configuration key, every feature flag, and the regeneration
+recipe.
 
 ## Documentation
 
@@ -476,6 +527,10 @@ Understanding our branching strategy will help you target the right branch for y
 - Sit back, and wait.
 - Try pinging @BrighterCommand on Twitter if you hear nothing
 
+Please ask that your pull request is merged with a merge commit, not squashed or rebased. Some of
+our tooling pins commit shas from a merged branch's history for later reference, and only a merge
+commit keeps those commits reachable from `master` afterwards.
+
 ### Contributor License Agreement
 
 To safeguard the project we ask you to sign a Contributor License Agreement. The goal is to let you keep your copyright, but to assign it to the project so that it can use it in perpetuity. It is still yours, but the project is not at risk from having multiple contributors holding the copyright, with anyone able to hold it to ransom by removing their grant of license.
@@ -486,26 +541,31 @@ To get started, <a href="https://www.clahub.com/agreements/iancooper/Paramore">s
 
 ## Support for Agentic Coding
 
-We are evolving our support for agentic coding; we are focused on making it easy to use Claude Code to work with Brighter, though other agents may benefit from this work.
+We welcome code authored with a coding agent. However, you are responsible for the code you submit: review it, understand it, and make sure the agent followed these guidelines.
 
-- CLAUDE.md: We provide a CLAUDE.md file to direct Claude Code to `.agent_instructions` for a version of these guidelines for agents
-- .claude
-  - commands: we provide a set of commands that help an agent follow Brighter's preferred workflow: Issue => ADR => Tasks => Implementation using TDD
-  - skills: we will provide skills that help an agent complete common tasks within Brighter.
+Our agent support is focused on Claude Code, though other agents can use the same instructions in `.agent_instructions/`. See **[AGENTIC_CODING.md](AGENTIC_CODING.md)** for:
 
-As our instructions are located in `.agent_instructions` it is relatively easy for other agents to use.
+- the instruction files and slash commands we provide;
+- the `/spec` workflow for features: requirements, ADRs, adversarial review, tasks, and TDD implementation;
+- how to choose a review gear with `/spec:gear`, and whether to work a task at a time with `/spec:implement` or run a loop with `/spec:ralph-implement`;
+- the `/bugfix` workflow, which proves a bug's root cause before fixing it.
 
+### Requesting an AI Code Review
 
-We provide explicit support for CoPilot via:
-- .github
-  - We provide a copilot-instructions.md file that mirrors AGENTS.md and CLAUDE.md
+We run a Claude review on pull requests, but it is **opt-in** rather than automatic. Reviewing every push to every pull request turned out to be expensive for the value it added, so we ask for a review when one will be useful.
 
-To avoid agents reward hacking, we are trialing [SlopWatch](https://github.com/Aaronontheweb/dotnet-slopwatch)
-- .slopwatch
-  - we have a baseline.json that allows us to ignore legacy repo concerns
-  - we have a post-hook installed for Claude Code to ensure it runs after the agent generates code
+**If you are a maintainer**, there are two ways to ask for one:
 
-We are open to receiving code that has been authored by agents. However, you are responsible for the code that you submit and should review the code and ensure that the agent follows our guidelines.
+| How | What it does |
+| --- | --- |
+| Add the `claude-review` label to the pull request | Reviews the pull request and posts the review as a comment |
+| Comment `@claude` followed by what you want | Runs Claude against your instruction, on a pull request or an issue |
+
+The label clears itself once the review finishes, so add it again whenever you want another pass, for example after pushing fixes. On a pull request raised from a fork the label cannot be cleared automatically, because GitHub issues workflows a read-only token when they run against a fork; remove it by hand before re-adding it.
+
+**If you are a contributor**, you do not need to do anything. Both triggers are restricted to people with write access to the repository, so the `claude-review` label will not appear in your pull request and commenting `@claude` will not start a review. A maintainer may request a review on your work, in which case Claude will comment on the pull request. Treat that comment as you would any other review: useful, occasionally wrong, and never a substitute for a human reviewer signing off.
+
+The review is pinned to a specific model in `.github/workflows/claude-code-review.yml` rather than tracking whatever the current default model is, which keeps its cost predictable. Change it there if a particular piece of work needs a more capable review.
 
 ### Contributor Code of Conduct
 

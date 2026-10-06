@@ -415,6 +415,40 @@ public class AzureServiceBusConsumerTests
     }
 
     [Fact]
+    public void When_rejecting_a_message_the_reason_and_description_are_forwarded_to_the_dead_letter_queue()
+    {
+        _nameSpaceManagerWrapper.ResetState();
+        _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
+
+        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_EVENT);
+        var message = new Message(messageHeader, new MessageBody("body"));
+        message.Header.Bag.Add("LockToken", Guid.NewGuid());
+
+        var reason = new MessageRejectionReason(RejectionReason.Unacceptable, "currency-missing");
+
+        _azureServiceBusConsumer.Reject(message, reason);
+
+        Assert.Equal("Unacceptable", _messageReceiver.DeadLetterReason);
+        Assert.Equal("currency-missing", _messageReceiver.DeadLetterDescription);
+    }
+
+    [Fact]
+    public void When_rejecting_a_message_with_no_reason_a_default_reason_and_description_are_forwarded_to_the_dead_letter_queue()
+    {
+        _nameSpaceManagerWrapper.ResetState();
+        _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
+
+        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_EVENT);
+        var message = new Message(messageHeader, new MessageBody("body"));
+        message.Header.Bag.Add("LockToken", Guid.NewGuid());
+
+        _azureServiceBusConsumer.Reject(message);
+
+        Assert.Equal("DeliveryError", _messageReceiver.DeadLetterReason);
+        Assert.Equal("unknown", _messageReceiver.DeadLetterDescription);
+    }
+
+    [Fact]
     public void When_a_subscription_does_not_exist_and_Missing_is_set_to_Validate_a_Channel_Failure_is_Raised()
     {
         _nameSpaceManagerWrapper.ResetState();

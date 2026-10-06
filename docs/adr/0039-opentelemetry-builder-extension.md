@@ -1,3 +1,18 @@
+---
+id: 0039-opentelemetry-builder-extension
+title: "OpenTelemetry Builder Extension"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2026-02-18
+summary: "Adds a new Paramore.Brighter.Extensions.OpenTelemetry package providing a single AddBrighterInstrumentation() extension on OpenTelemetryBuilder that wires both tracing and metrics in one call, delegating to the existing per-signal extensions in Extensions.Diagnostics."
+tags:
+  - "observability"
+  - "otel"
+  - "tracing"
+  - "metrics"
+---
+
 # 39. OpenTelemetry Builder Extension
 
 Date: 2026-02-18

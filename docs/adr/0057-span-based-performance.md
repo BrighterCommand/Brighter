@@ -1,3 +1,18 @@
+---
+id: 0057-span-based-performance
+title: "Reduce Heap Allocations with Span<T> and Memory<T>"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-05-01
+summary: "Adopts `Span<T>`, `ReadOnlySpan<T>`, `Memory<T>`, and `ReadOnlyMemory<byte>` across Brighter's core message pipeline and transport gateways to eliminate redundant heap allocations, replacing `MessageBody`'s internal `byte[]` storage with zero-copy `ReadOnlyMemory<byte>`, enabling direct UTF-8 serialization in `JsonMessageMapper`, and reducing per-header encoding allocations in the RMQ, Kafka, and Azure Service Bus transports. Also fixes the Azure Service Bus `Encoding.Default` bug and the Kafka ASCII/UTF-8 encoding mismatch."
+tags:
+  - "performance"
+  - "memory"
+  - "messaging"
+  - "transports"
+---
+
 # 57. Reduce Heap Allocations with Span\<T\> and Memory\<T\>
 
 Date: 2026-05-01

@@ -1,3 +1,17 @@
+---
+id: 0011-brighter-support-for-bulk-messaging-operations
+title: "Support for Bulk Messaging Operations"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2019-08-01
+summary: "Introduces a StartBatch/EndBatch mechanism on the Outbox to support bulk DepositPost, using late-binding reflection to reuse the single-request pipeline and accumulate writes to the Outbox rather than writing each message individually."
+tags:
+  - "bulk-messaging"
+  - "outbox"
+  - "messaging"
+---
+
 # 11. Support for Bulk Messaging Operations 
 
 Date: 2019-08-01

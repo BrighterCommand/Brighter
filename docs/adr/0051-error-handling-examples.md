@@ -1,3 +1,18 @@
+---
+id: 0051-error-handling-examples
+title: "Error Handling Example Applications"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-23
+summary: "Defines six sample TaskQueue applications demonstrating RejectOnError, DeferOnError, and DontAckOnError error-handling actions for Kafka and RabbitMQ, each following the established Brighter sample convention with Greetings, GreetingsSender, GreetingsReceiverConsole, and optional DlqConsole sub-projects."
+tags:
+  - "error-handling"
+  - "kafka"
+  - "rabbitmq"
+  - "messaging"
+---
+
 # 51. Error Handling Example Applications
 
 Date: 2026-02-23

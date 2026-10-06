@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Outbox.Firestore;
 /// transaction, preventing data loss in case of application failures before
 /// message dispatch.
 /// </remarks>
-public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, IAmAnOutboxAsync<Message, FirestoreTransaction>
+public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, IAmAnOutboxAsync<Message, FirestoreTransaction>, IAmACausationTrackingOutbox
 {
     private readonly IAmAFirestoreConnectionProvider _connectionProvider;
     private readonly FirestoreConfiguration _configuration;
@@ -77,6 +77,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
 
     private const string Dispatched = "Dispatched";
     private const string IsDispatched = "IsDispatched";
+    private const string CausationId = "CausationId";
     private const string Topic = "Topic";
     
     /// <inheritdoc />
@@ -104,7 +105,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
         {
             var write = new Write
             {
-                Update = ToDocument(message), CurrentDocument = new Precondition { Exists = false }
+                Update = ToDocument(message, ReadCausationId(requestContext)), CurrentDocument = new Precondition { Exists = false }
             };
 
             if (transactionProvider != null)
@@ -153,9 +154,10 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
 
         try
         {
+            var causationId = ReadCausationId(requestContext);
             var writes = messages.Select(message => new Write
             {
-                Update = ToDocument(message), 
+                Update = ToDocument(message, causationId),
                 CurrentDocument = new Precondition { Exists = false }
             });
 
@@ -488,7 +490,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
         {
             var write = new Write
             {
-                Update = ToDocument(message), CurrentDocument = new Precondition { Exists = false }
+                Update = ToDocument(message, ReadCausationId(requestContext)), CurrentDocument = new Precondition { Exists = false }
             };
 
             if (transactionProvider != null)
@@ -546,9 +548,10 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
         
         try
         {
+            var causationId = ReadCausationId(requestContext);
             var writes = messages.Select(message => new Write
             {
-                Update = ToDocument(message),
+                Update = ToDocument(message, causationId),
                 CurrentDocument = new Precondition { Exists = false }
             });
 
@@ -850,9 +853,111 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     }
 
     /// <inheritdoc />
+    public bool SupportsCausationTracking() => true;
+
+    /// <inheritdoc />
+    public Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(true);
+
+    /// <inheritdoc />
+    public bool ReplayCausation(string causationId, RequestContext? requestContext, Dictionary<string, object>? args = null)
+    {
+        // Sync-over-async: the Firestore SDK is async-only, so the sync IAmACausationTrackingOutbox entry
+        // point (used by the sync UseInboxHandler) must run the async path on a pumped context. This matches
+        // the sync-over-async convention already used throughout this class. BrighterAsyncContext.Run pumps
+        // a single-threaded context to avoid the classic sync-over-async deadlock.
+        return BrighterAsyncContext.Run(() => ReplayCausationAsync(causationId, requestContext, args));
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> ReplayCausationAsync(string causationId, RequestContext? requestContext,
+        Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    {
+        var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.Replay, _outboxCollection.Name),
+            requestContext?.Span,
+            options: _configuration.Instrumentation);
+
+        try
+        {
+            var query = new StructuredQuery
+            {
+                From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _outboxCollection.Name } },
+                Where = new StructuredQuery.Types.Filter
+                {
+                    FieldFilter = new StructuredQuery.Types.FieldFilter
+                    {
+                        Field = new StructuredQuery.Types.FieldReference { FieldPath = CausationId },
+                        Op = StructuredQuery.Types.FieldFilter.Types.Operator.Equal,
+                        Value = new Value { StringValue = causationId }
+                    }
+                }
+            };
+
+            var request = new RunQueryRequest
+            {
+                Parent = $"{_configuration.DatabasePath}/documents",
+                StructuredQuery = query
+            };
+
+            var client = await _connectionProvider
+                .GetFirestoreClientAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+
+            var writes = new List<Write>();
+            using (var response = client.RunQuery(request))
+            {
+                await foreach (var doc in response.GetResponseStream().WithCancellation(cancellationToken))
+                {
+                    if (doc.Document == null)
+                        continue;
+
+                    writes.Add(new Write
+                    {
+                        Update = new Document
+                        {
+                            Name = doc.Document.Name,
+                            Fields =
+                            {
+                                [Dispatched] = new Value { NullValue = NullValue.NullValue },
+                                [IsDispatched] = new Value { BooleanValue = false }
+                            }
+                        },
+                        UpdateMask = new DocumentMask { FieldPaths = { Dispatched, IsDispatched } },
+                        CurrentDocument = new Precondition { Exists = true }
+                    });
+                }
+            }
+
+            // The Firestore store always supports causation tracking, so the replay is always "performed"
+            // even when no messages matched the causation.
+            if (writes.Count == 0)
+                return true;
+
+            var commit = new CommitRequest { Database = _configuration.DatabasePath };
+            commit.Writes.AddRange(writes);
+
+            await client
+                .CommitAsync(commit, CallSettings.FromCancellationToken(cancellationToken))
+                .ConfigureAwait(ContinueOnCapturedContext);
+
+            return true;
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
+    }
+
+    private static string? ReadCausationId(RequestContext? requestContext)
+        => requestContext?.Bag.TryGetValue(RequestContextBagNames.CausationId, out var value) == true
+            ? value as string
+            : null;
+
+    /// <inheritdoc />
     public async Task<IEnumerable<Message>> OutstandingMessagesAsync(TimeSpan dispatchedSince, RequestContext requestContext, int pageSize = 100,
         int pageNumber = 1, IEnumerable<RoutingKey>? trippedTopics = null, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
-    { 
+    {
         var offset = (pageNumber - 1) * pageSize;
         var timeStamp = _configuration.TimeProvider.GetUtcNow().Subtract(dispatchedSince);
         var query = new StructuredQuery
@@ -1151,7 +1256,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     private static Expiration? ToExpiration(int outboxTimeout)
         => outboxTimeout == -1 ? null : Expiration.FromTimeout(TimeSpan.FromMilliseconds(outboxTimeout));
 
-    private Document ToDocument(Message message)
+    private Document ToDocument(Message message, string? causationId = null)
     {
         Value ttl;
         if (_outboxCollection.Ttl.HasValue && _outboxCollection.Ttl != TimeSpan.Zero)
@@ -1173,7 +1278,9 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                 [IsDispatched] = new Value { BooleanValue = false },
                 [nameof(MessageHeader.HandledCount)] = new Value { IntegerValue = message.Header.HandledCount }, 
                 [nameof(MessageHeader.MessageId)] = new Value { StringValue = message.Header.MessageId.ToString() },
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
                 [nameof(MessageHeader.MessageType)] = new Value { StringValue = message.Header.MessageType.ToString() },
+#pragma warning restore CS0618
                 [nameof(MessageHeader.SpecVersion)] = new Value { StringValue = message.Header.SpecVersion },
                 [nameof(MessageHeader.Source)] = new Value { StringValue = message.Header.Source.ToString() },
                 [nameof(MessageHeader.Topic)] = new Value { StringValue = message.Header.Topic.Value },
@@ -1249,7 +1356,12 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
         {
             doc.Fields[nameof(MessageHeader.JobId)] = new Value { StringValue = message.Header.JobId.Value };
         }
-        
+
+        if (!string.IsNullOrEmpty(causationId))
+        {
+            doc.Fields[CausationId] = new Value { StringValue = causationId };
+        }
+
         return doc;
     }
 
@@ -1257,9 +1369,13 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     {
         var messageId = Id.Create(document.Fields[nameof(MessageHeader.MessageId)].StringValue);
 #if NETSTANDARD
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         var messageType = (MessageType)Enum.Parse(typeof(MessageType), document.Fields[nameof(MessageHeader.MessageType)].StringValue);
+#pragma warning restore CS0618
 #else
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         var messageType = Enum.Parse<MessageType>(document.Fields[nameof(MessageHeader.MessageType)].StringValue);
+#pragma warning restore CS0618
 #endif 
         var specVersion = document.Fields[nameof(MessageHeader.SpecVersion)].StringValue;
         var topic = new RoutingKey(document.Fields[nameof(MessageHeader.Topic)].StringValue);

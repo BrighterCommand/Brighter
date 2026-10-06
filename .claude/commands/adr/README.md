@@ -41,6 +41,34 @@ The command creates ADRs with these sections:
 - **Alternatives Considered**: Other options and why rejected
 - **References**: Links to requirements, related ADRs, external docs
 
+## ADR Metadata (frontmatter & index)
+
+Every ADR carries a YAML **frontmatter** block (`id`, `title`, `status`, `author`, `created`,
+`summary`, `tags`) so agents can find prior art from cheap metadata instead of grepping full bodies.
+The schema, status vocabulary, tag taxonomy, and identity rule are defined once in
+[`.agent_instructions/adr_frontmatter.md`](../../../.agent_instructions/adr_frontmatter.md).
+
+Two skills manage it (both are invoked *by* `/adr`, `/spec:design`, and `/spec:approve`, but can be
+run directly):
+
+- **`read_adr_metadata`** (`read_adr_metadata.md`) — reads only the frontmatter of each ADR and
+  returns ranked prior-art candidates (`id` + `title` + `summary`) filtered by tag/status. Skips
+  `Deprecated`/`Superseded` by default. Used before drafting to surface related decisions.
+- **`write_adr_metadata`** (`write_adr_metadata.md`) — adds/updates a file's frontmatter and keeps it
+  in sync with the body `## Status` (`init` → `Proposed`; `status Accepted` on approval;
+  `supersede`/`deprecate` on retirement). Idempotent.
+
+**Identity is the `id`/slug (filename stem), not the number.** ADR numbers are a non-unique ordering
+hint — parallel branches have collided on numbers and we do not renumber. Tooling keys off `id`.
+
+**Derived index** — `docs/adr/index.md` is a table generated *from* the frontmatter. It is a
+regenerable cache: **never hand-edit it**. `/adr` and `/spec:approve` refresh it automatically; to
+regenerate by hand run the single canonical command:
+
+```bash
+awk -f .claude/commands/adr/generate_adr_index.awk docs/adr/[0-9]*.md > docs/adr/index.md
+```
+
 ## Integration with Specification Workflow
 
 The `/adr` command integrates with the [specification workflow](../spec/README.md):
@@ -171,6 +199,7 @@ This updates the Status field in the ADR from "Proposed" to "Accepted".
 Brighter/
 ├── docs/
 │   └── adr/
+│       ├── index.md                                # Derived index (generated; do not hand-edit)
 │       ├── 0001-record-architecture-decisions.md  # Template
 │       ├── 0047-message-rejection-routing-strategy.md
 │       └── 0037-kafka-message-serialization-strategy.md

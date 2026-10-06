@@ -1,3 +1,17 @@
+---
+id: 0018-support-a-command-oriented-interface
+title: "Support A Command Oriented Interface"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2024-07-18
+summary: "Brighter is designated as the Command side of CQRS, supporting Martin Fowler's Command Oriented Interface pattern by handling all command operations while Darker handles queries."
+tags:
+  - "cqrs"
+  - "architecture"
+  - "api-design"
+---
+
 # 18. Support A Command Oriented Interface
 
 Date: 2024-07-18

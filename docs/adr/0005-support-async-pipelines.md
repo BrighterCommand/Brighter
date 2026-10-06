@@ -1,3 +1,18 @@
+---
+id: 0005-support-async-pipelines
+title: "Support Async Pipelines"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2019-08-01
+summary: "Brighter implements support for asynchronous handler and message mapper pipelines via a custom synchronization context that invokes callbacks on the message pump thread, with the requirement that pipelines be homogeneously synchronous or asynchronous."
+tags:
+  - "async"
+  - "pipeline"
+  - "message-pump"
+  - "concurrency"
+---
+
 # 5. Support Async Pipelines 
 
 Date: 2019-08-01

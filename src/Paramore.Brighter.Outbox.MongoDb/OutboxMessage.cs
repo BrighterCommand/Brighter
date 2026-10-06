@@ -38,7 +38,9 @@ public class OutboxMessage : IMongoDbCollectionTTL
         CorrelationId = message.Header.CorrelationId.Value;
         HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
         MessageId = message.Id.Value;
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         MessageType = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
         PartitionKey = message.Header.PartitionKey.Value;
         ReplyTo = message.Header.ReplyTo?.Value;
         Topic = message.Header.Topic.Value;
@@ -103,6 +105,12 @@ public class OutboxMessage : IMongoDbCollectionTTL
     /// </summary>
     /// <value>The <see cref="string"/> with the correlation id.</value>
     public string? CorrelationId { get; set; }
+
+    /// <summary>
+    /// The causation id that links this outbox message to the inbox entry that produced it.
+    /// </summary>
+    /// <value>The <see cref="string"/> with the causation id, or null when not tracked.</value>
+    public string? CausationId { get; set; }
     
     /// <summary>
     /// The CloudEvents DataRef for a Claim Check of the message, if any

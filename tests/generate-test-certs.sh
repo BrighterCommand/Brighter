@@ -1,8 +1,12 @@
 #!/bin/bash
 set -e
 
-# Directory for certificates
-CERT_DIR="./certs"
+# Directory for certificates — anchored to this script's own directory so the
+# output always lands in tests/certs/ (which .gitignore ignores) no matter what
+# cwd the script is invoked from. Running from the repo root previously dropped
+# them at /certs/, outside the ignore rule, and they got committed.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CERT_DIR="$SCRIPT_DIR/certs"
 mkdir -p "$CERT_DIR"
 
 echo "Generating test certificates for RabbitMQ mutual TLS..."

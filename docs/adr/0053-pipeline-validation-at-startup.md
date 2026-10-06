@@ -1,3 +1,18 @@
+---
+id: 0053-pipeline-validation-at-startup
+title: "Pipeline Validation and Diagnostic Report at Startup"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-25
+summary: "Introduces opt-in startup pipeline validation and diagnostic reporting via `IAmAPipelineValidator` and `IAmAPipelineDiagnosticWriter`, using a Specification pattern to check handler pipeline ordering, producer publications, and consumer subscriptions across all three Brighter configuration paths."
+tags:
+  - "pipeline"
+  - "configuration"
+  - "specification-pattern"
+  - "observability"
+---
+
 # 53. Pipeline Validation and Diagnostic Report at Startup
 
 Date: 2026-02-25

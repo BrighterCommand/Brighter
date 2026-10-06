@@ -51,6 +51,20 @@ internal static class SqliteInboxLegacySeeder
         );
         """;
 
+    // V2 adds ContextKey (787c31c52) but is still pre-CausationId (V3). This is the schema a
+    // user has after upgrading Brighter past the ContextKey era but before the Replay feature
+    // migration — the realistic "no CausationId column" inbox the backward-compat fix must tolerate.
+    private const string V2Ddl = """
+        CREATE TABLE [{0}]
+        (
+            [CommandId] UNIQUEIDENTIFIER CONSTRAINT PK_MessageId PRIMARY KEY,
+            [CommandType] NVARCHAR(256),
+            [CommandBody] NTEXT,
+            [Timestamp] TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            [ContextKey] NVARCHAR(256)
+        );
+        """;
+
     /// <summary>
     /// Creates an inbox table with the V1 column set (no <c>ContextKey</c>). The history
     /// table is NOT seeded — the test under verification expects the runner to stamp it.
@@ -61,6 +75,20 @@ internal static class SqliteInboxLegacySeeder
         connection.Open();
         using var command = connection.CreateCommand();
         command.CommandText = string.Format(V1Ddl, tableName);
+        command.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Creates an inbox table with the V2 column set (<c>ContextKey</c> present, but no
+    /// <c>CausationId</c>) — the pre-Replay schema a user runs after upgrading Brighter
+    /// without applying the V3 causation migration.
+    /// </summary>
+    public static void SeedAtV2(string connectionString, string tableName)
+    {
+        using var connection = new SqliteConnection(connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = string.Format(V2Ddl, tableName);
         command.ExecuteNonQuery();
     }
 }

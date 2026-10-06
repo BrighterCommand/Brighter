@@ -1,10 +1,25 @@
+---
+id: 0021-move-archive-from-esb
+title: "Move Archive Methods from External Service Bus to Outbox Archiver to Reduce Complexity"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2024-10-28
+summary: "Moves the Archive and ArchiveAsync methods from ExternalServiceBus into OutboxArchiver, and renames ExternalServiceBus to OutboxProducerMediator to better reflect its mediator role between producer and outbox."
+tags:
+  - "archive"
+  - "outbox"
+  - "messaging"
+  - "architecture"
+---
+
 # 20. Move Archive Methods from External Service Bus to Outbox Archiver to Reduce Complexity
 
 Date: 2024-10-28
 
 ## Status
 
-Adopted
+Accepted
 
 ## Context
 
@@ -25,7 +40,6 @@ We will move the implementation from `ExternalServiceBus` into `OutboxArchiver`.
 ## Consequences
 
 One, we have moved these functions, it makes sense to rename the `ExternalServiceBus` class to 'OutboxProducerMediator' as this better describes its role within our codebase.
-
 
 
 

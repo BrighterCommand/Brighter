@@ -34,12 +34,30 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// Validate = look for topic using routing key name, queue using channel name
 /// Assume = Assume Routing Key is Topic ARN, queue exists via channel name
 /// </summary>
-public class SqsSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
+public class SqsSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport, IAmADeliveryCountingSubscription
 {
+    /// <inheritdoc />
+    public override Type ChannelFactoryType => typeof(ChannelFactory);
+
     /// <summary>
     /// The routing key type.
     /// </summary>
     public ChannelType ChannelType { get; }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Returns <see cref="SqsAttributes.RedrivePolicy"/>.<see cref="RedrivePolicy.MaxReceiveCount"/> when a redrive
+    /// policy is configured; <c>null</c> when no policy is set or when the policy was provisioned outside Brighter
+    /// and is therefore not visible here (ADR 0077 budget-rules table).
+    /// </remarks>
+    public int? NativeRedriveLimit => QueueAttributes.RedrivePolicy?.MaxReceiveCount;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Always <c>null</c> for SQS: <c>ApproximateReceiveCount</c> is populated on every delivery, so the
+    /// budget can always run down when a redrive policy is not in force ahead of it (ADR 0077).
+    /// </remarks>
+    public string? DeliveryBudgetUnenforceableReason => null;
 
     /// <summary>
     /// The routing key used for the Dead Letter Channel

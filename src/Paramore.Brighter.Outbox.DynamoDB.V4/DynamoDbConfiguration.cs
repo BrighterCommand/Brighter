@@ -30,7 +30,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         public string OutstandingAllTopicsIndexName { get; set; }
 
         /// <summary>
-        /// Timeout in milliseconds
+        /// The name of the global secondary index over the causation id, used to replay a causation's messages
+        /// </summary>
+        public string CausationIndexName { get; set; }
+
+        /// <summary>
+        /// The default outbox operation timeout in milliseconds. Zero or -1 disables the outbox deadline.
         /// </summary>
         public int Timeout { get; }
 
@@ -54,15 +59,19 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// Create a DynamoDbConfiguration for Outbox support
         /// </summary>
         /// <param name="tableName">The name of the outbox table</param>
-        /// <param name="timeout">The timeout when talking to DynamoDb</param>
+        /// <param name="timeout">The default operation timeout in milliseconds; zero or -1 disables the outbox deadline.</param>
         /// <param name="numberOfShards">The number of shards; use more than one shard for active topics to avoid hotspots</param>
         public DynamoDbConfiguration(string? tableName = null, int timeout = 500, int numberOfShards = 3, int scanConcurrency = 3)
         {
+            if (timeout < -1)
+                throw new ArgumentOutOfRangeException(nameof(timeout));
+
             TableName = tableName ?? "brighter_outbox";
             OutstandingIndexName = "Outstanding";
             OutstandingAllTopicsIndexName = "OutstandingAllTopics";
             DeliveredIndexName = "Delivered";
             DeliveredAllTopicsIndexName = "DeliveredAllTopics";
+            CausationIndexName = "Causation";
             Timeout = timeout;
             NumberOfShards = numberOfShards;
             ScanConcurrency = scanConcurrency;

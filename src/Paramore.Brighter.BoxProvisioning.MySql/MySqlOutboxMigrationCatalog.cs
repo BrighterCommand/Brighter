@@ -51,7 +51,8 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// </para>
 /// <para>
 /// LogicalColumns are stored PascalCase with <see cref="StringComparer.OrdinalIgnoreCase"/> —
-/// MySQL identifiers are case-insensitive on lookup. The accumulated columns across V1..V7 plus
+/// MySQL identifiers are case-insensitive on lookup. V8 adds <c>CausationId</c> (Spec 0027,
+/// #2541) plus a replay index on it. The accumulated columns across V1..V8 plus
 /// MySQL housekeeping (<c>Created</c>, <c>CreatedID</c>) equal the live builder's column set,
 /// verified by the drift test in <c>tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning</c>.
 /// </para>
@@ -70,6 +71,7 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v6AddedColumns = ["WorkflowId", "JobId"];
     private static readonly string[] s_v7AddedColumns = ["DataRef", "SpecVersion"];
+    private static readonly string[] s_v8AddedColumns = ["CausationId"];
 
     // Literal historical MySQL outbox DDL extracted from commit 695522367 (March 2019). The
     // exact pre-Dispatched shape that shipped as "V1" — preserved here so chain replay against
@@ -121,7 +123,7 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     /// Returns all migrations for the MySQL outbox, ordered by version.
     /// </summary>
     /// <param name="configuration">The relational database configuration.</param>
-    /// <returns>An ordered list of migrations from V1 to V7.</returns>
+    /// <returns>An ordered list of migrations from V1 to V8.</returns>
     public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
     {
         var table = configuration.OutBoxTableName;
@@ -195,7 +197,16 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
                     ("DataRef", "VARCHAR(255)"),
                     ("SpecVersion", "VARCHAR(255)")),
                 LogicalColumns: Cumulative(7),
-                SourceReference: "d67dac947 / #3790")
+                SourceReference: "d67dac947 / #3790"),
+
+            new BoxMigration(
+                Version: 8,
+                Description: "Add CausationId column and replay index",
+                UpScript: AddColumns(schema, table, ("CausationId", "VARCHAR(255)"))
+                    + Environment.NewLine
+                    + AddCausationIndex(schema, table),
+                LogicalColumns: Cumulative(8),
+                SourceReference: "#2541")
         ];
     }
 
@@ -209,6 +220,7 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
         if (upToVersion >= 5) { set.UnionWith(s_v5AddedColumns); }
         if (upToVersion >= 6) { set.UnionWith(s_v6AddedColumns); }
         if (upToVersion >= 7) { set.UnionWith(s_v7AddedColumns); }
+        if (upToVersion >= 8) { set.UnionWith(s_v8AddedColumns); }
         return set;
     }
 
@@ -239,5 +251,28 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
 PREPARE stmt FROM @q;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;";
+    }
+
+    /// <summary>
+    /// MySQL 5.7+ idempotent replay index (Spec 0027, #2541) on <c>CausationId</c> — MySQL lacks
+    /// <c>CREATE INDEX IF NOT EXISTS</c>, so an <c>information_schema.statistics</c> probe drives a
+    /// prepared statement that emits the <c>CREATE INDEX</c> only when the index is absent. Schema
+    /// scoping mirrors <see cref="AddColumn"/>: <c>DATABASE()</c> when <paramref name="schema"/> is
+    /// null, otherwise the configured schema.
+    /// </summary>
+    private static string AddCausationIndex(string? schema, string table)
+    {
+        var tableScopeForProbe = schema is null ? "DATABASE()" : $"'{schema}'";
+        var qualifiedAlterTarget = schema is null ? $"`{table}`" : $"`{schema}`.`{table}`";
+        // MySQL index names are scoped to their table, so the bare `idx_CausationId` (matching
+        // the live builder's inline KEY) is unambiguous and avoids embedding the table name.
+        return $@"SET @qi = (SELECT IF(
+    (SELECT COUNT(*) FROM information_schema.statistics
+     WHERE table_schema = {tableScopeForProbe} AND table_name = '{table}' AND index_name = 'idx_CausationId') = 0,
+    'CREATE INDEX `idx_CausationId` ON {qualifiedAlterTarget} (`CausationId`)',
+    'SELECT 1'));
+PREPARE stmti FROM @qi;
+EXECUTE stmti;
+DEALLOCATE PREPARE stmti;";
     }
 }

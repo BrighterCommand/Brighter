@@ -46,6 +46,7 @@ public static class DynamoDbOutboxTable
                             ReadCapacityUnits = 10,
                             WriteCapacityUnits = 10,
                         },
+                        ["Causation"] = new() { ReadCapacityUnits = 10, WriteCapacityUnits = 10 },
                     }
                 )
             );

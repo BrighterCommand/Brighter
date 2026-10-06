@@ -1,3 +1,17 @@
+---
+id: 0037-provide-roslyn-analyzers-for-brighter
+title: "Provide Roslyn Analyzers for Brighter"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2026-01-25
+summary: "Introduces a Paramore.Brighter.Analyzer NuGet package with Roslyn analyzers for compile-time validation of Brighter usage patterns, initially covering Publication.RequestType assignment, Subscription constructor arguments, and Wrap attribute placement."
+tags:
+  - "roslyn-analyzers"
+  - "api-design"
+  - "meta"
+---
+
 # 37. Provide Roslyn Analyzers for Brighter
 
 Date: 2026-01-25

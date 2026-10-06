@@ -1,3 +1,18 @@
+---
+id: 0061-box-provisioning-value-types
+title: "Box Provisioning value types"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-06-02
+summary: "Introduces six `record` value types (`BoxTableName`, `SchemaName`, `MigrationVersion`, `MigrationDescription`, `SqlScript`, `SourceReference`) in `Paramore.Brighter.BoxProvisioning` to replace bare string/int primitives in `IAmABoxMigration`, `IAmABoxMigrationRunner.MigrateAsync`, and `IAmABoxProvisioner.BoxTableName`, giving compile-time parameter distinctness so transposed adjacent strings produce a type error rather than a silent runtime bug. Bidirectional implicit conversions preserve source compatibility at all existing call sites with no argument changes required."
+tags:
+  - "box"
+  - "provisioning"
+  - "api-design"
+  - "architecture"
+---
+
 # 61. Box Provisioning value types
 
 Date: 2026-06-02

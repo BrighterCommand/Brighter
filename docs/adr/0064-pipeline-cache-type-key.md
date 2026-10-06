@@ -1,3 +1,17 @@
+---
+id: 0064-pipeline-cache-type-key
+title: "Key pipeline-builder metadata caches by runtime Type"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-06-18
+summary: "Fixes a pipeline-cache collision bug in PipelineBuilder, TransformPipelineBuilder, and TransformPipelineBuilderAsync by replacing the simple class-name string cache key with the runtime System.Type, so same-named handler or mapper types in different namespaces each receive their own correct decorators and transforms."
+tags:
+  - "pipeline"
+  - "middleware"
+  - "performance"
+---
+
 # 0064. Key pipeline-builder metadata caches by runtime Type
 
 Date: 2026-06-18

@@ -1,3 +1,18 @@
+---
+id: 0052-defer-message-on-error-backstop-handler
+title: "Defer Message On Error Backstop Handler"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-23
+summary: "Adds `DeferMessageOnErrorAttribute` and handler pair (sync and async) that wraps the pipeline in a try/catch and throws `DeferMessageAction` with a configurable per-handler delay, completing the set of three declarative backstop attributes and extending the message pump to read the delay from the exception."
+tags:
+  - "pipeline"
+  - "middleware"
+  - "error-handling"
+  - "resilience"
+---
+
 # 52. Defer Message On Error Backstop Handler
 
 Date: 2026-02-23
@@ -191,6 +206,14 @@ private bool RequeueMessage(Message message, TimeSpan? delay = null)
     return Channel.Requeue(message, delay ?? RequeueDelay);
 }
 ```
+
+#### Transport failures during requeue
+
+If the channel throws while requeueing, both pumps log the exception with the message and channel identifiers and request redelivery through the channel's negative-acknowledgment operation. This uses each transport's recovery mechanism, such as releasing a RabbitMQ delivery or seeking back to a Kafka offset. If negative acknowledgment also throws, that failure is logged without escaping the loop. The pumps wait for `DontAckDelay` before continuing to avoid a tight redelivery loop.
+
+The pumps do not acknowledge or reject the original delivery on this path: the requeue has not been confirmed, and the transport may still hold the original message. Actual redelivery depends on the transport and whether recovery succeeds. This applies to both a command's `DeferMessageAction` and an event handler's action wrapped in `AggregateException`.
+
+The existing handled-count limit and successful requeue behavior are unchanged. A failure while rejecting a message that has exhausted its delivery budget is outside this requeue-failure policy.
 
 ### 5. Source-Generated Logging
 

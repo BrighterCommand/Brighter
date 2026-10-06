@@ -1,3 +1,18 @@
+---
+id: 0042-use-reactive-programming-for-mediator
+title: "Use Reactive Programming For Mediator"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2025-01-13
+summary: "Adopts Flow Based Programming (FBP) for the mediator where each Step derives from a Component with a typed In port (IAmAJobChannel), enabling parallel splits and merges through multiple Out or In ports and bracket-based synchronization."
+tags:
+  - "mediator"
+  - "workflow"
+  - "reactive"
+  - "concurrency"
+---
+
 # 42. Use Reactive Programming For Mediator
 
 Date: 2025-01-13
@@ -58,4 +73,3 @@ For configuration of a downstream a component needs an `Opt` channel which can t
 
 FBP is stongly aligned with workflows, so adopting concepts from FBP gives us a strong programming model to work with. 
 FBP has already solved many of the problems around running workflows, so it gives us a strong plan to work with.
-

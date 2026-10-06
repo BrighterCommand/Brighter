@@ -1,3 +1,18 @@
+---
+id: 0008-support-cloud-events
+title: "Support Cloud Events"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2019-08-01
+summary: "Brighter will support the CloudEvents specification by adding CloudEvents metadata fields to the MessageHeader and enabling transports to produce and consume both binary and structured CloudEvents, with the Publication passed to the Message Mapper to supply user-defined CloudEvents values."
+tags:
+  - "cloudevents"
+  - "messaging"
+  - "transports"
+  - "message-mapping"
+---
+
 # 8. Support Cloud Events
 
 Date: 2019-08-01

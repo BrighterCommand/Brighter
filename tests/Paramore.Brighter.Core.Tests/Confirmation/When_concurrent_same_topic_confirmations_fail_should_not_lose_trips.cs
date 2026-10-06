@@ -52,11 +52,10 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
         public ConcurrentConfirmationFailureTripTests()
         {
             // Arrange: a producer whose confirmations always fail, wired to a mediator whose tracer
-            // gates every callback on a barrier so all failures trip the breaker concurrently.
+            // gates every callback on a barrier so concurrent sends trip the breaker concurrently.
             var bus = new InternalBus();
             _producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
             {
-                UseAsyncPublishConfirmation = true,
                 PublishFailurePredicate = _ => true
             };
 
@@ -85,17 +84,17 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
         {
             using var context = TestCorrelator.CreateContext();
 
-            // Act: send N messages on the same topic; their failed confirmations rendezvous on the
-            // barrier and then trip the breaker concurrently. DisposeAsync drains and awaits them.
-            for (var i = 0; i < ConcurrentFailures; i++)
-                await _producer.SendAsync(NewMessage());
-            await _producer.DisposeAsync();
+            // Act: send N messages concurrently on the same topic; their failed confirmations
+            // rendezvous on the barrier and then trip the breaker concurrently.
+            var sendTasks = Enumerable.Range(0, ConcurrentFailures)
+                .Select(_ => Task.Run(() => _producer.Send(NewMessage())));
+            await Task.WhenAll(sendTasks);
 
             // Assert: every concurrent failure ran to completion — N Warnings were logged (none lost
             // to the race) and the topic ends tripped (order-independent end state).
             var warnings = TestCorrelator.GetLogEventsFromCurrentContext()
                 .Where(e => e.Level == LogEventLevel.Warning)
-                .Where(e => e.RenderMessage().Contains(_topic.Value))
+                .Where(e => e.MessageTemplate.Text == "Publish confirmation failed for message Id:{Id} on topic {Topic}")
                 .ToList();
             Assert.Equal(ConcurrentFailures, warnings.Count);
 

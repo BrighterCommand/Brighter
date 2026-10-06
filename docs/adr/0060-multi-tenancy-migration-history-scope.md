@@ -1,3 +1,18 @@
+---
+id: 0060-multi-tenancy-migration-history-scope
+title: "Multi-Tenancy: Per-Schema Placement of the Box Migration-History Table"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-05-27
+summary: "Introduces an opt-in `MigrationHistoryScope.PerSchema` enum on `BoxProvisioningOptions` and a single `ResolveHistorySchema()` method on `SqlBoxMigrationRunner` so MSSQL and PostgreSQL tenants can co-locate the `__BrighterMigrationHistory` table in their own schema rather than the shared default schema, with a backward-compatible `Global = 0` default. Includes a misconfiguration guard, an idempotent one-time seed that copies prior history rows from the legacy default-schema table on first per-schema creation, and schema-aware coordination of write and read sides through the detection helper."
+tags:
+  - "box"
+  - "migration"
+  - "multi-tenancy"
+  - "provisioning"
+---
+
 # 60. Multi-Tenancy: Per-Schema Placement of the Box Migration-History Table
 
 Date: 2026-05-27

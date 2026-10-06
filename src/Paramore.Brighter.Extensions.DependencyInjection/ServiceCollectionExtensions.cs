@@ -30,6 +30,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
@@ -70,13 +71,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (configure != null)
                 services.Configure(configure);
 
-            // Register IBrighterOptions resolved from IOptions<BrighterOptions>
-            services.TryAddSingleton<IBrighterOptions>(sp =>
-                sp.GetRequiredService<IOptions<BrighterOptions>>().Value);
-
             return BrighterHandlerBuilder(
                 services,
-                sp => (BrighterOptions)sp.GetRequiredService<IBrighterOptions>());
+                sp => sp.GetRequiredService<IOptions<BrighterOptions>>().Value);
         }
 
         /// <summary>
@@ -94,7 +91,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (configure == null)
                 throw new ArgumentNullException(nameof(configure));
 
-            services.TryAddSingleton<IBrighterOptions>(configure);
             return BrighterHandlerBuilder(
                 services,
                 configure);
@@ -143,6 +139,23 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             IServiceCollection services,
             Func<IServiceProvider, BrighterOptions> optionsFunc)
         {
+            // Every registration path funnels through here - this is the one place that registers
+            // IBrighterOptions, so a registered ScopeAffinityOverride reaches it regardless of path (FR-17)
+            RegisterBrighterOptions(services, optionsFunc);
+
+            // ADR 0072 step 5 - the ambient-scope diagnostics singleton, latched per Brighter
+            // container (D19). Falls back to a no-op logger when the host never called AddLogging(),
+            // so a container-backed factory asking for this singleton cannot fail construction on a
+            // host that has no interest in logging at all.
+            services.TryAddSingleton(sp => new AmbientScopeDiagnostics(
+                (ILogger<AmbientScopeDiagnostics>?)sp.GetService(typeof(ILogger<AmbientScopeDiagnostics>))
+                ?? NullLogger<AmbientScopeDiagnostics>.Instance));
+
+            // ADR 0072 step 5 - the per-request-scope artefact cache a borrowed ambient's Scoped
+            // resolution routes through, so two pipelines sharing one ambient share one artefact
+            // instance rather than one each.
+            services.TryAddScoped<ScopedArtefactCache>();
+
             // DO NOT build intermediate provider - defer all resolution
             // Create registries - they always register as Transient, actual lifetime managed by ServiceProviderHandlerFactory
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
@@ -172,13 +185,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, ServiceLifetime.Singleton));
 
-            var builder =  new ServiceCollectionBrighterBuilder(
+            var builder = new ServiceCollectionBrighterBuilder(
                 services,
                 subscriberRegistry,
                 mapperRegistry,
                 transformRegistry,
                 null // PolicyRegistry resolved at runtime
             );
+
+            RegisterResiliencePipelineRegistry(builder);
 
             // Register built-in Brighter handlers, mappers, and transforms from Paramore.Brighter assemblies.
             // This is done here rather than in the constructor so that direct construction of the builder
@@ -224,6 +239,53 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
+        /// Registers this path's <see cref="IBrighterOptions"/> descriptor, applying a registered
+        /// <see cref="ScopeAffinityOverride"/> to it at first resolution, and records the descriptor's
+        /// identity so a validator can later ask whether it is still the effective one - all without
+        /// resolving anything here. A no-op where an unkeyed <see cref="IBrighterOptions"/> descriptor
+        /// is already registered, so a host that registers its own keeps it.
+        /// </summary>
+        /// <param name="services">The collection to register into.</param>
+        /// <param name="optionsFunc">This registration path's own options factory.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="services"/> or
+        /// <paramref name="optionsFunc"/> is <see langword="null"/>.</exception>
+        private static void RegisterBrighterOptions(
+            IServiceCollection services,
+            Func<IServiceProvider, BrighterOptions> optionsFunc)
+        {
+            if (services is null)
+                throw new ArgumentNullException(nameof(services));
+            if (optionsFunc is null)
+                throw new ArgumentNullException(nameof(optionsFunc));
+
+            // TryAddSingleton spelled out, because the descriptor we add has to be one we can hand on:
+            // a validator's rule asks whether the effective IBrighterOptions descriptor is this one.
+            // ServiceKey is part of the test because that is what TryAdd itself matches on - without
+            // it, a host with a KEYED IBrighterOptions would get no Brighter registration at all.
+            if (services.Any(d => d.ServiceType == typeof(IBrighterOptions) && d.ServiceKey is null))
+                return;
+
+            var descriptor = ServiceDescriptor.Singleton<IBrighterOptions>(sp =>
+            {
+                var options = optionsFunc(sp)
+                    ?? throw new InvalidOperationException("The Brighter options factory returned null.");
+                var over = sp.GetService<ScopeAffinityOverride>();
+                if (over is not null)
+                    options.DefaultScopeAffinity = over.Affinity; // D18: the extension wins
+                return options;
+            });
+
+            services.Add(descriptor);
+            services.AddSingleton(new BrighterOptionsRegistration(descriptor));
+        }
+
+        private static void RegisterResiliencePipelineRegistry(IBrighterBuilder builder)
+        {
+            builder.Services.TryAddSingleton(sp => new BrighterResiliencePipelineRegistry(
+                sp.GetRequiredService<IBrighterOptions>(), builder.ResiliencePolicyRegistry));
+        }
+
+        /// <summary>
         ///We use AddProducers to register an external bus, which is a bus that is not the Brighter In-Memory Bus.
         /// The external bus uses Message Oriented Middleware (MoM) to dispatch a message from a producer
         /// to a consumer. 
@@ -244,6 +306,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="configure">A callback that allows you to configure <see cref="ProducersConfiguration"/> options</param>
         /// <param name="serviceLifetime">The DI container registration lifetime for the transaction provider (default: Transient)</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
+        /// <remarks>
+        /// A <see cref="RelationDatabaseOutbox"/> supplies its configuration as a singleton
+        /// <see cref="IAmARelationalDatabaseConfiguration"/> when that service is not already registered.
+        /// Existing explicit registrations retain their lifetimes. A later ordinary service registration
+        /// overrides this fallback for single-service resolution; a later <c>TryAdd</c> does not.
+        /// </remarks>
         public static IBrighterBuilder AddProducers(
             this IBrighterBuilder brighterBuilder,
             Action<ProducersConfiguration> configure,
@@ -261,7 +329,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (busConfiguration.UseRpc && busConfiguration.ReplyQueueSubscriptions == null)
                 throw new ConfigurationException("If the you configure RPC, you must configure the ReplyQueueSubscriptions");
             
-            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType >();
+            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType>();
             brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
 
             //default to using System Transactions if nothing provided, so we always technically can share the outbox transaction
@@ -312,6 +380,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     $"Unable to register outbox of type {outbox.GetType().Name} - no transaction provider has been registered that matches the outbox's transaction type");
             }
 
+            if (outbox is RelationDatabaseOutbox relationalOutbox)
+                brighterBuilder.Services.TryAddSingleton<IAmARelationalDatabaseConfiguration>(relationalOutbox.DatabaseConfiguration);
+
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox), _ => outbox, ServiceLifetime.Singleton));
 
             if (hasSyncOutbox)
@@ -327,7 +398,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                         new ServiceDescriptor(asyncOutboxType, _ => outbox, ServiceLifetime.Singleton);
                 brighterBuilder.Services.Add(asyncOutboxdescriptor);
             }
-            
+
+            //if the outbox supports causation tracking, register it under that role interface too (same instance)
+            if (outbox is IAmACausationTrackingOutbox)
+            {
+                brighterBuilder.Services.Add(
+                    new ServiceDescriptor(typeof(IAmACausationTrackingOutbox), _ => outbox, ServiceLifetime.Singleton));
+            }
+
             // If no distributed locking service is added, then add the in memory variant
             var distributedLock = busConfiguration.DistributedLock ?? new InMemoryLock();
             brighterBuilder.Services.AddSingleton(distributedLock);
@@ -336,11 +414,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 brighterBuilder.Services.TryAddSingleton<IUseRpc>(new UseRpc(busConfiguration.UseRpc, busConfiguration.ReplyQueueSubscriptions!));
             
             brighterBuilder.Services.TryAddSingleton<IAmProducersConfiguration>(busConfiguration);
-            brighterBuilder.ResiliencePolicyRegistry ??= new ResiliencePipelineRegistry<string>().AddBrighterDefault();
+            RegisterResiliencePipelineRegistry(brighterBuilder);
            
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator),
                (serviceProvider) => BuildOutBoxProducerMediator(
-                   serviceProvider, transactionType, busConfiguration, brighterBuilder.ResiliencePolicyRegistry, outbox
+                   serviceProvider, transactionType, busConfiguration, outbox
                ) ?? throw new ConfigurationException("Unable to create an outbox producer mediator. Ensure IAmProducersConfiguration, IAmABoxTransactionProvider, and IAmAnOutbox are registered."),
                ServiceLifetime.Singleton));
 
@@ -372,6 +450,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <remarks>
         /// Note: This overload enables access to the service provider during configuration,
         /// allowing resolution of other registered services when configuring producers.
+        /// Register <see cref="IAmARelationalDatabaseConfiguration"/> explicitly when a provider requires it.
+        /// This deferred overload does not infer database configuration from the outbox.
         /// </remarks>
         public static IBrighterBuilder AddProducers(
             this IBrighterBuilder brighterBuilder,
@@ -397,7 +477,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return busConfiguration;
             });
 
-            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType >();
+            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType>();
 
             // Register producer registry with deferred resolution
             brighterBuilder.Services.TryAddSingleton<IAmAProducerRegistry>(sp =>
@@ -446,6 +526,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return outbox;
             }, ServiceLifetime.Singleton));
 
+            //Resolve the outbox under the causation-tracking role interface too (same instance). Unlike the
+            //eager AddProducers overload — which knows the concrete outbox and can register this conditionally
+            //(see above) — this overload defers outbox creation to a factory, so the outbox type is unknown at
+            //registration time and we cannot omit the descriptor for a non-tracking outbox. The factory
+            //therefore returns null when the outbox does not implement the role; the only consumer
+            //(UseInboxHandler) takes it as an optional ctor arg resolved via GetService, so a null is expected.
+            //Note: because the descriptor IS registered here, GetRequiredService<IAmACausationTrackingOutbox>()
+            //returns null (rather than throwing) for a non-tracking outbox — use GetService and null-check.
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmACausationTrackingOutbox),
+                sp => (sp.GetRequiredService<IAmAnOutbox>() as IAmACausationTrackingOutbox)!,
+                ServiceLifetime.Singleton));
+
             brighterBuilder.Services.AddSingleton<IDistributedLock>(sp =>
             {
                 var busConfiguration = sp.GetRequiredService<IAmProducersConfiguration>();
@@ -460,7 +552,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return null!;
             });
 
-            brighterBuilder.ResiliencePolicyRegistry ??= new ResiliencePipelineRegistry<string>().AddBrighterDefault();
+            RegisterResiliencePipelineRegistry(brighterBuilder);
 
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator), sp =>
             {
@@ -477,7 +569,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     {
                         ProducerRegistry = busConfiguration.ProducerRegistry,
                         Outbox = outbox
-                    }, brighterBuilder.ResiliencePolicyRegistry, outbox
+                    }, outbox
                 ) ?? throw new ConfigurationException("Unable to create an outbox producer mediator. Ensure IAmProducersConfiguration, IAmABoxTransactionProvider, and IAmAnOutbox are registered.");
             }, ServiceLifetime.Singleton));
 
@@ -633,7 +725,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             INeedInstrumentation? instrumentationBuilder = null;
             bool useRpc = useRequestResponse != null && useRequestResponse.RPC;
 
-            if (!hasEventBus) instrumentationBuilder = messagingBuilder.NoExternalBus();
+            if (!hasEventBus)
+                instrumentationBuilder = messagingBuilder.NoExternalBus();
 
             if (hasEventBus && !useRpc)
             {
@@ -693,7 +786,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var handlerFactory = new ServiceProviderHandlerFactory(provider);
             var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory);
 
-            var handlerBuilder = CommandProcessorBuilder.StartNew();
+            var handlerBuilder = CommandProcessorBuilder.StartNew(
+                provider.GetService<IAmConsumerOptions>()?.InboxConfiguration);
 
             var featureSwitchRegistry = provider.GetService<IAmAFeatureSwitchRegistry>();
 
@@ -702,9 +796,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             
             var pollyBuilder = handlerBuilder.Handlers(handlerConfiguration);
 
-            options.ResiliencePipelineRegistry ??= new ResiliencePipelineRegistry<string>().AddBrighterDefault();
+            var resiliencePipelineRegistry = provider.GetRequiredService<BrighterResiliencePipelineRegistry>().Registry;
 #pragma warning disable CS0618 // Type or member is obsolete
-            var messagingBuilder = pollyBuilder.Resilience(options.ResiliencePipelineRegistry, options.PolicyRegistry);
+            var messagingBuilder = pollyBuilder.Resilience(resiliencePipelineRegistry, options.PolicyRegistry);
 #pragma warning restore CS0618 // Type or member is obsolete
 
             
@@ -727,13 +821,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             IServiceProvider serviceProvider,
             Type transactionType,
             ProducersConfiguration busConfiguration,
-            ResiliencePipelineRegistry<string>? resiliencePipelineRegistry,
             IAmAnOutbox outbox) 
         {
+            var resiliencePipelineRegistry = serviceProvider.GetRequiredService<BrighterResiliencePipelineRegistry>().Registry;
             //Because the bus has specialized types as members, we need to create the bus type dynamically
             //again to prevent someone configuring Brighter from having to pass generic types
             var busType = typeof(OutboxProducerMediator<,>).MakeGenericType(typeof(Message), transactionType);
 
+            //the registry and transform factories are newed up here solely for this mediator and are not
+            //container-registered, so the mediator is their sole owner and disposes them at container teardown
+            //(the trailing ownsRegistry/ownsTransformerFactories arguments). Activator.CreateInstance does not
+            //apply constructor default values, so these positional arguments must be supplied explicitly.
             return (IAmAnOutboxProducerMediator?)Activator.CreateInstance(
                 busType,
                 busConfiguration.ProducerRegistry,
@@ -751,19 +849,28 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 busConfiguration.MaxOutStandingCheckInterval,
                 busConfiguration.OutBoxBag,
                 TimeProvider.System,
-                busConfiguration.InstrumentationOptions);
+                busConfiguration.InstrumentationOptions,
+                true,
+                true);
         }
 
         /// <summary>
-        /// Config the Json Serializer that is used inside of Brighter
+        /// Configures a copy of Brighter's process-wide JSON serialization options.
         /// </summary>
-        /// <param name="brighterBuilder">The Brighter Builder</param>
-        /// <param name="configure">Action to configure the options</param>
-        /// <returns>Brighter Builder</returns>
+        /// <param name="brighterBuilder">The builder to continue configuring.</param>
+        /// <param name="configure">The action to apply to a mutable copy of the current options.</param>
+        /// <returns>The same builder for further configuration.</returns>
+        /// <remarks>
+        /// Existing settings and converters are preserved, even if the current options have already been used in serialization.
+        /// The copy replaces <see cref="JsonSerialisationOptions.Options"/> only after <paramref name="configure"/> succeeds.
+        /// Callers retaining an earlier options instance continue to use that instance and its settings.
+        /// </remarks>
         public static IBrighterBuilder ConfigureJsonSerialisation(this IBrighterBuilder brighterBuilder,
             Action<JsonSerializerOptions> configure)
         {
-            configure.Invoke(JsonSerialisationOptions.Options);
+            var options = new JsonSerializerOptions(JsonSerialisationOptions.Options);
+            configure.Invoke(options);
+            JsonSerialisationOptions.Options = options;
 
             return brighterBuilder;
         }
@@ -805,12 +912,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             ServiceLifetime serviceLifetime)
         {
             var connectionProviderInterface = GetConnectionProviderInterface(connectionProvider);
-            if(connectionProviderInterface != null)
+            if (connectionProviderInterface != null)
             {
                 brighterBuilder.Services.TryAdd(new ServiceDescriptor(connectionProviderInterface, connectionProvider, serviceLifetime));
                 
-                var transactionProviderInterface = GetTransactionInterface(transactionProvider, connectionProviderInterface );
-                if(transactionProviderInterface != null)
+                var transactionProviderInterface = GetTransactionInterface(transactionProvider, connectionProviderInterface);
+                if (transactionProviderInterface != null)
                 {
                     brighterBuilder.Services.TryAdd(new ServiceDescriptor(transactionProviderInterface, transactionProvider, serviceLifetime));
                 }
@@ -999,14 +1106,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 .AddSingleton(provider =>
                 {
                     IAmAStorageProvider store = provider.GetRequiredService<TStoreProvider>();
-                    store.Tracer = provider.GetRequiredService<IAmABrighterTracer>();
+                    store.Tracer = provider.GetService<IAmABrighterTracer>();
                     store.EnsureStoreExists();
                     return store;
                 })
                 .AddSingleton(provider =>
                 {
                     IAmAStorageProviderAsync store = provider.GetRequiredService<TStoreProvider>();
-                    store.Tracer = provider.GetRequiredService<IAmABrighterTracer>();
+                    store.Tracer = provider.GetService<IAmABrighterTracer>();
                     store.EnsureStoreExistsAsync().GetAwaiter().GetResult();
                     return store;
                 });

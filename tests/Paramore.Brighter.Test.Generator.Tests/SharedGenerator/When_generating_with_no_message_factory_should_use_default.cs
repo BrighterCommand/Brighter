@@ -24,12 +24,18 @@ public class WhenGeneratingWithNoMessageFactoryShouldUseDefault : IDisposable
     [Fact]
     public async Task When_generating_with_no_message_factory_should_use_default()
     {
-        // Arrange
-        var configuration = new TestConfiguration
-        {
-            Namespace = "MyApp.Tests",
-            DestinationFolder = _testDirectory,
-        };
+        // Arrange - read through the loader, which is how every real caller gets a configuration.
+        // The defaulting used to be a side effect of running this generator first; it belongs to
+        // reading the file, so that the generators and the generated-tree audit start from the
+        // same root whichever of them runs.
+        var configurationFile = Path.Combine(_testDirectory, TestConfigurationLoader.ConfigurationFileName);
+        File.WriteAllText(configurationFile, """
+            {
+              "Namespace": "MyApp.Tests"
+            }
+            """);
+        var configuration = TestConfigurationLoader.Load(
+            configurationFile, defaultDestinationFolder: _testDirectory)!;
         var generator = new Generators.SharedGenerator(_logger);
 
         // Act
@@ -37,6 +43,13 @@ public class WhenGeneratingWithNoMessageFactoryShouldUseDefault : IDisposable
 
         // Assert
         Assert.Equal("DefaultMessageBuilder", configuration.MessageBuilder);
+        Assert.Equal("DefaultMessageAssertion", configuration.MessageAssertion);
+
+        // Assert - and the shared files the generator owns are on disk
+        Assert.True(File.Exists(Path.Combine(_testDirectory, "DefaultMessageBuilder.cs")));
+        Assert.True(File.Exists(Path.Combine(_testDirectory, "DefaultMessageAssertion.cs")));
+        Assert.True(File.Exists(Path.Combine(_testDirectory, "IAmAMessageBuilder.cs")));
+        Assert.True(File.Exists(Path.Combine(_testDirectory, "IAmAMessageAssertion.cs")));
     }
 
     public void Dispose()

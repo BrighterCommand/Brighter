@@ -31,25 +31,40 @@ namespace Paramore.Brighter.ServiceActivator
     public class ControlBusMessageMapperFactory : IAmAMessageMapperFactory
     {
         /// <summary>
+        /// Offers no pipeline scope: the control bus mappers are plain objects holding no resources.
+        /// </summary>
+        public IAmAScope? CreatePipelineScope() => null;
+
+        /// <summary>
         /// Creates the specified message mapper type.
         /// </summary>
         /// <param name="messageMapperType">Type of the message mapper.</param>
+        /// <param name="scope">Ignored: this factory offers no pipeline scope.</param>
         /// <returns>IAmAMessageMapper.</returns>
-        public IAmAMessageMapper? Create(Type messageMapperType)
+        public Lease<IAmAMessageMapper>? Create(Type messageMapperType, IAmAScope? scope = null)
         {
             if (messageMapperType == typeof (ConfigurationCommandMessageMapper))
             {
-                return new ConfigurationCommandMessageMapper();
+                return Lease<IAmAMessageMapper>.Untracked(new ConfigurationCommandMessageMapper());
             }
             else if (messageMapperType == typeof (HeartbeatRequestCommandMessageMapper))
             {
-                return new HeartbeatRequestCommandMessageMapper();
+                return Lease<IAmAMessageMapper>.Untracked(new HeartbeatRequestCommandMessageMapper());
             }
             else if (messageMapperType == typeof (HeartbeatReplyCommandMessageMapper))
             {
-                return new HeartbeatReplyCommandMessageMapper();
+                return Lease<IAmAMessageMapper>.Untracked(new HeartbeatReplyCommandMessageMapper());
             }
             throw new ConfigurationException(string.Format("Message Mapper for type {0} not registered with ControBusMessageMapperFactory", messageMapperType.FullName));
+        }
+
+        /// <summary>
+        /// Releases the specified message mapper lease. A no-op: the control bus mappers are plain objects
+        /// holding no resources, so there is nothing to release.
+        /// </summary>
+        /// <param name="lease">The mapper lease to release.</param>
+        public void Release(Lease<IAmAMessageMapper>? lease)
+        {
         }
     }
 }

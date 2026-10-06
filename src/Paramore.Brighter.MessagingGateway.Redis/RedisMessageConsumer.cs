@@ -32,12 +32,16 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using ServiceStack.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
-    public partial class RedisMessageConsumer : RedisMessageGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    public partial class RedisMessageConsumer : RedisMessageGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
     {
+        /// <inheritdoc />
+        public MessagingSystem MessagingSystem => MessagingSystem.Redis;
+
         
         /* see RedisMessageProducer to understand how we are using a dynamic recipient list model with Redis */
 
@@ -250,7 +254,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     return [];
                 
                 var message = RedisMessageCreator.CreateMessage(redisMessage.rawMsg);
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
                 if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
+#pragma warning restore CS0618
                 {
                     _inflight.Add(message.Id.Value, redisMessage.msgId);
                 }
@@ -299,7 +305,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 
                 var message = RedisMessageCreator.CreateMessage(redisMessage.rawMsg);
 
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
                 if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
+#pragma warning restore CS0618
                 {
                     _inflight.Add(message.Id.Value, redisMessage.msgId);
                 }
@@ -595,7 +603,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             message.Header.Bag["originalTopic"] = message.Header.Topic.Value;
             message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
 
             if (reason == null) return;
 

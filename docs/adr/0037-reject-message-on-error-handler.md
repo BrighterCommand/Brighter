@@ -1,3 +1,18 @@
+---
+id: 0037-reject-message-on-error-handler
+title: "Reject Message On Error Handler"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-01-30
+summary: "Introduces RejectMessageOnErrorAttribute and RejectMessageOnErrorHandler — a declarative middleware pair that catches all unhandled exceptions in message handlers, logs them, and converts them to RejectMessageAction for automatic dead-letter-queue routing."
+tags:
+  - "message-rejection"
+  - "dead-letter-queue"
+  - "error-handling"
+  - "middleware"
+---
+
 # 37. Reject Message On Error Handler
 
 Date: 2026-01-30

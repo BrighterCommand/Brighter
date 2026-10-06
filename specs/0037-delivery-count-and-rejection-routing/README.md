@@ -1,0 +1,168 @@
+# 0037 — Delivery Count and Rejection Routing (the FR-23 family)
+
+**Created:** 2026-09-21
+**GitHub Issues:** [#4341](https://github.com/BrighterCommand/Brighter/issues/4341) (family head) ·
+[#4386](https://github.com/BrighterCommand/Brighter/issues/4386) ·
+[#4353](https://github.com/BrighterCommand/Brighter/issues/4353) ·
+[#4354](https://github.com/BrighterCommand/Brighter/issues/4354) (folded in — see Scope)
+**Next ADR:** `docs/adr/0077-…` — **not** 0072. `0070`–`0076` are all claimed by in-flight branches
+(PR #4282 alone takes 0070–0076), and master already carries duplicate 0066/0067 pairs. Re-check
+`git ls-tree origin/master docs/adr/` plus open PRs immediately before creating the file.
+**Branch:** `feature/4341-delivery-count-and-rejection-routing` (created 2026-09-21 off `f906efc0b`)
+**Worktree:** `/Users/ian.cooper/CSharpProjects/github/BrighterCommand/generator-transport-tests`
+
+## Summary
+
+Three issues, one root cause, plus one prerequisite that only GCP is missing.
+
+**The shared root cause** — *a requeue that does not persist the delivery count cannot exhaust a
+Brighter-side budget.* The pump enforces `RequeueCount` by calling
+`message.Header.UpdateHandledCount()` and then `message.HandledCountReached(RequeueCount)`
+(`Reactor.cs:494-509`, `Proactor.cs:500-513`). That only works when the redelivered message carries
+the incremented count. Transports that requeue by **republishing** (Redis, Kafka ×3, MSSQL,
+Postgres, RMQ ×3) carry it and their budgets run down. Transports that requeue by asking the broker
+to re-serve its **own stored copy** do not:
+
+| transport | requeue mechanism | consequence |
+|---|---|---|
+| AWS SQS / SQS.V4 (#4341) | `ChangeMessageVisibility` | budget inert; native `maxReceiveCount` redrive dead-letters instead, with **no rejection metadata** |
+| GCP Pub/Sub (#4386) | `ModifyAckDeadline(…, 0)` | budget inert; `MaxDeliveryAttempts` is the only redrive |
+| RocketMQ (#4353) | **nothing at all** (the one broker call is commented out) | budget inert **and** no broker redrive — the message is never dead-lettered by anyone |
+
+**The GCP-only prerequisite** (#4386) — GCP `Reject` *acknowledges and discards*. No DLQ, no
+invalid-message channel, `MessageRejectionReason` bound and never read, in both the Pull
+(`GcpPullMessageConsumer.cs:276`, async `:306`) and Stream (`GcpPubSubStreamMessageConsumer.cs:84`)
+consumers, across all four configurations × both variants. `GcpPubSubSubscription` does not
+implement `IUseBrighterDeadLetterSupport` / `IUseBrighterInvalidMessageSupport`, which nine other
+gateways do. Even a working delivery budget would have nowhere to send the rejected message.
+
+## Why one spec and not three
+
+Taken separately the repo acquires three different answers to the same question: *how does a
+delivery count survive a requeue the broker does not rewrite?* The candidate answers — rewrite the
+stored message, read the broker's own delivery counter, or track it consumer-side — each bind all
+three transports, and the choice has different costs on each. [#4240's triage
+comment](https://github.com/BrighterCommand/Brighter/issues/4240#issuecomment-5758194438) routes
+#4341 as the family head for exactly this reason. This spec settles the contract once; #4386 and
+#4353 become implementations of it, plus #4386's own rejection-routing decision.
+
+## Scope
+
+**In scope**
+
+- The delivery-count contract: what `HandledCount` means on a delivered message, and what a
+  transport must do on requeue so a Brighter-side budget can run down. Binds SQS, SQS.V4, GCP
+  Pub/Sub and RocketMQ; must not regress the republishing transports.
+- The interaction of a Brighter budget with a native redrive policy (`maxReceiveCount`,
+  `MaxDeliveryAttempts`) — including the `min(requeueCount, maxReceiveCount)` consequence #4341
+  calls out, and whether a message rescued by native redrive is allowed to arrive without rejection
+  metadata.
+- GCP Brighter-managed rejection routing (#4386): `GcpPubSubSubscription` implementing the two
+  support interfaces, `GcpPubSubConsumerFactory` wiring the producers, both consumers re-publishing
+  to the routing key selected by `reason` **before** acking the original, and stamping the standard
+  `RejectionMetadataKeys` so FR-8 can assert for real instead of being relaxed.
+- The conformance cells this closes or re-points: 8 AWS/AWS.V4 FR-23, 1 RocketMQ FR-23, and the GCP
+  FR-4 / FR-5 / FR-6 / FR-8 / FR-17 cells (5 behaviours × 4 configs × 2 variants).
+
+**Out of scope (named, so the boundary is deliberate)**
+
+- Changing ADR 0038's DLQ strategy. It is settled and the path it specifies works; this spec makes
+  the budget-exhaustion route *reachable*, nothing more.
+- MQTT FR-23 (#4351) — a Proactor requeue **deadlock**, a different root cause, routed to `/bugfix`.
+- #4321 (GCP zero-delay requeue latency) and #4354 (GCP DLQ channel creation needs project IAM
+  admin) — separate issues, though **#4354 gates verification** (see below).
+- RMQ's invalid-message destination (#4387), which should *follow* whatever #4386 settles rather
+  than invent a second pattern.
+
+## The two scope calls taken at Requirements
+
+**1. #4354 is folded in, and the GCP bar is a local emulator run.** The 0036 ledger records that the
+Pub/Sub emulator "implements neither of the two APIs the DLQ path needs", so without #4354 the #4386
+half could only ever be proven on `gcp-ci` against a real cloud project. Tolerating `Unimplemented`
+and `PermissionDenied` from the IAM calls is therefore first-class work here (R-20/R-21), not a
+footnote. ⚠️ **#4354's own text is incomplete**: `GcpPubSubMessageGateway.cs:251` calls a *second*
+IAM helper, `UpdateIAmRoleForSubscriptionAsync` (`:527`), under the same `DeadLetter != null`
+condition and making the same calls — tolerating only the first would still hard-fail one line
+later. Both are in scope. *Verified in the source, 2026-09-21.*
+
+**2. RocketMQ is conditional by design** (R-14). If a redelivered RocketMQ message presents a
+strictly increasing broker-supplied delivery-attempt value **without** any
+`ChangeInvisibleDuration` call, it needs no upstream client fix and is implemented here. If not, it
+stops at *bound to the contract but unimplemented*, with the blocker recorded and the measurement
+written into the ledger. Both sides of the branch have a defined "done"; AC-23 measures it.
+`MessageView.DeliveryAttempt` is public in the pinned RocketMQ.Client 5.2.1, so the condition is
+plausibly satisfiable — but whether the *broker increments it on a lease lapse* is unverified,
+which is exactly why the branch exists.
+
+## Prior art to read before designing
+
+⛔ **`0074-lifetime-validation-evaluation-site`** (unmerged, [PR #4282](https://github.com/BrighterCommand/Brighter/pull/4282),
+branch `spec/scoped-lifetime-per-pipeline`) — **read before designing R-25's evaluation site.** It
+already decided how a validation rule reaches `ValidatePipelines()` from an assembly core cannot
+reference, and gives a two-rung ladder: an `ISpecification<Subscription>` when the entity is a core
+type, a separately-registered `IAmAPipelineValidator` when it cannot be. R-25 is bound to one of
+those two rungs; a third mechanism is out of bounds.
+
+- [`0038-aws-sqs-dlq-direct-send`](../../docs/adr/0038-aws-sqs-dlq-direct-send.md) — SQS: direct DLQ send replaces
+  `ChangeMessageVisibility`. Explicitly considered and **rejected** leaning on native redrive.
+- [`0039-redis-dlq-brighter-managed`](../../docs/adr/0039-redis-dlq-brighter-managed.md) — Redis.
+- [`0041-postgres-dlq-brighter-managed`](../../docs/adr/0041-postgres-dlq-brighter-managed.md) — Postgres.
+- `specs/0036-universal-transport-conformance-tests/conformance-status.md` — the ledger; FR-23 rows
+  and the GCP block are the measurements this spec has to move.
+
+## Status Checklist
+
+- [x] **Requirements** — drafted 2026-09-21, `requirements.md`. Now **28 `R-n`, 8 `NFR-n`, 43 `AC-n`**, full R→AC map, integrity-checked (no unmapped requirement, no dangling AC reference, no numbering gap). Revised same day to route the budget-configuration findings through `ValidatePipelines` (R-25/R-26), then again to remediate round 1 of adversarial review. **Approved 2026-09-24** (`.requirements-approved`) after 15 review rounds.
+- [x] **Adversarial Review (requirements) — round 1**, 2026-09-21. NEEDS WORK, 18 findings, 14 at or above threshold 60. All 14 remediated, plus 3 of the 4 below-threshold findings.
+- [x] **Adversarial Review (requirements) — round 2**, 2026-09-21. NEEDS WORK, 12 findings, 8 at or above threshold 60 — **eight of the twelve were defects round 1's remediation introduced**. All 12 remediated ⚠️ **on paper only for five of them** — see the correction notice in round 2's log.
+- [x] **Adversarial Review (requirements) — round 3**, 2026-09-22. NEEDS WORK, 14 findings, 9 at or above threshold 60. Its Critical finding was that five round-2 remediations had been logged but never written to the file; all five are now applied and verified in the document, along with all 14 of round 3's findings. Verdict on convergence was **not converging**, for that reason alone. All three rounds and their remediation logs are in `review-requirements.md`.
+- [x] **Adversarial Review (requirements) — round 4**, 2026-09-22. NEEDS WORK, 13 findings. All 13 remediated; the decision it turned on (keep NFR-3, exclude republish) is recorded as C-12, and R-28 was added.
+- [x] **Adversarial Review (requirements) — round 5**, 2026-09-22. NEEDS WORK, 6 findings, 4 at or above threshold 60. All thirteen round-4 remediations spot-checked present; finding 1 was a round-3 fix that landed in R-24 but not in its AC-27. All 6 remediated 2026-09-23 and verified against the file.
+- [x] **Adversarial Review (requirements) — round 6**, 2026-09-23. NEEDS WORK, 8 findings, 4 at or above threshold 60. All six round-5 remediations spot-checked present. The main finding was that R-13's fallback branch was still keyed on A-2. All 8 remediated the same day and verified against the file.
+- [x] **Adversarial Review (requirements) — round 7**, 2026-09-23. NEEDS WORK, 5 findings, 2 at or above threshold 60 (both Medium, none High). All eight round-6 remediations spot-checked present. On the user's call, R-1's expiry redelivery path gained its own criterion, **AC-42**. All 5 remediated and verified against the file.
+- [x] **Adversarial Review (requirements) — round 8**, 2026-09-23. NEEDS WORK, 3 findings, 1 at or above threshold 60: AC-42 could not lapse on the GCP stream consumer, because `SubscriberClient` extends the lease for up to 60 minutes. All five round-7 remediations spot-checked present. All 3 remediated and verified against the file.
+- [x] **Adversarial Review (requirements) — round 9**, 2026-09-23. NEEDS WORK, 4 findings, 2 at or above threshold 60. AC-42 deadlocked on the GCP stream consumer (flow-control cap of 1). On the user's call, the stream consumer's expiry-redelivery mechanics became a named ADR input under R-13, and AC-42 keeps the obligation. All 4 remediated and verified against the file.
+- [x] **Adversarial Review (requirements) — round 10**, 2026-09-23. NEEDS WORK, 3 findings, 2 at or above threshold 60. R-19's "not acknowledged" was ambiguous on the GCP stream consumer, where holding the message would stall the subscription. On the user's call, both GCP consumers now release the message for prompt redelivery via their requeue call. R-13's ADR-input escape is bounded to an executed alternative test. All 3 remediated and verified against the file.
+- [x] **Adversarial Review (requirements) — round 11**, 2026-09-23. NEEDS WORK, 6 findings, 3 at or above threshold 60. R-19 claimed the delivery budget ended a failed-routing loop, but the budget ends it with the very `Reject` that fails, and round 10's prompt release made the loop hot. On the user's call, the bound is Pub/Sub's native `MaxDeliveryAttempts`; with no `DeadLetterPolicy` the loop is accepted as unbounded, explicitly. R-4 gains an exception, and AC-43 and A-6 are added. `Reject` must return `true` on the release path (otherwise the pump acks). All 6 remediated and verified against the file.
+- [x] **Adversarial Review (requirements) — round 12**, 2026-09-23. NEEDS WORK, 9 findings, 3 at or above threshold 60. AC-43 (added in round 11) passed on today's unfixed GCP code and claimed R-4's exception on the AC-40 branch, where it cannot arise. On the user's call, AC-43 now proves that the failed-routing path ran: an R-19 Error is logged and the routing topic is still absent. On AC-19's branch it uses a deferring handler (R-4's exception); on AC-40's branch it uses a handler that throws `RejectMessageAction` (R-19's loop). It has a defined poll, ceiling and post-arrival wait. R-19's release-failure `true` gains an AC-18 clause. A refuted A-6 is R-21's one accepted exception. All 9 remediated and verified against the file.
+- [x] **Adversarial Review (requirements) — round 13**, 2026-09-23. NEEDS WORK, 8 findings, 2 at or above threshold 60; none Critical or High. R-19's native-cap bound needs the forwarding IAM bindings that R-20 lets a channel start without. On the user's call, that case is accepted as unbounded, explicitly, and R-20's Warning gains a fifth element naming the consequence. AC-18's release-failure clause waited on a seam nothing obliged the ADR to define; R-19 now carries an ADR MUST, with a code-review fallback. R-16's ack failure no longer escapes `Reject`, which would have stopped the pump. All 8 remediated and verified against the file.
+- [x] **R-19 consolidated**, 2026-09-24, between rounds 13 and 14, on the user's call. Rounds 10–13's at-threshold findings all landed on R-19 and its ACs (AC-18, AC-43), because the requirement had grown into mechanism. R-19 now states outcomes only. The source-verified mechanism moved to "How a GCP `Reject` fails safely is an ADR input", with two ADR MUSTs (the `Reject` composition per consumer, and how the release and ack failures are evidenced). R-16 and R-18 shed their mechanism the same way. No decision was reversed.
+- [x] **Adversarial Review (requirements) — round 14**, 2026-09-24. NEEDS WORK, 5 findings, 2 at or above threshold 60; none Critical or High, and both were slips in the R-19 consolidation. R-19's outcomes drew none. On the user's call, a failed pull acknowledgement is left to its ack deadline (a second accepted outstanding case). How unforceable failures are evidenced is no longer specified in the requirements: the AC-15/AC-18 clauses (findings in rounds 12–14) were removed, and those outcomes are verified at design review against the ADR's record. All 5 remediated and verified against the file.
+- [x] **Adversarial Review (requirements) — round 15**, 2026-09-24. **PASS**: 6 findings, none at or above threshold 60, all Low. All six applied in one batch with no further round (user's call). R-17 joins the failed-acknowledgement outcome, recorded evidence must be produced at implementation, and there are framing and wording nits.
+- [x] **Requirements approved** — 2026-09-24, `/spec:approve requirements`.
+- [x] **Design (ADR)** — ADR 0077 `delivery-count-contract` and ADR 0078 `gcp-rejection-routing-and-dlq-channel-creation`, both Proposed (2026-09-24).
+- [x] **Adversarial Review (design) — round 1**, 2026-09-24. NEEDS WORK, 13 findings, 4 at or above threshold 60. The core key type was renamed to `RejectionMetadataKeyNames`, and the GCP providers keep a native `DeadLetterPolicy` on `{deadLetterRoutingKey}.native` (both the user's calls). All 13 applied.
+- [x] **Adversarial Review (design) — round 2**, 2026-09-25. NEEDS WORK, 8 findings, 2 at or above threshold 60, both on text round 1 changed: 0078 step 5 (the DLQ reader and the `.native` subscription name) and AC-18's two-subscription Given (the subscription under test keeps its own mode; the provisioning subscription carries the broker attributes). On the user's call, patched once in the ADR; if round 3 finds these sections again, they move to tasks. All 8 applied and verified against the file.
+- [x] **Adversarial Review (design) — round 3**, 2026-09-25. NEEDS WORK, 3 findings, 1 at or above threshold 60. On RocketMQ, the dead-letter copy's `HandledCount` was overwritten by the stale bag entry. On the user's call, the publisher's bag loop now skips any key already written. Round 2's sections drew no findings. All 3 applied and verified against the file.
+- [x] **Adversarial Review (design) — round 4**, 2026-09-25. **PASS**: 2 findings, none at or above threshold 60, both Low. Both applied in one batch with no further round (user's call). The RocketMQ publisher bag-loop skip lands on both branches, and its effect on every RocketMQ publish is recorded as a Negative consequence.
+- [x] **Design approved** — 2026-09-25, `/spec:approve design`. ADRs 0077 and 0078 are `Accepted`, and the index is regenerated.
+- [x] **Tasks** — drafted 2026-09-25, `tasks.md`: 78 tasks in 8 phases (51 TEST + IMPLEMENT, 4 TIDY, 18 GATE, 5 MEASURE), with the GCP (AC-39) and RocketMQ (AC-23) branches pre-listed. One PR. Not yet reviewed.
+- [x] **Adversarial Review (tasks) — round 1**, 2026-09-25. NEEDS WORK, 12 findings, 4 at or above threshold 60. On the user's call, the 17 tasks expected green on first run become `CHARACTERISE`, each with a named production mutation; the convention comes from the #4334 branch and is summarised in `tasks.md`. The validation tests are split between `Core.Tests` and `Extensions.Tests`. All 12 applied; 5.5 re-split by the main agent to avoid `InternalsVisibleTo`. Now 79 tasks.
+- [x] **Adversarial Review (tasks) — round 2**, 2026-09-25. NEEDS WORK, 8 findings, 1 at or above threshold 60. 6.15's GCP DLQ read had no `DeadLetterPolicy`, so its discriminator mutation could not fail the test. On the user's call, the read now uses a subscription that carries its own policy. All 8 applied and verified against the file.
+- [x] **Adversarial Review (tasks) — round 3**, 2026-09-25. NEEDS WORK, 6 findings, 2 at or above threshold 60. ADR 0078's missing-receipt-handle decision had no test (pull `Reject` still returns `false`), and round 2's 6.4 Given (b) left a pull clause with an ineffective mutation. On the user's call, 5.5a/5.6 gain a missing-handle clause, and 6.4 gains outcome (c) with the pull clause dropped under (b). All 6 applied and verified against the file.
+- [x] **Adversarial Review (tasks) — round 4**, 2026-09-25. NEEDS WORK, 4 findings, 1 at or above threshold 60. Phase 5's stream routing needed the `googclient_deliveryattempt` ignore entry that only landed in 6.4. The 6.3/6.4 area had drawn a finding three rounds running, so on the user's call they move into Phase 5 as 5.5c/5.5d ahead of 5.6. All 4 applied and verified against the file.
+- [x] **Adversarial Review (tasks) — round 5**, 2026-09-25. **PASS**: 2 findings, none at or above threshold 60 (Medium 55, Low 25). Both applied with no further round (user's call): 5.6's routed-copy clause reads the destination with a raw `Pull`, not through `Parser`; 1.5's citations and Verification wording corrected.
+- [x] **Tasks approved** 2026-09-25 (`.tasks-approved`) after 5 review rounds: 79 tasks — 36 TEST + IMPLEMENT, 17 CHARACTERISE, 4 TIDY, 17 GATE, 5 MEASURE.
+- [ ] **Implementation** — `/spec:ralph-implement` (review-after, scoped to tasks 1.1–2.7) in progress
+  - [x] AC-27 samples committed (0da0169b9) — task 1.1
+  - [x] **AC-26 / R-22 / R-23 final regression; C-7 none observed**, 2026-10-02. Task 8.7. At `5e7d78ef8` (code as of `30828b1c7`), every in-scope and AC-26 project was run whole, net10.0. Project totals:
+    - AWS 286/0/2 and AWS.V4 286/0/2 (Floci).
+    - GCP 155/50/30 (CI filter) and 122/0/25 (stream filter), on a reset emulator.
+    - RocketMQ 67/0/6, on a clean store.
+    - Kafka 198/4/0, then 4/0/0 on re-run.
+    - Redis 71/0/4, MSSQL 343/0/4, Postgres 261/0/0, RMQ.Async 145/9/6, RMQ.Sync 81/9/3.
+
+    No generated conformance test failed except one Kafka test on a cold broker, which passed on re-run. FR-23 passed in every configuration and both variants. The other failures are infrastructure: the GCP Firestore and GCS tests, which need real GCP; the RMQ `Requires=Docker-mTLS` acceptance tests, which have no :5671 broker; and Kafka's cold start. All 264 of 7A.3's reject-test results have the same outcome by name. The run record is in the ledger, "Final run record — 2026-10-02 (spec 0037 task 8.7)". ADR 0077 has the note "C-7 observation (2026-10-02)": none observed. Ledger audits 42/42.
+  - [x] **AC-30/AC-31 ledger audited**, 2026-10-02. Task 8.6. A cell-by-cell diff of the conformance matrix against the merge base `f906efc0b` finds 35 moved cells. The 33 spec 0037 cells are 8 AWS FR-23 (4.11), 20 GCP routing (5.11, repeated in 6.31), 4 GCP FR-23 (6.16) and 1 RocketMQ FR-23 (7.13); each cites a dated run. The other 2 are `GCP / Stream*` FR-16, moved by bugfix 0024 (#4449). The ledger's new section "Spec 0037's cell moves, and the cells it did not move" records the moves, lists all 36 remaining `Deferred` cells as "Not moved by 0037", and records no A-6 refutation from 6.30. Ledger audits 42/42.
+  - [x] **AC-27 samples still compile against the final assemblies**, 2026-10-02. Task 8.4. `dotnet build Brighter.slnx` (Debug, every target framework) at `a4b30a329` succeeded with 0 errors, in 3 min 15 s. The five samples' projects (Core, AWS, AWS.V4, Gcp, RocketMQ `.Tests`) built on net9.0 and net10.0, and no warning of any kind names a `V10CompatibilitySample.cs` file. The samples are unchanged since `0da0169b9` and contain no `#pragma`. The branch adds no `[Obsolete]`. The only project change since the merge base `f906efc0b` is `Gcp.Tests` gaining `Serilog.Extensions.Logging` and `Serilog.Sinks.TestCorrelator` (`ea1a5efbc`, Phase 5 log capture), which the samples do not use. `Subscription.RequeueCount` still defaults to `-1` in both constructors (`Subscription.cs:203`, `:288`).
+  - [x] R-16/R-17/R-19 failure evidence produced, 2026-09-28 (12 GREEN, ADR 0078 Evidence) — task 5.10
+  - [x] **ADR 0077 document review (AC-33 second clause, AC-34 first clause, AC-41 final clause)**, 2026-10-02. **PASS** on all three. Task 8.1.
+    - **AC-33**: "First delivery on an approximate counter (R-2, AC-33)" states that no mechanism within NFR-1 to NFR-3 reaches `0` when a broker over-reports a first delivery. It records the residual risk against C-7 and names the exposed cells: the `Pass` behaviours that assert identity on a first receive, on the 8 AWS/AWS.V4 configurations and on RocketMQ. 7.1 selected AC-24, so the RocketMQ clause is live. GCP is correctly absent from that list. A GCP subscription reports a non-zero `DeliveryAttempt` only with a native `DeadLetterPolicy`. The conformance providers set one only when a `deadLetterRoutingKey` is given (`GcpPullMessageGatewayProvider.cs:142-157`), and none of the templates that pass one calls `_messageAssertion.Assert` (the five reject templates and `When_requeuing_a_message_too_many_times…`). The ADR doesn't explain that absence, and the R-13 branch rule's "the first-delivery residual risk applies as on SQS" reads as if GCP cells were exposed.
+    - **AC-34**: "Counter classification (R-3, AC-34's table)" has four rows, all **approximate**, each with evidence (AWS's documentation of `ApproximateReceiveCount`, A-4; the Google.Cloud.PubSub.V1 3.36.0 XML doc, which matches `Directory.Packages.props:61`; no vendor exactness statement for RocketMQ.Client 5.2.1). 6.7's and 7.1's measurement outcomes left the classification unchanged: 7.1's says so explicitly, and 6.7 adds nothing that could make GCP exact. The table's consequence line says AC-34's second clause and AC-41's "exactly `3`" bind no transport.
+    - **AC-41**: "R-28 per transport (AC-41's table)" has four rows. Each says how R-28 is satisfied and names `rejectionReason` in `Header.Bag` as the discriminator. I checked them against the code: SQS v3/V4 stamp it in `RefreshMetadata` (`SqsMessageConsumer.cs:499-515`); GCP stamps it in `GcpRejectionRouter.cs:217-232`, which meets the "constraint on 0078"; RocketMQ stamps it at `RocketMessageConsumer.cs:250-262`, and the publisher's bag loop skips header-owned keys (`RocketMqMessagePublisher.cs:55-59`), as the AC-24 row requires.
+    - **Not blocking**: several line citations in the ADR's tables have drifted with the implementation, e.g. `Parser.cs:307` is now `:323`, `Parser.cs:352` is now `:368`, `RocketMqMessagePublisher.cs:103` is now `:119`, and `RocketMessageConsumer.cs:328`/`:422` are now `:344`/`:433`.
+
+**TDD gear:** `review-before` (armed by default). No `.current-gear` file exists for this spec.
+
+**Numbering note:** requirements are `R-n`, not `FR-n`, because `FR-nn` already means a spec 0036
+conformance behaviour and this document cites those throughout.

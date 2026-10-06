@@ -81,7 +81,12 @@ public static class HeaderNames
     public const string TraceState = "ce-tracestate";
     
     /// <summary>
-    /// The Baggage 
+    /// The Baggage
     /// </summary>
     public const string Baggage = "ce-baggage";
+
+    /// <summary>
+    /// The partition key
+    /// </summary>
+    public const string PartitionKey = "ce-partitionkey";
 }

@@ -2,6 +2,7 @@
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
+using Google.Api.Gax;
 using Google.Cloud.Spanner.Data;
 
 namespace Paramore.Brighter.Spanner;
@@ -20,8 +21,14 @@ namespace Paramore.Brighter.Spanner;
 /// <param name="configuration">The configuration containing the connection string for the Spanner database.</param>
 public class SpannerUnitOfWork(IAmARelationalDatabaseConfiguration configuration) : RelationalDbTransactionProvider
 {
-    private readonly string _connectionString = configuration.ConnectionString;
-    
+    // Enable emulator detection so the connection routes to SPANNER_EMULATOR_HOST when it is set,
+    // and behaves as normal production otherwise. The keyword serialises into the connection string.
+    private readonly string _connectionString =
+        new SpannerConnectionStringBuilder(configuration.ConnectionString)
+        {
+            EmulatorDetection = EmulatorDetection.EmulatorOrProduction
+        }.ConnectionString;
+
     /// <inheritdoc />
     public override DbConnection GetConnection()
     {

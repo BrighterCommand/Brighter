@@ -1,3 +1,18 @@
+---
+id: 0039-transport-scheduler-wiring
+title: "Transport Channel Factory Scheduler Wiring"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-19
+summary: "Decides to thread IAmAMessageScheduler through the channel factory chain via constructor injection and a new IAmAChannelFactoryWithScheduler opt-in interface, register InMemorySchedulerFactory as the default scheduler, and create missing MQTT factory infrastructure."
+tags:
+  - "scheduling"
+  - "transports"
+  - "di"
+  - "configuration"
+---
+
 # 39. Transport Channel Factory Scheduler Wiring
 
 Date: 2026-02-19

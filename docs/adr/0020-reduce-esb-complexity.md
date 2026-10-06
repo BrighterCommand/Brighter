@@ -1,10 +1,25 @@
+---
+id: 0020-reduce-esb-complexity
+title: "Reduce External Service Bus Complexity"
+status: Deprecated
+author:
+  - "Brighter Team"
+created: 2024-08-01
+summary: "Attempted to refactor ExternalServiceBus by extracting a MessagePoster and Outbox class, but the approach was abandoned because the extracted classes developed cyclic dependencies, confirming that the Mediator role of ExternalServiceBus is necessary."
+tags:
+  - "architecture"
+  - "messaging"
+  - "outbox"
+  - "mediator"
+---
+
 # 20. Reduce External Service Bus Complexity
 
 Date: 2024-08-01
 
 ## Status
 
-Retired
+Deprecated
 
 ## Context
 

@@ -2,17 +2,27 @@
   "Namespace": "Paramore.Brighter.Kafka.Tests",
   "MessageAssertion": "KafkaMessageAssertion",
   "MessagingGateways": {
-    "Standard": {
+    "Classic": {
       "Publication": "Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication",
       "Subscription": "Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription",
-      "MessageGatewayProvider": "Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider",
+      "MessageGatewayProvider": "Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaClassicMessageGatewayProvider",
       "Category": "Kafka",
       "CollectionName": "Kafka",
+      "LedgerKey": "Kafka / Classic",
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": false,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": false,
-      "HasSupportToRequeue": false,
+      "ReceiveMessageTimeoutInMilliseconds": 15000
+    },
+    "Consumer": {
+      "Publication": "Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaConsumerMessageGatewayProvider",
+      "Category": "Kafka",
+      "CollectionName": "Kafka",
+      "LedgerKey": "Kafka / Consumer",
+      "HasSupportToPublishConfirmation": true,
+      "HasSupportToValidateBrokerExistence": false,
+      "HasSupportToDetectMissingInfrastructureOnAssume": false,
       "ReceiveMessageTimeoutInMilliseconds": 15000
     },
     "PartitionKey": {
@@ -22,12 +32,13 @@
       "MessageBuilder": "FifoMessageBuilder",
       "Category": "Kafka",
       "CollectionName": "Kafka",
+      "LedgerKey": "Kafka / PartitionKey",
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": false,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": false,
-      "HasSupportToRequeue": false,
       "ReceiveMessageTimeoutInMilliseconds": 15000
     }
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription"
   }
 }

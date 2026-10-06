@@ -29,6 +29,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.NJsonConverters;
 
 namespace Paramore.Brighter
 {
@@ -77,6 +78,7 @@ namespace Paramore.Brighter
         /// The type of message encoded into Bytes.  A hint for deserialization that 
         /// will be sent with the byte[] to allow
         /// </summary>
+        [Newtonsoft.Json.JsonConverter(typeof(NContentTypePropertyConverter))]
         public ContentType? ContentType { get; set; }
 
         /// <summary>
@@ -158,6 +160,7 @@ namespace Paramore.Brighter
         /// <param name="contentType">The <see cref="ContentType"/> of message encoded in body.</param>
         /// <param name="characterEncoding">The <see cref="CharacterEncoding"/> used for any text content in the body.</param>
         [JsonConstructor]
+        [Newtonsoft.Json.JsonConstructor]
         public MessageBody(byte[]? bytes, ContentType? contentType = null,  CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
 #if NETSTANDARD2_0
