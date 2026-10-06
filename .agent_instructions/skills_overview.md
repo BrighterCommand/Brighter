@@ -14,6 +14,7 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 |-------|---------|-------|
 | `/test-first` | TDD with an approval gate, armed by default | `/test-first <behavior description>` |
 | `/tidy-first` | Separate refactoring from features | `/tidy-first <change description>` |
+| `/refactor:smells` | Find code smells in completed work, schedule refactorings | `/refactor:smells [base-ref \| path...]` |
 | `/adr` | Create Architecture Decision Record | `/adr <title>` |
 | `/bugfix:*` | Diagnosis-first bug workflow (Confirm gate) | `/bugfix:triage [issue \| description]` |
 
@@ -69,6 +70,10 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
    • Separate structural changes from behavioral changes
    • Creates two commits: refactor + feat/fix/perf
    • Example: /tidy-first optimize message processing
+
+   /refactor:smells [base-ref | path...]
+   • Opt-in, after a unit of work is green: find Fowler's code smells
+   • Reports and schedules refactorings; does not change code
 
 📋 ARCHITECTURE DECISIONS
    /adr <title>

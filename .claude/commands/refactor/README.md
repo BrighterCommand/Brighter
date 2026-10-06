@@ -15,6 +15,27 @@ Implements Kent Beck's "Tidy First" methodology by separating structural changes
 /tidy-first optimize the message processing in KafkaConsumer
 ```
 
+### `/refactor:smells [base-ref | path...]`
+
+An opt-in review, run after a unit of work completes (a task, a spec section, or a branch) and its
+tests are green, that looks for Martin Fowler's code smells (*Refactoring*, 2nd ed.) in the changed
+code — for example Long Function, Feature Envy, Data Clumps, Primitive Obsession, Shotgun Surgery,
+Speculative Generality and Message Chains — calibrated against Brighter's design principles.
+
+**Purpose**: Turn "this could be tidier" into scheduled, named refactorings. Each finding gives the
+smell, its location and evidence, and the refactoring from Fowler's catalogue that removes it, and is
+marked `structural` (a `/tidy-first` job) or `public API change` (needs a decision first).
+
+**It reports and schedules; it does not refactor.** Findings become a `/tidy-first` run, or
+`STRUCTURAL` tasks appended to the active spec's `tasks.md`, as you choose.
+
+**Usage:**
+```bash
+/refactor:smells                 # current branch vs master, plus uncommitted changes
+/refactor:smells HEAD~3          # changes since a ref
+/refactor:smells src/Paramore.Brighter/CommandProcessor.cs
+```
+
 ## The Core Principle
 
 From [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md):
@@ -284,6 +305,7 @@ dotnet test
 
 ## Related Commands
 
+- **`/refactor:smells`** - Find code smells in a completed unit of work and schedule refactorings
 - **`/test-first`** - TDD workflow for pure feature additions
 - **`/spec:implement`** - Specification-driven implementation (uses TDD)
 - **`/commit`** - Standard commit (doesn't enforce separation)
