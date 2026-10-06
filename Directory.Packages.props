@@ -24,7 +24,7 @@
   <ItemGroup>
     <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.0" />
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.0" />
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.513.4, 4)" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.107" />
     <PackageVersion Include="AWSSDK.IdentityManagement" Version="[3.7.507.47, 4)" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="[3.7.400.2, 4)" />
     <PackageVersion Include="AWSSDK.S3" Version="[3.7.511.8, 4)" />
