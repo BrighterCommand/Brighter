@@ -1,7 +1,7 @@
 ---
 allowed-tools: Bash(git diff:*), Bash(git log:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git show:*), Bash(cat:*), Bash(ls:*), Bash(test:*), Read, Glob, Grep, Edit, AskUserQuestion, TodoWrite
 description: Review a completed unit of work for Fowler's code smells and schedule the refactorings
-argument-hint: [base-ref | path...]
+argument-hint: [base-ref | base..head | path...]
 ---
 
 # Code Smells - Review and Schedule Refactorings
@@ -41,6 +41,7 @@ Resolve the scope from the arguments:
 |-----------|-------|
 | none | The current branch against its merge-base with `master`, plus any uncommitted changes: `git diff $(git merge-base HEAD master)` |
 | a git ref (e.g. `HEAD~3`, a commit SHA, a branch) | `git diff <ref>` — the changes since that ref |
+| a range `<base>..<head>` (e.g. `abc123^1..abc123` for a merged PR's merge commit, `master..feature`) | `git diff <base>..<head>` — the changes between the two refs, ignoring the working tree. Use this to review work that is already committed or merged |
 | one or more paths | The changes to those paths on the current branch; if they have no changes, the files themselves |
 
 Then:
@@ -51,7 +52,9 @@ Then:
      template, so report it against the template instead if the template is in scope
    - `*.Designer.cs`, migrations, `Directory.Packages.props`, project files, and non-code files
 3. Read each remaining changed file **in full**, not just the hunks. Many smells (Large Class,
-   Divergent Change, Feature Envy) only show against the surrounding class.
+   Divergent Change, Feature Envy) only show against the surrounding class. For a range, read each
+   file as it is at `<head>` (`git show <head>:<path>`), not from the working tree, which may have
+   moved on since.
 4. Read [design_principles.md](../../../.agent_instructions/design_principles.md) and
    [code_style.md](../../../.agent_instructions/code_style.md). Brighter's conventions decide some
    cases (see *Brighter Calibration* below).

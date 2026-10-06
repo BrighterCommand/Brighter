@@ -75,7 +75,7 @@ Claude Code skills automate common workflows and enforce mandatory engineering p
 
 - `/test-first <behavior>` - TDD workflow with an approval gate before implementation, armed by default ([docs](.claude/commands/tdd/README.md))
 - `/tidy-first <change>` - Separate structural (refactoring) from behavioral (feature) changes ([docs](.claude/commands/refactor/README.md))
-- `/refactor:smells [base-ref | path...]` - Opt-in review of a completed, green unit of work for Fowler's code smells; reports and schedules refactorings (as `/tidy-first` runs or `STRUCTURAL` tasks) without changing code ([docs](.claude/commands/refactor/README.md))
+- `/refactor:smells [base-ref | base..head | path...]` - Opt-in review of a completed, green unit of work for Fowler's code smells; reports and schedules refactorings (as `/tidy-first` runs or `STRUCTURAL` tasks) without changing code ([docs](.claude/commands/refactor/README.md))
 - `/adr <title>` - Create Architecture Decision Records ([docs](.claude/commands/adr/README.md))
 - `/bugfix:*` - Lightweight diagnosis-first bug workflow: Triage → Confirm (✋ gate) → Test-first → Fix → Verify. Use for a bug whose root cause is not yet proven, or that arrived with a suggested fix you should verify first ([docs](.claude/commands/bugfix/README.md))
 

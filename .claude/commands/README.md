@@ -10,7 +10,7 @@ Skills are invoked using slash commands in Claude Code:
 /test-first <behavior description>    # TDD with an approval gate (armed by default)
 /adr <title>                          # Create Architecture Decision Record
 /tidy-first <change description>      # Separate structural from behavioral changes
-/refactor:smells [base-ref | path...]  # Find code smells in completed work, schedule refactorings
+/refactor:smells [base-ref | base..head | path...]  # Find code smells in completed work, schedule refactorings
 ```
 
 ## Available Skills

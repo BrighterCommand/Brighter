@@ -15,7 +15,7 @@ Implements Kent Beck's "Tidy First" methodology by separating structural changes
 /tidy-first optimize the message processing in KafkaConsumer
 ```
 
-### `/refactor:smells [base-ref | path...]`
+### `/refactor:smells [base-ref | base..head | path...]`
 
 An opt-in review, run after a unit of work completes (a task, a spec section, or a branch) and its
 tests are green, that looks for Martin Fowler's code smells (*Refactoring*, 2nd ed.) in the changed
@@ -33,6 +33,7 @@ marked `structural` (a `/tidy-first` job) or `public API change` (needs a decisi
 ```bash
 /refactor:smells                 # current branch vs master, plus uncommitted changes
 /refactor:smells HEAD~3          # changes since a ref
+/refactor:smells abc123^1..abc123  # changes between two refs, e.g. a merged PR's merge commit
 /refactor:smells src/Paramore.Brighter/CommandProcessor.cs
 ```
 
