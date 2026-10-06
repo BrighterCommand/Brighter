@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,6 +27,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Policies.Handlers;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -84,5 +85,8 @@ internal static class Initializer
             diPackage.GetType("Paramore.Brighter.Extensions.DependencyInjection.ServiceProviderLifetimeScope")!.TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(HandlerLifetimeScope).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<SharedRegistryCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<SharedRegistryCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(ResilienceExceptionPolicyHandlerAsync<SharedRegistryCommand>).TypeHandle);
     }
 }
