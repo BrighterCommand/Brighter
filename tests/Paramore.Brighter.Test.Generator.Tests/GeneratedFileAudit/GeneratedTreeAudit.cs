@@ -47,6 +47,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 /// </para>
 /// <para>
 /// The expected set comes from the generators themselves, through
+/// <see cref="Generators.InboxGenerator.Plan"/>,
 /// <see cref="Generators.OutboxGenerator.Plan"/>,
 /// <see cref="Generators.MessagingGatewayGenerator.Plan"/> and
 /// <see cref="Generators.GatewayConformanceGenerator.Plan"/>, rather than from a description of them
@@ -155,6 +156,8 @@ public sealed class GeneratedTreeAudit
     /// </summary>
     private static IReadOnlySet<string> ExpectedFilesUnder(string testsRoot)
     {
+        var inboxGenerator = new Generators.InboxGenerator(
+            NullLogger<Generators.InboxGenerator>.Instance);
         var outboxGenerator = new Generators.OutboxGenerator(
             NullLogger<Generators.OutboxGenerator>.Instance);
         var messagingGatewayGenerator = new Generators.MessagingGatewayGenerator(
@@ -183,7 +186,8 @@ public sealed class GeneratedTreeAudit
                 continue;
             }
 
-            expected.UnionWith(outboxGenerator.Plan(configuration)
+            expected.UnionWith(inboxGenerator.Plan(configuration)
+                .Concat(outboxGenerator.Plan(configuration))
                 .Concat(messagingGatewayGenerator.Plan(configuration))
                 .Concat(gatewayConformanceGenerator.Plan(configuration))
                 .Select(plannedFile => Path.GetFullPath(plannedFile.DestinationPath))
