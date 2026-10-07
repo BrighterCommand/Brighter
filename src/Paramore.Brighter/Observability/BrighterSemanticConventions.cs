@@ -98,6 +98,10 @@ public static class BrighterSemanticConventions
     public const string NetworkPeerAddress = "network.peer.address";
     public const string NetworkPeerPort = "network.peer.port";
     public const string Operation = "paramore.brighter.operation";
+    public const string OutboxAddedMessages = "paramore.brighter.outbox.added.messages";
+    public const string OutboxClearedMessages = "paramore.brighter.outbox.cleared.messages";
+    public const string OutboxPublishDuration = "paramore.brighter.outbox.publish.duration";
+    public const string OutboxClearSource = "paramore.brighter.outbox.clear_source";
     public const string OutboxSharedTransaction = "paramore.brighter.outbox.shared_transaction";
     public const string OutboxType = "paramore.brighter.outbox.type";
     public const string ReplyTo = "paramore.brighter.replyto";
