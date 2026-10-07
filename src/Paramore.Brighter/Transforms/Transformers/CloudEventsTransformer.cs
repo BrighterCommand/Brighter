@@ -182,7 +182,9 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
                 DataRef = message.Header.DataRef,
                 Delayed = message.Header.Delayed,
                 HandledCount = message.Header.HandledCount,
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
                 MessageType = message.Header.MessageType,
+#pragma warning restore CS0618
                 PartitionKey = message.Header.PartitionKey,
                 ReplyTo = message.Header.ReplyTo,
                 Topic = message.Header.Topic,

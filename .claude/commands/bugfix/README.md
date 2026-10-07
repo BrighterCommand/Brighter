@@ -101,7 +101,7 @@ for those, matching the implementation policy.
 
 ```
 bugfixes/
-├── .current-bug                     # tracks the active bug (like specs/.current-spec)
+├── .current-bug                     # local active bug (untracked)
 └── 0001-asb-sessionid-case/
     ├── .issue-number                # linked GitHub issue (optional)
     ├── .confirm-approved            # the ONE gate marker
@@ -110,6 +110,10 @@ bugfixes/
 
 Unlike `/spec` (three approval markers), `/bugfix` has a **single** marker (`.confirm-approved`).
 Every other phase is inferred from the content of `bugfix.md`, keeping the workflow light.
+
+`.current-bug` is local to each working copy and ignored by Git. A fresh checkout has no active
+bug: use `/bugfix:switch <NNNN-slug>` to select an existing bug, or `/bugfix:triage` to start one.
+The per-bug `bugfix.md`, `.issue-number`, and `.confirm-approved` files remain tracked.
 
 ### `bugfix.md` sections (filled progressively)
 

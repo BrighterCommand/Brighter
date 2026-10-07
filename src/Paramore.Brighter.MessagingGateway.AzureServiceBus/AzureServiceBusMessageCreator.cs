@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Net.Mime;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -42,9 +43,18 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
     private static readonly ILogger s_logger =
         ApplicationLogging.CreateLogger<AzureServiceBusMessageCreator>();
 
+    private static readonly Uri s_defaultSourceUri = new(MessageHeader.DefaultSource);
+
     /// <summary>
     /// Maps an Azure Service Bus message to a Brighter <see cref="Message"/>.
     /// </summary>
+    /// <remarks>
+    /// The CloudEvents subject application property takes precedence over the native subject.
+    /// When it is absent, wrappers implementing <see cref="IBrokeredMessageWithSubject"/> supply the native subject.
+    /// Likewise, when the CloudEvents partition key is absent, wrappers implementing
+    /// <see cref="IBrokeredMessageWithPartitionKey"/> supply the native partition key.
+    /// When the CloudEvents trace parent is absent, a valid W3C <c>Diagnostic-Id</c> supplies the trace parent.
+    /// </remarks>
     /// <param name="azureServiceBusMessage">The Azure Service Bus Message to map to a Brighter <see cref="Message"/></param>
     /// <returns></returns>
     public Message MapToBrighterMessage(IBrokeredMessageWrapper? azureServiceBusMessage)
@@ -148,9 +158,8 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
         return baggage;
     }
 
-    private Uri GetCloudEventsDataSchema(IBrokeredMessageWrapper azureServiceBusMessage)
+    private Uri? GetCloudEventsDataSchema(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        var defaultSchemaUri = new Uri("http://goparamore.io"); // Default schema URI
         if (
             !azureServiceBusMessage.ApplicationProperties.TryGetValue(
                 ASBConstants.CloudEventsSchema,
@@ -159,18 +168,19 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
         )
         {
             Log.NoCloudEventsDataSchema(s_logger, _topic, subscription.Name);
-            return defaultSchemaUri;
+            return null;
         }
 
-        var dataSchema = property.ToString();
-
-        if (string.IsNullOrEmpty(dataSchema))
+        // An AMQP null application property arrives as a null value, not an absent key, so this
+        // must guard the value as well as the type — matching GetSource below
+        if (property is not string dataSchema || string.IsNullOrEmpty(dataSchema))
         {
             Log.EmptyCloudEventsDataSchema(s_logger, _topic, subscription.Name);
-            return defaultSchemaUri;
+            return null;
         }
 
-        return new Uri(dataSchema);
+        // CloudEvents defines dataschema as a URI-reference, which may be relative
+        return Uri.TryCreate(dataSchema, UriKind.RelativeOrAbsolute, out var uri) ? uri : null;
     }
 
     private string GetCloudEventsSubject(IBrokeredMessageWrapper azureServiceBusMessage)
@@ -182,11 +192,15 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             )
         )
         {
+            if (azureServiceBusMessage is IBrokeredMessageWithSubject messageWithSubject
+                && !string.IsNullOrEmpty(messageWithSubject.Subject))
+                return messageWithSubject.Subject;
+
             Log.NoCloudEventsSubject(s_logger, _topic, subscription.Name);
             return string.Empty;
         }
 
-        var subject = property.ToString() ?? string.Empty;
+        var subject = property?.ToString() ?? string.Empty;
 
         return subject;
     }
@@ -227,11 +241,15 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             )
         )
         {
+            if (azureServiceBusMessage is IBrokeredMessageWithPartitionKey messageWithPartitionKey
+                && !string.IsNullOrEmpty(messageWithPartitionKey.PartitionKey))
+                return new PartitionKey(messageWithPartitionKey.PartitionKey);
+
             Log.NoCloudEventsPartitionKey(s_logger, _topic, subscription.Name);
             return PartitionKey.Empty;
         }
 
-        return new PartitionKey(property.ToString() ?? string.Empty);
+        return new PartitionKey(property?.ToString() ?? string.Empty);
     }
 
     private CloudEventsType GetCloudEventsType(IBrokeredMessageWrapper azureServiceBusMessage)
@@ -308,7 +326,6 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
 
     private Uri GetSource(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        var defaultSourceUri = new Uri("http://goparamore.io"); // Default source URI
         if (
             !azureServiceBusMessage.ApplicationProperties.TryGetValue(
                 ASBConstants.CloudEventsSource,
@@ -317,18 +334,17 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
         )
         {
             Log.NoSourceFound(s_logger, _topic, subscription.Name);
-            return defaultSourceUri;
+            return s_defaultSourceUri;
         }
 
         if (property is not string sourceString || string.IsNullOrEmpty(sourceString))
         {
             Log.EmptyOrInvalidSource(s_logger, _topic, subscription.Name);
-            return defaultSourceUri;
+            return s_defaultSourceUri;
         }
 
-        var source = property.ToString();
-
-        return new Uri(source!);
+        // CloudEvents defines source as a URI-reference, which may be relative
+        return Uri.TryCreate(sourceString, UriKind.RelativeOrAbsolute, out var uri) ? uri : s_defaultSourceUri;
     }
 
     private TraceParent GetTraceParent(IBrokeredMessageWrapper azureServiceBusMessage)
@@ -340,6 +356,13 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             )
         )
         {
+            if (azureServiceBusMessage.ApplicationProperties.TryGetValue("Diagnostic-Id", out var diagnosticProperty)
+                && diagnosticProperty is string diagnosticId
+                && ActivityContext.TryParse(diagnosticId, null, out _))
+            {
+                return new TraceParent(diagnosticId);
+            }
+
             Log.NoTraceParentFound(s_logger, _topic, subscription.Name);
             return new TraceParent(string.Empty);
         }
@@ -410,8 +433,10 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             SubscriptionName subscriptionName
         );
 
+        // dataschema is optional in CloudEvents, and since it is no longer substituted with a default
+        // its absence is the normal outcome rather than something an operator needs to act on
         [LoggerMessage(
-            LogLevel.Warning,
+            LogLevel.Debug,
             "No Cloud Events data schema found in message from topic {Topic} via subscription {SubscriptionName}"
         )]
         public static partial void NoCloudEventsDataSchema(

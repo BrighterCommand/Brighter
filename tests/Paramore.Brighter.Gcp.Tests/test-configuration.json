@@ -7,11 +7,9 @@
       "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpPullMessageGatewayProvider",
       "Category": "GcpPubSubPull",
       "CollectionName": "Pull",
+      "LedgerKey": "GCP / Pull",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 5000
     },
     "PullOrdering": {
@@ -21,12 +19,10 @@
       "MessageBuilder": "FifoMessageBuilder",
       "Category": "GcpPubSubPullOrdering",
       "CollectionName": "PullOrdering",
+      "LedgerKey": "GCP / PullOrdering",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
-      "ReceiveMessageTimeoutInMilliseconds": 5000
+      "ReceiveMessageTimeoutInMilliseconds": 15000
     },
     "Stream": {
       "Publication": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPublication",
@@ -34,11 +30,9 @@
       "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpStreamMessageGatewayProvider",
       "Category": "GcpPubSubStream",
       "CollectionName": "Stream",
+      "LedgerKey": "GCP / Stream",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 5000
     },
     "StreamOrdering": {
@@ -48,11 +42,9 @@
       "MessageBuilder": "FifoMessageBuilder",
       "Category": "GcpPubSubStreamOrdering",
       "CollectionName": "StreamOrdering",
+      "LedgerKey": "GCP / StreamOrdering",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 5000
     }
   },
@@ -75,5 +67,8 @@
       "Category": "Spanner",
       "CollectionName": "SpannerTextOutbox"
     }
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPubSubSubscription"
   }
 }

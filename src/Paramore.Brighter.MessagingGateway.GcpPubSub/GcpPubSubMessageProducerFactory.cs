@@ -72,22 +72,23 @@ public class GcpPubSubMessageProducerFactory : GcpPubSubMessageGateway, IAmAMess
             var topicName = GetTopicName(publication.TopicAttributes.ProjectId, publication.TopicAttributes.Name);
 
             // Create the Google PublisherClient which is used to send messages
-            var client = await CreatePublisherClient(topicName, 
+            var (client, enableMessageOrdering) = await CreatePublisherClient(topicName,
                 publication.EnableMessageOrdering,
-                publication.PublisherClientConfiguration ?? _connection.PublisherConfiguration);
+                publication.PublisherClientConfiguration);
 
             // Create the Brighter-specific producer wrapper and add it to the dictionary
             producers[new ProducerKey(publication.Topic!, publication.Type)] = new GcpMessageProducer(
                 client,
                 publication,
-                _instrumentation ?? InstrumentationOptions.None
+                _instrumentation ?? InstrumentationOptions.None,
+                enableMessageOrdering
             );
         }
 
         return producers;
     }
 
-    private async Task<PublisherClient> CreatePublisherClient(TopicName topicName, 
+    private async Task<(PublisherClient Client, bool EnableMessageOrdering)> CreatePublisherClient(TopicName topicName,
         bool enableMessageOrdering,
         Action<PublisherClientBuilder>? configure)
     {
@@ -101,7 +102,20 @@ public class GcpPubSubMessageProducerFactory : GcpPubSubMessageGateway, IAmAMess
             }
         };
         
+        // The connection's configuration applies to every publication; the publication's own runs after it, so it wins
+        _connection.PublisherConfiguration?.Invoke(builder);
         configure?.Invoke(builder);
-        return await builder.BuildAsync();
+
+        // A configuration may replace the settings; keep the ordering the publication asked for, as Brighter sends
+        // keyed messages with an ordering key
+        builder.Settings ??= new PublisherClient.Settings();
+        if (enableMessageOrdering)
+        {
+            builder.Settings.EnableMessageOrdering = true;
+        }
+
+        // A configuration may also enable ordering the publication did not ask for; the producer needs the ordering
+        // the client was built with, as the client refuses an ordering key without it
+        return (await builder.BuildAsync(), builder.Settings.EnableMessageOrdering);
     }
 }

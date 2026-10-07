@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
@@ -77,7 +78,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     throw new ChannelFailureException($"Queue {channelName} does not exist and missing channel mode set to Validate.");
                 }
 
-                await _administrationClientWrapper.CreateQueueAsync(channelName);
+                try
+                {
+                    await _administrationClientWrapper.CreateQueueAsync(channelName);
+                }
+                catch (ServiceBusException e) when (e.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+                {
+                    Log.MessageEntityAlreadyExists(s_logger, channelName);
+                }
                 TopicCreated = true;
             }
             catch (Exception e)
@@ -91,9 +99,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         private static partial class Log
         {
+            [LoggerMessage(LogLevel.Debug, "Queue {ChannelName} was created by another caller")]
+            public static partial void MessageEntityAlreadyExists(ILogger logger, string channelName);
+
             [LoggerMessage(LogLevel.Error, "Failing to check or create queue")]
             public static partial void FailingToCheckOrCreateQueue(ILogger logger, Exception e);
         }
     }
 }
-

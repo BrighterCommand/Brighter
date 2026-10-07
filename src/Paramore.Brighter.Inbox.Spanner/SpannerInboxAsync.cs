@@ -63,14 +63,26 @@ public class SpannerInboxAsync(
     {
         if (parameterName == "@CommandBody")
         {
-            return new SpannerParameter 
+            return new SpannerParameter
             {
-                ParameterName = parameterName, 
+                ParameterName = parameterName,
                 SpannerDbType = SpannerDbType.Json,
-                Value = value ?? DBNull.Value 
+                Value = value ?? DBNull.Value
             };
         }
-        
+
+        if (parameterName == "@CausationId")
+        {
+            // CausationId is a STRING(256) column and may be null; Spanner requires an explicit
+            // SpannerDbType when the value is DBNull, so set it rather than relying on inference.
+            return new SpannerParameter
+            {
+                ParameterName = parameterName,
+                SpannerDbType = SpannerDbType.String,
+                Value = value ?? DBNull.Value
+            };
+        }
+
         return new SpannerParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
     }
 

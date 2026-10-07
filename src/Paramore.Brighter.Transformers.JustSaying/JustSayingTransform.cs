@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.Transformers.JustSaying.JsonConverters;
 using Paramore.Brighter.Transformers.JustSaying.Extensions;
 
 namespace Paramore.Brighter.Transformers.JustSaying;
@@ -116,7 +116,7 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
             message.Header.ContentType = new ContentType("application/json");
             message.Header.Subject = GetSubject(message, publication);
 
-            message.Body = new MessageBody(node.ToJsonString(JsonSerialisationOptions.Options));
+            message.Body = new MessageBody(node.ToJsonString(JustSayingSerialisationOptions.Options));
             return message;
         }
         catch (JsonException)

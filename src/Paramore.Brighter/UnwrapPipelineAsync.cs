@@ -40,19 +40,23 @@ namespace Paramore.Brighter
         /// <summary>
         /// Constructs an instance of an Unwrap pipeline
         /// </summary>
-        /// <param name="transforms">The transforms that run before the mapper</param>
+        /// <param name="transformLeases">The leases over the transforms that run before the mapper</param>
         /// <param name="messageTransformerFactory">The factory used to create transforms</param>
-        /// <param name="messageMapperAsync">The message mapper that forms the pipeline sink</param>
+        /// <param name="messageMapperLease">The lease over the message mapper that forms the pipeline sink</param>
+        /// <param name="mapperRegistry">The registry the message mapper came from, required to release it when the pipeline is disposed</param>
+        /// <param name="scope">The pipeline's own DI scope, if one was offered when the pipeline was built</param>
         public UnwrapPipelineAsync(
-            IEnumerable<IAmAMessageTransformAsync> transforms, 
-            IAmAMessageTransformerFactoryAsync messageTransformerFactory, 
-            IAmAMessageMapperAsync<TRequest> messageMapperAsync
-            ) : base(messageMapperAsync, transforms)
+            IEnumerable<Lease<IAmAMessageTransformAsync>> transformLeases,
+            IAmAMessageTransformerFactoryAsync? messageTransformerFactory,
+            Lease<IAmAMessageMapperAsync<TRequest>> messageMapperLease,
+            IAmAMessageMapperRegistryAsync? mapperRegistry = null,
+            IAmAScope? scope = null
+            ) : base(messageMapperLease, transformLeases, mapperRegistry, scope)
         {
             if (messageTransformerFactory != null)
             {
                 InstanceScope = new TransformLifetimeScopeAsync(messageTransformerFactory);
-                Transforms.Each(transform => InstanceScope.Add(transform));
+                TransformLeases.Each(lease => InstanceScope.Add(lease));
             }
         }
 
@@ -80,7 +84,7 @@ namespace Paramore.Brighter
             if(requestContext is not null)
                 requestContext.Span ??= Activity.Current;
             
-            var msg = message;
+            var msg = requestContext?.Delivery is null ? message : message.CopyForDelivery();
             await Transforms.EachAsync(async transform => {
                transform.Context = requestContext; 
                msg = await transform.UnwrapAsync(msg, cancellationToken);

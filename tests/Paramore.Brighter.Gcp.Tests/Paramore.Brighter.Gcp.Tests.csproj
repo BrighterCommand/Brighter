@@ -25,6 +25,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Polly.Extensions.Http"/>
+    <PackageReference Include="Serilog.Extensions.Logging" />
+    <PackageReference Include="Serilog.Sinks.TestCorrelator" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,6 +38,7 @@
          drift test can compare its VLatestOutbox / VLatestInbox constants against
          <Backend>OutboxMigrationCatalog.All(cfg).Count for every relational backend. The
          transitive DB drivers are not exercised at runtime. -->
+    <ProjectReference Include="..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.MsSql\Paramore.Brighter.BoxProvisioning.MsSql.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.MySql\Paramore.Brighter.BoxProvisioning.MySql.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.PostgreSql\Paramore.Brighter.BoxProvisioning.PostgreSql.csproj" />

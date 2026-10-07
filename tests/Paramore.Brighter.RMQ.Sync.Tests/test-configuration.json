@@ -1,0 +1,33 @@
+{
+  "Namespace": "Paramore.Brighter.RMQ.Sync.Tests",
+  "MessageAssertion": "RmqMessageAssertion",
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.RMQ.Sync.RmqSubscription"
+  },
+  "MessagingGateways": {
+    "Classic": {
+      "Publication": "Paramore.Brighter.MessagingGateway.RMQ.Sync.RmqPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.RMQ.Sync.RmqSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.RmqSyncMessageGatewayProvider",
+      "Category": "RMQ",
+      "CollectionName": "RMQ",
+      "LedgerKey": "RMQ.Sync / RmqSyncMessagingGateway",
+      "HasSupportToPublishConfirmation": true,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToValidateInfrastructure": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
+    },
+    "NativeClassic": {
+      "Publication": "Paramore.Brighter.MessagingGateway.RMQ.Sync.RmqPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.RMQ.Sync.RmqSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.RmqNativeClassicMessageGatewayProvider",
+      "Category": "RMQNativeDelay",
+      "CollectionName": "RMQNativeDelay",
+      "LedgerKey": "RMQ.Sync / NativeClassic",
+      "HasSupportToPublishConfirmation": true,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToValidateInfrastructure": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
+    }
+  }
+}

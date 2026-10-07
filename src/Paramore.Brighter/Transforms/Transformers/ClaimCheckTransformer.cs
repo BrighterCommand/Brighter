@@ -160,7 +160,10 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
             return message;
         }
             
-        _store.Delete(id!);
+        if (Context is RequestContext { Delivery: { } delivery })
+            delivery.OnAcknowledged(() => _store.Delete(id!), token => _storeAsync.DeleteAsync(id!, token));
+        else
+            await _storeAsync.DeleteAsync(id!, cancellationToken);
         message.Header.DataRef = null;
         message.Header.Bag.Remove(CLAIM_CHECK);
 
@@ -217,7 +220,10 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
             return message;
         }
             
-        _store.Delete(id!);
+        if (Context is RequestContext { Delivery: { } delivery })
+            delivery.OnAcknowledged(() => _store.Delete(id!), token => _storeAsync.DeleteAsync(id!, token));
+        else
+            _store.Delete(id!);
         message.Header.DataRef = null;
         message.Header.Bag.Remove(CLAIM_CHECK);
 

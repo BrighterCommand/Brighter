@@ -33,9 +33,11 @@ namespace Paramore.Brighter
     /// </summary>
     public class EmptyMessageTransformerFactory : IAmAMessageTransformerFactory
     {
-        public IAmAMessageTransform Create(Type transformerType) { return new EmptyMessageTransform(); }
+        public IAmAScope? CreatePipelineScope() { return null; }
 
-        public void Release(IAmAMessageTransform transformer) { transformer.Dispose(); }
+        public Lease<IAmAMessageTransform>? Create(Type transformerType, IAmAScope? scope = null) { return Lease<IAmAMessageTransform>.Untracked(new EmptyMessageTransform()); }
+
+        public void Release(Lease<IAmAMessageTransform>? lease) { lease?.Instance.Dispose(); }
     }
 
     /// <summary>

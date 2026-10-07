@@ -7,6 +7,6 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// </summary>
 internal static class ExpectedMigrationVersions
 {
-    public const int OutboxLatest = 7;
-    public const int InboxLatest = 2;
+    public const int OutboxLatest = 8;
+    public const int InboxLatest = 3;
 }

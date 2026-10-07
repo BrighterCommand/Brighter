@@ -61,12 +61,11 @@ public static class ExchangeConfigurationHelper
         if (connection.Exchange.SupportDelay)
         {
             arguments.Add("x-delayed-type", connection.Exchange.Type);
-            connection.Exchange.Type = "x-delayed-message";
         }
 
         await channel.ExchangeDeclareAsync(
             connection.Exchange.Name,
-            connection.Exchange.Type,
+            connection.Exchange.SupportDelay ? "x-delayed-message" : connection.Exchange.Type,
             connection.Exchange.Durable,
             autoDelete: false,
             arguments: arguments,

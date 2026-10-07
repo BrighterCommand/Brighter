@@ -32,13 +32,29 @@ using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    public partial class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
+    public partial class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation, ISupportPublishConfirmationAsync
     {
+        // Bounds the dispose-time wait for confirmation callbacks still running after Flush() has
+        // drained the delivery reports; without it a hung Outbox write would block dispose forever.
+        // Fixed rather than configurable: KafkaPublication has no confirm-wait setting (unlike
+        // RmqPublication's WaitForConfirmsTimeOutInMilliseconds), and none of its existing timeouts
+        // describe this wait. 5s matches the RMQ.Async producer's active-sends shutdown bound.
+        private const int ConfirmationCallbacksShutdownTimeoutMs = 5000;
+
         /// <summary>
         /// Action taken when a message is published, following receipt of a confirmation from the broker
         /// see https://www.rabbitmq.com/blog/2011/02/10/introducing-publisher-confirms#how-confirms-work for more
         /// </summary>
         public event Action<PublishConfirmationResult>? OnMessagePublished;
+
+        /// <inheritdoc cref="ISupportPublishConfirmationAsync.UseAsyncPublishConfirmation"/>
+        bool ISupportPublishConfirmationAsync.UseAsyncPublishConfirmation => true;
+
+        event Func<PublishConfirmationResult, Task> ISupportPublishConfirmationAsync.OnMessagePublishedAsync
+        {
+            add => _onMessagePublishedAsync += value;
+            remove => _onMessagePublishedAsync -= value;
+        }
       
         /// <summary>
         /// The publication configuration for this producer
@@ -59,6 +75,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private KafkaMessagePublisher? _publisher;
         private bool _hasFatalProducerError;
         private readonly InstrumentationOptions _instrumentation;
+        private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
+        // Confirmation raises run on worker tasks (never on Confluent's poll thread); the tracker
+        // lets Dispose wait for those callbacks — including the awaited Outbox mark-dispatched —
+        // after Flush() has drained the delivery reports themselves.
+        private readonly InFlightCallbackTracker _confirmationCallbacks = new();
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration configuration, 
@@ -373,7 +394,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (disposing)
             {
+                // Flush drains the delivery reports; the callbacks they spawned (including the
+                // awaited Outbox mark-dispatched) may still be running, so wait for those too.
                 Flush();
+                WaitForConfirmationCallbacks();
                 _producer?.Dispose();
             }
         }
@@ -427,17 +451,30 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             // invoke so a faulting subscriber is logged rather than left as an unobserved Task exception
             // (which can escalate via TaskScheduler.UnobservedTaskException). Brighter's own mediator
             // callback is already self-contained; this guards any other subscriber and the broker thread.
-            Task.Run(() =>
+            // The in-flight tracker must be released on every path or dispose would block on its timeout.
+            _confirmationCallbacks.Begin();
+            Task.Run(async () =>
             {
                 try
                 {
                     OnMessagePublished?.Invoke(result);
+                    await _onMessagePublishedAsync.InvokeAllAsync(result);
                 }
                 catch (Exception ex)
                 {
                     Log.PublishConfirmationRaiseFault(s_logger, ex);
                 }
+                finally
+                {
+                    _confirmationCallbacks.End();
+                }
             });
+        }
+
+        private void WaitForConfirmationCallbacks()
+        {
+            if (!_confirmationCallbacks.TryWait(TimeSpan.FromMilliseconds(ConfirmationCallbacksShutdownTimeoutMs), out int stillInFlight))
+                Log.FailedToAwaitConfirmationCallbacks(s_logger, stillInFlight, ConfirmationCallbacksShutdownTimeoutMs);
         }
 
         private static partial class Log
@@ -462,6 +499,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             [LoggerMessage(LogLevel.Error, "KafkaMessageProducer: There was an error sending to topic {Topic})")]
             public static partial void KafkaExceptionError(ILogger logger, Exception exception, string topic);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to await {CallbackCount} confirmation callbacks after {TimeoutMs}ms when shutting down")]
+            public static partial void FailedToAwaitConfirmationCallbacks(ILogger logger, int callbackCount, int timeoutMs);
         }
     }
 }

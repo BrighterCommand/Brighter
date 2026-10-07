@@ -40,7 +40,8 @@ public enum InstrumentationOptions
     DatabaseInformation = 16,                                    //=> What is the database related context?
     ClamCheck = 32,                                             //(claim_check) Information about the claim chek operation
     Brighter = 64,                                              //Brighter Handler Instrumentation
-    All = RequestInformation | RequestBody | RequestContext | Messaging | DatabaseInformation | ClamCheck | Brighter
+    CircuitBreaker = 128,                                        //(circuit_breaker) => circuit breaker trip/re-trip/reset detail
+    All = RequestInformation | RequestBody | RequestContext | Messaging | DatabaseInformation | ClamCheck | Brighter | CircuitBreaker
     //(.requestid, .requestids, .requesttype, .operation, .requestbody, .requestcontext) => what is the whole request?
 }
 

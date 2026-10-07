@@ -74,7 +74,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
             var partitionKey = ReadPartitionKey(sqsMessage);
             var deduplicationId = ReadDeduplicationId(sqsMessage);
             var subject = ReadSubject(sqsMessage, cloudEventHeaders);
-            var handledCount = ReadHandledCount(bag);
+            var handledCount = ReadHandledCount(sqsMessage, bag);
             var source = ReadCloudEventSource(cloudEventHeaders);
             var type = ReadCloudEventType(cloudEventHeaders);
             var dataSchema = ReadCloudEventsDataSchema(cloudEventHeaders);
@@ -167,12 +167,16 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
     
     private static HeaderResult<Uri?> ReadCloudEventSource(Dictionary<string, string> cloudEventHeaders)
     {
-        if (cloudEventHeaders.TryGetValue(HeaderNames.Source, out var value))
+        if (cloudEventHeaders.TryGetValue(HeaderNames.Source, out var value)
+            && Uri.TryCreate(value, UriKind.RelativeOrAbsolute, out var uri))
         {
-            if (Uri.TryCreate(value, UriKind.RelativeOrAbsolute, out var uri))
-            {
-                return new HeaderResult<Uri?>(uri, true);
-            }
+            return new HeaderResult<Uri?>(uri, true);
+        }
+
+        if (cloudEventHeaders.TryGetValue(HeaderNames.LEGACY_SOURCE, out value)
+            && Uri.TryCreate(value, UriKind.RelativeOrAbsolute, out uri))
+        {
+            return new HeaderResult<Uri?>(uri, true);
         }
 
         return new HeaderResult<Uri?>(null, false);
@@ -327,15 +331,21 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
     }
 
-    private static HeaderResult<int> ReadHandledCount(Dictionary<string, object> bag)
+    private static HeaderResult<int> ReadHandledCount(Amazon.SQS.Model.Message sqsMessage, Dictionary<string, object> bag)
     {
+        int headerCount = 0;
         if (bag.TryGetValue(HeaderNames.HandledCount, out var value))
+            headerCount = Convert.ToInt32(value);
+
+        int? brokerCount = null;
+        if (sqsMessage.Attributes is not null
+            && sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.ApproximateReceiveCount, out var raw)
+            && int.TryParse(raw, out var parsed))
         {
-            int handledCount = Convert.ToInt32(value);
-            return new HeaderResult<int>(handledCount, true);
+            brokerCount = parsed;
         }
 
-        return new HeaderResult<int>(0, true);
+        return new HeaderResult<int>(DeliveryCount.Resolve(headerCount, brokerCount, bag), true);
     }
 
     private static HeaderResult<Id> ReadCorrelationId(Amazon.SQS.Model.Message sqsMessage)

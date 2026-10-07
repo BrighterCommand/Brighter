@@ -9,9 +9,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 // (Topic, ReplyTo, TraceParent, TraceState). Property *names* differ across the two
 // stacks because Brighter's STJ options use camelCase while Newtonsoft default is
 // PascalCase, but both serializers tolerate either casing on read, so cross-stack
-// interop depends on the *values* matching, not byte-equal JSON. Full deserialisation
-// parity for the whole MessageHeader is blocked on the unrelated ContentType issue
-// (tracked separately) — this test stays on serialisation only.
+// interop depends on the *values* matching, not byte-equal JSON.
 public class MessageHeaderCustomPropertyParityTests
 {
     [Fact]

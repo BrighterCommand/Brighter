@@ -8,11 +8,9 @@
       "MessageGatewayProvider": "Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqClassicMessageGatewayProvider",
       "Category": "RMQ",
       "CollectionName": "Classic",
+      "LedgerKey": "RMQ.Async / Classic",
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 4000
     },
     "Quorum": {
@@ -21,12 +19,35 @@
       "MessageGatewayProvider": "Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqQuorumMessageGatewayProvider",
       "Category": "RMQ",
       "CollectionName": "Quorum",
+      "LedgerKey": "RMQ.Async / Quorum",
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
+    },
+    "NativeClassic": {
+      "Publication": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqNativeClassicMessageGatewayProvider",
+      "Category": "RMQNativeDelay",
+      "CollectionName": "RMQNativeDelay",
+      "LedgerKey": "RMQ.Async / NativeClassic",
+      "HasSupportToPublishConfirmation": true,
+      "HasSupportToValidateBrokerExistence": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
+    },
+    "NativeQuorum": {
+      "Publication": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqNativeQuorumMessageGatewayProvider",
+      "Category": "RMQNativeDelay",
+      "CollectionName": "RMQNativeDelay",
+      "LedgerKey": "RMQ.Async / NativeQuorum",
+      "HasSupportToPublishConfirmation": true,
+      "HasSupportToValidateBrokerExistence": true,
       "ReceiveMessageTimeoutInMilliseconds": 4000
     }
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription"
   }
 }

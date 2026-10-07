@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.MessageMappers;
 using Polly.Registry;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -40,10 +41,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="extraAssemblies">Additional assemblies not in the current app domain</param>
         /// <param name="excludeDynamicHandlerTypes">If you want to register a handler with a dynamic routing rule - an agreement - you need to excluce it from auto-regisration by adding it to this list</param>
-        /// <param name="defaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
-        /// <param name="asyncDefaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
+        /// <param name="defaultMessageMapper">We use <see cref="JsonMessageMapper{TRequest}"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="CloudEventJsonMessageMapper{TRequest}"/></param>
+        /// <param name="asyncDefaultMessageMapper">We use <see cref="JsonMessageMapper{TRequest}"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="CloudEventJsonMessageMapper{TRequest}"/></param>
         /// <returns></returns>
-        IBrighterBuilder AutoFromAssemblies(IEnumerable<Assembly>? extraAssemblies = null, IEnumerable<Type>? excludeDynamicHandlerTypes = null, Type? defaultMessageMapper = null, Type? asyncDefaultMessageMapper =  null);
+        IBrighterBuilder AutoFromAssemblies(IEnumerable<Assembly>? extraAssemblies = null, IEnumerable<Type>? excludeDynamicHandlerTypes = null, Type? defaultMessageMapper = null, Type? asyncDefaultMessageMapper = null);
         
         /// <summary>
         /// Scan the assemblies provided for implementations of IHandleRequestsAsync and register them with ServiceCollection
@@ -79,19 +80,20 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Register message mappers
         /// </summary>
         /// <param name="registerMappers">A callback to register mappers</param>
-        /// <param name="defaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
-        /// <param name="asyncDefaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
+        /// <param name="defaultMessageMapper">We use <see cref="JsonMessageMapper{TRequest}"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="CloudEventJsonMessageMapper{TRequest}"/></param>
+        /// <param name="asyncDefaultMessageMapper">We use <see cref="JsonMessageMapper{TRequest}"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="CloudEventJsonMessageMapper{TRequest}"/></param>
         /// <returns>This builder, allows chaining calls</returns>
-        IBrighterBuilder MapperRegistry(Action<ServiceCollectionMessageMapperRegistryBuilder> registerMappers, Type? defaultMessageMapper = null, Type? asyncDefaultMessageMapper =  null);
+        IBrighterBuilder MapperRegistry(Action<ServiceCollectionMessageMapperRegistryBuilder> registerMappers, Type? defaultMessageMapper = null, Type? asyncDefaultMessageMapper = null);
         
         /// <summary>
-        /// Scan the assemblies provided for implementations of IAmAMessageMapper and register them with ServiceCollection
+        /// Scan the assemblies provided for public and nested-public synchronous and asynchronous message mappers
+        /// and register them with ServiceCollection. Non-public mappers can be registered explicitly with MapperRegistry.
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
-        /// <param name="defaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
-        /// <param name="asyncDefaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
+        /// <param name="defaultMessageMapper">We use <see cref="JsonMessageMapper{TRequest}"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="CloudEventJsonMessageMapper{TRequest}"/></param>
+        /// <param name="asyncDefaultMessageMapper">We use <see cref="JsonMessageMapper{TRequest}"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="CloudEventJsonMessageMapper{TRequest}"/></param>
         /// <returns>This builder, allows chaining calls</returns>
-        IBrighterBuilder MapperRegistryFromAssemblies(IEnumerable<Assembly> assemblies, Type? defaultMessageMapper = null, Type? asyncDefaultMessageMapper =  null);
+        IBrighterBuilder MapperRegistryFromAssemblies(IEnumerable<Assembly> assemblies, Type? defaultMessageMapper = null, Type? asyncDefaultMessageMapper = null);
         
         /// <summary>
         /// Scan the assemblies for implementations of IAmAMessageTransformAsync and register them with ServiceCollection
@@ -119,12 +121,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Gets or sets the registry of resilience pipelines used for the command processor and event bus.
         /// </summary>
         /// <value>
-        /// The registry containing named resilience pipeline instances. Required for coordination between AddBrighter and AddProducers.
-        /// Returns <c>null</c> if no pipelines are configured.
+        /// An explicit registry shared by handlers and outbox producers.
+        /// Returns <c>null</c> if no builder override is configured.
         /// </value>
         /// <remarks>
         /// Replaces <see cref="PolicyRegistry"/> for modern resilience patterns. 
-        /// Use this registry to share configured resilience pipelines between Brighter components.
+        /// Assign before resolving Brighter services. An explicit value overrides
+        /// <see cref="IBrighterOptions.ResiliencePipelineRegistry"/> when services are first resolved.
+        /// Otherwise, Brighter uses the options registry or creates one.
+        /// Missing default pipelines are added without replacing configured pipelines.
         /// </remarks>
         ResiliencePipelineRegistry<string>? ResiliencePolicyRegistry { get; set; }
 

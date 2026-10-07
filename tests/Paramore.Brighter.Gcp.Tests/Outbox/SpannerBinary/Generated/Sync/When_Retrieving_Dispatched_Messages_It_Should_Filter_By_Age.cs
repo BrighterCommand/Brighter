@@ -35,6 +35,7 @@ using System.Linq;
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerBinary.Sync;
 
 [Trait("Category", "Spanner")]
+[Collection("SpannerBinaryOutbox")]
 public class WhenRetrievingDispatchedMessagesItShouldFilterByAge : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

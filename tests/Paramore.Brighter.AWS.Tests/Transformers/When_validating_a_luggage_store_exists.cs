@@ -5,7 +5,6 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
-using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Transformers.AWS;
 using Paramore.Brighter.Transforms.Storage;
 using Xunit;
@@ -13,9 +12,10 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.Transformers;
 
 [Trait("Category", "AWS")] 
-public class S3LuggageStoreExistsTests 
+public class S3LuggageStoreExistsTests : IAsyncLifetime
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly string _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
 
     public S3LuggageStoreExistsTests()
     {
@@ -29,10 +29,8 @@ public class S3LuggageStoreExistsTests
     [Fact]
     public async Task When_checking_store_that_exists()
     {
-        var bucketName = $"brightertestbucket-{Guid.NewGuid()}";
-        
         //arrange
-        var luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), bucketName)
+        var luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
         {
             HttpClientFactory = _httpClientFactory,
             BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
@@ -46,7 +44,7 @@ public class S3LuggageStoreExistsTests
         await Task.Delay(5000);
 
         //act
-        luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), bucketName)
+        luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
         {
             Strategy = StorageStrategy.Validate,
             HttpClientFactory = _httpClientFactory, 
@@ -55,13 +53,12 @@ public class S3LuggageStoreExistsTests
         });
 
         Assert.NotNull(luggageStore);
-        
-        //teardown
-        var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
-        var client = factory.CreateS3Client();
-        await client.DeleteBucketAsync(bucketName);
     }
     
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public Task DisposeAsync() => S3TestBucketCleanup.DeleteAsync(_bucketName);
+
     [Fact]
     public async Task When_checking_store_that_does_not_exist()
     {

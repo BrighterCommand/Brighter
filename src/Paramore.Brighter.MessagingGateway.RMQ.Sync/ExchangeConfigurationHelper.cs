@@ -55,12 +55,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             if (connection.Exchange!.SupportDelay)
             {
                 arguments.Add("x-delayed-type", connection.Exchange.Type);
-                connection.Exchange.Type = "x-delayed-message";
             }
 
             channel.ExchangeDeclare(
                 connection.Exchange.Name, 
-                connection.Exchange.Type, 
+                connection.Exchange.SupportDelay ? "x-delayed-message" : connection.Exchange.Type,
                 connection.Exchange.Durable, 
                 autoDelete: false,
                 arguments: arguments);

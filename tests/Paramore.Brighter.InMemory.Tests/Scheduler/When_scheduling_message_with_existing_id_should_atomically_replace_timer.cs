@@ -45,7 +45,7 @@ namespace Paramore.Brighter.InMemory.Tests.Scheduler;
 /// for messages with the same scheduler ID, preventing race conditions.
 /// </summary>
 [Trait("Category", "InMemory")]
-[Collection("CommandProcess")]
+[Collection(ThreadPoolSaturatingCollection.Name)]
 public class When_scheduling_message_with_existing_id_should_atomically_replace_timer
 {
     private readonly InMemorySchedulerFactory _schedulerFactory;

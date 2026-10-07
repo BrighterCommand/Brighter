@@ -2,8 +2,8 @@
 
 namespace Paramore.Brighter
 {
-    internal interface IAmATransformLifetimeAsync : IDisposable
+    internal interface IAmATransformLifetimeAsync : IDisposable, IAsyncDisposable
     {
-        void Add(IAmAMessageTransformAsync transform);
+        void Add(Lease<IAmAMessageTransformAsync> lease);
     }
 }

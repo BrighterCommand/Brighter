@@ -1,13 +1,14 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Transactions;
 using Events.Ports.Commands;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.MsSql;
+using SampleInfrastructure;
 
 if (args.Length != 1)
 {
@@ -25,14 +26,22 @@ if (!int.TryParse(args[0], out int repeatCount))
 var builder = Host.CreateApplicationBuilder(args);
 
 //create the gateway
+var connectionString = SampleDatabase.ConnectionString(
+    builder.Configuration.GetConnectionString("Brighter"));
+
 var messagingConfiguration = new RelationalDatabaseConfiguration(
-    @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
-    databaseName: "BrighterSqlQueue",
-    queueStoreTable: "QueueData");
+    connectionString,
+    queueStoreTable: SampleDatabase.QueueTable);
 
 var producerRegistry = new MsSqlProducerRegistryFactory(
         messagingConfiguration,
-        [new Publication()])
+        // A Publication with no Topic throws ConfigurationException from
+        // MsSqlMessageProducerFactory.Create(); the routing key must match the subscription
+        // CompetingReceiverConsole declares.
+        [new Publication<CompetingConsumerCommand>
+        {
+            Topic = new RoutingKey(SampleDatabase.CompetingTopic)
+        }])
     .Create();
 
 builder.Services.AddBrighter()
@@ -43,42 +52,47 @@ builder.Services.AddBrighter()
     {
         configure.ProducerRegistry = producerRegistry;
     })
-    .AutoFromAssemblies();
+    .AutoFromAssemblies([typeof(CompetingConsumerCommand).Assembly])
+    // Producer-side validation of what has been registered above, so a misconfigured publication
+    // fails at startup rather than on the first send.
+    .ValidatePipelines();
 
-builder.Services.AddHostedService<RunCommandProcessor>(provider => new RunCommandProcessor(provider.GetRequiredService<IAmACommandProcessor>(), repeatCount));
+builder.Services.AddHostedService<RunCommandProcessor>(provider => new RunCommandProcessor(
+    provider.GetRequiredService<IAmACommandProcessor>(),
+    provider.GetRequiredService<IHostApplicationLifetime>(),
+    repeatCount));
 
 var host = builder.Build();
 await host.RunAsync();
 
-internal sealed class RunCommandProcessor : IHostedService
+internal sealed class RunCommandProcessor : BackgroundService
 {
     private readonly IAmACommandProcessor _commandProcessor;
+    private readonly IHostApplicationLifetime _lifetime;
     private readonly int _repeatCount;
 
-    public RunCommandProcessor(IAmACommandProcessor commandProcessor, int repeatCount)
+    public RunCommandProcessor(IAmACommandProcessor commandProcessor, IHostApplicationLifetime lifetime, int repeatCount)
     {
         _commandProcessor = commandProcessor;
+        _lifetime = lifetime;
         _repeatCount = repeatCount;
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    // ExecuteAsync rather than StartAsync, and the Yield is what makes that true: without an
+    // await, BackgroundService.StartAsync runs this to completion inside the call that starts
+    // the host.
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using (new TransactionScope(TransactionScopeOption.RequiresNew,
-            new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
-            TransactionScopeAsyncFlowOption.Enabled))
+        await Task.Yield();
+
+        Console.WriteLine($"Sending {_repeatCount} command messages");
+        var sequenceNumber = 1;
+        for (int i = 0; i < _repeatCount && !stoppingToken.IsCancellationRequested; i++)
         {
-            Console.WriteLine($"Sending {_repeatCount} command messages");
-            var sequenceNumber = 1;
-            for (int i = 0; i < _repeatCount; i++)
-            {
-                _commandProcessor.Post(new CompetingConsumerCommand(sequenceNumber++));
-            }
-            // We do NOT complete the transaction here to show that a message is
-            // always queued, whether the transaction commits or aborts!
+            _commandProcessor.Post(new CompetingConsumerCommand(sequenceNumber++));
         }
 
-        await Task.CompletedTask;
+        // Nothing left to do: stop rather than leaving the reader to find Ctrl-C.
+        _lifetime.StopApplication();
     }
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

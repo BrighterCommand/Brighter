@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -40,14 +41,22 @@ namespace Paramore.Brighter
             _factoryMethod = factoryMethod;
         }
 
-        public IAmAMessageTransformAsync Create(Type transformerType)
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType, IAmAScope? scope = null)
         {
-            return _factoryMethod(transformerType);
+            var transform = _factoryMethod(transformerType);
+            return transform is null ? null : Lease<IAmAMessageTransformAsync>.Untracked(transform);
         }
 
-        public void Release(IAmAMessageTransformAsync transformer)
+        public void Release(Lease<IAmAMessageTransformAsync>? lease)
         {
             return;
+        }
+
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease)
+        {
+            return default;
         }
     }
 }

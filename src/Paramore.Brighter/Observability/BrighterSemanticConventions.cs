@@ -51,9 +51,13 @@ public static class BrighterSemanticConventions
     // Operators querying a trace store can filter / aggregate by this value to size the flip impact.
     public const string BoxMigrationSeedRowCount = "brighter.box.migration.seed.rows";
     public const string BoxType = "paramore.brighter.box.type";
+    public const string CausationId = "paramore.brighter.causation_id";
     public const string CeSource = "cloudevents.event_source";
     public const string CeMessageId = "cloudevents.event_id";
     public const string CeVersion = "cloudevents.event_spec_version";
+    public const string CircuitBreakerInstrumentationDomain = "circuit_breaker";
+    public const string CircuitBreakerTopic = "circuit_breaker.topic";
+    public const string CircuitBreakerCooldownCount = "circuit_breaker.cooldown_count";
     public const string ClearMessages = "paramore.brighter.clear_messages";
     public const string ConsumerGroupName = "messaging.consumer.group.name";
     public const string ConversationId = "messaging.message.conversation_id";

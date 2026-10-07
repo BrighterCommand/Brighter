@@ -1,46 +1,72 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    public partial class TransformLifetimeScope : IAmATransformLifetime
+    public partial class TransformLifetimeScope(IAmAMessageTransformerFactory factory) : IAmATransformLifetime
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformLifetimeScope>();
-        private readonly IAmAMessageTransformerFactory _factory;
-        private readonly IList<IAmAMessageTransform> _trackedObjects = new List<IAmAMessageTransform>();
+        private readonly IList<Lease<IAmAMessageTransform>> _trackedObjects = new List<Lease<IAmAMessageTransform>>();
 
-        public TransformLifetimeScope(IAmAMessageTransformerFactory factory)
-        {
-            _factory = factory;
-        }
-        
         public void Dispose()
         {
-            ReleaseTrackedObjects();
-            GC.SuppressFinalize(this);
+            //SuppressFinalize in a finally: the drain can now throw (a Release failure surfaces as an
+            //AggregateException to an explicit Dispose), and if it does the object would otherwise stay
+            //registered for finalization, whose retry only re-runs the already-drained list — wasted work
+            try { ReleaseTrackedObjects(); }
+            finally { GC.SuppressFinalize(this); }
         }
 
         ~TransformLifetimeScope()
         {
-            ReleaseTrackedObjects();
+            //a finalizer must never let an exception escape — that terminates the process. Releasing a
+            //transform whose scope holds an IAsyncDisposable-only service through the synchronous path can
+            //throw (netstandard2.0 only: MS DI's sync scope Dispose throws for an async-only service; net8+
+            //takes the async branch first), as can a user Dispose.
+            //Finalization order is non-deterministic, so this scope can be finalized before its owning
+            //pipeline disposes it. Release best-effort here and swallow; an explicit Dispose still
+            //surfaces the exception to the owner.
+            try { ReleaseTrackedObjects(); }
+            catch { /* swallowed: a finalizer must not throw */ }
         }
         
-        public void Add(IAmAMessageTransform instance)
+        public void Add(Lease<IAmAMessageTransform> lease)
         {
-            _trackedObjects.Add(instance);
-            Log.TrackingInstance(s_logger, instance.GetHashCode(), instance.GetType());
+            _trackedObjects.Add(lease);
+            Log.TrackingInstance(s_logger, lease.Instance.GetHashCode(), lease.Instance.GetType());
          }
         
         private void ReleaseTrackedObjects()
         {
-              _trackedObjects.Each((trackedItem) =>
-              {
-                  _factory.Release(trackedItem);
-                  Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
-              });
+            //drain as we go: remove each transform before releasing it, so a Release that throws (MS DI's
+            //sync scope Dispose throws for an IAsyncDisposable-only transform, and a user Dispose may throw)
+            //neither leaves the remaining transforms unreleased on a finalizer retry nor lets an
+            //already-released transform be released again — the retry re-runs this over the shortened list.
+            //Remove from the tail so each removal is O(1); release order is irrelevant, the transforms are independent.
+            //A throwing Release is caught per item so the drain completes deterministically rather than
+            //aborting and leaving the remaining transforms to the GC-timed finalizer; the collected failures
+            //surface together as an AggregateException to an explicit Dispose (the finalizer swallows it).
+            List<Exception>? releaseExceptions = null;
+            while (_trackedObjects.Count > 0)
+            {
+                var lastIndex = _trackedObjects.Count - 1;
+                var trackedItem = _trackedObjects[lastIndex];
+                _trackedObjects.RemoveAt(lastIndex);
+                try
+                {
+                    factory.Release(trackedItem);
+                    Log.ReleasingHandlerInstance(s_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
+                }
+                catch (Exception ex)
+                {
+                    (releaseExceptions ??= new List<Exception>()).Add(ex);
+                }
+            }
+
+            if (releaseExceptions is not null)
+                throw new AggregateException(releaseExceptions);
         }
 
         private static partial class Log

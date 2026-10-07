@@ -34,14 +34,13 @@ env:
 
 jobs:
   build:
-    # Increased from 30 to 40 minutes to prevent cancellations during test execution.
-    # The build includes compilation + running 3 test suites (Core.Tests, Extensions.Tests,
-    # Transforms.Adaptors.Tests) which can take 20-30 minutes in slower CI environments.
+    # Compilation plus four test suites: Core.Tests, Extensions.Tests, Transforms.Adaptors.Tests
+    # and Test.Generator.Tests. 60 minutes leaves room for a cold NuGet cache on a slow runner.
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -50,6 +49,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - name: AWS Cleanup Offline Tests
+        run: bash test_clean_failed_tests_aws_assets_offline.sh
       - uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
@@ -58,6 +59,52 @@ jobs:
             Linux-nuget-
       - name: Build
         run: dotnet build --configuration Release
+      # The generator's own tests include the audit that compares the Generated/ tree with what
+      # the checked-in configurations would produce. It has to run somewhere to be worth having,
+      # and it runs first: it needs no infrastructure and takes seconds, so generator drift is
+      # reported before the long suites rather than after them - or not at all, if one fails.
+      - name: Test Generator Tests
+        # One framework rather than both: the audit walks the repository tree, and neither the walk
+        # nor the generator it plans with is framework-sensitive, so the second run re-answers a
+        # question already answered. net10.0 matches what generate-test.sh runs.
+        run: dotnet test tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build -f net10.0
+
+      # Every shipped gateway's channel factory declaration sweep (ADR 0073). Construction-only and
+      # needs no broker, so it runs here rather than in a transport job - MQTT's job filters to
+      # Category=MQTT, Kafka's to Category=Kafka, and the RocketMQ job is commented out entirely, so
+      # an untagged test in those projects would never run there. This step's non-vacuity depends on
+      # the generated-tree audit above: a --filter that matches nothing does not fail the run, so a
+      # missing generated file would leave this step green while guarding eleven assemblies instead
+      # of twelve - do not remove or reorder that step.
+      - name: Gateway Channel Factory Declaration Sweeps
+        run: |
+          dotnet test tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" -c Release --no-restore --logger GitHubActions --no-build
+
+      # The RocketMQ gateway's broker-free tests. rocketmq-ci is commented out below, so without
+      # this step the whole RocketMQ suite - and with it the builder-block extraction in
+      # RocketMqMessagePublisher - is executed by nothing in CI. The filter is what keeps the step
+      # honest: the other 47 tests in that project need a live broker and would fail here.
+      - name: RocketMQ Broker-Free Tests
+        run: dotnet test tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "Category=RocketMQBrokerFree" -c Release --logger GitHubActions --no-restore --no-build
+
+      # These producer race tests use in-memory clients and do not need the Azure job's secrets.
+      - name: Azure Service Bus Creation Race Tests
+        run: dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "FullyQualifiedName~AzureServiceBusProducerCreationRaceTests" -c Release --logger GitHubActions --no-restore --no-build
+
+      - name: Azure Configuration Tests
+        run: dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "FullyQualifiedName~Paramore.Brighter.AzureServiceBus.Tests.Configuration." -c Release --logger GitHubActions --no-restore --no-build
+
       - name: Core Tests
         run: |
           dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --logger GitHubActions --no-restore --no-build
@@ -96,7 +143,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -114,7 +161,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -132,7 +179,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -150,7 +197,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -162,10 +209,9 @@ jobs:
 
   redis-ci:
     runs-on: ubuntu-latest
-    # Increased from 5 to 8 minutes to accommodate slower CI environments
-    # and service initialization time. This provides adequate buffer without
-    # being excessive for typical test execution (P95 < 5 min observed).
-    timeout-minutes: 8
+    # Raised from 8 to 15 when the generated conformance suite landed. Run 34214484655 measured
+    # this job at 7.0 minutes against the old 8-minute cap - the closest of any job to timing out.
+    timeout-minutes: 15
     needs: [build]
 
     services:
@@ -182,7 +228,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -194,7 +240,7 @@ jobs:
 
   mqtt-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
 
     services:
@@ -207,7 +253,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -219,12 +265,12 @@ jobs:
 
   rabbitmq-async-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
 
     services:
       rabbitmq:
-        image: brightercommand/rabbitmq:4.2-management-delay
+        image: rabbitmq:4.2-management
         ports:
         - 5672:5672 
         # needed because the rabbitmq container does not provide a healthcheck
@@ -237,22 +283,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
             10.0.x
       - name: RMQ Async Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS&Category!=RMQNativeDelay" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
   rabbitmq-sync-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
 
     services:
       rabbitmq:
-        image: brightercommand/rabbitmq:3.13-management-delay
+        image: rabbitmq:3.13-management
         ports:
         - 5672:5672 
         # needed because the rabbitmq container does not provide a healthcheck
@@ -265,13 +311,38 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
             10.0.x
       - name: RMQ Sync Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS&Category!=RMQNativeDelay" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+
+  rabbitmq-native-delay-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+      - name: Start RabbitMQ with the delayed-message plugin
+        run: docker compose -f docker-compose-rmq-native-delay.yaml up --build -d --wait
+      - name: Native delay transport tests
+        run: |
+          dotnet test tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Category=RMQNativeDelay" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
+          dotnet test tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Category=RMQNativeDelay" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
+      - name: Broker logs
+        if: failure()
+        run: docker compose -f docker-compose-rmq-native-delay.yaml logs
+      - name: Stop broker
+        if: always()
+        run: docker compose -f docker-compose-rmq-native-delay.yaml down -v
 
   kafka-ci:
     runs-on: ubuntu-latest
@@ -283,29 +354,31 @@ jobs:
       CONFLUENT_SASL_USERNAME: ${{ secrets.CONFLUENT_SASL_USERNAME }}
 
     services:
-      zookeeper:
-        image: confluentinc/cp-zookeeper:latest
-        ports: 
-          - 2181:2181
-        env:
-         ZOOKEEPER_CLIENT_PORT: 2181
-         ZOOKEEPER_TICK_TIME: 2000
-         ALLOW_ANONYMOUS_LOGIN: yes
       kafka:
-        image: confluentinc/cp-enterprise-kafka:latest
+        image: apache/kafka:4.0.2
         ports:
           - 9092:9092
         env:
-          KAFKA_BROKER_ID: 1
-          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+          # 1. KRaft Specific Configurations
+          KAFKA_NODE_ID: 1
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+          CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk' # Required by Docker to format KRaft storage
+          
+          # 2. Updated Listeners to include the KRaft Controller
+          KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093
           KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          
+          # 3. Your Existing Configurations
           KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
           KAFKA_DELETE_TOPIC_ENABLE: "true"
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+          KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       schema-registry:
-        image: confluentinc/cp-schema-registry:latest
+        image: confluentinc/cp-schema-registry:8.0.6
         ports:
           - 8081:8081
         env:
@@ -338,7 +411,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
     - name: Setup dotnet
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@v6
       with:
         dotnet-version: |
           9.0.x
@@ -350,7 +423,7 @@ jobs:
 
   postgres-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
 
     services:
@@ -369,7 +442,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -381,7 +454,7 @@ jobs:
 
   sqlserver-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
 
     services:
@@ -395,7 +468,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -423,7 +496,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -454,7 +527,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -467,7 +540,7 @@ jobs:
           dotnet test ./tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
   aws-mock-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 20
     needs: build
     env:
       AWS_SERVICE_URL: http://localhost:4566
@@ -490,7 +563,7 @@ jobs:
           filter: tree:0
           show-progress: false
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -501,14 +574,24 @@ jobs:
           key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
           restore-keys: |
             Linux-nuget-
+      # LiveAWS marks the tests that stand infrastructure up in a real account and then look for
+      # it. Localstack cannot answer for them, so they are filtered out here and run in aws-ci.
+      # Note that aws-ci is gated on the PR not coming from a fork, so on a fork PR these tests
+      # run in neither job. The offline ProviderResourceTrackingTests cover the same providers'
+      # tracking without an account, and are what a fork PR is checked against.
       - name: AWS Tests
         run: |
-          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "LiveAWS!=true" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "LiveAWS!=true" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
   aws-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    # AWS.Tests (v3) only; AWS.V4.Tests runs in aws-v4-ci, in parallel. Each project carries live
+    # teardown tests that poll a deletion to a deadline — SQS documents a deleted queue as visible
+    # for up to sixty seconds, so the waiting is the test rather than slack in it. With spec 0037's
+    # delivery-budget conformance tests each project takes about 13 minutes against real AWS, so the
+    # two no longer fit one after the other inside 20.
+    timeout-minutes: 20
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
@@ -516,13 +599,13 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: us-west-2
+      AWS_REGION: eu-west-1
       AWS_DEFAULT_OUTPUT: json    
 
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -535,10 +618,44 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-1
+      # LiveAWS!=true is aws-mock-ci's filter, not this job's: the tests it excludes are the ones
+      # that need a real account, which is exactly what this job has. Only Fragile!=CI applies here.
       - name: AWS SNS, SQS and S3 Tests
-        run: |
-          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+
+  aws-v4-ci:
+    runs-on: ubuntu-latest
+    # AWS.V4.Tests, split out of aws-ci so the two SDK suites run in parallel; see aws-ci.
+    timeout-minutes: 20
+    if: |
+      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
+    needs: [build]
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: eu-west-1
+      AWS_DEFAULT_OUTPUT: json
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+      # Only Fragile!=CI applies here, as in aws-ci: this job has a real account.
+      - name: AWS V4 SNS, SQS and S3 Tests
+        run: dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
   aws-scheduler-ci:
     runs-on: ubuntu-latest
@@ -550,13 +667,13 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: us-west-2
+      AWS_REGION: eu-west-1
       AWS_DEFAULT_OUTPUT: json
 
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -582,7 +699,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -594,7 +711,7 @@ jobs:
 
   azure-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
@@ -604,7 +721,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -636,7 +753,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -671,7 +788,7 @@ jobs:
           version: '>= 363.0.0'
       
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             10.0.x
@@ -679,69 +796,111 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
         
+      # The Pull and PullOrdering messaging tests run in gcp-emulator-ci instead: against real Pub/Sub
+      # their DLQ, requeue and delivery-count tests take over an hour, far past this job's cap.
       - name: GCP Tests
-        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --blame-hang-timeout 15min --framework net10.0
-        
-#  TODO: Rafael Andrade is working on how to run RocketMQ on GHA
-#  rocketmq-ci:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 5
-#    needs: [build]
-#    services:
-#      rocketmq-namesrv:
-#        image: apache/rocketmq
-#        ports:
-#          - 9876:9876
-#        options: >-
-#          --name rmqnamesrv
-#          --hostname rmqnamesrv
-#          --health-cmd "netstat -an | grep 9876"
-#          --health-interval 20s
-#          --health-timeout 10s
-#          --health-retries 10
-#
-#      rocketmq-broker:
-#        image: apache/rocketmq
-#        ports:
-#          - 10909:10909
-#          - 10911:10911
-#          - 10912:10912
-#        options: >-
-#          --name rmqbroker
-#          --hostname rmqbroker
-#          --link rmqnamesrv:rmqnamesrv
-#          --health-cmd "netstat -an | grep 10911"
-#          --health-interval 20s
-#          --health-timeout 10s
-#          --health-retries 10
-#        env:
-#          NAMESRV_ADDR: "rocketmq-namesrv:9876"
-#          BROKER_CLUSTER_NAME: "DefaultCluster"
-#          BROKER_NAME: "broker-a"
-#          BROKER_ID: "0"
-#          AUTO_CREATE_TOPIC_ENABLE: "true"  # Auto-create topics
-#          
-#    steps:
-#      - uses: actions/checkout@v7
-#        with:
-#          fetch-depth: 0 # Required to fetch the Git tags
-#          filter: tree:0
-#          show-progress: false 
-#          
-#      - name: Wait for RocketMQ to be ready
-#        run: |
-#          sleep 15
-#          echo "RocketMQ should be ready now"
-#          
-#      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v5
-#        with:
-#          dotnet-version: |
-#            8.0.x
-#            9.0.x
-#            
-#      - name: Install dependencies
-#        run: dotnet restore
-#        
-#      - name: RocketMQ Tests
-#        run: dotnet test ./tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Fragile!=CI&Requires!=PubSubEmulator&FullyQualifiedName!~Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.&FullyQualifiedName!~Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering." --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --blame-hang-timeout 15min --framework net10.0
+
+  gcp-emulator-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [build]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            10.0.x
+
+      - name: Start the Pub/Sub emulator
+        run: |
+          docker run -d --name gcp-pubsub-emulator -p 8085:8085 \
+            gcr.io/google.com/cloudsdktool/cloud-sdk:emulators \
+            gcloud beta emulators pubsub start --host-port=0.0.0.0:8085 --project=brighter-test
+          for i in $(seq 1 60); do
+            docker logs gcp-pubsub-emulator 2>&1 | grep -q "Server started" && exit 0
+            sleep 2
+          done
+          docker logs gcp-pubsub-emulator
+          exit 1
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      - name: GCP Pull Tests (emulator)
+        env:
+          PUBSUB_EMULATOR_HOST: localhost:8085
+          GOOGLE_CLOUD_PROJECT: brighter-test
+        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "(FullyQualifiedName~Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.|FullyQualifiedName~Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering.)&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --blame-hang-timeout 15min --framework net10.0
+
+  rocketmq-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [build]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # GHA's native `services:` block cannot sequence startup, restart a container, or run the
+      # topic-creation step this image needs, so the stack is brought up the same way as
+      # gcp-emulator-ci - with Docker commands in a step - rather than as `services:`. The
+      # reference compose file owns the role commands, image pin, healthchecks and topic list, so
+      # this job stays in step with local dev by construction instead of duplicating them here.
+      - name: Start the RocketMQ nameserver, broker and proxy
+        run: docker compose -f docker-compose-rocketmq.yaml up -d nameserver broker proxy
+
+      - name: Create RocketMQ topics
+        run: docker compose -f docker-compose-rocketmq.yaml up --exit-code-from create-topic create-topic
+
+      # The proxy can still crash if it started before the broker had registered with the
+      # nameserver, not just before the topics existed - `restart: on-failure:5` in the compose
+      # file already brings it back up, but a final explicit restart here, after topics are known
+      # to exist, is the cheapest way to be sure it is serving before the tests run.
+      - name: Restart the proxy now that topics exist
+        run: docker compose -f docker-compose-rocketmq.yaml restart proxy
+
+      - name: Wait for the proxy to serve
+        run: |
+          echo "Waiting for the RocketMQ proxy..."
+          max_attempts=30
+          attempt=0
+          # Port 8081 is the proxy's gRPC/HTTP2 endpoint, not plain HTTP - a curl GET gets a real
+          # response (Http2Exception, confirmed live) rather than "connection refused", so it never
+          # reports ready. A bare TCP connect, as used for the compose healthchecks, is enough to
+          # know the proxy is accepting connections.
+          until echo > /dev/tcp/localhost/8081 2>/dev/null; do
+            attempt=$((attempt + 1))
+            if [ $attempt -ge $max_attempts ]; then
+              echo "Proxy failed to become ready after $max_attempts attempts"
+              docker compose -f docker-compose-rocketmq.yaml logs proxy
+              exit 1
+            fi
+            echo "Attempt $attempt/$max_attempts: proxy not ready yet, waiting 5 seconds..."
+            sleep 5
+          done
+          echo "Proxy is ready!"
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      # --framework net10.0: every generated test uses a fixed topic name, so running both TFMs
+      # in turn against this same live broker is a re-run without tearing the stack down, which
+      # pollutes every topic's second pass (confirmed live: cross-run message-ID mismatches on
+      # the net9.0 → net10.0 transition). Pinned to one TFM, matching gcp-emulator-ci and the GCP
+      # Pull jobs for the same reason.
+      - name: RocketMQ Tests
+        run: dotnet test ./tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --framework net10.0
+
+      - name: Tear down the RocketMQ stack
+        if: always()
+        run: docker compose -f docker-compose-rocketmq.yaml down -v

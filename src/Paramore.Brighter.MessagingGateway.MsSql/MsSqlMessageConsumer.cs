@@ -5,11 +5,15 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
-    public partial class MsSqlMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    public partial class MsSqlMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
     {
+        /// <inheritdoc />
+        public MessagingSystem MessagingSystem => MessagingSystem.MsSql;
+
         private readonly string _topic;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageConsumer>();
         private readonly MsSqlMessageQueue<Message> _sqlMessageQueue;
@@ -381,7 +385,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             message.Header.Bag["originalTopic"] = message.Header.Topic.Value;
             message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
 
             if (reason == null) return;
 

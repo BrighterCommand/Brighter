@@ -4,6 +4,6 @@ namespace Paramore.Brighter
 {
     internal interface IAmATransformLifetime : IDisposable
     {
-        void Add(IAmAMessageTransform transform);
+        void Add(Lease<IAmAMessageTransform> lease);
     }
 }

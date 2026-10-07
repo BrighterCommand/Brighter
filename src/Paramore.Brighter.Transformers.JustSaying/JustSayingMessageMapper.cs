@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transformers.JustSaying.Extensions;
 using Paramore.Brighter.Transformers.JustSaying.JsonConverters;
 using Paramore.Brighter.Transforms.Attributes;
@@ -29,14 +28,6 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
     // ReSharper disable once StaticMemberInGenericType
     private static readonly ContentType s_justSaying = new("application/json");
 
-    /// <summary>
-    /// Initialize <see cref="JustSayingMessageMapper{TMessage}"/>
-    /// </summary>
-    public JustSayingMessageMapper()
-    {
-        RegisterConverters.Register();
-    }
-    
     /// <inheritdoc cref="IAmAMessageMapper{TRequest}.Context" />
     public IRequestContext? Context { get; set; }
 
@@ -93,14 +84,14 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
                 Bag = defaultHeaders.Merge(Context.GetHeaders())
             },
             new MessageBody(
-                JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options),
+                JsonSerializer.SerializeToUtf8Bytes(request, JustSayingSerialisationOptions.Options),
                 s_justSaying));
     }
 
     private Message GenericToMessage(TMessage request, MessageType messageType, Publication publication)
     {
         var defaultHeaders = publication.DefaultHeaders ?? new Dictionary<string, object>();
-        var doc = JsonSerializer.SerializeToNode(request, JsonSerialisationOptions.Options)!;
+        var doc = JsonSerializer.SerializeToNode(request, JustSayingSerialisationOptions.Options)!;
         var messageId = GetId(doc.GetId(nameof(IJustSayingRequest.Id)));
         var correlationId = GetCorrelationId(doc.GetId(nameof(IJustSayingRequest.Conversation))); 
         var timestamp = GetTimeStamp(doc.GetDateTimeOffset(nameof(IJustSayingRequest.TimeStamp)));
@@ -126,7 +117,7 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
                 Bag = defaultHeaders.Merge(Context.GetHeaders())
             },
             new MessageBody(
-                doc.ToJsonString(JsonSerialisationOptions.Options),
+                doc.ToJsonString(JustSayingSerialisationOptions.Options),
                 s_justSaying));
     }
     
@@ -222,9 +213,9 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
     [JustSayingDecompress(0)]
     public TMessage MapToRequest(Message message)
 #if NETSTANDARD2_0
-        => JsonSerializer.Deserialize<TMessage>(message.Body.Memory.ToArray(), JsonSerialisationOptions.Options)!;
+        => JsonSerializer.Deserialize<TMessage>(message.Body.Memory.ToArray(), JustSayingSerialisationOptions.Options)!;
 #else
-        => JsonSerializer.Deserialize<TMessage>(message.Body.Memory.Span, JsonSerialisationOptions.Options)!;
+        => JsonSerializer.Deserialize<TMessage>(message.Body.Memory.Span, JustSayingSerialisationOptions.Options)!;
 #endif
 }
 

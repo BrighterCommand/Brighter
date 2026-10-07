@@ -55,6 +55,7 @@ public class RocketConsumerFactoryDlqTests : IDisposable
             subscriptionName: new SubscriptionName("test-subscription"),
             channelName: new ChannelName("test-channel"),
             routingKey: new RoutingKey("orders"),
+            consumerGroup: Guid.NewGuid().ToString(),
             messagePumpType: MessagePumpType.Reactor,
             deadLetterRoutingKey: dlqRoutingKey,
             invalidMessageRoutingKey: invalidRoutingKey

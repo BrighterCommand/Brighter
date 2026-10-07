@@ -1,0 +1,2 @@
+Records the approval already given for the documented diagnosis, regression test, and scoped fix.
+Added retrospectively; the standalone test-first path was used, without a separate bugfix:confirm step.

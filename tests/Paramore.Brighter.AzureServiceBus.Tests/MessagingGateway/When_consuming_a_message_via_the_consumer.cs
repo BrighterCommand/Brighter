@@ -38,11 +38,21 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             _channelName = "test-channel";
             _topicName = $"Consumer-Tests-{Guid.NewGuid()}";
             var routingKey = new RoutingKey(_topicName);
+
+            _subscriptionConfiguration = new AzureServiceBusSubscriptionConfiguration
+            {
+                DeadLetteringOnMessageExpiration = true,
+                DefaultMessageTimeToLive = TimeSpan.FromDays(4),
+                LockDuration = TimeSpan.FromMinutes(3),
+                MaxDeliveryCount = 7,
+                SqlFilter = "1=1"
+            };
             
             AzureServiceBusSubscription<ASBTestCommand> subscription = new(
                 subscriptionName: new SubscriptionName(_channelName),
                 channelName: new ChannelName(_channelName),
-                routingKey: routingKey
+                routingKey: routingKey,
+                subscriptionConfiguration: _subscriptionConfiguration
             );
 
             _correlationId = Guid.NewGuid().ToString();
@@ -80,20 +90,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
             );
 
-            _subscriptionConfiguration = new AzureServiceBusSubscriptionConfiguration
-            {
-                DeadLetteringOnMessageExpiration = true,
-                DefaultMessageTimeToLive = TimeSpan.FromDays(4),
-                LockDuration = TimeSpan.FromMinutes(3),
-                MaxDeliveryCount = 7,
-                SqlFilter = "1=1"
-            };
-
             var clientProvider = ASBCreds.ASBClientProvider;
             _administrationClient = new AdministrationClientWrapper(clientProvider);
-            _administrationClient.CreateSubscriptionAsync(_topicName, _channelName, _subscriptionConfiguration)
-                .GetAwaiter()
-                .GetResult();
 
             _serviceBusClient = clientProvider.GetServiceBusClient();
 

@@ -79,29 +79,49 @@ public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection)
         // Check if the consumer should use dedicated Pull mode
         if (pubSubSubscription.SubscriptionMode == SubscriptionMode.Pull)
         {
-            // Create a new, non-shared consumer that uses the Pull API for each request
-            return new GcpPullMessageConsumer(_connection, subscriptionName,
-                pubSubSubscription.BufferSize, pubSubSubscription.TimeProvider);
+            // Create a new, non-shared consumer that uses the Pull API for each request,
+            // wiring the Brighter rejection routing keys so Reject routes rather than discards.
+            return new GcpPullMessageConsumer(
+                _connection,
+                subscriptionName,
+                pubSubSubscription.BufferSize,
+                pubSubSubscription.TimeProvider,
+                deadLetterRoutingKey: pubSubSubscription.DeadLetterRoutingKey,
+                invalidMessageRoutingKey: pubSubSubscription.InvalidMessageRoutingKey,
+                makeChannels: pubSubSubscription.MakeChannels);
         }
 
         // If not Pull, use Stream mode. Stream mode consumers are shared per subscription to manage
-        // a single long-lived gRPC streaming connection.
-        var consumer = s_consumers.GetOrAdd(pubSubSubscription, sub => new GcpStreamConsumer(CreateSubscriberClient(
-            subscriptionName,
-            sub.BufferSize * sub.NoOfPerformers,
-            sub.StreamingConfiguration ?? _connection.StreamConfiguration)));
+        // a single long-lived gRPC streaming connection, and started by the first channel to use them.
+        // A consumer whose last channel has gone has a stopped client that cannot restart, so it is
+        // evicted and replaced.
+        var consumer = s_consumers.GetOrAdd(pubSubSubscription, sub => CreateStreamConsumer(sub, subscriptionName));
+        while (!consumer.TryStart())
+        {
+            // remove only this stopped consumer, never a replacement another channel has just added
+            ((ICollection<KeyValuePair<GcpPubSubSubscription, GcpStreamConsumer>>)s_consumers)
+                .Remove(new KeyValuePair<GcpPubSubSubscription, GcpStreamConsumer>(pubSubSubscription, consumer));
+            consumer = s_consumers.GetOrAdd(pubSubSubscription, sub => CreateStreamConsumer(sub, subscriptionName));
+        }
 
-        // Start the shared stream consumer to begin receiving messages from Google Cloud Pub/Sub
-        consumer.Start();
-
-        // Return a wrapper consumer that delegates to the shared stream consumer.
-        // Each Brighter 'performer' will get its own wrapper consumer.
+        // Return a wrapper consumer that delegates to the shared stream consumer, wiring the
+        // Brighter rejection routing keys so Reject routes rather than discards.
         return new GcpPubSubStreamMessageConsumer(
             _connection,
             consumer,
             subscriptionName,
-            pubSubSubscription.TimeProvider);
+            pubSubSubscription.TimeProvider,
+            deadLetterRoutingKey: pubSubSubscription.DeadLetterRoutingKey,
+            invalidMessageRoutingKey: pubSubSubscription.InvalidMessageRoutingKey,
+            makeChannels: pubSubSubscription.MakeChannels);
     }
+
+    private GcpStreamConsumer CreateStreamConsumer(GcpPubSubSubscription subscription,
+        Google.Cloud.PubSub.V1.SubscriptionName subscriptionName) =>
+        new(CreateSubscriberClient(
+            subscriptionName,
+            subscription.BufferSize * subscription.NoOfPerformers,
+            subscription.StreamingConfiguration));
 
     private Google.Cloud.PubSub.V1.SubscriberClient CreateSubscriberClient(Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
         long maxInFlightMessages,
@@ -110,9 +130,12 @@ public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection)
         var builder = new SubscriberClientBuilder
         {
             SubscriptionName = subscriptionName,
-            Credential = _connection.Credential
+            Credential = _connection.Credential,
+            Settings = new SubscriberClient.Settings()
         };
 
+        // The connection's configuration applies to every subscription; the subscription's own runs after it, so it wins
+        _connection.StreamConfiguration?.Invoke(builder);
         configure?.Invoke(builder);
 
         builder.Settings ??= new SubscriberClient.Settings();

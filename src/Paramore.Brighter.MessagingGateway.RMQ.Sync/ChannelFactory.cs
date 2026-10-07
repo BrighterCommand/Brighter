@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -58,6 +59,7 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
     /// <param name="subscription">The subscription details for the channel.</param>
     /// <returns>A synchronous RabbitMQ channel instance.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an RmqSubscription.</exception>
+    /// <exception cref="ChannelFailureException">Thrown when the queue cannot be created, bound or validated, as the subscription's <see cref="Subscription.MakeChannels"/> requires.</exception>
     public IAmAChannelSync CreateSyncChannel(Subscription subscription)
     {
         RmqSubscription? rmqSubscription = subscription as RmqSubscription;
@@ -65,6 +67,7 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
             throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
 
         var messageConsumer = _messageConsumerFactory.Create(rmqSubscription);
+        EnsureChannelExists((RmqMessageConsumer)messageConsumer, subscription);
 
         return new Channel(
             channelName: subscription.ChannelName,
@@ -108,5 +111,20 @@ public class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithSchedule
         );
 
         return Task.FromResult<IAmAChannelAsync>(channel);
+    }
+
+    private static void EnsureChannelExists(RmqMessageConsumer messageConsumer, Subscription subscription)
+    {
+        try
+        {
+            messageConsumer.EnsureChannelExists();
+        }
+        catch (Exception e)
+        {
+            messageConsumer.Dispose();
+            if (e is ConfigurationException) throw;
+            throw new ChannelFailureException(
+                $"RMQ ChannelFactory: could not provision channel {subscription.ChannelName.Value}, see inner exception for details", e);
+        }
     }
 }

@@ -26,13 +26,15 @@ internal static class Parser
         HeaderNames.DataSchema,
         HeaderNames.TraceParent,
         HeaderNames.TraceState,
-        HeaderNames.Baggage
+        HeaderNames.Baggage,
+        HeaderNames.PartitionKey,
+        "googclient_deliveryattempt"
     };
 
 
     public static Message ToBrighterMessage(GcpStreamMessage receivedMessage)
     {
-        var partitionKey = receivedMessage.Message.OrderingKey;
+        var partitionKey = ReadPartitionKey(receivedMessage.Message);
         var topic = ReadTopic(receivedMessage.Message.Attributes);
         var messageId = ReadMessageId(receivedMessage.Message.Attributes);
         var handleCount = ReadHandleCount(receivedMessage.Message.Attributes);
@@ -77,6 +79,14 @@ internal static class Parser
 
         messageHeader.Bag["ReceiptHandle"] = receivedMessage;
 
+        // R-1/R-2/R-3 (ADR 0077): present the broker's own delivery counter, normalised so a first
+        // delivery reads 0, unless the message is a Brighter-routed rejection copy (R-28), in which
+        // case the stamped header count is kept. Runs after the bag is filled so the rejectionReason
+        // discriminator (if present) is visible to Resolve. No allocation, no RPC (NFR-1, NFR-2):
+        // GetDeliveryAttempt reads the already-received PubsubMessage's own attribute.
+        messageHeader.HandledCount = DeliveryCount.Resolve(
+            handleCount, PubsubExtensions.GetDeliveryAttempt(receivedMessage.Message), messageHeader.Bag);
+
         var body = new MessageBody(receivedMessage.Message.Data.ToByteArray());
         return new Message(messageHeader, body);
     }
@@ -84,7 +94,7 @@ internal static class Parser
     public static Message ToBrighterMessage(ReceivedMessage receivedMessage)
     {
         var receiptHandle = receivedMessage.AckId;
-        var partitionKey = receivedMessage.Message.OrderingKey;
+        var partitionKey = ReadPartitionKey(receivedMessage.Message);
         var topic = ReadTopic(receivedMessage.Message.Attributes);
         var messageId = ReadMessageId(receivedMessage.Message.Attributes);
         var handleCount = ReadHandleCount(receivedMessage.Message.Attributes);
@@ -129,9 +139,27 @@ internal static class Parser
 
         messageHeader.Bag["ReceiptHandle"] = receiptHandle;
 
+        // R-1/R-2/R-3 (ADR 0077): present the broker's own delivery counter, normalised so a first
+        // delivery reads 0, unless the message is a Brighter-routed rejection copy (R-28), in which
+        // case the stamped header count is kept. Runs after the bag is filled so the rejectionReason
+        // discriminator (if present) is visible to Resolve. No allocation, no RPC (NFR-1, NFR-2):
+        // DeliveryAttempt is already on the ReceivedMessage the Pull call returned.
+        messageHeader.HandledCount = DeliveryCount.Resolve(handleCount, receivedMessage.DeliveryAttempt, messageHeader.Bag);
+
         var body = new MessageBody(receivedMessage.Message.Data.ToByteArray());
 
         return new Message(messageHeader, body);
+    }
+
+    private static string ReadPartitionKey(PubsubMessage message)
+    {
+        // A message from a producer that predates the partition key attribute carries its key only as the ordering key
+        if (message.Attributes.TryGetValue(HeaderNames.PartitionKey, out var partitionKey))
+        {
+            return partitionKey;
+        }
+
+        return message.OrderingKey;
     }
 
     private static RoutingKey ReadTopic(MapField<string, string> attributes)
@@ -289,11 +317,14 @@ internal static class Parser
         return baggage;
     }
 
-    public static PubsubMessage ToPubSubMessage(Message message)
+    public static PubsubMessage ToPubSubMessage(Message message, bool enableMessageOrdering)
     {
+        // The Google client refuses an ordering key unless message ordering is enabled; the partition key attribute
+        // carries the key either way
         var pubSubMessage = new PubsubMessage
         {
-            Data = ByteString.CopyFrom(message.Body.Memory.Span), OrderingKey = message.Header.PartitionKey
+            Data = ByteString.CopyFrom(message.Body.Memory.Span),
+            OrderingKey = enableMessageOrdering ? message.Header.PartitionKey : string.Empty
         };
 
         AddHeaders(pubSubMessage.Attributes, message);
@@ -305,7 +336,9 @@ internal static class Parser
         headers.Add(HeaderNames.Id, message.Header.MessageId.Value);
         headers.Add(HeaderNames.Topic, message.Header.Topic.Value);
         headers.Add(HeaderNames.HandledCount, message.Header.HandledCount.ToString());
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         headers.Add(HeaderNames.MessageType, message.Header.MessageType.ToString());
+#pragma warning restore CS0618
         headers.Add(HeaderNames.SpecVersion, message.Header.SpecVersion);
         headers.Add(HeaderNames.Source, message.Header.Source.ToString());
         headers.Add(HeaderNames.Timestamp, message.Header.TimeStamp.ToRfc3339());
@@ -345,6 +378,11 @@ internal static class Parser
         if (!TraceState.IsNullOrEmpty(message.Header.TraceState))
         {
             headers.Add(HeaderNames.TraceState, message.Header.TraceState.Value);
+        }
+
+        if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
+        {
+            headers.Add(HeaderNames.PartitionKey, message.Header.PartitionKey.Value);
         }
 
         message.Header.Bag.Each(header =>

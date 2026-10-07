@@ -68,26 +68,54 @@ public static class BrighterPipelineValidationExtensions
         builder.Services.TryAddSingleton<IAmATransformerResolvabilityProbe>(
             new ServiceCollectionTransformerResolvabilityProbe(builder.Services));
 
+        builder.Services.TryAddSingleton(sp =>
+        {
+            var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
+            return new ValidationMapperRegistry(mapperRegistryBuilder != null
+                ? () => ServiceCollectionExtensions.MessageMapperRegistry(sp)
+                : null);
+        });
+
         builder.Services.TryAddSingleton<IAmAPipelineValidator>(sp =>
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
                 ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
-            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
+            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, ResolveInboxConfiguration(sp));
 
             var publications = ResolvePublications(sp);
             var subscriptions = ResolveSubscriptions(sp);
             var consumerSpecs = sp.GetServices<ISpecification<Subscription>>();
             var consumerSpecList = consumerSpecs.Any() ? consumerSpecs : null;
 
-            var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
-            var mapperRegistry = mapperRegistryBuilder != null
-                ? ServiceCollectionExtensions.MessageMapperRegistry(sp)
-                : null;
+            var inbox = ResolveInboxConfiguration(sp)?.Inbox;
+            var outbox = sp.GetService<IAmAnOutboxProducerMediator>()?.Outbox;
+
+            var mapperRegistry = sp.GetRequiredService<ValidationMapperRegistry>();
             var transformerProbe = sp.GetService<IAmATransformerResolvabilityProbe>();
 
             return new PipelineValidator(
-                pipelineBuilder, publications, subscriptions, consumerSpecList,
-                providerRegistrations, mapperRegistry, transformerProbe);
+                pipelineBuilder, publications, subscriptions, consumerSpecList, inbox, outbox,
+                providerRegistrations, mapperRegistry.Factory, transformerProbe);
+        });
+
+        // ADR 0074's validator, registered beside the core one — AddSingleton, not TryAdd, because TryAdd
+        // tests the service type and would never add a second implementation of it. The snapshot is
+        // captured here, above the delegate, matching ValidationProviderRegistrations' and
+        // ServiceCollectionTransformerResolvabilityProbe's own ValidatePipelines()-call-time capture point.
+        var registrationSnapshot = new ContainerRegistrationSnapshot(builder.Services);
+        builder.Services.AddSingleton<IAmAPipelineValidator>(sp =>
+        {
+            var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
+                ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
+            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, ResolveInboxConfiguration(sp));
+
+            return new ScopeConfigurationValidator(
+                sp.GetService<IBrighterOptions>(),
+                registrationSnapshot,
+                pipelineBuilder,
+                ResolvePublications(sp),
+                ResolveSubscriptions(sp),
+                sp.GetRequiredService<ValidationMapperRegistry>());
         });
 
         builder.Services.AddSingleton<IHostedService, BrighterValidationHostedService>();
@@ -110,17 +138,17 @@ public static class BrighterPipelineValidationExtensions
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
                 ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
-            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
+            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, ResolveInboxConfiguration(sp));
             var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<PipelineDiagnosticWriter>();
 
             var publications = ResolvePublications(sp);
             var subscriptions = ResolveSubscriptions(sp);
             var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
-            var mapperRegistry = mapperRegistryBuilder != null
-                ? ServiceCollectionExtensions.MessageMapperRegistry(sp)
+            Func<MessageMapperRegistry>? mapperRegistryFactory = mapperRegistryBuilder != null
+                ? () => ServiceCollectionExtensions.MessageMapperRegistry(sp)
                 : null;
 
-            return new PipelineDiagnosticWriter(logger, pipelineBuilder, mapperRegistry, publications, subscriptions);
+            return new PipelineDiagnosticWriter(logger, pipelineBuilder, mapperRegistryFactory, publications, subscriptions);
         });
 
         builder.Services.AddSingleton<IHostedService, BrighterDiagnosticHostedService>();
@@ -144,4 +172,12 @@ public static class BrighterPipelineValidationExtensions
         var subscriptions = consumerOptions?.Subscriptions?.ToList();
         return subscriptions is { Count: > 0 } ? subscriptions : null;
     }
+
+    /// <summary>
+    /// Resolves the global <see cref="InboxConfiguration"/> the runtime pipeline would use, so the
+    /// describe/validate paths inject the same global inbox attribute as <c>Build()</c> and do not drift.
+    /// Returns null when no consumer options are registered (matching the runtime, which receives null too).
+    /// </summary>
+    private static InboxConfiguration? ResolveInboxConfiguration(IServiceProvider sp)
+        => sp.GetService<IAmConsumerOptions>()?.InboxConfiguration;
 }

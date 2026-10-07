@@ -1,13 +1,63 @@
 #!/bin/bash
 # clean_failed_tests_aws_assets.sh
-# Cleans up orphaned AWS test resources identified by the Environment=Test tag.
+# Cleans up orphaned AWS test resources, found two ways: by the Environment=Test tag, and by the
+# naming conventions the AWS test suites use. The name sweep is not a nicety -- the gateway only
+# tags what it creates with Source=Brighter, so most leaked resources carry no Environment=Test
+# tag at all and the tag query alone finds nothing.
+#
+# Operates on the ambient AWS region (AWS_REGION / AWS_DEFAULT_REGION / the configured default).
+# Resources leaked in any other region are invisible to it, so a developer running the tests
+# locally against a different default region needs to run it for that region too.
 #
 # Usage:
-#   ./clean_failed_tests_aws_assets.sh            # delete tagged resources
+#   ./clean_failed_tests_aws_assets.sh            # delete orphaned resources
 #   ./clean_failed_tests_aws_assets.sh --dry-run   # list without deleting
+#
+# Environment:
+#   CLEANUP_PARALLELISM      concurrent age-check/delete workers in the name sweep (default 16)
+#   CLEANUP_MIN_AGE_SECONDS  resources younger than this are left alone (default 3600; 0 disables).
+#                            Must be a whole number of seconds; anything else is refused.
+#   CLEANUP_MAX_DELETE_FAILURES  tolerated failed deletion attempts (default 0; 0-999999999).
+#                            Confirmed already-absent responses do not count as failures.
+#   CLEANUP_TIMEOUT_SECONDS  whole-sweep deadline (default 0 disables; 0-999999999).
+#                            Requires GNU timeout when enabled; includes discovery and AWS calls.
+#                            Exits nonzero on interruption; in-flight outcomes may be unknown.
+#
+# IAM: as well as the delete and list calls, the age guard needs sqs:GetQueueAttributes and --
+# because SNS reports no creation time -- sns:ListTagsForResource and sns:TagResource, which it
+# uses to stamp a topic on first sight and read that stamp back on a later sweep.
+# S3 needs s3:ListAllMyBuckets, plus s3:ListBucket, s3:DeleteObject and s3:DeleteBucket
+# scoped to brightertestbucket-* buckets and their objects. Use AWS CLI v2 with
+# paginated, region-filtered s3api list-buckets support.
 
-# Intentionally omitting -e: individual deletion failures are soft errors handled inline.
+# Continue after individual failures so one error does not prevent the rest of the cleanup.
 set -uo pipefail
+
+TIMEOUT_SECONDS="${CLEANUP_TIMEOUT_SECONDS-0}"
+if [[ ! "$TIMEOUT_SECONDS" =~ ^[0-9]{1,9}$ ]]; then
+    echo "ERROR: CLEANUP_TIMEOUT_SECONDS must be an integer from 0 to 999999999." >&2
+    exit 1
+fi
+TIMEOUT_SECONDS=$((10#$TIMEOUT_SECONDS))
+if [[ "$TIMEOUT_SECONDS" -gt 0 ]]; then
+    if ! command -v timeout >/dev/null 2>&1; then
+        echo "ERROR: CLEANUP_TIMEOUT_SECONDS requires GNU timeout; nothing was deleted." >&2
+        exit 1
+    fi
+    # A separate process group lets timeout signal AWS calls and parallel workers too.
+    CLEANUP_TIMEOUT_SECONDS=0 timeout --signal=TERM --kill-after=5s "${TIMEOUT_SECONDS}s" bash "$0" "$@"
+    CLEANUP_STATUS=$?
+    case "$CLEANUP_STATUS" in
+        124)
+            echo "ERROR: Cleanup deadline exceeded after ${TIMEOUT_SECONDS}s; sweep incomplete." >&2
+            echo "  Remaining resources will be rediscovered next run; in-flight deletion outcomes may be unknown." >&2 ;;
+        137)
+            echo "ERROR: Cleanup was forcibly terminated; sweep incomplete. In-flight deletion outcomes may be unknown." >&2 ;;
+        125|126|127)
+            echo "ERROR: Cleanup supervisor could not complete (exit $CLEANUP_STATUS); sweep incomplete." >&2 ;;
+    esac
+    exit "$CLEANUP_STATUS"
+fi
 
 DRY_RUN=false
 if [[ "${1:-}" == "--dry-run" ]]; then
@@ -15,24 +65,238 @@ if [[ "${1:-}" == "--dry-run" ]]; then
     echo "[DRY RUN] No resources will be deleted"
 fi
 
+MAX_DELETE_FAILURES="${CLEANUP_MAX_DELETE_FAILURES-0}"
+if [[ ! "$MAX_DELETE_FAILURES" =~ ^[0-9]{1,9}$ ]]; then
+    echo "ERROR: CLEANUP_MAX_DELETE_FAILURES must be an integer from 0 to 999999999." >&2
+    exit 1
+fi
+MAX_DELETE_FAILURES=$((10#$MAX_DELETE_FAILURES))
+
+CLEANUP_RESULTS=$(mktemp "${TMPDIR:-/tmp}/brighter-aws-cleanup.XXXXXX") || exit 1
+REPORTING_FAILED=false
+
+# A one-byte append records each completed attempt without a shared read/modify/write counter.
+# Each worker opens the same private file in append mode; aggregation waits for xargs to finish.
+record_cleanup_result() {
+    if ! printf '%s' "$1" >> "$CLEANUP_RESULTS"; then
+        echo "ERROR: Could not record a cleanup result." >&2
+        return 1
+    fi
+}
+
+aws_resource_is_absent() {
+    local service="$1" action="$2" output="$3" line
+    local pattern='^An error occurred \(([A-Za-z0-9_.]+)\) when calling the ([A-Za-z0-9]+) operation:'
+    while IFS= read -r line; do
+        if [[ "$line" =~ $pattern ]]; then
+            case "$service:$action:${BASH_REMATCH[1]}:${BASH_REMATCH[2]}" in
+                sqs:delete-queue:AWS.SimpleQueueService.NonExistentQueue:DeleteQueue|\
+                sqs:delete-queue:QueueDoesNotExist:DeleteQueue|\
+                sqs:get-queue-url:AWS.SimpleQueueService.NonExistentQueue:GetQueueUrl|\
+                sqs:get-queue-url:QueueDoesNotExist:GetQueueUrl|\
+                sns:delete-topic:NotFound:DeleteTopic|\
+                sns:unsubscribe:NotFound:Unsubscribe|\
+                sns:list-subscriptions-by-topic:NotFound:ListSubscriptionsByTopic|\
+                s3api:delete-bucket:NoSuchBucket:DeleteBucket|\
+                scheduler:delete-schedule:ResourceNotFoundException:DeleteSchedule|\
+                scheduler:delete-schedule-group:ResourceNotFoundException:DeleteScheduleGroup|\
+                scheduler:list-schedules:ResourceNotFoundException:ListSchedules)
+                    return 0 ;;
+            esac
+            return 1
+        fi
+    done <<< "$output"
+    return 1
+}
+
+delete_resource() {
+    local description="$1" output status
+    shift
+    if output=$(aws "$@" 2>&1); then
+        record_cleanup_result s || return 1
+        echo "  Deleted $description"
+    else
+        status=$?
+        if aws_resource_is_absent "$1" "$2" "$output"; then
+            record_cleanup_result a || return 1
+            echo "  Already absent: $description"
+        else
+            record_cleanup_result f || return 1
+            printf 'WARNING: failed to delete %s (AWS CLI exit %s):\n%s\n' "$description" "$status" "$output" >&2
+        fi
+    fi
+    # A recorded API failure is not a worker failure: finish the batch, then apply the threshold.
+    return 0
+}
+
+# Discovery output must not turn into deletion arguments when the CLI writes an error instead.
+read_cleanup_resources() {
+    local output status
+    if output=$(aws "$@" 2>&1); then
+        printf '%s\n' "$output"
+    else
+        status=$?
+        if aws_resource_is_absent "$1" "$2" "$output"; then
+            echo None
+            return 0
+        fi
+        record_cleanup_result e || return 1
+        printf 'ERROR: Could not read cleanup resources with %s %s (AWS CLI exit %s):\n%s\n' "$1" "$2" "$status" "$output" >&2
+        return 1
+    fi
+}
+
+finish_cleanup() {
+    local status=$? counts succeeded absent failed errors
+    trap - EXIT
+    if ! counts=$(LC_ALL=C awk '
+        { for (i = 1; i <= length($0); i++) {
+            outcome = substr($0, i, 1)
+            if (outcome == "s") succeeded++
+            else if (outcome == "a") absent++
+            else if (outcome == "f") failed++
+            else errors++
+        }}
+        END { printf "%d %d %d %d\n", succeeded, absent, failed, errors }
+        ' "$CLEANUP_RESULTS"); then
+        echo "ERROR: Could not aggregate cleanup results." >&2
+        counts='0 0 0 1'
+    fi
+    read -r succeeded absent failed errors <<< "$counts"
+    printf 'Deletion summary: attempted=%s succeeded=%s already_absent=%s failed=%s (failure limit=%s)\n' \
+        "$((succeeded + absent + failed))" "$succeeded" "$absent" "$failed" "$MAX_DELETE_FAILURES"
+    if [[ "$failed" -gt "$MAX_DELETE_FAILURES" ]]; then
+        echo "ERROR: Failed deletion attempts exceed CLEANUP_MAX_DELETE_FAILURES." >&2
+        status=1
+    fi
+    if $REPORTING_FAILED || [[ "$errors" -gt 0 ]]; then
+        echo "ERROR: Cleanup discovery or result reporting was incomplete." >&2
+        status=1
+    fi
+    rm -f -- "$CLEANUP_RESULTS" || status=1
+    exit "$status"
+}
+trap finish_cleanup EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
+export CLEANUP_RESULTS
+export -f record_cleanup_result aws_resource_is_absent delete_resource
+
 # --- Helper: delete all schedules in a given group ---
 # AWS CLI v2 auto-paginates by default, so all schedules are returned across pages.
 delete_schedules_in_group() {
     local group_name="$1"
     local schedules
-    schedules=$(aws scheduler list-schedules --group-name "$group_name" \
-        --query 'Schedules[*].Name' --output text 2>&1 || echo "")
+    if ! schedules=$(read_cleanup_resources scheduler list-schedules --group-name "$group_name" \
+        --query 'Schedules[*].Name' --output text); then
+        REPORTING_FAILED=true
+        return
+    fi
     for sched_name in $schedules; do
         [[ -z "$sched_name" || "$sched_name" == "None" ]] && continue
         if $DRY_RUN; then
             echo "    [DRY RUN] Would delete schedule: $sched_name (group: $group_name)"
         else
             echo "    Deleting schedule: $sched_name (group: $group_name)"
-            aws scheduler delete-schedule --name "$sched_name" --group-name "$group_name" 2>&1 \
-                || echo "      WARNING: failed to delete schedule $sched_name"
+            delete_resource "schedule $sched_name (group: $group_name)" scheduler delete-schedule \
+                --name "$sched_name" --group-name "$group_name" || REPORTING_FAILED=true
         fi
     done
 }
+
+# Helper: convert an ISO-8601 timestamp to a Unix epoch second (cross-platform).
+iso_to_epoch() {
+    local ts="$1"
+    local result
+    # GNU date (Linux / GitHub Actions)
+    result=$(date -d "$ts" +%s 2>/dev/null) && { echo "$result"; return; }
+    # Python fallback (macOS / BSD)
+    result=$(python3 -c "import sys,datetime; ts=sys.argv[1].replace('Z','+00:00'); print(int(datetime.datetime.fromisoformat(ts).timestamp()))" "$ts" 2>/dev/null) && { echo "$result"; return; }
+    echo ""
+}
+
+# --- Age guard: resources younger than this are left alone ---
+# Applied in both the tag sweep and the name sweep, to queues and to topics, so that a CI job
+# still in flight does not have its resources deleted out from under it. The sweep fires on every
+# CI completion as well as on a schedule, and CI declares no concurrency group, so the run that
+# triggered a sweep is never the only one in the account.
+#
+# The guard is the only thing standing between the sweep and a live run's resources, and this
+# script deliberately omits `set -e`, so a value bash cannot compare would evaluate false and
+# silently disable it. Refuse to run instead.
+MIN_AGE_SECONDS="${CLEANUP_MIN_AGE_SECONDS:-3600}"
+if [[ ! "$MIN_AGE_SECONDS" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: CLEANUP_MIN_AGE_SECONDS must be a whole number of seconds (got '$MIN_AGE_SECONDS')."
+    echo "  It guards a live test run's resources against this sweep. Disabling it by accident is"
+    echo "  worse than not sweeping at all, so nothing is deleted."
+    exit 1
+fi
+NOW=$(date +%s)
+
+# Stamped on a matched SNS topic the first time a sweep sees it; see topic_is_too_young.
+FIRST_SEEN_TAG="BrighterSweepFirstSeen"
+
+# True when a queue is young enough that a run still in flight may be using it. An age that
+# cannot be read counts as young: declining to delete costs a deferred leak, deleting wrongly
+# costs somebody else's build.
+queue_is_too_young() {
+    local queue_url="$1" created
+    [[ "$MIN_AGE_SECONDS" -gt 0 ]] || return 1
+
+    created=$(aws sqs get-queue-attributes --queue-url "$queue_url" \
+        --attribute-names CreatedTimestamp \
+        --query "Attributes.CreatedTimestamp" --output text 2>/dev/null || echo "")
+    [[ "$created" =~ ^[0-9]+$ ]] || return 0
+
+    [[ $(( NOW - created )) -lt "$MIN_AGE_SECONDS" ]]
+}
+
+# True when a topic may belong to a run still in flight.
+#
+# SNS reports no creation time -- there is no such attribute, and the tagging API does not carry
+# one -- so a topic's age cannot be read, only established. The first sweep to match a topic
+# stamps it with FIRST_SEEN_TAG and leaves it; a later sweep deletes it once that stamp is
+# MIN_AGE_SECONDS old. A topic a live run created moments ago therefore always survives its first
+# sweep, and nothing is deferred forever -- the sweep after the window takes it.
+#
+# Needs sns:ListTagsForResource and sns:TagResource. Without TagResource no stamp ever lands and
+# every topic is deferred indefinitely, which is the leak this script exists to stop, so that
+# failure is reported rather than swallowed.
+#
+# A tag read that fails -- most likely throttling, since SNS's tagging APIs are documented at
+# around 10 TPS per account and this runs at CLEANUP_PARALLELISM -- must not be confused with a
+# topic that has no stamp yet: re-stamping on every failed read would reset the clock every
+# sweep and defer the topic forever. So a failed read defers and leaves any existing stamp
+# alone. The CLI distinguishes the two: a successful query with no such tag prints None, a
+# failed call prints nothing and exits non-zero.
+topic_is_too_young() {
+    local topic_arn="$1" first_seen
+    [[ "$MIN_AGE_SECONDS" -gt 0 ]] || return 1
+
+    if ! first_seen=$(aws sns list-tags-for-resource --resource-arn "$topic_arn" \
+        --query "Tags[?Key=='$FIRST_SEEN_TAG'].Value | [0]" --output text 2>/dev/null); then
+        echo "    WARNING: could not read tags on ${topic_arn##*:} (needs sns:ListTagsForResource, or the call was throttled); deferring without stamping" >&2
+        return 0
+    fi
+
+    if [[ "$first_seen" =~ ^[0-9]+$ ]]; then
+        [[ $(( NOW - first_seen )) -lt "$MIN_AGE_SECONDS" ]]
+        return
+    fi
+
+    # First sighting -- the read succeeded and carried no stamp. Record it and defer. A dry run
+    # writes nothing, so it previews the same deferral the next real run would make.
+    if ! $DRY_RUN; then
+        aws sns tag-resource --resource-arn "$topic_arn" \
+            --tags "Key=$FIRST_SEEN_TAG,Value=$NOW" >/dev/null 2>&1 \
+            || echo "    WARNING: could not stamp $FIRST_SEEN_TAG on ${topic_arn##*:} (needs sns:TagResource); it will be deferred again next sweep" >&2
+    fi
+    return 0
+}
+
+# The name sweep runs these checks in parallel, each in its own bash subshell.
+export -f queue_is_too_young topic_is_too_young
+export MIN_AGE_SECONDS NOW FIRST_SEEN_TAG DRY_RUN
 
 # --- Discover tagged resources via Resource Groups Tagging API ---
 # Note: AWS CLI v2 auto-paginates by default. The --query/--output flags are applied
@@ -101,7 +365,7 @@ if [[ ${#SUBSCRIPTIONS[@]} -gt 0 ]]; then
             echo "  [DRY RUN] Would delete subscription: $arn"
         else
             echo "  Deleting subscription: $arn"
-            aws sns unsubscribe --subscription-arn "$arn" 2>&1 || echo "    WARNING: failed to delete subscription $arn"
+            delete_resource "subscription $arn" sns unsubscribe --subscription-arn "$arn" || REPORTING_FAILED=true
         fi
     done
 fi
@@ -109,14 +373,26 @@ fi
 # 2. Topics
 if [[ ${#TOPICS[@]} -gt 0 ]]; then
     for arn in "${TOPICS[@]}"; do
+        if topic_is_too_young "$arn"; then
+            if $DRY_RUN; then
+                echo "  [DRY RUN] Would skip (too young): ${arn##*:}"
+            else
+                echo "  Skipping tagged topic (too young): ${arn##*:}"
+            fi
+            continue
+        fi
+
         # Delete any subscriptions on this topic that weren't tagged individually
         if ! $DRY_RUN; then
-            TOPIC_SUBS=$(aws sns list-subscriptions-by-topic --topic-arn "$arn" \
-                --query 'Subscriptions[*].SubscriptionArn' --output text 2>&1 || echo "")
+            if ! TOPIC_SUBS=$(read_cleanup_resources sns list-subscriptions-by-topic --topic-arn "$arn" \
+                --query 'Subscriptions[*].SubscriptionArn' --output text); then
+                REPORTING_FAILED=true
+                TOPIC_SUBS=""
+            fi
             for sub_arn in $TOPIC_SUBS; do
-                [[ "$sub_arn" == "PendingConfirmation" ]] && continue
+                [[ "$sub_arn" == "PendingConfirmation" || "$sub_arn" == "None" ]] && continue
                 echo "  Deleting subscription on topic: $sub_arn"
-                aws sns unsubscribe --subscription-arn "$sub_arn" 2>&1 || echo "    WARNING: failed to delete subscription $sub_arn"
+                delete_resource "subscription $sub_arn" sns unsubscribe --subscription-arn "$sub_arn" || REPORTING_FAILED=true
             done
         fi
 
@@ -124,7 +400,7 @@ if [[ ${#TOPICS[@]} -gt 0 ]]; then
             echo "  [DRY RUN] Would delete topic: $arn"
         else
             echo "  Deleting topic: $arn"
-            aws sns delete-topic --topic-arn "$arn" 2>&1 || echo "    WARNING: failed to delete topic $arn"
+            delete_resource "topic $arn" sns delete-topic --topic-arn "$arn" || REPORTING_FAILED=true
         fi
     done
 fi
@@ -135,16 +411,31 @@ if [[ ${#QUEUES[@]} -gt 0 ]]; then
         # Extract queue name from ARN (last segment)
         QUEUE_NAME="${arn##*:}"
 
+        # Resolved and age-checked before the dry-run branch, so that the preview reports the
+        # same decision the real run would reach rather than a longer list than it would act on.
+        if ! QUEUE_URL=$(read_cleanup_resources sqs get-queue-url --queue-name "$QUEUE_NAME" --query 'QueueUrl' --output text); then
+            REPORTING_FAILED=true
+            continue
+        fi
+        if [[ -z "$QUEUE_URL" || "$QUEUE_URL" == "None" ]]; then
+            echo "  Queue already gone: $QUEUE_NAME"
+            continue
+        fi
+
+        if queue_is_too_young "$QUEUE_URL"; then
+            if $DRY_RUN; then
+                echo "  [DRY RUN] Would skip (too young): $QUEUE_NAME"
+            else
+                echo "  Skipping tagged queue (too young): $QUEUE_NAME"
+            fi
+            continue
+        fi
+
         if $DRY_RUN; then
             echo "  [DRY RUN] Would delete queue: $QUEUE_NAME ($arn)"
         else
-            QUEUE_URL=$(aws sqs get-queue-url --queue-name "$QUEUE_NAME" --query 'QueueUrl' --output text 2>&1 || echo "")
-            if [[ -n "$QUEUE_URL" && "$QUEUE_URL" != *"NonExistentQueue"* ]]; then
-                echo "  Deleting queue: $QUEUE_NAME ($QUEUE_URL)"
-                aws sqs delete-queue --queue-url "$QUEUE_URL" 2>&1 || echo "    WARNING: failed to delete queue $QUEUE_NAME"
-            else
-                echo "  Queue already gone: $QUEUE_NAME"
-            fi
+            echo "  Deleting queue: $QUEUE_NAME ($QUEUE_URL)"
+            delete_resource "queue $QUEUE_NAME" sqs delete-queue --queue-url "$QUEUE_URL" || REPORTING_FAILED=true
         fi
     done
 fi
@@ -162,6 +453,18 @@ if [[ ${#SCHEDULE_GROUPS[@]} -gt 0 ]]; then
             continue
         fi
 
+        if [[ "$MIN_AGE_SECONDS" -gt 0 ]]; then
+            CREATED_DATE=$(aws scheduler get-schedule-group --name "$GROUP_NAME" \
+                --query 'CreationDate' --output text 2>/dev/null || echo "")
+            if [[ -n "$CREATED_DATE" && "$CREATED_DATE" != "None" ]]; then
+                CREATED_TS=$(iso_to_epoch "$CREATED_DATE")
+                if [[ -n "$CREATED_TS" && $(( NOW - CREATED_TS )) -lt "$MIN_AGE_SECONDS" ]]; then
+                    echo "  Skipping tagged schedule group (too young): $GROUP_NAME"
+                    continue
+                fi
+            fi
+        fi
+
         echo "  Processing schedule group: $GROUP_NAME"
         delete_schedules_in_group "$GROUP_NAME"
 
@@ -169,8 +472,8 @@ if [[ ${#SCHEDULE_GROUPS[@]} -gt 0 ]]; then
             echo "  [DRY RUN] Would delete schedule group: $GROUP_NAME"
         else
             echo "  Deleting schedule group: $GROUP_NAME"
-            aws scheduler delete-schedule-group --name "$GROUP_NAME" 2>&1 \
-                || echo "    WARNING: failed to delete schedule group $GROUP_NAME"
+            delete_resource "schedule group $GROUP_NAME" scheduler delete-schedule-group \
+                --name "$GROUP_NAME" || REPORTING_FAILED=true
         fi
     done
 fi
@@ -179,11 +482,14 @@ fi
 # The AwsSchedulerFactory tags groups with Source=Brighter. We require both Source=Brighter
 # AND Environment=Test to avoid accidentally deleting non-test resources in shared accounts.
 echo "Checking for Brighter-tagged schedule groups ..."
-BRIGHTER_GROUPS=$(aws resourcegroupstaggingapi get-resources \
+if ! BRIGHTER_GROUPS=$(read_cleanup_resources resourcegroupstaggingapi get-resources \
     --tag-filters Key=Source,Values=Brighter Key=Environment,Values=Test \
     --resource-type-filters scheduler:schedule-group \
     --query 'ResourceTagMappingList[*].ResourceARN' \
-    --output text 2>&1 || echo "")
+    --output text); then
+    REPORTING_FAILED=true
+    BRIGHTER_GROUPS=""
+fi
 
 if [[ -n "$BRIGHTER_GROUPS" && "$BRIGHTER_GROUPS" != "None" ]]; then
     for arn in $BRIGHTER_GROUPS; do
@@ -195,6 +501,18 @@ if [[ -n "$BRIGHTER_GROUPS" && "$BRIGHTER_GROUPS" != "None" ]]; then
             continue
         fi
 
+        if [[ "$MIN_AGE_SECONDS" -gt 0 ]]; then
+            CREATED_DATE=$(aws scheduler get-schedule-group --name "$GROUP_NAME" \
+                --query 'CreationDate' --output text 2>/dev/null || echo "")
+            if [[ -n "$CREATED_DATE" && "$CREATED_DATE" != "None" ]]; then
+                CREATED_TS=$(iso_to_epoch "$CREATED_DATE")
+                if [[ -n "$CREATED_TS" && $(( NOW - CREATED_TS )) -lt "$MIN_AGE_SECONDS" ]]; then
+                    echo "  Skipping Brighter schedule group (too young): $GROUP_NAME"
+                    continue
+                fi
+            fi
+        fi
+
         echo "  Processing Brighter schedule group: $GROUP_NAME"
         delete_schedules_in_group "$GROUP_NAME"
 
@@ -202,8 +520,8 @@ if [[ -n "$BRIGHTER_GROUPS" && "$BRIGHTER_GROUPS" != "None" ]]; then
             echo "  [DRY RUN] Would delete Brighter schedule group: $GROUP_NAME"
         else
             echo "  Deleting Brighter schedule group: $GROUP_NAME"
-            aws scheduler delete-schedule-group --name "$GROUP_NAME" 2>&1 \
-                || echo "    WARNING: failed to delete schedule group $GROUP_NAME"
+            delete_resource "schedule group $GROUP_NAME" scheduler delete-schedule-group \
+                --name "$GROUP_NAME" || REPORTING_FAILED=true
         fi
     done
 else
@@ -211,59 +529,184 @@ else
 fi
 
 # --- Fallback: clean up untagged test resources by naming convention ---
-# Some test fixtures (particularly FIFO tests) were not tagged with Environment=Test.
-# These are identified by their naming pattern: <TestPrefix>-<GUID> (truncated to 45 chars).
-# This section lists all topics/queues and deletes those matching known test prefixes.
-TEST_PREFIXES="Producer-Send-Tests|Producer-Requeue-Tests|Producer-DLQ-Tests|Producer-Scheduler-Tests|Producer-Scheduler-Async-Tests|Producer-Fire-Scheduler-Tests|Producer-Fire-Scheduler-Async-Tests|Producer-Tag-Tests|Producer-FSR-Tests|Producer-FSRA-Tests|Consumer-Requeue-Tests|Consumer-DLQ-Tests|Consumer-DLQ-Fifo|Consumer-Fallback-Tests|Consumer-Invalid-Tests|Consumer-NoChan-Tests|Buffered-Consumer-Tests|Buffered-Scheduler-Tests|Buffered-Scheduler-Async-Tests|Buffered-FSR-Tests|Redrive-Tests|Redrive-DLQ-Tests|Raw-Msg-Delivery-Tests|DLQ-Reader|Invalid-Reader"
+# Most test fixtures are not tagged with Environment=Test -- the AWS gateway only stamps
+# Source=Brighter -- so the Tagging API query above misses them. We therefore also sweep
+# by name, matching the two naming conventions the AWS test suites use.
+#
+# 1. Hand-written fixtures name resources <TestPrefix>-<GUID>, truncated to 45 chars.
+# 2. Generated MessageGateway tests (Paramore.Brighter.Test.Generator) name resources
+#    <transport>-<type>[-ch]-<32 hex GUID>, e.g. sqs-fifo-019f8f426d6378db9404c3550dd9c3c1.fifo.
+#    See tests/Paramore.Brighter.AWS.Tests/MessagingGateway/*MessageGatewayProvider.cs and the
+#    matching files under tests/Paramore.Brighter.AWS.V4.Tests.
+#
+# Both patterns are anchored at the start only, so derived resources that append a suffix
+# (-DLQ, -Invalid, -dlq.fifo, .fifo) are matched by the same rule as their parent.
+TEST_PREFIXES="Producer-Send-Tests|Producer-Requeue-Tests|Producer-DLQ-Tests|Producer-Scheduler-Tests|Producer-Scheduler-Async-Tests|Producer-Fire-Scheduler-Tests|Producer-Fire-Scheduler-Async-Tests|Producer-Tag-Tests|Producer-FSR-Tests|Producer-FSRA-Tests|Consumer-Requeue-Tests|Consumer-DLQ-Tests|Consumer-DLQ-Async|Consumer-DLQ-Fifo|Consumer-Fallback-Tests|Consumer-Invalid-Tests|Consumer-NoChan-Tests|Buffered-Consumer-Tests|Buffered-Scheduler-Tests|Buffered-Scheduler-Async-Tests|Buffered-FSR-Tests|Redrive-Tests|Redrive-DLQ-Tests|Raw-Msg-Delivery-Tests|DLQ-Reader|Invalid-Reader"
+
+# The 32-hex GUID makes this pattern specific enough that it cannot collide with a
+# hand-named resource; it is the only thing standing between a real queue and deletion.
+# Note the asymmetry with TEST_PREFIXES above, which carries no such requirement and is anchored
+# at the start only: a queue named DLQ-Reader-orders would be swept by it. That is tolerable in a
+# dedicated test account and nowhere else.
+GENERATED_TEST_PATTERN="(sqs|sns)-(std|fifo)(-ch)?-[0-9a-f]{32}"
+
+# A resource is treated as a test leftover if its name matches either convention.
+TEST_NAME_PATTERN="^($TEST_PREFIXES|$GENERATED_TEST_PATTERN)"
 
 echo ""
 echo "Scanning for untagged test resources by naming convention ..."
 
-# Clean untagged SNS topics
-ALL_TOPICS=$(aws sns list-topics --query 'Topics[*].TopicArn' --output text 2>&1 || echo "")
-UNTAGGED_TOPIC_COUNT=0
-if [[ -n "$ALL_TOPICS" && "$ALL_TOPICS" != "None" ]]; then
-    for topic_arn in $ALL_TOPICS; do
-        TOPIC_NAME="${topic_arn##*:}"
-        if echo "$TOPIC_NAME" | grep -qE "^($TEST_PREFIXES)"; then
-            UNTAGGED_TOPIC_COUNT=$((UNTAGGED_TOPIC_COUNT + 1))
-            if $DRY_RUN; then
-                echo "  [DRY RUN] Would delete untagged test topic: $TOPIC_NAME"
-            else
-                # Delete subscriptions first
-                TOPIC_SUBS=$(aws sns list-subscriptions-by-topic --topic-arn "$topic_arn" \
-                    --query 'Subscriptions[*].SubscriptionArn' --output text 2>&1 || echo "")
-                for sub_arn in $TOPIC_SUBS; do
-                    [[ "$sub_arn" == "PendingConfirmation" || -z "$sub_arn" || "$sub_arn" == "None" ]] && continue
-                    aws sns unsubscribe --subscription-arn "$sub_arn" 2>&1 || true
-                done
-                echo "  Deleting untagged test topic: $TOPIC_NAME"
-                aws sns delete-topic --topic-arn "$topic_arn" 2>&1 || echo "    WARNING: failed to delete topic $TOPIC_NAME"
-            fi
-        fi
-    done
-fi
-echo "  Found $UNTAGGED_TOPIC_COUNT untagged test topic(s)"
+# Parallel workers let large backlogs make progress within the workflow's timeout.
+PARALLELISM="${CLEANUP_PARALLELISM:-16}"
 
-# Clean untagged SQS queues
-ALL_QUEUES=$(aws sqs list-queues --query 'QueueUrls[*]' --output text 2>&1 || echo "")
-UNTAGGED_QUEUE_COUNT=0
-if [[ -n "$ALL_QUEUES" && "$ALL_QUEUES" != "None" ]]; then
-    for queue_url in $ALL_QUEUES; do
-        QUEUE_NAME="${queue_url##*/}"
-        if echo "$QUEUE_NAME" | grep -qE "^($TEST_PREFIXES)"; then
-            UNTAGGED_QUEUE_COUNT=$((UNTAGGED_QUEUE_COUNT + 1))
-            if $DRY_RUN; then
-                echo "  [DRY RUN] Would delete untagged test queue: $QUEUE_NAME"
-            else
-                echo "  Deleting untagged test queue: $QUEUE_NAME"
-                aws sqs delete-queue --queue-url "$queue_url" 2>&1 || echo "    WARNING: failed to delete queue $QUEUE_NAME"
-            fi
+# MIN_AGE_SECONDS, NOW and the two age predicates are defined near the top of the file so the tag
+# sweep can share them.
+
+# Each worker makes progress without waiting for the rest of the backlog's age checks.
+cleanup_named_topic() {
+    local topic_arn="$1"
+    if topic_is_too_young "$topic_arn"; then
+        if $DRY_RUN; then
+            echo "  [DRY RUN] Would skip (too young): ${topic_arn##*:}"
+        else
+            echo "  Deferred topic (too young or age unknown): ${topic_arn##*:}"
         fi
-    done
+    elif $DRY_RUN; then
+        echo "  [DRY RUN] Would delete untagged test topic: ${topic_arn##*:}"
+    else
+        delete_resource "untagged test topic ${topic_arn##*:}" sns delete-topic --topic-arn "$topic_arn"
+    fi
+}
+
+cleanup_named_queue() {
+    local queue_url="$1"
+    if queue_is_too_young "$queue_url"; then
+        if $DRY_RUN; then
+            echo "  [DRY RUN] Would skip (too young): ${queue_url##*/}"
+        else
+            echo "  Deferred queue (too young or age unknown): ${queue_url##*/}"
+        fi
+    elif $DRY_RUN; then
+        echo "  [DRY RUN] Would delete untagged test queue: ${queue_url##*/}"
+    else
+        delete_resource "untagged test queue ${queue_url##*/}" sqs delete-queue --queue-url "$queue_url"
+    fi
+}
+export -f cleanup_named_topic cleanup_named_queue
+
+# Clean untagged SNS topics.
+# SNS list-topics returns a NextToken, so the CLI's default auto-pagination sees every topic.
+ALL_TOPICS=$(aws sns list-topics --query 'Topics[*].TopicArn' --output text 2>&1)
+SNS_LIST_EXIT=$?
+if [[ $SNS_LIST_EXIT -ne 0 ]]; then
+    echo "ERROR: Failed to list SNS topics (exit code $SNS_LIST_EXIT)."
+    echo "  Ensure the caller has sns:ListTopics permission."
+    echo "  Response: $ALL_TOPICS"
+    exit 1
 fi
-echo "  Found $UNTAGGED_QUEUE_COUNT untagged test queue(s)"
+MATCHED_TOPICS=()
+for topic_arn in $ALL_TOPICS; do
+    [[ -z "$topic_arn" || "$topic_arn" == "None" ]] && continue
+    # The topic name is the last ARN segment and cannot itself contain a colon.
+    if [[ "${topic_arn##*:}" =~ $TEST_NAME_PATTERN ]]; then
+        MATCHED_TOPICS+=("$topic_arn")
+    fi
+done
+
+echo "  Matched ${#MATCHED_TOPICS[@]} untagged test topic(s)"
+if [[ ${#MATCHED_TOPICS[@]} -gt 0 ]]; then
+    if ! printf '%s\n' "${MATCHED_TOPICS[@]}" \
+        | xargs -P "$PARALLELISM" -I {} bash -c 'cleanup_named_topic "$1"' _ {}; then
+        echo "ERROR: Topic deletion workers did not complete successfully." >&2
+        REPORTING_FAILED=true
+    fi
+fi
+
+# Clean untagged SQS queues.
+# --page-size is required: without it SQS returns at most 1000 queues and no NextToken, so the
+# CLI has nothing to paginate on and the rest are silently invisible.
+ALL_QUEUES=$(aws sqs list-queues --page-size 1000 --query 'QueueUrls[*]' --output text 2>&1)
+SQS_LIST_EXIT=$?
+if [[ $SQS_LIST_EXIT -ne 0 ]]; then
+    echo "ERROR: Failed to list SQS queues (exit code $SQS_LIST_EXIT)."
+    echo "  Ensure the caller has sqs:ListQueues permission."
+    echo "  Response: $ALL_QUEUES"
+    exit 1
+fi
+MATCHED_QUEUES=()
+for queue_url in $ALL_QUEUES; do
+    [[ -z "$queue_url" || "$queue_url" == "None" ]] && continue
+    if [[ "${queue_url##*/}" =~ $TEST_NAME_PATTERN ]]; then
+        MATCHED_QUEUES+=("$queue_url")
+    fi
+done
+
+echo "  Matched ${#MATCHED_QUEUES[@]} untagged test queue(s)"
+if [[ ${#MATCHED_QUEUES[@]} -gt 0 ]]; then
+    if ! printf '%s\n' "${MATCHED_QUEUES[@]}" \
+        | xargs -P "$PARALLELISM" -I {} bash -c 'cleanup_named_queue "$1"' _ {}; then
+        echo "ERROR: Queue deletion workers did not complete successfully." >&2
+        REPORTING_FAILED=true
+    fi
+fi
+
+# S3 ListBuckets is account-wide unless explicitly restricted to the ambient region.
+cleanup_s3_test_buckets() {
+    local region buckets bucket created extra epoch output status
+    local matched=0 acted=0
+    local pattern='^brightertestbucket-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    region="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"
+    if [[ -z "$region" ]]; then
+        region=$(aws configure get region 2>/dev/null) || region=""
+    fi
+    if [[ -z "$region" ]]; then
+        echo "ERROR: Cannot determine the AWS region; refusing account-wide S3 cleanup." >&2
+        REPORTING_FAILED=true
+        return
+    fi
+
+    # The CLI follows all pages; the query preserves the creation time with each name.
+    if ! buckets=$(read_cleanup_resources s3api list-buckets --region "$region" \
+        --bucket-region "$region" --prefix brightertestbucket- --page-size 1000 \
+        --query 'Buckets[].[Name,CreationDate]' --output text); then
+        REPORTING_FAILED=true
+        return
+    fi
+
+    while IFS=$'\t' read -r bucket created extra; do
+        [[ "$bucket" =~ $pattern ]] || continue
+        matched=$((matched + 1))
+        epoch=$(iso_to_epoch "$created")
+        if [[ -n "$extra" || ! "$epoch" =~ ^[0-9]+$ ]]; then
+            echo "  Skipped S3 bucket (unreadable age): $bucket"
+            continue
+        fi
+        if [[ $(( NOW - epoch )) -lt "$MIN_AGE_SECONDS" ]]; then
+            echo "  Skipped S3 bucket (too young): $bucket"
+            continue
+        fi
+        if $DRY_RUN; then
+            echo "  [DRY RUN] Would empty and delete S3 test bucket: $bucket"
+            continue
+        fi
+
+        acted=$((acted + 1))
+        # Do not attempt bucket deletion if emptying failed. Versioned objects are not purged.
+        if output=$(aws s3 rm "s3://$bucket" --recursive --only-show-errors --region "$region" 2>&1); then
+            record_cleanup_result s || REPORTING_FAILED=true
+        else
+            status=$?
+            record_cleanup_result f || REPORTING_FAILED=true
+            printf 'WARNING: failed to empty S3 bucket %s (AWS CLI exit %s):\n%s\n' "$bucket" "$status" "$output" >&2
+            continue
+        fi
+        delete_resource "S3 test bucket $bucket" s3api delete-bucket \
+            --bucket "$bucket" --region "$region" || REPORTING_FAILED=true
+    done <<< "$buckets"
+    echo "  Matched $matched S3 test bucket(s), acted on $acted"
+}
+
+cleanup_s3_test_buckets
 
 echo ""
-echo "Cleanup complete."
-exit 0
+echo "Cleanup sweep finished."

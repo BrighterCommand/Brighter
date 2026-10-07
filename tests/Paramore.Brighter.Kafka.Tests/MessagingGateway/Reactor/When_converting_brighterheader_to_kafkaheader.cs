@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Net.Mime;
 using Confluent.Kafka;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 
@@ -57,7 +58,9 @@ public class KafkaDefaultMessageHeaderBuilderTests
         Assert.Equal(message.Header.MessageType.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.MESSAGE_TYPE));
         Assert.Equal(message.Header.MessageId.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.MESSAGE_ID));
         Assert.Equal(message.Header.Topic.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.TOPIC));
-        Assert.Equal(message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture).ToByteArray(), headers.GetLastBytes(HeaderNames.TIMESTAMP));
+        //The timestamp goes on the wire as RFC 3339 (UTC, offset-bearing), not as an offset-less DateTime:
+        //dropping the offset left the reader to guess it, drifting Header.TimeStamp by the host offset per hop.
+        Assert.Equal(message.Header.TimeStamp.ToRfc3339().ToByteArray(), headers.GetLastBytes(HeaderNames.TIMESTAMP));
         Assert.Equal(message.Header.CorrelationId.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.CORRELATION_ID));
         Assert.Equal(message.Header.PartitionKey.Value.ToByteArray(), headers.GetLastBytes(HeaderNames.PARTITIONKEY));
         Assert.Equal(message.Header.ContentType!.ToString().ToByteArray(), headers.GetLastBytes(HeaderNames.CONTENT_TYPE));

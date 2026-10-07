@@ -1,0 +1,17 @@
+services:
+  rabbitmq-native-delay:
+    build:
+      context: ./docker/RabbitMQ
+    image: brighter-4388-rabbitmq-native:local
+    ports:
+      - "127.0.0.1:5673:5672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      # The delayed-message plugin cannot route topic bindings correctly with Khepri.
+      RABBITMQ_FEATURE_FLAGS: "-khepri_db"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 12

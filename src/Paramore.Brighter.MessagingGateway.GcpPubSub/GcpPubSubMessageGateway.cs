@@ -20,6 +20,12 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
     private static readonly ConcurrentDictionary<string, bool> s_topicOrSubscriptionAlreadyCreatedUpdate = new();
 
     /// <summary>
+    /// Runs IAM helper steps with tolerance for missing-rights failures (R-20, ADR 0078 §IAM tolerance).
+    /// Logs one Warning per tolerated failure and returns false to end the helper early.
+    /// </summary>
+    private readonly GcpIamCallTolerance _iamTolerance = new();
+
+    /// <summary>
     /// Gets the configured connection details for the Google Cloud Pub/Sub gateway.
     /// </summary>
     protected GcpMessagingGatewayConnection Connection { get; } = connection;
@@ -481,12 +487,21 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
         // If members aren't explicitly configured, derive the default Pub/Sub service account for the project
         if (string.IsNullOrEmpty(publishMember))
         {
-            var projectClient = await Connection.CreateProjectsClientAsync();
-            var project = await projectClient.GetProjectAsync(new GetProjectRequest { ProjectName = new ProjectName(projectId) });
-                
+            var constructStep = new IamStep(nameof(UpdateIAmRoleForDeadLetterAsync), "construct ProjectsClient", $"projects/{projectId}");
+            var projectClient = await _iamTolerance.TryCreateProjectsClientAsync(
+                constructStep,
+                () => Connection.CreateProjectsClientAsync());
+            if (projectClient == null) return;
+
+            var getProjectStep = new IamStep(nameof(UpdateIAmRoleForDeadLetterAsync), "GetProjectAsync", $"projects/{projectId}");
+            var (gotProject, project) = await _iamTolerance.TryCallAsync(
+                getProjectStep,
+                () => projectClient.GetProjectAsync(new GetProjectRequest { ProjectName = new ProjectName(projectId) }));
+            if (!gotProject) return;
+
             // The service account for Pub/Sub in a project is service-<PROJECT_NUMBER>@gcp-sa-pubsub.iam.gserviceaccount.com
             // The project number is the last segment of the Project resource name
-            var projectNumber = project.Name.Split('/').Last();
+            var projectNumber = project!.Name.Split('/').Last();
             publishMember ??= $"serviceAccount:service-{projectNumber}@gcp-sa-pubsub.iam.gserviceaccount.com";
         }
 
@@ -494,16 +509,20 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
         var publisher = await Connection.CreatePublisherServiceApiClientAsync();
 
         // 1. Get the current IAM policy for the DLT
-        var policy = await publisher.IAMPolicyClient.GetIamPolicyAsync(new GetIamPolicyRequest
-        {
-            ResourceAsResourceName = topicName,
-        });
+        var getIamStep = new IamStep(nameof(UpdateIAmRoleForDeadLetterAsync), "GetIamPolicyAsync", topicName.ToString());
+        var (gotPolicy, policy) = await _iamTolerance.TryCallAsync(
+            getIamStep,
+            () => publisher.IAMPolicyClient.GetIamPolicyAsync(new GetIamPolicyRequest
+            {
+                ResourceAsResourceName = topicName,
+            }));
+        if (!gotPolicy) return;
 
         var bindings = new List<Binding>();
         const string publisherRole = "roles/pubsub.publisher";
             
         // 2. Check if the DLT Publisher role is missing for the service account
-        if (!policy.Bindings.Any(x => x.Role == publisherRole && x.Members.Contains(publishMember)))
+        if (!policy!.Bindings.Any(x => x.Role == publisherRole && x.Members.Contains(publishMember)))
         {
             // Add the new binding granting the Pub/Sub service account publisher permission
             var binding = new Binding { Role = publisherRole };
@@ -515,10 +534,13 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
         if (bindings.Count > 0)
         {
             policy.Bindings.AddRange(bindings);
-            await publisher.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest
-            {
-                Policy = policy, ResourceAsResourceName = topicName
-            });
+            var setIamStep = new IamStep(nameof(UpdateIAmRoleForDeadLetterAsync), "SetIamPolicyAsync", topicName.ToString());
+            await _iamTolerance.TryCallAsync<Policy>(
+                setIamStep,
+                () => publisher.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest
+                {
+                    Policy = policy, ResourceAsResourceName = topicName
+                }));
         }
     }
     
@@ -533,28 +555,41 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
         // If members aren't explicitly configured, derive the default Pub/Sub service account for the project
         if (string.IsNullOrEmpty(subscriberMember))
         {
-            var projectClient = await Connection.CreateProjectsClientAsync();
-            var project = await projectClient.GetProjectAsync(new GetProjectRequest { ProjectName = new ProjectName(projectId) });
+            var constructStep = new IamStep(nameof(UpdateIAmRoleForSubscriptionAsync), "construct ProjectsClient", $"projects/{projectId}");
+            var projectClient = await _iamTolerance.TryCreateProjectsClientAsync(
+                constructStep,
+                () => Connection.CreateProjectsClientAsync());
+            if (projectClient == null) return;
+
+            var getProjectStep = new IamStep(nameof(UpdateIAmRoleForSubscriptionAsync), "GetProjectAsync", $"projects/{projectId}");
+            var (gotProject, project) = await _iamTolerance.TryCallAsync(
+                getProjectStep,
+                () => projectClient.GetProjectAsync(new GetProjectRequest { ProjectName = new ProjectName(projectId) }));
+            if (!gotProject) return;
 
             // The service account for Pub/Sub in a project is service-<PROJECT_NUMBER>@gcp-sa-pubsub.iam.gserviceaccount.com
             // The project number is the last segment of the Project resource name
-            var projectNumber = project.Name.Split('/').Last();
+            var projectNumber = project!.Name.Split('/').Last();
             subscriberMember ??= $"serviceAccount:service-{projectNumber}@gcp-sa-pubsub.iam.gserviceaccount.com";
         }
 
         var publisher = await Connection.CreatePublisherServiceApiClientAsync();
 
         // 1. Get the current IAM policy for the DLT
-        var policy = await publisher.IAMPolicyClient.GetIamPolicyAsync(new GetIamPolicyRequest
-        {
-            ResourceAsResourceName = subscriptionName,
-        });
+        var getIamStep = new IamStep(nameof(UpdateIAmRoleForSubscriptionAsync), "GetIamPolicyAsync", subscriptionName.ToString());
+        var (gotPolicy, policy) = await _iamTolerance.TryCallAsync(
+            getIamStep,
+            () => publisher.IAMPolicyClient.GetIamPolicyAsync(new GetIamPolicyRequest
+            {
+                ResourceAsResourceName = subscriptionName,
+            }));
+        if (!gotPolicy) return;
 
         var bindings = new List<Binding>();
         
         const string subscriberRole = "roles/pubsub.subscriber";
         // Check if the DLT Subscriber role is missing for the service account
-        if (!policy.Bindings.Any(x => x.Role == subscriberRole && x.Members.Contains(subscriberMember)))
+        if (!policy!.Bindings.Any(x => x.Role == subscriberRole && x.Members.Contains(subscriberMember)))
         {
             // Note: The main Pub/Sub service account often needs subscriber role on the DLT for management/monitoring,
             // though the core DLQ function primarily relies on the publisher role.
@@ -567,10 +602,13 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
         if (bindings.Count > 0)
         {
             policy.Bindings.AddRange(bindings);
-            await publisher.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest
-            {
-                Policy = policy, ResourceAsResourceName = subscriptionName
-            });
+            var setIamStep = new IamStep(nameof(UpdateIAmRoleForSubscriptionAsync), "SetIamPolicyAsync", subscriptionName.ToString());
+            await _iamTolerance.TryCallAsync<Policy>(
+                setIamStep,
+                () => publisher.IAMPolicyClient.SetIamPolicyAsync(new SetIamPolicyRequest
+                {
+                    Policy = policy, ResourceAsResourceName = subscriptionName
+                }));
         }
     }
 }

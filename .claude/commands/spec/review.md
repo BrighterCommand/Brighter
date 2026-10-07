@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(grep:*), Bash(git diff:*), Bash(git log:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git show:*), Read, Write, Glob, Grep, Agent, AskUserQuestion
+allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(grep:*), Bash(mkdir:*), Bash(npx:*), Bash(python3:*), Bash(git diff:*), Bash(git log:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git show:*), Read, Write, Glob, Grep, Agent, AskUserQuestion
 description: Review current specification phase (requirements, design, tasks, or code)
 argument-hint: [requirements|design [adr-number]|tasks|code [base-ref]] [threshold]
 ---
@@ -55,6 +55,13 @@ Read ALL documents the sub-agent will need. The sub-agent gets a clean context �
 - Read `specs/{current-spec}/.adr-list` to find ADRs
 - Read each ADR from `docs/adr/{filename}` (or just the specified one)
 - Read `specs/{current-spec}/requirements.md` (for cross-referencing)
+- Pass the path to `.agent_instructions/documentation.md` — § *Architecture Decision Records* is
+  the canonical skeleton, readability rules, diagram rules and pre-commit checks that the
+  *Structure and Readability* criteria in Step 4 grade against, and § *Writing tone for design
+  documents* is the tone contract. The sub-agent reads it itself.
+- **Even when reviewing a single ADR, read the whole `.adr-list` set.** Two of the design criteria
+  — the sibling map and the unifying sentence — are properties of the set, not of one file, and
+  cannot be judged from one ADR alone.
 
 **For tasks review:**
 - Read `specs/{current-spec}/tasks.md`
@@ -89,7 +96,7 @@ Review is reasoning-heavy work, so it uses opus per the model policy (see
 
 **For design and tasks reviews**: Tell the sub-agent the file paths to read — it should read the files itself. This handles large documents (ADRs can be very long) and allows the sub-agent to verify codebase references. Include the requirements.md text in the prompt for cross-referencing (or the file path if it's also large).
 
-**Sub-agent tool access**: The sub-agent (general-purpose) inherits tool access. For design and tasks reviews it SHOULD use Read, Glob, and Grep to read documents and verify codebase references. For **code** reviews it SHOULD additionally use `Bash(git diff:* / git show:* / git log:*)` to pull file-level diffs on demand. The sub-agent should NOT write the findings file — it should return the findings as text. The main agent writes the file after validating the output (see Step 6).
+**Sub-agent tool access**: The sub-agent (general-purpose) inherits tool access. For design and tasks reviews it SHOULD use Read, Glob, and Grep to read documents and verify codebase references. For **design** reviews it SHOULD additionally use `Bash` to run the diagram render check and the escaped-markdown grep in the *Diagrams* criteria — those are verifications, not judgements, and a review that skips them has not checked the one class of defect that is invisible to a careful read. For **code** reviews it SHOULD additionally use `Bash(git diff:* / git show:* / git log:*)` to pull file-level diffs on demand. The sub-agent should NOT write the findings file — it should return the findings as text. The main agent writes the file after validating the output (see Step 6).
 
 **Code review sub-agent prompt must additionally include:**
 - The resolved base ref, the commit list, and the `git diff --stat` output
@@ -148,6 +155,12 @@ You are a skeptical reviewer. Assume the requirements have problems — your job
 - Are ACs written in Given/When/Then or equivalent testable format?
 - Are there FRs without corresponding ACs? (List them specifically.)
 
+**Declaration Form:**
+- Is every numbered requirement declared with the bold lead-in form (`**FR-3 — …**`,
+  `- **NFR-1 — …**`), never as a heading (`#### FR-3: …`) or a numbered-list item
+  (`1. **FR-3** — …`)? `/spec:show-me` does not recognise either of those two forms — flag
+  any requirement declared that way.
+
 ---
 
 #### Design (ADR) Review Criteria
@@ -177,10 +190,77 @@ You are a skeptical reviewer. Assume the design has problems — your job is to 
 - Are there "the system will handle this" hand-waves?
 - Is the ADR focused on ONE architectural decision, or does it try to cover too much?
 
+**Structure and Readability:**
+
+An ADR that is correct and unreadable has failed. Its primary audience is a human reviewer six
+months from now reading for the *why* of a behaviour — behaviour endures, structure changes under
+refactoring. Grade against `.agent_instructions/documentation.md` § *ADR structure* and
+§ *ADR readability*:
+
+- **Headings.** Do they match the canonical skeleton — same wording, same order, same nesting
+  level as the sibling ADRs? Heading drift is what makes a corpus unnavigable, and an ADR that
+  invents its own section names or nests them one level off its siblings is a finding even when
+  every word of its content is right.
+- **Behaviour before structure.** Does the Decision open with `### The mechanism, end to end`
+  (what happens, in what order) before `### Where the pieces live` (which assemblies) before the
+  signatures? An ADR whose Decision opens with an interface declaration has it backwards.
+- **The opening.** Does Context open in plain language a user would recognise, or does it name
+  four interfaces before the reader knows what the problem is?
+- **Orientation first.** Does each section lead with the artefact that orients — a table, a
+  diagram, a contract — and then read the consequences off it? Or does it make the reader assemble
+  the picture from paragraphs and only then show them the diagram?
+- **The roles table.** Is there a `#### The roles, and what each is responsible for` table with
+  **knowing** / **doing** / **deciding** stereotypes? If it is absent, or its rows are types rather
+  than roles, Responsibility-Driven Design was applied to the review and not to the design.
+- **Citation density.** Are `file:line` references concentrated in `Implementation Approach` and
+  the `Where each type is touched` table? Citations are load-bearing for an implementor and pure
+  noise inside an argument — a forces bullet carrying three of them is a finding.
+- **What is unchanged.** Does `Where each type is touched` close by naming the types deliberately
+  *not* touched, so a reviewer does not read an omission as an oversight?
+- **One decision.** Can the ADR state its unifying rule in one sentence? If that takes a paragraph,
+  suspect it is more than one decision and say so.
+
+**Diagrams — verify these actively, do not eyeball them:**
+
+- **Render every mermaid block.** Extract each to its own `.mmd` file under the scratchpad and run
+  `npx -y -p @mermaid-js/mermaid-cli@11 mmdc -i diagram.mmd -o diagram.svg`. A non-zero exit or a
+  missing `.svg` is a **defect in the ADR** — report it at High or above. Roughly one diagram in
+  six fails on first draft, and a broken diagram looks perfectly fine in a read-through. If the
+  render cannot run at all (no network for `npx`), say so in the findings rather than reporting the
+  diagrams as verified.
+- The three traps that produce a clean-looking, non-rendering diagram: **`;` is a statement
+  separator in `sequenceDiagram`**; **`<` or `>` in a label** is eaten as HTML, so `Lease<T>` loses
+  its type parameter; **HTML entities** (`&lt;`, `&gt;`, `&amp;`) break the escaped-markdown check.
+- **Escaped markdown**: `grep -c '&lt;\|&gt;\|&amp;' docs/adr/{file}.md` must be `0`.
+- **Is any flowchart carrying more than about four decision points?** That renders as an unreadable
+  column with edges spanning its whole height. It should be a decision-ladder table — one row per
+  situation, in evaluation order. A diagram can parse cleanly and still be unreadable, so render
+  the most complex one to PNG (`-o diagram.png -w 1600 -b white`) and look at it.
+
+**Writing tone** (§ *Writing tone for design documents*):
+
+- Does the ADR reference **participants in the authoring conversation** — "at the user's
+  direction", "the user explicitly chose", "per the user's feedback" — rather than durable
+  artefacts like requirement ids, other ADRs or code locations? This is a real defect that has
+  survived into an Accepted ADR in this repo, so check for it rather than assuming it away.
+- Does it reference **ephemeral state** — `PROMPT.md`, the current spec phase, unresolved review
+  back-and-forth? Either the substance is folded in or the sentence goes.
+
 **Cross-Reference (when reviewing all ADRs):**
 - Do the ADRs collectively cover all the requirements?
 - Are there gaps — requirements that no ADR addresses?
 - Are there contradictions between ADRs?
+- **Does every ADR in the set carry `### Where this ADR sits`, and is every table complete?** ADRs
+  are written one at a time, so an earlier ADR's map goes stale the moment the next one lands —
+  check each table lists *every* ADR in the set, with that file's own row bolded and marked
+  *(this one)*. A map that is right for the newest ADR and stale for the rest is worse than no map.
+- **Is the unifying sentence stated identically across the siblings that apply it**, or has it been
+  paraphrased into three not-quite-equivalent versions?
+- **Release Notes Coverage.** Does the ADR set (or any ADR in it) record, in its `## Consequences`,
+  a change that breaks an existing behaviour or interface? If so, does `release_notes.md` carry a
+  section marked for this spec (a `### … (spec {NNNN})` heading immediately followed by
+  `<!-- spec: {this spec's directory name} -->`)? A breaking change with no such marked section is
+  a finding — recommend running `/spec:write_release_notes`.
 
 ---
 
@@ -214,6 +294,11 @@ You are a skeptical reviewer. Assume the task list has problems — your job is 
 - Map each FR from requirements.md to tasks. Are there FRs with no corresponding task? LIST THEM.
 - Map each ADR decision to tasks. Are there design decisions with no implementation task? LIST THEM.
 - Are there tasks that don't trace back to any requirement or design decision? (Scope creep.)
+
+**Task-Type Tag Form:**
+- Does every task checkbox open its bold lead-in with the tag first (`**STRUCTURAL: T1.2 —
+  …**`), never the task id first (`**T1.2 — STRUCTURAL: …**`)? `/spec:show-me` counts a
+  tag-second lead-in as `untagged` — flag any checkbox that drifts, outside a *DO NOT* block.
 
 ---
 
@@ -336,6 +421,14 @@ Upward calibration (don't under-score):
 - A requirement that two developers would implement differently IS High (70+), even if each interpretation seems reasonable.
 - A task list that omits a design decision from the ADR IS High (70+) — that's a coverage gap that could cause the feature to ship incomplete.
 - A file path reference in an ADR that doesn't exist in the codebase IS at least Medium-High (65-75) — it misleads anyone reading the ADR.
+- **A mermaid diagram that does not render IS High (70-85)** — it is a broken artefact that reads as perfectly fine, so nothing else will catch it before it ships.
+- **An ADR that references a participant in the authoring conversation** ("at the user's direction", "the user explicitly chose") **IS Medium-High (65-75)** — it fails the document's only audience, and once the ADR is Accepted the sentence tends to stay.
+- **A stale `### Where this ADR sits` map** — one that omits a sibling added after it was written — **IS Medium-High (60-75)**. A reader who finds a map stale once stops trusting every other map in the corpus.
+
+Calibrating the structure criteria specifically — they are about navigability, not conformity:
+- Heading **order or nesting level** drifting from the siblings is Medium-High (60-75): it breaks the reader's ability to navigate the next ADR using what they learned on this one.
+- Heading **wording** differing slightly while order and nesting are right is Low-Medium (35-55).
+- **Do not demand an artefact where there is nothing to put in it.** An ADR that genuinely introduces no new roles — a pure ordering, timing or naming decision — needs no roles table, and a missing one there is Low or no finding at all. The same goes for a diagram on an ADR whose decision has no sequence and no layering. Report the *absence of orientation*, not the absence of a specific heading.
 
 General:
 - Reserve Critical (90+) for contradictions, factually broken references, or requirements/designs that are impossible to implement as written.
@@ -364,7 +457,7 @@ After the sub-agent returns:
    - Count of findings by severity
    - List just the title and score of each finding at or above threshold
    - Path to the findings file for full details
-   - For `requirements`/`design`/`tasks`: remind the user to use `/spec:approve {phase}` when ready, or iterate and re-run `/spec:review {phase}`.
+   - For `requirements`/`design`/`tasks`: remind the user to use `/spec:approve {phase}` when ready, or to work the findings (Step 8) and re-run `/spec:review {phase}`.
    - For `code`: remind the user that `code` has no approval marker — fix findings, commit, and re-run `/spec:review code` until clean. When clean, the next step is commit/push/PR.
 
 ### Step 7: Spec Status
@@ -375,3 +468,42 @@ Display overall spec status:
 - Design: {X} ADRs ({Y} approved, {Z} proposed)
 - Tasks: Approved / In Progress / Not Started
 - Code: Reviewed at {commit sha} / Not reviewed (code is "reviewed" if `review-code.md` exists; include its verdict and the commit sha at the top of HEAD when the review was run)
+
+### Step 8: Working the Findings — Fix Issues, Not Lines
+
+This step is not part of the review. It applies whenever the findings of a `requirements`, `design`
+or `tasks` review are worked, in this session or a later one, and it runs only when the user asks
+for them to be addressed.
+
+**Why it exists.** A finding quotes one sentence, but the concept that sentence states is usually
+stated in several places: a definition, an FR, an NFR, a constraint, Out of Scope, one or more ACs,
+a worked example, and, for a design, sibling ADRs. Editing only the quoted sentence leaves the other
+places saying the old thing, so the fix becomes a new contradiction. The next pass then finds it,
+often scored *higher* than the original finding, because a contradiction outranks a vagueness.
+Fixing lines instead of issues is how a review loop stops converging.
+
+1. **Name the issue, not the sentence.** For each finding being worked, write down in a few words
+   the concept it is about: "who may add a release-notes marker", not "line 121". Findings that
+   turn out to be about the same concept are worked together.
+2. **Find every statement of the concept.** Grep the whole document with several search terms, not
+   only the words the finding quoted. For a design, grep every ADR in `.adr-list` and
+   `requirements.md` too. Check Definitions, FRs, NFRs, Constraints, Out of Scope, the ACs and any
+   worked examples. List the sites before editing any of them.
+3. **Edit every site together**, so the concept is stated one way everywhere. When a fix needs a
+   choice, prefer the option that does not contradict a rule stated elsewhere. If every option
+   does, or the choice is the owner's, ask the user before editing.
+4. **Re-sweep the old phrasings.** Grep for the wording you replaced and read every hit. Fix any
+   survivor that is now false.
+5. **Run a quick contradiction check before committing.** Launch a sub-agent
+   (`general-purpose`, `model: "opus"`, forbidden to ask the user anything or to write files). Give
+   it the diff of the edit, the findings file and the list of concepts touched. Its job is narrow
+   and is not a re-review of the document. For each concept it:
+   - greps every statement of the concept;
+   - reports any sentence, edited or untouched, that now disagrees with another;
+   - confirms which findings are resolved;
+   - flags new wording that two implementers would read differently.
+
+   Fix anything it scores **≥ 50** before committing, repeating steps 2–4 for that concept. You may
+   fix lower items in the same edit when they sit in a concept already touched.
+6. **Commit, then re-run `/spec:review {phase}`** as the next pass. The commit message names the
+   issues worked, not only the finding numbers.

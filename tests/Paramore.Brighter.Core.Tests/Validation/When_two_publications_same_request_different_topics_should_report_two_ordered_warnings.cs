@@ -53,7 +53,7 @@ public class ProducerTransformWarningDeterminismTests
             new PipelineBuilder<IRequest>(new SubscriberRegistry()),
             publications,
             transformerProbe: StubTransformerResolvabilityProbe.ResolvesNothing,
-            mapperRegistry: registry);
+            mapperRegistryFactory: () => registry);
         return validator.Validate();
     }
 

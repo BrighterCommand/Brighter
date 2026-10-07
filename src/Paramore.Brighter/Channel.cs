@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Concurrent;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -35,13 +36,14 @@ namespace Paramore.Brighter
     ///   <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     ///   and acknowledging receipt of those messages
     /// </summary>
-    public class Channel : IAmAChannelSync
+    public class Channel : IAmAChannelSync, IHaveAMessagingSystem
     {
         private readonly IAmAMessageConsumerSync _messageConsumer;
         private ConcurrentQueue<Message> _queue = new();
         private readonly int _maxQueueLength;
         private static readonly Message s_noneMessage = new();
-        
+        private bool _disposed;
+
         /// <summary>
         /// The name of a channel is its identifier
         /// See Topic for the broker routing key
@@ -55,6 +57,10 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The topic on the broker</value>
         public RoutingKey RoutingKey { get; }
+
+        /// <inheritdoc />
+        public MessagingSystem MessagingSystem =>
+            (_messageConsumer as IHaveAMessagingSystem)?.MessagingSystem ?? MessagingSystem.InternalBus;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Channel" /> class.
@@ -195,6 +201,9 @@ namespace Paramore.Brighter
 
         private void Dispose(bool disposing)
         {
+            if (_disposed) return;
+            _disposed = true;
+
             if (disposing)
             {
                 _messageConsumer.Dispose();

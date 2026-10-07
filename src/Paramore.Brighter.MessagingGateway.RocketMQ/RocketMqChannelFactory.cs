@@ -16,7 +16,10 @@ public class RocketMqChannelFactory(RocketMessageConsumerFactory factory) : IAmA
         {
             throw new ConfigurationException("We expect a RocketSubscription or a RocketSubscription<T> as parameter");
         }
-        
+
+        // Warn once, at channel creation, if the delivery budget cannot run down (R-11, R-26)
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription);
+
         return new Channel(
             subscription.ChannelName,
             subscription.RoutingKey,
@@ -31,7 +34,10 @@ public class RocketMqChannelFactory(RocketMessageConsumerFactory factory) : IAmA
         {
             throw new ConfigurationException("We expect a RocketSubscription or a RocketSubscription<T> as parameter");
         }
-        
+
+        // Warn once, at channel creation, if the delivery budget cannot run down (R-11, R-26)
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription);
+
         return new ChannelAsync(
             subscription.ChannelName,
             subscription.RoutingKey,
@@ -42,6 +48,9 @@ public class RocketMqChannelFactory(RocketMessageConsumerFactory factory) : IAmA
     /// <inheritdoc />
     public async Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription, CancellationToken ct = default)
     {
+        // Warn once, at channel creation, if the delivery budget cannot run down (R-11, R-26)
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription);
+
         return new ChannelAsync(
             subscription.ChannelName,
             subscription.RoutingKey,
