@@ -1,7 +1,7 @@
 ---
 id: 0072-outbox-metrics
 title: "Outbox Metrics"
-status: Proposed
+status: Accepted
 author:
   - "taha-rafique"
 created: 2026-09-28
@@ -19,7 +19,7 @@ Date: 2026-09-28
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
