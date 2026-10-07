@@ -136,8 +136,23 @@ Should I commit these changes?
    stop honouring it
 5. **Refactor regularly**: Take advantage of the refactor phase to improve design while tests are green
 
+## Related Commands
+
+- [`/tidy-first`](../refactor/tidy-first.md) - Separate structural (refactoring) changes from
+  behavioural ones, following Beck's "Tidy First". Use it for refactoring beyond the small,
+  in-cycle tidy of the REFACTOR phase above.
+- [`/refactor:smells`](../refactor/smells.md) - Optional review, once a unit of work is complete,
+  for Fowler's code smells in the changed code; schedules the refactorings rather than making them.
+
 ## Future Commands
 
 Planned TDD commands:
-- `/tdd:refactor` - Separate refactoring workflow following "Tidy First" principles (see `/tidy-first`)
-- `/tdd:coverage` - Analyze test coverage and suggest missing tests
+- `/tdd:coverage` - Check that the code added for a task is reachable from its tests through the
+  public interface. Code written test-first should be covered by the tests that drove it; a line
+  that can only be covered by a special-purpose test (a branch reachable only through an internal or
+  private member rather than the public interface) is a sign of speculative code or a design
+  problem, not a gap to plug with a test. It runs once the task is GREEN and after any
+  `/tidy-first` refactoring, so it checks the code as it will be committed. The command would
+  collect coverage (`dotnet test --collect:"XPlat Code Coverage"`) for the task's diff and report
+  uncovered added lines as findings to remove or redesign, rather than suggesting tests to cover
+  them.
