@@ -29,7 +29,7 @@ We welcome code authored with an agent. **You remain responsible for the code yo
 | `AGENTS.md` | The same entry point for other agents. |
 | `.github/copilot-instructions.md` | The same entry point for GitHub Copilot. |
 | `.agent_instructions/` | An agent-oriented version of our contribution guidelines: build, code style, design principles, testing, documentation and dependency management. |
-| `.claude/commands/` | Slash commands that drive our preferred workflows: `/spec:*`, `/bugfix:*`, `/test-first`, `/tidy-first` and `/adr`. See the [commands README](.claude/commands/README.md). |
+| `.claude/commands/` | Slash commands that drive our preferred workflows: `/spec:*`, `/bugfix:*`, `/test-first`, `/tidy-first`, `/refactor:smells` and `/adr`. See the [commands README](.claude/commands/README.md). |
 | `PROMPT.md` | Not provided: you create it. A gitignored file of session state that lets work continue across agent sessions. See [Working Across Sessions](#working-across-sessions-promptmd). |
 | `.slopwatch/` | Configuration and a legacy baseline for [SlopWatch](https://github.com/Aaronontheweb/dotnet-slopwatch), which we are trialing to catch agents reward-hacking (for example, weakening a test to make it pass). |
 
@@ -43,6 +43,7 @@ Because our instructions live in plain Markdown under `.agent_instructions/`, an
 | Fixing a bug whose cause is not yet proven, or that arrived with a suggested fix | `/bugfix:*` | Proves the root cause before any fix is written. |
 | Making a small change whose behavior is already obvious | `/test-first` | Test-first discipline without the ceremony. |
 | Restructuring code | `/tidy-first` | Keeps structural and behavioral changes in separate commits. |
+| Looking for what to tidy once a piece of work is finished and green | `/refactor:smells` | Finds Fowler's code smells in the change and schedules the refactorings, without changing code. |
 
 ---
 
@@ -280,6 +281,7 @@ Nothing here is specific to Claude Code: any agent that can read a file can work
 
 - **`/test-first <behavior>`** runs one red-green-refactor cycle. It always stops after writing the failing test so you can review it in your IDE before any implementation. See the [TDD README](.claude/commands/tdd/README.md).
 - **`/tidy-first <change>`** separates structural changes (refactoring) from behavioral ones, following Kent Beck's *Tidy First*, so each lands in its own commit. See the [refactoring README](.claude/commands/refactor/README.md).
+- **`/refactor:smells [base-ref | base..head | path...]`** reviews finished, green work for the code smells in Martin Fowler's *Refactoring*, calibrated to our design principles. By default it looks at your branch's changes against `master`; pass a git ref, a `base..head` range (for example, to review a PR that has already merged) or paths to narrow it. Each finding names the smell, where it is, and the refactoring that removes it. It changes no code: you choose which findings to act on, as `/tidy-first` runs or as `STRUCTURAL` tasks in the current spec's `tasks.md`. It is opt-in, and agents will not run it unless you ask. See the [refactoring README](.claude/commands/refactor/README.md).
 - **`/adr <title>`** creates a correctly numbered ADR outside the spec workflow. See the [ADR README](.claude/commands/adr/README.md).
 
 ---
