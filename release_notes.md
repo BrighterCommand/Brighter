@@ -44,6 +44,17 @@ An idle thread costs little. Under load, though, those threads compete with the 
 CPU. That can matter on a pod limited to 1–2 CPUs. If you run many publications on a small pod, watch
 CPU throttling (`container_cpu_cfs_throttled_periods_total` on Kubernetes) and the new sweeper
 tick-lag metric.
+### Dispatcher shutdown drains consumers still being created (#4541)
+
+The Dispatcher now tracks accepted consumer operations until their channels have either been
+registered with a performer task or disposed. A concurrent `End()` cannot finish before those
+operations complete. Consumers shut before opening are removed and disposed without registering
+a null task. A disposal failure is logged and does not prevent the remaining consumers from draining.
+
+**Behaviour change:** `Receive()`, `Open()`, and `SetActivePerformers()` throw
+`InvalidOperationException` while shutdown is in progress. Await `End()` before restarting.
+After disposal, these operations throw `ObjectDisposedException`. Channel creation and disposal
+run outside the lifecycle lock. See [ADR 0083](docs/adr/0083-coordinate-dispatcher-startup-and-shutdown.md).
 
 ### AWS SQS, GCP Pub/Sub and RocketMQ: `requeueCount` now runs down (#4341, spec 0037)
 
