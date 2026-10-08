@@ -809,7 +809,9 @@ namespace Paramore.Brighter
             }                                                    
 
             Log.RunningOutstandingMessageCheck(s_logger, now, timeSinceLastCheck.TotalSeconds);
-            //This is expensive, so use a background thread
+            //This is expensive, so use a background thread. Task.Run uses TaskScheduler.Default and does not carry the
+            //caller's SynchronizationContext. That keeps the blocking call on the async outbox in
+            //OutstandingMessagesCheck from deadlocking the pump, so do not run it inline on the caller's thread
             Task.Run(
                 () => OutstandingMessagesCheck(requestContext)
             );
@@ -1357,7 +1359,8 @@ namespace Paramore.Brighter
 
                 if (_asyncOutbox != null)
                 {
-                    // Pool thread without a SynchronizationContext (see CheckOutstandingMessages), so blocking cannot deadlock
+                    // Blocking holds this pool thread but never the pump: this runs inside the Task.Run in
+                    // CheckOutstandingMessages, with no SynchronizationContext, and the caller never waits for that task
                     _outStandingCount = _asyncOutbox
                         .GetOutstandingMessageCountAsync(
                             _maxOutStandingCheckInterval,
