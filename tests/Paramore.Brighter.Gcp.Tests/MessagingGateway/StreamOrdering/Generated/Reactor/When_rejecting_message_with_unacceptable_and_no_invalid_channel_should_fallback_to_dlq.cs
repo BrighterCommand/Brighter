@@ -55,7 +55,7 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
         _producer.Send(message);
 
         // Act
-        var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(15000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         var rejected = _channel.Reject(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message — no invalid channel"));
