@@ -89,6 +89,7 @@ namespace Paramore.Brighter
         /// after messages are cleared from the outbox (Post clears straight after it deposits), if the time since the previous check is at
         /// least this threshold; TimeSpan.Zero checks after every clear.
         /// It is also the minimum age a message must have in the outbox to be counted as outstanding (it is passed to the outbox as dispatchedSince).
+        /// If you set MaxOutStandingMessages to -1 (no limit) the outbox is not consulted for the count and this property is ignored.
         /// If you set MaxOutStandingMessages to 0 the property still applies: once a check has counted an outstanding message at least this old,
         /// the next add to the outbox throws an OutboxLimitReachedException.
         /// </summary>
@@ -209,6 +210,7 @@ namespace Paramore.Brighter
         /// after messages are cleared from the outbox (Post clears straight after it deposits), if the time since the previous check is at
         /// least this threshold; TimeSpan.Zero checks after every clear.
         /// It is also the minimum age a message must have in the outbox to be counted as outstanding (it is passed to the outbox as dispatchedSince).
+        /// If you set MaxOutStandingMessages to -1 (no limit) the outbox is not consulted for the count and this property is ignored.
         /// If you set MaxOutStandingMessages to 0 the property still applies: once a check has counted an outstanding message at least this old,
         /// the next add to the outbox throws an OutboxLimitReachedException.
         /// </summary>

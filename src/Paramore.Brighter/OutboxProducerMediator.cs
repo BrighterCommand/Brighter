@@ -110,7 +110,8 @@ namespace Paramore.Brighter
         /// <param name="maxOutStandingCheckInterval">
         /// The minimum time between background checks for maxOutStandingMessages, measured from the previous check
         /// (<see cref="TimeSpan.Zero"/> checks after every clear, so after every Post). It is also the minimum age a message
-        /// must have in the outbox to count as outstanding. Defaults to one second when null.
+        /// must have in the outbox to count as outstanding. Ignored when maxOutStandingMessages is -1 (no limit), as the
+        /// outbox is then not consulted for the count. Defaults to one second when null.
         /// </param>
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="timeProvider"></param>
@@ -798,6 +799,11 @@ namespace Paramore.Brighter
 
         private void CheckOutstandingMessages(RequestContext? requestContext)
         {
+            //With no limit (-1) the count is never compared with a limit, so do not queue a task, take the
+            //process-wide semaphore and query the outbox just to throw the number away
+            if (_maxOutStandingMessages == -1)
+                return;
+
             var now = _timeProvider.GetUtcNow();
 
             var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
