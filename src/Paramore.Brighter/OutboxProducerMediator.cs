@@ -107,7 +107,11 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory"></param>
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
         /// <param name="maxOutStandingMessages">How many messages can become outstanding in the Outbox before we throw an OutboxLimitReached exception</param>
-        /// <param name="maxOutStandingCheckInterval">How long before we check for maxOutStandingMessages</param>
+        /// <param name="maxOutStandingCheckInterval">
+        /// The minimum time between background checks for maxOutStandingMessages, measured from the previous check
+        /// (<see cref="TimeSpan.Zero"/> checks after every clear, so after every Post). It is also the minimum age a message
+        /// must have in the outbox to count as outstanding. Defaults to one second when null.
+        /// </param>
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="timeProvider"></param>
         /// <param name="instrumentationOptions">How verbose do we want our instrumentation to be</param>

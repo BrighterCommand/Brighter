@@ -84,9 +84,13 @@ namespace Paramore.Brighter
         public int MaxOutStandingMessages { get; set; } 
 
         /// <summary>
-        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
-        /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
-        /// If you set MaxOutStandingMessages to 0 this property is effectively ignored
+        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages.
+        /// This is the minimum time between background checks, measured from the previous check. We start a check on a background thread
+        /// after messages are cleared from the outbox (Post clears straight after it deposits), if the time since the previous check is at
+        /// least this threshold; TimeSpan.Zero checks after every clear.
+        /// It is also the minimum age a message must have in the outbox to be counted as outstanding (it is passed to the outbox as dispatchedSince).
+        /// If you set MaxOutStandingMessages to 0 the property still applies: once a check has counted an outstanding message at least this old,
+        /// the next add to the outbox throws an OutboxLimitReachedException.
         /// </summary>
         public TimeSpan MaxOutStandingCheckInterval { get; set; } 
         
@@ -200,9 +204,13 @@ namespace Paramore.Brighter
         public int MaxOutStandingMessages { get; set; } = -1;
 
         /// <summary>
-        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
-        /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
-        /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
+        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages.
+        /// This is the minimum time between background checks, measured from the previous check. We start a check on a background thread
+        /// after messages are cleared from the outbox (Post clears straight after it deposits), if the time since the previous check is at
+        /// least this threshold; TimeSpan.Zero checks after every clear.
+        /// It is also the minimum age a message must have in the outbox to be counted as outstanding (it is passed to the outbox as dispatchedSince).
+        /// If you set MaxOutStandingMessages to 0 the property still applies: once a check has counted an outstanding message at least this old,
+        /// the next add to the outbox throws an OutboxLimitReachedException.
         /// </summary>
         public TimeSpan MaxOutStandingCheckInterval { get; set; } = TimeSpan.Zero;
         
