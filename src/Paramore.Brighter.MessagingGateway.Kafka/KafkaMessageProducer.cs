@@ -74,6 +74,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher? _publisher;
         private bool _hasFatalProducerError;
+        private int _disposed;
         private readonly InstrumentationOptions _instrumentation;
         private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
         // Confirmation raises run on worker tasks (never on Confluent's poll thread); the tracker
@@ -148,8 +149,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
         
         /// <summary>
-        /// Dispose of the producer 
+        /// Disposes of the producer. Repeated calls are no-ops.
         /// </summary>
+        /// <remarks>Flush, confirmation-callback draining and handle disposal are attempted before any errors are rethrown.</remarks>
+        /// <exception cref="AggregateException">More than one cleanup step failed.</exception>
         public void Dispose()
         {
             Dispose(true);
@@ -158,8 +161,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     
         
         /// <summary>
-        /// Dispose of the producer 
+        /// Disposes of the producer. Repeated calls are no-ops, including calls after <see cref="Dispose()"/>.
         /// </summary>
+        /// <returns>A completed value task after the synchronous Kafka teardown has finished.</returns>
+        /// <remarks>Flush, confirmation-callback draining and handle disposal are attempted before any errors are rethrown.</remarks>
+        /// <exception cref="AggregateException">More than one cleanup step failed.</exception>
         public ValueTask DisposeAsync()
         {
             Dispose(true);
@@ -392,14 +398,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                // Flush drains the delivery reports; the callbacks they spawned (including the
-                // awaited Outbox mark-dispatched) may still be running, so wait for those too.
-                Flush();
-                WaitForConfirmationCallbacks();
-                _producer?.Dispose();
-            }
+            if (!disposing || Interlocked.Exchange(ref _disposed, 1) != 0)
+                return;
+
+            var cleanup = new KafkaResourceCleanup();
+            // Delivery reports can start confirmation callbacks that outlive the flush.
+            cleanup.Try(() => Flush());
+            cleanup.Try(WaitForConfirmationCallbacks);
+            cleanup.Try(() => _producer?.Dispose());
+            cleanup.ThrowIfFailed();
         }
         
         private void PublishResults(PersistenceStatus status, Headers headers, RoutingKey topic, ActivityContext? publishContext)
@@ -505,4 +512,3 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
     }
 }
-
