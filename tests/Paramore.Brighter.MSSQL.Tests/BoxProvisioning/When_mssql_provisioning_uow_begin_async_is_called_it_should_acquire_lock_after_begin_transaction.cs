@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -50,7 +50,11 @@ public class MsSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
     private readonly FakeMsSqlAdvisoryLock _advisoryLock = new(throwOnAcquire: null);
 
-    public async Task InitializeAsync() => await _connection.OpenAsync();
+    public async Task InitializeAsync()
+    {
+        await Configuration.EnsureDatabaseExistsAsync(_connection.ConnectionString);
+        await _connection.OpenAsync();
+    }
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 

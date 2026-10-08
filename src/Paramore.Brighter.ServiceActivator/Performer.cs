@@ -29,10 +29,14 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.ServiceActivator
 {
     /// Abstracts the thread that runs a message pump
-    public class Performer : IAmAPerformer
+    public class Performer : IAmAPerformer, IHaveAChannelFailureCount
     {
         private readonly IAmAChannel _channel;
         private readonly IAmAMessagePump _messagePump;
+
+        /// <inheritdoc />
+        public int ConsecutiveChannelFailures =>
+            (_messagePump as IHaveAChannelFailureCount)?.ConsecutiveChannelFailures ?? 0;
 
         /// <summary>
         /// Constructs a performer, a combination of a message pump and a channel that it reads from
