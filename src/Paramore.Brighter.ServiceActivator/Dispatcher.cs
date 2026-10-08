@@ -49,6 +49,10 @@ namespace Paramore.Brighter.ServiceActivator
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<Dispatcher>();
 
         private Task? _controlTask;
+        private readonly object _lifecycleLock = new();
+        private int _pendingConsumerOperations;
+        private bool _stopping;
+        private volatile DispatcherState _state;
         //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange,
         //making the disposal body run exactly once even under concurrent Dispose (an application-level
         //dispose racing the container's)
@@ -94,7 +98,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets the state of the <see cref="Dispatcher"/>
         /// </summary>
         /// <value>The state.</value>
-        public DispatcherState State { get; private set; }
+        public DispatcherState State { get => _state; private set => _state = value; }
 
         /// <summary>
         /// The maximum time <see cref="Dispose"/> waits for the pumps to drain their in-flight message —
@@ -337,22 +341,36 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Stop listening to messages
         /// </summary>
-        /// <returns>Task.</returns>
+        /// <returns>A task that completes after accepted consumer operations and all performers have drained.</returns>
+        /// <remarks>
+        /// New receive, open, and scaling operations are rejected until the returned task completes.
+        /// Consumers still being created are disposed without starting their performers.
+        /// </remarks>
         public Task End()
         {
-            if (State == DispatcherState.DS_RUNNING)
+            IAmAConsumer[] consumers;
+            Task controlTask;
+            lock (_lifecycleLock)
             {
-                Log.StoppingDispatcher(s_logger);
-                Consumers.Each(consumer => consumer.Shut(consumer.Subscription.RoutingKey));
+                controlTask = _controlTask ?? Task.CompletedTask;
+                if (State != DispatcherState.DS_RUNNING)
+                    return controlTask;
+
+                _stopping = true;
+                consumers = _consumers.Values.ToArray();
             }
 
-            return _controlTask ?? Task.CompletedTask;
+            Log.StoppingDispatcher(s_logger);
+            consumers.Each(consumer => consumer.Shut(consumer.Subscription.RoutingKey));
+            return controlTask;
         }
 
         /// <summary>
         /// Opens the specified subscription by name 
         /// </summary>
-        /// <param name="subscriptionName"></param>
+        /// <param name="subscriptionName">The subscription name.</param>
+        /// <exception cref="InvalidOperationException">The dispatcher is stopping.</exception>
+        /// <exception cref="ObjectDisposedException">The dispatcher has been disposed.</exception>
         public void Open(SubscriptionName subscriptionName)
         {
             Open(Subscriptions.Single(c => c.Name == subscriptionName));
@@ -362,31 +380,17 @@ namespace Paramore.Brighter.ServiceActivator
         /// Opens the specified subscription.
         /// </summary>
         /// <param name="subscription">The subscription.</param>
+        /// <exception cref="InvalidOperationException">The dispatcher is stopping.</exception>
+        /// <exception cref="ObjectDisposedException">The dispatcher has been disposed.</exception>
         public void Open(Subscription subscription)
         {
-            Log.OpeningSubscription(s_logger, subscription.Name.Value);
-
-            AddSubscriptionToSubscriptions(subscription);
-            var addedConsumers = CreateConsumers([subscription]);
-
-            switch (State)
+            ExecuteConsumerOperation(_ =>
             {
-                case DispatcherState.DS_RUNNING:
-                    addedConsumers.Each(consumer =>
-                    {
-                        _consumers.TryAdd(consumer.Name.Value, consumer);
-                        consumer.Open();
-                        _tasks.TryAdd(consumer.JobId, consumer.Job!);
-                    });
-                    break;
-                case DispatcherState.DS_STOPPED:
-                case DispatcherState.DS_AWAITING:
-                    addedConsumers.Each(consumer => _consumers.TryAdd(consumer.Name.Value, consumer));
-                    Start();
-                    break;
-                default:
-                    throw new InvalidOperationException("The dispatcher is not ready");
-            }
+                Log.OpeningSubscription(s_logger, subscription.Name.Value);
+                lock (_lifecycleLock)
+                    AddSubscriptionToSubscriptions(subscription);
+                return CreateConsumers([subscription]);
+            });
         }
 
         private void AddSubscriptionToSubscriptions(Subscription subscription)
@@ -400,10 +404,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Begins listening for messages on channels, and dispatching them to request handlers.
         /// </summary>
+        /// <exception cref="InvalidOperationException">The dispatcher is stopping.</exception>
+        /// <exception cref="ObjectDisposedException">The dispatcher has been disposed.</exception>
         public void Receive()
         {
-            CreateConsumers(Subscriptions).Each(consumer => _consumers.TryAdd(consumer.Name.Value, consumer));
-            Start();
+            ExecuteConsumerOperation(_ => CreateConsumers(Subscriptions));
         }
 
         /// <summary>
@@ -442,106 +447,165 @@ namespace Paramore.Brighter.ServiceActivator
             ).ToArray();
         }
 
+        /// <summary>
+        /// Changes the number of performers for a subscription, starting a new run when stopped.
+        /// </summary>
+        /// <param name="connectionName">The subscription name.</param>
+        /// <param name="numberOfPerformers">The requested number of performers; negative values are treated as zero.</param>
+        /// <exception cref="InvalidOperationException">The dispatcher is stopping, or the subscription does not exist.</exception>
+        /// <exception cref="ObjectDisposedException">The dispatcher has been disposed.</exception>
         public void SetActivePerformers(string connectionName, int numberOfPerformers)
         {
-            var subscription = Subscriptions.Single(c => c.Name == connectionName);
-            var currentPerformers = subscription?.NoOfPerformers;
-            if(currentPerformers == numberOfPerformers)
-                return;
-            if (subscription is null)
-                throw new ArgumentException("Cannot find Subscription.");
+            ExecuteConsumerOperation(starting =>
+            {
+                Subscription subscription;
+                int currentPerformers;
+                int desiredPerformers;
+                IAmAConsumer[] consumersToClose;
+                lock (_lifecycleLock)
+                {
+                    subscription = Subscriptions.Single(c => c.Name == connectionName);
+                    currentPerformers = starting ? 0 : subscription.NoOfPerformers;
+                    subscription.SetNumberOfPerformers(numberOfPerformers);
+                    desiredPerformers = subscription.NoOfPerformers;
+                    consumersToClose = _consumers.Values
+                        .Where(c => c.Subscription.Name == subscription.Name)
+                        .Take(Math.Max(0, currentPerformers - desiredPerformers)).ToArray();
+                }
 
-            subscription.SetNumberOfPerformers(numberOfPerformers);
-            if (currentPerformers < numberOfPerformers)
-            {
-                for (var i = currentPerformers; i < numberOfPerformers; i++)
-                {
-                    var consumer = CreateConsumer(subscription, i);
-                    _consumers.TryAdd(consumer.Name.Value, consumer);
-                    consumer.Open();
-                    _tasks.TryAdd(consumer.JobId, consumer.Job!);
-                }
-            }
-            else
-            {
-                var consumersForConnection = Consumers.Where(consumer => subscription != null && consumer.Subscription.Name == subscription.Name)
-                    .ToArray();
-                var consumersToClose = currentPerformers - numberOfPerformers;
-                for (int i = 0; i < consumersToClose; ++i)
-                {
-                    consumersForConnection[i].Shut(subscription.RoutingKey);
-                }
-            }
+                if (currentPerformers < desiredPerformers)
+                    return CreateConsumers([subscription], desiredPerformers - currentPerformers);
+
+                consumersToClose.Each(consumer => consumer.Shut(subscription.RoutingKey));
+                return Array.Empty<Consumer>();
+            });
         }
 
-        private void Start()
+        private void ExecuteConsumerOperation(Func<bool, IEnumerable<Consumer>> createConsumers)
         {
-            // Block Start() callers until every consumer is Open. A Shut()/End() racing in
-            // immediately after Receive() returns must not see a still-Shut consumer, or the
-            // late-opened performer leaks and End() hangs forever in Task.WaitAny.
-            var startup = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            _controlTask = Task.Factory.StartNew(
-                () => RunControlLoop(startup),
-                CancellationToken.None,
-                TaskCreationOptions.LongRunning,
-                TaskScheduler.Default);
-
-            startup.Task.GetAwaiter().GetResult();
-        }
-
-        private void RunControlLoop(TaskCompletionSource<bool> startup)
-        {
-            if (State != DispatcherState.DS_AWAITING && State != DispatcherState.DS_STOPPED)
-            {
-                startup.TrySetResult(true);
-                return;
-            }
-
-            Log.DispatcherStarting(s_logger);
-
+            var starting = BeginConsumerOperation();
+            Consumer[] consumers = [];
             try
             {
-                OpenConsumers();
+                consumers = createConsumers(starting).ToArray();
+                lock (_lifecycleLock)
+                {
+                    foreach (var consumer in consumers)
+                        _consumers.TryAdd(consumer.Name.Value, consumer);
+                }
+
+                if (starting)
+                    Log.DispatcherStarting(s_logger);
+                foreach (var consumer in consumers)
+                    OpenConsumer(consumer);
+                if (starting)
+                    Log.DispatcherStartingPerformers(s_logger, _tasks.Count);
+            }
+            catch
+            {
+                foreach (var consumer in consumers)
+                {
+                    consumer.Shut(consumer.Subscription.RoutingKey);
+                    if (consumer.Job is null)
+                        RemoveUnopenedConsumer(consumer);
+                }
+                throw;
+            }
+            finally
+            {
+                lock (_lifecycleLock)
+                {
+                    --_pendingConsumerOperations;
+                    Monitor.PulseAll(_lifecycleLock);
+                }
+            }
+        }
+
+        private bool BeginConsumerOperation()
+        {
+            lock (_lifecycleLock)
+            {
+                if (Volatile.Read(ref _disposed) != 0)
+                    throw new ObjectDisposedException(nameof(Dispatcher));
+                if (_stopping && _controlTask?.IsCompleted != true)
+                    throw new InvalidOperationException("The dispatcher is stopping. Await End() before opening consumers.");
+
+                ++_pendingConsumerOperations;
+                if (State == DispatcherState.DS_RUNNING)
+                    return false;
+
+                _stopping = false;
                 State = DispatcherState.DS_RUNNING;
-                startup.TrySetResult(true);
+                _controlTask = Task.Factory.StartNew(RunControlLoop, CancellationToken.None,
+                    TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                return true;
+            }
+        }
+
+        private void RunControlLoop()
+        {
+            while (true)
+            {
+                Task[] runningTasks;
+                lock (_lifecycleLock)
+                {
+                    // Accepted operations own resources even before their tasks can be registered.
+                    while (_tasks.IsEmpty && _pendingConsumerOperations != 0)
+                        Monitor.Wait(_lifecycleLock);
+                    if (_tasks.IsEmpty)
+                    {
+                        State = DispatcherState.DS_STOPPED;
+                        break;
+                    }
+                    runningTasks = _tasks.Values.ToArray();
+                }
+                HandleNextStoppedPerformer(runningTasks);
+            }
+            Log.DispatcherStopped(s_logger);
+        }
+
+        private void OpenConsumer(IAmAConsumer consumer)
+        {
+            lock (_lifecycleLock)
+            {
+                if (_stopping)
+                    consumer.Shut(consumer.Subscription.RoutingKey);
+                consumer.Open();
+                if (consumer.Job is { } job)
+                {
+                    _tasks.TryAdd(consumer.JobId, job);
+                    Monitor.PulseAll(_lifecycleLock);
+                    return;
+                }
+            }
+
+            RemoveUnopenedConsumer(consumer);
+        }
+
+        private void RemoveUnopenedConsumer(IAmAConsumer consumer)
+        {
+            // A consumer shut before opening has no task to trigger the normal cleanup path.
+            if (_consumers.TryRemove(consumer.Name.Value, out var unopenedConsumer))
+            {
+                Log.RemovingConsumer(s_logger, unopenedConsumer.Name.Value);
+                DisposeConsumer(unopenedConsumer);
+            }
+        }
+
+        private static void DisposeConsumer(IAmAConsumer consumer)
+        {
+            try
+            {
+                consumer.Dispose();
             }
             catch (Exception ex)
             {
                 Log.ErrorOnConsumer(s_logger, ex);
-                startup.TrySetException(ex);
-                throw;
-            }
-
-            Log.DispatcherStartingPerformers(s_logger, _tasks.Count);
-
-            WaitForPerformersToStop();
-
-            State = DispatcherState.DS_STOPPED;
-            Log.DispatcherStopped(s_logger);
-        }
-
-        private void OpenConsumers()
-        {
-            foreach (var consumer in Consumers)
-            {
-                consumer.Open();
-                if (consumer.Job is not null)
-                    _tasks.TryAdd(consumer.JobId, consumer.Job);
             }
         }
 
-        private void WaitForPerformersToStop()
+        private void HandleNextStoppedPerformer(Task[] runningTasks)
         {
-            while (!_tasks.IsEmpty)
-            {
-                HandleNextStoppedPerformer();
-            }
-        }
-
-        private void HandleNextStoppedPerformer()
-        {
-            var runningTasks = _tasks.Values.ToArray();
             var index = Task.WaitAny(runningTasks);
             var stoppingConsumer = runningTasks[index];
             Log.PerformerStopped(s_logger, stoppingConsumer.Status);
@@ -590,19 +654,26 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
 
-        private IEnumerable<Consumer> CreateConsumers(IEnumerable<Subscription> subscriptions)
+        private IEnumerable<Consumer> CreateConsumers(IEnumerable<Subscription> subscriptions, int? numberOfPerformers = null)
         {
-            var list = new List<Consumer>();
-            subscriptions.Each(subscription =>
+            var consumers = new List<Consumer>();
+            try
             {
-                for (var i = 0; i < subscription.NoOfPerformers; i++)
+                foreach (var subscription in subscriptions)
                 {
-                    list.Add(CreateConsumer(subscription, i + 1));
+                    for (var i = 0; i < (numberOfPerformers ?? subscription.NoOfPerformers); i++)
+                        consumers.Add(CreateConsumer(subscription, i + 1));
                 }
-            });
-            return list;
+                return consumers;
+            }
+            catch
+            {
+                foreach (var consumer in consumers)
+                    DisposeConsumer(consumer);
+                throw;
+            }
         }
-        
+
         private Consumer CreateConsumer(Subscription subscription, int? consumerNumber)
         {
             Log.CreatingConsumer(s_logger, consumerNumber, subscription.Name.Value);
