@@ -24,27 +24,29 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Tasks
 {
     /// <summary>
-    /// Runs callbacks one at a time, in the order they were queued, on a single worker. A producer uses it to
-    /// raise publish confirmations off the broker's thread without queuing one thread-pool work item per
-    /// confirmation (#4560).
+    /// Runs callbacks one at a time, in the order they were queued, on a single dedicated thread. A producer uses
+    /// it to raise publish confirmations off the broker's thread without queuing any work on the thread pool, so a
+    /// busy producer does not add to the pool's queue and confirmations keep flowing when the pool is starved (#4560).
     /// </summary>
     /// <remarks>
-    /// A callback must handle its own exceptions; one that escapes is swallowed so that the worker keeps
-    /// draining. <see cref="TryWait"/> lets a producer's dispose wait for the queued callbacks to finish.
+    /// Each callback runs inside a <see cref="BrighterAsyncContext"/>, so its continuations come back to the
+    /// dedicated thread; only a continuation that opts out of the context (<c>ConfigureAwait(false)</c>) can land
+    /// on the pool. A callback must handle its own exceptions; one that escapes is swallowed so that the thread
+    /// keeps draining. <see cref="TryWait"/> lets a producer's dispose wait for the queued callbacks to finish.
+    /// The thread starts with the first callback and ends after <see cref="Complete"/> once the queue is empty.
     /// </remarks>
     public sealed class SerialCallbackQueue
     {
-        private readonly System.Threading.Channels.Channel<Func<Task>> _callbacks =
-            System.Threading.Channels.Channel.CreateUnbounded<Func<Task>>(new UnboundedChannelOptions { SingleReader = true });
+        private readonly BlockingCollection<Func<Task>> _callbacks = new();
         private readonly InFlightCallbackTracker _inFlight = new();
-        private int _workerStarted;
+        private int _threadStarted;
 
         /// <summary>
         /// Queues a callback to run after every callback queued before it.
@@ -53,14 +55,14 @@ namespace Paramore.Brighter.Tasks
         public void Enqueue(Func<Task> callback)
         {
             _inFlight.Begin();
-            if (!_callbacks.Writer.TryWrite(callback))
+            if (!TryAdd(callback))
             {
                 _inFlight.End();
                 return;
             }
 
-            if (Interlocked.CompareExchange(ref _workerStarted, 1, 0) == 0)
-                _ = Task.Run(DrainAsync);
+            if (Interlocked.CompareExchange(ref _threadStarted, 1, 0) == 0)
+                new Thread(Drain) { IsBackground = true, Name = "Brighter Confirmation Callbacks" }.Start();
         }
 
         /// <summary>
@@ -72,29 +74,39 @@ namespace Paramore.Brighter.Tasks
         public bool TryWait(TimeSpan timeout, out int stillInFlight) => _inFlight.TryWait(timeout, out stillInFlight);
 
         /// <summary>
-        /// Stops accepting callbacks; the worker ends once it has run those already queued.
+        /// Stops accepting callbacks; the thread ends once it has run those already queued.
         /// </summary>
-        public void Complete() => _callbacks.Writer.TryComplete();
+        public void Complete() => _callbacks.CompleteAdding();
 
-        private async Task DrainAsync()
+        // A confirmation that arrives after Complete (a late broker ack during dispose) is dropped rather than
+        // thrown back onto the broker's thread; BlockingCollection throws once adding is complete.
+        private bool TryAdd(Func<Task> callback)
         {
-            var reader = _callbacks.Reader;
-            while (await reader.WaitToReadAsync().ConfigureAwait(false))
+            try
             {
-                while (reader.TryRead(out var callback))
+                return _callbacks.TryAdd(callback);
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
+        }
+
+        private void Drain()
+        {
+            foreach (var callback in _callbacks.GetConsumingEnumerable())
+            {
+                try
                 {
-                    try
-                    {
-                        await callback().ConfigureAwait(false);
-                    }
-                    catch
-                    {
-                        // The callback owns its fault handling; swallow anything it let escape so later callbacks still run.
-                    }
-                    finally
-                    {
-                        _inFlight.End();
-                    }
+                    BrighterAsyncContext.Run(callback);
+                }
+                catch
+                {
+                    // The callback owns its fault handling; swallow anything it let escape so later callbacks still run.
+                }
+                finally
+                {
+                    _inFlight.End();
                 }
             }
         }
