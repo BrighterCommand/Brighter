@@ -102,6 +102,10 @@ public static class BrighterSemanticConventions
     public const string NetworkPeerPort = "network.peer.port";
     public const string Operation = "paramore.brighter.operation";
     public const string OutboxSharedTransaction = "paramore.brighter.outbox.shared_transaction";
+    public const string OutboxSweeperOutcome = "paramore.brighter.outbox_sweeper.outcome";
+    public const string OutboxSweeperSweepDuration = "paramore.brighter.outbox_sweeper.sweep.duration";
+    public const string OutboxSweeperSweeps = "paramore.brighter.outbox_sweeper.sweeps";
+    public const string OutboxSweeperTickLag = "paramore.brighter.outbox_sweeper.tick.lag";
     public const string OutboxType = "paramore.brighter.outbox.type";
     public const string ReplyTo = "paramore.brighter.replyto";
     public const string RequestId = "paramore.brighter.request.id"; 

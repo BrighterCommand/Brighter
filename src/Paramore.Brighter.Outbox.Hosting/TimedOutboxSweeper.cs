@@ -31,6 +31,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Paramore.Brighter.Outbox.Hosting
@@ -44,6 +45,8 @@ namespace Paramore.Brighter.Outbox.Hosting
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IDistributedLock _distributedLock;
         private readonly TimedOutboxSweeperOptions _options;
+        private readonly TimeProvider _timeProvider;
+        private readonly IAmABrighterSweeperMeter _meter;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
         private Timer? _timer;
         private const string LockingResourceName = "OutboxSweeper";
@@ -54,15 +57,21 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <param name="serviceScopeFactory">Needed to create a scope within which to create a <see cref="CommandProcessor"/></param>
         /// <param name="distributedLock">Used to ensure that only one instance of the <see cref="TimedOutboxSweeper"/> is running</param>
         /// <param name="options">The <see cref="TimedOutboxSweeperOptions"/> that can be used to configure how this runs, such as interval or age</param>
+        /// <param name="timeProvider">The clock that schedules sweeps; defaults to <see cref="TimeProvider.System"/></param>
+        /// <param name="meter">Records the sweeper's health (see ADR 0081); defaults to <see cref="NullSweeperMeter"/>, which records nothing</param>
         public TimedOutboxSweeper(
             IServiceScopeFactory serviceScopeFactory,
             IDistributedLock distributedLock,
-            TimedOutboxSweeperOptions options
+            TimedOutboxSweeperOptions options,
+            TimeProvider? timeProvider = null,
+            IAmABrighterSweeperMeter? meter = null
         )
         {
             _serviceScopeFactory = serviceScopeFactory;
             _distributedLock = distributedLock;
             _options = options;
+            _timeProvider = timeProvider ?? TimeProvider.System;
+            _meter = meter ?? NullSweeperMeter.Instance;
         }
 
         /// <summary>
