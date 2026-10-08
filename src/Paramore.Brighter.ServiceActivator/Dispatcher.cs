@@ -535,18 +535,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             while (!_tasks.IsEmpty)
             {
-                try
-                {
-                    HandleNextStoppedPerformer();
-                }
-                catch (AggregateException ae)
-                {
-                    ae.Handle(ex =>
-                    {
-                        Log.ErrorOnConsumer(s_logger, ex);
-                        return true;
-                    });
-                }
+                HandleNextStoppedPerformer();
             }
         }
 
@@ -557,14 +546,34 @@ namespace Paramore.Brighter.ServiceActivator
             var stoppingConsumer = runningTasks[index];
             Log.PerformerStopped(s_logger, stoppingConsumer.Status);
 
-            RemoveConsumerForTask(stoppingConsumer);
-
-            if (_tasks.TryRemove(stoppingConsumer.Id, out var removedTask))
+            // Retire the completed task before cleanup so a disposal failure cannot leave it pending.
+            _tasks.TryRemove(stoppingConsumer.Id, out _);
+            try
             {
-                removedTask?.Dispose();
-            }
+                using (stoppingConsumer)
+                {
+                    // WaitAny does not observe faults, including disposal failures inside the pump.
+                    if (stoppingConsumer.Exception is { } taskException)
+                    {
+                        foreach (var exception in taskException.Flatten().InnerExceptions)
+                            Log.ErrorOnConsumer(s_logger, exception);
+                    }
 
-            stoppingConsumer.Dispose();
+                    RemoveConsumerForTask(stoppingConsumer);
+                }
+            }
+            catch (AggregateException ae)
+            {
+                ae.Handle(ex =>
+                {
+                    Log.ErrorOnConsumer(s_logger, ex);
+                    return true;
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.ErrorOnConsumer(s_logger, ex);
+            }
         }
 
         private void RemoveConsumerForTask(Task stoppingConsumer)
