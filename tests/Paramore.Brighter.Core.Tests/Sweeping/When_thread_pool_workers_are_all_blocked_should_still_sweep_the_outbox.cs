@@ -34,9 +34,7 @@ public class TimedOutboxSweeperStarvationTests
 
         var services = new ServiceCollection();
         services.AddSingleton<IAmAnOutboxProducerMediator>(mediator);
-        // Not disposed: a starved timer tick can still fire after StopAsync, and a disposed provider
-        // makes that tick throw out of the sweeper and crash the test host (a separate defect, #4560).
-        var provider = services.BuildServiceProvider();
+        using var provider = services.BuildServiceProvider();
 
         var sweeper = new TimedOutboxSweeper(
             provider.GetRequiredService<IServiceScopeFactory>(),

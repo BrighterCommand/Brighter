@@ -37,6 +37,7 @@ public static class BrighterMetricsBuilderExtensions
         {
             services.TryAddSingleton<IAmABrighterMessagingMeter, MessagingMeter>();
             services.TryAddSingleton<IAmABrighterDbMeter, DbMeter>();
+            services.TryAddSingleton<IAmABrighterSweeperMeter, SweeperMeter>();
             
             builder.AddMeter(BrighterSemanticConventions.MeterName);
         });

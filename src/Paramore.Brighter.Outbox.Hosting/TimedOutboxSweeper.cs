@@ -40,6 +40,10 @@ namespace Paramore.Brighter.Outbox.Hosting
     /// Runs a sweeper that will find outstanding messages in the Outbox and produce them via a broker
     /// Uses a time to run at pre-defined intervals
     /// </summary>
+    /// <remarks>
+    /// Sweeps run on a dedicated thread, not on the thread pool. A thread-pool timer cannot fire while every
+    /// pool worker is blocked, and that is exactly when unsent messages pile up in the Outbox (#4560).
+    /// </remarks>
     public partial class TimedOutboxSweeper : IHostedService, IDisposable
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -47,8 +51,13 @@ namespace Paramore.Brighter.Outbox.Hosting
         private readonly TimedOutboxSweeperOptions _options;
         private readonly TimeProvider _timeProvider;
         private readonly IAmABrighterSweeperMeter _meter;
+        private readonly TimeSpan _interval;
+        private readonly CancellationTokenSource _stopping = new();
+        private readonly AutoResetEvent _due = new(false);
+        private readonly TaskCompletionSource<bool> _stopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
-        private Timer? _timer;
+        private Thread? _sweepThread;
+        private bool _disposed;
         private const string LockingResourceName = "OutboxSweeper";
 
         /// <summary>
@@ -59,6 +68,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <param name="options">The <see cref="TimedOutboxSweeperOptions"/> that can be used to configure how this runs, such as interval or age</param>
         /// <param name="timeProvider">The clock that schedules sweeps; defaults to <see cref="TimeProvider.System"/></param>
         /// <param name="meter">Records the sweeper's health (see ADR 0081); defaults to <see cref="NullSweeperMeter"/>, which records nothing</param>
+        /// <exception cref="ConfigurationException">Thrown when <see cref="TimedOutboxSweeperOptions.TimerInterval"/> is less than one second</exception>
         public TimedOutboxSweeper(
             IServiceScopeFactory serviceScopeFactory,
             IDistributedLock distributedLock,
@@ -67,85 +77,193 @@ namespace Paramore.Brighter.Outbox.Hosting
             IAmABrighterSweeperMeter? meter = null
         )
         {
+            if (options.TimerInterval < 1)
+                throw new ConfigurationException(
+                    $"{nameof(TimedOutboxSweeperOptions)}.{nameof(TimedOutboxSweeperOptions.TimerInterval)} must be at least 1 second, but was {options.TimerInterval}");
+
             _serviceScopeFactory = serviceScopeFactory;
             _distributedLock = distributedLock;
             _options = options;
             _timeProvider = timeProvider ?? TimeProvider.System;
             _meter = meter ?? NullSweeperMeter.Instance;
+            _interval = TimeSpan.FromSeconds(options.TimerInterval);
         }
 
         /// <summary>
         /// Starts an instance of the <see cref="TimedOutboxSweeper"/> at the configured interval. See <see cref="TimedOutboxSweeperOptions.TimerInterval"/>
         /// </summary>
-        /// <param name="cancellationToken">Cancels execution of the <see cref="TimedOutboxSweeper"/></param>
+        /// <param name="cancellationToken">Not used</param>
         /// <returns>A completed task to allow other background services to be run</returns>
         public Task StartAsync(CancellationToken cancellationToken)
         {
             Log.OutboxSweeperServiceIsStarting(s_logger);
 
-            _timer = new Timer(Sweep, null, TimeSpan.Zero, TimeSpan.FromSeconds(_options.TimerInterval));
+            _sweepThread = new Thread(SweepUntilStopped) { IsBackground = true, Name = "Brighter Outbox Sweeper" };
+            _sweepThread.Start();
 
             return Task.CompletedTask;
         }
 
         /// <summary>
-        /// Stops the <see cref="TimedOutboxSweeper"/>
+        /// Stops the <see cref="TimedOutboxSweeper"/>, waiting for any sweep in flight to finish
         /// </summary>
-        /// <param name="cancellationToken">Not used</param>
-        /// <returns>A completed task to allow other background services to be stopped</returns>
+        /// <param name="cancellationToken">Abandons the wait for a sweep in flight</param>
+        /// <returns>A task that completes when the sweeper has stopped</returns>
         public Task StopAsync(CancellationToken cancellationToken)
         {
             Log.OutboxSweeperServiceIsStopping(s_logger);
 
-            _timer?.Change(Timeout.Infinite, 0);
+            if (_sweepThread is null)
+                return Task.CompletedTask;
 
-            return Task.CompletedTask;
+            _stopping.Cancel();
+            return WaitForStop(cancellationToken);
         }
 
         /// <summary>
-        /// Cleans up the <see cref="System.Threading.Timer"/> used by the <see cref="TimedOutboxSweeper"/>
+        /// Stops the sweeper's thread and releases the resources it uses
         /// </summary>
         public void Dispose()
         {
-            _timer?.Dispose();
+            if (_disposed) return;
+            _disposed = true;
+
+            _stopping.Cancel();
+
+            // A sweep still in flight goes on using these; let it finish rather than pull them away.
+            if (_sweepThread is not null && !_sweepThread.Join(TimeSpan.Zero))
+                return;
+
+            _stopping.Dispose();
+            _due.Dispose();
         }
 
-        private async void Sweep(object? state)
+        private async Task WaitForStop(CancellationToken cancellationToken)
+        {
+            if (!cancellationToken.CanBeCanceled)
+            {
+                await _stopped.Task;
+                return;
+            }
+
+            var abandoned = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            using (cancellationToken.Register(() => abandoned.TrySetResult(true)))
+                await Task.WhenAny(_stopped.Task, abandoned.Task);
+        }
+
+        private void SweepUntilStopped()
+        {
+            try
+            {
+                var due = _timeProvider.GetUtcNow();
+                while (WaitUntil(due))
+                {
+                    var started = _timeProvider.GetUtcNow();
+                    Record(() => _meter.RecordTickLag(started - due));
+
+                    Sweep();
+
+                    due = NextDue(due, started);
+                }
+            }
+            finally
+            {
+                _stopped.TrySetResult(true);
+            }
+        }
+
+        // Waits on this thread, never on the pool: the real-time timeout wakes the sweeper even when no pool
+        // thread is free to run the TimeProvider's timer callback. The callback lets a test clock wake it too.
+        private bool WaitUntil(DateTimeOffset due)
+        {
+            while (!_stopping.IsCancellationRequested)
+            {
+                var wait = due - _timeProvider.GetUtcNow();
+                if (wait <= TimeSpan.Zero)
+                    return true;
+
+                using var timer = _timeProvider.CreateTimer(_ => SignalDue(), null, wait, Timeout.InfiniteTimeSpan);
+                WaitHandle.WaitAny(new[] { _due, _stopping.Token.WaitHandle }, wait);
+            }
+
+            return false;
+        }
+
+        private void SignalDue()
+        {
+            try { _due.Set(); }
+            catch (ObjectDisposedException) { }
+        }
+
+        // Keeps to the schedule, so a late or overrunning sweep shows as lag on the next one. A sweep that started
+        // a whole interval or more late re-anchors the schedule, so the sweeper never sweeps back to back to catch up.
+        private DateTimeOffset NextDue(DateTimeOffset due, DateTimeOffset started)
+        {
+            var anchor = started - due >= _interval ? started : due;
+            return anchor + _interval;
+        }
+
+        private void Sweep()
+        {
+            var started = _timeProvider.GetTimestamp();
+            var outcome = SweepOnce();
+            var duration = _timeProvider.GetElapsedTime(started);
+            Record(() => _meter.RecordSweep(outcome, duration));
+
+            Log.OutboxSweeperSleeping(s_logger);
+        }
+
+        private SweepOutcome SweepOnce()
+        {
+            try
+            {
+                // On the sweeper's own thread, so blocking on the sweep is safe: there is no synchronization context to deadlock on.
+                return SweepAsync().GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                Log.OutboxSweepFailed(s_logger, e);
+                return SweepOutcome.Failed;
+            }
+        }
+
+        private async Task<SweepOutcome> SweepAsync()
         {
             var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, CancellationToken.None);
-            if (lockId != null)
+            if (lockId == null)
+            {
+                Log.OutboxSweeperIsStillRunningAbandoningAttempt(s_logger);
+                return SweepOutcome.LockUnavailable;
+            }
+
+            try
             {
                 Log.OutboxSweeperLookingForUnsentMessages(s_logger);
 
-                var scope = _serviceScopeFactory.CreateScope();
-                try
-                {
-                    IAmAnOutboxProducerMediator outboxProducerMediator = scope.ServiceProvider.GetRequiredService<IAmAnOutboxProducerMediator>();
+                using var scope = _serviceScopeFactory.CreateScope();
+                IAmAnOutboxProducerMediator outboxProducerMediator = scope.ServiceProvider.GetRequiredService<IAmAnOutboxProducerMediator>();
 
-                    var outBoxSweeper = new OutboxSweeper(
-                        timeSinceSent: _options.MinimumMessageAge,
-                        outboxProducerMediator: outboxProducerMediator,
-                        new InMemoryRequestContextFactory(),
-                        _options.BatchSize,
-                        _options.UseBulk,
-                        _options.Args);
-                    
-                    await outBoxSweeper.SweepAsync();
-                }
-                finally
-                {
-                    //on a timer thread, so blocking is OK
-                    await _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, CancellationToken.None);
-                        
-                    scope.Dispose();
-                }
+                var outBoxSweeper = new OutboxSweeper(
+                    timeSinceSent: _options.MinimumMessageAge,
+                    outboxProducerMediator: outboxProducerMediator,
+                    new InMemoryRequestContextFactory(),
+                    _options.BatchSize,
+                    _options.UseBulk,
+                    _options.Args);
+
+                await outBoxSweeper.SweepAsync();
+                return SweepOutcome.Completed;
             }
-            else
+            finally
             {
-                Log.OutboxSweeperIsStillRunningAbandoningAttempt(s_logger);
+                await _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, CancellationToken.None);
             }
+        }
 
-            Log.OutboxSweeperSleeping(s_logger);
+        private static void Record(Action record)
+        {
+            try { record(); }
+            catch (Exception e) { Log.SweeperMeterFailed(s_logger, e); }
         }
 
         private static partial class Log
@@ -164,7 +282,12 @@ namespace Paramore.Brighter.Outbox.Hosting
             
             [LoggerMessage(LogLevel.Information, "Outbox Sweeper sleeping")]
             public static partial void OutboxSweeperSleeping(ILogger logger);
+
+            [LoggerMessage(LogLevel.Error, "Outbox Sweeper failed to sweep the outbox; it will try again on the next sweep")]
+            public static partial void OutboxSweepFailed(ILogger logger, Exception exception);
+
+            [LoggerMessage(LogLevel.Warning, "Outbox Sweeper could not record a metric")]
+            public static partial void SweeperMeterFailed(ILogger logger, Exception exception);
         }
     }
 }
-

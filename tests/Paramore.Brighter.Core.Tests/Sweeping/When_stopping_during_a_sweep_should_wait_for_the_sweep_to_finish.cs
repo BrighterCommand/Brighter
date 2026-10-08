@@ -24,9 +24,7 @@ public class TimedOutboxSweeperStopTests
         var routingKey = new RoutingKey("MyCommand");
         var services = new ServiceCollection();
         services.AddSingleton<IAmAnOutboxProducerMediator>(CreateMediator(routingKey));
-        // Not disposed: today the sweep carries on after StopAsync returns, and a disposed provider
-        // makes it throw out of the sweeper and crash the test host instead of failing the assertion.
-        var provider = services.BuildServiceProvider();
+        await using var provider = services.BuildServiceProvider();
 
         using var sweepInFlight = new GatedDistributedLock();
         var sweeper = new TimedOutboxSweeper(
