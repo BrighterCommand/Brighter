@@ -2,6 +2,49 @@
 
 ## Master
 
+### Outbox sweeper and publish confirmations no longer depend on the thread pool (#4560)
+
+`TimedOutboxSweeper` used to run each sweep from a thread-pool `Timer`. When every pool thread was
+busy or blocked, sweeps ran late or not at all, so messages awaiting a publish confirmation stayed in
+the `InMemoryOutbox`. Kafka and RabbitMQ (`RMQ.Sync`) producers also queued one thread-pool work item
+per publish confirmation, which added to that pressure under load.
+
+- **The sweeper runs on its own thread.** Sweeps now start on time even when the thread pool is
+  starved.
+- **`StopAsync` waits for a sweep in flight** before it returns.
+- **A failed sweep no longer crashes the process.** The sweeper logs the error and tries again on the
+  next sweep. It also releases its lock on every path, so one failure no longer blocks every later
+  sweep.
+- **Kafka and `RMQ.Sync` raise publish confirmations on one thread per producer**, one at a time, in
+  delivery order.
+- **New sweeper metrics.** `AddBrighterInstrumentation` registers
+  `paramore.brighter.outbox_sweeper.tick.lag`, `.sweep.duration` and `.sweeps` (by outcome). See
+  [ADR 0081](docs/adr/0081-timed-outbox-sweeper-health-metrics.md).
+
+#### Behaviour change: `TimerInterval` below 1 is rejected
+
+`TimedOutboxSweeperOptions.TimerInterval` must be at least 1 second. A value of 0 or less now throws
+a `ConfigurationException` when the sweeper is created. Before, 0 swept once and then never again,
+and a negative value threw when the sweeper started.
+
+#### Behaviour change: publish-confirmation subscribers run one at a time
+
+On Kafka and `RMQ.Sync`, subscribers to `OnMessagePublished` and to the awaited confirmation event
+used to run concurrently. They now run one at a time, in the order the broker confirmed the
+messages. A slow subscriber therefore delays the confirmations behind it. Brighter's own subscriber
+marks the message dispatched in the outbox.
+
+#### Cost: one thread per confirming producer
+
+Each Kafka or `RMQ.Sync` producer now starts one background thread, with its first confirmation, and
+keeps it until the producer is disposed. Both transports create one producer per publication, so an
+app with twenty publications runs twenty confirmation threads, plus one sweeper thread.
+
+An idle thread costs little. Under load, though, those threads compete with the rest of the app for
+CPU. That can matter on a pod limited to 1–2 CPUs. If you run many publications on a small pod, watch
+CPU throttling (`container_cpu_cfs_throttled_periods_total` on Kubernetes) and the new sweeper
+tick-lag metric.
+
 ### AWS SQS, GCP Pub/Sub and RocketMQ: `requeueCount` now runs down (#4341, spec 0037)
 
 On these transports the broker re-serves its own stored copy of a requeued message, and Brighter never
