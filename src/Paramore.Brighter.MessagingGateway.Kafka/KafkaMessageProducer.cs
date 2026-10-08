@@ -76,10 +76,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private bool _hasFatalProducerError;
         private readonly InstrumentationOptions _instrumentation;
         private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
-        // Confirmation raises run on worker tasks (never on Confluent's poll thread); the tracker
-        // lets Dispose wait for those callbacks — including the awaited Outbox mark-dispatched —
-        // after Flush() has drained the delivery reports themselves.
-        private readonly InFlightCallbackTracker _confirmationCallbacks = new();
+        // Confirmation raises run one at a time, in delivery order, on a single worker (never on Confluent's
+        // poll thread, and never one thread-pool item per report); the queue lets Dispose wait for those
+        // callbacks — including the awaited Outbox mark-dispatched — after Flush() has drained the delivery
+        // reports themselves.
+        private readonly SerialCallbackQueue _confirmationCallbacks = new();
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration configuration, 
@@ -398,6 +399,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 // awaited Outbox mark-dispatched) may still be running, so wait for those too.
                 Flush();
                 WaitForConfirmationCallbacks();
+                _confirmationCallbacks.Complete();
                 _producer?.Dispose();
             }
         }
@@ -447,13 +449,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private void RaisePublishConfirmation(PublishConfirmationResult result)
         {
-            // Raise on a worker thread so we never block Confluent's delivery-report handler. Wrap the
-            // invoke so a faulting subscriber is logged rather than left as an unobserved Task exception
-            // (which can escalate via TaskScheduler.UnobservedTaskException). Brighter's own mediator
-            // callback is already self-contained; this guards any other subscriber and the broker thread.
-            // The in-flight tracker must be released on every path or dispose would block on its timeout.
-            _confirmationCallbacks.Begin();
-            Task.Run(async () =>
+            // Raise on the confirmation queue's worker so we never block Confluent's delivery-report handler,
+            // and confirmations reach subscribers one at a time, in delivery order. Wrap the invoke so a
+            // faulting subscriber is logged. Brighter's own mediator callback is already self-contained;
+            // this guards any other subscriber and the queue's worker.
+            _confirmationCallbacks.Enqueue(async () =>
             {
                 try
                 {
@@ -463,10 +463,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 catch (Exception ex)
                 {
                     Log.PublishConfirmationRaiseFault(s_logger, ex);
-                }
-                finally
-                {
-                    _confirmationCallbacks.End();
                 }
             });
         }

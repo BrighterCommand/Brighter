@@ -60,10 +60,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private readonly int _waitForConfirmsTimeOutInMilliseconds;
         private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
         // The ack/nack handlers run on the client's connection loop, which must never block on a
-        // subscriber, so awaited callbacks run on worker tasks. The tracker lets Dispose wait for
-        // them — including the awaited Outbox mark-dispatched — after WaitForConfirms has drained
-        // the broker acks themselves.
-        private readonly InFlightCallbackTracker _confirmationCallbacks = new();
+        // subscriber, so awaited callbacks run one at a time, in ack order, on the queue's single worker
+        // (never one thread-pool item per ack). The queue lets Dispose wait for them — including the
+        // awaited Outbox mark-dispatched — after WaitForConfirms has drained the broker acks themselves.
+        private readonly SerialCallbackQueue _confirmationCallbacks = new();
 
         /// <summary>
         /// Action taken when a message is published, following receipt of a confirmation from the broker
@@ -251,6 +251,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     // WaitForConfirms drains the broker acks; the callbacks those acks spawned (including
                     // the awaited Outbox mark-dispatched) run on worker tasks, so wait for them too.
                     WaitForConfirmationCallbacks();
+                    _confirmationCallbacks.Complete();
                 }
             }
             finally
@@ -289,10 +290,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 return;
 
             // Awaited callbacks must not block the connection loop (WaitForConfirms depends on it to
-            // process acks), so they run on a worker task; Dispose waits on the in-flight tracker,
-            // which must be released on every path or that wait would hang until its timeout.
-            _confirmationCallbacks.Begin();
-            Task.Run(async () =>
+            // process acks), so they run on the confirmation queue's worker, one at a time, in ack order.
+            _confirmationCallbacks.Enqueue(async () =>
             {
                 try
                 {
@@ -301,10 +300,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 catch (Exception ex)
                 {
                     Log.ConfirmationCallbackFault(s_logger, result.MessageId.Value, ex);
-                }
-                finally
-                {
-                    _confirmationCallbacks.End();
                 }
             });
         }
