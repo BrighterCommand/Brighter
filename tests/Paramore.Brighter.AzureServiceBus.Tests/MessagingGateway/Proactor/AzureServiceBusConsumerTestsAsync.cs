@@ -254,39 +254,6 @@ public class AzureServiceBusConsumerTestsAsync
     }
 
     [Fact]
-    public async Task When_requeue_is_called_and_the_delay_is_zero_the_send_method_is_called()
-    {
-        _nameSpaceManagerWrapper.ResetState();
-        _nameSpaceManagerWrapper.Topics.Add("topic", new ());
-        _fakeMessageProducer.SentMessages.Clear();
-        var messageLockTokenOne = Guid.NewGuid();
-        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_EVENT);
-        var message = new Message(messageHeader, new MessageBody("body"));
-        message.Header.Bag.Add("LockToken", messageLockTokenOne);
-
-        await _azureServiceBusConsumer.RequeueAsync(message, TimeSpan.Zero);
-
-        Assert.Single(_fakeMessageProducer.SentMessages);
-    }
-
-    [Fact]
-    public void When_requeue_is_called_and_the_delay_is_more_than_zero_the_sendWithDelay_method_is_called()
-    {
-        _nameSpaceManagerWrapper.ResetState();
-        _nameSpaceManagerWrapper.Topics.Add("topic", new ());
-        _fakeMessageProducer.SentMessages.Clear();
-            
-        var messageLockTokenOne = Guid.NewGuid();
-        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_EVENT);
-        var message = new Message(messageHeader, new MessageBody("body"));
-        message.Header.Bag.Add("LockToken", messageLockTokenOne);
-
-        _azureServiceBusConsumer.Requeue(message, TimeSpan.FromMilliseconds(100));
-
-        Assert.Single(_fakeMessageProducer.SentMessages);
-    }
-
-    [Fact]
     public void
         When_there_is_an_error_talking_to_servicebus_when_checking_if_subscription_exist_then_a_ChannelFailureException_is_raised()
     {

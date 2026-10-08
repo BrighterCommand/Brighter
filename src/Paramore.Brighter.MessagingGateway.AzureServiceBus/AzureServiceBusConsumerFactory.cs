@@ -58,6 +58,7 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
     /// </summary>
     /// <param name="subscription">The queue to connect to</param>
     /// <returns>IAmAMessageConsumerSync</returns>
+    /// <exception cref="ConfigurationException">The subscription's retry, forwarding or lock renewal configuration is invalid.</exception>
     public IAmAMessageConsumerSync Create(Subscription subscription)
     {
         var nameSpaceManagerWrapper = new AdministrationClientWrapper(_clientProvider);
@@ -69,7 +70,35 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
         if (sub.Configuration.MaxAutoLockRenewalDuration < TimeSpan.Zero)
             throw new ConfigurationException("MaxAutoLockRenewalDuration must be zero or positive.");
 
+        if (sub.RequeueDelay > TimeSpan.Zero && !sub.Configuration.UseServiceBusQueue
+            && sub.Configuration.ForwardTo is null)
+        {
+            throw new ConfigurationException(
+                "Delayed topic retries require ForwardTo to a dedicated queue, or UseServiceBusQueue with externally provisioned forwarding.");
+        }
+
         var receiverProvider = new ServiceBusReceiverProvider(_clientProvider, sub.Configuration.MaxAutoLockRenewalDuration);
+
+        if (sub.Configuration.ForwardTo is { } queueName)
+        {
+            if (sub.Configuration.UseServiceBusQueue || string.IsNullOrWhiteSpace(queueName)
+                || Uri.TryCreate(queueName, UriKind.Absolute, out _))
+            {
+                throw new ConfigurationException(
+                    "ForwardTo must name a queue in the same namespace and cannot be combined with UseServiceBusQueue.");
+            }
+
+            var messageProducer = new AzureServiceBusQueueMessageProducer(
+                nameSpaceManagerWrapper,
+                new ServiceBusSenderProvider(_clientProvider),
+                new AzureServiceBusPublication { MakeChannels = subscription.MakeChannels })
+            {
+                DestinationOverride = new RoutingKey(queueName)
+            };
+
+            return new AzureServiceBusForwardingConsumer(sub, messageProducer,
+                nameSpaceManagerWrapper, receiverProvider);
+        }
 
         if (sub.Configuration.UseServiceBusQueue)
         {

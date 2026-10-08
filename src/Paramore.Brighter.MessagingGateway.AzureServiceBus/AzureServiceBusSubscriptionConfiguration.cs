@@ -89,7 +89,7 @@ public class AzureServiceBusSubscriptionConfiguration
     /// are preserved; remove obsolete rules explicitly when changing the configured rule name.
     /// Null uses <see cref="SqlFilter"/> when specified, or the default rule for a new subscription.
     /// Existing rules are left unchanged when neither option is specified.
-    /// <see cref="OnMissingChannel.Validate"/> checks subscription existence only;
+    /// <see cref="OnMissingChannel.Validate"/> does not reconcile rules;
     /// <see cref="OnMissingChannel.Assume"/> performs no administration operations.
     /// </remarks>
     /// <value>The subscription's <see cref="CreateRuleOptions"/>, or null to use the legacy filter or default behavior.</value>
@@ -107,6 +107,29 @@ public class AzureServiceBusSubscriptionConfiguration
     /// does not allow the session requirement to be changed after queue creation.
     /// </remarks>
     public bool UseServiceBusQueue { get; set; } = false;
+
+    /// <summary>
+    /// The queue in the same namespace that receives this topic subscription's messages and retries.
+    /// Null consumes the topic subscription directly.
+    /// </summary>
+    /// <remarks>
+    /// Use a different queue for each independent subscription. The routing key remains the topic name.
+    /// Create provisions the queue before the subscription; Validate checks both entities and forwarding;
+    /// Assume uses infrastructure provisioned externally. Existing subscriptions must already forward to
+    /// this queue. Session settings apply to the destination queue, not the forwarding subscription.
+    /// This option cannot be combined with UseServiceBusQueue.
+    /// Delayed retries require this option or UseServiceBusQueue; direct subscriptions only support immediate retries.
+    /// Purge requires Create because it deletes and recreates the destination queue. Validate and Assume reject
+    /// purge before changing the receiver or queue.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// new AzureServiceBusSubscriptionConfiguration { ForwardTo = "orders-accounting" }
+    /// </code>
+    /// Keep the subscription's routing key set to the source topic and its channel name set to
+    /// the topic subscription. Publishers continue sending to the source topic.
+    /// </example>
+    public string? ForwardTo { get; set; }
 
     internal CreateRuleOptions? GetRuleOptions()
     {

@@ -346,7 +346,8 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     /// </summary>
     /// <param name="message"></param>
     /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
-    /// <returns>True if the message should be acked, false otherwise</returns>
+    /// <returns>True when the message has been requeued.</returns>
+    /// <exception cref="ConfigurationException">A delayed retry was requested for a direct topic subscription.</exception>
     public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(() => RequeueAsync(message, delay));
 
     /// <summary>
@@ -354,14 +355,37 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     /// </summary>
     /// <param name="message"></param>
     /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
-    /// <param name="cancellationToken">Cancel the requeue ioperation</param>
-    /// <returns>True if the message should be acked, false otherwise</returns>
+    /// <param name="cancellationToken">Cancel the requeue operation.</param>
+    /// <returns>True when the message has been requeued.</returns>
+    /// <exception cref="ConfigurationException">A delayed retry was requested for a direct topic subscription.</exception>
+    /// <remarks>
+    /// Immediate retries on direct topic subscriptions abandon the original delivery and persist its handled count.
+    /// Abandon also increments Azure Service Bus's delivery count, so the subscription's
+    /// MaxDeliveryCount can dead-letter a message before Brighter exhausts its retry budget.
+    /// Direct topic subscriptions reject delayed retries before publishing or settling the original message.
+    /// Set AzureServiceBusSubscriptionConfiguration.ForwardTo to consume and retry through a dedicated
+    /// queue. Alternatively, provision forwarding externally and use UseServiceBusQueue with the queue
+    /// name as the routing key.
+    /// </remarks>
     public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken))
     {
         var topic = message.Header.Topic;
         delay ??= TimeSpan.Zero;
 
         Log.RequeuingMessage(Logger, topic, message.Id.Value);
+
+        if (!SubscriptionConfiguration.UseServiceBusQueue
+            && SubscriptionConfiguration.ForwardTo is null)
+        {
+            if (delay.Value > TimeSpan.Zero)
+            {
+                throw new ConfigurationException(
+                    "Delayed topic retries require ForwardTo to a dedicated queue, or UseServiceBusQueue with externally provisioned forwarding.");
+            }
+
+            await AbandonForRetryAsync(message, cancellationToken);
+            return true;
+        }
 
         var messageProducerAsync = _messageProducer as IAmAMessageProducerAsync;
             
@@ -382,6 +406,30 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         await AcknowledgeAsync(message, cancellationToken);
 
         return true;
+    }
+
+    private async Task AbandonForRetryAsync(Message message, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await EnsureChannelAsync();
+        var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
+        if (string.IsNullOrEmpty(lockToken))
+            throw new ChannelFailureException($"LockToken for message with id {message.Id} is null or empty");
+
+        if (ServiceBusReceiver == null)
+            await GetMessageReceiverProviderAsync();
+
+        if (ServiceBusReceiver is not IAmAServiceBusRetryReceiver receiver)
+        {
+            throw new ChannelFailureException(
+                "Immediate topic retries require a receiver that implements IAmAServiceBusRetryReceiver.");
+        }
+
+        await receiver.AbandonAsync(lockToken, new Dictionary<string, object>
+        {
+            [ASBConstants.HandledCountHeaderBagKey] = message.Header.HandledCount
+        }, cancellationToken);
+        await CloseSessionIfIdleAsync();
     }
 
     internal async Task ResetReceiverAsync()
