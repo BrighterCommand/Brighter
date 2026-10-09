@@ -925,19 +925,29 @@ because checking whether a subscription exists is itself a management-API call.
 `AzureServiceBusConsumerFactory`, used on its own without the channel factory, is unchanged: its
 consumers still provision on first use.
 
-### Outbox: no outstanding message count when there is no limit (#4554)
+### Outbox: the outstanding message check is skipped with no limit and no longer piles up (#4554)
 
 With the default `AddProducers` settings (`MaxOutStandingMessages` of -1 and
 `MaxOutStandingCheckInterval` of zero), every `Post` and clear queued a background count of the
 outstanding messages, even though with no limit the count is never compared with one. Each count
-waited on a thread-pool thread for a process-wide semaphore and then queried the outbox: a sort of
-every entry it held for the `InMemoryOutbox`, a query per `Post` for a relational outbox. With a
-limit of -1 the count no longer runs. A limit of 0 is a real limit and is still checked.
+waited on a thread-pool thread for a semaphore shared by every mediator with the same message and
+transaction types, and then queried the outbox: a sort of every entry it held for the
+`InMemoryOutbox`, a query per `Post` for a relational outbox. With a limit of -1 the count no
+longer runs. A limit of 0 is a real limit and is still checked.
 
 With no limit, the span the outbox creates for the count no longer appears under a clear
 (`count.outstanding_messages` for the `InMemoryOutbox`, `retrieve.outstanding_messages` for a
 relational outbox), the debug line "Outbox outstanding message count is" always reports 0, and the
 other debug lines of the check, such as "Current outstanding count is", are no longer logged.
+
+With a limit set, the checks no longer pile up. Each mediator keeps at most one check queued or
+running, and a post that comes while one is in flight does not queue another, so with the default
+interval of zero a clear queues a check only if the previous one has finished. Before, a burst of
+posts could queue a check per post, each holding a thread-pool thread while it waited on the
+semaphore. The time of the last check is now recorded when the check is queued rather than when it
+starts, so `MaxOutStandingCheckInterval` is measured from then, and the debug lines "Time since last
+check is" and "Running outstanding message check" measure from the same point. A post that finds a
+check in flight does not log "Running outstanding message check".
 
 ## 10.7.0
 
