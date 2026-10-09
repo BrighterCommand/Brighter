@@ -81,7 +81,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         // poll thread, and never one thread-pool item per report); the queue lets Dispose wait for those
         // callbacks — including the awaited Outbox mark-dispatched — after Flush() has drained the delivery
         // reports themselves.
-        private readonly BatchedCallbackQueue _confirmationCallbacks = new();
+        private readonly BatchedCallbackQueue _confirmationCallbacks;
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration configuration, 
@@ -95,6 +95,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 throw new ConfigurationException("Topic is required for a publication");
 
             Publication = publication;
+            _confirmationCallbacks = new BatchedCallbackQueue(MessagingSystem.Kafka, publication.Topic!);
 
             ClientConfig = new ClientConfig
             {

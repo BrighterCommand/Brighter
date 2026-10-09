@@ -48,6 +48,20 @@ namespace Paramore.Brighter.Tasks
         private TaskCompletionSource<bool>? _drained;
 
         /// <summary>
+        /// How many callbacks have begun and not yet ended.
+        /// </summary>
+        public int Count
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _inFlight;
+                }
+            }
+        }
+
+        /// <summary>
         /// Records that a callback has been started. Every call must be balanced by exactly one
         /// <see cref="End"/> (call it in a finally), or <see cref="TryWait"/> will wait out its
         /// full timeout.

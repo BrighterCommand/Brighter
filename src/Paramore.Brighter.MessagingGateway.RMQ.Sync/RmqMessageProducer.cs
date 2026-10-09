@@ -63,7 +63,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         // subscriber, so awaited callbacks run one at a time, in ack order, on the queue's single worker
         // (never one thread-pool item per ack). The queue lets Dispose wait for them — including the
         // awaited Outbox mark-dispatched — after WaitForConfirms has drained the broker acks themselves.
-        private readonly BatchedCallbackQueue _confirmationCallbacks = new();
+        private readonly BatchedCallbackQueue _confirmationCallbacks;
 
         /// <summary>
         /// Action taken when a message is published, following receipt of a confirmation from the broker
@@ -122,6 +122,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             _publication = publication ?? new RmqPublication { MakeChannels = OnMissingChannel.Create };
             _waitForConfirmsTimeOutInMilliseconds = _publication.WaitForConfirmsTimeOutInMilliseconds;
+            // A publication without a topic publishes to many routing keys on its exchange, so report it by the exchange
+            var destination = RoutingKey.IsNullOrEmpty(_publication.Topic)
+                ? new RoutingKey(connection.Exchange?.Name ?? string.Empty)
+                : _publication.Topic!;
+            _confirmationCallbacks = new BatchedCallbackQueue(MessagingSystem.RabbitMQ, destination);
         }
 
         /// <summary>

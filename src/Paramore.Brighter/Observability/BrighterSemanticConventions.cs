@@ -106,6 +106,7 @@ public static class BrighterSemanticConventions
     public const string OutboxSweeperSweepDuration = "paramore.brighter.outbox_sweeper.sweep.duration";
     public const string OutboxSweeperSweeps = "paramore.brighter.outbox_sweeper.sweeps";
     public const string OutboxSweeperTickLag = "paramore.brighter.outbox_sweeper.tick.lag";
+    public const string PublishConfirmationQueueDepth = "paramore.brighter.publish_confirmation.queue.depth";
     public const string OutboxType = "paramore.brighter.outbox.type";
     public const string ReplyTo = "paramore.brighter.replyto";
     public const string RequestId = "paramore.brighter.request.id"; 

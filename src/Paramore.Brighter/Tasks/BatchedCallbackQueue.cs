@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Tasks
 {
@@ -53,6 +54,33 @@ namespace Paramore.Brighter.Tasks
         private readonly BlockingCollection<Func<Task>> _callbacks = new();
         private readonly InFlightCallbackTracker _inFlight = new();
         private int _threadStarted;
+        private readonly long? _registryId;
+
+        /// <summary>
+        /// Creates a queue that the confirmation queue-depth metric does not report.
+        /// </summary>
+        public BatchedCallbackQueue() { }
+
+        /// <summary>
+        /// Creates a queue whose depth <see cref="PublishConfirmationMeter"/> reports under the producer's attributes.
+        /// </summary>
+        /// <param name="messagingSystem">The broker the owning producer publishes to.</param>
+        /// <param name="destination">The topic the owning producer publishes to.</param>
+        public BatchedCallbackQueue(MessagingSystem messagingSystem, RoutingKey destination)
+        {
+            MessagingSystem = messagingSystem;
+            Destination = destination;
+            _registryId = BatchedCallbackQueueRegistry.Register(this);
+        }
+
+        internal MessagingSystem? MessagingSystem { get; }
+
+        internal RoutingKey? Destination { get; }
+
+        /// <summary>
+        /// How many callbacks are queued or running.
+        /// </summary>
+        internal int Depth => _inFlight.Count;
 
         /// <summary>
         /// Queues a callback; it starts after every callback queued before it has started.
@@ -82,7 +110,12 @@ namespace Paramore.Brighter.Tasks
         /// <summary>
         /// Stops accepting callbacks; the thread ends once it has run those already queued.
         /// </summary>
-        public void Complete() => _callbacks.CompleteAdding();
+        public void Complete()
+        {
+            _callbacks.CompleteAdding();
+            if (Volatile.Read(ref _threadStarted) == 0)
+                Unregister();
+        }
 
         // A confirmation that arrives after Complete (a late broker ack during dispose) is dropped rather than
         // thrown back onto the broker's thread; BlockingCollection throws once adding is complete.
@@ -105,6 +138,14 @@ namespace Paramore.Brighter.Tasks
                 var batch = TakeBatch(first);
                 BrighterAsyncContext.Run(() => Task.WhenAll(batch.Select(RunAndRelease)));
             }
+
+            Unregister();
+        }
+
+        private void Unregister()
+        {
+            if (_registryId is { } id)
+                BatchedCallbackQueueRegistry.Unregister(id);
         }
 
         private List<Func<Task>> TakeBatch(Func<Task> first)
