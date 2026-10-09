@@ -158,10 +158,14 @@ namespace Paramore.Brighter.Outbox.Hosting
         {
             try
             {
-                var due = _timeProvider.GetUtcNow();
-                while (WaitUntil(due))
+                // Schedule by elapsed time, not the wall clock, so a clock that steps backwards cannot hold up a sweep
+                var origin = _timeProvider.GetTimestamp();
+                TimeSpan Elapsed() => _timeProvider.GetElapsedTime(origin);
+
+                var due = Elapsed();
+                while (WaitUntil(due, Elapsed))
                 {
-                    var started = _timeProvider.GetUtcNow();
+                    var started = Elapsed();
                     Record(() => _meter.RecordTickLag(started - due));
 
                     Sweep();
@@ -177,17 +181,17 @@ namespace Paramore.Brighter.Outbox.Hosting
 
         // Waits on this thread, never on the pool: the real-time timeout wakes the sweeper even when no pool
         // thread is free to run the TimeProvider's timer callback. The callback lets a test clock wake it too.
-        private bool WaitUntil(DateTimeOffset due)
+        private bool WaitUntil(TimeSpan due, Func<TimeSpan> elapsed)
         {
             while (!_stopping.IsCancellationRequested)
             {
-                var wait = due - _timeProvider.GetUtcNow();
+                var wait = due - elapsed();
                 if (wait <= TimeSpan.Zero)
                     return true;
 
                 using var timer = _timeProvider.CreateTimer(_ => SignalDue(), null, wait, Timeout.InfiniteTimeSpan);
                 // The clock may have moved on before the timer existed to see it, so look again before waiting.
-                if (due - _timeProvider.GetUtcNow() <= TimeSpan.Zero)
+                if (due - elapsed() <= TimeSpan.Zero)
                     return true;
 
                 WaitHandle.WaitAny(new[] { _due, _stopping.Token.WaitHandle }, wait);
@@ -204,7 +208,7 @@ namespace Paramore.Brighter.Outbox.Hosting
 
         // Keeps to the schedule, so a late or overrunning sweep shows as lag on the next one. A sweep that started
         // a whole interval or more late re-anchors the schedule, so the sweeper never sweeps back to back to catch up.
-        private DateTimeOffset NextDue(DateTimeOffset due, DateTimeOffset started)
+        private TimeSpan NextDue(TimeSpan due, TimeSpan started)
         {
             var anchor = started - due >= _interval ? started : due;
             return anchor + _interval;
