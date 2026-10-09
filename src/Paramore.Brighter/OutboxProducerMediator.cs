@@ -800,7 +800,7 @@ namespace Paramore.Brighter
         private void CheckOutstandingMessages(RequestContext? requestContext)
         {
             //With no limit (-1) the count is never compared with a limit, so do not queue a task, take the
-            //process-wide semaphore and query the outbox just to throw the number away
+            //semaphore shared by every mediator with the same types and query the outbox just to throw the number away
             if (_maxOutStandingMessages == -1)
                 return;
 
