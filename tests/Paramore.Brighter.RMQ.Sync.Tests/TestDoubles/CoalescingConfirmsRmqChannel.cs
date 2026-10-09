@@ -51,10 +51,28 @@ public class CoalescingConfirmsRmqChannel : DispatchProxy
 
     // One broker frame: the client raises a single event, carrying the broker's multiple flag as-is
     public void RaiseAck(ulong deliveryTag, bool multiple)
-        => _acks?.Invoke(this, new BasicAckEventArgs { DeliveryTag = deliveryTag, Multiple = multiple });
+        => Raise(_acks, new BasicAckEventArgs { DeliveryTag = deliveryTag, Multiple = multiple });
 
     public void RaiseNack(ulong deliveryTag, bool multiple)
-        => _nacks?.Invoke(this, new BasicNackEventArgs { DeliveryTag = deliveryTag, Multiple = multiple });
+        => Raise(_nacks, new BasicNackEventArgs { DeliveryTag = deliveryTag, Multiple = multiple });
+
+    // As the client does, call each subscriber in turn and swallow its exception, so one cannot stop the next
+    private void Raise<TArgs>(EventHandler<TArgs>? handlers, TArgs args)
+    {
+        if (handlers is null) return;
+
+        foreach (var handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                ((EventHandler<TArgs>)handler)(this, args);
+            }
+            catch (Exception)
+            {
+                // the client reports a subscriber's exception through CallbackException and carries on
+            }
+        }
+    }
 
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
     {

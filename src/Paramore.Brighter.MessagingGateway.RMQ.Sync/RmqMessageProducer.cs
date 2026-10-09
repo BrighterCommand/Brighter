@@ -275,10 +275,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             foreach (var confirmedTag in ConfirmedDeliveryTags(deliveryTag, multiple))
             {
-                if (_pendingConfirmations.TryGetValue(confirmedTag, out PendingConfirmation confirmation))
+                // Claim before raising: the handlers are subscribed once per Send, so only one invocation may win each tag
+                if (_pendingConfirmations.TryRemove(confirmedTag, out PendingConfirmation confirmation))
                 {
                     RaisePublishConfirmation(new PublishConfirmationResult(success, confirmation.MessageId, confirmation.Topic, confirmation.Context));
-                    _pendingConfirmations.TryRemove(confirmedTag, out PendingConfirmation _);
                     if (success)
                         Log.PublishedMessageInformation(s_logger, confirmation.MessageId.Value);
                     else
@@ -295,8 +295,16 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         private void RaisePublishConfirmation(PublishConfirmationResult result)
         {
-            // The sync event stays on the connection loop thread, matching its long-standing behavior.
-            OnMessagePublished?.Invoke(result);
+            // The sync event stays on the connection loop thread, matching its long-standing behavior. A subscriber
+            // that throws must not stop the rest of a coalesced ack from settling.
+            try
+            {
+                OnMessagePublished?.Invoke(result);
+            }
+            catch (Exception ex)
+            {
+                Log.ConfirmationCallbackFault(s_logger, result.MessageId.Value, ex);
+            }
 
             var handlers = _onMessagePublishedAsync;
             if (handlers is null)
