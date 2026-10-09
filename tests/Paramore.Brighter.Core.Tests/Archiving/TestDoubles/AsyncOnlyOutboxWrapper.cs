@@ -69,7 +69,7 @@ public class AsyncOnlyOutboxWrapper : IAmAnOutboxAsync<Message, CommittableTrans
         Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         => _inner.OutstandingMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, trippedTopics, args, cancellationToken);
 
-    public Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext,
+    public virtual Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext,
         int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         => _inner.GetOutstandingMessageCountAsync(dispatchedSince, requestContext, maxCount, args, cancellationToken);
 }
