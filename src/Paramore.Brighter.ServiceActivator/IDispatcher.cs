@@ -56,27 +56,38 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Ends this dispatcher instance, stopping all message processing.
         /// </summary>
-        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+        /// <returns>A task that completes after accepted consumer operations and all performers have drained.</returns>
+        /// <remarks>
+        /// Await this task before starting another receive, open, or scaling operation.
+        /// Such operations are rejected while shutdown is in progress.
+        /// </remarks>
         Task End();
 
         /// <summary>
         /// Opens the specified subscription for message processing.
         /// </summary>
         /// <param name="subscription">The <see cref="Subscription"/> to open.</param>
+        /// <exception cref="System.InvalidOperationException">Shutdown is in progress.</exception>
+        /// <exception cref="System.ObjectDisposedException">The dispatcher has been disposed.</exception>
         void Open(Subscription subscription);
 
         /// <summary>
         /// Opens the specified subscription by name for message processing.
         /// </summary>
         /// <param name="subscriptionName">The <see cref="SubscriptionName"/> of the subscription to open.</param>
+        /// <exception cref="System.InvalidOperationException">Shutdown is in progress.</exception>
+        /// <exception cref="System.ObjectDisposedException">The dispatcher has been disposed.</exception>
         void Open(SubscriptionName subscriptionName);
 
         /// <summary>
         /// Begins listening for messages on channels, and dispatching them to request handlers.
         /// </summary>
         /// <remarks>
-        /// This method will typically block and run continuously until <see cref="End"/> is called.
+        /// Returns after the consumers have been opened, or disposed if shutdown began during creation.
+        /// Their performers continue processing until stopped.
         /// </remarks>
+        /// <exception cref="System.InvalidOperationException">Shutdown is in progress.</exception>
+        /// <exception cref="System.ObjectDisposedException">The dispatcher has been disposed.</exception>
         void Receive();
 
         /// <summary>
@@ -102,6 +113,8 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="connectionName">The <see cref="string"/> name of the connection.</param>
         /// <param name="numberOfPerformers">The <see cref="int"/> number of performers to set.</param>
+        /// <exception cref="System.InvalidOperationException">Shutdown is in progress, or the subscription does not exist.</exception>
+        /// <exception cref="System.ObjectDisposedException">The dispatcher has been disposed.</exception>
         void SetActivePerformers(string connectionName, int numberOfPerformers);
     }
 }
