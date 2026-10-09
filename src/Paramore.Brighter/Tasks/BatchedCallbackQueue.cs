@@ -25,31 +25,37 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Tasks
 {
     /// <summary>
-    /// Runs callbacks one at a time, in the order they were queued, on a single dedicated thread. A producer uses
-    /// it to raise publish confirmations off the broker's thread without queuing any work on the thread pool, so a
-    /// busy producer does not add to the pool's queue and confirmations keep flowing when the pool is starved (#4560).
+    /// Runs callbacks in batches on a single dedicated thread. A producer uses it to raise publish confirmations off
+    /// the broker's thread without queuing any work on the thread pool, so a busy producer does not add to the pool's
+    /// queue and confirmations keep flowing when the pool is starved (#4560).
     /// </summary>
     /// <remarks>
-    /// Each callback runs inside a <see cref="BrighterAsyncContext"/>, so its continuations come back to the
-    /// dedicated thread; only a continuation that opts out of the context (<c>ConfigureAwait(false)</c>) can land
+    /// The thread takes up to 32 queued callbacks at a time, starts them in the order they were queued, and waits for
+    /// all of them before taking more; so their I/O, such as marking a message dispatched in an outbox, overlaps,
+    /// but callbacks may finish in any order. Each batch runs inside a <see cref="BrighterAsyncContext"/>, so
+    /// continuations come back to the dedicated thread; only a continuation that opts out of the context (<c>ConfigureAwait(false)</c>) can land
     /// on the pool. A callback must handle its own exceptions; one that escapes is swallowed so that the thread
     /// keeps draining. <see cref="TryWait"/> lets a producer's dispose wait for the queued callbacks to finish.
     /// The thread starts with the first callback and ends after <see cref="Complete"/> once the queue is empty.
     /// </remarks>
     public sealed class BatchedCallbackQueue
     {
+        private const int MaxBatchSize = 32;
+
         private readonly BlockingCollection<Func<Task>> _callbacks = new();
         private readonly InFlightCallbackTracker _inFlight = new();
         private int _threadStarted;
 
         /// <summary>
-        /// Queues a callback to run after every callback queued before it.
+        /// Queues a callback; it starts after every callback queued before it has started.
         /// </summary>
         /// <param name="callback">The callback; it must not throw.</param>
         public void Enqueue(Func<Task> callback)
@@ -94,20 +100,34 @@ namespace Paramore.Brighter.Tasks
 
         private void Drain()
         {
-            foreach (var callback in _callbacks.GetConsumingEnumerable())
+            foreach (var first in _callbacks.GetConsumingEnumerable())
             {
-                try
-                {
-                    BrighterAsyncContext.Run(callback);
-                }
-                catch
-                {
-                    // The callback owns its fault handling; swallow anything it let escape so later callbacks still run.
-                }
-                finally
-                {
-                    _inFlight.End();
-                }
+                var batch = TakeBatch(first);
+                BrighterAsyncContext.Run(() => Task.WhenAll(batch.Select(RunAndRelease)));
+            }
+        }
+
+        private List<Func<Task>> TakeBatch(Func<Task> first)
+        {
+            var batch = new List<Func<Task>> { first };
+            while (batch.Count < MaxBatchSize && _callbacks.TryTake(out var next))
+                batch.Add(next);
+            return batch;
+        }
+
+        private async Task RunAndRelease(Func<Task> callback)
+        {
+            try
+            {
+                await callback();
+            }
+            catch
+            {
+                // The callback owns its fault handling; swallow anything it let escape so the rest still run.
+            }
+            finally
+            {
+                _inFlight.End();
             }
         }
     }
