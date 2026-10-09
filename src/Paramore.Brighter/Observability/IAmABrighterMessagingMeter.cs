@@ -53,7 +53,13 @@ public interface IAmABrighterMessagingMeter
     /// </summary>
     /// <param name="activity">Activity to record</param>
     void RecordProcess(Activity activity);
-    
+
+    /// <summary>
+    /// Add a count of a circuit breaker trip/re-trip/reset event.
+    /// </summary>
+    /// <param name="activity">Activity to add</param>
+    void AddCircuitBreakerEvent(Activity activity);
+
     /// <summary>
     /// Checks if any of the instrument members has any listeners
     /// For example, this will be false if the associated meters are not registered

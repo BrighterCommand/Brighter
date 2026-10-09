@@ -148,7 +148,7 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
         try
         {
             foreach (Message message in messages)
-                await azureServiceBusMessageBatches.AddMessageToBatch(message, cancellationToken);
+                await azureServiceBusMessageBatches.AddMessageToBatchAsync(message, _publication.TimeToLive, cancellationToken);
 
             Log.SendingMessagesInBatches(Logger, topic, azureServiceBusMessageBatches.Batches.Count(), _bulkSendBatchSize);
 
@@ -219,7 +219,7 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
             Log.PublishingMessage(Logger, message.Header.Topic, delay, message.Body.Value, message.Id.Value);
 
             BrighterTracer.WriteProducerEvent(Span, "azure_service_bus", message, _options);
-            var azureServiceBusMessage = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message);
+            var azureServiceBusMessage = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message, _publication.TimeToLive);
             if (delay == TimeSpan.Zero)
             {
                 await serviceBusSenderWrapper.SendAsync(azureServiceBusMessage, cancellationToken);

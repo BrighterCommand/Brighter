@@ -86,6 +86,9 @@ public sealed class BrighterMetricsFromTracesProcessor(
             case BrighterSemanticConventions.DbInstrumentationDomain:
                 dbMeter.RecordClientOperation(activity);
                 break;
+            case BrighterSemanticConventions.CircuitBreakerInstrumentationDomain:
+                messagingMeter.AddCircuitBreakerEvent(activity);
+                break;
         }
 
         base.OnEnd(activity);

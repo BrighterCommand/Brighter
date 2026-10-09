@@ -266,4 +266,12 @@ public interface IAmABrighterTracer : IDisposable
     /// <param name="span"></param>
     /// <param name="exceptions"></param>
     void AddExceptionToSpan(Activity? span, IEnumerable<Exception> exceptions);
+
+    /// <summary>
+    /// Create a span for an outbox circuit breaker state transition (trip, re-trip, or reset)
+    /// </summary>
+    /// <param name="info">The attributes of the circuit breaker transition</param>
+    /// <param name="options">How deep should the instrumentation go?</param>
+    /// <returns>A new span named "{topic} {operation}"</returns>
+    Activity? CreateCircuitBreakerSpan(CircuitBreakerSpanInfo info, InstrumentationOptions options = InstrumentationOptions.All);
 }

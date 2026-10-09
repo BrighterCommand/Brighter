@@ -10,6 +10,8 @@ internal sealed class QuickHandlerFactory : IAmAHandlerFactorySync
     {
         _handlerAction = handlerAction;
     }
+    public IAmAScope? CreatePipelineScope() => null;
+
     public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
     {
         return _handlerAction();

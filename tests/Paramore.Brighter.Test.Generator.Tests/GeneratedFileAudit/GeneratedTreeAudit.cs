@@ -47,8 +47,9 @@ namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 /// </para>
 /// <para>
 /// The expected set comes from the generators themselves, through
-/// <see cref="Generators.OutboxGenerator.Plan"/> and
-/// <see cref="Generators.MessagingGatewayGenerator.Plan"/>, rather than from a description of them
+/// <see cref="Generators.OutboxGenerator.Plan"/>,
+/// <see cref="Generators.MessagingGatewayGenerator.Plan"/> and
+/// <see cref="Generators.GatewayConformanceGenerator.Plan"/>, rather than from a description of them
 /// kept here. A second description would be a second thing to keep in step, and would agree with
 /// the generator exactly until the day it mattered.
 /// </para>
@@ -158,6 +159,8 @@ public sealed class GeneratedTreeAudit
             NullLogger<Generators.OutboxGenerator>.Instance);
         var messagingGatewayGenerator = new Generators.MessagingGatewayGenerator(
             NullLogger<Generators.MessagingGatewayGenerator>.Instance);
+        var gatewayConformanceGenerator = new Generators.GatewayConformanceGenerator(
+            NullLogger<Generators.GatewayConformanceGenerator>.Instance);
 
         var expected = new HashSet<string>(StringComparer.Ordinal);
         foreach (var projectFolder in Directory.EnumerateDirectories(testsRoot))
@@ -182,8 +185,9 @@ public sealed class GeneratedTreeAudit
 
             expected.UnionWith(outboxGenerator.Plan(configuration)
                 .Concat(messagingGatewayGenerator.Plan(configuration))
+                .Concat(gatewayConformanceGenerator.Plan(configuration))
                 .Select(plannedFile => Path.GetFullPath(plannedFile.DestinationPath))
-                .Where(IsUnderAGeneratedFolder));
+                .Where(path => IsUnderAGeneratedFolder(path, testsRoot)));
         }
 
         return expected;
@@ -244,8 +248,21 @@ public sealed class GeneratedTreeAudit
         }
     }
 
-    private static bool IsUnderAGeneratedFolder(string path) =>
-        Segments(path).SkipLast(1).Contains(GENERATED_FOLDER_NAME, StringComparer.Ordinal);
+    /// <summary>
+    /// Whether <paramref name="path"/> lands under a <c>Generated/</c> directory somewhere beneath
+    /// <paramref name="testsRoot"/>.
+    /// </summary>
+    /// <remarks>
+    /// The question is asked of the path relative to <paramref name="testsRoot"/>, because that is
+    /// the only part of it the walk that builds the on-disk set ever sees. Asked of the absolute
+    /// path instead, a checkout that happened to live under a directory named <c>Generated</c>
+    /// would answer yes for every planned file - so the expected set would claim files the walk
+    /// never collects, and the audit would report them missing on a tree that is perfectly correct.
+    /// </remarks>
+    private static bool IsUnderAGeneratedFolder(string path, string testsRoot) =>
+        Segments(Path.GetRelativePath(testsRoot, path))
+            .SkipLast(1)
+            .Contains(GENERATED_FOLDER_NAME, StringComparer.Ordinal);
 
     private static string[] Segments(string path) =>
         path.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],

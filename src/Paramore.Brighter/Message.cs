@@ -91,7 +91,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Returns true if this is an empty Message.
         /// </summary>
+#pragma warning disable CS0618 // Message types still identify pump control signals.
         public bool IsEmpty => Header.MessageType == MessageType.MT_NONE;
+#pragma warning restore CS0618
 
         /// <summary>
         /// Gets the identifier of the message.

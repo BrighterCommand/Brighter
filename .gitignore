@@ -351,6 +351,8 @@ ralph.log
 
 # AI agent session state
 PROMPT.md
+PROMPT-*.md
+/bugfixes/.current-bug
 
 # TDD review gear (ADR 0071) — untracked working state, not a spec artifact.
 # Holds which gear a spec is currently being run in (review-before | review-after).
@@ -360,3 +362,4 @@ specs/**/.current-gear
 
 # Local-only docker compose overrides (e.g. port remaps for host conflicts)
 docker-compose-*.local.yaml
+.show-me-ledger.json

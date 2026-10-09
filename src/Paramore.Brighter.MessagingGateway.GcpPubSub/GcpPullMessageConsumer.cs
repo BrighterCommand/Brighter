@@ -1,4 +1,6 @@
-﻿using Google.Cloud.PubSub.V1;
+﻿using Google.Api.Gax;
+using Google.Api.Gax.Grpc;
+using Google.Cloud.PubSub.V1;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
@@ -140,27 +142,52 @@ public partial class GcpPullMessageConsumer(
     /// <summary>
     /// Asynchronously receives a batch of messages from the subscription using the Pull API.
     /// </summary>
-    /// <param name="timeOut">A timeout value (not strictly used by the underlying Google Pub/Sub client, but part of the Brighter interface).</param>
+    /// <param name="timeOut">
+    /// How long to wait for messages. Bounds the Pull call, so an empty subscription returns after
+    /// this window rather than long-polling until a message arrives. When null the client's own
+    /// default expiration applies.
+    /// </param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that returns an array of received Brighter messages. Returns an array containing a single empty message if no messages are available.</returns>
     public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
     {
         PullResponse response;
+        // Honour the caller's timeout: bound the Pull so it returns after the requested window
+        // rather than long-polling until a message arrives (which would block the pump and, for a
+        // delayed send, surface a scheduled message inside a shorter negative-observation window).
+        // Held outside the try so the catch filter below can ask whether the deadline that elapsed
+        // is the one we set.
+        var pullWindow = BuildPullCallSettings(timeOut);
         try
         {
             var client = await connection.CreateSubscriberServiceApiClientAsync();
             response = await client.PullAsync(
                 new PullRequest
                 {
-                    SubscriptionAsSubscriptionName = subscriptionName, 
+                    SubscriptionAsSubscriptionName = subscriptionName,
                     MaxMessages = batchSize,
                 },
-                cancellationToken);
+                pullWindow.WithCancellationToken(cancellationToken));
 
             if (response.ReceivedMessages.Count == 0)
             {
                 return [new Message()];
             }
+        }
+        catch (RpcException rcpException)
+            when (rcpException.Status.StatusCode == StatusCode.DeadlineExceeded && pullWindow != null)
+        {
+            // The window this call asked for elapsed with no messages available - a normal empty
+            // receive, and the only way a bounded Pull reports one.
+            //
+            // Only when we bounded it. With no timeout the deadline in force is the client's own
+            // per-method expiration, and a DeadlineExceeded then means a Pull took longer than the
+            // library expects rather than that the subscription is empty. Reporting that as an
+            // empty receive would turn a Pub/Sub that has become too slow to answer into a
+            // consumer that quietly reports no work, for ever. It falls through to the general
+            // handler below and is logged and rethrown, which is what it did before this call
+            // carried a deadline of ours at all.
+            return [new Message()];
         }
         catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.Unavailable)
         {
@@ -177,28 +204,53 @@ public partial class GcpPullMessageConsumer(
         return response.ReceivedMessages.Select(Parser.ToBrighterMessage).ToArray();
     }
 
+    // Bounds a Pull to the caller's timeout so an empty subscription returns after the requested
+    // window (as DeadlineExceeded) instead of long-polling. A null or non-positive timeout returns
+    // null, which leaves the client's own per-method expiration from SubscriberServiceApiSettings
+    // in force - the behaviour of the PullAsync(request, cancellationToken) overload this replaced.
+    // Returning Expiration.None here instead would override that default with no deadline at all,
+    // which is not what the caller who omitted a timeout asked for.
+    private static CallSettings? BuildPullCallSettings(TimeSpan? timeOut) =>
+        timeOut is { } window && window > TimeSpan.Zero
+            ? CallSettings.FromExpiration(Expiration.FromTimeout(window))
+            : null;
+
     
     /// <summary>
     /// Synchronously receives a batch of messages from the subscription using the Pull API.
     /// </summary>
-    /// <param name="timeOut">A timeout value (not strictly used by the underlying Google Pub/Sub client).</param>
+    /// <param name="timeOut">
+    /// How long to wait for messages. Bounds the Pull call, so an empty subscription returns after
+    /// this window rather than long-polling until a message arrives. When null the client's own
+    /// default expiration applies.
+    /// </param>
     /// <returns>An array of received Brighter messages. Returns an array containing a single empty message if no messages are available.</returns>
 
     public Message[] Receive(TimeSpan? timeOut = null)
     {
         PullResponse response;
+        // Honour the caller's timeout (see ReceiveAsync) so an empty subscription returns after
+        // the requested window rather than long-polling until a message arrives.
+        var pullWindow = BuildPullCallSettings(timeOut);
         try
         {
             var client = connection.GetOrCreateSubscriberServiceApiClient();
             response = client.Pull(new PullRequest
             {
                 SubscriptionAsSubscriptionName = subscriptionName, MaxMessages = batchSize
-            });
+            }, pullWindow);
 
             if (response.ReceivedMessages.Count == 0)
             {
                 return [new Message()];
             }
+        }
+        catch (RpcException rcpException)
+            when (rcpException.Status.StatusCode == StatusCode.DeadlineExceeded && pullWindow != null)
+        {
+            // The window this call asked for elapsed with no messages available. See ReceiveAsync
+            // for why an unbounded Pull's DeadlineExceeded is not treated the same way.
+            return [new Message()];
         }
         catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.Unavailable)
         {

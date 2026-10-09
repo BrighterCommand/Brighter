@@ -188,6 +188,7 @@ namespace Paramore.Brighter.ServiceActivator
             UnacceptableMessageCount++;
         }
 
+        [Obsolete("Message type headers no longer determine request routing. Use ICommand or IEvent on the mapped request.")]
         protected void ValidateMessageType(MessageType messageType, IRequest request)
         {
             if (messageType == MessageType.MT_COMMAND && request is IEvent)

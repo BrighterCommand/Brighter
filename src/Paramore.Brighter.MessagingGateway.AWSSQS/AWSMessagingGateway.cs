@@ -216,11 +216,32 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         //create topic is idempotent, so safe to call even if topic already exists
         var createTopic = await snsClient.CreateTopicAsync(createTopicRequest);
-        if (!string.IsNullOrEmpty(createTopic.TopicArn))
-            return createTopic.TopicArn;
+        if (string.IsNullOrEmpty(createTopic.TopicArn))
+            throw new InvalidOperationException(
+                $"Could not create Topic topic: {topic} on {AwsConnection.Region}");
 
-        throw new InvalidOperationException(
-            $"Could not create Topic topic: {topic} on {AwsConnection.Region}");
+        await SetTopicMaximumMessageSizeAsync(createTopic.TopicArn, snsAttributes, snsClient);
+
+        return createTopic.TopicArn;
+    }
+
+    /// <summary>
+    /// Applies <see cref="SnsAttributes.MaximumMessageSize"/> after creation rather than as part of the CreateTopic call.
+    /// SNS rejects CreateTopic when a supplied attribute differs from the existing topic's value, but tolerates omitted
+    /// attributes; setting the size afterwards lets us raise the limit of a topic that already exists.
+    /// </summary>
+    private static async Task SetTopicMaximumMessageSizeAsync(
+        string topicArn,
+        SnsAttributes snsAttributes,
+        AmazonSimpleNotificationServiceClient snsClient)
+    {
+        if (snsAttributes.MaximumMessageSize is not { } maximumMessageSize)
+            return;
+
+        await snsClient.SetTopicAttributesAsync(new SetTopicAttributesRequest(
+            topicArn,
+            "MaximumMessageSize",
+            maximumMessageSize.ToString(CultureInfo.InvariantCulture)));
     }
 
     private async Task<string> CreateQueueAsync(
@@ -365,6 +386,8 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
             attributes.Add(QueueAttributeName.ReceiveMessageWaitTimeSeconds,
                 Convert.ToString(Convert.ToInt32(sqsAttributes.TimeOut.Value.TotalSeconds), CultureInfo.InvariantCulture));
         attributes.Add(QueueAttributeName.VisibilityTimeout, Convert.ToString(Convert.ToInt32(sqsAttributes.LockTimeout.TotalSeconds), CultureInfo.InvariantCulture));
+        if (sqsAttributes.MaximumMessageSize is { } maximumMessageSize)
+            attributes.Add(QueueAttributeName.MaximumMessageSize, maximumMessageSize.ToString(CultureInfo.InvariantCulture));
 
         if (sqsAttributes.IamPolicy != null)
         {

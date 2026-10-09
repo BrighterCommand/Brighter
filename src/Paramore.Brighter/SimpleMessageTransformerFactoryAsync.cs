@@ -41,7 +41,9 @@ namespace Paramore.Brighter
             _factoryMethod = factoryMethod;
         }
 
-        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType)
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType, IAmAScope? scope = null)
         {
             var transform = _factoryMethod(transformerType);
             return transform is null ? null : Lease<IAmAMessageTransformAsync>.Untracked(transform);

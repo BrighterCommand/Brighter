@@ -32,6 +32,8 @@ namespace Paramore.Brighter
     /// </summary>
     public class SimpleHandlerFactorySync(Func<Type, IHandleRequests> factoryMethod) : IAmAHandlerFactorySync
     {
+        public IAmAScope? CreatePipelineScope() => null;
+
         public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
         {
             return factoryMethod(handlerType);

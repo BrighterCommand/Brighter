@@ -57,8 +57,8 @@ public class ValidatePipelinesWithConsumersTests
         var provider = services.BuildServiceProvider();
 
         // Act — resolve validator and validate
-        var validator = provider.GetRequiredService<IAmAPipelineValidator>();
-        var result = validator.Validate();
+        var validators = provider.GetServices<IAmAPipelineValidator>();
+        var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — should detect the subscription has no handler registered
         Assert.False(result.IsValid);
@@ -77,8 +77,9 @@ public class ValidatePipelinesWithConsumersTests
         // Act — resolve consumer validation specs
         var specs = provider.GetServices<ISpecification<Subscription>>().ToList();
 
-        // Assert — AddConsumers should register 4 consumer validation specs
-        Assert.Equal(4, specs.Count);
+        // Assert — AddConsumers should register 5 consumer validation specs, including the
+        // channel-factory compatibility rule (AC-16, FR-6)
+        Assert.Equal(5, specs.Count);
     }
 
     [Fact]

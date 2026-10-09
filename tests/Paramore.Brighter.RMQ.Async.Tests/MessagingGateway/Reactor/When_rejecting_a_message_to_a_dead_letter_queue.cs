@@ -64,7 +64,7 @@ public class RmqMessageProducerDLQTests : IDisposable
             connection: rmqConnection, 
             queueName: queueName, 
             routingKey: routingKey, 
-            isDurable: false, 
+            isDurable: true, 
             highAvailability: false,
             deadLetterQueueName: deadLetterQueueName,
             deadLetterRoutingKey: deadLetterRoutingKey,
@@ -75,7 +75,7 @@ public class RmqMessageProducerDLQTests : IDisposable
             connection: rmqConnection,
             queueName: deadLetterQueueName,
             routingKey: deadLetterRoutingKey,
-            isDurable:false,
+            isDurable: true,
             makeChannels:OnMissingChannel.Assume
         );
     }

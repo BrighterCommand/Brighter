@@ -142,7 +142,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private static void WriteMessageType(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             headers.Add(HeaderNames.MESSAGE_TYPE, messageHeader.MessageType.ToString());
+#pragma warning restore CS0618
         }
         
         private static void WriteReplyTo(MessageHeader messageHeader, Dictionary<string, string> headers)

@@ -33,6 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.MySQL.Tests.Outbox.Binary.Causation;
 
 [Trait("Category", "MySQL")]
+[Collection("MySQLBinaryOutbox")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<System.Data.Common.DbTransaction>
 {
     private readonly MySQLBinaryOutboxProvider _outboxProvider = new();

@@ -672,10 +672,10 @@ namespace Paramore.Brighter
             if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
 
             var written = await ExecuteWithResiliencePipelineAsync(
-                async _ =>
+                async ct =>
                 {
                     await _asyncOutbox.AddAsync(batch, requestContext, _outboxTimeout,
-                        transactionProvider, cancellationToken);
+                        transactionProvider, ct);
                 },
                 requestContext,
                 cancellationToken: cancellationToken
@@ -1164,7 +1164,7 @@ namespace Paramore.Brighter
                         foreach (var batch in await bulkMessageProducer.CreateBatchesAsync(messages, cancellationToken))
                         {
                             var sent = await ExecuteWithResiliencePipelineAsync(
-                                    async _ => await bulkMessageProducer.SendAsync(batch, cancellationToken)
+                                    async ct => await bulkMessageProducer.SendAsync(batch, ct)
                                         .ConfigureAwait(continueOnCapturedContext),
                                     requestContext,
                                     continueOnCapturedContext,
@@ -1177,12 +1177,12 @@ namespace Paramore.Brighter
                                 foreach (var successfulMessage in batch.Ids())
                                 {
                                     DateTimeOffset? dispatchedAt = null;
-                                    var marked = await ExecuteWithResiliencePipelineAsync(async _ =>
+                                    var marked = await ExecuteWithResiliencePipelineAsync(async ct =>
                                         {
                                             dispatchedAt = _timeProvider.GetUtcNow();
                                             await _asyncOutbox.MarkDispatchedAsync(
                                                 successfulMessage, requestContext, dispatchedAt.Value,
-                                                cancellationToken: cancellationToken
+                                                cancellationToken: ct
                                             );
                                         },
                                         requestContext,
@@ -1248,7 +1248,7 @@ namespace Paramore.Brighter
                     if (producer is IAmAMessageProducerAsync producerAsync)
                     {
                         var sent = await ExecuteWithResiliencePipelineAsync(
-                                async _ => await producerAsync.SendAsync(message, cancellationToken)
+                                async ct => await producerAsync.SendAsync(message, ct)
                                     .ConfigureAwait(continueOnCapturedContext),
                                 requestContext,
                                 continueOnCapturedContext,
@@ -1260,12 +1260,12 @@ namespace Paramore.Brighter
                         {
                             DateTimeOffset? dispatchedAt = null;
                             var marked = await ExecuteWithResiliencePipelineAsync(
-                                async _ =>
+                                async ct =>
                                 {
                                     dispatchedAt = _timeProvider.GetUtcNow();
                                     await _asyncOutbox.MarkDispatchedAsync(
                                         message.Id, requestContext, dispatchedAt.Value,
-                                        cancellationToken: cancellationToken
+                                        cancellationToken: ct
                                     );
                                 },
                                 requestContext,
@@ -1440,7 +1440,7 @@ namespace Paramore.Brighter
             {
                 if (requestContext?.ResilienceContext != null)
                 {
-                    resiliencePipeline.Execute(_ => action, requestContext.ResilienceContext);
+                    resiliencePipeline.Execute(_ => action(), requestContext.ResilienceContext);
                 }
                 else
                 {

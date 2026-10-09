@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox.Binary.Async;
 
 [Trait("Category", "Sqlite")]
+[Collection("SqliteBinaryOutbox")]
 
 public class WhenStoringAMessageWithARelativeDataSchemaItShouldBeReadBackAsync : IAsyncLifetime
 {

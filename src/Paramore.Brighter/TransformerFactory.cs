@@ -36,10 +36,10 @@ namespace Paramore.Brighter
 
         private readonly Type _messageType = typeof(TRequest);
 
-        public Lease<IAmAMessageTransform> CreateMessageTransformer()
+        public Lease<IAmAMessageTransform> CreateMessageTransformer(IAmAScope? scope = null)
         {
             var transformerType = attribute.GetHandlerType();
-            var lease = factory.Create(transformerType);
+            var lease = factory.Create(transformerType, scope);
             if (lease is null)
                 throw new ConfigurationException($"Could not create transformer {transformerType} from {factory}");
             try

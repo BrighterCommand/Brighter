@@ -130,6 +130,21 @@ coverage") is what makes a narrow, self-expiring gear shift possible. Any headin
 `tasks N-M` range. What does not work is a single flat `## Tasks` heading over forty tasks, because
 there is then nothing to scope to short of the whole spec.
 
+##### Task-type tag form (required)
+
+Every task checkbox opens its bold lead-in with exactly one of the four tags, followed
+immediately by a colon, with any task id after the colon — one template line per tag:
+
+```markdown
+- [ ] **TEST + IMPLEMENT: T1.1 — …**
+- [ ] **STRUCTURAL: T1.2 — …**
+- [ ] **PROJECT: T1.3 — …**
+- [ ] **DOC: T1.4 — …**
+```
+
+The tag must come first, immediately after `**`. Never write the id before the tag — see the
+drifted form in the *DO NOT* block below, which `/spec:show-me` counts as `untagged`.
+
 ##### DO NOT Format Tasks Like This
 
 ❌ **BAD - Separates test and implementation:**
@@ -143,6 +158,14 @@ there is then nothing to scope to short of the whole spec.
 ```
 
 This format allows Claude to skip the approval by treating them as independent tasks.
+
+❌ **BAD - Puts the task id before the tag:**
+```markdown
+- [ ] **T1.1 — STRUCTURAL: Extract shared helper**
+```
+
+This drifts from the tag-first form above. `/spec:show-me` does not recognise it as a
+`STRUCTURAL` task — it counts as `untagged`.
 
 #### Coverage cross-reference (include in the sub-agent prompt)
 

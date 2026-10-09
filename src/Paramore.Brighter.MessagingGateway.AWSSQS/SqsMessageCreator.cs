@@ -169,12 +169,16 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
     
     private static HeaderResult<Uri?> ReadCloudEventSource(Dictionary<string, string> cloudEventHeaders)
     {
-        if (cloudEventHeaders.TryGetValue(HeaderNames.Source, out var value))
+        if (cloudEventHeaders.TryGetValue(HeaderNames.Source, out var value)
+            && Uri.TryCreate(value, UriKind.RelativeOrAbsolute, out var uri))
         {
-            if (Uri.TryCreate(value, UriKind.RelativeOrAbsolute, out var uri))
-            {
-                return new HeaderResult<Uri?>(uri, true);
-            }
+            return new HeaderResult<Uri?>(uri, true);
+        }
+
+        if (cloudEventHeaders.TryGetValue(HeaderNames.LEGACY_SOURCE, out value)
+            && Uri.TryCreate(value, UriKind.RelativeOrAbsolute, out uri))
+        {
+            return new HeaderResult<Uri?>(uri, true);
         }
 
         return new HeaderResult<Uri?>(null, false);

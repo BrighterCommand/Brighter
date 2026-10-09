@@ -45,19 +45,23 @@ public class AzureBlobArchiveProviderOptions(
     public int MaxUploadSize { get; init; } = maxUploadSize;
 
     /// <summary>
-    /// The function to arrange the tags to add when storing, please note that <see cref="TagBlobs"/> must be True for these to be used
+    /// Gets or sets the function that creates blob tags when <see cref="TagBlobs"/> is enabled.
     /// </summary>
-    public Func<Message, Dictionary<string, string?>> TagsFunc = (message) => new Dictionary<string, string?>()
+    /// <value>A function mapping a message to blob tags. Defaults to the topic, correlation ID, message type, timestamp, and content type.</value>
+    public Func<Message, Dictionary<string, string?>> TagsFunc { get; set; } = (message) => new Dictionary<string, string?>()
     {
         { "topic", message.Header.Topic },
         { "correlationId", message.Header.CorrelationId?.ToString() },
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         { "message_type", message.Header.MessageType.ToString() },
+#pragma warning restore CS0618
         { "timestamp", message.Header.TimeStamp.ToString(CultureInfo.InvariantCulture) },
         { "content_type", message.Header.ContentType is not null ? message.Header.ContentType.ToString() : MediaTypeNames.Text.Plain }
     };
 
     /// <summary>
-    /// The function to provide the location to store the message inside of the Blob container
+    /// Gets or sets the function that selects the message location inside the blob container.
     /// </summary>
-    public Func<Message, string> StorageLocationFunc = (message) => $"{message.Id}";
+    /// <value>A function mapping a message to a blob name. Defaults to the message ID.</value>
+    public Func<Message, string> StorageLocationFunc { get; set; } = (message) => $"{message.Id}";
 }

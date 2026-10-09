@@ -47,7 +47,8 @@ public class AzureServiceBusMessagePublisherSessionIdTests
             var header = new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
                 topic: new RoutingKey("test.topic"),
-                messageType: MessageType.MT_COMMAND);
+                messageType: MessageType.MT_COMMAND,
+                partitionKey: new PartitionKey("partition-101"));
             header.Bag[sessionIdKey] = expectedSessionId;
 
             // round-trip the Bag exactly as an Outbox does, so the key is mangled by the real policy
@@ -60,6 +61,8 @@ public class AzureServiceBusMessagePublisherSessionIdTests
 
             // the session id is set on the outgoing message...
             Assert.Equal(expectedSessionId, asbMessage.SessionId);
+            Assert.Equal(expectedSessionId, asbMessage.PartitionKey);
+            Assert.Equal("partition-101", asbMessage.ApplicationProperties["cloudEvents:partitionkey"]);
             // ...and the reserved header, whatever casing the policy gave it, does not leak into ApplicationProperties
             var roundTrippedKey = policy?.ConvertName(sessionIdKey) ?? sessionIdKey;
             Assert.False(asbMessage.ApplicationProperties.ContainsKey(roundTrippedKey));

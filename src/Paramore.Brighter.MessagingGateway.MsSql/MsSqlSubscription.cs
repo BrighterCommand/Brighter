@@ -57,6 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The delay the delivery of a requeue message. 0 is no delay. Defaults to 0</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="unacceptableMessageLimitWindow">The time window over which to enforce the unacceptable message limit. Defaults to null, so the count does not reset.</param>
         /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
@@ -100,13 +101,14 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
-        /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <see cref="T"/> if null</param>
+        /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <typeparamref name="T"/> if null</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
         /// <param name="timeOut">The timeout to wait for messages</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The Delay to the requeue of a message. 0 is no delay. Defaults to 0</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="unacceptableMessageLimitWindow">The time window over which to enforce the unacceptable message limit. Defaults to null, so the count does not reset.</param>
         /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>

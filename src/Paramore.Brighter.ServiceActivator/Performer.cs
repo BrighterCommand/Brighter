@@ -62,7 +62,13 @@ namespace Paramore.Brighter.ServiceActivator
         public Task Run()
         {
             return Task.Factory.StartNew(
-                () => _messagePump.Run(),
+                () =>
+                {
+                    using (AmbientScopeSuppression.Suppress())
+                    {
+                        _messagePump.Run();
+                    }
+                },
                 CancellationToken.None,
                 TaskCreationOptions.LongRunning,
                 TaskScheduler.Default);
