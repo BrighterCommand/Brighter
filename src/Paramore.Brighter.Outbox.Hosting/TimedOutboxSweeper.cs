@@ -100,7 +100,9 @@ namespace Paramore.Brighter.Outbox.Hosting
             Log.OutboxSweeperServiceIsStarting(s_logger);
 
             _sweepThread = new Thread(SweepUntilStopped) { IsBackground = true, Name = "Brighter Outbox Sweeper" };
-            _sweepThread.Start();
+            // Start with an empty context, so sweeps do not carry the starting caller's ambient state (AsyncLocals)
+            using (ExecutionContext.SuppressFlow())
+                _sweepThread.Start();
 
             return Task.CompletedTask;
         }

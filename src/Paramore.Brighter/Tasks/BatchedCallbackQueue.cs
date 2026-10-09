@@ -96,7 +96,11 @@ namespace Paramore.Brighter.Tasks
             }
 
             if (Interlocked.CompareExchange(ref _threadStarted, 1, 0) == 0)
-                new Thread(Drain) { IsBackground = true, Name = "Brighter Confirmation Callbacks" }.Start();
+            {
+                // Start with an empty context, so callbacks do not carry the first caller's ambient state (AsyncLocals)
+                using (ExecutionContext.SuppressFlow())
+                    new Thread(Drain) { IsBackground = true, Name = "Brighter Confirmation Callbacks" }.Start();
+            }
         }
 
         /// <summary>
