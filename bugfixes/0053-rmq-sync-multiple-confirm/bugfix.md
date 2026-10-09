@@ -1,7 +1,7 @@
 # Bugfix: RMQ.Sync producer ignores coalesced (multiple=true) publisher confirms
 
 **Linked Issue**: none yet (found by CI on PR #4562; related to #4560)
-**Status**: Tested
+**Status**: Verified
 
 ## Symptom
 
@@ -291,4 +291,39 @@ The test:
 - **Nack variant:** the same with `RaiseNack(3, multiple: true)`, expecting 3 failed results.
 
 ## Fix
-_(left blank — filled by /bugfix:fix)_
+
+Each fix was made in the GREEN step of its own regression test, so `/bugfix:fix` had nothing left to
+do. All the changes are in `src/Paramore.Brighter.MessagingGateway.RMQ.Sync/RmqMessageProducer.cs`.
+
+- **Range settlement** (`6b546641b`, `0af74dcf1`)
+  - `OnPublishSucceeded` and `OnPublishFailed` delegate to `SettleConfirmations(deliveryTag, multiple,
+    success)`.
+  - `ConfirmedDeliveryTags` returns every pending tag up to and including `DeliveryTag` when `multiple`
+    is set, otherwise just that tag. The tags are sorted ascending and copied before the loop.
+- **Claim, then raise** (`dda706a47`)
+  - Each entry is removed with `TryRemove` before its confirmation is raised, so each tag is raised
+    at most once.
+  - An exception from a sync `OnMessagePublished` subscriber is caught and logged with
+    `ConfirmationCallbackFault`, so the rest of the range still settles.
+- **Clear on reset** (`229908c4e`): `_pendingConfirmations.Clear()` before `ResetConnectionToBroker()`
+  in the `IOException` path, as RMQ.Async does.
+
+## Verification (2026-10-09)
+
+- **Full suite.** `Paramore.Brighter.RMQ.Sync.Tests` with the CI filter
+  (`Fragile!=CI&Requires!=Docker-mTLS&Category!=RMQNativeDelay`): **143 passed, 1 skipped, 0 failed**
+  on both net9.0 and net10.0.
+- **Repetition.** The 4 regression tests and the original CI failure
+  (`RmqConfirmationBatchingTests...overlapping_batches_off_the_thread_pool`) were run 10 times on both
+  frameworks: **20 of 20 runs green**.
+- **Not counted.** Without the CI filter, 9 mutual-TLS acceptance tests fail locally. They need a TLS
+  broker on port 5671, which this machine doesn't have, and CI excludes them.
+
+## Follow-ups (to raise as issues, per the user)
+
+- RMQ.Sync `Send` subscribes `BasicAcks`/`BasicNacks` again and calls `ConfirmSelect()` again on every
+  call (`RmqMessageProducer.cs:168-170`). This is not the cause of this bug, but it means:
+  - the invocation list grows without bound;
+  - every `Send` makes a synchronous `confirm.select` round trip.
+- `_pendingConfirmations` is still not cleared on `Dispose`, or when the client's automatic recovery
+  replaces the channel. Auto-recovery is on by default, and the recovery case has not been verified.
