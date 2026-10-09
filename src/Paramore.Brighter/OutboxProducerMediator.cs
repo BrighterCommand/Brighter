@@ -1373,7 +1373,8 @@ namespace Paramore.Brighter
             Log.BeginCountOfOutstandingMessages(s_logger);
             try
             {
-                // Only count up to one more than the limit; with no limit, the outbox's default ceiling applies
+                // Only count up to one more than the limit. CheckOutstandingMessages never queues this check at -1 (no
+                // limit), so the outbox's default ceiling only applies to a limit below -1
                 var maxCount = _maxOutStandingMessages >= 0 ? _maxOutStandingMessages + 1 : DefaultOutstandingCountCeiling;
 
                 if (_outBox != null)
