@@ -319,11 +319,13 @@ do. All the changes are in `src/Paramore.Brighter.MessagingGateway.RMQ.Sync/RmqM
 - **Not counted.** Without the CI filter, 9 mutual-TLS acceptance tests fail locally. They need a TLS
   broker on port 5671, which this machine doesn't have, and CI excludes them.
 
-## Follow-ups (to raise as issues, per the user)
+## Follow-ups (raised 2026-10-09, assigned to the maintainer, labelled `Bug` and `1 - Up Next`)
 
-- RMQ.Sync `Send` subscribes `BasicAcks`/`BasicNacks` again and calls `ConfirmSelect()` again on every
+- **#4567**: RMQ.Sync `Send` subscribes `BasicAcks`/`BasicNacks` again and calls `ConfirmSelect()` again on every
   call (`RmqMessageProducer.cs:168-170`). This is not the cause of this bug, but it means:
   - the invocation list grows without bound;
   - every `Send` makes a synchronous `confirm.select` round trip.
-- `_pendingConfirmations` is still not cleared on `Dispose`, or when the client's automatic recovery
-  replaces the channel. Auto-recovery is on by default, and the recovery case has not been verified.
+- **#4568**: `_pendingConfirmations` is not cleared when the client's automatic recovery replaces the
+  channel. Auto-recovery is on by default in 6.8.1; that tags restart on recovery has not been
+  verified. Not clearing on `Dispose` turned out not to be a defect: the entries are collected with
+  the producer, and those messages were correctly never confirmed.
