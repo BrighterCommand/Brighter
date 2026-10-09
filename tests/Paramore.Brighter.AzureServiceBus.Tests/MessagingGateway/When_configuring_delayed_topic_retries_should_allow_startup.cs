@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
@@ -35,6 +37,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 [Collection("AzureServiceBus")]
 public class AzureServiceBusDelayedRetryConfigurationTests
 {
+    private static readonly InMemoryServiceBusLogProvider s_logs = new();
+
+    static AzureServiceBusDelayedRetryConfigurationTests() => ApplicationLogging.LoggerFactory.AddProvider(s_logs);
+
     [Theory]
     [InlineData(OnMissingChannel.Create, false)]
     [InlineData(OnMissingChannel.Create, true)]
@@ -42,7 +48,7 @@ public class AzureServiceBusDelayedRetryConfigurationTests
     [InlineData(OnMissingChannel.Validate, true)]
     [InlineData(OnMissingChannel.Assume, false)]
     [InlineData(OnMissingChannel.Assume, true)]
-    public async Task When_configuring_delayed_topic_retries_should_require_a_dedicated_queue(
+    public async Task When_configuring_delayed_topic_retries_should_allow_startup(
         OnMissingChannel makeChannels, bool synchronous)
     {
         // Arrange
@@ -55,7 +61,7 @@ public class AzureServiceBusDelayedRetryConfigurationTests
             requeueCount: 3, requeueDelay: TimeSpan.FromSeconds(2), makeChannels: makeChannels);
 
         // Act
-        var exception = Assert.Throws<ConfigurationException>(() =>
+        var exception = Record.Exception(() =>
         {
             if (synchronous)
             {
@@ -69,14 +75,14 @@ public class AzureServiceBusDelayedRetryConfigurationTests
         });
 
         // Assert
-        Assert.Contains("ForwardTo", exception.Message);
+        Assert.Null(exception);
         Assert.False((await administration.TopicExistsAsync(topicName)).Value);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task When_requesting_a_delayed_topic_retry_should_reject_without_publishing_or_settling(bool synchronous)
+    public async Task When_requesting_a_delayed_topic_retry_should_abandon_and_warn_without_broadcasting(bool synchronous)
     {
         // Arrange
         var provider = ASBCreds.ASBClientProvider;
@@ -118,16 +124,23 @@ public class AzureServiceBusDelayedRetryConfigurationTests
 
             // Act
             received.Header.UpdateHandledCount();
-            var exception = synchronous
-                ? Assert.Throws<ConfigurationException>(() => syncChannel!.Requeue(received, TimeSpan.FromSeconds(2)))
-                : await Assert.ThrowsAsync<ConfigurationException>(() => asyncChannel!.RequeueAsync(received, TimeSpan.FromSeconds(2)));
+            Assert.True(synchronous
+                ? syncChannel!.Requeue(received, TimeSpan.FromMinutes(5))
+                : await asyncChannel!.RequeueAsync(received, TimeSpan.FromMinutes(5)));
+            var redelivered = synchronous
+                ? syncChannel!.Receive(TimeSpan.FromSeconds(5))
+                : await asyncChannel!.ReceiveAsync(TimeSpan.FromSeconds(5));
 
             // Assert
-            Assert.Contains("ForwardTo", exception.Message);
+            Assert.Equal(original.MessageId, redelivered.Id.Value);
+            Assert.Equal(original.Body.ToString(), redelivered.Body.Value);
+            Assert.Equal(1, redelivered.Header.HandledCount);
+            Assert.Contains(s_logs.Entries, entry => entry.Level == LogLevel.Warning
+                && entry.Message.Contains("ForwardTo") && entry.Message.Contains(original.MessageId));
             if (synchronous)
-                syncChannel!.Acknowledge(received);
+                syncChannel!.Acknowledge(redelivered);
             else
-                await asyncChannel!.AcknowledgeAsync(received);
+                await asyncChannel!.AcknowledgeAsync(redelivered);
             Assert.Null(await otherB.ReceiveMessageAsync(TimeSpan.FromSeconds(3)));
             Assert.Null(await otherC.ReceiveMessageAsync(TimeSpan.FromSeconds(3)));
         }

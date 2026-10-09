@@ -118,7 +118,8 @@ public class AzureServiceBusSubscriptionConfiguration
     /// Assume uses infrastructure provisioned externally. Existing subscriptions must already forward to
     /// this queue. Session settings apply to the destination queue, not the forwarding subscription.
     /// This option cannot be combined with UseServiceBusQueue.
-    /// Delayed retries require this option or UseServiceBusQueue; direct subscriptions only support immediate retries.
+    /// Retaining a retry delay requires this option or UseServiceBusQueue. Direct subscriptions abandon
+    /// immediately and warn when a delay is requested.
     /// Purge requires Create because it deletes and recreates the destination queue. Validate and Assume reject
     /// purge before changing the receiver or queue.
     /// </remarks>

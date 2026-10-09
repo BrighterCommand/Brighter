@@ -54,6 +54,10 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     protected readonly AzureServiceBusSubscriptionConfiguration SubscriptionConfiguration;
     private readonly AzureServiceBusMessageCreator _azureServiceBusMesssageCreator;
 
+    /// <summary>The fallback scheduler for custom producers without native queue retry support.</summary>
+    /// <remarks>Built-in ASB queue producers schedule retries on their own broker and take precedence.</remarks>
+    public IAmAMessageScheduler? Scheduler { get; set; }
+
     /// <summary>
     /// Constructor for the Azure Service Bus Consumer
     /// </summary>
@@ -347,7 +351,6 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     /// <param name="message"></param>
     /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
     /// <returns>True when the message has been requeued.</returns>
-    /// <exception cref="ConfigurationException">A delayed retry was requested for a direct topic subscription.</exception>
     public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(() => RequeueAsync(message, delay));
 
     /// <summary>
@@ -357,12 +360,11 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
     /// <param name="cancellationToken">Cancel the requeue operation.</param>
     /// <returns>True when the message has been requeued.</returns>
-    /// <exception cref="ConfigurationException">A delayed retry was requested for a direct topic subscription.</exception>
     /// <remarks>
     /// Immediate retries on direct topic subscriptions abandon the original delivery and persist its handled count.
     /// Abandon also increments Azure Service Bus's delivery count, so the subscription's
     /// MaxDeliveryCount can dead-letter a message before Brighter exhausts its retry budget.
-    /// Direct topic subscriptions reject delayed retries before publishing or settling the original message.
+    /// Direct topic subscriptions abandon immediately and warn when a delay was requested.
     /// Set AzureServiceBusSubscriptionConfiguration.ForwardTo to consume and retry through a dedicated
     /// queue. Alternatively, provision forwarding externally and use UseServiceBusQueue with the queue
     /// name as the routing key.
@@ -379,11 +381,21 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         {
             if (delay.Value > TimeSpan.Zero)
             {
-                throw new ConfigurationException(
-                    "Delayed topic retries require ForwardTo to a dedicated queue, or UseServiceBusQueue with externally provisioned forwarding.");
+                Log.RetryDelayRequiresForwarding(Logger, delay.Value, message.Id.Value, Topic, SubscriptionName);
             }
 
             await AbandonForRetryAsync(message, cancellationToken);
+            return true;
+        }
+
+        // Native retries must stay on the consuming broker, regardless of a global scheduler's namespace.
+        var requeueScheduler = _messageProducer as IAmAMessageRequeueSchedulerAsync
+            ?? Scheduler as IAmAMessageRequeueSchedulerAsync;
+        if (requeueScheduler is not null)
+        {
+            var destination = new ChannelName(SubscriptionConfiguration.ForwardTo ?? Topic);
+            await requeueScheduler.RequeueAsync(message, destination, delay.Value, cancellationToken);
+            await AcknowledgeAsync(message, cancellationToken);
             return true;
         }
 
@@ -483,6 +495,9 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
     private static partial class Log
     {
+        [LoggerMessage(LogLevel.Warning, "Cannot honor retry delay {Delay} for message {Id} on topic {Topic} subscription {ChannelName}; abandoning immediately. Configure ForwardTo to a dedicated queue to retain delayed retries")]
+        public static partial void RetryDelayRequiresForwarding(ILogger logger, TimeSpan delay, string id, string topic, string channelName);
+
         [LoggerMessage(LogLevel.Warning, "Skipping Service Bus message with id {Id} from {Topic} via {ChannelName} because its lock has expired or been lost; the message will not be dispatched")]
         public static partial void SkippingMessageWithInvalidLock(ILogger logger, string id, string topic, string channelName);
 

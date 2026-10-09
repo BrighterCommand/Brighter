@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
@@ -35,13 +36,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     /// <summary>
     /// A Sync and Async Message Producer for Azure Service Bus.
     /// </summary>
-    public partial class AzureServiceBusQueueMessageProducer : AzureServiceBusMessageProducer
+    public partial class AzureServiceBusQueueMessageProducer : AzureServiceBusMessageProducer, IAmAMessageRequeueSchedulerAsync, IAmAMessageRequeueSchedulerSync
     {
         protected override ILogger Logger => s_logger;
         
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusQueueMessageProducer>();
         
         private readonly IAdministrationClientWrapper _administrationClientWrapper;
+        private readonly AzureServiceBusRequeueScheduler _requeueScheduler;
 
         /// <summary>
         /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>
@@ -58,7 +60,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         ) : base(serviceBusSenderProvider, publication, bulkSendBatchSize)
         {
             _administrationClientWrapper = administrationClientWrapper;
+            _requeueScheduler = new AzureServiceBusRequeueScheduler(serviceBusSenderProvider, TimeProvider.System);
         }
+
+        /// <inheritdoc />
+        public Task RequeueAsync(Message message, ChannelName destination, TimeSpan delay,
+            CancellationToken cancellationToken = default)
+            => _requeueScheduler.RequeueAsync(message, destination, delay, cancellationToken);
+
+        /// <inheritdoc />
+        public void Requeue(Message message, ChannelName destination, TimeSpan delay)
+            => _requeueScheduler.Requeue(message, destination, delay);
 
         protected override async Task EnsureChannelExistsAsync(string channelName)
         {

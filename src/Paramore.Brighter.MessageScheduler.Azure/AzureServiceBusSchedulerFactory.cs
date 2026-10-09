@@ -5,6 +5,8 @@ namespace Paramore.Brighter.MessageScheduler.Azure;
 
 /// <summary>
 /// The <see cref="AzureServiceBusScheduler"/> factory.
+/// Created schedulers also support queue-targeted retries through
+/// <see cref="IAmAMessageRequeueSchedulerAsync"/> and <see cref="IAmAMessageRequeueSchedulerSync"/>.
 /// </summary>
 /// <param name="client"></param>
 /// <param name="topic"></param>
@@ -57,6 +59,6 @@ public class AzureServiceBusSchedulerFactory(IServiceBusClientProvider client, R
             }
         }
         
-        return new AzureServiceBusScheduler(_sender, Topic, TimeProvider);
+        return new AzureServiceBusRequeueScheduler(_sender, Topic, TimeProvider, ClientProvider, SenderOptions);
     }
 }

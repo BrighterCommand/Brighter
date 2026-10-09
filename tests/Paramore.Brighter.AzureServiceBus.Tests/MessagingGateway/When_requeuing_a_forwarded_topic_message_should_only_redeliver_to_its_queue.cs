@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -141,7 +141,9 @@ public class AzureServiceBusForwardedRetryIsolationTests
 
             var redelivered = await ReceiveRetryAsync(TimeSpan.FromSeconds(10));
             Assert.True(elapsed.Elapsed >= TimeSpan.FromSeconds(4.5), "The retry must respect its scheduled delay.");
-            Assert.Equal(original.MessageId, redelivered.Id.Value);
+            Assert.NotEqual(original.MessageId, redelivered.Id.Value);
+            Assert.Equal(original.MessageId, redelivered.Header.Bag[Message.OriginalMessageIdHeaderName]);
+            Assert.Equal(original.MessageId, received.Id.Value);
             Assert.Equal(original.Body.ToString(), redelivered.Body.Value);
             Assert.Equal(1, redelivered.Header.HandledCount);
             Assert.Equal(new RoutingKey(topicName), redelivered.Header.Topic);

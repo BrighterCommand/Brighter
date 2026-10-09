@@ -36,6 +36,10 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
 {
     private readonly IServiceBusClientProvider _clientProvider;
 
+    /// <summary>The fallback scheduler for custom producers without native queue retry support.</summary>
+    /// <remarks>Built-in ASB queue producers schedule retries on their own broker and take precedence.</remarks>
+    public IAmAMessageScheduler? Scheduler { get; set; }
+
     /// <summary>
     /// Factory to create an Azure Service Bus Consumer
     /// </summary>
@@ -70,13 +74,6 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
         if (sub.Configuration.MaxAutoLockRenewalDuration < TimeSpan.Zero)
             throw new ConfigurationException("MaxAutoLockRenewalDuration must be zero or positive.");
 
-        if (sub.RequeueDelay > TimeSpan.Zero && !sub.Configuration.UseServiceBusQueue
-            && sub.Configuration.ForwardTo is null)
-        {
-            throw new ConfigurationException(
-                "Delayed topic retries require ForwardTo to a dedicated queue, or UseServiceBusQueue with externally provisioned forwarding.");
-        }
-
         var receiverProvider = new ServiceBusReceiverProvider(_clientProvider, sub.Configuration.MaxAutoLockRenewalDuration);
 
         if (sub.Configuration.ForwardTo is { } queueName)
@@ -97,7 +94,7 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
             };
 
             return new AzureServiceBusForwardingConsumer(sub, messageProducer,
-                nameSpaceManagerWrapper, receiverProvider);
+                nameSpaceManagerWrapper, receiverProvider) { Scheduler = Scheduler };
         }
 
         if (sub.Configuration.UseServiceBusQueue)
@@ -111,7 +108,7 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
                 sub,
                 messageProducer,
                 nameSpaceManagerWrapper,
-                receiverProvider);
+                receiverProvider) { Scheduler = Scheduler };
         }
         else
         {
@@ -124,7 +121,7 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
                 sub,
                 messageProducer,
                 nameSpaceManagerWrapper,
-                receiverProvider);
+                receiverProvider) { Scheduler = Scheduler };
         }
     }
 
