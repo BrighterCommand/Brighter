@@ -25,8 +25,10 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -277,13 +279,22 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         private void OnPublishSucceeded(object? sender, BasicAckEventArgs e)
         {
-            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out PendingConfirmation confirmation))
+            foreach (var deliveryTag in ConfirmedDeliveryTags(e.DeliveryTag, e.Multiple))
             {
-                RaisePublishConfirmation(new PublishConfirmationResult(true, confirmation.MessageId, confirmation.Topic, confirmation.Context));
-                _pendingConfirmations.TryRemove(e.DeliveryTag, out PendingConfirmation _);
-                Log.PublishedMessageInformation(s_logger, confirmation.MessageId.Value);
+                if (_pendingConfirmations.TryGetValue(deliveryTag, out PendingConfirmation confirmation))
+                {
+                    RaisePublishConfirmation(new PublishConfirmationResult(true, confirmation.MessageId, confirmation.Topic, confirmation.Context));
+                    _pendingConfirmations.TryRemove(deliveryTag, out PendingConfirmation _);
+                    Log.PublishedMessageInformation(s_logger, confirmation.MessageId.Value);
+                }
             }
         }
+
+        // The broker may coalesce confirms: with multiple set, one frame settles every tag up to and including its own
+        private IEnumerable<ulong> ConfirmedDeliveryTags(ulong deliveryTag, bool multiple)
+            => multiple
+                ? _pendingConfirmations.Keys.Where(pending => pending <= deliveryTag).OrderBy(pending => pending).ToArray()
+                : [deliveryTag];
 
         private void RaisePublishConfirmation(PublishConfirmationResult result)
         {
