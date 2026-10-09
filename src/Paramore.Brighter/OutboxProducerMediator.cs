@@ -108,10 +108,10 @@ namespace Paramore.Brighter
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
         /// <param name="maxOutStandingMessages">How many messages can become outstanding in the Outbox before we throw an OutboxLimitReached exception</param>
         /// <param name="maxOutStandingCheckInterval">
-        /// The minimum time between background checks for maxOutStandingMessages, measured from the previous check
-        /// (<see cref="TimeSpan.Zero"/> checks after every clear, so after every Post). It is also the minimum age a message
-        /// must have in the outbox to count as outstanding. Ignored when maxOutStandingMessages is -1 (no limit), as the
-        /// outbox is then not consulted for the count. Defaults to one second when null.
+        /// The minimum time between background checks for maxOutStandingMessages, measured from when the previous check
+        /// was queued (<see cref="TimeSpan.Zero"/> checks after every clear, so after every Post). It is also the minimum
+        /// age a message must have in the outbox to count as outstanding. Ignored when maxOutStandingMessages is -1 (no
+        /// limit), as the outbox is then not consulted for the count. Defaults to one second when null.
         /// </param>
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="timeProvider"></param>
@@ -816,6 +816,10 @@ namespace Paramore.Brighter
                 return;
             }                                                    
 
+            //Record the time now, not when the queued check starts, so a burst of posts within the interval
+            //queues one check
+            _lastOutStandingMessageCheckAt = now;
+
             Log.RunningOutstandingMessageCheck(s_logger, now, timeSinceLastCheck.TotalSeconds);
             //This is expensive, so use a background thread
             Task.Run(
@@ -1343,7 +1347,6 @@ namespace Paramore.Brighter
         {
             s_checkOutstandingSemaphoreToken.Wait();
 
-            _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
             Log.BeginCountOfOutstandingMessages(s_logger);
             try
             {
