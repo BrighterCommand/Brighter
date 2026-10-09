@@ -256,18 +256,18 @@ The queue becomes `BatchedCallbackQueue` (`Paramore.Brighter.Tasks`). It keeps t
 never the thread pool.
 
 - **The drain thread takes a batch.** It waits for one callback, then takes whatever else is already
-  queued, up to `maxBatchSize` (default **32**) in total.
+  queued, up to **32** in total.
 - **It starts every callback in the batch, in queue order,** inside one `BrighterAsyncContext.Run`,
   and waits for all of them before taking the next batch. So their I/O overlaps, while their
   continuations still come back to the drain thread.
 - **The batch size bounds concurrency.** A batch of at most 32 stays below the default connection
   pool size of SqlClient and Npgsql (100), which leaves room for the application. The size is a
-  constructor parameter, not a public option: no producer exposes it in this amendment.
+  private constant: no test or producer needs to vary it, so it is not a parameter or an option.
 - **Callbacks still run in a `BrighterAsyncContext`.** Only a continuation that opts out with
   `ConfigureAwait(false)` can land on the pool. This is unchanged.
 - **Unchanged:** `TryWait`, `Complete`, dropping a confirmation added after `Complete`, and
   swallowing a callback's escaped exception.
-- **Changed:** callbacks may now complete out of order, and up to `maxBatchSize` may be in progress
+- **Changed:** callbacks may now complete out of order, and up to 32 may be in progress
   at once.
 
 #### Queue depth
@@ -297,7 +297,7 @@ never the thread pool.
 
 | Assembly | Type | Change |
 | --- | --- | --- |
-| Paramore.Brighter | `SerialCallbackQueue` | Renamed `BatchedCallbackQueue`; batched drain; new constructor parameters for its attributes and `maxBatchSize` |
+| Paramore.Brighter | `SerialCallbackQueue` | Renamed `BatchedCallbackQueue`; batched drain; a new constructor that takes its attributes (`MessagingSystem`, `RoutingKey`) |
 | Paramore.Brighter | `BatchedCallbackQueueRegistry` | New, internal |
 | Paramore.Brighter | `PublishConfirmationMeter` | New |
 | Paramore.Brighter | `BrighterSemanticConventions` | New constant for the instrument name |
@@ -321,7 +321,7 @@ never the thread pool.
 
 #### Consequences (amendment)
 
-- **Positive:** confirmation throughput with a database outbox is bounded by `maxBatchSize`
+- **Positive:** confirmation throughput with a database outbox is bounded by 32
   overlapping round trips, not one. A backlog is visible before it causes resends.
 - **Negative:** the in-order guarantee from #4560 goes away. Nothing documented it, and nothing in
   Brighter depends on it. The approved Kafka and RMQ.Sync tests that assert "one at a time, in

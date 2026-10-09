@@ -15,11 +15,23 @@ per publish confirmation, which added to that pressure under load.
 - **A failed sweep no longer crashes the process.** The sweeper logs the error and tries again on the
   next sweep. It also releases its lock on every path, so one failure no longer blocks every later
   sweep.
-- **Kafka and `RMQ.Sync` raise publish confirmations on one thread per producer**, one at a time, in
-  delivery order.
-- **New sweeper metrics.** `AddBrighterInstrumentation` registers
-  `paramore.brighter.outbox_sweeper.tick.lag`, `.sweep.duration` and `.sweeps` (by outcome). See
-  [ADR 0081](docs/adr/0081-timed-outbox-sweeper-health-metrics.md).
+- **A sweep stays on the sweeper's thread across awaited sends.** A Kafka send completes on
+  Confluent's own thread, so before this each later message in a sweep waited for a pool thread. Now
+  a starved pool cannot slow a Kafka sweep down. A producer or outbox that itself awaits with
+  `ConfigureAwait(false)`, as database clients and the AWS SDK do, still resumes on the pool.
+- **The schedule uses elapsed time, not the wall clock**, so a clock that steps backwards (an NTP
+  correction, a resumed VM) no longer delays the next sweep.
+- **Kafka and `RMQ.Sync` raise publish confirmations on one thread per producer**, in batches of up
+  to 32 rather than one work item per confirmation.
+- **The sweeper and confirmation threads start with an empty `ExecutionContext`**, so they no longer
+  keep the `AsyncLocal` state (logging scopes, baggage) of whichever caller started them.
+- **New metrics.** `AddBrighterInstrumentation` registers:
+  - `paramore.brighter.outbox_sweeper.tick.lag`, `.sweep.duration` and `.sweeps` (by outcome);
+  - `paramore.brighter.publish_confirmation.queue.depth`, by `messaging.system` and
+    `messaging.destination.name`. It counts confirmations waiting or running for each producer, so a
+    backlog is visible before messages are swept again.
+
+  See [ADR 0081](docs/adr/0081-timed-outbox-sweeper-health-metrics.md).
 
 #### Behaviour change: `TimerInterval` below 1 is rejected
 
@@ -27,12 +39,27 @@ per publish confirmation, which added to that pressure under load.
 a `ConfigurationException` when the sweeper is created. Before, 0 swept once and then never again,
 and a negative value threw when the sweeper started.
 
-#### Behaviour change: publish-confirmation subscribers run one at a time
+#### Behaviour change: publish-confirmation subscribers run in batches on one thread
 
 On Kafka and `RMQ.Sync`, subscribers to `OnMessagePublished` and to the awaited confirmation event
-used to run concurrently. They now run one at a time, in the order the broker confirmed the
-messages. A slow subscriber therefore delays the confirmations behind it. Brighter's own subscriber
-marks the message dispatched in the outbox.
+used to run each on its own thread-pool work item. They now run on the producer's confirmation
+thread: up to 32 start together, in the order the broker confirmed the messages, and may finish in
+any order. A subscriber's continuations come back to that thread unless it uses
+`ConfigureAwait(false)`. Brighter's own subscriber marks the message dispatched in the outbox.
+
+#### Behaviour change: `continueOnCapturedContext` now reaches the resilience pipeline
+
+`OutboxProducerMediator` passes the caller's `continueOnCapturedContext` to Polly when the request
+has no `ResilienceContext` of its own. Before, that path always used Polly's default of `false`. A
+caller that posts with `continueOnCapturedContext: true` (the default for `PostAsync` and
+`ClearOutboxAsync`) from inside a `SynchronizationContext` now has Polly's continuations come back to
+that context too.
+
+The `SynchronizationContext` that matters most here is the Proactor's own. A handler on a Proactor pump
+that posts or clears the outbox now runs the outbox producer's resilience pipeline, including callbacks
+such as a retry's `OnRetry`, on the pump's thread rather than on a thread-pool thread. The mediator's
+own awaits, and Kafka's, already resumed there. This adds no new way to deadlock. Blocking on `PostAsync`
+from a pump thread already deadlocked.
 
 #### Cost: one thread per confirming producer
 
@@ -42,8 +69,8 @@ app with twenty publications runs twenty confirmation threads, plus one sweeper 
 
 An idle thread costs little. Under load, though, those threads compete with the rest of the app for
 CPU. That can matter on a pod limited to 1–2 CPUs. If you run many publications on a small pod, watch
-CPU throttling (`container_cpu_cfs_throttled_periods_total` on Kubernetes) and the new sweeper
-tick-lag metric.
+CPU throttling (`container_cpu_cfs_throttled_periods_total` on Kubernetes), the sweeper tick-lag
+metric and the confirmation queue depth.
 
 ### AWS SQS, GCP Pub/Sub and RocketMQ: `requeueCount` now runs down (#4341, spec 0037)
 

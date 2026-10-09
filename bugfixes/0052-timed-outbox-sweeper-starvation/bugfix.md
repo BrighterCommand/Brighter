@@ -633,6 +633,43 @@ A `dotnet-dump` of an affected pod (`threadpool`, `clrstack -all`) would settle 
    - **RED:** compilation fails because `IAmABrighterSweeperMeter`, `SweepOutcome`, `SweeperMeter`
      and the `meter:` and `timeProvider:` constructor parameters do not exist yet.
 
+9. **Reopened after review of #4562 (2026-10-09), finding #1/#2.**
+   `.../Sweeping/When_thread_pool_workers_are_all_blocked_and_sends_complete_off_the_pool_should_still_sweep_a_batch.cs`
+   (uses `TestDoubles/OffPoolCompletingProducer`).
+   - **Why:** test 1 uses `InMemoryMessageProducer`, whose `SendAsync` completes inline, so it only
+     proves the tick fires. Confluent.Kafka 2.15.1's `TypedTaskDeliveryHandlerShim` completes
+     `ProduceAsync` with `RunContinuationsAsynchronously` (checked in its IL), from librdkafka's thread.
+     On the sweeper thread, which has no `SynchronizationContext`, every continuation after an awaited
+     send goes to the pool.
+   - **The double** completes each send from a dedicated delivery thread through a
+     `RunContinuationsAsynchronously` TCS, as Confluent does. Five messages are outstanding.
+   - **RED (3/3):** "dispatched 1 of 5 outstanding messages within 00:00:03".
+
+10. **Review #3 (batched drain), ADR 0081 amendment.**
+    - `Tasks/When_more_callbacks_are_queued_than_the_batch_size_should_run_a_batch_at_once.cs`. RED
+      (3/3): "Expected 32 callbacks in progress at once, but at most 1 were".
+    - `Tasks/When_confirmations_are_waiting_should_report_the_queue_depth.cs` (doubles
+      `Tasks/TestDoubles/ObservedQueueDepths`, `QueueDepth`). RED: the meter and the tagged queue
+      constructor did not exist.
+    - **Replaced** tests 6 and 7 with `When_confirming_many_messages_should_raise_confirmations_in_overlapping_batches_off_the_thread_pool`
+      (Kafka and RMQ.Sync): 2–32 handlers at once and none on a pool thread. Mutation-checked on both
+      brokers: a serial drain gives "Actual: 1"; no `BrighterAsyncContext` gives "ran on a
+      thread-pool thread".
+11. **Review #4.** `Tasks/When_a_callback_is_first_queued_from_a_flow_with_ambient_state_should_not_carry_it_into_callbacks.cs`
+    and `Sweeping/When_the_sweeper_is_started_from_a_flow_with_ambient_state_should_not_carry_it_into_sweeps.cs`
+    (`TestDoubles/AmbientRecordingLock`). RED (3/3): both saw the starting caller's `AsyncLocal` value.
+12. **Review #5.** `Sweeping/When_the_wall_clock_steps_backwards_should_still_sweep_one_interval_later.cs`
+    (`TestDoubles/SteppableWallClock`). RED (3/3): no sweep one interval after a one-hour backward step.
+
+13. **Characterisation of the Polly `continueOnCapturedContext` change on a Proactor pump** (raised by the
+    maintainer): `MessageDispatch/Proactor/When_a_handler_clears_the_outbox_should_run_the_resilience_pipeline_on_the_pump_thread.cs`
+    (`TestDoubles/FailsOnceOffPoolProducer`, `OutboxClearingCommandProcessor`).
+    - **Green on arrival.** RED under the named mutation (Polly given its default of `false`): `OnRetry`
+      ran on pool threads 5 and 10, not pump thread 19.
+    - It pins that a Proactor handler's post or clear completes, runs Polly's callbacks on the pump
+      thread, and resumes there. Blocking on `PostAsync` from the pump thread already deadlocked, so
+      no new deadlock is introduced.
+
 ## Fix
 
 Four commits on `bugfix/4560-timed-outbox-sweeper-starvation`:
@@ -678,6 +715,37 @@ Four commits on `bugfix/4560-timed-outbox-sweeper-starvation`:
 | Existing Kafka confirmation and dispose tests | 12/12 |
 | Existing RMQ.Sync confirmation and dispose tests | 30/30 |
 
+
+### Fixes after review of #4562 (2026-10-09)
+
+1. **Review #1/#2:** `eece13a93` test, `80512a496` fix.
+   - The sweep runs in `BrighterAsyncContext.Run` on the sweeper thread.
+   - **Running it in a context was not enough on its own.** A `ConfigureAwait(false)` continuation is
+     not inlined on a thread with a `SynchronizationContext`; it goes to the pool. Two such hops were
+     found by tracing threads in the test double:
+     - `BackgroundDispatchUsingAsync`, whose only caller is the sweeper, now passes
+       `continueOnCapturedContext: true`;
+     - `ExecuteWithResiliencePipelineAsync` now passes the caller's `continueOnCapturedContext` to
+       Polly through a pooled `ResilienceContext`. It used to get Polly's default of `false`.
+   - Removing either change turns the test red again.
+   - The reviewer's claim that `ConfigureAwait(false)` "resumes on whichever thread completed the
+     inner task" is wrong in exactly this case.
+   - Confluent.Kafka 2.15.1's `TypedTaskDeliveryHandlerShim` passes `RunContinuationsAsynchronously`
+     (`ldc.i4.s 0x40`); this was checked in its IL.
+2. **Review #3:** `10287babe` rename; `5bd972f69`/`cf8da1438` batched drain; `0ff90cfa6` replaced
+   broker tests; `398db5c2a`/`e4d826dbf` queue-depth metric; ADR 0081 amended (`docs:` commit).
+3. **Race fix, found while testing #3:** `08a8ff64c` re-checks the due time after creating the timer.
+   The tick-lag test had failed 2 of 8 runs under load; it was green 10/10 afterwards.
+4. **Review #4:** `964a85cc8`/`5e08f53ac`: `ExecutionContext.SuppressFlow()` around both thread starts.
+5. **Review #5:** `232d069dc`/`3ad95ee1c`: the schedule uses elapsed time from `GetTimestamp`.
+
+**Review points not acted on:**
+- **6a:** `StopAsync`'s continuation needs a pool thread. This is bounded by the host's shutdown
+  timeout.
+- **6b:** a sweep in flight is not cancelled on stop. This is by design, and a test covers it.
+- **6c:** "log the backlog at dispose". This is already done: `WaitForConfirmationCallbacks` logs
+  `stillInFlight`.
+
 ## Verify
 
 Full suites run on 2026-10-08 against `ea92447c9` (all branch commits), on net9.0 and net10.0. The
@@ -706,3 +774,35 @@ them come from the local environment rather than this change:
 RMQ.Async.Tests was not run: RMQ.Async's `RmqMessageProducer` is unchanged.
 
 **Dropped from scope:** the `samples/` harness (see Scope Notes).
+
+### Re-verify after the review fixes (2026-10-09)
+
+The run was at `6f180d632`, on net9.0 and net10.0. A fresh Kafka container ran with
+`schema-registry`, alongside a stock RabbitMQ on 5672 and the native-delay RabbitMQ on 5673.
+
+| Suite | net9.0 | net10.0 |
+| --- | --- | --- |
+| Core.Tests | 1661 passed, 7 skipped | 1661 passed, 7 skipped |
+| Kafka.Tests | **265/265** | **265/265** |
+| RMQ.Sync.Tests | 186 passed, 1 skipped, without mTLS | 193 passed, 1 skipped, 9 mTLS failed |
+| Extensions.Tests | 753 / 750, all passed | |
+| Testing.Tests, InMemory.Tests | all passed | all passed |
+| RMQ.Async.Tests | 358 passed, 10 failed: 8 mTLS and 2 `mary` | same |
+| Extensions.AspNetCore.Tests | flaky, see below | flaky |
+
+**Environment problems found and fixed along the way:**
+- **Clock drift:** the Podman VM's clock was 1 h 19 min behind the host, so Kafka produced
+  `Invalid timestamp` and about 110 consumer tests failed. It was stepped with `chronyc makestep`.
+- **No native-delay broker:** port 5673 had no broker. The image from `docker/RabbitMQ/Dockerfile`
+  crashes with `.erlang.cookie: eacces`, probably because `rabbitmq-plugins enable --offline` runs as
+  root during the build. It was run with `--user 0`, so the entrypoint fixes ownership and drops
+  privileges.
+
+**Failures that remain are environmental:**
+- The mTLS tests need generated certificates.
+- `DispatchBuilderTests` fail on a `mary` durable-queue mismatch, because RMQ.Sync and RMQ.Async
+  share the queue name.
+
+**Extensions.AspNetCore is flaky.** `UseInboxHandler<T>`'s static initializer throws
+`ObjectDisposedException`, because the shared logger factory has already been disposed. The failure
+count varies from run to run (1–6), and a rerun passes 65/65 on both frameworks.
