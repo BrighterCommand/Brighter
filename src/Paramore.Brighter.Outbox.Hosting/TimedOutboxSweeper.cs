@@ -184,6 +184,10 @@ namespace Paramore.Brighter.Outbox.Hosting
                     return true;
 
                 using var timer = _timeProvider.CreateTimer(_ => SignalDue(), null, wait, Timeout.InfiniteTimeSpan);
+                // The clock may have moved on before the timer existed to see it, so look again before waiting.
+                if (due - _timeProvider.GetUtcNow() <= TimeSpan.Zero)
+                    return true;
+
                 WaitHandle.WaitAny(new[] { _due, _stopping.Token.WaitHandle }, wait);
             }
 
