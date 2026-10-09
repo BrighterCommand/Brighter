@@ -77,7 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private int _disposed;
         private readonly InstrumentationOptions _instrumentation;
         private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
-        // Confirmation raises run one at a time, in delivery order, on a single worker (never on Confluent's
+        // Confirmation raises run on a single worker, in batches started in delivery order (never on Confluent's
         // poll thread, and never one thread-pool item per report); the queue lets Dispose wait for those
         // callbacks — including the awaited Outbox mark-dispatched — after Flush() has drained the delivery
         // reports themselves.
@@ -458,7 +458,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private void RaisePublishConfirmation(PublishConfirmationResult result)
         {
             // Raise on the confirmation queue's worker so we never block Confluent's delivery-report handler,
-            // and confirmations reach subscribers one at a time, in delivery order. Wrap the invoke so a
+            // and confirmations reach subscribers in batches started in delivery order. Wrap the invoke so a
             // faulting subscriber is logged. Brighter's own mediator callback is already self-contained;
             // this guards any other subscriber and the queue's worker.
             _confirmationCallbacks.Enqueue(async () =>
