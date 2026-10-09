@@ -628,10 +628,10 @@ namespace Paramore.Brighter
             {
                 var now = _timeProvider.GetUtcNow();
                 var sentBefore = now - dispatchedSince;
-                var outstandingMessageCount = Requests.Values
-                    .Where(oe =>
-                        oe.TimeFlushed == DateTimeOffset.MinValue
-                        && oe.WriteTime <= sentBefore)
+                var outstandingMessageCount = Requests
+                    .Where(entry =>
+                        entry.Value.TimeFlushed == DateTimeOffset.MinValue
+                        && entry.Value.WriteTime <= sentBefore)
                     .Take(maxCount)
                     .Count();
                 return outstandingMessageCount;
