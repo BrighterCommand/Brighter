@@ -62,7 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private readonly int _waitForConfirmsTimeOutInMilliseconds;
         private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
         // The ack/nack handlers run on the client's connection loop, which must never block on a
-        // subscriber, so awaited callbacks run one at a time, in ack order, on the queue's single worker
+        // subscriber, so awaited callbacks run on the queue's single worker, in batches started in ack order
         // (never one thread-pool item per ack). The queue lets Dispose wait for them — including the
         // awaited Outbox mark-dispatched — after WaitForConfirms has drained the broker acks themselves.
         private readonly BatchedCallbackQueue _confirmationCallbacks;
@@ -313,7 +313,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 return;
 
             // Awaited callbacks must not block the connection loop (WaitForConfirms depends on it to
-            // process acks), so they run on the confirmation queue's worker, one at a time, in ack order.
+            // process acks), so they run on the confirmation queue's worker, in batches started in ack order.
             _confirmationCallbacks.Enqueue(async () =>
             {
                 try
