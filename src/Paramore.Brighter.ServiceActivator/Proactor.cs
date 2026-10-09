@@ -168,6 +168,7 @@ namespace Paramore.Brighter.ServiceActivator
                         }
                         catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
                         {
+                            RecordChannelFailure();
                             Log.BrokenCircuitExceptionMessages(s_logger, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
                             receiveSpan?.AddException(ex);
                             receiveSpan?.SetStatus(ActivityStatusCode.Error, ex.Message);
@@ -176,6 +177,7 @@ namespace Paramore.Brighter.ServiceActivator
                         }
                         catch (ChannelFailureException ex)
                         {
+                            RecordChannelFailure();
                             Log.ChannelFailureExceptionMessages(s_logger, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
                             receiveSpan?.AddException(ex);
                             receiveSpan?.SetStatus(ActivityStatusCode.Error, ex.Message);
@@ -196,6 +198,8 @@ namespace Paramore.Brighter.ServiceActivator
                             Status = MessagePumpStatus.MP_ERROR;
                             throw new Exception(NoMessageReceivedDescription);
                         }
+
+                        ResetChannelFailures();
 
                         // empty queue
 #pragma warning disable CS0618 // Message types still identify pump control signals.

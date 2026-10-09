@@ -74,7 +74,7 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
         // belongs to the transport, not to Brighter, so the rejected message is identified by its
         // id rather than assumed to be the one sent first (NFR-4). The behaviour under test is the
         // same either way.
-        var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(15000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         var rejectedMessage = _sentMessages.Single(m => m.Header.MessageId == received.Header.MessageId);

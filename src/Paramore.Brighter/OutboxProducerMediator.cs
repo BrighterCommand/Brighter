@@ -79,6 +79,8 @@ namespace Paramore.Brighter
         private const string NoAsyncOutboxError = "An async Outbox must be defined.";
             
         private int _outStandingCount;
+        // The default ceiling of IAmAnOutboxSync/Async.GetOutstandingMessageCount
+        private const int DefaultOutstandingCountCeiling = 100;
         //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
         //an owner and the container disposing concurrently must run CloseAll() (broker I/O) and the factory
         //disposals exactly once
@@ -828,7 +830,10 @@ namespace Paramore.Brighter
             //queues one check
             _lastOutStandingMessageCheckAt = now;
 
-            //This is expensive, so use a background thread. The flag is released when the check ends, however it ends
+            //This is expensive, so use a background thread. Task.Run uses TaskScheduler.Default and does not carry the
+            //caller's SynchronizationContext. That keeps the blocking call on the async outbox in
+            //OutstandingMessagesCheck from deadlocking the pump, so do not run it inline on the caller's thread.
+            //The flag is released when the check ends, however it ends
             Task.Run(() =>
             {
                 try
@@ -1368,27 +1373,35 @@ namespace Paramore.Brighter
             Log.BeginCountOfOutstandingMessages(s_logger);
             try
             {
+                // Only count up to one more than the limit; with no limit, the outbox's default ceiling applies
+                var maxCount = _maxOutStandingMessages >= 0 ? _maxOutStandingMessages + 1 : DefaultOutstandingCountCeiling;
+
                 if (_outBox != null)
                 {
-                    if (_maxOutStandingMessages >= 0)
-                    {
-                        _outStandingCount = _outBox
-                            .GetOutstandingMessageCount(
-                                _maxOutStandingCheckInterval,
-                                requestContext,
-                                _maxOutStandingMessages + 1,
-                                args: _outBoxBag
-                            );
-                    }
-                    else
-                    {
-                        _outStandingCount = _outBox
-                            .GetOutstandingMessageCount(
-                                _maxOutStandingCheckInterval,
-                                requestContext,
-                                args: _outBoxBag
-                            );
-                    }
+                    _outStandingCount = _outBox
+                        .GetOutstandingMessageCount(
+                            _maxOutStandingCheckInterval,
+                            requestContext,
+                            maxCount,
+                            args: _outBoxBag
+                        );
+
+                    return;
+                }
+
+                if (_asyncOutbox != null)
+                {
+                    // Blocking holds this pool thread but never the pump: this runs inside the Task.Run in
+                    // CheckOutstandingMessages, with no SynchronizationContext, and the caller never waits for that task
+                    _outStandingCount = _asyncOutbox
+                        .GetOutstandingMessageCountAsync(
+                            _maxOutStandingCheckInterval,
+                            requestContext,
+                            maxCount,
+                            args: _outBoxBag
+                        )
+                        .GetAwaiter()
+                        .GetResult();
 
                     return;
                 }

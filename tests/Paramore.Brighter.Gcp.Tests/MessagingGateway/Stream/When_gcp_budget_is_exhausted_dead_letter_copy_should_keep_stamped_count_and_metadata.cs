@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -155,12 +155,11 @@ public class GcpStreamBudgetExhaustedDlqTests
             {
                 readingChannel = readerChannelFactory.CreateSyncChannel(readingSubscription);
 
-                // 5.3: channel creation for a DeadLetterPolicy-carrying subscription logs exactly
-                // two tolerated IAM Warnings (one per helper) on the emulator.
+                // The emulator logs two tolerated IAM warnings; real Pub/Sub should apply the grants.
                 var warnings = TestCorrelator.GetLogEventsFromCurrentContext()
                     .Where(e => e.Level == LogEventLevel.Warning)
                     .ToList();
-                Assert.Equal(2, warnings.Count);
+                Assert.Equal(serviceAccount is null ? 0 : 2, warnings.Count);
             }
 
             var cmd = new ConformanceDeferredCommand { Value = "stream budget exhaustion dlq metadata test" };
