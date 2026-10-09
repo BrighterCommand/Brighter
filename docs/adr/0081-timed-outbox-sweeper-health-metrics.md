@@ -21,6 +21,9 @@ Date: 2026-10-08
 
 Accepted
 
+Amended 2026-10-09: publish confirmations drain in bounded batches on one thread per producer, and a
+queue-depth instrument makes a confirmation backlog visible (see Decision § Amendment 2026-10-09).
+
 ## Context
 
 `TimedOutboxSweeper` re-sends outbox messages that were never confirmed as dispatched. When the
@@ -234,6 +237,97 @@ can only happen with a second caller of `ClearOutstandingFromOutboxAsync`.
 5. **Docs:** add a sweeper section to the observability guide. It covers the three instruments,
    suggested alerts, and turning on the .NET `System.Runtime` meter for thread-pool queue length
    and thread count.
+
+### Amendment 2026-10-09: batched confirmation drain and queue depth
+
+Review of #4562 found a cost in the #4560 confirmation fix. The fix replaced one `Task.Run` per
+confirmation with a `SerialCallbackQueue`, which raises each producer's confirmations one at a time,
+in order, on a dedicated thread. With a database outbox each confirmation is a round trip, so
+running them one at a time caps how fast a producer can mark messages dispatched. At 2 ms a round
+trip that is about 500 messages per second. Above that rate the unbounded queue grows, messages
+pass `MinimumMessageAge` while still unmarked, and the sweeper sends them again. Nothing needs the
+ordering: marking messages dispatched commutes. Ordering came along with the fix that stopped the
+`Task.Run` flood, and was never a requirement.
+
+#### Batched drain
+
+The queue becomes `BatchedCallbackQueue` (`Paramore.Brighter.Tasks`). It keeps the parts of the
+#4560 fix that matter: one dedicated thread per producer, created with the first callback, and
+never the thread pool.
+
+- **The drain thread takes a batch.** It waits for one callback, then takes whatever else is already
+  queued, up to `maxBatchSize` (default **32**) in total.
+- **It starts every callback in the batch, in queue order,** inside one `BrighterAsyncContext.Run`,
+  and waits for all of them before taking the next batch. So their I/O overlaps, while their
+  continuations still come back to the drain thread.
+- **The batch size bounds concurrency.** A batch of at most 32 stays below the default connection
+  pool size of SqlClient and Npgsql (100), which leaves room for the application. The size is a
+  constructor parameter, not a public option: no producer exposes it in this amendment.
+- **Callbacks still run in a `BrighterAsyncContext`.** Only a continuation that opts out with
+  `ConfigureAwait(false)` can land on the pool. This is unchanged.
+- **Unchanged:** `TryWait`, `Complete`, dropping a confirmation added after `Complete`, and
+  swallowing a callback's escaped exception.
+- **Changed:** callbacks may now complete out of order, and up to `maxBatchSize` may be in progress
+  at once.
+
+#### Queue depth
+
+| Instrument | Type | Unit | Attributes |
+| --- | --- | --- | --- |
+| `paramore.brighter.publish_confirmation.queue.depth` | `ObservableUpDownCounter<long>` | `{confirmation}` | `messaging.system`, `messaging.destination.name` |
+
+- **What it counts:** for each live queue, the confirmations queued or running.
+- **Its attributes:** they come from the producer that owns the queue. Kafka passes `kafka`, RMQ.Sync
+  passes `rabbitmq`, and both pass the publication's topic.
+- **Why an up-down counter:** OpenTelemetry recommends an up-down counter for a queue size, because
+  depths across topics add up meaningfully.
+- **How it reaches the queues.** Producers are built by registry factories outside DI, so a meter
+  cannot be injected into them. Instead:
+  1. Each queue registers itself, with its attributes, in an internal static
+     `BatchedCallbackQueueRegistry` that holds weak references.
+  2. It unregisters once it has completed and drained.
+  3. A new `PublishConfirmationMeter` creates the observable instrument through `IMeterFactory`
+     and reads the registry when the instrument is collected.
+- **How the meter is created:** `AddBrighterInstrumentation` registers it, and creates it when the
+  meter provider is built (`ConfigureBuilder`), because nothing else depends on it.
+- **Without `AddBrighterInstrumentation`:** nothing observes the registry. The cost is one
+  registration per producer.
+
+#### Where each type is touched (amendment)
+
+| Assembly | Type | Change |
+| --- | --- | --- |
+| Paramore.Brighter | `SerialCallbackQueue` | Renamed `BatchedCallbackQueue`; batched drain; new constructor parameters for its attributes and `maxBatchSize` |
+| Paramore.Brighter | `BatchedCallbackQueueRegistry` | New, internal |
+| Paramore.Brighter | `PublishConfirmationMeter` | New |
+| Paramore.Brighter | `BrighterSemanticConventions` | New constant for the instrument name |
+| Paramore.Brighter.MessagingGateway.Kafka | `KafkaMessageProducer` | Passes `kafka` and its topic to the queue |
+| Paramore.Brighter.MessagingGateway.RMQ.Sync | `RmqMessageProducer` | Passes `rabbitmq` and its topic to the queue |
+| Paramore.Brighter.Extensions.Diagnostics | `BrighterMetricsBuilderExtensions` | Registers and creates `PublishConfirmationMeter` |
+
+#### Alternatives considered (amendment)
+
+- **Keep the drain serial and document why.** This was rejected, because the cap on database round
+  trips described above is a regression for high-rate producers.
+- **Several drain threads (2–4).** This gives more threads for less overlap than a batch on one
+  thread, and the threads per producer would multiply on small pods. Rejected.
+- **An unbounded batch.** A large backlog would open that many database connections at once.
+  Rejected.
+- **A static `Meter` inside the queue.** Simpler, but it bypasses `IMeterFactory`, which every other
+  Brighter meter uses and which keeps metric tests isolated. Rejected.
+- **Pass a meter role to each producer.** This needs a new parameter on every producer factory and
+  registry factory. That is a public API change, for a value the registry provides without it.
+  Rejected.
+
+#### Consequences (amendment)
+
+- **Positive:** confirmation throughput with a database outbox is bounded by `maxBatchSize`
+  overlapping round trips, not one. A backlog is visible before it causes resends.
+- **Negative:** the in-order guarantee from #4560 goes away. Nothing documented it, and nothing in
+  Brighter depends on it. The approved Kafka and RMQ.Sync tests that assert "one at a time, in
+  order" are replaced by tests that assert confirmations overlap, never exceed the batch size, and
+  run on the drain thread rather than the pool. The registry is process-wide static state, so tests
+  that read it must filter by their own topic.
 
 ## Consequences
 
