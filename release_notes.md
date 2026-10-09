@@ -2,6 +2,18 @@
 
 ## Master
 
+### Dispatcher shutdown drains consumers still being created (#4541)
+
+The Dispatcher now tracks accepted consumer operations until their channels have either been
+registered with a performer task or disposed. A concurrent `End()` cannot finish before those
+operations complete. Consumers shut before opening are removed and disposed without registering
+a null task. A disposal failure is logged and does not prevent the remaining consumers from draining.
+
+**Behaviour change:** `Receive()`, `Open()`, and `SetActivePerformers()` throw
+`InvalidOperationException` while shutdown is in progress. Await `End()` before restarting.
+After disposal, these operations throw `ObjectDisposedException`. Channel creation and disposal
+run outside the lifecycle lock. See [ADR 0083](docs/adr/0083-coordinate-dispatcher-startup-and-shutdown.md).
+
 ### AWS SQS, GCP Pub/Sub and RocketMQ: `requeueCount` now runs down (#4341, spec 0037)
 
 On these transports the broker re-serves its own stored copy of a requeued message, and Brighter never
@@ -912,6 +924,20 @@ because checking whether a subscription exists is itself a management-API call.
 
 `AzureServiceBusConsumerFactory`, used on its own without the channel factory, is unchanged: its
 consumers still provision on first use.
+
+### Outbox: no outstanding message count when there is no limit (#4554)
+
+With the default `AddProducers` settings (`MaxOutStandingMessages` of -1 and
+`MaxOutStandingCheckInterval` of zero), every `Post` and clear queued a background count of the
+outstanding messages, even though with no limit the count is never compared with one. Each count
+waited on a thread-pool thread for a process-wide semaphore and then queried the outbox: a sort of
+every entry it held for the `InMemoryOutbox`, a query per `Post` for a relational outbox. With a
+limit of -1 the count no longer runs. A limit of 0 is a real limit and is still checked.
+
+With no limit, the span the outbox creates for the count no longer appears under a clear
+(`count.outstanding_messages` for the `InMemoryOutbox`, `retrieve.outstanding_messages` for a
+relational outbox), the debug line "Outbox outstanding message count is" always reports 0, and the
+other debug lines of the check, such as "Current outstanding count is", are no longer logged.
 
 ## 10.7.0
 
