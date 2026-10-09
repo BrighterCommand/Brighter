@@ -202,6 +202,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             catch (IOException io)
             {
                 Log.ErrorTalkingToSocket(s_logger, io, Connection.AmpqUri!.GetSanitizedUri());
+                // The new channel numbers its delivery tags from 1 again, so its acks must not settle the old channel's
+                _pendingConfirmations.Clear();
                 ResetConnectionToBroker();
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
             }

@@ -26,6 +26,7 @@ THE SOFTWARE. */
 #nullable enable
 
 using System;
+using System.IO;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using RabbitMQ.Client;
@@ -40,6 +41,7 @@ public class CoalescingConfirmsRmqChannel : DispatchProxy
     private IModel _channel = null!;
     private EventHandler<BasicAckEventArgs>? _acks;
     private EventHandler<BasicNackEventArgs>? _nacks;
+    private bool _failNextPublish;
 
     public static CoalescingConfirmsRmqChannel Wrap(IModel channel)
     {
@@ -48,6 +50,9 @@ public class CoalescingConfirmsRmqChannel : DispatchProxy
         coalescing._channel = channel;
         return coalescing;
     }
+
+    // The next publish fails as a dropped socket would, so the producer resets its connection
+    public void FailNextPublish() => _failNextPublish = true;
 
     // One broker frame: the client raises a single event, carrying the broker's multiple flag as-is
     public void RaiseAck(ulong deliveryTag, bool multiple)
@@ -85,6 +90,9 @@ public class CoalescingConfirmsRmqChannel : DispatchProxy
             case "add_BasicNacks":
                 _nacks += (EventHandler<BasicNackEventArgs>)args![0]!;
                 return null;
+            case "BasicPublish" when _failNextPublish:
+                _failNextPublish = false;
+                throw new IOException("Injected socket failure.");
         }
 
         try
