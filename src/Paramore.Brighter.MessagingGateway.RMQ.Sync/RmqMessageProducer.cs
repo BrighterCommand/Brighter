@@ -267,25 +267,22 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
         }
 
-        private void OnPublishFailed(object? sender, BasicNackEventArgs e)
-        {
-            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out PendingConfirmation confirmation))
-            {
-                RaisePublishConfirmation(new PublishConfirmationResult(false, confirmation.MessageId, confirmation.Topic, confirmation.Context));
-                _pendingConfirmations.TryRemove(e.DeliveryTag, out PendingConfirmation _);
-                Log.FailedToPublishMessage(s_logger, confirmation.MessageId.Value);
-            }
-        }
+        private void OnPublishFailed(object? sender, BasicNackEventArgs e) => SettleConfirmations(e.DeliveryTag, e.Multiple, success: false);
 
-        private void OnPublishSucceeded(object? sender, BasicAckEventArgs e)
+        private void OnPublishSucceeded(object? sender, BasicAckEventArgs e) => SettleConfirmations(e.DeliveryTag, e.Multiple, success: true);
+
+        private void SettleConfirmations(ulong deliveryTag, bool multiple, bool success)
         {
-            foreach (var deliveryTag in ConfirmedDeliveryTags(e.DeliveryTag, e.Multiple))
+            foreach (var confirmedTag in ConfirmedDeliveryTags(deliveryTag, multiple))
             {
-                if (_pendingConfirmations.TryGetValue(deliveryTag, out PendingConfirmation confirmation))
+                if (_pendingConfirmations.TryGetValue(confirmedTag, out PendingConfirmation confirmation))
                 {
-                    RaisePublishConfirmation(new PublishConfirmationResult(true, confirmation.MessageId, confirmation.Topic, confirmation.Context));
-                    _pendingConfirmations.TryRemove(deliveryTag, out PendingConfirmation _);
-                    Log.PublishedMessageInformation(s_logger, confirmation.MessageId.Value);
+                    RaisePublishConfirmation(new PublishConfirmationResult(success, confirmation.MessageId, confirmation.Topic, confirmation.Context));
+                    _pendingConfirmations.TryRemove(confirmedTag, out PendingConfirmation _);
+                    if (success)
+                        Log.PublishedMessageInformation(s_logger, confirmation.MessageId.Value);
+                    else
+                        Log.FailedToPublishMessage(s_logger, confirmation.MessageId.Value);
                 }
             }
         }
