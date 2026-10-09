@@ -332,7 +332,13 @@ jobs:
             9.0.x
             10.0.x
       - name: Start RabbitMQ with the delayed-message plugin
-        run: docker compose -f docker-compose-rmq-native-delay.yaml up --build -d --wait
+        run: docker compose -f docker-compose-rmq-native-delay.yaml up --build -d --wait --wait-timeout 120
+      - name: Verify unprivileged broker startup
+        run: |
+          docker compose -f docker-compose-rmq-native-delay.yaml exec -T rabbitmq-native-delay sh -ec '
+            test "$(id -un)" = rabbitmq
+            rabbitmq-diagnostics -q check_running
+          '
       - name: Native delay transport tests
         run: |
           dotnet test tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Category=RMQNativeDelay" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
