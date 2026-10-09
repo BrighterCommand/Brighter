@@ -2,6 +2,18 @@
 
 ## Master
 
+### Dispatcher shutdown drains consumers still being created (#4541)
+
+The Dispatcher now tracks accepted consumer operations until their channels have either been
+registered with a performer task or disposed. A concurrent `End()` cannot finish before those
+operations complete. Consumers shut before opening are removed and disposed without registering
+a null task. A disposal failure is logged and does not prevent the remaining consumers from draining.
+
+**Behaviour change:** `Receive()`, `Open()`, and `SetActivePerformers()` throw
+`InvalidOperationException` while shutdown is in progress. Await `End()` before restarting.
+After disposal, these operations throw `ObjectDisposedException`. Channel creation and disposal
+run outside the lifecycle lock. See [ADR 0083](docs/adr/0083-coordinate-dispatcher-startup-and-shutdown.md).
+
 ### AWS SQS, GCP Pub/Sub and RocketMQ: `requeueCount` now runs down (#4341, spec 0037)
 
 On these transports the broker re-serves its own stored copy of a requeued message, and Brighter never
