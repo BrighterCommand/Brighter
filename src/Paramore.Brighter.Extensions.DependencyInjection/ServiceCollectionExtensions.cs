@@ -851,7 +851,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 TimeProvider.System,
                 busConfiguration.InstrumentationOptions,
                 true,
-                true);
+                true,
+                OutboxMeter(serviceProvider));
         }
 
         /// <summary>
@@ -1013,6 +1014,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private static IAmAnOutboxCircuitBreaker? OutboxCircuitBreaker(IServiceProvider serviceProvider)
         {
             return serviceProvider.GetService<IAmAnOutboxCircuitBreaker>();
+        }
+
+        private static IAmABrighterOutboxMeter? OutboxMeter(IServiceProvider serviceProvider)
+        {
+            return serviceProvider.GetService<IAmABrighterOutboxMeter>();
         }
 
         /// <summary>                                                            x
