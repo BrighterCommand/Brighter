@@ -32,6 +32,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Tasks;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Paramore.Brighter.Outbox.Hosting
@@ -217,8 +218,9 @@ namespace Paramore.Brighter.Outbox.Hosting
         {
             try
             {
-                // On the sweeper's own thread, so blocking on the sweep is safe: there is no synchronization context to deadlock on.
-                return SweepAsync().GetAwaiter().GetResult();
+                // Runs the sweep in a context on the sweeper's own thread, so its awaits resume here rather than on the pool:
+                // a producer such as Kafka completes a send from its own thread with asynchronous continuations.
+                return BrighterAsyncContext.Run(SweepAsync);
             }
             catch (Exception e)
             {
