@@ -9,13 +9,13 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.Tasks;
 
 [Collection(ThreadPoolStarvationCollection.Name)]
-public class SerialCallbackQueueStarvationTests
+public class BatchedCallbackQueueStarvationTests
 {
     [Fact]
     public void When_the_thread_pool_is_starved_should_still_run_queued_callbacks()
     {
         //Arrange
-        var queue = new SerialCallbackQueue();
+        var queue = new BatchedCallbackQueue();
         using var confirmed = new ManualResetEventSlim(false);
 
         var starvedPool = new StarvedThreadPool();

@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Tasks
     /// keeps draining. <see cref="TryWait"/> lets a producer's dispose wait for the queued callbacks to finish.
     /// The thread starts with the first callback and ends after <see cref="Complete"/> once the queue is empty.
     /// </remarks>
-    public sealed class SerialCallbackQueue
+    public sealed class BatchedCallbackQueue
     {
         private readonly BlockingCollection<Func<Task>> _callbacks = new();
         private readonly InFlightCallbackTracker _inFlight = new();

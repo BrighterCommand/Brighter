@@ -63,7 +63,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         // subscriber, so awaited callbacks run one at a time, in ack order, on the queue's single worker
         // (never one thread-pool item per ack). The queue lets Dispose wait for them — including the
         // awaited Outbox mark-dispatched — after WaitForConfirms has drained the broker acks themselves.
-        private readonly SerialCallbackQueue _confirmationCallbacks = new();
+        private readonly BatchedCallbackQueue _confirmationCallbacks = new();
 
         /// <summary>
         /// Action taken when a message is published, following receipt of a confirmation from the broker
