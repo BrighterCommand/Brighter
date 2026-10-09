@@ -94,8 +94,7 @@ namespace Paramore.Brighter
         private readonly Dictionary<string, object> _outBoxBag;
         private readonly IAmABrighterTracer? _tracer;
         private readonly TimeProvider _timeProvider;
-        private IAmABrighterOutboxMeter _outboxMeter = null!;
-        private bool _ownsOutboxMeter;
+        private readonly IAmABrighterOutboxMeter? _outboxMeter;
 
         /// <inheritdoc />
         public IAmAnOutbox? Outbox => (IAmAnOutbox?)_outBox ?? _asyncOutbox;
@@ -134,6 +133,10 @@ namespace Paramore.Brighter
         /// <param name="ownsTransformerFactories">
         /// Does this mediator own the transform factories, so that <see cref="Dispose()"/> should dispose them?
         /// Defaults to <c>false</c> for the manual-wiring path; the DI path passes <c>true</c>.
+        /// </param>
+        /// <param name="outboxMeter">
+        /// Records Outbox metrics. Optional; when null, no Outbox metrics are recorded. Registered by
+        /// <c>AddBrighterInstrumentation()</c> when Brighter metrics are configured.
         /// </param>
         public OutboxProducerMediator(
             IAmAProducerRegistry producerRegistry,
@@ -175,8 +178,7 @@ namespace Paramore.Brighter
             
             _timeProvider = timeProvider ?? TimeProvider.System;
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
-            _outboxMeter = outboxMeter ?? new OutboxMeter();
-            _ownsOutboxMeter = outboxMeter is null;
+            _outboxMeter = outboxMeter;
 
             _messageMapperRegistry = mapperRegistry;
             _messageTransformerFactory = messageTransformerFactory;
@@ -249,9 +251,6 @@ namespace Paramore.Brighter
                     DisposeQuietly(_messageTransformerFactory);
                     DisposeQuietly(_messageTransformerFactoryAsync);
                 }
-
-                if (_ownsOutboxMeter)
-                    DisposeQuietly(_outboxMeter);
             }
         }
 
@@ -1194,7 +1193,7 @@ namespace Paramore.Brighter
                         Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key.WireTopic.Value);
 
                         Dictionary<string, DateTimeOffset>? createdAtById = null;
-                        if (_outboxMeter.Enabled)
+                        if (_outboxMeter is { Enabled: true })
                         {
                             createdAtById = new Dictionary<string, DateTimeOffset>(messages.Length, StringComparer.Ordinal);
                             foreach (var m in messages)
@@ -1555,7 +1554,7 @@ namespace Paramore.Brighter
 
         private void RecordAdded(Message message)
         {
-            if (!_outboxMeter.Enabled) return;
+            if (_outboxMeter is not { Enabled: true }) return;
             try { _outboxMeter.AddMessageAdded(message.Header.Topic); }
             catch (Exception ex) { Log.OutboxMetricsFault(s_logger, ex); }
         }
@@ -1566,7 +1565,7 @@ namespace Paramore.Brighter
             DateTimeOffset? createdAt,
             DateTimeOffset dispatchedAt)
         {
-            if (!_outboxMeter.Enabled) return;
+            if (_outboxMeter is not { Enabled: true }) return;
             try
             {
                 _outboxMeter.AddMessageCleared(destination, clearSource);

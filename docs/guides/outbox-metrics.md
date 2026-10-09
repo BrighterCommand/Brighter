@@ -39,32 +39,25 @@ Every recording carries at most two attributes.
 
 ## Registration
 
-Outbox metrics are exported automatically through the existing `AddBrighterInstrumentation()` call.
-No extra step is required:
+Outbox metrics are enabled as part of your telemetry setup. The existing `AddBrighterInstrumentation()`
+call registers an `OutboxMeter` (with the `MeterProvider`'s service-resource attributes, e.g. `service.name`)
+alongside Brighter's other meters. No extra step is required:
 
 ```csharp
 services.AddOpenTelemetry()
     .WithMetrics(b => b
-        .AddBrighterInstrumentation()   // already includes the Outbox instruments
+        .AddBrighterInstrumentation()   // registers IAmABrighterOutboxMeter
         .AddOtlpExporter());
 ```
 
+The mediator receives `IAmABrighterOutboxMeter` from the container when built via `AddBrighter()`.
+The meter is optional: if none is registered, or you construct `OutboxProducerMediator` yourself without
+passing one, no Outbox metrics are recorded and the recording calls return immediately.
+
 ### Providing your own OutboxMeter
 
-To attach service-resource attributes to every recording (e.g. `service.name`), pass a
-`MeterProvider` to `OutboxMeter`:
-
-```csharp
-// Register the meter as a singleton so the mediator uses it
-services.AddSingleton<IAmABrighterOutboxMeter>(sp =>
-{
-    var meterProvider = sp.GetRequiredService<MeterProvider>();
-    return new OutboxMeter(meterProvider);
-});
-```
-
-The mediator receives `IAmABrighterOutboxMeter` from the container when built via `AddBrighter()`.
-If no instance is registered, the mediator creates its own `OutboxMeter()` without service attributes.
+Register your own `IAmABrighterOutboxMeter` before calling `AddBrighterInstrumentation()`; the built-in
+registration does not replace an existing one.
 
 ---
 
