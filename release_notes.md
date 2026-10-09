@@ -1024,6 +1024,20 @@ because checking whether a subscription exists is itself a management-API call.
 `AzureServiceBusConsumerFactory`, used on its own without the channel factory, is unchanged: its
 consumers still provision on first use.
 
+### Outbox: no outstanding message count when there is no limit (#4554)
+
+With the default `AddProducers` settings (`MaxOutStandingMessages` of -1 and
+`MaxOutStandingCheckInterval` of zero), every `Post` and clear queued a background count of the
+outstanding messages, even though with no limit the count is never compared with one. Each count
+waited on a thread-pool thread for a process-wide semaphore and then queried the outbox: a sort of
+every entry it held for the `InMemoryOutbox`, a query per `Post` for a relational outbox. With a
+limit of -1 the count no longer runs. A limit of 0 is a real limit and is still checked.
+
+With no limit, the span the outbox creates for the count no longer appears under a clear
+(`count.outstanding_messages` for the `InMemoryOutbox`, `retrieve.outstanding_messages` for a
+relational outbox), the debug line "Outbox outstanding message count is" always reports 0, and the
+other debug lines of the check, such as "Current outstanding count is", are no longer logged.
+
 ## 10.7.0
 
 ### Azure Service Bus: dead-letter reason and description (#4196)
