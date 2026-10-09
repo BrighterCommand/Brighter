@@ -220,7 +220,10 @@ the values with a `MeterListener`. The test then needs no OpenTelemetry pipeline
 #### Why three outcomes and no more?
 
 These three outcomes are the ones that need different responses. `failed` means read the logs.
-`lock_unavailable` means a sweep is overrunning or hung. `completed` is the baseline. A sweep that
+`lock_unavailable` means a sweep is overrunning or hung on **another instance** that shares the
+distributed lock. It cannot show a hang in the same process: the sweeper runs its sweeps one after
+another on one thread, so while a sweep is hung, no later tick starts and nothing is recorded at all
+(see Risks and Mitigations). `completed` is the baseline. A sweep that
 the mediator skipped internally is still `completed` from the sweeper's point of view. That case
 can only happen with a second caller of `ClearOutstandingFromOutboxAsync`.
 
@@ -354,6 +357,8 @@ never the thread pool.
 | The names conflict with the outbox metrics in #4484 | Both use the `paramore.brighter.` prefix, and this ADR uses the `outbox_sweeper` segment. Neither counts messages twice. The #4484 review should cross-reference this ADR |
 | A meter failure breaks sweeping | The role's contract says it never throws. The sweeper records outside the lock and inside its catch-all. A test checks that a throwing meter does not stop sweeps |
 | Tick lag is misread when the sweeper is stopped | The sweeper records lag only for sweeps it starts, never for the wait that `StopAsync` cancels |
+| A sweep hangs and the metrics go silent. Sweeps run one after another on the sweeper's thread, so while one is hung no tick starts: nothing records `tick.lag`, `sweep.duration` or `sweeps`, and tick lag is recorded only when a sweep finally starts. `lock_unavailable` appears only on other instances sharing the lock, so with one instance or the in-memory lock a hang records nothing | The primary stall alert is **no increase in `completed` sweeps**, summed across instances, over several intervals, paired with `absent()` where the backend drops stale series. It must be `completed`, not any outcome: while the lock holder is hung, the other instances keep recording `lock_unavailable`. Treat `lock_unavailable` as a sign of an overrun on another instance, not as the stall alert |
+| A sweep deadlocks on the sweeper's thread. Since the sweep runs in a `BrighterAsyncContext`, code in its path that blocks on a task (sync-over-async), such as a custom `IDistributedLock`, producer or outbox calling `.GetAwaiter().GetResult()` on an async method, can deadlock there. Before #4560 the same code only tied up a pool thread | Brighter's own sweep path does not block on tasks: its `GetAwaiter().GetResult()` sites are in sync-only methods. A third-party implementation that does is caught by the stall alert above |
 
 ## Alternatives Considered
 
