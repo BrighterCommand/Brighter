@@ -87,7 +87,8 @@ namespace Paramore.Brighter
         /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages.
         /// This is the minimum time between background checks, measured from when the previous check was queued. We queue a check to run
         /// on a background thread after messages are cleared from the outbox (Post clears straight after it deposits), if the time since
-        /// the previous check was queued is at least this threshold; TimeSpan.Zero checks after every clear.
+        /// the previous check was queued is at least this threshold and no check is still queued or running. A mediator keeps at most one
+        /// check in flight, so with TimeSpan.Zero a clear queues a check only if the previous one has finished.
         /// It is also the minimum age a message must have in the outbox to be counted as outstanding (it is passed to the outbox as dispatchedSince).
         /// If you set MaxOutStandingMessages to -1 (no limit) the outbox is not consulted for the count and this property is ignored.
         /// If you set MaxOutStandingMessages to 0 the property still applies: once a check has counted an outstanding message at least this old,
@@ -208,7 +209,8 @@ namespace Paramore.Brighter
         /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages.
         /// This is the minimum time between background checks, measured from when the previous check was queued. We queue a check to run
         /// on a background thread after messages are cleared from the outbox (Post clears straight after it deposits), if the time since
-        /// the previous check was queued is at least this threshold; TimeSpan.Zero checks after every clear.
+        /// the previous check was queued is at least this threshold and no check is still queued or running. A mediator keeps at most one
+        /// check in flight, so with TimeSpan.Zero a clear queues a check only if the previous one has finished.
         /// It is also the minimum age a message must have in the outbox to be counted as outstanding (it is passed to the outbox as dispatchedSince).
         /// If you set MaxOutStandingMessages to -1 (no limit) the outbox is not consulted for the count and this property is ignored.
         /// If you set MaxOutStandingMessages to 0 the property still applies: once a check has counted an outstanding message at least this old,

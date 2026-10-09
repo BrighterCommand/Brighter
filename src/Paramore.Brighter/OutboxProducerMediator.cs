@@ -83,6 +83,9 @@ namespace Paramore.Brighter
         //an owner and the container disposing concurrently must run CloseAll() (broker I/O) and the factory
         //disposals exactly once
         private int _disposed;
+        //1 while a check of the outstanding count is queued or running: an int rather than a bool so one caller can
+        //claim it with a single atomic Interlocked.CompareExchange
+        private int _outstandingCheckInFlight;
         private readonly int _maxOutStandingMessages;
         private readonly TimeSpan _maxOutStandingCheckInterval;
         private readonly Dictionary<string, object> _outBoxBag;
@@ -109,9 +112,10 @@ namespace Paramore.Brighter
         /// <param name="maxOutStandingMessages">How many messages can become outstanding in the Outbox before we throw an OutboxLimitReached exception</param>
         /// <param name="maxOutStandingCheckInterval">
         /// The minimum time between background checks for maxOutStandingMessages, measured from when the previous check
-        /// was queued (<see cref="TimeSpan.Zero"/> checks after every clear, so after every Post). It is also the minimum
-        /// age a message must have in the outbox to count as outstanding. Ignored when maxOutStandingMessages is -1 (no
-        /// limit), as the outbox is then not consulted for the count. Defaults to one second when null.
+        /// was queued. The mediator keeps at most one check in flight, so with <see cref="TimeSpan.Zero"/> a clear queues
+        /// a check only if the previous one has finished. It is also the minimum age a message must have in the outbox
+        /// to count as outstanding. Ignored when maxOutStandingMessages is -1 (no limit), as the outbox is then not
+        /// consulted for the count. Defaults to one second when null.
         /// </param>
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="timeProvider"></param>
@@ -816,15 +820,29 @@ namespace Paramore.Brighter
                 return;
             }                                                    
 
+            //Keep at most one check in flight: only the caller that claims it records the time and queues the check
+            if (Interlocked.CompareExchange(ref _outstandingCheckInFlight, 1, 0) != 0)
+                return;
+
             //Record the time now, not when the queued check starts, so a burst of posts within the interval
             //queues one check
             _lastOutStandingMessageCheckAt = now;
 
+            //This is expensive, so use a background thread. The flag is released when the check ends, however it ends
+            Task.Run(() =>
+            {
+                try
+                {
+                    OutstandingMessagesCheck(requestContext);
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _outstandingCheckInFlight, 0);
+                }
+            });
+
+            //Logged after the check is queued, so a logger that throws cannot leave the flag claimed
             Log.RunningOutstandingMessageCheck(s_logger, now, timeSinceLastCheck.TotalSeconds);
-            //This is expensive, so use a background thread
-            Task.Run(
-                () => OutstandingMessagesCheck(requestContext)
-            );
         }
 
         /// <summary>
