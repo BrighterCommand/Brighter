@@ -925,6 +925,17 @@ because checking whether a subscription exists is itself a management-API call.
 `AzureServiceBusConsumerFactory`, used on its own without the channel factory, is unchanged: its
 consumers still provision on first use.
 
+### Outbox: `MaxOutStandingMessages` is now enforced for an async-only outbox (#4552)
+
+The outstanding message count only went through `IAmAnOutboxSync`, so with an outbox that implements
+only `IAmAnOutboxAsync` the count stayed at 0 and `MaxOutStandingMessages` was never enforced. It
+now counts through the async outbox when there is no sync one. No outbox that ships with Brighter is
+async-only, so none of them is affected. If you use a custom or third-party outbox that is
+async-only and set `MaxOutStandingMessages` to 0 or more, `PostAsync` and `DepositPostAsync` can now
+throw `OutboxLimitReachedException` where they never did before. With the default of -1 (no limit)
+nothing changes. The async count blocks a thread-pool thread while it runs, and with the change for
+issue #4554 below a mediator has at most one count queued or running.
+
 ### Outbox: the outstanding message check is skipped with no limit and no longer piles up (#4554)
 
 With the default `AddProducers` settings (`MaxOutStandingMessages` of -1 and
