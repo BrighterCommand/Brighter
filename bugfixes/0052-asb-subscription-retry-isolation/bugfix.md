@@ -1,30 +1,39 @@
 # ASB subscription retry isolation
 
-**Linked issue:** #4546
+**Linked issues:** [#4546](https://github.com/BrighterCommand/Brighter/issues/4546) and
+[#4490](https://github.com/BrighterCommand/Brighter/issues/4490).
 
-## Cause and scope
+## Cause and resulting behavior
 
-The topic consumer previously republished retries to the original topic. Every matching subscription receives
-another copy, including subscriptions that already processed the event successfully.
+Republishing a failed delivery to its topic broadcasts another copy to every matching subscription.
+Reusing its MessageId on a queue with duplicate detection can instead silently discard the retry,
+while the original is acknowledged and lost.
 
-Immediate retries on direct subscriptions now abandon the original delivery and persist the updated
-`HandledCount`. The broker's delivery count also increases, so `MaxDeliveryCount` can dead-letter a
-message before Brighter exhausts `RequeueCount`.
+Direct topic subscriptions now abandon the original delivery with the updated `HandledCount`.
+If a delay is requested, they warn and abandon immediately; the configuration remains valid at startup.
+They never republish to the topic. This applies to both configured and handler-specific delays.
 
-Delayed retries are isolated when the subscription uses a dedicated forwarding queue. This is an
-explicit topology choice. A positive `RequeueDelay` on a direct topic subscription now fails consumer
-creation with a `ConfigurationException` explaining how to configure forwarding. A positive delay
-passed directly to `Requeue`/`RequeueAsync` is rejected before publishing or settling the original.
-This deliberately breaks configurations that previously broadcast retries: migrate them to a dedicated
-queue to retain delayed retry behavior. Immediate retries remain supported on direct subscriptions.
+Forwarding and queue consumers use native queue scheduling by default. A retry gets a distinct,
+deterministic delivery ID, while `x-original-message-id` retains the first ID across retries.
+Repeated scheduling of the same delivery uses the same retry ID. This allows the broker to suppress
+ambiguous duplicate sends within its detection window without suppressing the next retry attempt.
+The original is acknowledged only after scheduling succeeds. Scheduling failure or cancellation
+leaves it unacknowledged; settlement failures propagate.
 
-Handler-specific delays also require forwarding. If a handler requests one on a direct subscription,
-the pump treats the exception as a failed requeue and nacks the original; it cannot honor that delay.
-Brighter does not automatically migrate existing broker entities.
+Native scheduling is bound to the consuming broker and takes precedence over a registered scheduler.
+A global scheduler pointing to another namespace cannot redirect the retry. No separate scheduler
+package, registration, scheduler queue or scheduler pump is needed for native ASB queue retries.
 
-## Configuration
+Native abandon increases the broker's delivery count. Configure `MaxDeliveryCount` above Brighter's
+`RequeueCount`, allowing additional broker redeliveries as appropriate. A direct subscription cannot
+retain a requested delay; use a dedicated queue when retry timing matters.
 
-Set `AzureServiceBusSubscriptionConfiguration.ForwardTo` to a queue dedicated to that subscription:
+## Configuration and migration
+
+The [deployment guide](../../docs/guides/azure-service-bus-retries.md) covers runtime
+permissions, rollout, rollback, recovery, monitoring, and live Azure release acceptance.
+
+Set `AzureServiceBusSubscriptionConfiguration.ForwardTo` to a queue dedicated to the subscription:
 
 ```csharp
 var configuration = new AzureServiceBusSubscriptionConfiguration
@@ -33,69 +42,89 @@ var configuration = new AzureServiceBusSubscriptionConfiguration
 };
 ```
 
-Keep the Brighter subscription's routing key set to the topic name and its channel name set to the
-topic subscription name. Publishers continue sending to the topic. The consumer receives from the
-forwarding queue and sends retries directly to that queue, preserving the logical topic and message
-metadata. Each independent subscriber needs its own queue.
+Keep the subscription's routing key set to the topic and its channel name set to the topic subscription.
+Publishers continue sending to the topic. Brighter receives from the forwarding queue and schedules
+retries there while retaining the logical topic. Each independent subscriber needs its own queue.
 
 - `Create` creates the queue before the forwarding subscription and applies the configured rule.
-- `Validate` requires both entities to exist and checks the subscription's forwarding destination.
-- `Assume` performs no administration requests; provision the topology externally first.
+- `Validate` requires both entities to exist and verifies the forwarding destination.
+- `Assume` performs no administration requests. Provision forwarding externally first; the consumer
+  needs Listen and Send permissions on the destination queue, but does not need Manage rights.
 
 Existing subscriptions must already forward to the configured destination. `Create` and `Validate`
-reject a mismatch instead of changing an existing subscription. Plan migration with the consumer
-stopped and account for pending messages before configuring forwarding externally.
+reject a mismatch instead of changing an existing subscription. Stop the consumer and account for
+pending deliveries when migrating broker entities. Brighter does not perform automatic migration.
 
-`ForwardTo` cannot be combined with `UseServiceBusQueue`. The latter remains available for applications
-that already provision forwarding and consume the destination queue directly.
+`ForwardTo` cannot be combined with `UseServiceBusQueue`. Applications that provision forwarding
+externally can continue consuming the destination queue with `UseServiceBusQueue = true` and the queue
+name as their routing key. Both configurations receive the native retry identity fix.
 
-Purge is supported only with `OnMissingChannel.Create`, where the destination can be recreated.
-`Validate` and `Assume` reject purge before closing the receiver or deleting the queue, preserving
-existing deliveries and externally managed infrastructure.
-
-Session settings apply to the destination queue. The forwarding subscription must not require
-sessions. Native session IDs are retained on receipt so a delayed retry remains valid for the queue.
+Session settings apply to the destination queue; the forwarding subscription must not require sessions.
+Native session IDs are retained on the retry. Purge is supported only with `OnMissingChannel.Create`;
+`Validate` and `Assume` reject purge before closing the receiver or deleting the destination.
 
 ## Design
 
-The forwarding consumer owns queue and subscription provisioning. Its retry producer has a separate
-physical destination, so sending to the queue does not require mutating or copying message headers.
+[ADR 0082](../../docs/adr/0082-isolate-azure-service-bus-subscription-retries.md) records the design.
+The forwarding consumer owns queue and subscription provisioning. The queue producer implements the
+optional core requeue-scheduler capability using the gateway's `AzureServiceBusRequeueScheduler`.
+The Azure scheduler package delegates its requeue capability to that same native implementation;
+ordinary scheduled commands and requests keep their envelope behavior.
 
-`IAmAServiceBusRetryReceiver` extends the existing receiver contract with property-preserving abandon.
-It leaves existing interface implementations source-compatible; custom receivers used for immediate
-topic retries must implement the additional capability. Unsupported receivers fail explicitly.
+Custom producers without native requeue support can use an explicitly configured requeue-capable
+scheduler. Custom components are responsible for compatible broker configuration. The existing
+producer fallback is retained for custom implementations; the built-in ASB queue producer always
+uses the native capability. Custom receivers for direct subscriptions must implement
+`IAmAServiceBusRetryReceiver` to support property-preserving abandon.
+
+Scheduling uses the physical queue separately from the logical topic and leaves the received message
+unchanged. Body bytes, correlation, session, handled count and other metadata are preserved.
+The retry's CloudEvents ID matches its native delivery ID. Send and settlement are not transactional:
+duplicates remain possible with duplicate detection disabled or outside its detection window.
+Handlers must remain idempotent. Each retry sender is closed; the client remains owned by its provider.
 
 ## Regression coverage
 
-- Three subscriptions receive the original; only the retrying subscription receives another copy.
-- Immediate retries preserve handled counts across repeated redelivery, for sync and async consumers.
-- Delayed forwarding covers sync and async consumers, all three provisioning modes, and session queues.
-- Existing subscriptions with mismatched forwarding are rejected without reconfiguration.
-- Delayed retry configuration is rejected for direct subscriptions in every provisioning mode.
-- Per-message delays on direct subscriptions neither publish copies nor settle the original.
-- Unsupported forwarding purges preserve the destination and its active message locks.
-- Named mutations restore a topic retry producer and accept mismatched forwarding. The regression tests
-  must fail on duplicate-delivery and missing-rejection assertions respectively.
+- Direct-subscription startup works in Create, Validate and Assume modes with configured delays.
+- Requested delays on direct subscriptions warn and abandon without sending to sibling subscribers.
+- Immediate direct retries preserve handled counts across successive redeliveries.
+- Queue retries survive duplicate detection with no scheduler, an Azure scheduler or a general-purpose
+  scheduler, through forwarding and direct queue configurations, with zero and positive delays.
+- Sync and async consumers and session-enabled queues preserve delivery metadata and isolation.
+- A scheduler backed by another client cannot redirect retries away from the consuming broker.
+- Scheduling failures and cancellation leave the original unacknowledged; repeated scheduling after
+  acknowledgement failure keeps the same retry ID and does not mutate the original message.
+- Existing forwarding provisioning, mismatch validation and purge protection remain covered.
+- Generated gateway conformance tests use the configured ASB assertion to verify distinct retry
+  delivery IDs and retained original identity, alongside the existing metadata and body checks.
 
-The conformance fixture uses forwarding queues so its delayed retry scenarios exercise the supported
-production topology. Its DLQ reads and cleanup target the destination queues as well as source topics.
-
-Tests use an isolated Service Bus emulator. Existing tests with three- or four-day message lifetimes
-fail during provisioning because the emulator permits at most one hour; those failures also occur on
-the unchanged master revision.
+Before hardening, all nine startup/fallback and broker-ownership cases failed. The default-path
+broker regression reproduced silent retry loss with duplicate detection enabled. Earlier deliberate
+mutations also demonstrated that the failure tests catch premature acknowledgement and unstable IDs.
 
 ## Validation
 
-Against master `2890f8610`, all four immediate-retry cases failed on delivery to an unrelated
-subscription. The twelve safety-guard cases also failed before their implementations: eight for
-missing delayed-retry rejection, and four for deleting externally managed forwarding queues.
-All 26 regression cases pass on .NET 9 and .NET 10.
+The 26 hardening cases pass on both .NET 9 and .NET 10. The 13 existing Azure scheduler tests
+and all 312 generator tests pass on .NET 10. The shared gateway/scheduler implementation builds
+for netstandard2.0 and net8.0 with zero warnings and errors.
 
-The full .NET 10 ASB suite reports 535 passed, 10 failed, and 4 skipped. All 10 failures also occur
-on master and reject the existing tests' configured message lifetimes during provisioning. The
-conformance fixture uses a one-hour lifetime compatible with the emulator and disposes its shared
-client between cases; its delayed retry and dead-letter scenarios pass with forwarding.
+The final full ASB suite on .NET 10 reports **553 passed, 10 failed and 4 skipped** out of 567.
+The ten failed test names exactly match the established baseline and all fail on the emulator
+TTL restriction below. There are no additional failures. All six regenerated retry identity
+conformance cases pass. `git diff --check` is clean.
 
-The gateway builds for netstandard2.0, net8.0, net9.0, and net10.0 with zero warnings and errors.
-The routing mutation caused eight duplicate-delivery assertion failures; the validation mutation
-caused two missing-rejection assertion failures. Both mutations were reverted before the final runs.
+Release packages for core, the ASB gateway, and the Azure scheduler build for
+netstandard2.0, net8.0, net9.0, and net10.0. A separate .NET 8 consumer compiles
+against the three local NuGet packages with zero warnings and errors. Package hashes
+confirm that it restored these exact artifacts, rather than previously cached versions.
+
+## Release validation still required
+
+No dedicated Azure test namespace was supplied. The Azure CLI has cached account metadata,
+but a read-only namespace lookup failed with AADSTS9002313 and required interactive login.
+No live test entities were created. Real Azure validation of least-privilege permissions,
+recovery, sustained load and migration remains unverified. The emulator rejects the existing suite's
+three- and four-day TTL fixtures because it permits at most one hour; ten such failures have been
+established on the unchanged baseline. The deployment guide provides the release acceptance
+procedure; these checks remain open until their results are recorded. The public documentation
+site needs the same guide when publishing the feature.
