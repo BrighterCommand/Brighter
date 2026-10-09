@@ -33,6 +33,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
@@ -48,8 +49,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// the package Paramore.Brighter.MessagingGateway.RMQ.Async.
     /// </remarks>
     /// </summary>
-    public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync
+    public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IHaveAMessagingSystem
     {
+        /// <inheritdoc />
+        public MessagingSystem MessagingSystem => MessagingSystem.RabbitMQ;
+
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
         private PullConsumer? _consumer;
@@ -433,10 +437,24 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     ; //-- pass, here for clarity on fall through to use of queue directly on assume
                 }
 
+                if (DelaySupported)
+                    RmqDelayedRequeue.EnsureTopology(Channel!, Connection, _queueName, _makeChannels);
+
                 CreateConsumer();
 
                 Log.CreatedChannel(s_logger, Channel!.ChannelNumber, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
             }
+        }
+
+        /// <summary>
+        /// Declares and binds (or validates) the queue this consumer reads from, honouring
+        /// <see cref="Subscription.MakeChannels"/>, so that a channel factory can do so before handing out a channel.
+        /// With <see cref="OnMissingChannel.Assume"/> this does no broker I/O.
+        /// </summary>
+        internal void EnsureChannelExists()
+        {
+            if (_makeChannels == OnMissingChannel.Assume) return;
+            EnsureChannel();
         }
 
         private void CancelConsumer()

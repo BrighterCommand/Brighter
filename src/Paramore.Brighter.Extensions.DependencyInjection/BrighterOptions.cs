@@ -1,4 +1,28 @@
-﻿using System;
+﻿#region Licence
+/* The MIT License (MIT)
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Observability;
@@ -128,13 +152,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         IPolicyRegistry<string>? PolicyRegistry { get; set; }
         
         /// <summary>
-        /// Configure the registry of resilience pipelines.
+        /// Configures the registry of resilience pipelines shared by handlers and outbox producers.
         /// </summary>
         /// <value>
         /// The registry containing named resilience pipeline instances. Returns <c>null</c> if no pipelines are configured.
         /// </value>
         /// <remarks>
-        /// Use this registry to retrieve pre-configured resilience pipelines by name. 
+        /// The registry is resolved when Brighter services are first requested, after deferred options configuration.
+        /// An explicit <see cref="IBrighterBuilder.ResiliencePolicyRegistry"/> overrides this value.
+        /// If neither entry point supplies a registry, Brighter creates one.
+        /// Brighter adds missing default pipelines to the selected registry without replacing configured pipelines.
         /// This replaces the obsolete <see cref="PolicyRegistry"/> property for modern resilience implementations.
         /// </remarks>
         ResiliencePipelineRegistry<string>? ResiliencePipelineRegistry { get; set; }

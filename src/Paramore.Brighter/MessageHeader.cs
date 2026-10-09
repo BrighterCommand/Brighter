@@ -180,6 +180,7 @@ namespace Paramore.Brighter
         /// Default value is "appliacation/json; charset=utf-8"
         /// </summary>
         /// <value>The content type.</value>
+        [Newtonsoft.Json.JsonConverter(typeof(NContentTypePropertyConverter))]
         public ContentType ContentType { get; set; }
 
         /// <summary>
@@ -213,7 +214,8 @@ namespace Paramore.Brighter
         
         /// <summary>
         /// OPTIONAL
-        /// Internal usage. Gets the period the message was instructed to be delayed for
+        /// Internal usage. Gets or sets the requested delivery delay.
+        /// RabbitMQ clears this instruction on receipt; its elapsed native delay remains in Bag["x-delay"].
         /// </summary>
         /// <value>The delay.</value>
         public TimeSpan Delayed { get; set; }
@@ -476,6 +478,17 @@ namespace Paramore.Brighter
             }
 
             return newHeader;
+        }
+
+        internal MessageHeader CopyForDelivery()
+        {
+            var copy = (MessageHeader)MemberwiseClone();
+            copy.Bag = new Dictionary<string, object>(Bag, Bag.Comparer);
+            copy.ContentType = new ContentType(ContentType.ToString());
+            copy.Baggage = new Baggage();
+            foreach (var entry in Baggage)
+                copy.Baggage.Add(entry.Key, entry.Value!);
+            return copy;
         }
         
         /// <summary>

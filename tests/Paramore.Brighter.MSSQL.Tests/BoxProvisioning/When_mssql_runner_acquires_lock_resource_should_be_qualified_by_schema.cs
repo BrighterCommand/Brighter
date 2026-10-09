@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -56,6 +56,7 @@ public class MsSqlRunnerLockResourceSchemaQualificationTests
         string? configuredSchema, string expectedSchemaInLockResource)
     {
         //Arrange
+        await Configuration.EnsureDatabaseExistsAsync(_connectionString);
         var tableName = $"test_outbox_{Guid.NewGuid():N}";
         var config = new RelationalDatabaseConfiguration(
             _connectionString, outBoxTableName: tableName, schemaName: configuredSchema);

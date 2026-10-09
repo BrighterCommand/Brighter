@@ -37,15 +37,22 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
     internal sealed partial class ServiceBusReceiverWrapper : IServiceBusReceiverWrapper
     {
         private readonly ServiceBusReceiver _messageReceiver;
+        private readonly TimeSpan _maxAutoLockRenewalDuration;
+        private readonly object _gate = new();
+        private readonly Dictionary<string, ServiceBusLock> _locks = new();
+        private readonly HashSet<ServiceBusLock> _renewals = new();
+        private ServiceBusLock? _sessionLock;
+        private Task? _closing;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ServiceBusReceiverWrapper>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceBusReceiverWrapper"/> class.
         /// </summary>
         /// <param name="messageReceiver">The <see cref="ServiceBusReceiver"/> to wrap.</param>
-        public ServiceBusReceiverWrapper(ServiceBusReceiver messageReceiver)
+        public ServiceBusReceiverWrapper(ServiceBusReceiver messageReceiver, TimeSpan maxAutoLockRenewalDuration)
         {
             _messageReceiver = messageReceiver;
+            _maxAutoLockRenewalDuration = maxAutoLockRenewalDuration;
         }
 
         /// <summary>
@@ -62,24 +69,108 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             {
                 return new List<IBrokeredMessageWrapper>();
             }
+            lock (_gate)
+            {
+                if (_closing is not null) return Array.Empty<IBrokeredMessageWrapper>();
+                foreach (var message in messages)
+                    TrackLock(message);
+            }
             return messages.Select(x => new BrokeredMessageWrapper(x));
         }
 
         /// <summary>
         /// Closes the message receiver connection.
         /// </summary>
-        public void Close()
+        public void Close() => CloseAsync().GetAwaiter().GetResult();
+
+        public Task CloseAsync()
         {
-            Log.ClosingMessageReceiverConnection(s_logger);
-            _messageReceiver.CloseAsync().GetAwaiter().GetResult();
-            Log.MessageReceiverConnectionStopped(s_logger);
+            TaskCompletionSource<bool> completion;
+            ServiceBusLock[] locks;
+            lock (_gate)
+            {
+                if (_closing is not null) return _closing;
+                completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _closing = completion.Task;
+                locks = _renewals.ToArray();
+                _locks.Clear();
+                _renewals.Clear();
+                _sessionLock = null;
+            }
+            _ = CloseCoreAsync(locks, completion);
+            return completion.Task;
         }
-        
-        public async Task CloseAsync()
+
+        private async Task CloseCoreAsync(ServiceBusLock[] locks, TaskCompletionSource<bool> completion)
         {
-            Log.ClosingMessageReceiverConnection(s_logger);
-            await _messageReceiver.CloseAsync().ConfigureAwait(false);
-            Log.MessageReceiverConnectionStopped(s_logger);
+            try
+            {
+                Log.ClosingMessageReceiverConnection(s_logger);
+                await Task.WhenAll(locks.Select(messageLock => messageLock.StopAsync())).ConfigureAwait(false);
+                await _messageReceiver.CloseAsync().ConfigureAwait(false);
+                Log.MessageReceiverConnectionStopped(s_logger);
+                completion.TrySetResult(true);
+            }
+            catch (Exception exception)
+            {
+                completion.TrySetException(exception);
+            }
+        }
+
+        public bool HasPendingMessages
+        {
+            get { lock (_gate) return _locks.Count > 0; }
+        }
+
+        public bool IsLockValid(string lockToken)
+        {
+            lock (_gate)
+                return _locks.TryGetValue(lockToken, out var messageLock) && messageLock.IsValid;
+        }
+
+        public async Task ForgetAsync(string lockToken)
+        {
+            ServiceBusLock? messageLock;
+            bool stopRenewal;
+            lock (_gate)
+            {
+                if (!_locks.TryGetValue(lockToken, out messageLock)) return;
+                _locks.Remove(lockToken);
+                stopRenewal = _sessionLock is null || _locks.Count == 0;
+                if (stopRenewal && ReferenceEquals(messageLock, _sessionLock))
+                    _sessionLock = null;
+            }
+            if (stopRenewal)
+            {
+                await messageLock.StopAsync().ConfigureAwait(false);
+                lock (_gate) _renewals.Remove(messageLock);
+            }
+        }
+
+        private void TrackLock(ServiceBusReceivedMessage message)
+        {
+            if (_messageReceiver is ServiceBusSessionReceiver session)
+            {
+                _sessionLock ??= new ServiceBusLock(session.SessionLockedUntil, _maxAutoLockRenewalDuration,
+                    session.EntityPath, "session", session.SessionId,
+                    async cancellationToken =>
+                    {
+                        await session.RenewSessionLockAsync(cancellationToken).ConfigureAwait(false);
+                        return session.SessionLockedUntil;
+                    });
+                _locks[message.LockToken] = _sessionLock;
+            }
+            else
+            {
+                _locks[message.LockToken] = new ServiceBusLock(message.LockedUntil, _maxAutoLockRenewalDuration,
+                    _messageReceiver.EntityPath, "message", message.MessageId,
+                    async cancellationToken =>
+                    {
+                        await _messageReceiver.RenewMessageLockAsync(message, cancellationToken).ConfigureAwait(false);
+                        return message.LockedUntil;
+                    });
+            }
+            _renewals.Add(_locks[message.LockToken]);
         }
 
         /// <summary>
@@ -87,9 +178,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         /// <param name="lockToken">The lock token of the message to complete.</param>
         /// <returns>A task that represents the asynchronous complete operation.</returns>
-        public Task CompleteAsync(string lockToken)
+        public async Task CompleteAsync(string lockToken)
         {
-            return _messageReceiver.CompleteMessageAsync(CreateMessageShiv(lockToken));
+            await ForgetAsync(lockToken).ConfigureAwait(false);
+            await _messageReceiver.CompleteMessageAsync(CreateMessageShiv(lockToken)).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -98,9 +190,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="lockToken">The lock token of the message to deadletter.</param>
         /// <returns>A task that represents the asynchronous deadletter operation.</returns>
         public Task DeadLetterAsync(string lockToken)
-        {
-            return _messageReceiver.DeadLetterMessageAsync(CreateMessageShiv(lockToken));
-        }
+            => SettleDeadLetterAsync(lockToken, null, null);
 
         /// <summary>
         /// Deadletters the message, recording the reason and description in the broker's native
@@ -112,10 +202,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <returns>A task that represents the asynchronous deadletter operation.</returns>
         public Task DeadLetterAsync(string lockToken, string reason, string? description)
         {
-            return _messageReceiver.DeadLetterMessageAsync(
-                CreateMessageShiv(lockToken),
-                Truncate(reason),
-                description is null ? null : Truncate(description));
+            return SettleDeadLetterAsync(lockToken, Truncate(reason), description is null ? null : Truncate(description));
         }
 
         /// <summary>
@@ -123,9 +210,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         /// <param name="lockToken">The lock token of the message to abandon.</param>
         /// <returns>A task that represents the asynchronous abandon operation.</returns>
-        public Task AbandonAsync(string lockToken)
+        public async Task AbandonAsync(string lockToken)
         {
-            return _messageReceiver.AbandonMessageAsync(CreateMessageShiv(lockToken));
+            await ForgetAsync(lockToken).ConfigureAwait(false);
+            await _messageReceiver.AbandonMessageAsync(CreateMessageShiv(lockToken)).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -141,6 +229,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         private ServiceBusReceivedMessage CreateMessageShiv(string lockToken)
         {
             return ServiceBusModelFactory.ServiceBusReceivedMessage(lockTokenGuid: Guid.Parse(lockToken));
+        }
+
+        private async Task SettleDeadLetterAsync(string lockToken, string? reason, string? description)
+        {
+            await ForgetAsync(lockToken).ConfigureAwait(false);
+            await _messageReceiver.DeadLetterMessageAsync(CreateMessageShiv(lockToken), reason, description).ConfigureAwait(false);
         }
 
         // Azure Service Bus rejects dead-letter reason/description values longer than 4096 characters
@@ -160,4 +254,3 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         }
     }
 }
-

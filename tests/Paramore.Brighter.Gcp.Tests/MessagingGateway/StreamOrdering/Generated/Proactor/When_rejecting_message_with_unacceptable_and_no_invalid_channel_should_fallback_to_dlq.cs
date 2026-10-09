@@ -41,7 +41,7 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — fallback: unacceptable, DLQ-only not yet conformant for GCP / StreamOrdering (maintainer sign-off)")]
+    [Fact]
     public async Task When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq_async()
     {
         // Arrange — a dead-letter queue is configured, but no invalid-message channel
@@ -60,10 +60,13 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
         await _producer.SendAsync(message);
 
         // Act
-        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
-        await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message — no invalid channel"));
+        var rejected = await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message — no invalid channel"));
+
+        // Assert — RejectAsync returns true when the copy was routed
+        Assert.True(rejected, "RejectAsync should return true when the message was routed");
 
         // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
         var dlqMessage = new Message();
@@ -79,6 +82,7 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
         }
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
 
         // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
         // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.

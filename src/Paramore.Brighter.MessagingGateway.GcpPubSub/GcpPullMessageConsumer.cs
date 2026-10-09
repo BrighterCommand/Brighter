@@ -5,6 +5,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
@@ -17,10 +18,24 @@ public partial class GcpPullMessageConsumer(
     GcpMessagingGatewayConnection connection,
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
     int batchSize,
-    TimeProvider timeProvider)
-    : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
+    TimeProvider timeProvider,
+    RoutingKey? deadLetterRoutingKey = null,
+    RoutingKey? invalidMessageRoutingKey = null,
+    OnMissingChannel makeChannels = OnMissingChannel.Assume)
+    : IAmAMessageConsumerAsync, IAmAMessageConsumerSync, IHaveAMessagingSystem
 {
+    /// <inheritdoc />
+    public MessagingSystem MessagingSystem => MessagingSystem.PubSub;
+
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPullMessageConsumer>();
+
+    private readonly GcpRejectionRouter _router = new GcpRejectionRouter(
+        connection,
+        deadLetterRoutingKey,
+        invalidMessageRoutingKey,
+        makeChannels,
+        subscriptionName.ProjectId,
+        timeProvider);
     
     /// <summary>
     /// Synchronously acknowledges a message.
@@ -35,8 +50,7 @@ public partial class GcpPullMessageConsumer(
 
         try
         {
-            var client = connection.GetOrCreateSubscriberServiceApiClient();
-            client.Acknowledge(subscriptionName, [ackId]);
+            AckByHandle(ackId);
             Log.AcknowledgeSuccess(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
         }
         catch (Exception ex)
@@ -61,8 +75,7 @@ public partial class GcpPullMessageConsumer(
 
         try
         {
-            var client = await connection.CreateSubscriberServiceApiClientAsync();
-            await client.AcknowledgeAsync(subscriptionName, [ackId], cancellationToken);
+            await AckByHandleAsync(ackId, cancellationToken);
             Log.AcknowledgeSuccess(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
         }
         catch (Exception ex)
@@ -101,8 +114,11 @@ public partial class GcpPullMessageConsumer(
             var client = connection.GetOrCreateSubscriberServiceApiClient();
 
             Log.PurgeStart(s_logger, subscriptionName.ToString());
-            client.Seek(
-                new SeekRequest { Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)) });
+            client.Seek(new SeekRequest
+            {
+                SubscriptionAsSubscriptionName = subscriptionName,
+                Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1))
+            });
             Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
@@ -127,7 +143,11 @@ public partial class GcpPullMessageConsumer(
             Log.PurgeStart(s_logger, subscriptionName.ToString());
 
             await client.SeekAsync(
-                new SeekRequest { Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)) },
+                new SeekRequest
+                {
+                    SubscriptionAsSubscriptionName = subscriptionName,
+                    Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1))
+                },
                 cancellationToken);
 
             Log.PurgeComplete(s_logger, subscriptionName.ToString());
@@ -144,8 +164,10 @@ public partial class GcpPullMessageConsumer(
     /// </summary>
     /// <param name="timeOut">
     /// How long to wait for messages. Bounds the Pull call, so an empty subscription returns after
-    /// this window rather than long-polling until a message arrives. When null the client's own
-    /// default expiration applies.
+    /// this window rather than long-polling until a message arrives — raised to
+    /// <see cref="MinimumPullDeadline"/> if shorter, to avoid losing a message to a real-Pub/Sub
+    /// redelivery race on a too-short deadline (#4321). When null the client's own default
+    /// expiration applies.
     /// </param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that returns an array of received Brighter messages. Returns an array containing a single empty message if no messages are available.</returns>
@@ -204,15 +226,26 @@ public partial class GcpPullMessageConsumer(
         return response.ReceivedMessages.Select(Parser.ToBrighterMessage).ToArray();
     }
 
-    // Bounds a Pull to the caller's timeout so an empty subscription returns after the requested
-    // window (as DeadlineExceeded) instead of long-polling. A null or non-positive timeout returns
-    // null, which leaves the client's own per-method expiration from SubscriberServiceApiSettings
-    // in force - the behaviour of the PullAsync(request, cancellationToken) overload this replaced.
-    // Returning Expiration.None here instead would override that default with no deadline at all,
-    // which is not what the caller who omitted a timeout asked for.
+    // A floor below ~2s risks losing a message to a real Pub/Sub race (#4321): the server can
+    // dispatch a message to this specific Pull RPC - including one redelivered by Requeue's
+    // ModifyAckDeadline(..., 0) - and start its lease just as a short client-side deadline cancels
+    // the call. The client never sees that delivery's ackId, so it cannot ack or re-modack it, and
+    // the message is stranded until a full fresh ack-deadline cycle elapses. Measured against real
+    // Pub/Sub: 500ms-1s callers lost the message reliably; 3s gave clear margin over the observed
+    // ~1.6-2.1s base latency. This trades idle-poll responsiveness (an empty subscription now takes
+    // up to this floor, not the caller's shorter request, to report empty) for not losing deliveries.
+    private static readonly TimeSpan MinimumPullDeadline = TimeSpan.FromSeconds(3);
+
+    // Bounds a Pull to the caller's timeout (raised to MinimumPullDeadline, see above) so an empty
+    // subscription returns after the requested window (as DeadlineExceeded) instead of long-polling.
+    // A null or non-positive timeout returns null, which leaves the client's own per-method
+    // expiration from SubscriberServiceApiSettings in force - the behaviour of the
+    // PullAsync(request, cancellationToken) overload this replaced. Returning Expiration.None here
+    // instead would override that default with no deadline at all, which is not what the caller who
+    // omitted a timeout asked for.
     private static CallSettings? BuildPullCallSettings(TimeSpan? timeOut) =>
         timeOut is { } window && window > TimeSpan.Zero
-            ? CallSettings.FromExpiration(Expiration.FromTimeout(window))
+            ? CallSettings.FromExpiration(Expiration.FromTimeout(window < MinimumPullDeadline ? MinimumPullDeadline : window))
             : null;
 
     
@@ -221,8 +254,10 @@ public partial class GcpPullMessageConsumer(
     /// </summary>
     /// <param name="timeOut">
     /// How long to wait for messages. Bounds the Pull call, so an empty subscription returns after
-    /// this window rather than long-polling until a message arrives. When null the client's own
-    /// default expiration applies.
+    /// this window rather than long-polling until a message arrives — raised to
+    /// <see cref="MinimumPullDeadline"/> if shorter, to avoid losing a message to a real-Pub/Sub
+    /// redelivery race on a too-short deadline (#4321). When null the client's own default
+    /// expiration applies.
     /// </param>
     /// <returns>An array of received Brighter messages. Returns an array containing a single empty message if no messages are available.</returns>
 
@@ -268,58 +303,111 @@ public partial class GcpPullMessageConsumer(
     }
     
        /// <summary>
-    /// Synchronously rejects a message.
+    /// Synchronously rejects a message, routing a stamped copy to the configured dead-letter
+    /// destination before acknowledging the original.
     /// </summary>
     /// <param name="message">The message to reject.</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
-    /// <returns>True if the message was successfully rejected/acknowledged, otherwise false.</returns>
+    /// <returns>Always <see langword="true"/>: the message is settled by this call.</returns>
     public bool Reject(Message message, MessageRejectionReason? reason = null)
     {
-        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not string ackId)
+        // Copy the handle before the router strips it from the bag.
+        message.Header.Bag.TryGetValue("ReceiptHandle", out var handler);
+        var ackId = handler as string;
+
+        var outcome = _router.Route(message, reason);
+
+        if (ackId == null)
         {
-            return false;
+            // Missing handle: routing still ran, but we cannot settle the original.
+            Log.RejectMissingHandle(s_logger, message.Id.Value);
+            return true;
         }
 
+        if (outcome == RoutingOutcome.Failed)
+        {
+            // The routing publish failed: release the original for prompt redelivery instead of
+            // acknowledging it (R-19). GcpRejectionRouter has already logged the Error. A failed
+            // release RPC is itself caught below (R-19's accepted case 1): nothing escapes Reject,
+            // and the message is left to return at its own ack deadline.
+            try
+            {
+                ReleaseByHandle(ackId);
+            }
+            catch (Exception ex)
+            {
+                Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            }
+
+            return true;
+        }
+
+        Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
         try
         {
-            var client = connection.GetOrCreateSubscriberServiceApiClient();
-
-            Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
-            client.Acknowledge(subscriptionName, [ackId]);
+            AckByHandle(ackId);
         }
         catch (Exception ex)
         {
+            // A failed ack RPC is accepted case 2 (R-16/R-17): the message stays leased until its
+            // ack deadline, and nothing escapes Reject.
             Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
-            throw;
         }
 
         return true;
     }
-    
+
     /// <summary>
-    /// Asynchronously rejects a message.
+    /// Asynchronously rejects a message, routing a stamped copy to the configured dead-letter
+    /// destination before acknowledging the original.
     /// </summary>
     /// <param name="message">The message to reject.</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task that returns true if the message was successfully rejected/acknowledged, otherwise false.</returns>
+    /// <returns>A task that always returns <see langword="true"/>: the message is settled by this call.</returns>
     public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
     {
-        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not string ackId)
+        // Copy the handle before the router strips it from the bag.
+        message.Header.Bag.TryGetValue("ReceiptHandle", out var handler);
+        var ackId = handler as string;
+
+        var outcome = await _router.RouteAsync(message, reason, cancellationToken);
+
+        if (ackId == null)
         {
-            return false;
+            // Missing handle: routing still ran, but we cannot settle the original.
+            Log.RejectMissingHandle(s_logger, message.Id.Value);
+            return true;
         }
 
+        if (outcome == RoutingOutcome.Failed)
+        {
+            // The routing publish failed: release the original for prompt redelivery instead of
+            // acknowledging it (R-19). GcpRejectionRouter has already logged the Error. A failed
+            // release RPC is itself caught below (R-19's accepted case 1): nothing escapes
+            // RejectAsync, and the message is left to return at its own ack deadline.
+            try
+            {
+                await ReleaseByHandleAsync(ackId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            }
+
+            return true;
+        }
+
+        Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
         try
         {
-            var client = await connection.CreateSubscriberServiceApiClientAsync();
-            Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
-            await client.AcknowledgeAsync(subscriptionName, [ackId], cancellationToken);
+            await AckByHandleAsync(ackId, cancellationToken);
         }
         catch (Exception ex)
         {
+            // A failed ack RPC is accepted case 2 (R-16/R-17): the message stays leased until its
+            // ack deadline, and nothing escapes RejectAsync.
             Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
-            throw;
         }
 
         return true;
@@ -339,14 +427,11 @@ public partial class GcpPullMessageConsumer(
             return false;
         }
 
+        Log.RequeueStart(s_logger, message.Id.Value);
         try
         {
-            var client = connection.GetOrCreateSubscriberServiceApiClient();
-
-            Log.RequeueStart(s_logger, message.Id.Value);
-
             // The requeue policy is defined by subscription, during its creation
-            client.ModifyAckDeadline(subscriptionName, [ackId], 0);
+            ReleaseByHandle(ackId);
 
             Log.RequeueComplete(s_logger, message.Id.Value);
             return true;
@@ -374,19 +459,11 @@ public partial class GcpPullMessageConsumer(
             return false;
         }
 
+        Log.RequeueStart(s_logger, message.Id.Value);
         try
         {
-            var client = await connection.CreateSubscriberServiceApiClientAsync();
-
-            Log.RequeueStart(s_logger, message.Id.Value);
-
             // The requeue policy is defined by subscription, during its creation
-            await client.ModifyAckDeadlineAsync(new ModifyAckDeadlineRequest
-            {
-                SubscriptionAsSubscriptionName = subscriptionName,
-                AckIds = { ackId },
-                AckDeadlineSeconds = 0
-            }, cancellationToken);
+            await ReleaseByHandleAsync(ackId, cancellationToken);
 
             Log.RequeueComplete(s_logger, message.Id.Value);
             return true;
@@ -398,13 +475,57 @@ public partial class GcpPullMessageConsumer(
         }
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        return new ValueTask();
+        await _router.DisposeAsync();
     }
 
     public void Dispose()
     {
+        _router.Dispose();
+    }
+
+    /// <summary>
+    /// Acknowledges a message by ack id, performing the client lookup and the RPC.
+    /// </summary>
+    private void AckByHandle(string ackId)
+    {
+        var client = connection.GetOrCreateSubscriberServiceApiClient();
+        client.Acknowledge(subscriptionName, [ackId]);
+    }
+
+    /// <summary>
+    /// Asynchronously acknowledges a message by ack id, performing the client lookup and the RPC.
+    /// </summary>
+    private async Task AckByHandleAsync(string ackId, CancellationToken cancellationToken)
+    {
+        var client = await connection.CreateSubscriberServiceApiClientAsync();
+        await client.AcknowledgeAsync(subscriptionName, [ackId], cancellationToken);
+    }
+
+    /// <summary>
+    /// Releases a message by ack id by setting its acknowledgment deadline to zero, performing
+    /// the client lookup and the RPC.
+    /// </summary>
+    private void ReleaseByHandle(string ackId)
+    {
+        var client = connection.GetOrCreateSubscriberServiceApiClient();
+        client.ModifyAckDeadline(subscriptionName, [ackId], 0);
+    }
+
+    /// <summary>
+    /// Asynchronously releases a message by ack id by setting its acknowledgment deadline to zero,
+    /// performing the client lookup and the RPC.
+    /// </summary>
+    private async Task ReleaseByHandleAsync(string ackId, CancellationToken cancellationToken)
+    {
+        var client = await connection.CreateSubscriberServiceApiClientAsync();
+        await client.ModifyAckDeadlineAsync(new ModifyAckDeadlineRequest
+        {
+            SubscriptionAsSubscriptionName = subscriptionName,
+            AckIds = { ackId },
+            AckDeadlineSeconds = 0
+        }, cancellationToken);
     }
 
     private static partial class Log
@@ -428,6 +549,10 @@ public partial class GcpPullMessageConsumer(
             "PullPubSubConsumer: Error during rejecting the message {Id} with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]
         public static partial void RejectError(ILogger logger, Exception ex, string id, string receiptHandle,
             string subscriptionName);
+
+        [LoggerMessage(LogLevel.Error,
+            "PullPubSubConsumer: Message {Id} has no receipt handle; routed copy published but the original cannot be settled")]
+        public static partial void RejectMissingHandle(ILogger logger, string id);
 
         [LoggerMessage(LogLevel.Information, "PullPubSubConsumer: Purging the subscription {SubscriptionName}")]
         public static partial void PurgeStart(ILogger logger, string subscriptionName);

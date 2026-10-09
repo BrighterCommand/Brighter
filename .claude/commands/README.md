@@ -10,6 +10,7 @@ Skills are invoked using slash commands in Claude Code:
 /test-first <behavior description>    # TDD with an approval gate (armed by default)
 /adr <title>                          # Create Architecture Decision Record
 /tidy-first <change description>      # Separate structural from behavioral changes
+/refactor:smells [base-ref | base..head | path...]  # Find code smells in completed work, schedule refactorings
 ```
 
 ## Available Skills
@@ -149,6 +150,7 @@ Skills are invoked using slash commands in Claude Code:
 ### Development Workflow Skills
 - **`/test-first`** - TDD with an approval gate, armed by default (shift it with `/spec:gear`)
 - **`/tidy-first`** - Safe refactoring workflow
+- **`/refactor:smells`** - Opt-in code smell review of completed work; schedules refactorings
 - **`/bugfix:*`** - Diagnosis-first bug workflow (Triage → Confirm → Test-first → Fix → Verify)
 
 ### Documentation Skills
@@ -238,8 +240,9 @@ These skills enforce practices documented in `.agent_instructions/`:
 | `/test-first` | TDD approval workflow (gate armed by default) | [testing.md](../../.agent_instructions/testing.md) → "TDD Style" / "The review gear" |
 | `/adr` | ADR creation standards | [documentation.md](../../.agent_instructions/documentation.md) lines 49-62 |
 | `/tidy-first` | Structural/behavioral separation | [code_style.md](../../.agent_instructions/code_style.md) lines 74-83 |
+| `/refactor:smells` | Fowler's code smells, calibrated to Brighter's design principles | [design_principles.md](../../.agent_instructions/design_principles.md) |
 
-All three make **mandatory workflows enforceable** rather than just documented.
+The first three make **mandatory workflows enforceable** rather than just documented. `/refactor:smells` is opt-in.
 
 ---
 

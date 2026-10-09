@@ -36,7 +36,7 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlq : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — reject with delivery error to DLQ not yet conformant for GCP / Pull (maintainer sign-off)")]
+    [Fact]
     public void When_rejecting_message_with_delivery_error_should_send_to_dlq()
     {
         // Arrange
@@ -58,7 +58,10 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlq : IDisposable
         var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
-        _channel.Reject(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
+        var rejected = _channel.Reject(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
+
+        // Assert — Reject returns true when the copy was routed
+        Assert.True(rejected, "Reject should return true when the message was routed");
 
         // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
         var dlqMessage = new Message();
@@ -74,6 +77,7 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlq : IDisposable
         }
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
 
         // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
         // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.

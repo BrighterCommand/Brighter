@@ -61,11 +61,13 @@ public sealed class BrighterMetricsFromTracesProcessor(
                     {
                         case "publish":
                             messagingMeter.RecordClientOperation(activity);
-                            messagingMeter.AddClientSentMessage(activity);
+                            if (activity.Kind == ActivityKind.Producer)
+                                messagingMeter.AddClientSentMessage(activity);
                             break;
                         case "receive":
                             messagingMeter.RecordClientOperation(activity);
-                            messagingMeter.AddClientConsumedMessage(activity);
+                            if (activity.GetCustomProperty(BrighterTracer.RECEIVED_MESSAGE) is true)
+                                messagingMeter.AddClientConsumedMessage(activity);
                             break;
                         case "process":
                             messagingMeter.RecordProcess(activity);

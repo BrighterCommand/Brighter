@@ -222,6 +222,30 @@ A run in `review-after` that drops any of these is defective — it is not "a di
   - Implement the code to make it pass
   - This ensures you're building the right behavior from the start
 
+### Hand-written tests that use a generated pump must join its configuration's collection
+
+The generated `ConformanceDeferredPump` (one per provider configuration, under that configuration's
+`Generated/` folder) keeps its dispatch count, requeue count and `HandledCount` log in **static**
+counters. Every test that uses it calls `ConformanceDeferredPump.ResetDispatchCount()` in its
+constructor, and that clears the counters for **every** message, not only the test's own.
+
+xUnit runs test classes in different collections in parallel. So if two classes using the same pump
+run at once, one test's reset wipes the other's in-flight counts. The failures are intermittent and
+look like wrong counts (e.g. "Expected 0, Actual 1").
+
+- The generated tests are already safe. Each `test-configuration.json` sets a `CollectionName` for
+  every configuration, and the templates put every generated test in that collection, so tests
+  sharing a pump run one at a time.
+- **A hand-written test that uses a generated pump must join the same collection.** Put
+  `[Collection("<CollectionName>")]` on the class, with the `CollectionName` of the configuration
+  whose pump it imports. For example, a test using
+  `Paramore.Brighter.AWS.Tests.MessagingGateway.SqsStandard.ConformanceDeferredPump` takes
+  `[Collection("SqsStandard")]`.
+- Do not "fix" the race by removing the reset from a test or template. The reset is part of the
+  spec 0037 harness contract (task 3.2) and a generator test enforces it.
+- Before you accept a new test of this kind, run the full suite for the project more than once.
+  This race does not show up in a filtered run.
+
 ### RabbitMQ: run each suite against the broker version it targets
 
 The two RabbitMQ suites do not target the same broker, and pointing one at the other's version

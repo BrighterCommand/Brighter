@@ -29,6 +29,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -38,7 +39,7 @@ namespace Paramore.Brighter
     ///   <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     ///   and acknowledging receipt of those messages
     /// </summary>
-    public class ChannelAsync : IAmAChannelAsync
+    public class ChannelAsync : IAmAChannelAsync, IHaveAMessagingSystem
     {
         private readonly IAmAMessageConsumerAsync _messageConsumer;
         private ConcurrentQueue<Message> _queue = new();
@@ -59,6 +60,10 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The topic on the broker</value>
         public RoutingKey RoutingKey { get; }
+
+        /// <inheritdoc />
+        public MessagingSystem MessagingSystem =>
+            (_messageConsumer as IHaveAMessagingSystem)?.MessagingSystem ?? MessagingSystem.InternalBus;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Channel" /> class.

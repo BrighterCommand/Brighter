@@ -34,6 +34,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
+using Paramore.Brighter.Observability;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client.Exceptions;
 
@@ -45,8 +46,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching, 
 /// result sending, and error handling.
 /// </summary>
-public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
 {
+    /// <inheritdoc />
+    public MessagingSystem MessagingSystem => MessagingSystem.RabbitMQ;
+
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
     private PullConsumer? _consumer;
@@ -504,6 +508,9 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
                 //-- pass, here for clarity on fall through to use of queue directly on assume
             }
 
+            if (DelaySupported)
+                await RmqDelayedRequeue.EnsureTopologyAsync(Channel!, Connection, _queueName, _makeChannels, cancellationToken);
+
             await CreateConsumerAsync(cancellationToken);
             
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
@@ -516,6 +523,15 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
                 Connection.AmpqUri.GetSanitizedUri());
         }
     }
+
+    /// <summary>
+    /// Declares and binds (or validates) the queue this consumer reads from, honouring
+    /// <see cref="Subscription.MakeChannels"/>, so that a channel factory can do so before handing out a channel.
+    /// With <see cref="OnMissingChannel.Assume"/> this does no broker I/O.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    internal Task EnsureChannelExistsAsync(CancellationToken cancellationToken = default)
+        => _makeChannels == OnMissingChannel.Assume ? Task.CompletedTask : EnsureChannelAsync(cancellationToken);
 
     private async Task CancelConsumerAsync(CancellationToken cancellationToken)
     {

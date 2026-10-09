@@ -541,26 +541,14 @@ To get started, <a href="https://www.clahub.com/agreements/iancooper/Paramore">s
 
 ## Support for Agentic Coding
 
-We are evolving our support for agentic coding; we are focused on making it easy to use Claude Code to work with Brighter, though other agents may benefit from this work.
+We welcome code authored with a coding agent. However, you are responsible for the code you submit: review it, understand it, and make sure the agent followed these guidelines.
 
-- CLAUDE.md: We provide a CLAUDE.md file to direct Claude Code to `.agent_instructions` for a version of these guidelines for agents
-- .claude
-  - commands: we provide a set of commands that help an agent follow Brighter's preferred workflow: Issue => ADR => Tasks => Implementation using TDD
-  - skills: we will provide skills that help an agent complete common tasks within Brighter.
+Our agent support is focused on Claude Code, though other agents can use the same instructions in `.agent_instructions/`. See **[AGENTIC_CODING.md](AGENTIC_CODING.md)** for:
 
-As our instructions are located in `.agent_instructions` it is relatively easy for other agents to use.
-
-
-We provide explicit support for CoPilot via:
-- .github
-  - We provide a copilot-instructions.md file that mirrors AGENTS.md and CLAUDE.md
-
-To avoid agents reward hacking, we are trialing [SlopWatch](https://github.com/Aaronontheweb/dotnet-slopwatch)
-- .slopwatch
-  - we have a baseline.json that allows us to ignore legacy repo concerns
-  - we have a post-hook installed for Claude Code to ensure it runs after the agent generates code
-
-We are open to receiving code that has been authored by agents. However, you are responsible for the code that you submit and should review the code and ensure that the agent follows our guidelines.
+- the instruction files and slash commands we provide;
+- the `/spec` workflow for features: requirements, ADRs, adversarial review, tasks, and TDD implementation;
+- how to choose a review gear with `/spec:gear`, and whether to work a task at a time with `/spec:implement` or run a loop with `/spec:ralph-implement`;
+- the `/bugfix` workflow, which proves a bug's root cause before fixing it.
 
 ### Requesting an AI Code Review
 

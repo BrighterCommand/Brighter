@@ -28,6 +28,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
 
     public WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue()
     {
+        ConformanceDeferredPump.ResetDispatchCount();
         _messageGatewayProvider = new Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqQuorumMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
     }
@@ -104,6 +105,14 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
         _channel.Enqueue(MessageFactory.CreateQuitMessage(_subscription.RoutingKey));
         await pumping;
 
+        // R-27(c)(4): the dispatch count after quit-and-await must not exceed the budget. The
+        // observation window closes here — if the budget did not hold, the pump would have kept
+        // redelivering between the poll break and the await, and the count would be larger.
+        var dispatchCount = ConformanceDeferredPump.GetDispatchCount(ConformanceDeferredPump.KeyOf(message));
+        Assert.True(dispatchCount <= _subscription.RequeueCount,
+            $"expected at most {_subscription.RequeueCount} dispatches (RequeueCount), "
+            + $"but got {dispatchCount} — the budget was not enforced");
+
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
 
         // Identity, asserted here rather than through IAmAMessageAssertion: the shared assertion
@@ -126,5 +135,16 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
         Assert.True(dlqMessage.Header.HandledCount >= deliveriesExpected,
             $"expected at least {deliveriesExpected} deliveries before dead-lettering, "
             + $"but the dead-lettered message reports {dlqMessage.Header.HandledCount}");
+
+        // R-5: when the provider's gateway stamps Brighter rejection metadata, the dead-letter
+        // copy must carry rejectionReason == "DeliveryError". This proves the Brighter budget
+        // route was taken and not a native redrive that bypasses the pump entirely.
+        var keys = _messageGatewayProvider.RejectionMetadataKeys;
+        if (keys.StampsRejectionMetadata)
+        {
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason),
+                $"dead-letter message must carry rejection reason key '{keys.RejectionReason}'");
+            Assert.Equal("DeliveryError", dlqMessage.Header.Bag[keys.RejectionReason].ToString());
+        }
     }
 }

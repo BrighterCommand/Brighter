@@ -34,14 +34,18 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     /// <summary>
     /// Read messages from an SQS queue
     /// </summary>
-    public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync, IHaveAMessagingSystem
     {
+        /// <inheritdoc />
+        public MessagingSystem MessagingSystem => MessagingSystem.AWSSQS;
+
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageConsumer>();
 
         private readonly AWSMessagingGatewayConnection _connection;
@@ -239,7 +243,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
-        /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+        /// <returns>True if the message was settled by this call (deleted, routed to a rejection channel, or released for redelivery); false if the message had no receipt handle.</returns>
         public bool Reject(Message message, MessageRejectionReason? reason = null) => BrighterAsyncContext.Run(async () => await RejectAsync(message, reason));
 
         /// <summary>
@@ -248,7 +252,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="message">The message.</param>
         /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
         /// <param name="cancellationToken">Cancel the reject operation</param>
-        /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+        /// <returns>True if the message was settled by this call (deleted, routed to a rejection channel, or released for redelivery); false if the message had no receipt handle.</returns>
         public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
@@ -306,10 +310,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             catch (Exception ex)
             {
-                // Sending to DLQ failed — delete the original to prevent infinite
-                // reprocessing. The message is lost rather than stuck in a retry loop.
+                // Sending to the rejection channel failed — release the original for prompt
+                // redelivery instead of deleting it, so a message whose destination is
+                // configured is never silently discarded (spec 0037 R-19). Use
+                // CancellationToken.None: the release must still be attempted even if the pump
+                // is shutting down and cancellationToken is already cancelled, otherwise the
+                // message would sit out its full visibility timeout instead of becoming
+                // available immediately.
                 Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
-                await DeleteSourceMessageAsync(receiptHandle!, message.Id.Value, cancellationToken);
+                await ReleaseSourceMessageAsync(receiptHandle!, message.Id.Value, CancellationToken.None);
                 return true;
             }
 
@@ -496,21 +505,25 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private static void RefreshMetadata(Message message, MessageRejectionReason? reason)
         {
             // Keys use camelCase because the bag is JSON-serialized with CamelCase naming policy
-            message.Header.Bag["originalTopic"] = message.Header.Topic.Value;
-            message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
+            message.Header.Bag[RejectionMetadataKeyNames.OriginalTopic] = message.Header.Topic.Value;
+            message.Header.Bag[RejectionMetadataKeyNames.RejectionTimestamp] = DateTimeOffset.UtcNow.ToString("o");
 #pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
-            message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
+            message.Header.Bag[RejectionMetadataKeyNames.OriginalMessageType] = message.Header.MessageType.ToString();
 #pragma warning restore CS0618
 
             // Remove SQS-specific headers that will be reset when sent to the DLQ
             message.Header.Bag.Remove("ReceiptHandle");
 
-            if (reason == null) return;
+            if (reason == null)
+            {
+                message.Header.Bag[RejectionMetadataKeyNames.RejectionReason] = RejectionReason.None.ToString();
+                return;
+            }
 
-            message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
+            message.Header.Bag[RejectionMetadataKeyNames.RejectionReason] = reason.RejectionReason.ToString();
             if (!string.IsNullOrEmpty(reason.Description))
             {
-                message.Header.Bag["rejectionMessage"] = reason.Description ?? string.Empty;
+                message.Header.Bag[RejectionMetadataKeyNames.RejectionMessage] = reason.Description ?? string.Empty;
             }
         }
 
@@ -537,6 +550,44 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 Log.ErrorDeletingMessage(s_logger, exception, messageId, receiptHandle, _queueName);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Releases the source message for immediate redelivery by setting its visibility timeout
+        /// to zero. Used when routing a rejected message to its DLQ/invalid-message channel fails,
+        /// so the message is not lost (spec 0037 R-19).
+        /// </summary>
+        /// <remarks>
+        /// Unlike <see cref="DeleteSourceMessageAsync"/>, this never rethrows: it runs inside
+        /// <see cref="RejectAsync"/>'s own failure-catch block, and an uncaught exception here
+        /// would escape <c>Reject</c> into the pump (Reactor/Proactor call <c>Reject</c> from
+        /// inside their own catch blocks with no guard). A release failure is logged at Error and
+        /// <c>Reject</c> still reports <see langword="true"/> — the message keeps its existing
+        /// visibility timeout and becomes eligible for redelivery once that expires.
+        /// </remarks>
+        private async Task ReleaseSourceMessageAsync(string receiptHandle, string messageId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                using var client = _clientFactory.CreateSqsClient();
+                await EnsureChannelUrl(client, cancellationToken);
+                await client.ChangeMessageVisibilityAsync(
+                    new ChangeMessageVisibilityRequest(_channelUrl, receiptHandle, 0),
+                    cancellationToken);
+
+                Log.ReleasedSourceMessageAfterRejectionFailure(s_logger, messageId, receiptHandle, _channelUrl!);
+            }
+            catch (ReceiptHandleIsInvalidException ex)
+            {
+                // Receipt handle is invalid (most likely because the visibility timeout elapsed).
+                // SQS has already made the message visible again for redelivery by another
+                // consumer — the net effect is the same as a successful release.
+                Log.ReleaseFailedReceiptHandleExpiredAfterRejectionFailure(s_logger, ex, messageId, receiptHandle, _queueName);
+            }
+            catch (Exception exception)
+            {
+                Log.ErrorReleasingSourceMessageAfterRejectionFailure(s_logger, exception, messageId, receiptHandle, _queueName);
             }
         }
 
@@ -583,6 +634,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Could not delete message {Id} with receipt handle {ReceiptHandle} on queue {ChannelName} because the receipt handle is invalid (most likely because the visibility timeout elapsed). SQS has already re-presented it for delivery; if the handler is not idempotent this may result in duplicate processing.")]
             public static partial void DeleteFailedReceiptHandleExpired(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
+
+            [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Released the message {Id} with receipt handle {ReceiptHandle} on the queue {Url} for redelivery after a rejection routing failure")]
+            public static partial void ReleasedSourceMessageAfterRejectionFailure(ILogger logger, string id, string? receiptHandle, string url);
+
+            [LoggerMessage(LogLevel.Warning, "SqsMessageConsumer: Could not release message {Id} with receipt handle {ReceiptHandle} on queue {ChannelName} after a rejection routing failure because the receipt handle is invalid (most likely because the visibility timeout elapsed). SQS has already re-presented it for delivery.")]
+            public static partial void ReleaseFailedReceiptHandleExpiredAfterRejectionFailure(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
+
+            [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error releasing message {Id} with receipt handle {ReceiptHandle} on queue {ChannelName} after a rejection routing failure. The message keeps its existing visibility timeout and will become eligible for redelivery once that elapses.")]
+            public static partial void ErrorReleasingSourceMessageAfterRejectionFailure(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
 
             [LoggerMessage(LogLevel.Warning, "SqsMessageConsumer: Could not requeue message {Id} with receipt handle {ReceiptHandle} on queue {ChannelName} because the receipt handle is invalid (most likely because the visibility timeout elapsed). SQS has already re-presented it for delivery without the intended delay of {Delay}.")]
             public static partial void RequeueFailedReceiptHandleExpired(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName, TimeSpan delay);

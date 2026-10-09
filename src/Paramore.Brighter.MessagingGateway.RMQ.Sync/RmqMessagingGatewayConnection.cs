@@ -191,6 +191,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// Gets or sets a value indicating if the declared <see cref="Exchange"/> support delayed messages.
         /// (requires plugin rabbitmq_delayed_message_exchange)
         /// </summary>
+        /// <remarks>
+        /// Native delayed retries use a separate direct delayed exchange named
+        /// <c>{Name}.requeue</c>, bound to each consumer queue using its queue name.
+        /// With Validate or Assume provisioning, create this exchange and its bindings externally.
+        /// The retry exchange has the same durability as this exchange and is not auto-deleted.
+        /// </remarks>
         /// <value><c>true</c> if supporting; otherwise, <c>false</c>.</value>
         public bool SupportDelay { get; set; }
 

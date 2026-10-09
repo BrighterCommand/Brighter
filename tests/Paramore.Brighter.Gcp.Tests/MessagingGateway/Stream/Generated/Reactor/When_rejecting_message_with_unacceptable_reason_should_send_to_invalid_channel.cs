@@ -36,7 +36,7 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — reject with unacceptable reason to invalid channel not yet conformant for GCP / Stream (maintainer sign-off)")]
+    [Fact]
     public void When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel()
     {
         // Arrange
@@ -59,7 +59,10 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
-        _channel.Reject(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message"));
+        var rejected = _channel.Reject(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message"));
+
+        // Assert — Reject returns true when the copy was routed
+        Assert.True(rejected, "Reject should return true when the message was routed");
 
         // Assert — the message reaches the invalid-message channel: poll every 500 ms, give up after 60 s
         var invalidMessage = new Message();
@@ -75,6 +78,7 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         }
 
         Assert.NotEqual(MessageType.MT_NONE, invalidMessage.Header.MessageType);
+        Assert.Equal(message.Body.Value, invalidMessage.Body.Value);
 
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
         if (keys.StampsRejectionMetadata)

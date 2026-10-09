@@ -82,6 +82,7 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
     {
         Log.PurgingMessagesFromQueueAsync(s_logger, Topic);
 
+        await ResetReceiverAsync();
         await AdministrationClientWrapper.DeleteQueueAsync(Topic);
         await EnsureChannelAsync();
     }

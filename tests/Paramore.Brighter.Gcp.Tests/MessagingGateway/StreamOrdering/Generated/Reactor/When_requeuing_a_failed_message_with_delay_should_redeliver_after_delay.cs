@@ -55,7 +55,7 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelay : IDi
         _producer.Send(message);
 
         // Act — receive the message and requeue it with a 5 s delay
-        var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(15000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         var requeued = _channel.Requeue(received, TimeSpan.FromSeconds(5));
@@ -82,6 +82,11 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelay : IDi
         }
 
         Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
+        // R-1 vs R-23 (ADR 0077): the redelivered count must be >= the sent count; normalise
+        // it back so the transport's equality assertion can still compare the rest of the header.
+        Assert.True(redelivered.Header.HandledCount >= message.Header.HandledCount,
+            $"Redelivered HandledCount {redelivered.Header.HandledCount} must be >= sent {message.Header.HandledCount} (R-1)");
+        redelivered.Header.HandledCount = message.Header.HandledCount;
         _messageAssertion.Assert(message, redelivered);
     }
 }

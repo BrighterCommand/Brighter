@@ -2,6 +2,350 @@
 
 ## Master
 
+### Dispatcher shutdown drains consumers still being created (#4541)
+
+The Dispatcher now tracks accepted consumer operations until their channels have either been
+registered with a performer task or disposed. A concurrent `End()` cannot finish before those
+operations complete. Consumers shut before opening are removed and disposed without registering
+a null task. A disposal failure is logged and does not prevent the remaining consumers from draining.
+
+**Behaviour change:** `Receive()`, `Open()`, and `SetActivePerformers()` throw
+`InvalidOperationException` while shutdown is in progress. Await `End()` before restarting.
+After disposal, these operations throw `ObjectDisposedException`. Channel creation and disposal
+run outside the lifecycle lock. See [ADR 0083](docs/adr/0083-coordinate-dispatcher-startup-and-shutdown.md).
+
+### AWS SQS, GCP Pub/Sub and RocketMQ: `requeueCount` now runs down (#4341, spec 0037)
+
+On these transports the broker re-serves its own stored copy of a requeued message, and Brighter never
+rewrote that copy, so every redelivery presented the same `HandledCount`. A subscription's
+`requeueCount` therefore never ran down. A message that kept failing was requeued for ever, never
+dead-lettered by Brighter. The consumers now read the broker's own delivery counter on receive
+(SQS `ApproximateReceiveCount`, Pub/Sub `delivery_attempt`, RocketMQ `DeliveryAttempt`) and present it
+so that a first delivery reads `0`. The message pump is unchanged and still decides when the budget is
+spent. No broker call is added. See [ADR 0077](docs/adr/0077-delivery-count-contract.md).
+
+All three counters are approximate, so a budget of `R` rejects **on or before** delivery `R`, and the
+v3 and v4 SQS packages may reject on different deliveries.
+
+**GCP needs a `DeadLetterPolicy`.** Pub/Sub only populates `delivery_attempt` on a subscription that
+has one. Without it, `requeueCount` still cannot run down, and Brighter warns (see "New Warnings"
+below).
+
+#### Behaviour change: the broker's count overrides a producer-set `HandledCount`
+
+Where a broker counter is available (SQS, GCP with a `DeadLetterPolicy`, RocketMQ), the
+`HandledCount` carried in the message header is now ignored on delivery from the source channel. A
+producer that sends `HandledCount = N` sees `0` on the first delivery. The header count no longer
+carries earlier budget spend into a new delivery.
+
+The exception is a message Brighter routed to a dead-letter or invalid-message destination. A message
+whose bag carries the `rejectionReason` key keeps the `HandledCount` stamped on it at rejection. A
+dead-letter read therefore shows how many deliveries the message took, not the dead-letter queue's own
+counter.
+
+#### Behaviour change: a null-reason `Reject` stamps `rejectionReason = "None"`
+
+On AWS SQS (both packages), GCP Pub/Sub and RocketMQ, a `Reject(message, null)` now stamps
+`rejectionReason = "None"` on the routed copy. Before, the key was left off. `rejectionMessage` stays
+absent. Any code that reads dead-lettered messages and tests for the presence of `rejectionReason`
+will now find it on these copies. The other Brighter-managed transports are unchanged.
+
+#### The rejection-metadata keys are reserved for Brighter
+
+`rejectionReason`, `rejectionMessage`, `originalTopic`, `originalMessageType` and
+`rejectionTimestamp` are reserved for Brighter's use. They are now named once in
+`Paramore.Brighter.RejectionMetadataKeyNames`. **Don't set them on an ordinary message.** A message
+that carries `rejectionReason` is treated as a routed copy: its stamped count is kept, and on a
+transport above it can be rejected on its first delivery.
+
+#### Replaying dead-lettered messages: strip the rejection metadata
+
+A tool that puts a dead-lettered message back on its source (a DLQ redrive, a replay script, a manual
+move) **must remove the rejection metadata** above, and may reset `HandledCount` to `0`. If it leaves
+`rejectionReason` in place, the message is still treated as a routed copy. Its stamped count is at
+least the budget that dead-lettered it, so the pump rejects it again on its first delivery whenever
+the source's budget is no larger than that stamped count plus one. If the source's budget is larger,
+the count stays where it was, and only a native broker limit bounds the message.
+
+#### RocketMQ: header-owned properties win over same-named bag entries
+
+When it publishes, the RocketMQ producer now skips any `Header.Bag` entry whose key it has already
+written from the header: `HandledCount`, `MessageId`, `Topic`, `MessageType`, `TimeStamp`, `Source`,
+`SpecVersion` and the other header-owned properties. Before, the bag was written last, so a stale
+bag entry overwrote the header value (RocketMQ's `AddProperty` is last-write-wins). That is how a
+dead-letter copy lost its stamped `HandledCount`. **If you forward a received message, or set one of
+these keys in the bag to override a header**, the header value now wins on every publish.
+
+#### New Warnings
+
+Three startup validation rules (reported by `ValidatePipelines`, at Warning, once per subscription):
+
+- **A zero budget, on any transport.** A `requeueCount` of `0`, or below `-1`, rejects the first deferral. The Warning
+  asks whether you meant `-1` (requeue for ever) or `1` (reject after one delivery).
+- **A budget at or above a native redrive limit.** When `requeueCount` meets or exceeds a native
+  limit Brighter can see (SQS `RedrivePolicy.maxReceiveCount`, GCP
+  `DeadLetterPolicy.MaxDeliveryAttempts`), the native limit fires first. The Warning names both values.
+  A policy configured outside Brighter is invisible to it and isn't warned about.
+- **A budget that cannot run down.** For example, a GCP subscription with no `DeadLetterPolicy`. The
+  same Warning is also logged once when the channel is created:
+  `Subscription '…' has requeueCount … but the delivery count cannot advance: …. The budget will not run down.`
+
+`requeueCount: -1` (the default) disables the budget and none of these fire.
+
+### GCP Pub/Sub: `Reject` routes to a dead-letter and an invalid-message topic (#4341, spec 0037)
+
+GCP `Reject` used to acknowledge the message and discard it. `GcpPubSubSubscription` now takes
+`deadLetterRoutingKey` and `invalidMessageRoutingKey` (new optional constructor parameters, at the
+end of both constructors; callers must recompile). `Reject` then publishes a copy carrying the
+rejection metadata, as SQS and RocketMQ do: `Unacceptable` goes to the invalid-message topic, falling
+back to the dead-letter topic; every other reason, and a null reason, goes to the dead-letter topic.
+The existing `DeadLetter` (`DeadLetterPolicy`) setting is unchanged, and native dead-lettering still
+works alongside it. See [ADR 0078](docs/adr/0078-gcp-rejection-routing-and-dlq-channel-creation.md).
+
+#### Behaviour changes
+
+- **A subscription with no routing keys logs a Warning on every `Reject`:**
+  `GcpRejectionRouter: no destination configured for rejected message {Id} with reason {Reason}; message acknowledged without publishing`.
+  The message is still acknowledged.
+- **A failed routing publish releases the message instead of acknowledging it.** It comes back
+  promptly for another attempt, and an Error names the message id. With a native `DeadLetterPolicy`
+  that loop ends at its `MaxDeliveryAttempts`. Without one, a publish that keeps failing loops for as
+  long as it fails.
+- **`Reject` always returns `true` and never throws.** The pull consumer's `Reject` with no receipt
+  handle now returns `true` instead of `false`. A failed pull acknowledgement is logged instead of
+  rethrown, and the message stays leased until its ack deadline, so the destination may receive a
+  duplicate.
+- **A destination topic with no subscription drops messages.** The destination producer follows the
+  subscription's `MakeChannels`. Under `Create` it creates the topic but not a subscription, and Pub/Sub
+  discards messages published to a topic nothing subscribes to. **Create a subscription on each
+  destination topic** before relying on it.
+
+#### DLQ-backed channels without project IAM rights: new Warning
+
+Creating a subscription with a `DeadLetterPolicy` grants Pub/Sub's service account the forwarding
+roles through two IAM helpers. When the caller lacks project-level IAM rights (`PermissionDenied`,
+`Unauthenticated`, `Unimplemented` on the emulator, or no resolvable credentials), the helper is now
+abandoned with a Warning instead of failing channel creation:
+`{Helper} abandoned: {Rpc} on {Resource} failed with {Status}; native dead-lettering may be inactive`.
+The subscription is still created. **If you see this Warning**, grant the forwarding roles yourself,
+or native dead-lettering will not move messages. Any other status still fails channel creation.
+
+### RocketMQ: `Requeue` and `Nack` now act on the broker (#4353)
+
+`RocketMessageConsumer.Requeue` and `Nack` never called the broker. A requeued or nacked message came
+back only when its receive-time invisibility lease lapsed (30 s by default), and the delay passed to
+`Requeue` was ignored. Both now call `ChangeInvisibleDuration` on the message:
+
+- `Requeue(message, delay)` hides the message for `delay`, so it is redelivered after about that long.
+  A zero or missing delay redelivers it at once.
+- `Nack(message)` releases the message for redelivery at once.
+
+#### Behaviour changes
+
+- **A requeued or nacked message comes back sooner.** Before, every requeue and nack waited for the
+  subscription's invisibility lease. A handler that relied on that wait as a back-off should pass an
+  explicit delay to `Requeue`, or use a `DeferMessageAction` with a delay.
+- **The requeue delay is clamped to the broker's range of 0 to 12 hours.** A negative delay is treated
+  as zero. A delay above 12 hours is held for 12 hours and logs a Warning:
+  `Requeue delay {RequestedDelay} for message {MessageId} is above the broker's maximum invisible duration; holding it for {MaximumDelay}`.
+- **If the broker call fails, the message is not lost.** The consumer logs a Warning,
+  `Could not change the invisible duration of message {MessageId} to {InvisibleDuration}; it will reappear when its invisibility timeout lapses`,
+  and `Requeue` still returns `true`. The message comes back when its lease lapses, as before.
+
+### GCP Pub/Sub stream: `Nack` releases the message for redelivery (#4449)
+
+`GcpPubSubStreamMessageConsumer.Nack`/`NackAsync` did nothing, on the assumption that not
+acknowledging a message is enough for Pub/Sub to redeliver it. That holds for Pull, but not for the
+streaming client, which keeps extending the lease on a message it is still holding. A message the pump
+declined to acknowledge (`DontAckAction`) was therefore never redelivered, and at the default
+`BufferSize: 1` it could stall the consumer for up to `MaxTotalAckExtension` (60 minutes by default).
+`Nack` now releases the message, as `Requeue` already did, and it is redelivered promptly.
+
+### GCP Pub/Sub stream: disposing a channel no longer waits for unsettled messages (#4479)
+
+Stopping the stream consumer waited for every message it had delivered to be acknowledged or nacked.
+A message that was never settled blocked `Dispose`, and with it shutdown, for up to about an hour. The
+consumer now stops with `ShutdownMode.NackImmediately`. A message still held at shutdown is nacked and
+redelivered, and `Dispose` returns promptly.
+
+### GCP Pub/Sub stream: reopening a channel on the same subscription works again (#4502)
+
+Channels on one stream subscription share a `SubscriberClient`, which stops when the last channel
+leaves. A `SubscriberClient` cannot be restarted. However, Brighter kept the stopped client cached
+against the subscription. So when the dispatcher reopened that subscription, after `Shut` then `Open`
+or after scaling performers to zero and back, channel creation threw `InvalidOperationException: Can
+only start an instance once.` A second attempt then silently gave a channel that never received
+anything. A stopped client is now replaced by a new one.
+
+A Reactor performer also disposed its stream consumer twice. With several performers on one
+subscription, that could stop the shared client while the others were still reading from it, and
+they then received nothing. Disposing the stream consumer is now idempotent.
+
+**Breaking change:** `GcpStreamConsumer.Start()` is replaced by `bool TryStart()`, which returns
+`false` once the consumer has stopped. Only `GcpPubSubConsumerFactory` called it in Brighter.
+
+### GCP Pub/Sub stream: settled messages are no longer kept in memory (#4505)
+
+For every message it delivered, the stream handler registered a callback on the `SubscriberClient`'s
+cancellation token and never removed it. That token lives as long as the client, so every message the
+client delivered, payload included, stayed in memory until the channel was disposed. A long-running
+stream consumer's memory grew with its throughput. Stopping the client also had to run one callback for
+every message ever delivered. The callback is now removed once the message is settled.
+
+### GCP Pub/Sub: `Purge` now clears the subscription (#4508)
+
+`Purge` and `PurgeAsync` on a GCP channel, Pull or Stream, never worked. They purge by seeking the
+subscription to a future time, but the Seek request did not name the subscription, so Pub/Sub
+rejected it with `InvalidArgument` and `Purge` always threw. The Seek now names the consumer's
+subscription. This also affects `CommandProcessor.Call` over GCP, which purges the reply channel before
+sending the request.
+
+On a Stream subscription, a Seek clears only the messages still held by the service. The streaming
+client may already have delivered some messages into Brighter's local buffer, and those were still
+returned by the next `Receive`. A purge now also acknowledges every buffered message published before
+the purge started. Messages published after it are kept.
+
+### Reactor: a channel disposes its message consumer only once (#4511)
+
+When a Reactor performer stopped, its sync `Channel` was disposed twice: once by the pump when it
+received the quit message, and again when the dispatcher disposed the performer. `Channel` passed both
+calls on, so every transport's sync message consumer was disposed twice on each shutdown. For a Kafka
+consumer that had created a requeue or rejection producer, the second dispose threw
+`ObjectDisposedException` from the already-disposed producer's `Flush`. `Channel.Dispose` is now
+idempotent, as `ChannelAsync` already was, so the consumer is disposed once.
+
+### GCP Pub/Sub: subscription and publication client configuration now adds to the connection's (#4516)
+
+A `GcpPubSubSubscription`'s `streamingConfiguration` used to **replace** the connection's
+`StreamConfiguration`, and a `GcpPublication`'s `PublisherClientConfiguration` used to replace the
+connection's `PublisherConfiguration`. Any connection-wide setting, such as `EmulatorDetection`, an
+endpoint or channel credentials, was dropped for that subscription or publication. On the emulator, the
+client then went to production Pub/Sub and failed with `Unauthenticated`. Now the connection's
+configuration runs first, then the subscription's or publication's. Where both set the same builder
+property, the more specific one wins. A configuration that assigns a new `Settings` object still replaces
+whatever `Settings` the connection's configuration set.
+
+#### Behaviour change: the connection's configuration now also runs
+
+If a connection sets `StreamConfiguration` or `PublisherConfiguration`, that action now runs for every
+subscription or publication, including those with their own configuration. If you repeated connection
+settings in each per-entity configuration to work around the old behaviour, you can remove the
+repetition. If a connection setting must not apply to one subscription or publication, override it in
+that subscription's or publication's configuration.
+
+#### Message ordering survives a configuration that replaces `Settings`
+
+A publisher configuration that assigned a new `PublisherClient.Settings` switched off the message
+ordering an ordered `GcpPublication` asked for. Brighter sends each message with a partition key using
+an ordering key, so every such send then threw `InvalidOperationException` ("Message ordering must be
+enabled…"). This also broke dead-letter and invalid-message forwarding of keyed messages under a
+connection `PublisherConfiguration` that replaced `Settings`. After the configurations have run, Brighter
+now switches ordering back on for a publication with `EnableMessageOrdering = true`. A publication
+without it keeps whatever the configuration set.
+
+#### Stream configurations can set `Settings` values directly
+
+A stream configuration that set a value such as `builder.Settings.AckDeadline` threw
+`NullReferenceException`, because `Settings` was still null when the configuration ran. Brighter now
+creates `Settings` before running the configurations, as it already did for the publisher.
+
+### GCP Pub/Sub: keyed messages can be sent through an unordered publication (#4517)
+
+Brighter used to send every message's partition key as the Pub/Sub ordering key. The Google client
+refuses an ordering key unless message ordering is enabled, so on a `GcpPublication` without
+`EnableMessageOrdering` (the default), every message with a partition key failed with
+`InvalidOperationException` ("Message ordering must be enabled in settings before using OrderingKey").
+This included the bulk send, and delayed sends when the scheduler fired them. A message mapper copies the
+partition key from the request context, so a message could have a key without your code setting one.
+
+Now Brighter sends the partition key as the ordering key only when the publisher client has message
+ordering enabled. That is either because the publication sets `EnableMessageOrdering`, or because a
+publisher configuration switched ordering on. A publisher configuration that enables ordering keeps working
+as before.
+
+#### The partition key now also travels as a `ce-partitionkey` attribute
+
+The ordering key used to be the only place the partition key travelled. Each message with a partition key
+now also carries a `ce-partitionkey` attribute, so a consumer receives the key whether or not the
+publication is ordered. A consumer reads the attribute first. If there is none, it falls back to the
+ordering key, so messages from producers on earlier versions still arrive with their key. The attribute is
+not copied into `Header.Bag`. A consumer on an earlier version reads the key from the ordering key as
+before, and sees the new attribute in its `Header.Bag`.
+
+#### `GcpMessageProducer` takes an optional `enableMessageOrdering`
+
+If you build a `GcpMessageProducer` yourself rather than through `GcpPubSubMessageProducerFactory`, you can
+pass `enableMessageOrdering` to say whether your `PublisherClient` was built with ordering enabled. If you
+leave it out, the producer uses the publication's `EnableMessageOrdering`.
+
+### Message pumps reject received messages with no handler (#4500)
+
+`Reactor` and `Proactor` now reject a received message as `Unacceptable` when it maps successfully
+but runtime routing selects no handler. Previously, an event was acknowledged after an Information
+log reporting zero pipelines. A command raised an exception, but the pump still acknowledged it.
+The change also applies to registered routers that select no handler for a particular request.
+
+The existing rejection policy determines the destination: an invalid-message channel or dead-letter
+channel where supported and configured, or native dead-lettering on transports such as Azure Service
+Bus. Without a rejection destination, the transport determines whether the message is discarded.
+Subscriptions that deliberately ignore some types may therefore start sending them to a rejection
+destination. To intentionally acknowledge and ignore a type, register a handler that does nothing.
+
+**Unhandled events now count toward `UnacceptableMessageLimit`.** Each rejection increments the
+unacceptable-message count; unhandled commands already incremented it. A positive limit can now stop
+the pump after repeated unhandled events. Review the types handled by each subscription and its
+`UnacceptableMessageLimit` and `UnacceptableMessageLimitWindow` settings when upgrading. The default
+limit of zero remains unlimited.
+
+Both commands and events are logged as rejected, with their message ID and channel. The rejection
+metadata identifies the request type with no handler. Commands without handlers no longer enter the
+general dispatch-error logging path.
+
+Local `Publish`/`PublishAsync` calls, including calls inside handlers using the received context, can
+still have zero subscribers. Application-handler exception policy and command-handler cardinality
+checks retain their existing behavior.
+
+**New public API:** `RequestContext.RequireHandlerForNextDispatch()` requires a handler for the next
+immediate `Send`, `SendAsync`, `Publish`, or `PublishAsync` call using that context. CommandProcessor
+consumes the requirement before building pipelines. Context copies and scheduled dispatches do not
+carry it. Custom `IAmACommandProcessor` decorators must pass the pump's context instance through to
+CommandProcessor; substituting or omitting it loses the requirement and retains the previous
+acknowledgement behavior for messages without handlers.
+
+### RabbitMQ: channel factories declare the queue before returning the channel (#4519)
+
+The RabbitMQ `ChannelFactory` in both `Paramore.Brighter.MessagingGateway.RMQ.Async` and
+`Paramore.Brighter.MessagingGateway.RMQ.Sync` now honours `Subscription.MakeChannels` when it creates a
+channel. Previously, the queue was declared and bound only on the channel's first `Receive` or `Purge`.
+A message published to the exchange between creating the channel and that first receive matched no
+binding, so RabbitMQ dropped it. Because Brighter publishes with `mandatory: false`, nothing reported
+the loss, and with publisher confirms on the publish was still acknowledged.
+
+- **`Create`** declares and binds the queue, the invalid-message queue, the dead-letter queue and, where
+  native delay is configured, the delayed-requeue exchange, before the factory returns.
+- **`Validate`** checks that the queue exists. If it does not, the factory throws
+  `ChannelFailureException`.
+- **`Assume`** makes no broker connection.
+
+A message published before any subscriber has created its channel is still not delivered: the
+producer does not declare subscriber queues. That is ordinary publish/subscribe behaviour.
+
+#### Behaviour change: provisioning failures now surface when the channel is created
+
+The factory now connects to the broker, so connection, declaration and validation failures come out of
+channel creation as `ChannelFailureException`. In a Service Activator host that is dispatcher
+start-up (`Dispatcher.Receive()`), so the host fails to start. Previously the same failures surfaced on
+the message pump's first receive, which logged them and retried every `ChannelFailureDelay`.
+
+Connecting is retried when the broker is unreachable: `AmqpUriSpecification.ConnectionRetryCount`
+attempts (default 3) with exponential back-off from `RetryWaitInMilliseconds` (default 1000 ms; about
+14 s in total per channel), behind a circuit breaker that opens for `CircuitBreakTimeInMilliseconds`.
+Declaring, binding and validating the queue are not retried.
+
+The consumer also starts consuming when the channel is created rather than on the first receive, so
+up to `BufferSize` messages may be prefetched, unacknowledged, before the pump runs. They are returned
+to the queue if the channel is disposed or closed.
+
 ### Azure Service Bus queue subscription settings (#4269)
 
 Queues created by a consumer now honor `AzureServiceBusSubscriptionConfiguration`, including sessions, delivery count, lock duration, default message lifetime and dead-lettering on expiration. Default consumer-created queues now use the subscription defaults (five deliveries, a three-day lifetime and dead-lettering on expiration) instead of the broker defaults. Existing queues and producer-created queues are unchanged.
@@ -545,6 +889,55 @@ Provisioning refuses such a name up front with a message that explains the arith
 
 `Validate` builds no identifier and keeps the full 128, so a longer table that already exists can
 still be used.
+
+### Azure Service Bus: the channel factory provisions the subscription before handing out a channel (#4309)
+
+`AzureServiceBusChannelFactory` now honours `OnMissingChannel` on an `AzureServiceBusSubscription` as
+it creates a channel, from `CreateSyncChannel`, `CreateAsyncChannel` and `CreateAsyncChannelAsync`
+alike, in the same way as the AWS and GCP channel factories:
+
+| `MakeChannels` | Behaviour |
+|---|---|
+| `Create` (the default) | the topic subscription (or, with `UseServiceBusQueue`, the queue) is created if absent, using the subscription's `AzureServiceBusSubscriptionConfiguration` |
+| `Validate` | a missing subscription or queue throws `ChannelFailureException` from channel creation |
+| `Assume` | nothing happens and no management-API call is made |
+
+Before this, the factory ignored the setting and created nothing on the broker. The subscription was
+created by the consumer's first receive, so a message published to the topic between the channel
+being created and that first receive arrived at a topic with no subscription, and Azure Service Bus
+silently discarded it. Nothing logged and nothing threw. The queue path did not lose messages, because
+the producer creates the same queue on send.
+
+#### Behaviour change: provisioning failures now surface at startup
+
+The management-API calls that used to happen on the first receive now happen when the
+`ServiceActivator` creates its channels. With `Create` or `Validate`, a missing subscription under
+`Validate`, a management API that cannot be reached, or a credential without **Manage** rights on the
+namespace now throws `ChannelFailureException` from channel creation, which is to say from
+`Dispatcher.Receive()` at startup. Before, the same exception came from the first receive, where the
+message pump caught it and retried after `ChannelFailureDelay`. There is no retry around channel
+creation.
+
+**If your subscriptions are provisioned by infrastructure-as-code, or your application's credential
+has only Send/Listen rights, set `MakeChannels` to `Assume`.** `Validate` also needs Manage rights,
+because checking whether a subscription exists is itself a management-API call.
+
+`AzureServiceBusConsumerFactory`, used on its own without the channel factory, is unchanged: its
+consumers still provision on first use.
+
+### Outbox: no outstanding message count when there is no limit (#4554)
+
+With the default `AddProducers` settings (`MaxOutStandingMessages` of -1 and
+`MaxOutStandingCheckInterval` of zero), every `Post` and clear queued a background count of the
+outstanding messages, even though with no limit the count is never compared with one. Each count
+waited on a thread-pool thread for a process-wide semaphore and then queried the outbox: a sort of
+every entry it held for the `InMemoryOutbox`, a query per `Post` for a relational outbox. With a
+limit of -1 the count no longer runs. A limit of 0 is a real limit and is still checked.
+
+With no limit, the span the outbox creates for the count no longer appears under a clear
+(`count.outstanding_messages` for the `InMemoryOutbox`, `retrieve.outstanding_messages` for a
+relational outbox), the debug line "Outbox outstanding message count is" always reports 0, and the
+other debug lines of the check, such as "Current outstanding count is", are no longer logged.
 
 ## 10.7.0
 

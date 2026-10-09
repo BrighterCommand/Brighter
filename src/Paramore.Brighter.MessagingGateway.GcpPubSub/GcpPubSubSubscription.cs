@@ -7,7 +7,7 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// Represents Google Cloud Pub/Sub specific configuration for a message subscription (a queue).
 /// This class extends the core Brighter <see cref="Subscription"/> with GCP-specific settings.
 /// </summary>
-public class GcpPubSubSubscription : Subscription
+public class GcpPubSubSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport, IAmADeliveryCountingSubscription
 {
     /// <summary>
     /// Gets the Google Cloud Project ID where the subscription and its topic reside.
@@ -74,6 +74,24 @@ public class GcpPubSubSubscription : Subscription
     /// </summary>
     public DeadLetterPolicy? DeadLetter { get; }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Returns <see cref="MessagingGateway.GcpPubSub.DeadLetterPolicy.MaxDeliveryAttempts"/> when a dead
+    /// letter policy is configured; <c>null</c> when no policy is set (ADR 0077 budget-rules table).
+    /// </remarks>
+    public int? NativeRedriveLimit => DeadLetter?.MaxDeliveryAttempts;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Non-null when no <see cref="DeadLetterPolicy"/> is configured: Pub/Sub only populates
+    /// <c>delivery_attempt</c> for subscriptions with a dead letter policy, so without one the delivery
+    /// count cannot advance and the budget can never run down (A-1, ADR 0077).
+    /// </remarks>
+    public string? DeliveryBudgetUnenforceableReason =>
+        DeadLetter is null
+            ? "no DeadLetterPolicy is configured — Pub/Sub only populates delivery_attempt for subscriptions with a dead letter policy"
+            : null;
+
     /// <summary>
     /// Gets the maximum delay time for exponential backoff retry policy when a message is requeued.
     /// This works in conjunction with <see cref="Subscription.RequeueDelay"/> which is the minimum backoff.
@@ -94,12 +112,33 @@ public class GcpPubSubSubscription : Subscription
     /// Gets an action to configure the <see cref="SubscriberClientBuilder"/> used for the streaming consumer.
     /// This allows for advanced customization of the underlying streaming client configuration.
     /// </summary>
+    /// <remarks>
+    /// Runs after the connection's <see cref="GcpMessagingGatewayConnection.StreamConfiguration"/>, so this configuration
+    /// wins where both set the same property. Assigning a new <c>Settings</c> replaces any the connection's configuration
+    /// set. Brighter sets the flow control limits after both have run.
+    /// </remarks>
     public Action<SubscriberClientBuilder>? StreamingConfiguration { get; }
 
     /// <summary>
     /// 
     /// </summary>
     public string? SubscriberMember { get; }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The routing key for the Brighter-managed dead-letter destination. When set, a rejected message is
+    /// published to this topic before the original is acknowledged. Distinct from <see cref="DeadLetter"/>,
+    /// which configures Pub/Sub's native dead-letter policy (ADR 0078).
+    /// </remarks>
+    public RoutingKey? DeadLetterRoutingKey { get; set; }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The routing key for the Brighter-managed invalid-message destination. When set and a message is
+    /// rejected with <see cref="RejectionReason.Unacceptable"/>, it is published here rather than to
+    /// <see cref="DeadLetterRoutingKey"/> (ADR 0078).
+    /// </remarks>
+    public RoutingKey? InvalidMessageRoutingKey { get; set; }
 
     /// <summary>
     /// Gets the type of the channel factory used to create this channel.
@@ -126,7 +165,9 @@ public class GcpPubSubSubscription : Subscription
         TimeSpan? maxRequeueDelay = null,
         TimeProvider? timeProvider = null, SubscriptionMode subscriptionMode = SubscriptionMode.Stream,
         Action<SubscriberClientBuilder>? streamingConfiguration = null,
-        string? subscriberMember = null)
+        string? subscriberMember = null,
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null)
         : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize,
             noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType,
             channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, unacceptableMessageLimitWindow)
@@ -147,6 +188,8 @@ public class GcpPubSubSubscription : Subscription
         SubscriptionMode = subscriptionMode;
         StreamingConfiguration = streamingConfiguration;
         SubscriberMember = subscriberMember;
+        DeadLetterRoutingKey = deadLetterRoutingKey;
+        InvalidMessageRoutingKey = invalidMessageRoutingKey;
     }
 }
 
@@ -176,14 +219,17 @@ public class GcpPubSubSubscription<T> : GcpPubSubSubscription
         ExpirationPolicy? expirationPolicy = null, DeadLetterPolicy? deadLetter = null,
         TimeSpan? maxRequeueDelay = null,
         TimeProvider? timeProvider = null, SubscriptionMode subscriptionMode = SubscriptionMode.Stream,
-        string? subscriberMember = null)
+        string? subscriberMember = null,
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null)
         : base(subscriptionName, channelName, routingKey, typeof(T), getRequestType, bufferSize,
             noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit,
             unacceptableMessageLimitWindow, messagePumpType,
             channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, projectId, topicAttributes,
             ackDeadlineSeconds, retainAckedMessages, messageRetentionDuration, labels, enableMessageOrdering,
             enableExactlyOnceDelivery, storage, expirationPolicy, deadLetter, maxRequeueDelay, timeProvider,
-            subscriptionMode: subscriptionMode, subscriberMember: subscriberMember)
+            subscriptionMode: subscriptionMode, subscriberMember: subscriberMember,
+            deadLetterRoutingKey: deadLetterRoutingKey, invalidMessageRoutingKey: invalidMessageRoutingKey)
     {
     }
 }
