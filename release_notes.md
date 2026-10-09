@@ -72,6 +72,35 @@ CPU. That can matter on a pod limited to 1–2 CPUs. If you run many publication
 CPU throttling (`container_cpu_cfs_throttled_periods_total` on Kubernetes), the sweeper tick-lag
 metric and the confirmation queue depth.
 
+### RabbitMQ (`RMQ.Sync`): every message a coalesced publisher confirm covers is now confirmed (#4562)
+
+RabbitMQ can confirm several publishes with one ack or nack. The ack carries `multiple=true` and
+covers every delivery tag up to and including its own. The `RMQ.Sync` producer settled only that one
+tag. The other messages the ack covered never raised `OnMessagePublished` or the awaited
+confirmation event, so an outbox never marked them dispatched and the sweeper sent them again. The
+broker coalesces confirms under load, so this showed up as occasional duplicates. `RMQ.Async` already
+handled it.
+
+- **A coalesced ack or nack settles every message it covers,** once each, in the order they were
+  sent.
+- **A confirmation is raised at most once.** A subscriber that throws no longer stops the rest of a
+  coalesced ack from settling, and no longer causes the same confirmation to be raised again.
+- **A connection reset forgets confirmations still pending on the old channel.** When a send fails
+  with an `IOException`, the producer resets its connection, and the new channel numbers its delivery
+  tags from 1 again. The new channel's acks used to settle the old channel's pending entries, marking
+  messages dispatched that the broker had never confirmed. Those messages are now left for the
+  sweeper to send again, as `RMQ.Async` already does.
+
+**Known gap:** when RabbitMQ.Client's automatic recovery (on by default) rebuilds the channel instead,
+nothing yet forgets the old channel's pending confirmations. #4568 tracks it.
+
+#### Behaviour change: a throwing `OnMessagePublished` subscriber is logged, not rethrown
+
+On `RMQ.Sync`, an exception from a subscriber to the synchronous `OnMessagePublished` event is now
+caught and logged as a Warning ("Confirmation callback for message {MessageId} faulted"), as faults
+in awaited subscribers already were. Before, it went to RabbitMQ.Client, which also swallowed it, so
+no caller could have relied on seeing it.
+
 ### Dispatcher shutdown drains consumers still being created (#4541)
 
 The Dispatcher now tracks accepted consumer operations until their channels have either been
