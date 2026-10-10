@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenTelemetry.Metrics;
 using Paramore.Brighter.Observability;
@@ -37,9 +38,15 @@ public static class BrighterMetricsBuilderExtensions
         {
             services.TryAddSingleton<IAmABrighterMessagingMeter, MessagingMeter>();
             services.TryAddSingleton<IAmABrighterDbMeter, DbMeter>();
+            services.TryAddSingleton<IAmABrighterSweeperMeter, SweeperMeter>();
+            services.TryAddSingleton<PublishConfirmationMeter>();
             
             builder.AddMeter(BrighterSemanticConventions.MeterName);
         });
+
+        // Nothing depends on the queue-depth meter, so create it when the meter provider is built
+        if (builder is IDeferredMeterProviderBuilder deferred)
+            deferred.Configure((serviceProvider, _) => serviceProvider.GetRequiredService<PublishConfirmationMeter>());
         
         return builder;
     }
