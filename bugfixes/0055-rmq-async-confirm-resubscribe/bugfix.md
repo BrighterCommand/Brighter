@@ -1,7 +1,7 @@
 # Bugfix: RMQ.Async producer never subscribes confirm handlers to a replacement channel
 
 **Linked Issue**: #4578
-**Status**: Fixed
+**Status**: Verified
 
 ## Symptom
 
@@ -351,3 +351,19 @@ https://github.com/BrighterCommand/Brighter/issues/4577#issuecomment-6099959203
 
 Detaching after the IOException reset was left as it is: the v7 source shows it is safe (see
 Upstream verification).
+
+## Verification
+
+Run on 2026-10-10 against the local RabbitMQ broker (5672) and the native-delay broker (5673):
+
+- **Regression test:** passes on net9.0 and net10.0. It was observed RED before the fix (it timed
+  out waiting for the new-channel confirmation).
+- **`Paramore.Brighter.RMQ.Async.Tests`, with CI's filter**
+  (`Fragile!=CI&Requires!=Docker-mTLS&Category!=RMQNativeDelay`): 257 passed, 0 failed, 2 skipped,
+  on both net9.0 and net10.0.
+- **`Category=RMQNativeDelay`:** 103 passed, 0 failed (net10.0).
+- **Not caused by this fix:**
+  - An unfiltered local run also picks up the mTLS tests, which CI excludes and which need locally
+    generated certificates.
+  - `DispatchBuilderTests` failed until the `mary`/`alice` queues left by the RMQ.Sync suite were
+    deleted. That is a durability collision between the suites, raised as #4581.
