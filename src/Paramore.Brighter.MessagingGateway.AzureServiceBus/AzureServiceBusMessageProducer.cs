@@ -74,6 +74,8 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
     /// <inheritdoc />
     public IAmAMessageScheduler? Scheduler { get; set; }
 
+    internal RoutingKey? DestinationOverride { get; set; }
+
     /// <summary>
     /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>
     /// </summary>
@@ -212,7 +214,8 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
 
         if (message.Header.Topic is null) throw new ArgumentException("Topic not be null");
 
-        var serviceBusSenderWrapper = await GetSenderAsync(message.Header.Topic.Value);
+        var destination = DestinationOverride ?? message.Header.Topic;
+        var serviceBusSenderWrapper = await GetSenderAsync(destination.Value);
 
         try
         {

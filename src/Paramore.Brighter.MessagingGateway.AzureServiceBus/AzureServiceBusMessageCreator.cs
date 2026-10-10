@@ -129,8 +129,15 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
         headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
         headers.Bag.Add(ASBConstants.SequenceNumberBagKey, azureServiceBusMessage.SequenceNumber);
 
+        var sessionId = (azureServiceBusMessage as BrokeredMessageWrapper)?.SessionId;
+        if (!string.IsNullOrEmpty(sessionId))
+            headers.Bag[ASBConstants.SessionIdKey] = sessionId!;
+
         foreach (var property in azureServiceBusMessage.ApplicationProperties)
         {
+            if (!string.IsNullOrEmpty(sessionId) && ASBConstants.IsBagKey(property.Key, ASBConstants.SessionIdKey))
+                continue;
+
             headers.Bag[property.Key] = property.Value;
         }
 

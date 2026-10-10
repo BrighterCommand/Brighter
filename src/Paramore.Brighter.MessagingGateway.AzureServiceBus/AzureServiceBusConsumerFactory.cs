@@ -36,6 +36,10 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
 {
     private readonly IServiceBusClientProvider _clientProvider;
 
+    /// <summary>The fallback scheduler for custom producers without native queue retry support.</summary>
+    /// <remarks>Built-in ASB queue producers schedule retries on their own broker and take precedence.</remarks>
+    public IAmAMessageScheduler? Scheduler { get; set; }
+
     /// <summary>
     /// Factory to create an Azure Service Bus Consumer
     /// </summary>
@@ -58,6 +62,7 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
     /// </summary>
     /// <param name="subscription">The queue to connect to</param>
     /// <returns>IAmAMessageConsumerSync</returns>
+    /// <exception cref="ConfigurationException">The subscription's retry, forwarding or lock renewal configuration is invalid.</exception>
     public IAmAMessageConsumerSync Create(Subscription subscription)
     {
         var nameSpaceManagerWrapper = new AdministrationClientWrapper(_clientProvider);
@@ -71,6 +76,27 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
 
         var receiverProvider = new ServiceBusReceiverProvider(_clientProvider, sub.Configuration.MaxAutoLockRenewalDuration);
 
+        if (sub.Configuration.ForwardTo is { } queueName)
+        {
+            if (sub.Configuration.UseServiceBusQueue || string.IsNullOrWhiteSpace(queueName)
+                || Uri.TryCreate(queueName, UriKind.Absolute, out _))
+            {
+                throw new ConfigurationException(
+                    "ForwardTo must name a queue in the same namespace and cannot be combined with UseServiceBusQueue.");
+            }
+
+            var messageProducer = new AzureServiceBusQueueMessageProducer(
+                nameSpaceManagerWrapper,
+                new ServiceBusSenderProvider(_clientProvider),
+                new AzureServiceBusPublication { MakeChannels = subscription.MakeChannels })
+            {
+                DestinationOverride = new RoutingKey(queueName)
+            };
+
+            return new AzureServiceBusForwardingConsumer(sub, messageProducer,
+                nameSpaceManagerWrapper, receiverProvider) { Scheduler = Scheduler };
+        }
+
         if (sub.Configuration.UseServiceBusQueue)
         {
             var messageProducer = new AzureServiceBusQueueMessageProducer(
@@ -82,7 +108,7 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
                 sub,
                 messageProducer,
                 nameSpaceManagerWrapper,
-                receiverProvider);
+                receiverProvider) { Scheduler = Scheduler };
         }
         else
         {
@@ -95,7 +121,7 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
                 sub,
                 messageProducer,
                 nameSpaceManagerWrapper,
-                receiverProvider);
+                receiverProvider) { Scheduler = Scheduler };
         }
     }
 
