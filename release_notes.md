@@ -2,6 +2,117 @@
 
 ## Master
 
+### Outbox sweeper and publish confirmations no longer depend on the thread pool (#4560)
+
+`TimedOutboxSweeper` used to run each sweep from a thread-pool `Timer`. When every pool thread was
+busy or blocked, sweeps ran late or not at all, so messages awaiting a publish confirmation stayed in
+the `InMemoryOutbox`. Kafka and RabbitMQ (`RMQ.Sync`) producers also queued one thread-pool work item
+per publish confirmation, which added to that pressure under load.
+
+- **The sweeper runs on its own thread.** Sweeps now start on time even when the thread pool is
+  starved.
+- **`StopAsync` waits for a sweep in flight** before it returns.
+- **A failed sweep no longer crashes the process.** The sweeper logs the error and tries again on the
+  next sweep. It also releases its lock on every path, so one failure no longer blocks every later
+  sweep.
+- **A sweep stays on the sweeper's thread across awaited sends.** A Kafka send completes on
+  Confluent's own thread, so before this each later message in a sweep waited for a pool thread. Now
+  a starved pool cannot slow a Kafka sweep down. A producer or outbox that itself awaits with
+  `ConfigureAwait(false)`, as database clients and the AWS SDK do, still resumes on the pool.
+- **The schedule uses elapsed time, not the wall clock**, so a clock that steps backwards (an NTP
+  correction, a resumed VM) no longer delays the next sweep.
+- **Kafka and `RMQ.Sync` raise publish confirmations on one thread per producer**, in batches of up
+  to 32 rather than one work item per confirmation.
+- **The sweeper and confirmation threads start with an empty `ExecutionContext`**, so they no longer
+  keep the `AsyncLocal` state (logging scopes, baggage) of whichever caller started them.
+- **New metrics.** `AddBrighterInstrumentation` registers:
+  - `paramore.brighter.outbox_sweeper.tick.lag`, `.sweep.duration` and `.sweeps` (by outcome);
+  - `paramore.brighter.publish_confirmation.queue.depth`, by `messaging.system` and
+    `messaging.destination.name`. It counts confirmations waiting or running for each producer, so a
+    backlog is visible before messages are swept again.
+
+  See [ADR 0081](docs/adr/0081-timed-outbox-sweeper-health-metrics.md).
+
+#### Behaviour change: `TimerInterval` below 1 is rejected
+
+`TimedOutboxSweeperOptions.TimerInterval` must be at least 1 second. A value of 0 or less now throws
+a `ConfigurationException` when the sweeper is created. Before, 0 swept once and then never again,
+and a negative value threw when the sweeper started.
+
+#### Behaviour change: publish-confirmation subscribers run in batches on one thread
+
+On Kafka and `RMQ.Sync`, subscribers to `OnMessagePublished` and to the awaited confirmation event
+used to run each on its own thread-pool work item. They now run on the producer's confirmation
+thread: up to 32 start together, in the order the broker confirmed the messages, and may finish in
+any order. A subscriber's continuations come back to that thread unless it uses
+`ConfigureAwait(false)`. Brighter's own subscriber marks the message dispatched in the outbox.
+
+#### Behaviour change: `continueOnCapturedContext` now reaches the resilience pipeline
+
+`OutboxProducerMediator` passes the caller's `continueOnCapturedContext` to Polly when the request
+has no `ResilienceContext` of its own. Before, that path always used Polly's default of `false`. A
+caller that posts with `continueOnCapturedContext: true` (the default for `PostAsync` and
+`ClearOutboxAsync`) from inside a `SynchronizationContext` now has Polly's continuations come back to
+that context too.
+
+The `SynchronizationContext` that matters most here is the Proactor's own. A handler on a Proactor pump
+that posts or clears the outbox now runs the outbox producer's resilience pipeline, including callbacks
+such as a retry's `OnRetry`, on the pump's thread rather than on a thread-pool thread. The mediator's
+own awaits, and Kafka's, already resumed there. This adds no new way to deadlock. Blocking on `PostAsync`
+from a pump thread already deadlocked.
+
+#### Cost: one thread per confirming producer
+
+Each Kafka or `RMQ.Sync` producer now starts one background thread, with its first confirmation, and
+keeps it until the producer is disposed. Both transports create one producer per publication, so an
+app with twenty publications runs twenty confirmation threads, plus one sweeper thread.
+
+An idle thread costs little. Under load, though, those threads compete with the rest of the app for
+CPU. That can matter on a pod limited to 1–2 CPUs. If you run many publications on a small pod, watch
+CPU throttling (`container_cpu_cfs_throttled_periods_total` on Kubernetes), the sweeper tick-lag
+metric and the confirmation queue depth.
+
+### RabbitMQ (`RMQ.Sync`): every message a coalesced publisher confirm covers is now confirmed (#4562)
+
+RabbitMQ can confirm several publishes with one ack or nack. The ack carries `multiple=true` and
+covers every delivery tag up to and including its own. The `RMQ.Sync` producer settled only that one
+tag. The other messages the ack covered never raised `OnMessagePublished` or the awaited
+confirmation event, so an outbox never marked them dispatched and the sweeper sent them again. The
+broker coalesces confirms under load, so this showed up as occasional duplicates. `RMQ.Async` already
+handled it.
+
+- **A coalesced ack or nack settles every message it covers,** once each, in the order they were
+  sent.
+- **A confirmation is raised at most once.** A subscriber that throws no longer stops the rest of a
+  coalesced ack from settling, and no longer causes the same confirmation to be raised again.
+- **A connection reset forgets confirmations still pending on the old channel.** When a send fails
+  with an `IOException`, the producer resets its connection, and the new channel numbers its delivery
+  tags from 1 again. The new channel's acks used to settle the old channel's pending entries, marking
+  messages dispatched that the broker had never confirmed. Those messages are now left for the
+  sweeper to send again, as `RMQ.Async` already does.
+
+**Known gap:** when RabbitMQ.Client's automatic recovery (on by default) rebuilds the channel instead,
+nothing yet forgets the old channel's pending confirmations. #4568 tracks it.
+
+#### Behaviour change: a throwing `OnMessagePublished` subscriber is logged, not rethrown
+
+On `RMQ.Sync`, an exception from a subscriber to the synchronous `OnMessagePublished` event is now
+caught and logged as a Warning ("Confirmation callback for message {MessageId} faulted"), as faults
+in awaited subscribers already were. Before, it went to RabbitMQ.Client, which also swallowed it, so
+no caller could have relied on seeing it.
+
+### Dispatcher shutdown drains consumers still being created (#4541)
+
+The Dispatcher now tracks accepted consumer operations until their channels have either been
+registered with a performer task or disposed. A concurrent `End()` cannot finish before those
+operations complete. Consumers shut before opening are removed and disposed without registering
+a null task. A disposal failure is logged and does not prevent the remaining consumers from draining.
+
+**Behaviour change:** `Receive()`, `Open()`, and `SetActivePerformers()` throw
+`InvalidOperationException` while shutdown is in progress. Await `End()` before restarting.
+After disposal, these operations throw `ObjectDisposedException`. Channel creation and disposal
+run outside the lifecycle lock. See [ADR 0083](docs/adr/0083-coordinate-dispatcher-startup-and-shutdown.md).
+
 ### AWS SQS, GCP Pub/Sub and RocketMQ: `requeueCount` now runs down (#4341, spec 0037)
 
 On these transports the broker re-serves its own stored copy of a requeued message, and Brighter never
@@ -912,6 +1023,20 @@ because checking whether a subscription exists is itself a management-API call.
 
 `AzureServiceBusConsumerFactory`, used on its own without the channel factory, is unchanged: its
 consumers still provision on first use.
+
+### Outbox: no outstanding message count when there is no limit (#4554)
+
+With the default `AddProducers` settings (`MaxOutStandingMessages` of -1 and
+`MaxOutStandingCheckInterval` of zero), every `Post` and clear queued a background count of the
+outstanding messages, even though with no limit the count is never compared with one. Each count
+waited on a thread-pool thread for a process-wide semaphore and then queried the outbox: a sort of
+every entry it held for the `InMemoryOutbox`, a query per `Post` for a relational outbox. With a
+limit of -1 the count no longer runs. A limit of 0 is a real limit and is still checked.
+
+With no limit, the span the outbox creates for the count no longer appears under a clear
+(`count.outstanding_messages` for the `InMemoryOutbox`, `retrieve.outstanding_messages` for a
+relational outbox), the debug line "Outbox outstanding message count is" always reports 0, and the
+other debug lines of the check, such as "Current outstanding count is", are no longer logged.
 
 ## 10.7.0
 

@@ -68,6 +68,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private bool _hasFatalError;
         private readonly Func<Error, LogLevel>? _errorLogLevel;
         private bool _isClosed;
+        private int _disposed;
         private readonly RoutingKey? _deadLetterRoutingKey;
         private readonly RoutingKey? _invalidMessageRoutingKey;
         private readonly Lazy<KafkaMessageProducer?>? _deadLetterProducer;
@@ -1227,54 +1228,83 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private void Dispose(bool disposing)
         {
-            if (!disposing) return;
-            _sweeperTimer.Dispose();
+            if (!disposing)
+                return;
 
-            Close();
-            _consumer?.Dispose();
-            _flushToken?.Dispose();
+            DisposeAsyncCore(useAsyncDispose: false).GetAwaiter().GetResult();
+        }
 
-            // Dispose all producers independently - each may be created without the others
-            if (_deadLetterProducer?.IsValueCreated == true)
-                _deadLetterProducer.Value?.Dispose();
+        private async ValueTask DisposeAsyncCore(bool useAsyncDispose)
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+                return;
 
-            if (_invalidMessageProducer?.IsValueCreated == true)
-                _invalidMessageProducer.Value?.Dispose();
+            var cleanup = new KafkaResourceCleanup();
+            if (useAsyncDispose)
+                await cleanup.TryAsync(_sweeperTimer.DisposeAsync).ConfigureAwait(false);
+            else
+                cleanup.Try(_sweeperTimer.Dispose);
 
-            _requeueProducer?.Dispose();
+            cleanup.Try(Close);
+            cleanup.Try(_consumer.Dispose);
+            cleanup.Try(_flushToken.Dispose);
+
+            foreach (var producer in CreatedProducers())
+            {
+                if (useAsyncDispose)
+                    await cleanup.TryAsync(producer.DisposeAsync).ConfigureAwait(false);
+                else
+                    cleanup.Try(producer.Dispose);
+            }
+
+            cleanup.ThrowIfFailed();
+        }
+
+        private IEnumerable<KafkaMessageProducer> CreatedProducers()
+        {
+            if (_deadLetterProducer?.IsValueCreated == true && _deadLetterProducer.Value is { } deadLetterProducer)
+                yield return deadLetterProducer;
+
+            if (_invalidMessageProducer?.IsValueCreated == true && _invalidMessageProducer.Value is { } invalidMessageProducer)
+                yield return invalidMessageProducer;
+
+            if (_requeueProducer is { } requeueProducer)
+                yield return requeueProducer;
         }
 
         /// <summary>
-        /// Disposes of the consumer
+        /// Disposes of the consumer and its created producers. Repeated calls are no-ops.
         /// </summary>
+        /// <remarks>All cleanup steps are attempted before any errors are rethrown.</remarks>
+        /// <exception cref="AggregateException">More than one cleanup step failed.</exception>
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            try
+            {
+                Dispose(true);
+            }
+            finally
+            {
+                GC.SuppressFinalize(this);
+            }
         }
 
         /// <summary>
-        /// Disposes of the consumer, async
+        /// Disposes of the consumer and its created producers asynchronously. Repeated calls are no-ops.
         /// </summary>
+        /// <remarks>Shares disposal state with <see cref="Dispose()"/>. All cleanup steps are attempted before any errors are rethrown.</remarks>
         /// <returns>A value task that manages the disposal</returns>
+        /// <exception cref="AggregateException">More than one cleanup step failed.</exception>
         public async ValueTask DisposeAsync()
         {
-            await _sweeperTimer.DisposeAsync();
-
-            Close();
-            _consumer?.Dispose();
-            _flushToken?.Dispose();
-
-            if (_deadLetterProducer?.IsValueCreated == true && _deadLetterProducer.Value != null)
-                await _deadLetterProducer.Value.DisposeAsync();
-
-            if (_invalidMessageProducer?.IsValueCreated == true && _invalidMessageProducer.Value != null)
-                await _invalidMessageProducer.Value.DisposeAsync();
-
-            if (_requeueProducer != null)
-                await _requeueProducer.DisposeAsync();
-
-            GC.SuppressFinalize(this);
+            try
+            {
+                await DisposeAsyncCore(useAsyncDispose: true).ConfigureAwait(false);
+            }
+            finally
+            {
+                GC.SuppressFinalize(this);
+            }
         }
         
         private static partial class Log

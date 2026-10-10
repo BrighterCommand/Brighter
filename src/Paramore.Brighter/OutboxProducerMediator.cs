@@ -33,6 +33,7 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
+using Polly;
 using Polly.Registry;
 
 // ReSharper disable StaticMemberInGenericType
@@ -79,6 +80,8 @@ namespace Paramore.Brighter
         private const string NoAsyncOutboxError = "An async Outbox must be defined.";
             
         private int _outStandingCount;
+        // The default ceiling of IAmAnOutboxSync/Async.GetOutstandingMessageCount
+        private const int DefaultOutstandingCountCeiling = 100;
         //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
         //an owner and the container disposing concurrently must run CloseAll() (broker I/O) and the factory
         //disposals exactly once
@@ -107,7 +110,12 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory"></param>
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
         /// <param name="maxOutStandingMessages">How many messages can become outstanding in the Outbox before we throw an OutboxLimitReached exception</param>
-        /// <param name="maxOutStandingCheckInterval">How long before we check for maxOutStandingMessages</param>
+        /// <param name="maxOutStandingCheckInterval">
+        /// The minimum time between background checks for maxOutStandingMessages, measured from the previous check
+        /// (<see cref="TimeSpan.Zero"/> checks after every clear, so after every Post). It is also the minimum age a message
+        /// must have in the outbox to count as outstanding. Ignored when maxOutStandingMessages is -1 (no limit), as the
+        /// outbox is then not consulted for the count. Defaults to one second when null.
+        /// </param>
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="timeProvider"></param>
         /// <param name="instrumentationOptions">How verbose do we want our instrumentation to be</param>
@@ -744,13 +752,15 @@ namespace Paramore.Brighter
 
                     Log.FoundMessagesToClear(s_logger, messages.Length, amountToClear);
 
+                    // Continue on the caller's context: the TimedOutboxSweeper runs this in a context on its own thread, so
+                    // the sweep stays off a starved thread pool. A caller without a context is unaffected.
                     if (useBulk)
                     {
-                        await BulkDispatchAsync(messages, requestContext, false, cancellationToken);
+                        await BulkDispatchAsync(messages, requestContext, true, cancellationToken);
                     }
                     else
                     {
-                        await DispatchAsync(messages, requestContext, false, cancellationToken);
+                        await DispatchAsync(messages, requestContext, true, cancellationToken);
                     }
 
                     Log.MessagesHaveBeenCleared(s_logger);
@@ -794,6 +804,11 @@ namespace Paramore.Brighter
 
         private void CheckOutstandingMessages(RequestContext? requestContext)
         {
+            //With no limit (-1) the count is never compared with a limit, so do not queue a task, take the
+            //process-wide semaphore and query the outbox just to throw the number away
+            if (_maxOutStandingMessages == -1)
+                return;
+
             var now = _timeProvider.GetUtcNow();
 
             var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
@@ -807,7 +822,9 @@ namespace Paramore.Brighter
             }                                                    
 
             Log.RunningOutstandingMessageCheck(s_logger, now, timeSinceLastCheck.TotalSeconds);
-            //This is expensive, so use a background thread
+            //This is expensive, so use a background thread. Task.Run uses TaskScheduler.Default and does not carry the
+            //caller's SynchronizationContext. That keeps the blocking call on the async outbox in
+            //OutstandingMessagesCheck from deadlocking the pump, so do not run it inline on the caller's thread
             Task.Run(
                 () => OutstandingMessagesCheck(requestContext)
             );
@@ -1337,27 +1354,35 @@ namespace Paramore.Brighter
             Log.BeginCountOfOutstandingMessages(s_logger);
             try
             {
+                // Only count up to one more than the limit; with no limit, the outbox's default ceiling applies
+                var maxCount = _maxOutStandingMessages >= 0 ? _maxOutStandingMessages + 1 : DefaultOutstandingCountCeiling;
+
                 if (_outBox != null)
                 {
-                    if (_maxOutStandingMessages >= 0)
-                    {
-                        _outStandingCount = _outBox
-                            .GetOutstandingMessageCount(
-                                _maxOutStandingCheckInterval,
-                                requestContext,
-                                _maxOutStandingMessages + 1,
-                                args: _outBoxBag
-                            );
-                    }
-                    else
-                    {
-                        _outStandingCount = _outBox
-                            .GetOutstandingMessageCount(
-                                _maxOutStandingCheckInterval,
-                                requestContext,
-                                args: _outBoxBag
-                            );
-                    }
+                    _outStandingCount = _outBox
+                        .GetOutstandingMessageCount(
+                            _maxOutStandingCheckInterval,
+                            requestContext,
+                            maxCount,
+                            args: _outBoxBag
+                        );
+
+                    return;
+                }
+
+                if (_asyncOutbox != null)
+                {
+                    // Blocking holds this pool thread but never the pump: this runs inside the Task.Run in
+                    // CheckOutstandingMessages, with no SynchronizationContext, and the caller never waits for that task
+                    _outStandingCount = _asyncOutbox
+                        .GetOutstandingMessageCountAsync(
+                            _maxOutStandingCheckInterval,
+                            requestContext,
+                            maxCount,
+                            args: _outBoxBag
+                        )
+                        .GetAwaiter()
+                        .GetResult();
 
                     return;
                 }
@@ -1420,8 +1445,18 @@ namespace Paramore.Brighter
                 }
                 else
                 {
-                    await resiliencePipeline.ExecuteAsync(async ct => await send(ct), cancellationToken)
-                        .ConfigureAwait(continueOnCapturedContext);
+                    // Polly awaits with its context's ContinueOnCapturedContext, so pass the caller's choice through.
+                    var resilienceContext = ResilienceContextPool.Shared.Get(continueOnCapturedContext, cancellationToken);
+                    try
+                    {
+                        await resiliencePipeline
+                            .ExecuteAsync(async context => await send(context.CancellationToken), resilienceContext)
+                            .ConfigureAwait(continueOnCapturedContext);
+                    }
+                    finally
+                    {
+                        ResilienceContextPool.Shared.Return(resilienceContext);
+                    }
                 }
                 
                 return true;
