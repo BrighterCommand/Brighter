@@ -33,6 +33,7 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
+using Polly;
 using Polly.Registry;
 
 // ReSharper disable StaticMemberInGenericType
@@ -85,6 +86,9 @@ namespace Paramore.Brighter
         //an owner and the container disposing concurrently must run CloseAll() (broker I/O) and the factory
         //disposals exactly once
         private int _disposed;
+        //1 while a check of the outstanding count is queued or running: an int rather than a bool so one caller can
+        //claim it with a single atomic Interlocked.CompareExchange
+        private int _outstandingCheckInFlight;
         private readonly int _maxOutStandingMessages;
         private readonly TimeSpan _maxOutStandingCheckInterval;
         private readonly Dictionary<string, object> _outBoxBag;
@@ -110,10 +114,11 @@ namespace Paramore.Brighter
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
         /// <param name="maxOutStandingMessages">How many messages can become outstanding in the Outbox before we throw an OutboxLimitReached exception</param>
         /// <param name="maxOutStandingCheckInterval">
-        /// The minimum time between background checks for maxOutStandingMessages, measured from the previous check
-        /// (<see cref="TimeSpan.Zero"/> checks after every clear, so after every Post). It is also the minimum age a message
-        /// must have in the outbox to count as outstanding. Ignored when maxOutStandingMessages is -1 (no limit), as the
-        /// outbox is then not consulted for the count. Defaults to one second when null.
+        /// The minimum time between background checks for maxOutStandingMessages, measured from when the previous check
+        /// was queued. The mediator keeps at most one check in flight, so with <see cref="TimeSpan.Zero"/> a clear queues
+        /// a check only if the previous one has finished. It is also the minimum age a message must have in the outbox
+        /// to count as outstanding. Ignored when maxOutStandingMessages is -1 (no limit), as the outbox is then not
+        /// consulted for the count. Defaults to one second when null.
         /// </param>
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="timeProvider"></param>
@@ -751,13 +756,15 @@ namespace Paramore.Brighter
 
                     Log.FoundMessagesToClear(s_logger, messages.Length, amountToClear);
 
+                    // Continue on the caller's context: the TimedOutboxSweeper runs this in a context on its own thread, so
+                    // the sweep stays off a starved thread pool. A caller without a context is unaffected.
                     if (useBulk)
                     {
-                        await BulkDispatchAsync(messages, requestContext, false, cancellationToken);
+                        await BulkDispatchAsync(messages, requestContext, true, cancellationToken);
                     }
                     else
                     {
-                        await DispatchAsync(messages, requestContext, false, cancellationToken);
+                        await DispatchAsync(messages, requestContext, true, cancellationToken);
                     }
 
                     Log.MessagesHaveBeenCleared(s_logger);
@@ -802,7 +809,7 @@ namespace Paramore.Brighter
         private void CheckOutstandingMessages(RequestContext? requestContext)
         {
             //With no limit (-1) the count is never compared with a limit, so do not queue a task, take the
-            //process-wide semaphore and query the outbox just to throw the number away
+            //semaphore shared by every mediator with the same types and query the outbox just to throw the number away
             if (_maxOutStandingMessages == -1)
                 return;
 
@@ -818,13 +825,32 @@ namespace Paramore.Brighter
                 return;
             }                                                    
 
-            Log.RunningOutstandingMessageCheck(s_logger, now, timeSinceLastCheck.TotalSeconds);
+            //Keep at most one check in flight: only the caller that claims it records the time and queues the check
+            if (Interlocked.CompareExchange(ref _outstandingCheckInFlight, 1, 0) != 0)
+                return;
+
+            //Record the time now, not when the queued check starts, so a burst of posts within the interval
+            //queues one check
+            _lastOutStandingMessageCheckAt = now;
+
             //This is expensive, so use a background thread. Task.Run uses TaskScheduler.Default and does not carry the
             //caller's SynchronizationContext. That keeps the blocking call on the async outbox in
-            //OutstandingMessagesCheck from deadlocking the pump, so do not run it inline on the caller's thread
-            Task.Run(
-                () => OutstandingMessagesCheck(requestContext)
-            );
+            //OutstandingMessagesCheck from deadlocking the pump, so do not run it inline on the caller's thread.
+            //The flag is released when the check ends, however it ends
+            Task.Run(() =>
+            {
+                try
+                {
+                    OutstandingMessagesCheck(requestContext);
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _outstandingCheckInFlight, 0);
+                }
+            });
+
+            //Logged after the check is queued, so a logger that throws cannot leave the flag claimed
+            Log.RunningOutstandingMessageCheck(s_logger, now, timeSinceLastCheck.TotalSeconds);
         }
 
         /// <summary>
@@ -1347,11 +1373,11 @@ namespace Paramore.Brighter
         {
             s_checkOutstandingSemaphoreToken.Wait();
 
-            _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
             Log.BeginCountOfOutstandingMessages(s_logger);
             try
             {
-                // Only count up to one more than the limit; with no limit, the outbox's default ceiling applies
+                // Only count up to one more than the limit. CheckOutstandingMessages never queues this check at -1 (no
+                // limit), so the outbox's default ceiling only applies to a limit below -1
                 var maxCount = _maxOutStandingMessages >= 0 ? _maxOutStandingMessages + 1 : DefaultOutstandingCountCeiling;
 
                 if (_outBox != null)
@@ -1442,8 +1468,18 @@ namespace Paramore.Brighter
                 }
                 else
                 {
-                    await resiliencePipeline.ExecuteAsync(async ct => await send(ct), cancellationToken)
-                        .ConfigureAwait(continueOnCapturedContext);
+                    // Polly awaits with its context's ContinueOnCapturedContext, so pass the caller's choice through.
+                    var resilienceContext = ResilienceContextPool.Shared.Get(continueOnCapturedContext, cancellationToken);
+                    try
+                    {
+                        await resiliencePipeline
+                            .ExecuteAsync(async context => await send(context.CancellationToken), resilienceContext)
+                            .ConfigureAwait(continueOnCapturedContext);
+                    }
+                    finally
+                    {
+                        ResilienceContextPool.Shared.Return(resilienceContext);
+                    }
                 }
                 
                 return true;
