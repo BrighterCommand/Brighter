@@ -43,6 +43,10 @@ public class CoalescingConfirmsRmqChannel : DispatchProxy
     private EventHandler<BasicNackEventArgs>? _nacks;
     private bool _failNextPublish;
 
+    public int AckSubscriberCount => _acks?.GetInvocationList().Length ?? 0;
+    public int NackSubscriberCount => _nacks?.GetInvocationList().Length ?? 0;
+    public int ConfirmSelectCount { get; private set; }
+
     public static CoalescingConfirmsRmqChannel Wrap(IModel channel)
     {
         var proxy = Create<IModel, CoalescingConfirmsRmqChannel>();
@@ -90,6 +94,16 @@ public class CoalescingConfirmsRmqChannel : DispatchProxy
             case "add_BasicNacks":
                 _nacks += (EventHandler<BasicNackEventArgs>)args![0]!;
                 return null;
+            // Removals still reach the real channel, which rejects them once disposed, as it would in production
+            case "remove_BasicAcks":
+                _acks -= (EventHandler<BasicAckEventArgs>)args![0]!;
+                break;
+            case "remove_BasicNacks":
+                _nacks -= (EventHandler<BasicNackEventArgs>)args![0]!;
+                break;
+            case "ConfirmSelect":
+                ConfirmSelectCount++;
+                break;
             case "BasicPublish" when _failNextPublish:
                 _failNextPublish = false;
                 throw new IOException("Injected socket failure.");
