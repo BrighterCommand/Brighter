@@ -59,6 +59,9 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     private RmqPublication _publication;
     private readonly Dictionary<ulong, PendingConfirmation> _pendingConfirmations = new();
     private readonly object _stateLock = new();
+    // The channel our confirm handlers are attached to. The gateway replaces a closed channel in place,
+    // so compare by reference, not null, to notice a new channel and move the handlers to it.
+    private IChannel? _confirmChannel;
     private readonly int _waitForConfirmsTimeOutInMilliseconds;
     private TaskCompletionSource<bool> _activeSendsCompleted = NewCompletedTaskCompletionSource();
     private TaskCompletionSource<bool> _publisherConfirmationsCompleted = NewCompletedTaskCompletionSource();
@@ -182,15 +185,10 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
 
             Log.PreparingToSendAsync(s_logger, Connection.Exchange.Name);
 
-            var channelInitialized = Channel is not null;
             await EnsureBrokerAsync(makeExchange: _publication.MakeChannels, cancellationToken: cancellationToken);
 
             if (Channel is null) throw new ChannelFailureException($"RmqMessageProducer: Channel is not set for {_publication.Topic}");
-            if (!channelInitialized)
-            {
-                Channel.BasicAcksAsync += OnPublishSucceeded;
-                Channel.BasicNacksAsync += OnPublishFailed;
-            }
+            ListenForConfirmsOnChannel();
 
             message.Persist = Connection.PersistMessages;
 
@@ -526,10 +524,23 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     private static TaskCompletionSource<bool> NewPendingTaskCompletionSource()
         => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    private void ListenForConfirmsOnChannel()
+    {
+        if (ReferenceEquals(Channel, _confirmChannel)) return;
+
+        DetachPublisherConfirmHandlers();
+        Channel!.BasicAcksAsync += OnPublishSucceeded;
+        Channel.BasicNacksAsync += OnPublishFailed;
+        _confirmChannel = Channel;
+    }
+
     private void DetachPublisherConfirmHandlers()
     {
-        Channel?.BasicAcksAsync -= OnPublishSucceeded;
-        Channel?.BasicNacksAsync -= OnPublishFailed;
+        if (_confirmChannel is null) return;
+
+        _confirmChannel.BasicAcksAsync -= OnPublishSucceeded;
+        _confirmChannel.BasicNacksAsync -= OnPublishFailed;
+        _confirmChannel = null;
     }
 
     private Task OnPublishFailed(object sender, BasicNackEventArgs e) => SettleConfirmationsAsync(e.DeliveryTag, e.Multiple, success: false);
