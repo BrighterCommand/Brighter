@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using System.Collections.Generic;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
 
@@ -33,12 +34,20 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 public class CoalescingConfirmsRmqProducer(RmqMessagingGatewayConnection connection)
     : RmqMessageProducer(connection)
 {
+    private readonly List<CoalescingConfirmsRmqChannel> _channels = [];
+
     public CoalescingConfirmsRmqChannel Confirms => (CoalescingConfirmsRmqChannel)Channel!;
+
+    // Every channel the producer has opened, oldest first, so a test can inspect one it has replaced
+    public IReadOnlyList<CoalescingConfirmsRmqChannel> Channels => _channels;
 
     protected override void ConnectToBroker(OnMissingChannel makeExchange)
     {
         base.ConnectToBroker(makeExchange);
-        if (Channel is not CoalescingConfirmsRmqChannel)
-            Channel = (IModel)(object)CoalescingConfirmsRmqChannel.Wrap(Channel!);
+        if (Channel is CoalescingConfirmsRmqChannel) return;
+
+        var confirms = CoalescingConfirmsRmqChannel.Wrap(Channel!);
+        _channels.Add(confirms);
+        Channel = (IModel)(object)confirms;
     }
 }
