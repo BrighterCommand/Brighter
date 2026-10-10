@@ -33,6 +33,7 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
+using Polly;
 using Polly.Registry;
 
 // ReSharper disable StaticMemberInGenericType
@@ -755,13 +756,15 @@ namespace Paramore.Brighter
 
                     Log.FoundMessagesToClear(s_logger, messages.Length, amountToClear);
 
+                    // Continue on the caller's context: the TimedOutboxSweeper runs this in a context on its own thread, so
+                    // the sweep stays off a starved thread pool. A caller without a context is unaffected.
                     if (useBulk)
                     {
-                        await BulkDispatchAsync(messages, requestContext, false, cancellationToken);
+                        await BulkDispatchAsync(messages, requestContext, true, cancellationToken);
                     }
                     else
                     {
-                        await DispatchAsync(messages, requestContext, false, cancellationToken);
+                        await DispatchAsync(messages, requestContext, true, cancellationToken);
                     }
 
                     Log.MessagesHaveBeenCleared(s_logger);
@@ -1465,8 +1468,18 @@ namespace Paramore.Brighter
                 }
                 else
                 {
-                    await resiliencePipeline.ExecuteAsync(async ct => await send(ct), cancellationToken)
-                        .ConfigureAwait(continueOnCapturedContext);
+                    // Polly awaits with its context's ContinueOnCapturedContext, so pass the caller's choice through.
+                    var resilienceContext = ResilienceContextPool.Shared.Get(continueOnCapturedContext, cancellationToken);
+                    try
+                    {
+                        await resiliencePipeline
+                            .ExecuteAsync(async context => await send(context.CancellationToken), resilienceContext)
+                            .ConfigureAwait(continueOnCapturedContext);
+                    }
+                    finally
+                    {
+                        ResilienceContextPool.Shared.Return(resilienceContext);
+                    }
                 }
                 
                 return true;
