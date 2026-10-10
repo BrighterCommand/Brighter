@@ -17,7 +17,8 @@ internal static class CountingOutboxCommandProcessorBuilder
     public static CommandProcessor Build(
         CountingOutbox outbox,
         int maxOutStandingMessages,
-        TimeSpan maxOutStandingCheckInterval)
+        TimeSpan maxOutStandingCheckInterval,
+        TimeProvider timeProvider = null)
     {
         var routingKey = new RoutingKey("MyCommand");
 
@@ -47,7 +48,8 @@ internal static class CountingOutboxCommandProcessorBuilder
             publicationFinder: new FindPublicationByPublicationTopicOrRequestType(),
             outbox: outbox,
             maxOutStandingMessages: maxOutStandingMessages,
-            maxOutStandingCheckInterval: maxOutStandingCheckInterval);
+            maxOutStandingCheckInterval: maxOutStandingCheckInterval,
+            timeProvider: timeProvider);
 
         return new CommandProcessor(
             new InMemoryRequestContextFactory(),
