@@ -1,7 +1,7 @@
 # Bugfix: RMQ.Async producer never subscribes confirm handlers to a replacement channel
 
 **Linked Issue**: #4578
-**Status**: Tested
+**Status**: Fixed
 
 ## Symptom
 
@@ -324,4 +324,30 @@ No `ConfirmSelect` equivalent is needed, because v7 enables confirms when it cre
     `Channels`.
 
 ## Fix
-_(left blank — filled by /bugfix:fix)_
+
+**Commit:** `fix: RMQ.Async producer moves confirm handlers to a replacement channel`, in
+`src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageProducer.cs`.
+- The `_confirmChannel` field records the channel the handlers are attached to.
+- `ListenForConfirmsOnChannel()` runs on each send after `EnsureBrokerAsync`. It compares `Channel`
+  with `_confirmChannel` by reference. If they differ, it detaches from the old channel and attaches
+  to the new one.
+- `DetachPublisherConfirmHandlers()` detaches from `_confirmChannel`, not from whatever `Channel`
+  is, and then clears it.
+
+**Scope narrowed after the test, with the user's agreement.** The Confirm gate approved a wider
+scope. Writing tests for it showed none of the extra items has a failure a test can reach on a
+single-threaded send path once the core fix is in. In tracking mode, each send settles its own
+entry before `BasicPublishAsync` returns, and new-channel tags overwrite old entries with the same
+tag. So these three items moved out of scope:
+
+- clearing `_pendingConfirmations` on a channel switch;
+- the dispose guard and detaching in `finally`;
+- the lock around the attach.
+
+The real leftover risk is a concurrent-send defect. Its three symptoms are duplicate tags, a failed
+old-channel send's `finally` removing a new-channel entry, and a double attach. It was recorded as
+one design problem on #4577:
+https://github.com/BrighterCommand/Brighter/issues/4577#issuecomment-6099959203
+
+Detaching after the IOException reset was left as it is: the v7 source shows it is safe (see
+Upstream verification).
