@@ -127,6 +127,88 @@ write_solution 'samples/Example App/Example App.csproj'
 run_guard
 assert_equal 0 "$STATUS"
 
+arrange 'commented-out project is not registered'
+write_project 'src/Example.csproj'
+cat > "$CASE_DIR/Brighter.slnx" <<'XML'
+<Solution>
+  <!-- <Project Path="src/Example.csproj" /> -->
+</Solution>
+XML
+run_guard
+assert_equal 1 "$STATUS"
+assert_contains 'src/Example.csproj'
+
+arrange 'solution item is not a project registration'
+write_project 'src/Example.csproj'
+cat > "$CASE_DIR/Brighter.slnx" <<'XML'
+<Solution>
+  <Folder Name="/Files/">
+    <File Path="src/Example.csproj" />
+  </Folder>
+</Solution>
+XML
+run_guard
+assert_equal 1 "$STATUS"
+assert_contains 'src/Example.csproj'
+
+arrange 'single-quoted project path is registered'
+write_project 'src/Example.csproj'
+cat > "$CASE_DIR/Brighter.slnx" <<'XML'
+<Solution>
+  <Project Path='src/Example.csproj' />
+</Solution>
+XML
+run_guard
+assert_equal 0 "$STATUS"
+
+arrange 'multiline project attributes with whitespace are registered'
+write_project 'src/Example.csproj'
+cat > "$CASE_DIR/Brighter.slnx" <<'XML'
+<Solution>
+  <Folder Name="/Source/">
+    <Project
+      Path = "src/Example.csproj"
+    />
+  </Folder>
+</Solution>
+XML
+run_guard
+assert_equal 0 "$STATUS"
+
+arrange 'XML entities in project paths are decoded'
+write_project 'samples/A&B/Example.csproj'
+cat > "$CASE_DIR/Brighter.slnx" <<'XML'
+<Solution>
+  <Project Path="samples/A&amp;B/Example.csproj" />
+</Solution>
+XML
+run_guard
+assert_equal 0 "$STATUS"
+
+arrange 'malformed XML is rejected despite a matching project path'
+write_project 'src/Example.csproj'
+cat > "$CASE_DIR/Brighter.slnx" <<'XML'
+<Solution>
+  <Project Path="src/Example.csproj">
+</Solution>
+XML
+run_guard
+assert_equal 1 "$STATUS"
+assert_contains 'Brighter.slnx'
+
+arrange 'solution element must be the document root'
+write_project 'src/Example.csproj'
+cat > "$CASE_DIR/Brighter.slnx" <<'XML'
+<Other>
+  <Solution>
+    <Project Path="src/Example.csproj" />
+  </Solution>
+</Other>
+XML
+run_guard
+assert_equal 1 "$STATUS"
+assert_contains 'Brighter.slnx'
+
 arrange 'standalone project is explicitly excluded'
 write_project 'bugfixes/diagnostic/Diagnostic.csproj'
 write_solution

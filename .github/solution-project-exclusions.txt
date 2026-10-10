@@ -1,3 +1,6 @@
 # Exact Git-tracked paths, one per line. Explain each intentional exclusion.
 # Standalone live-GCP diagnostic with independently pinned packages; run manually.
 bugfixes/0037-gcp-requeue-immediate-redelivery/diagnostic/Fr15Diagnostic.csproj
+# Standalone sweeper starvation diagnostics for manual before/after measurements.
+bugfixes/0052-timed-outbox-sweeper-starvation/diagnostic/pileup/pileup.csproj
+bugfixes/0052-timed-outbox-sweeper-starvation/diagnostic/starve/starve.csproj

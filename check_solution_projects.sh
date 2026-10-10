@@ -29,18 +29,27 @@ if [[ ! -r Brighter.slnx ]]; then
     exit 1
 fi
 
-if ! grep -Eq '<Solution([[:space:]>])' Brighter.slnx ||
-    ! grep -Eq '</Solution>|<Solution[^>]*/>' Brighter.slnx; then
-    echo 'Brighter.slnx is missing a complete Solution element.' >&2
-    exit 1
-fi
-
 CHECK_TEMP=$(mktemp -d "${TMPDIR:-/tmp}/brighter-solution-check.XXXXXX")
 trap 'rm -rf -- "$CHECK_TEMP"' EXIT
 
 git -c core.quotePath=false ls-files -- '*.csproj' | sort -u > "$CHECK_TEMP/tracked"
-{ grep -o 'Path="[^"]*\.csproj"' Brighter.slnx || [[ $? -eq 1 ]]; } |
-    sed 's/Path="//;s/"$//' | sort -u > "$CHECK_TEMP/registered"
+python3 - <<'PY' | sort -u > "$CHECK_TEMP/registered"
+import sys
+import xml.etree.ElementTree as ET
+
+try:
+    solution = ET.parse("Brighter.slnx").getroot()
+except (OSError, ET.ParseError) as error:
+    sys.exit(f"Cannot parse Brighter.slnx: {error}")
+
+if solution.tag != "Solution":
+    sys.exit("Brighter.slnx must have a Solution root element.")
+
+for project in solution.iter("Project"):
+    path = project.get("Path", "")
+    if path.endswith(".csproj"):
+        print(path)
+PY
 
 EXCLUSIONS='.github/solution-project-exclusions.txt'
 if [[ -f "$EXCLUSIONS" ]]; then
