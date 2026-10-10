@@ -25,8 +25,10 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -60,10 +62,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private readonly int _waitForConfirmsTimeOutInMilliseconds;
         private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
         // The ack/nack handlers run on the client's connection loop, which must never block on a
-        // subscriber, so awaited callbacks run on worker tasks. The tracker lets Dispose wait for
-        // them — including the awaited Outbox mark-dispatched — after WaitForConfirms has drained
-        // the broker acks themselves.
-        private readonly InFlightCallbackTracker _confirmationCallbacks = new();
+        // subscriber, so awaited callbacks run on the queue's single worker, in batches started in ack order
+        // (never one thread-pool item per ack). The queue lets Dispose wait for them — including the
+        // awaited Outbox mark-dispatched — after WaitForConfirms has drained the broker acks themselves.
+        private readonly BatchedCallbackQueue _confirmationCallbacks;
 
         /// <summary>
         /// Action taken when a message is published, following receipt of a confirmation from the broker
@@ -122,6 +124,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             _publication = publication ?? new RmqPublication { MakeChannels = OnMissingChannel.Create };
             _waitForConfirmsTimeOutInMilliseconds = _publication.WaitForConfirmsTimeOutInMilliseconds;
+            // A publication without a topic publishes to many routing keys on its exchange, so report it by the exchange
+            var destination = RoutingKey.IsNullOrEmpty(_publication.Topic)
+                ? new RoutingKey(connection.Exchange?.Name ?? string.Empty)
+                : _publication.Topic!;
+            _confirmationCallbacks = new BatchedCallbackQueue(MessagingSystem.RabbitMQ, destination);
         }
 
         /// <summary>
@@ -195,6 +202,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             catch (IOException io)
             {
                 Log.ErrorTalkingToSocket(s_logger, io, Connection.AmpqUri!.GetSanitizedUri());
+                // The new channel numbers its delivery tags from 1 again, so its acks must not settle the old channel's
+                _pendingConfirmations.Clear();
                 ResetConnectionToBroker();
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
             }
@@ -251,6 +260,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     // WaitForConfirms drains the broker acks; the callbacks those acks spawned (including
                     // the awaited Outbox mark-dispatched) run on worker tasks, so wait for them too.
                     WaitForConfirmationCallbacks();
+                    _confirmationCallbacks.Complete();
                 }
             }
             finally
@@ -259,40 +269,52 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
         }
 
-        private void OnPublishFailed(object? sender, BasicNackEventArgs e)
+        private void OnPublishFailed(object? sender, BasicNackEventArgs e) => SettleConfirmations(e.DeliveryTag, e.Multiple, success: false);
+
+        private void OnPublishSucceeded(object? sender, BasicAckEventArgs e) => SettleConfirmations(e.DeliveryTag, e.Multiple, success: true);
+
+        private void SettleConfirmations(ulong deliveryTag, bool multiple, bool success)
         {
-            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out PendingConfirmation confirmation))
+            foreach (var confirmedTag in ConfirmedDeliveryTags(deliveryTag, multiple))
             {
-                RaisePublishConfirmation(new PublishConfirmationResult(false, confirmation.MessageId, confirmation.Topic, confirmation.Context));
-                _pendingConfirmations.TryRemove(e.DeliveryTag, out PendingConfirmation _);
-                Log.FailedToPublishMessage(s_logger, confirmation.MessageId.Value);
+                // Claim before raising: the handlers are subscribed once per Send, so only one invocation may win each tag
+                if (_pendingConfirmations.TryRemove(confirmedTag, out PendingConfirmation confirmation))
+                {
+                    RaisePublishConfirmation(new PublishConfirmationResult(success, confirmation.MessageId, confirmation.Topic, confirmation.Context));
+                    if (success)
+                        Log.PublishedMessageInformation(s_logger, confirmation.MessageId.Value);
+                    else
+                        Log.FailedToPublishMessage(s_logger, confirmation.MessageId.Value);
+                }
             }
         }
 
-        private void OnPublishSucceeded(object? sender, BasicAckEventArgs e)
-        {
-            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out PendingConfirmation confirmation))
-            {
-                RaisePublishConfirmation(new PublishConfirmationResult(true, confirmation.MessageId, confirmation.Topic, confirmation.Context));
-                _pendingConfirmations.TryRemove(e.DeliveryTag, out PendingConfirmation _);
-                Log.PublishedMessageInformation(s_logger, confirmation.MessageId.Value);
-            }
-        }
+        // The broker may coalesce confirms: with multiple set, one frame settles every tag up to and including its own
+        private IEnumerable<ulong> ConfirmedDeliveryTags(ulong deliveryTag, bool multiple)
+            => multiple
+                ? _pendingConfirmations.Keys.Where(pending => pending <= deliveryTag).OrderBy(pending => pending).ToArray()
+                : [deliveryTag];
 
         private void RaisePublishConfirmation(PublishConfirmationResult result)
         {
-            // The sync event stays on the connection loop thread, matching its long-standing behavior.
-            OnMessagePublished?.Invoke(result);
+            // The sync event stays on the connection loop thread, matching its long-standing behavior. A subscriber
+            // that throws must not stop the rest of a coalesced ack from settling.
+            try
+            {
+                OnMessagePublished?.Invoke(result);
+            }
+            catch (Exception ex)
+            {
+                Log.ConfirmationCallbackFault(s_logger, result.MessageId.Value, ex);
+            }
 
             var handlers = _onMessagePublishedAsync;
             if (handlers is null)
                 return;
 
             // Awaited callbacks must not block the connection loop (WaitForConfirms depends on it to
-            // process acks), so they run on a worker task; Dispose waits on the in-flight tracker,
-            // which must be released on every path or that wait would hang until its timeout.
-            _confirmationCallbacks.Begin();
-            Task.Run(async () =>
+            // process acks), so they run on the confirmation queue's worker, in batches started in ack order.
+            _confirmationCallbacks.Enqueue(async () =>
             {
                 try
                 {
@@ -301,10 +323,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 catch (Exception ex)
                 {
                     Log.ConfirmationCallbackFault(s_logger, result.MessageId.Value, ex);
-                }
-                finally
-                {
-                    _confirmationCallbacks.End();
                 }
             });
         }
