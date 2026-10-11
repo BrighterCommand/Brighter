@@ -119,8 +119,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     /// <see cref="MigrateAsync"/> emits a migration span on the tracer's
     /// <see cref="System.Diagnostics.ActivitySource"/>. Defaults to null (no instrumentation).</param>
     /// <param name="scope">Controls where the migration-history table is physically placed.
-    /// Defaults to <see cref="MigrationHistoryScope.Global"/> (today's behaviour). Threaded on
-    /// the same call path as <paramref name="lockTimeout"/>.</param>
+    /// Defaults to <see cref="MigrationHistoryScope.Global"/>.</param>
     protected SqlBoxMigrationRunner(
         IAmAVersionDetectingMigrationHelper<TConnection, TTransaction> detectionHelper,
         IAmABoxMigrationCatalog catalog,
@@ -149,8 +148,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     /// The backend default schema in which history lives under
     /// <see cref="MigrationHistoryScope.Global"/>: MSSQL <c>"dbo"</c>, PostgreSQL <c>"public"</c>,
     /// or <c>null</c> for backends with no distinct schema concept (MySQL — history lives in the
-    /// connection-bound database; SQLite). This is the value the runner used unconditionally
-    /// prior to this feature.
+    /// connection-bound database; SQLite).
     /// </summary>
     protected abstract string? DefaultHistorySchema { get; }
 
@@ -166,8 +164,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     /// Resolves the physical schema that holds the migration-history table for this run. Under
     /// <see cref="MigrationHistoryScope.PerSchema"/> on a placement backend it is the configured
     /// <see cref="IAmARelationalDatabaseConfiguration.SchemaName"/> (guaranteed non-null by the
-    /// misconfiguration guard); otherwise it is <see cref="DefaultHistorySchema"/> — i.e. today's
-    /// behaviour. This is the single source of truth handed to both the write side (CREATE/INSERT)
+    /// misconfiguration guard); otherwise it is <see cref="DefaultHistorySchema"/>. This is the single source of truth handed to both the write side (CREATE/INSERT)
     /// and the read side (detection helper), so they cannot diverge.
     /// </summary>
     protected string? ResolveHistorySchema() =>
@@ -232,9 +229,6 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
 
         ValidateMigrationsMonotonic(schemaName?.Value, tableName.Value, migrations);
 
-        // Span name follows OTel DB convention "{operation} {target}" — the table name is the
-        // operator-meaningful target. Tags carry backend/schema/box-type so a multi-table
-        // startup trace can be filtered without re-parsing the display name.
         using var activity = StartMigrationActivity(tableName.Value, schemaName?.Value, boxType);
 
         // Spec 0029 NF5/AC7 (ADR 0060 D6): surface the placement decision per run so an operator
@@ -247,13 +241,6 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
             "Box migration history for {BoxTable} resolved to schema {HistorySchema} (scope {Scope})",
             tableName, ResolveHistorySchema() ?? "<backend default>", _scope);
 
-        // Bootstrap resources are held in locals so the outer try/finally can guarantee
-        // disposal whether the body succeeds, the body throws, or the bootstrap itself
-        // fails before any disposer would have run. The inner bootstrap try/catch records
-        // bootstrap failures (connection refused, lock timeout from BeginAsync per
-        // ADR 0058 §B.3) onto the migration activity — without this narrow handler those
-        // failures escape with ActivityStatusCode.Unset because the success-path catch
-        // only wraps the body.
         // Sync Dispose for the connection: DbConnection does not implement IAsyncDisposable
         // on netstandard2.0, so DisposeAsync is unavailable across the shared-assembly TFM
         // matrix. The UoW implements IAsyncDisposable (see IAmAProvisioningUnitOfWork) and
@@ -288,11 +275,6 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
                 {
                     activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "fresh");
                     activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventFreshInstall));
-                    // The fresh-install fast path no longer reads migrations[0].UpScript — V1 in
-                    // the chain now carries its honest historical baseline DDL (spec 0027 R1).
-                    // The live builder DDL comes from the catalog's FreshInstallDdl hook so the
-                    // post-install column set always matches V_latest regardless of how the
-                    // historical V1 looked.
                     var freshInstallDdl = _catalog.FreshInstallDdl(_configuration);
                     var latestVersion = migrations.Count == 0 ? (MigrationVersion)0 : migrations[migrations.Count - 1].Version;
                     await RunFreshPathAsync(
@@ -359,10 +341,10 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         }
     }
 
+    // The span name follows the OTel DB convention "{operation} {target}". With no schema,
+    // db.namespace is left off rather than set to null, so "namespace is missing" filters work.
     private Activity? StartMigrationActivity(string tableName, string? schemaName, BoxType boxType)
     {
-        // ActivitySource.StartActivity returns null when no listener is registered or sampling
-        // discards — caller handles null gracefully via the `?.` chain on every Set/AddEvent.
         var activity = Tracer?.ActivitySource.StartActivity(
             $"{BrighterSemanticConventions.BoxMigration} {tableName}",
             ActivityKind.Internal);
@@ -371,8 +353,6 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         activity.SetTag(BrighterSemanticConventions.DbTable, tableName);
         if (schemaName is not null)
         {
-            // SQLite has no schema concept — leaving the tag out (vs. setting it to "null")
-            // keeps a "filter where db.namespace is missing" query meaningful.
             activity.SetTag(BrighterSemanticConventions.DbNamespace, schemaName);
         }
         activity.SetTag(BrighterSemanticConventions.BoxType, boxType.ToString());
@@ -423,9 +403,9 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     /// Applies the fresh-install path: executes <paramref name="freshInstallDdl"/> (the live
     /// V_latest-shape DDL sourced from <see cref="IAmABoxMigrationCatalog.FreshInstallDdl"/>)
     /// and stamps history at <paramref name="latestVersion"/>. Invoked when re-detection inside
-    /// the UoW reports no table. The fresh path no longer reads the migration chain — the
-    /// historical V1 in <see cref="IAmABoxMigrationCatalog.All"/> may carry a pre-V_latest
-    /// baseline that does not match the current builder (spec 0027 R1).
+    /// the UoW reports no table. The fresh path does not read the migration chain: the
+    /// historical V1 in <see cref="IAmABoxMigrationCatalog.All"/> may carry an older baseline
+    /// that does not match the current builder.
     /// </summary>
     protected abstract Task RunFreshPathAsync(
         TConnection connection, TTransaction? transaction, string? schemaName, string tableName,
@@ -468,14 +448,8 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         return (tableExists, historyExists);
     }
 
-    /// <summary>
-    /// Rejects duplicate, gap, or out-of-order migration versions before any work begins.
-    /// A malformed list corrupts every path branch (PK violation on history insert, skipped
-    /// ALTERs, double-applied DDL), so the validation sits at <see cref="MigrateAsync"/> entry.
-    /// Lifted from spec 0027 Items H/I/Q. Private because the orchestration is owned by the
-    /// base; derived classes implement only the per-backend hooks and have no reason to
-    /// re-invoke (or override the algorithm of) the pre-flight monotonicity check.
-    /// </summary>
+    // Rejects duplicate, gap or out-of-order versions before any work begins: a malformed chain
+    // corrupts every path (PK violation on history insert, skipped ALTERs, double-applied DDL).
     private static void ValidateMigrationsMonotonic(
         string? schemaName, string tableName, IReadOnlyList<IAmABoxMigration> migrations)
     {

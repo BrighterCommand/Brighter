@@ -31,9 +31,8 @@ namespace Paramore.Brighter.BoxProvisioning;
 /// versions have been applied.
 /// </summary>
 /// <remarks>
-/// Spec 0027 R1 (PR #4039 part 2): the runner retrieves its migration chain and
-/// fresh-install DDL from an injected <see cref="IAmABoxMigrationCatalog"/>, so the
-/// caller no longer threads the migration list through every invocation. The Spanner
+/// The runner retrieves its migration chain and fresh-install DDL from an injected
+/// <see cref="IAmABoxMigrationCatalog"/>, so callers do not pass the migration list. The Spanner
 /// runner is exempt from <see cref="IAmABoxMigrationCatalog"/> per ADR 0057 §6 and
 /// implements this interface directly with its own per-backend fresh-install logic.
 /// </remarks>

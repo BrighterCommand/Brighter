@@ -113,8 +113,7 @@ public interface IAmAProvisioningUnitOfWork<TTransaction> : IAsyncDisposable
     /// <c>RollbackAsync</c> MUST NOT throw — disposal-style semantics. If the
     /// underlying transaction-rollback or lock-release fails internally, the
     /// implementation logs a Warning (with backend-specific diagnostic — e.g.
-    /// MySQL preserves its <c>RELEASE_LOCK</c> tri-state per spec 0027 Item M /
-    /// ADR 0057 §5b) and returns. The runner passes
+    /// MySQL preserves its <c>RELEASE_LOCK</c> tri-state per ADR 0057 §5b) and returns. The runner passes
     /// <see cref="CancellationToken.None"/> on rollback (NOT the caller's token)
     /// so a signalled token does not abandon the unwind. See ADR 0058 §B.3.
     /// </remarks>

@@ -59,9 +59,6 @@ public static class Identifiers
     /// with an underscore.</exception>
     public static void AssertSafe(string identifier, string parameterName)
     {
-        // Split missing-configuration (null) from malformed-identifier so operators see the real
-        // root cause. Pointing at the regex when no identifier was supplied at all sends them
-        // looking for an "invalid character" that does not exist.
         if (identifier is null)
         {
             throw new ConfigurationException(

@@ -93,8 +93,6 @@ public static class BrighterBuilderBoxProvisioningExtensions
         return builder;
     }
 
-    // Marker singleton used to detect a second UseBoxProvisioning call on the same builder.
-    // Internal because callers should never resolve or depend on it directly — its only role
-    // is to flip the "already invoked" check on subsequent calls.
+    // Marks a builder on which UseBoxProvisioning has already run.
     internal sealed class BoxProvisioningMarker { }
 }
