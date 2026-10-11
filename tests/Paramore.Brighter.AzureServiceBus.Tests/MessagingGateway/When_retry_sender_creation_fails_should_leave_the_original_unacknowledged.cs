@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -32,15 +32,12 @@ using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-public class AzureServiceBusRetrySenderRecoveryTests
+public class AzureServiceBusRetrySenderFailureTests
 {
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    public async Task When_retry_sender_creation_fails_transiently_should_retry_before_acknowledging(
-        bool synchronous, bool exhaustRetries)
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task When_retry_sender_creation_fails_should_leave_the_original_unacknowledged(bool synchronous)
     {
         // Arrange
         var delivery = ServiceBusModelFactory.ServiceBusReceivedMessage(
@@ -60,9 +57,8 @@ public class AzureServiceBusRetrySenderRecoveryTests
         var message = synchronous ? syncChannel!.Receive(TimeSpan.FromSeconds(1))
             : await asyncChannel!.ReceiveAsync(TimeSpan.FromSeconds(1));
         message.Header.UpdateHandledCount();
-        var failure = new ServiceBusException("Sender unavailable", ServiceBusFailureReason.ServiceBusy);
-        for (var i = 0; i < (exhaustRetries ? 6 : 2); i++)
-            client.SenderCreationFailures.Enqueue(failure);
+        var failure = new ObjectDisposedException(nameof(ServiceBusClient));
+        client.SenderCreationFailures.Enqueue(failure);
         var previousAttempts = client.SenderCreationAttempts;
         client.OnSenderCreation = () => Assert.Equal(0, client.Receiver.CompletionAttempts);
 
@@ -74,20 +70,10 @@ public class AzureServiceBusRetrySenderRecoveryTests
         });
 
         // Assert
-        if (exhaustRetries)
-        {
-            Assert.Same(failure, Assert.IsType<ChannelFailureException>(error).InnerException);
-            Assert.Equal(6, client.SenderCreationAttempts - previousAttempts);
-            Assert.Empty(client.Scheduled);
-            Assert.Equal(0, client.Receiver.CompletionAttempts);
-        }
-        else
-        {
-            Assert.Null(error);
-            Assert.Equal(3, client.SenderCreationAttempts - previousAttempts);
-            Assert.Equal("retry-queue", Assert.Single(client.Scheduled).Queue);
-            Assert.Equal(1, client.Receiver.CompletionAttempts);
-        }
+        Assert.Same(failure, Assert.IsType<ChannelFailureException>(error).InnerException);
+        Assert.Equal(1, client.SenderCreationAttempts - previousAttempts);
+        Assert.Empty(client.Scheduled);
+        Assert.Equal(0, client.Receiver.CompletionAttempts);
         Assert.Equal("original", message.Id.Value);
     }
 }

@@ -137,6 +137,16 @@ public class AzureServiceBusDelayedRetryConfigurationTests
             Assert.Equal(1, redelivered.Header.HandledCount);
             Assert.Contains(s_logs.Entries, entry => entry.Level == LogLevel.Warning
                 && entry.Message.Contains("ForwardTo") && entry.Message.Contains(original.MessageId));
+            redelivered.Header.UpdateHandledCount();
+            Assert.True(synchronous
+                ? syncChannel!.Requeue(redelivered, TimeSpan.FromMinutes(5))
+                : await asyncChannel!.RequeueAsync(redelivered, TimeSpan.FromMinutes(5)));
+            redelivered = synchronous
+                ? syncChannel!.Receive(TimeSpan.FromSeconds(5))
+                : await asyncChannel!.ReceiveAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(2, redelivered.Header.HandledCount);
+            Assert.Single(s_logs.Entries, entry => entry.Level == LogLevel.Warning
+                && entry.Message.Contains("ForwardTo") && entry.Message.Contains(original.MessageId));
             if (synchronous)
                 syncChannel!.Acknowledge(redelivered);
             else

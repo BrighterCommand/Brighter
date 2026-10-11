@@ -75,7 +75,12 @@ public class AzureServiceBusRetrySchedulerConfigurationTests
         });
 
         // Assert
-        Assert.IsType<ConfigurationException>(error);
+        var configurationError = Assert.IsType<ConfigurationException>(error);
+        if (!ordinaryScheduler)
+            Assert.Contains("No scheduler is configured for RequeueSchedulerMode.Global", configurationError.Message);
+        else
+            Assert.Contains(synchronous ? "IAmAMessageRequeueSchedulerSync" : "IAmAMessageRequeueSchedulerAsync",
+                configurationError.Message);
         Assert.Empty(client.Scheduled);
         Assert.Equal(0, client.Receiver.CompletionAttempts);
     }

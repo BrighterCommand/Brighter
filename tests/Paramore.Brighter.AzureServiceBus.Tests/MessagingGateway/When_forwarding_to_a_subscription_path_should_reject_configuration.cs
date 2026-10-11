@@ -36,6 +36,11 @@ public class AzureServiceBusForwardingDestinationValidationTests
     [InlineData("orders/Subscriptions/accounting")]
     [InlineData("orders/subscriptions/accounting")]
     [InlineData("orders/$DeadLetterQueue")]
+    [InlineData("sb://namespace/queue")]
+    [InlineData("/queue")]
+    [InlineData("queue/")]
+    [InlineData("queue//child")]
+    [InlineData("queue/ /child")]
     public async Task When_forwarding_to_a_subscription_path_should_reject_configuration(string destination)
     {
         // Arrange
@@ -63,6 +68,11 @@ public class AzureServiceBusForwardingDestinationValidationTests
     [InlineData("orders/Subscriptions/accounting")]
     [InlineData("orders/subscriptions/accounting")]
     [InlineData("orders/$DeadLetterQueue")]
+    [InlineData("sb://namespace/queue")]
+    [InlineData("/queue")]
+    [InlineData("queue/")]
+    [InlineData("queue//child")]
+    [InlineData("queue/ /child")]
     public async Task When_scheduling_to_a_subscription_path_should_reject_before_creating_a_sender(string destination)
     {
         // Arrange
@@ -77,6 +87,45 @@ public class AzureServiceBusForwardingDestinationValidationTests
         // Assert
         Assert.IsType<System.ArgumentException>(error);
         Assert.Empty(client.Scheduled);
+        Assert.Empty(client.Senders);
+    }
+
+    [Theory]
+    [InlineData("orders/Subscriptions/accounting", false)]
+    [InlineData("orders/Subscriptions/accounting", true)]
+    [InlineData("queue/$DeadLetterQueue", false)]
+    [InlineData("sb://namespace/queue", true)]
+    [InlineData("/queue", false)]
+    [InlineData("queue/", true)]
+    [InlineData("queue//child", false)]
+    [InlineData("queue/ /child", true)]
+    public async Task When_using_an_invalid_queue_routing_key_should_reject_configuration(string destination, bool synchronous)
+    {
+        // Arrange
+        await using var client = new InMemoryRetryServiceBusClient(ServiceBusModelFactory.ServiceBusReceivedMessage());
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client));
+        var subscription = new AzureServiceBusSubscription(new SubscriptionName("retry"),
+            new ChannelName("retry"), new RoutingKey(destination), requestType: typeof(Command),
+            timeOut: System.TimeSpan.FromSeconds(1),
+            messagePumpType: synchronous ? MessagePumpType.Reactor : MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Assume,
+            subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { UseServiceBusQueue = true });
+
+        // Act
+        var error = await Record.ExceptionAsync(async () =>
+        {
+            if (synchronous)
+            {
+                using var channel = factory.CreateSyncChannel(subscription);
+            }
+            else
+            {
+                await using var channel = await factory.CreateAsyncChannelAsync(subscription);
+            }
+        });
+
+        // Assert
+        Assert.IsType<ConfigurationException>(error);
         Assert.Empty(client.Senders);
     }
 }

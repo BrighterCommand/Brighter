@@ -25,6 +25,7 @@ THE SOFTWARE. */
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
@@ -35,6 +36,16 @@ public class InMemoryRetryServiceBusReceiver(ServiceBusReceivedMessage message) 
 {
     public int CompletionAttempts { get; private set; }
     public Exception? CompletionFailure { get; set; }
+    public Exception? AbandonFailure { get; set; }
+    public int AbandonAttempts { get; private set; }
+
+    public override Task AbandonMessageAsync(ServiceBusReceivedMessage message,
+        IDictionary<string, object>? propertiesToModify = null, CancellationToken cancellationToken = default)
+    {
+        AbandonAttempts++;
+        if (AbandonFailure is { } failure) throw failure;
+        return Task.CompletedTask;
+    }
 
     public override Task CompleteMessageAsync(ServiceBusReceivedMessage message, CancellationToken cancellationToken = default)
     {
