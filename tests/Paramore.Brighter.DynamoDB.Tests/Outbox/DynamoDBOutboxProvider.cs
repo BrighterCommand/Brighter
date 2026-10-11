@@ -23,7 +23,7 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
 
         return new DynamoDbOutbox(
             Const.DynamoDbClient,
-            new DynamoDbConfiguration { TableName = _tableName }
+            new DynamoDbConfiguration(_tableName, timeout: Const.OUTBOX_TIMEOUT_IN_MILLISECONDS)
         );
     }
 
@@ -36,7 +36,7 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
 
         return new DynamoDbOutbox(
             Const.DynamoDbClient,
-            new DynamoDbConfiguration { TableName = _tableName }
+            new DynamoDbConfiguration(_tableName, timeout: Const.OUTBOX_TIMEOUT_IN_MILLISECONDS)
         );
     }
 
@@ -92,7 +92,7 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
 
         var outbox = new DynamoDbOutbox(
             Const.DynamoDbClient,
-            new DynamoDbConfiguration { TableName = _tableName! }
+            new DynamoDbConfiguration(_tableName, timeout: Const.OUTBOX_TIMEOUT_IN_MILLISECONDS)
         );
 
         var client = Const.DynamoDbClient;

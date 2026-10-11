@@ -523,10 +523,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: [build]
+    # Each framework gets its own emulator and shared test tables.
+    strategy:
+      fail-fast: false
+      matrix:
+        framework: [net9.0, net10.0]
 
     services:
       dynamo:
-        image: dwmkerr/dynamodb
+        image: amazon/dynamodb-local:3.3.1
         ports: 
           - 8000:8000
 
@@ -542,8 +547,8 @@ jobs:
         run: dotnet restore
       - name: DynamoDB Tests
         run: |
-          dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --framework ${{ matrix.framework }} --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test ./tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj --framework ${{ matrix.framework }} --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
   aws-mock-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 20
