@@ -20,6 +20,16 @@ The compose fixture disables Khepri on first boot because the plugin has a
 with Khepri. Use a fresh test volume when changing this setting. The upstream plugin is archived;
 this fixture does not establish compatibility with RabbitMQ 4.3+.
 
+The image removes any Erlang cookie generated during plugin setup. RabbitMQ creates its cookie
+at first startup, owned by the runtime user, so a build-time root-owned cookie cannot prevent
+startup as `rabbitmq`. This applies to fresh containers; it does not repair cookies in existing volumes.
+The Compose fixture starts directly as `rabbitmq`, and CI checks that user and broker health before
+running the native-delay tests. Startup cannot rely on a root entrypoint repairing cookie ownership.
+
+If pulling `rabbitmq:4.2.6-management` fails with `unable to retrieve auth token: invalid username/password`,
+refresh the saved Docker Hub credentials for your container engine, then retry the pull and Compose build.
+This is a registry authentication failure, separate from the broker's cookie permissions.
+
 With `Exchange.SupportDelay = true`, delayed retries publish to `<exchange-name>.requeue`, an
 `x-delayed-message` exchange with `x-delayed-type=direct`, the original exchange's durability,
 and `autoDelete=false`. Each consumer queue binds with its own queue name as the routing key.
