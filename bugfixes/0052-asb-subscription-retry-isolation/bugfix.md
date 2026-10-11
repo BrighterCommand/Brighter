@@ -20,9 +20,11 @@ ambiguous duplicate sends within its detection window without suppressing the ne
 The original is acknowledged only after scheduling succeeds. Scheduling failure or cancellation
 leaves it unacknowledged; settlement failures propagate.
 
-Native scheduling is bound to the consuming broker and takes precedence over a registered scheduler.
-A global scheduler pointing to another namespace cannot redirect the retry. No separate scheduler
-package, registration, scheduler queue or scheduler pump is needed for native ASB queue retries.
+`Publication.RequeueScheduler` explicitly selects native or global scheduling. Native scheduling is
+the default and is bound to the consuming broker, regardless of a registered global scheduler.
+Explicit global selection uses the registered scheduler's backend, which may be another namespace.
+No separate scheduler package, registration, scheduler queue or scheduler pump is needed for native
+ASB queue retries.
 
 Native abandon increases the broker's delivery count. Configure `MaxDeliveryCount` above Brighter's
 `RequeueCount`, allowing additional broker redeliveries as appropriate. A direct subscription cannot
@@ -66,20 +68,24 @@ Native session IDs are retained on the retry. Purge is supported only with `OnMi
 ## Design
 
 [ADR 0082](../../docs/adr/0082-isolate-azure-service-bus-subscription-retries.md) records the design.
-The forwarding consumer owns queue and subscription provisioning. The queue producer implements the
-optional core requeue-scheduler capability using the gateway's `AzureServiceBusRequeueScheduler`.
+The forwarding consumer owns queue and subscription provisioning. The consumer factory injects the
+selected retry scheduler explicitly; producers do not implement the retry-scheduler capability.
+Native retries use the gateway's `AzureServiceBusRequeueScheduler`.
 The Azure scheduler package delegates its requeue capability to that same native implementation;
 ordinary scheduled commands and requests keep their envelope behavior.
 
-Custom producers without native requeue support can use an explicitly configured requeue-capable
-scheduler. Custom components are responsible for compatible broker configuration. The existing
-producer fallback is retained for custom implementations; the built-in ASB queue producer always
-uses the native capability. Custom receivers for direct subscriptions must implement
+Global mode requires a physical queue and a scheduler implementing the retry capability for the
+selected consumer mode. Reactor calls the synchronous capability; Proactor calls the asynchronous
+capability. Missing capabilities fail before provisioning. Custom receivers for direct subscriptions must implement
 `IAmAServiceBusRetryReceiver` to support property-preserving abandon.
 
 Scheduling uses the physical queue separately from the logical topic and leaves the received message
 unchanged. Body bytes, correlation, session, handled count and other metadata are preserved.
-The retry's CloudEvents ID matches its native delivery ID. Send and settlement are not transactional:
+The retry's CloudEvents ID retains the original event identity while its native delivery ID changes.
+Local-only headers are omitted from publishing and telemetry. Diagnostic serialization and context
+propagation errors cannot block scheduling. Existing baggage keys can be updated at capacity;
+overflow or unsupported ambient baggage is logged while other trace headers continue propagating.
+Send and settlement are not transactional:
 duplicates remain possible with duplicate detection disabled or outside its detection window.
 Handlers must remain idempotent. Each retry sender is closed; the client remains owned by its provider.
 
@@ -91,7 +97,15 @@ Handlers must remain idempotent. Each retry sender is closed; the client remains
 - Queue retries survive duplicate detection with no scheduler, an Azure scheduler or a general-purpose
   scheduler, through forwarding and direct queue configurations, with zero and positive delays.
 - Sync and async consumers and session-enabled queues preserve delivery metadata and isolation.
-- A scheduler backed by another client cannot redirect retries away from the consuming broker.
+- Native scheduling stays on the consuming broker; explicit global scheduling uses its configured backend.
+- Producer telemetry preserves trace context without changing the original, including when headers
+  contain local-only values or broker-supported values that cannot be serialized as diagnostic JSON.
+- Full baggage supports updates without exceeding 32 entries. Both consumer modes continue retrying
+  with trace parent/state when ambient baggage overflows or contains an unsupported key, including
+  when diagnostic JSON serialization also fails. The original baggage remains unchanged.
+- A queue with a `subscriptions` path segment works in queue and forwarding modes; subscription and
+  subqueue paths fail early. Fixtures use unique queue names so parallel runtime runs cannot collide.
+- Transient sender creation failures are retried before acknowledgement; exhausted failures remain visible.
 - Scheduling failures and cancellation leave the original unacknowledged; repeated scheduling after
   acknowledgement failure keeps the same retry ID and does not mutate the original message.
 - Existing forwarding provisioning, mismatch validation and purge protection remain covered.
@@ -104,19 +118,27 @@ mutations also demonstrated that the failure tests catch premature acknowledgeme
 
 ## Validation
 
-The 26 hardening cases pass on both .NET 9 and .NET 10. The 13 existing Azure scheduler tests
-and all 312 generator tests pass on .NET 10. The shared gateway/scheduler implementation builds
-for netstandard2.0 and net8.0 with zero warnings and errors.
+The review regression suite covers scheduler selection, consumer mode, producer telemetry, event
+identity, retry acquisition, failure settlement, and destination validation. The added queue-name and
+telemetry cases first failed against the local pre-fix implementation, then passed against the
+emulator after the fixes. In particular, broker round trips verify both local-only header exclusion
+and delivery of a `NaN` application property despite diagnostic JSON serialization rejecting it.
+Twelve further broker cases reproduced baggage capacity and propagation failures before the fix,
+then passed with both consumer modes. A core regression verifies that replacing a key in full baggage
+succeeds while adding a 33rd key remains rejected.
 
-The final full ASB suite on .NET 10 reports **553 passed, 10 failed and 4 skipped** out of 567.
-The ten failed test names exactly match the established baseline and all fail on the emulator
-TTL restriction below. There are no additional failures. All six regenerated retry identity
-conformance cases pass. `git diff --check` is clean.
+Core tests report 1,704 passed and 7 skipped; generator tests report 312 passed on .NET 10.
+The core, gateway and Azure scheduler build for netstandard2.0, net8.0, net9.0 and net10.0
+with zero warnings and errors.
 
-Release packages for core, the ASB gateway, and the Azure scheduler build for
-netstandard2.0, net8.0, net9.0, and net10.0. A separate .NET 8 consumer compiles
-against the three local NuGet packages with zero warnings and errors. Package hashes
-confirm that it restored these exact artifacts, rather than previously cached versions.
+All **57 review regression cases pass on .NET 9 and .NET 10**. The full Azure Service Bus
+suite on .NET 10 reports **592 passed, 10 failed and 4 skipped** out of 606. The ten failed
+test names exactly match the results reproduced on unchanged PR head
+`8c561701f952c049b6910908a2dbad453d7808b2`; all fail on the emulator's one-hour entity TTL
+restriction. There are no additional failures. `git diff --check` is clean.
+The queue-name cases also pass with both runtimes running together. Earlier repeat runs
+exhausted the emulator's entity quota; the final results above use a recreated disposable
+environment with the same cached images.
 
 ## Release validation still required
 

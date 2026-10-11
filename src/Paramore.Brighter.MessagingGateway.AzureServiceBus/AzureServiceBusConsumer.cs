@@ -47,36 +47,30 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
     protected readonly AzureServiceBusSubscription Subscription;
     protected readonly string Topic;
-    private readonly IAmAMessageProducer _messageProducer;
+    private readonly IAmAMessageScheduler? _requeueScheduler;
     protected readonly IAdministrationClientWrapper AdministrationClientWrapper;
     private readonly int _batchSize;
     protected IServiceBusReceiverWrapper? ServiceBusReceiver;
     protected readonly AzureServiceBusSubscriptionConfiguration SubscriptionConfiguration;
     private readonly AzureServiceBusMessageCreator _azureServiceBusMesssageCreator;
 
-    /// <summary>The fallback scheduler for custom producers without native queue retry support.</summary>
-    /// <remarks>Built-in ASB queue producers schedule retries on their own broker and take precedence.</remarks>
-    public IAmAMessageScheduler? Scheduler { get; set; }
-
     /// <summary>
     /// Constructor for the Azure Service Bus Consumer
     /// </summary>
     /// <param name="subscription">The ASB subscription details</param>
-    /// <param name="messageProducer">The producer we want to send via</param>
+    /// <param name="requeueScheduler">The selected queue retry scheduler; null for direct topic subscriptions.</param>
     /// <param name="administrationClientWrapper">The admin client for ASB</param>
-    /// <param name="isAsync">Whether the consumer is async</param>
     protected AzureServiceBusConsumer(
         AzureServiceBusSubscription subscription, 
-        IAmAMessageProducer messageProducer,
-        IAdministrationClientWrapper administrationClientWrapper,
-        bool isAsync = false
+        IAmAMessageScheduler? requeueScheduler,
+        IAdministrationClientWrapper administrationClientWrapper
     )
     {
         Subscription = subscription;
         Topic = subscription.RoutingKey.Value;
         _batchSize = subscription.BufferSize;
         SubscriptionConfiguration = subscription.Configuration ?? new AzureServiceBusSubscriptionConfiguration();
-        _messageProducer = messageProducer;
+        _requeueScheduler = requeueScheduler;
         AdministrationClientWrapper = administrationClientWrapper;
         _azureServiceBusMesssageCreator = new AzureServiceBusMessageCreator(subscription);
     }
@@ -351,7 +345,24 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     /// <param name="message"></param>
     /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
     /// <returns>True when the message has been requeued.</returns>
-    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(() => RequeueAsync(message, delay));
+    public bool Requeue(Message message, TimeSpan? delay = null)
+    {
+        delay ??= TimeSpan.Zero;
+        Log.RequeuingMessage(Logger, message.Header.Topic, message.Id.Value);
+        if (UsesDirectSubscription)
+        {
+            WarnIfDelayRequiresForwarding(message, delay.Value);
+            BrighterAsyncContext.Run(() => AbandonForRetryAsync(message, CancellationToken.None));
+        }
+        else
+        {
+            if (_requeueScheduler is not IAmAMessageRequeueSchedulerSync scheduler)
+                throw new ConfigurationException("The retry scheduler must implement IAmAMessageRequeueSchedulerSync.");
+            scheduler.Requeue(message, RetryDestination, delay.Value);
+            Acknowledge(message);
+        }
+        return true;
+    }
 
     /// <summary>
     /// Requeues the specified message.
@@ -371,53 +382,33 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     /// </remarks>
     public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken))
     {
-        var topic = message.Header.Topic;
+        cancellationToken.ThrowIfCancellationRequested();
         delay ??= TimeSpan.Zero;
-
-        Log.RequeuingMessage(Logger, topic, message.Id.Value);
-
-        if (!SubscriptionConfiguration.UseServiceBusQueue
-            && SubscriptionConfiguration.ForwardTo is null)
+        Log.RequeuingMessage(Logger, message.Header.Topic, message.Id.Value);
+        if (UsesDirectSubscription)
         {
-            if (delay.Value > TimeSpan.Zero)
-            {
-                Log.RetryDelayRequiresForwarding(Logger, delay.Value, message.Id.Value, Topic, SubscriptionName);
-            }
-
+            WarnIfDelayRequiresForwarding(message, delay.Value);
             await AbandonForRetryAsync(message, cancellationToken);
-            return true;
-        }
-
-        // Native retries must stay on the consuming broker, regardless of a global scheduler's namespace.
-        var requeueScheduler = _messageProducer as IAmAMessageRequeueSchedulerAsync
-            ?? Scheduler as IAmAMessageRequeueSchedulerAsync;
-        if (requeueScheduler is not null)
-        {
-            var destination = new ChannelName(SubscriptionConfiguration.ForwardTo ?? Topic);
-            await requeueScheduler.RequeueAsync(message, destination, delay.Value, cancellationToken);
-            await AcknowledgeAsync(message, cancellationToken);
-            return true;
-        }
-
-        var messageProducerAsync = _messageProducer as IAmAMessageProducerAsync;
-            
-        if (messageProducerAsync  is null)
-        {
-            throw new ChannelFailureException("Message Producer is not of type IAmAMessageProducerSync");    
-        }
-            
-        if (delay.Value > TimeSpan.Zero)
-        {
-            await messageProducerAsync.SendWithDelayAsync(message, delay.Value, cancellationToken);
         }
         else
         {
-            await messageProducerAsync.SendAsync(message, cancellationToken);
+            if (_requeueScheduler is not IAmAMessageRequeueSchedulerAsync scheduler)
+                throw new ConfigurationException("The retry scheduler must implement IAmAMessageRequeueSchedulerAsync.");
+            await scheduler.RequeueAsync(message, RetryDestination, delay.Value, cancellationToken);
+            await AcknowledgeAsync(message, cancellationToken);
         }
-            
-        await AcknowledgeAsync(message, cancellationToken);
-
         return true;
+    }
+
+    private bool UsesDirectSubscription => !SubscriptionConfiguration.UseServiceBusQueue
+        && SubscriptionConfiguration.ForwardTo is null;
+
+    private ChannelName RetryDestination => new(SubscriptionConfiguration.ForwardTo ?? Topic);
+
+    private void WarnIfDelayRequiresForwarding(Message message, TimeSpan delay)
+    {
+        if (delay > TimeSpan.Zero)
+            Log.RetryDelayRequiresForwarding(Logger, delay, message.Id.Value, Topic, SubscriptionName);
     }
 
     private async Task AbandonForRetryAsync(Message message, CancellationToken cancellationToken)

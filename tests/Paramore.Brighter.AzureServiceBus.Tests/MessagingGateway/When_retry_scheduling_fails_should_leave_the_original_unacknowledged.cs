@@ -66,7 +66,7 @@ public class AzureServiceBusScheduledRetryFailureTests
 
         // Assert
         if (cancel) Assert.IsAssignableFrom<OperationCanceledException>(error);
-        else Assert.Same(failure, error);
+        else Assert.Same(failure, Assert.IsType<ChannelFailureException>(error).InnerException);
         Assert.Equal(0, client.Receiver.CompletionAttempts);
         Assert.Equal("original", message.Id.Value);
         Assert.Equal(originalBag, message.Header.Bag.ToArray());
@@ -115,11 +115,13 @@ public class AzureServiceBusScheduledRetryFailureTests
         Assert.Equal("original", message.Id.Value);
     }
 
-    [Fact]
-    public async Task When_a_scheduler_uses_another_broker_should_keep_retries_on_the_consuming_broker()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task When_selecting_a_retry_scheduler_should_use_its_configured_broker(bool useGlobalScheduler)
     {
         // Arrange
-        var (local, factory, subscription) = Create(false);
+        var (local, factory, subscription) = Create(false, useGlobalScheduler);
         var (remote, remoteFactory, _) = Create(false);
         factory.Scheduler = remoteFactory.Scheduler;
         await using var channel = await factory.CreateAsyncChannelAsync(subscription);
@@ -130,12 +132,14 @@ public class AzureServiceBusScheduledRetryFailureTests
         Assert.True(await channel.RequeueAsync(message, TimeSpan.FromSeconds(5)));
 
         // Assert
-        Assert.Equal("retry-queue", Assert.Single(local.Scheduled).Queue);
-        Assert.Empty(remote.Scheduled);
+        var selected = useGlobalScheduler ? remote : local;
+        var unselected = useGlobalScheduler ? local : remote;
+        Assert.Equal("retry-queue", Assert.Single(selected.Scheduled).Queue);
+        Assert.Empty(unselected.Scheduled);
         Assert.Equal(1, local.Receiver.CompletionAttempts);
     }
 
-    private static (InMemoryRetryServiceBusClient, AzureServiceBusChannelFactory, AzureServiceBusSubscription) Create(bool synchronous)
+    private static (InMemoryRetryServiceBusClient, AzureServiceBusChannelFactory, AzureServiceBusSubscription) Create(bool synchronous, bool useGlobalScheduler = false)
     {
         var delivery = ServiceBusModelFactory.ServiceBusReceivedMessage(
             body: new BinaryData(new byte[] { 0, 255, 128, 1 }), messageId: "original",
@@ -147,7 +151,14 @@ public class AzureServiceBusScheduledRetryFailureTests
             new InMemoryRequestContextFactory(), new DefaultPolicy(),
             new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         var scheduler = new AzureServiceBusSchedulerFactory(client, new RoutingKey("scheduler")).Create(processor);
-        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client)) { Scheduler = scheduler };
+        var publication = new AzureServiceBusPublication
+        {
+            RequeueScheduler = useGlobalScheduler ? RequeueSchedulerMode.Global : RequeueSchedulerMode.Native
+        };
+        var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(client, publication))
+        {
+            Scheduler = scheduler
+        };
         var subscription = new AzureServiceBusSubscription(new SubscriptionName("retry"), new ChannelName("retry-queue"),
             new RoutingKey("retry-queue"), requestType: typeof(ASBTestCommand), timeOut: TimeSpan.FromSeconds(1),
             messagePumpType: synchronous ? MessagePumpType.Reactor : MessagePumpType.Proactor, makeChannels: OnMissingChannel.Assume,

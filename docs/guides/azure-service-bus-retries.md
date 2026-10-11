@@ -24,9 +24,39 @@ Do not combine `ForwardTo` with `UseServiceBusQueue`. Applications that already
 manage forwarding externally can instead use `UseServiceBusQueue = true`, with
 the destination queue as their routing key.
 
-No scheduler registration, scheduler queue, or scheduler pump is required for
-these retries. The built-in queue producer uses native Azure scheduling on its
-own broker, even when the application registers a scheduler for another broker.
+By default, retries use native Azure scheduling on the consuming broker. No global
+scheduler registration, scheduler queue, or scheduler pump is needed.
+
+To explicitly use the registered global scheduler, pass a publication to the consumer
+factory and select `Global`:
+
+```csharp
+var retryPublication = new AzureServiceBusPublication
+{
+    RequeueScheduler = RequeueSchedulerMode.Global // Native is the default
+};
+var consumerFactory = new AzureServiceBusConsumerFactory(clientProvider, retryPublication);
+var channelFactory = new AzureServiceBusChannelFactory(consumerFactory)
+{
+    Scheduler = schedulerFactory.Create(commandProcessor)
+};
+// Assign channelFactory to the subscription's ChannelFactory.
+```
+
+The Service Activator can supply the registered scheduler through the channel factory.
+The Azure scheduler supports queue retries. A global scheduler must implement
+`IAmAMessageRequeueSchedulerSync` for Reactor or `IAmAMessageRequeueSchedulerAsync` for
+Proactor; ordinary request/message scheduling alone is insufficient. Missing capabilities
+fail during channel creation. Global mode requires `ForwardTo` or `UseServiceBusQueue`.
+It uses the global scheduler's connection: if that targets another namespace, arrange
+consumption there explicitly. Native mode always uses the consuming broker's connection.
+`ForwardTo` must be a queue name, not a URI, subscription path, or reserved subqueue.
+The queue name `subscriptions` is valid; a path such as `orders/Subscriptions/accounting`
+identifies a subscription and is rejected.
+
+For manual composition, `AzureServiceBusQueueConsumer` now takes an explicit retry
+scheduler in place of its producer; `AzureServiceBusTopicConsumer` no longer takes a
+producer. Use the factory above to select and validate the scheduler automatically.
 
 | Channel policy | Provisioning behavior | Runtime requirements |
 |---|---|---|
@@ -42,7 +72,9 @@ See [Azure autoforwarding requirements](https://learn.microsoft.com/en-us/azure/
 ## Delivery identity and recovery
 
 Each queue retry gets a new delivery ID. `x-original-message-id` retains the first
-delivery's ID, while the message's logical topic and body remain unchanged.
+delivery's ID, while the message's logical topic and body remain unchanged. The
+CloudEvents ID and source remain stable across attempts (`cloudEvents:id` and
+`cloudEvents:source` in this gateway's application properties).
 Repeated scheduling of the same delivery uses the same retry ID. This prevents
 the broker from suppressing a legitimate next attempt, while allowing it to
 suppress repeated sends within its duplicate-detection window.
@@ -58,6 +90,23 @@ Direct abandon increases Azure's delivery count. Set `MaxDeliveryCount` above
 Brighter's `RequeueCount`, allowing for lock loss and other broker redeliveries.
 Queue scheduling preserves session IDs, but a delayed retry can arrive after
 later messages in that session; do not rely on retries preserving business order.
+
+Retries use the destination queue's default TTL as new broker deliveries. They do not
+inherit the original delivery's remaining TTL or `AzureServiceBusPublication.TimeToLive`.
+Carry and check an application deadline when expiry must span all attempts.
+
+Sender creation is retried five times, 100 ms apart. Scheduling failures leave the
+original unacknowledged; a later abandon or lock expiry increases Azure's delivery
+count. Account for these failures when setting `MaxDeliveryCount`, even for queue retries.
+Broker failures are reported as `ChannelFailureException`, while cancellation propagates
+as cancellation. Retry publishing adds producer telemetry to the current activity and
+propagates its trace context without changing the original delivery.
+Local-only headers are excluded from retry publishing and telemetry. If diagnostic
+header serialization fails (for example, for an AMQP `NaN` value), Brighter logs a
+warning and continues scheduling with trace context. Updating an existing baggage key is
+allowed at the 32-entry limit. Excess or unsupported ambient baggage is logged and cannot
+block retry delivery or propagation of the remaining trace headers. The original delivery's
+baggage is unchanged. Transport errors still fail the retry.
 
 ## Roll out forwarding
 
@@ -112,6 +161,13 @@ dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.Azur
 dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj \
   -c Release -f net9.0 --logger "trx;LogFileName=asb-release-net9.trx"
 ```
+
+The emulator used for local validation caps entity TTL at one hour. Existing tests
+that exercise multi-day TTLs fail during provisioning there, including on the
+unchanged base revision. Run those cases on Azure; retain the baseline comparison
+alongside local regression results.
+Repeated runs can also exhaust the emulator's entity quota; use a fresh disposable
+instance for clean full-suite comparisons.
 
 The suite validates functional behavior using provisioning credentials. It does
 not establish least-privilege access, process recovery, or production capacity.

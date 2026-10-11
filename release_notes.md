@@ -2,6 +2,23 @@
 
 ## Master
 
+### Azure Service Bus retry scheduler selection
+
+`Publication.RequeueScheduler` selects native scheduling on the consuming broker (the default)
+or the explicitly configured global scheduler. Pass the publication to `AzureServiceBusConsumerFactory`.
+Global mode requires a queue-targeted retry capability for the selected message pump. Reactor uses
+the synchronous capability and Proactor the asynchronous one. Retries preserve CloudEvents identity,
+record producer telemetry, retry sender acquisition, and report broker failures consistently.
+Subscription and reserved subqueue paths cannot be used as retry destinations.
+Retry telemetry and baggage propagation failures no longer prevent scheduling. Baggage
+allows updating an existing key at its 32-entry limit while still rejecting additional keys.
+
+**Composition change:** queue consumers take a scheduler instead of a producer; direct topic consumers
+no longer take a producer. The abstract consumer constructor takes a nullable scheduler and drops its
+unused `isAsync` parameter. Consumer scheduler property injection is replaced by constructor injection.
+Use the consumer factory or update manual constructor calls and rebuild. See the
+[retry configuration and migration guide](docs/guides/azure-service-bus-retries.md).
+
 ### Outbox sweeper and publish confirmations no longer depend on the thread pool (#4560)
 
 `TimedOutboxSweeper` used to run each sweep from a thread-pool `Timer`. When every pool thread was

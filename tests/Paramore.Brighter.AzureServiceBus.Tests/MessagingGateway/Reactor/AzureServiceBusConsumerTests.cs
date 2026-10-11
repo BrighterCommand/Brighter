@@ -17,7 +17,6 @@ public class AzureServiceBusConsumerTests
     private readonly FakeAdministrationClient _nameSpaceManagerWrapper;
     private readonly AzureServiceBusConsumer _azureServiceBusConsumer;
     private readonly FakeServiceBusReceiverWrapper _messageReceiver;
-    private readonly FakeMessageProducer _fakeMessageProducer;
     private readonly FakeServiceBusReceiverProvider _fakeMessageReceiver;
 
     private readonly AzureServiceBusSubscriptionConfiguration _subConfig = new();
@@ -25,7 +24,6 @@ public class AzureServiceBusConsumerTests
     public AzureServiceBusConsumerTests()
     {
         _nameSpaceManagerWrapper = new FakeAdministrationClient();
-        _fakeMessageProducer = new FakeMessageProducer();
         _messageReceiver = new FakeServiceBusReceiverWrapper();
         _fakeMessageReceiver = new FakeServiceBusReceiverProvider(_messageReceiver);
             
@@ -33,7 +31,7 @@ public class AzureServiceBusConsumerTests
         var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
             ,makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig);
             
-        _azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _fakeMessageProducer,
+        _azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub,
             _nameSpaceManagerWrapper, _fakeMessageReceiver);
     }
 
@@ -423,7 +421,7 @@ public class AzureServiceBusConsumerTests
         var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
             ,makeChannels: OnMissingChannel.Validate, subscriptionConfiguration: _subConfig);
             
-        var azureServiceBusConsumerValidate = new AzureServiceBusTopicConsumer(sub, _fakeMessageProducer,
+        var azureServiceBusConsumerValidate = new AzureServiceBusTopicConsumer(sub,
             _nameSpaceManagerWrapper, _fakeMessageReceiver);
 
         Assert.Throws<ChannelFailureException>(() => azureServiceBusConsumerValidate.Receive(TimeSpan.FromMilliseconds(400)));

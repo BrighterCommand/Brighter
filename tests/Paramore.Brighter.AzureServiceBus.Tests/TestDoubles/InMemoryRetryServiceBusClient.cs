@@ -36,9 +36,16 @@ public class InMemoryRetryServiceBusClient(ServiceBusReceivedMessage message) : 
     public List<(string Queue, ServiceBusMessage Message)> Scheduled { get; } = [];
     public List<InMemoryRetryServiceBusSender> Senders { get; } = [];
     public Exception? ScheduleFailure { get; set; }
+    public Queue<Exception> SenderCreationFailures { get; } = new();
+    public int SenderCreationAttempts { get; private set; }
+    public Action? OnSenderCreation { get; set; }
 
     public override ServiceBusSender CreateSender(string queueOrTopicName, ServiceBusSenderOptions? options = default)
     {
+        SenderCreationAttempts++;
+        OnSenderCreation?.Invoke();
+        if (SenderCreationFailures.Count > 0)
+            throw SenderCreationFailures.Dequeue();
         var sender = new InMemoryRetryServiceBusSender(this, queueOrTopicName);
         Senders.Add(sender);
         return sender;

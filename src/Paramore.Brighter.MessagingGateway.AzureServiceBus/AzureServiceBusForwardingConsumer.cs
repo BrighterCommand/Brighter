@@ -33,10 +33,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 
 internal sealed class AzureServiceBusForwardingConsumer(
     AzureServiceBusSubscription subscription,
-    IAmAMessageProducer messageProducer,
+    IAmAMessageScheduler requeueScheduler,
     IAdministrationClientWrapper administrationClientWrapper,
     IServiceBusReceiverProvider receiverProvider)
-    : AzureServiceBusConsumer(subscription, messageProducer, administrationClientWrapper)
+    : AzureServiceBusConsumer(subscription, requeueScheduler, administrationClientWrapper)
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusForwardingConsumer>();
     private readonly string _queueName = subscription.Configuration.ForwardTo!;

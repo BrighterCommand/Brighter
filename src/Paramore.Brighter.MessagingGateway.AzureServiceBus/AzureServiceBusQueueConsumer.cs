@@ -50,14 +50,14 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
     /// Initializes an Instance of <see cref="AzureServiceBusQueueConsumer"/> for Service Bus Queus
     /// </summary>
     /// <param name="subscription">An Azure Service Bus Subscription.</param>
-    /// <param name="messageProducer">An instance of the Messaging Producer used for Requeue.</param>
+    /// <param name="requeueScheduler">The explicitly selected queue retry scheduler.</param>
     /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
     /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
     public AzureServiceBusQueueConsumer(AzureServiceBusSubscription subscription,
-        IAmAMessageProducerSync messageProducer,
+        IAmAMessageScheduler requeueScheduler,
         IAdministrationClientWrapper administrationClientWrapper,
         IServiceBusReceiverProvider serviceBusReceiverProvider) : base(subscription,
-        messageProducer, administrationClientWrapper)
+        requeueScheduler, administrationClientWrapper)
     {
         _serviceBusReceiverProvider = serviceBusReceiverProvider;
     }

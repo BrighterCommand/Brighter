@@ -62,7 +62,7 @@ Out of scope:
 
 ## Decision
 
-**Use native abandon for direct-subscription retries and native queue scheduling for queue retries.**
+**Use native abandon for direct-subscription retries and explicit native/global scheduler selection for queue retries.**
 
 A direct subscription with a positive delay remains valid at startup. At requeue time the consumer
 abandons immediately, persists the handled count and warns that `ForwardTo` is required to honor
@@ -75,22 +75,23 @@ delays. Forwarding remains an explicit topology choice.
 |---|---|
 | Direct subscription, no delay | Abandon with the updated handled count |
 | Direct subscription, positive delay | Warn and abandon immediately with the updated handled count |
-| Forwarding or queue mode configured | Receive from the queue and schedule retries there using a new delivery ID |
+| Forwarding or queue mode, native scheduler | Receive from the queue and schedule retries there using a new delivery ID |
+| Forwarding or queue mode, global scheduler | Schedule to that queue name using the global scheduler's configured backend |
 | Queue retry accepted by the broker | Acknowledge the original delivery |
 | Existing forwarding destination differs | Require explicit migration |
 | Purge with Validate or Assume | Reject before closing the receiver or deleting the queue |
 
-The logical topic stays in the message header while the retry producer uses a separate physical destination.
+The logical topic stays in the message header while the retry scheduler uses a separate physical destination.
 Native session IDs are retained so retries remain valid for session-enabled destination queues.
 
 ### Where the pieces live
 
 Routing and provisioning changes live in the Azure Service Bus gateway assembly.
 The scheduler capability below is additive to core; its native implementation lives in the gateway.
-The consumer factory selects the forwarding consumer and supplies its queue producer.
+The consumer factory selects the consumer and injects its configured retry scheduler.
 The forwarding consumer provisions and validates broker entities through the administration wrapper.
 The receiver wrapper performs property-preserving abandon through the Azure SDK.
-Core message-pump and publisher APIs remain unchanged.
+Core adds the optional retry capability interfaces and publication selection; message-pump APIs remain unchanged.
 
 ### Key Components
 
@@ -98,7 +99,7 @@ Core message-pump and publisher APIs remain unchanged.
 
 | Role | Type | Responsibilities | Responsibility classifier | Collaborators |
 |---|---|---|---|---|
-| Retry policy | `AzureServiceBusConsumer` | Select abandon or queue scheduling; acknowledge after acceptance | Deciding, doing | Receiver and producer |
+| Retry policy | `AzureServiceBusConsumer` | Select abandon or queue scheduling; acknowledge after acceptance | Deciding, doing | Receiver and retry scheduler |
 | Forwarding endpoint | `AzureServiceBusForwardingConsumer` | Provision and validate the destination; receive from it | Knowing, doing | Administration wrapper, receiver provider |
 | Property-preserving release | `IAmAServiceBusRetryReceiver` | Persist properties while releasing a delivery | Doing | Azure SDK receiver |
 
@@ -106,13 +107,13 @@ Core message-pump and publisher APIs remain unchanged.
 
 | Member | Input | Output | Error conditions |
 |---|---|---|---|
-| `ForwardTo` | Destination queue name | Dedicated receive and retry endpoint | Blank name, absolute URI, or combined queue mode |
-| `RequeueAsync` | Message and optional delay | Original abandoned or replacement sent and original acknowledged | Unsupported receiver; broker failure |
+| `ForwardTo` | Destination queue name | Dedicated receive and retry endpoint | Blank name, absolute URI, subscription/subqueue path, or combined queue mode |
+| `Requeue` / `RequeueAsync` | Message and optional delay | Original abandoned or replacement scheduled and original acknowledged | Unsupported receiver/scheduler; broker failure |
 | `PurgeAsync` | Cancellation token | Destination deleted and recreated in Create mode | Validate and Assume reject before mutation |
 
 #### Where each type is touched
 
-The consumer factory, message producer and administration wrapper implement forwarding within the gateway assembly.
+The consumer factory, forwarding consumer and administration wrapper implement forwarding within the gateway assembly.
 The message creator preserves native session IDs.
 The existing receiver interface remains source-compatible; immediate retries require the additional receiver capability.
 
@@ -141,22 +142,35 @@ The [scheduler proposal](https://github.com/BrighterCommand/Brighter/issues/4546
 is implemented through optional `IAmAMessageRequeueSchedulerAsync` and
 `IAmAMessageRequeueSchedulerSync` capabilities. Existing scheduling contracts remain unchanged.
 
+`Publication.RequeueScheduler` selects `Native` (the default) or `Global`. Pass the
+`AzureServiceBusPublication` to the consumer factory to apply that selection. Native scheduling uses
+the consuming gateway's client, so registering a global scheduler cannot silently move retries to
+another broker. Explicit global selection uses the global scheduler's configured backend, including
+its namespace; deployments choosing this mode must arrange consumption of that destination.
+
+The factory selects and injects the scheduler into the consumer. Producers no longer implement retry
+scheduling. Reactor calls `IAmAMessageRequeueSchedulerSync` on its calling thread; Proactor calls
+`IAmAMessageRequeueSchedulerAsync`. The factory rejects an absent or incompatible global capability
+before channel provisioning. Global scheduling also requires a physical queue destination.
+
 `AzureServiceBusRequeueScheduler` in the gateway provides native scheduling on an explicit physical
-queue, separate from the message's logical topic. It is public because both the gateway's queue
-producer and the Azure scheduler package use it. `AzureServiceBusQueueMessageProducer` exposes this
-capability, making it available to consumers created by the factory or composed manually.
+queue, separate from the message's logical topic. It is public because the gateway consumer factory
+and the Azure scheduler package both use it. Subscription and reserved subqueue paths are rejected.
+`AzureServiceBusSchedulerFactory` exposes the requeue capability by delegating to that implementation.
+Its ordinary scheduled commands and requests retain their existing envelope behavior. Retries use
+`ScheduleMessageAsync` directly on the queue, including for zero delays, without a `FireAzureScheduler`
+envelope. The Azure SDK only exposes asynchronous I/O; its sync bridge stays inside the adapter.
 
-The consumer prioritizes its producer's native retry capability over a registered scheduler. This
-keeps retries on the receiving transport's broker, even when the application has a global scheduler
-using another namespace. No separate scheduler registration or scheduler pump is needed. If a custom
-producer lacks the native capability, an explicitly supplied requeue-capable scheduler can serve as
-its fallback; custom components remain responsible for compatible broker configuration.
-
-`AzureServiceBusSchedulerFactory` also exposes the requeue capability by delegating to the same native
-implementation. Its ordinary scheduled commands and requests retain their existing envelope behavior.
-Retries use `ScheduleMessageAsync` directly on the queue, including for zero delays, without a
-`FireAzureScheduler` envelope. The Service Activator's existing scheduler injection reaches the ASB
-channel factory, but cannot override the built-in producer's local retry destination.
+The native scheduler records Brighter producer telemetry on the current activity and propagates trace
+context through a copy, preserving the caller's message. Local-only headers are excluded; diagnostic
+serialization failures are logged without preventing scheduling or trace propagation.
+Context propagation failures are also contained within telemetry. Existing baggage keys can
+be updated at capacity; excess or unsupported ambient baggage cannot prevent delivery or
+the remaining trace headers from propagating. The received message is never modified.
+Sender acquisition uses five retries with a
+100 ms interval, matching the producer's connection policy. Cancellation interrupts the wait.
+Broker errors become `ChannelFailureException`; cancellation retains its cancellation exception.
+Sender cleanup errors are logged and cannot replace the scheduling outcome.
 
 No management calls are added to the scheduling path. `Assume` supports externally managed topology
 and does not require Manage rights. Queue requeue requires Send rights on the destination in addition
@@ -167,7 +181,7 @@ to the consumer's Listen rights. Direct-subscription abandon only requires the c
 A bounded broker MessageId is derived from the incoming delivery's MessageId, physical queue and
 updated handled count. This makes successive deliveries distinct while keeping repeated scheduling
 of the same delivery stable within the broker's duplicate-detection window. The retry's CloudEvents
-ID matches its new broker ID. `x-original-message-id` retains the first delivery's identity across
+ID remains the original event ID (the incoming CloudEvents ID, or the first delivery ID if absent). `x-original-message-id` retains the first delivery's identity across
 retries. Body bytes, correlation, session and other metadata are preserved; the input message remains
 unchanged so acknowledgement still refers to its original lock.
 
@@ -177,7 +191,24 @@ settlement are not transactional: duplicates remain possible outside the broker'
 window or with duplicate detection disabled. Handlers must remain idempotent.
 
 Each retry sender is disposed after scheduling; the provider owns the shared client. This bounds
-sender lifetime without an unbounded destination cache, at the cost of opening a sender per retry.
+sender lifetime without an unbounded destination cache, at the cost of opening a sender per retry. Sender caching, broader `ValidatePipelines` diagnostics,
+and native capabilities for other brokers remain separate follow-up work.
+
+Retries are new broker deliveries. They use the destination queue's default TTL, not the original
+message's remaining lifetime or a publisher's `TimeToLive`. Applications requiring an absolute expiry
+must carry and enforce a business deadline. Session IDs are retained, but delayed retries may be
+processed after later messages in the same session. Scheduling failures leave the original unsettled;
+subsequent abandon or lock expiry increments broker delivery count and can exhaust `MaxDeliveryCount`
+before Brighter's handled-count budget.
+
+### Composition compatibility
+
+Manual queue-consumer construction now takes a scheduler in place of a producer; direct topic consumers
+no longer take a producer. The abstract consumer constructor takes a nullable scheduler instead of a
+producer and no longer has the unused `isAsync` parameter. Consumer schedulers are constructor-injected,
+not mutable properties. Factory construction without a publication remains available and defaults to
+native retries. This is an intentional source/binary break for manually composed consumers; rebuild
+and update those call sites. The consumer factory is the preferred composition entry point.
 
 ### Release validation
 
