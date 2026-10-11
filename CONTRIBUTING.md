@@ -428,6 +428,16 @@ THE SOFTWARE. */
 - Use dotnet build and dotnet test to verify changes locally.
 - Ensure all tests pass before submitting a PR.
 
+CI checks that every Git-tracked `.csproj` across the repository is listed in `Brighter.slnx`
+or explicitly excluded.
+Run `bash check_solution_projects.sh` locally after adding, moving, or removing a project.
+The check uses Git's paths and exact casing, and ignores untracked files, including build artifacts.
+It parses the solution XML so commented-out entries and solution files do not count as projects.
+For a deliberately separate project, add its exact path to `.github/solution-project-exclusions.txt`
+with a comment explaining the exclusion. Remove the exclusion if the project is deleted or added to the solution.
+Run `bash test_check_solution_projects.sh` to exercise the check in temporary Git repositories.
+The check uses Bash, Git, Python 3 (standard library only), and standard command-line tools.
+
 ```bash
 # Build entire solution
 dotnet build Brighter.slnx
