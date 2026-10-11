@@ -37,6 +37,7 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
@@ -58,7 +59,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         static readonly object s_lock = new();
         private RmqPublication _publication;
         private readonly ConcurrentDictionary<ulong, PendingConfirmation> _pendingConfirmations = new ConcurrentDictionary<ulong, PendingConfirmation>();
-        private bool _confirmsSelected;
+        // The channel in confirm mode with our handlers on it; the gateway replaces a closed channel with a new instance
+        private IModel? _confirmChannel;
         private readonly int _waitForConfirmsTimeOutInMilliseconds;
         private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
         // The ack/nack handlers run on the client's connection loop, which must never block on a
@@ -167,17 +169,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     var rmqMessagePublisher = new RmqMessagePublisher(Channel!, Connection);
 
                     message.Persist = Connection.PersistMessages;
-                    Channel!.BasicAcks += OnPublishSucceeded;
-                    Channel.BasicNacks += OnPublishFailed;
-                    Channel.ConfirmSelect();
-                    _confirmsSelected = true;
+                    SelectConfirmsOnChannel();
 
                     BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RabbitMQ, message, _instrumentationOptions);
 
                     Log.PublishingMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri!.GetSanitizedUri(), delay.Value.TotalMilliseconds,
                         message.Header.Topic.Value, message.Persist, message.Id.Value, message.Body.Value);
 
-                    _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, new PendingConfirmation(message.Id, message.Header.Topic, publishContext));
+                    _pendingConfirmations.TryAdd(Channel!.NextPublishSeqNo, new PendingConfirmation(message.Id, message.Header.Topic, publishContext));
 
                      if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null)
                      {
@@ -202,6 +201,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             catch (IOException io)
             {
                 Log.ErrorTalkingToSocket(s_logger, io, Connection.AmpqUri!.GetSanitizedUri());
+                DetachConfirms();
                 // The new channel numbers its delivery tags from 1 again, so its acks must not settle the old channel's
                 _pendingConfirmations.Clear();
                 ResetConnectionToBroker();
@@ -248,7 +248,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             {
                 if (disposing)
                 {
-                    if (Channel != null && Channel.IsOpen && _confirmsSelected)
+                    if (Channel != null && Channel.IsOpen && ReferenceEquals(Channel, _confirmChannel))
                     {
                         //In the event this fails, then consequence is not marked as sent in outbox
                         //As we are disposing, just let that happen
@@ -265,8 +265,37 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
             finally
             {
-                base.Dispose(disposing);
+                try
+                {
+                    // Detach while the channel is still alive, even if waiting failed; base.Dispose disposes it
+                    if (disposing) DetachConfirms();
+                }
+                finally
+                {
+                    base.Dispose(disposing);
+                }
             }
+        }
+
+        // Confirm mode, and the handlers, are set up once per channel, not once per Send
+        private void SelectConfirmsOnChannel()
+        {
+            if (ReferenceEquals(Channel, _confirmChannel)) return;
+
+            DetachConfirms();
+            Channel!.ConfirmSelect();
+            Channel.BasicAcks += OnPublishSucceeded;
+            Channel.BasicNacks += OnPublishFailed;
+            _confirmChannel = Channel;
+        }
+
+        private void DetachConfirms()
+        {
+            if (_confirmChannel is null) return;
+
+            _confirmChannel.BasicAcks -= OnPublishSucceeded;
+            _confirmChannel.BasicNacks -= OnPublishFailed;
+            _confirmChannel = null;
         }
 
         private void OnPublishFailed(object? sender, BasicNackEventArgs e) => SettleConfirmations(e.DeliveryTag, e.Multiple, success: false);
@@ -277,7 +306,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             foreach (var confirmedTag in ConfirmedDeliveryTags(deliveryTag, multiple))
             {
-                // Claim before raising: the handlers are subscribed once per Send, so only one invocation may win each tag
+                // Claim before raising, so a tag is settled at most once even if its ack and nack handlers race
                 if (_pendingConfirmations.TryRemove(confirmedTag, out PendingConfirmation confirmation))
                 {
                     RaisePublishConfirmation(new PublishConfirmationResult(success, confirmation.MessageId, confirmation.Topic, confirmation.Context));
