@@ -15,8 +15,9 @@ namespace Paramore.Brighter.Base.Test.Outbox;
 /// <typeparam name="TTransaction">The transaction type the outbox enrolls in.</typeparam>
 public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposable
 {
-    protected const string CausationA = "causation-A";
-    protected const string CausationB = "causation-B";
+    // Separate test processes can share a store, so replay must be scoped to this scenario.
+    protected string CausationA { get; } = $"causation-A-{Uuid.New():N}";
+    protected string CausationB { get; } = $"causation-B-{Uuid.New():N}";
 
     /// <summary>
     /// The store under test. Must also implement <see cref="IAmAnOutboxAsync{TMessage, TTransaction}"/> and
