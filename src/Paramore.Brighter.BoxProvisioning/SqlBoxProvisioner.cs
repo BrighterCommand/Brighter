@@ -94,11 +94,24 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
-        // Defence-in-depth at the framework chokepoint. Catalogs gate AssertSafe at the entry to
-        // All(...), but the provisioner opens connections and runs detection BEFORE the catalog
-        // returns, so an unsafe identifier from configuration reaches the live DB connection
-        // unless the provisioner guards at its own entry. _configuration.SchemaName is nullable:
-        // SQLite has no schema concept per ADR 0057 §6, so a null value is legitimate.
+        GuardIdentifiers();
+
+        var migrations = _catalog.All(_configuration);
+
+        var tableState = await DetectAndValidateAsync(migrations, cancellationToken);
+
+        await _migrationRunner.MigrateAsync(
+            BoxTableName,
+            _configuration.SchemaName != null ? (SchemaName)_configuration.SchemaName : null,
+            BoxType,
+            tableState,
+            cancellationToken);
+    }
+
+    // Validates identifiers from configuration before they reach a live connection, rather than
+    // relying on the catalog to have done so.
+    private void GuardIdentifiers()
+    {
         var boxTableNameParam = BoxType == BoxType.Outbox
             ? nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName)
             : nameof(IAmARelationalDatabaseConfiguration.InBoxTableName);
@@ -108,31 +121,26 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
             Identifiers.AssertSafe(
                 _configuration.SchemaName, nameof(IAmARelationalDatabaseConfiguration.SchemaName));
         }
+    }
 
-        var migrations = _catalog.All(_configuration);
+    // Sync `using`: DbConnection has no DisposeAsync on netstandard2.0.
+    private async Task<BoxTableState> DetectAndValidateAsync(
+        IReadOnlyList<IAmABoxMigration> migrations,
+        CancellationToken cancellationToken)
+    {
+        using var connection = CreateConnection(_configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
 
-        // Sync `using`: DbConnection has no DisposeAsync on netstandard2.0.
-        BoxTableState tableState;
-        using (var connection = CreateConnection(_configuration.ConnectionString))
+        var tableState = await DetectTableStateAsync(connection, migrations, cancellationToken);
+
+        if (tableState.TableExists)
         {
-            await connection.OpenAsync(cancellationToken);
-
-            tableState = await DetectTableStateAsync(connection, migrations, cancellationToken);
-
-            if (tableState.TableExists)
-            {
-                await _payloadValidator.ValidateAsync(
-                    connection, BoxTableName.Value, EffectiveSchemaName,
-                    PayloadColumnName, _configuration.BinaryMessagePayload, cancellationToken);
-            }
+            await _payloadValidator.ValidateAsync(
+                connection, BoxTableName.Value, EffectiveSchemaName,
+                PayloadColumnName, _configuration.BinaryMessagePayload, cancellationToken);
         }
 
-        await _migrationRunner.MigrateAsync(
-            BoxTableName,
-            _configuration.SchemaName != null ? (SchemaName)_configuration.SchemaName : null,
-            BoxType,
-            tableState,
-            cancellationToken);
+        return tableState;
     }
 
     // Pre-lock detection is only a hint: the runner re-detects authoritatively under the lock and
@@ -150,19 +158,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        bool historyExists;
-        try
-        {
-            historyExists = await _detectionHelper.DoesHistoryExistAsync(
-                connection, BoxTableName.Value, EffectiveSchemaName, historySchema: null, cancellationToken);
-        }
-        catch (DbException ex)
-        {
-            s_logger.LogDebug(ex,
-                "Pre-lock historyExists hint for '{Schema}.{Table}' unavailable; deferring to the runner's under-lock authoritative detection.",
-                EffectiveSchemaName, BoxTableName);
-            historyExists = false;
-        }
+        var historyExists = await ReadHistoryExistsHintAsync(connection, cancellationToken);
 
         if (!historyExists)
         {
@@ -174,10 +170,31 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
                 CurrentVersion: detectedVersion < 0 ? 0 : detectedVersion);
         }
 
-        int maxVersion;
+        var maxVersion = await ReadMaxVersionHintAsync(connection, cancellationToken);
+        return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
+    }
+
+    private async Task<bool> ReadHistoryExistsHintAsync(TConnection connection, CancellationToken cancellationToken)
+    {
         try
         {
-            maxVersion = await _detectionHelper.GetMaxVersionAsync(
+            return await _detectionHelper.DoesHistoryExistAsync(
+                connection, BoxTableName.Value, EffectiveSchemaName, historySchema: null, cancellationToken);
+        }
+        catch (DbException ex)
+        {
+            s_logger.LogDebug(ex,
+                "Pre-lock historyExists hint for '{Schema}.{Table}' unavailable; deferring to the runner's under-lock authoritative detection.",
+                EffectiveSchemaName, BoxTableName);
+            return false;
+        }
+    }
+
+    private async Task<int> ReadMaxVersionHintAsync(TConnection connection, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _detectionHelper.GetMaxVersionAsync(
                 connection, BoxTableName.Value, EffectiveSchemaName, historySchema: null, cancellationToken);
         }
         catch (DbException ex)
@@ -185,9 +202,8 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
             s_logger.LogDebug(ex,
                 "Pre-lock maxVersion hint for '{Schema}.{Table}' unavailable; deferring to the runner's under-lock authoritative detection.",
                 EffectiveSchemaName, BoxTableName);
-            maxVersion = 0;
+            return 0;
         }
-        return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
     /// <summary>

@@ -180,71 +180,16 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
     {
-        // Defence-in-depth at the framework chokepoint. Catalogs gate AssertSafe at the entry to
-        // All(...), but the runner is independently reachable (callers can construct a migration
-        // list and invoke MigrateAsync directly), so the public entry point must validate too.
-        Identifiers.AssertSafe(tableName.Value, nameof(tableName));
+        schemaName = GuardIdentifiers(tableName, schemaName);
+        ThrowIfPerSchemaHasNoSchema();
 
-        // schemaName is optional: SQLite has no schema concept per ADR 0057 §6, so an absent value
-        // is legitimate and must not be rejected as "missing". A SchemaName is "absent" when it is
-        // a null reference OR wraps a null/empty string — callers commonly reach the latter via the
-        // implicit string->SchemaName conversion of a null/empty value (e.g. an unconfigured
-        // RelationalDatabaseConfiguration.SchemaName). Collapse every absent form to a single null
-        // using SchemaName.IsNullOrEmpty (the canonical "absent" check, mirroring Id.IsNullOrEmpty)
-        // so the AssertSafe gate and every downstream `schemaName?.Value ?? <backend default>` treat
-        // them identically — preserving the semantics of the `string?` parameter this value type
-        // replaced (spec 0030), which a bare `is not null` reference check silently broke.
-        if (SchemaName.IsNullOrEmpty(schemaName))
-        {
-            schemaName = null;
-        }
-        else
-        {
-            Identifiers.AssertSafe(schemaName.Value, nameof(schemaName));
-        }
-
-        // D3 misconfiguration guard (FR1a/AC1a): on a placement backend, PerSchema needs a schema
-        // to place history in. A null SchemaName is an operator misconfiguration — reject it at the
-        // entry point rather than silently falling back to Global. Backends that do not support
-        // PerSchema (MySQL/SQLite) never trip this; for them PerSchema is a no-op.
-        if (Scope == MigrationHistoryScope.PerSchema && SupportsPerSchemaHistory && Configuration.SchemaName is null)
-        {
-            throw new ConfigurationException(
-                "MigrationHistoryScope.PerSchema requires a non-null SchemaName; there is no schema to place history in.");
-        }
-
-        // The runner sources its migration chain and fresh-install DDL
-        // from the injected catalog rather than via parameter. A catalog returning null for
-        // either would surface inside ValidateMigrationsMonotonic / ExecuteFreshInstallAsync as
-        // an opaque NRE; replace with a descriptive operator-facing diagnostic. Empty migration
-        // lists are intentionally permitted: relational catalogs always return ≥V1, and
-        // internal tests use Array.Empty<IAmABoxMigration>() as a "don't care" payload when
-        // exercising hook-ordering, re-detection, or failure-path contracts.
-        var migrations = _catalog.All(_configuration);
-        if (migrations is null)
-        {
-            throw new ConfigurationException(
-                $"Migration list for '{(schemaName is null ? tableName : $"{schemaName}.{tableName}")}' was null. The injected IAmABoxMigrationCatalog must return a non-null list from All(...).");
-        }
-
+        var migrations = GetMigrations(tableName, schemaName);
         ValidateMigrationsMonotonic(schemaName?.Value, tableName.Value, migrations);
 
         using var activity = StartMigrationActivity(tableName.Value, schemaName?.Value, boxType);
 
-        // Spec 0029 NF5/AC7 (ADR 0060 D6): surface the placement decision per run so an operator
-        // can answer "where did THIS tenant's migration history go?" without correlating to the
-        // provisioner config. The single Information log carries the table, the resolved physical
-        // history schema (or the placeholder "<backend default>" on backends with no distinct
-        // history schema concept, e.g. SQLite / MySQL), and the active MigrationHistoryScope.
-        // Fires once per run regardless of which path (fresh / bootstrap / normal) dispatches.
-        Logger.LogInformation(
-            "Box migration history for {BoxTable} resolved to schema {HistorySchema} (scope {Scope})",
-            tableName, ResolveHistorySchema() ?? "<backend default>", _scope);
+        LogHistoryPlacement(tableName);
 
-        // Sync Dispose for the connection: DbConnection does not implement IAsyncDisposable
-        // on netstandard2.0, so DisposeAsync is unavailable across the shared-assembly TFM
-        // matrix. The UoW implements IAsyncDisposable (see IAmAProvisioningUnitOfWork) and
-        // is awaited explicitly in the finally.
         TConnection? connection = null;
         IAmAProvisioningUnitOfWork<TTransaction>? uow = null;
         try
@@ -303,42 +248,88 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
             {
                 activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
                 activity?.AddException(ex);
-                // Pass CancellationToken.None: a signalled caller token must not abandon the unwind.
-                // See ADR 0058 §B.3 cancellation contract.
-                try
-                {
-                    await uow.RollbackAsync(CancellationToken.None);
-                }
-                catch (Exception rollbackEx)
-                {
-                    // Defense in depth: the IAmAProvisioningUnitOfWork contract says RollbackAsync
-                    // MUST NOT throw, and the four per-backend impls comply (PG and MySQL tightened
-                    // explicitly in 3c8417fd6). If a future regression breaks that, do NOT let the
-                    // rollback exception mask the original triggering exception — the primary cause
-                    // is more diagnostically valuable than a defect in our own unwind, and callers
-                    // pattern-match on the type they actually threw. Log the rollback failure at
-                    // Error level so operators see both: the primary failure surfaces via rethrow,
-                    // the rollback defect surfaces via the log.
-                    Logger.LogError(rollbackEx,
-                        "Box migration unit-of-work RollbackAsync threw while unwinding from a primary failure for table '{Table}'; rollback exception is logged, primary exception is rethrown.",
-                        tableName);
-                }
+                await RollbackWithoutMaskingAsync(uow, tableName);
                 throw;
             }
         }
         finally
         {
-            // Disposal order mirrors the previous `await using var uow` / `using var connection`
-            // pair: UoW first (releases any per-backend advisory lock + transaction state),
-            // then the connection. Null checks defend the bootstrap-failure-before-assignment
-            // case: if OpenConnectionAsync threw, both locals stay null; if BeginAsync threw,
-            // both are assigned and need disposal.
-            if (uow is not null)
-            {
-                await uow.DisposeAsync();
-            }
-            connection?.Dispose();
+            await ReleaseAsync(uow, connection);
         }
+    }
+
+    // The runner is callable without going through a catalog, so it asserts identifier safety
+    // itself. A SchemaName that wraps a null or empty string is absent, the same as a null one.
+    private static SchemaName? GuardIdentifiers(BoxTableName tableName, SchemaName? schemaName)
+    {
+        Identifiers.AssertSafe(tableName.Value, nameof(tableName));
+
+        if (SchemaName.IsNullOrEmpty(schemaName))
+        {
+            return null;
+        }
+
+        Identifiers.AssertSafe(schemaName.Value, nameof(schemaName));
+        return schemaName;
+    }
+
+    private void ThrowIfPerSchemaHasNoSchema()
+    {
+        if (Scope == MigrationHistoryScope.PerSchema && SupportsPerSchemaHistory && Configuration.SchemaName is null)
+        {
+            throw new ConfigurationException(
+                "MigrationHistoryScope.PerSchema requires a non-null SchemaName; there is no schema to place history in.");
+        }
+    }
+
+    // An empty chain is allowed; a null one is a catalog defect, reported here rather than as an
+    // NRE further in.
+    private IReadOnlyList<IAmABoxMigration> GetMigrations(BoxTableName tableName, SchemaName? schemaName)
+    {
+        var migrations = _catalog.All(_configuration);
+        if (migrations is null)
+        {
+            throw new ConfigurationException(
+                $"Migration list for '{(schemaName is null ? tableName : $"{schemaName}.{tableName}")}' was null. The injected IAmABoxMigrationCatalog must return a non-null list from All(...).");
+        }
+
+        return migrations;
+    }
+
+    // Lets an operator see where this run's migration history lives without reading the
+    // provisioner configuration (ADR 0060).
+    private void LogHistoryPlacement(BoxTableName tableName) =>
+        Logger.LogInformation(
+            "Box migration history for {BoxTable} resolved to schema {HistorySchema} (scope {Scope})",
+            tableName, ResolveHistorySchema() ?? "<backend default>", _scope);
+
+    // Rolls back with CancellationToken.None so a cancelled caller cannot abandon the unwind
+    // (ADR 0058 §B.3). RollbackAsync must not throw; if it does, the failure is logged rather
+    // than allowed to mask the primary exception the caller is about to see.
+    private async Task RollbackWithoutMaskingAsync(IAmAProvisioningUnitOfWork<TTransaction> uow, BoxTableName tableName)
+    {
+        try
+        {
+            await uow.RollbackAsync(CancellationToken.None);
+        }
+        catch (Exception rollbackEx)
+        {
+            Logger.LogError(rollbackEx,
+                "Box migration unit-of-work RollbackAsync threw while unwinding from a primary failure for table '{Table}'; rollback exception is logged, primary exception is rethrown.",
+                tableName);
+        }
+    }
+
+    // Releases the unit of work (lock and transaction) before the connection. Either may be null
+    // if setup failed part way. The connection is disposed synchronously because DbConnection has
+    // no DisposeAsync on netstandard2.0.
+    private static async Task ReleaseAsync(IAmAProvisioningUnitOfWork<TTransaction>? uow, TConnection? connection)
+    {
+        if (uow is not null)
+        {
+            await uow.DisposeAsync();
+        }
+        connection?.Dispose();
     }
 
     // The span name follows the OTel DB convention "{operation} {target}". With no schema,
