@@ -316,12 +316,9 @@ recipe.
 public string Status { get; set; }
 ```
 
-- Use `<remarks>` for advice to developers or LLMs working with the code directly. Include information on how the method is implemented where it is not obvious from the code or significant design decisions have been made. Consider what you would want to know if maintaining this method. Use `<see href="">` if you need to link to external documentation.  This can also be used for more detailed information than could be included in the `<summary>`.
-  - Prefer to use good variable and method names to express intent, over inline comments.
-    - Use the refactoring "Extract Method To Express Intent" to encapsulate code in a named method that explains intent, over using a comment.
-    - Do not add comments for what may be easily inferred from the code.
-    - In tests you may use //Arrange, //Act, //Assert.
-    - If code has a complex algorithm or non-obvious implementation, prefer to use `/// <remarks>`
+- The elements divide into two kinds:
+  - **How to use the API** — `<summary>`, `<param>`, `<typeparam>`, `<returns>`, `<value>`, `<exception>`. What it is for and what to pass to get the behaviour you want.
+  - **Notes to the user** — `<remarks>`. Caveats, side effects, threading or ordering constraints, and how it is implemented where that affects how you use it, or where a significant design decision has been made. Use `<see href="">` if you need to link to external documentation. This can also be used for more detailed information than could be included in the `<summary>`.
 - Example:
 
   ```csharp
@@ -335,6 +332,15 @@ public string Status { get; set; }
 
 - Documentation comments should be changed when APIs change.      
 - Document new features and changes in the Docs repository of the BrighterCommand organization.
+
+#### Comments in Code
+
+- `///` XML documentation goes on public and protected members of public types only.
+- On internal or private types and members, no XML documentation. Where a method is complex to understand, or protects against a common trap, put a `//` or `/* */` comment immediately before the signature saying what it does or which trap it guards against.
+- Inside a method body, no comments as a rule. If a block needs a comment to be understood, use "Extract Method To Express Intent" and, if the name is not enough, comment above the new method's signature. Use Extract Variable, a named constant or a rename for the smaller cases.
+  - The exceptions are `//Arrange`, `//Act`, `//Assert` in tests, the reason on an analyser suppression, and the rare one-line warning about a trap that cannot be extracted.
+- No comment narrates what the code does, describes how it used to be, or is a note to a reviewer. No issue, PR or spec references. That context belongs in the ADR, the commit message, or the pull request.
+- Delete commented-out code.
 
 ### Licensing
 
