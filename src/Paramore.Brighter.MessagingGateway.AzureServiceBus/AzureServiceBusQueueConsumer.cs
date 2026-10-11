@@ -53,12 +53,18 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
     /// <param name="requeueScheduler">The explicitly selected queue retry scheduler.</param>
     /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
     /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
+    /// <exception cref="ConfigurationException">The scheduler supports neither synchronous nor asynchronous queue retries.</exception>
     public AzureServiceBusQueueConsumer(AzureServiceBusSubscription subscription,
         IAmAMessageScheduler requeueScheduler,
         IAdministrationClientWrapper administrationClientWrapper,
         IServiceBusReceiverProvider serviceBusReceiverProvider) : base(subscription,
         requeueScheduler, administrationClientWrapper)
     {
+        if (requeueScheduler is not IAmAMessageRequeueSchedulerSync
+            && requeueScheduler is not IAmAMessageRequeueSchedulerAsync)
+        {
+            throw new ConfigurationException("Queue retries require a scheduler implementing IAmAMessageRequeueSchedulerSync or IAmAMessageRequeueSchedulerAsync.");
+        }
         _serviceBusReceiverProvider = serviceBusReceiverProvider;
     }
 

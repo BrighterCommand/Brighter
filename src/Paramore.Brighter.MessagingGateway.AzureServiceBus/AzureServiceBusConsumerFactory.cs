@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using IServiceBusClientProvider = Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider.IServiceBusClientProvider;
@@ -36,6 +37,7 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
 {
     private readonly IServiceBusClientProvider _clientProvider;
     private readonly AzureServiceBusPublication _publication;
+    private readonly InstrumentationOptions _instrumentationOptions;
 
     /// <summary>The scheduler used when the publication selects <see cref="RequeueSchedulerMode.Global"/>.</summary>
     public IAmAMessageScheduler? Scheduler { get; set; }
@@ -61,9 +63,20 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
     /// <param name="clientProvider">The client for the consuming broker.</param>
     /// <param name="publication">The publication selecting native or global retries.</param>
     public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider, AzureServiceBusPublication publication)
+        : this(clientProvider, publication, InstrumentationOptions.All)
+    {
+    }
+
+    /// <summary>Creates consumers with the specified retry instrumentation verbosity.</summary>
+    /// <param name="clientProvider">The client for the consuming broker.</param>
+    /// <param name="publication">The publication selecting native or global retries.</param>
+    /// <param name="instrumentationOptions">The verbosity of native retry telemetry.</param>
+    public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider, AzureServiceBusPublication publication,
+        InstrumentationOptions instrumentationOptions)
     {
         _clientProvider = clientProvider ?? throw new ArgumentNullException(nameof(clientProvider));
         _publication = publication ?? throw new ArgumentNullException(nameof(publication));
+        _instrumentationOptions = instrumentationOptions;
     }
 
     /// <summary>
@@ -101,10 +114,11 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
 
         IAmAMessageScheduler? scheduler = _publication.RequeueScheduler switch
         {
-            RequeueSchedulerMode.Native => usesQueue ? new AzureServiceBusRequeueScheduler(_clientProvider) : null,
+            RequeueSchedulerMode.Native => usesQueue ? new AzureServiceBusRequeueScheduler(_clientProvider, instrumentationOptions: _instrumentationOptions) : null,
             RequeueSchedulerMode.Global when !usesQueue => throw new ConfigurationException(
                 "Global retry scheduling requires UseServiceBusQueue or ForwardTo to identify a physical queue."),
-            RequeueSchedulerMode.Global => Scheduler,
+            RequeueSchedulerMode.Global => Scheduler ?? throw new ConfigurationException(
+                "No scheduler is configured for RequeueSchedulerMode.Global."),
             _ => throw new ConfigurationException("Unknown requeue scheduler mode.")
         };
         if (usesQueue && (isAsync

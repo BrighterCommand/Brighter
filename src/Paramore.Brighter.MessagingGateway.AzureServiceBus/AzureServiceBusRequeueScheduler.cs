@@ -38,6 +38,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Context.Propagation;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 
@@ -52,25 +53,29 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// </remarks>
 public sealed partial class AzureServiceBusRequeueScheduler : IAmAMessageRequeueSchedulerAsync, IAmAMessageRequeueSchedulerSync
 {
-    private const int MAX_CONNECTION_RETRIES = 5;
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusRequeueScheduler>();
     private readonly IServiceBusSenderProvider _senderProvider;
     private readonly TimeProvider _timeProvider;
+    private readonly InstrumentationOptions _instrumentationOptions;
 
     /// <summary>Creates a native queue retry scheduler for the supplied client.</summary>
     /// <param name="clientProvider">The provider for the consuming broker's client.</param>
     /// <param name="timeProvider">The clock used to calculate delivery times; defaults to the system clock.</param>
     /// <param name="senderOptions">Options used when creating queue senders.</param>
+    /// <param name="instrumentationOptions">The verbosity of retry telemetry.</param>
     public AzureServiceBusRequeueScheduler(IServiceBusClientProvider clientProvider,
-        TimeProvider? timeProvider = null, ServiceBusSenderOptions? senderOptions = null)
-        : this(new ServiceBusSenderProvider(clientProvider, senderOptions), timeProvider ?? TimeProvider.System)
+        TimeProvider? timeProvider = null, ServiceBusSenderOptions? senderOptions = null,
+        InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+        : this(new ServiceBusSenderProvider(clientProvider, senderOptions), timeProvider ?? TimeProvider.System, instrumentationOptions)
     {
     }
 
-    internal AzureServiceBusRequeueScheduler(IServiceBusSenderProvider senderProvider, TimeProvider timeProvider)
+    internal AzureServiceBusRequeueScheduler(IServiceBusSenderProvider senderProvider, TimeProvider timeProvider,
+        InstrumentationOptions instrumentationOptions)
     {
         _senderProvider = senderProvider;
         _timeProvider = timeProvider;
+        _instrumentationOptions = instrumentationOptions;
     }
 
     /// <inheritdoc />
@@ -86,9 +91,6 @@ public sealed partial class AzureServiceBusRequeueScheduler : IAmAMessageRequeue
         cancellationToken.ThrowIfCancellationRequested();
 
         var outgoing = CopyForRetry(message);
-        WriteRetryTelemetry(outgoing);
-        var retry = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(outgoing);
-        retry.Body = new BinaryData(message.Body.Memory);
         var originalId = message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out var original)
             && !string.IsNullOrEmpty(original?.ToString()) ? original!.ToString()! : message.Id.Value;
         // A repeated scheduling call for the same delivery must not bypass broker duplicate detection.
@@ -98,16 +100,21 @@ public sealed partial class AzureServiceBusRequeueScheduler : IAmAMessageRequeue
             message.Id.Value, destination.Value,
             message.Header.HandledCount.ToString(System.Globalization.CultureInfo.InvariantCulture)
         });
-        retry.MessageId = "brighter-retry-" + BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(identity))).Replace("-", "");
-        retry.ApplicationProperties[Message.OriginalMessageIdHeaderName] = originalId;
-        retry.ApplicationProperties[ASBConstants.CloudEventsId] =
+        var retryId = "brighter-retry-" + BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(identity))).Replace("-", "");
+        var cloudEventId =
             message.Header.Bag.TryGetValue(ASBConstants.CloudEventsId, out var eventId)
             && !string.IsNullOrEmpty(eventId?.ToString()) ? eventId!.ToString()! : originalId;
+        WriteRetryTelemetry(outgoing, destination, retryId, cloudEventId);
+        var retry = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(outgoing);
+        retry.Body = new BinaryData(message.Body.Memory);
+        retry.MessageId = retryId;
+        retry.ApplicationProperties[Message.OriginalMessageIdHeaderName] = originalId;
+        retry.ApplicationProperties[ASBConstants.CloudEventsId] = cloudEventId;
 
         IServiceBusSenderWrapper? retrySender = null;
         try
         {
-            retrySender = await GetSenderAsync(destination.Value, cancellationToken).ConfigureAwait(false);
+            retrySender = _senderProvider.Get(destination.Value);
             await retrySender.ScheduleMessageAsync(retry, _timeProvider.GetUtcNow().Add(delay), cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -137,38 +144,49 @@ public sealed partial class AzureServiceBusRequeueScheduler : IAmAMessageRequeue
         }
     }
 
-    private async Task<IServiceBusSenderWrapper> GetSenderAsync(string destination, CancellationToken cancellationToken)
-    {
-        for (var attempt = 0; ; attempt++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                return _senderProvider.Get(destination);
-            }
-            catch (Exception error) when (error is not OperationCanceledException && attempt < MAX_CONNECTION_RETRIES)
-            {
-                Log.SenderCreationFailed(s_logger, error, destination);
-                await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken).ConfigureAwait(false);
-            }
-        }
-    }
-
-    private static void WriteRetryTelemetry(Message outgoing)
+    private void WriteRetryTelemetry(Message outgoing, ChannelName destination, string retryId, string cloudEventId)
     {
         var activity = Activity.Current;
         if (activity is null) return;
 
         try
         {
-            BrighterTracer.WriteProducerEvent(activity, "azure_service_bus", outgoing, InstrumentationOptions.Messaging);
+            var tags = new ActivityTagsCollection();
+            if (_instrumentationOptions != InstrumentationOptions.None)
+                tags.Add(BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain);
+            if (_instrumentationOptions.HasFlag(InstrumentationOptions.Messaging))
+            {
+                tags.Add(BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName());
+                tags.Add(BrighterSemanticConventions.MessagingSystem, "azure_service_bus");
+                tags.Add(BrighterSemanticConventions.MessagingDestination, destination.Value);
+                tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, outgoing.Header.PartitionKey.Value);
+                tags.Add(BrighterSemanticConventions.MessageId, retryId);
+                tags.Add(BrighterSemanticConventions.MessageHeaders,
+                    JsonSerializer.Serialize(outgoing.Header, JsonSerialisationOptions.Options));
+#pragma warning disable CS0618 // Preserve the legacy message type in telemetry.
+                tags.Add(BrighterSemanticConventions.MessageType, outgoing.Header.MessageType.ToString());
+#pragma warning restore CS0618
+                tags.Add(BrighterSemanticConventions.MessageBodySize, outgoing.Body.Memory.Length);
+                tags.Add(BrighterSemanticConventions.ConversationId, outgoing.Header.CorrelationId.Value);
+            }
+            if (_instrumentationOptions.HasFlag(InstrumentationOptions.RequestBody))
+                tags.Add(BrighterSemanticConventions.MessageBody, outgoing.Body.Value);
+            if (_instrumentationOptions.HasFlag(InstrumentationOptions.RequestInformation))
+            {
+                tags.Add(BrighterSemanticConventions.CeMessageId, cloudEventId);
+                tags.Add(BrighterSemanticConventions.CeSource, outgoing.Header.Source);
+                tags.Add(BrighterSemanticConventions.CeVersion, outgoing.Header.SpecVersion);
+                tags.Add(BrighterSemanticConventions.CeSubject, outgoing.Header.Subject);
+                tags.Add(BrighterSemanticConventions.CeType, outgoing.Header.Type.Value);
+            }
+            activity.AddEvent(new ActivityEvent($"{destination.Value} {CommandProcessorSpanOperation.Publish.ToSpanName()}",
+                DateTimeOffset.UtcNow, tags));
         }
         catch (Exception error)
         {
-            // Diagnostics and ambient context must not prevent delivery of a valid retry.
             Log.TelemetryFailed(s_logger, error);
-            PropagateRetryContext(activity, outgoing);
         }
+        PropagateRetryContext(activity, outgoing);
     }
 
     private static void PropagateRetryContext(Activity activity, Message outgoing)
@@ -229,9 +247,6 @@ public sealed partial class AzureServiceBusRequeueScheduler : IAmAMessageRequeue
 
         [LoggerMessage(LogLevel.Warning, "Failed to propagate retry trace header {Header}; continuing with existing metadata")]
         public static partial void TraceHeaderFailed(ILogger logger, Exception error, string header);
-
-        [LoggerMessage(LogLevel.Warning, "Failed to create retry sender for queue {Queue}, retrying")]
-        public static partial void SenderCreationFailed(ILogger logger, Exception error, string queue);
 
         [LoggerMessage(LogLevel.Error, "Failed to schedule retry on queue {Queue}")]
         public static partial void SchedulingFailed(ILogger logger, Exception error, string queue);

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using Azure.Messaging.ServiceBus;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.MessageScheduler.Azure;
@@ -32,12 +33,13 @@ internal sealed class AzureServiceBusRequeueScheduler(
     RoutingKey schedulerTopic,
     TimeProvider timeProvider,
     IServiceBusClientProvider clientProvider,
-    ServiceBusSenderOptions? senderOptions)
+    ServiceBusSenderOptions? senderOptions,
+    InstrumentationOptions instrumentationOptions)
     : AzureServiceBusScheduler(sender, schedulerTopic, timeProvider),
         IAmAMessageRequeueSchedulerAsync, IAmAMessageRequeueSchedulerSync
 {
     private readonly MessagingGateway.AzureServiceBus.AzureServiceBusRequeueScheduler _requeueScheduler =
-        new(clientProvider, timeProvider, senderOptions);
+        new(clientProvider, timeProvider, senderOptions, instrumentationOptions);
 
     public Task RequeueAsync(Message message, ChannelName destination, TimeSpan delay,
         CancellationToken cancellationToken = default)

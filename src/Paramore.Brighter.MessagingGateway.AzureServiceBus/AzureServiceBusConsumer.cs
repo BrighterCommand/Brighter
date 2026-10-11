@@ -48,6 +48,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     protected readonly AzureServiceBusSubscription Subscription;
     protected readonly string Topic;
     private readonly IAmAMessageScheduler? _requeueScheduler;
+    private int _retryDelayWarningLogged;
     protected readonly IAdministrationClientWrapper AdministrationClientWrapper;
     private readonly int _batchSize;
     protected IServiceBusReceiverWrapper? ServiceBusReceiver;
@@ -407,7 +408,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
     private void WarnIfDelayRequiresForwarding(Message message, TimeSpan delay)
     {
-        if (delay > TimeSpan.Zero)
+        if (delay > TimeSpan.Zero && Interlocked.Exchange(ref _retryDelayWarningLogged, 1) == 0)
             Log.RetryDelayRequiresForwarding(Logger, delay, message.Id.Value, Topic, SubscriptionName);
     }
 

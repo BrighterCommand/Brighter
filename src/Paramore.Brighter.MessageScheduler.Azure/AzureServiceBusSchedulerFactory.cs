@@ -1,5 +1,6 @@
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessageScheduler.Azure;
 
@@ -25,6 +26,9 @@ public class AzureServiceBusSchedulerFactory(IServiceBusClientProvider client, R
     /// The Sender options that the scheduler should use.
     /// </summary>
     public ServiceBusSenderOptions? SenderOptions { get; set; }
+
+    /// <summary>The verbosity of queue retry telemetry.</summary>
+    public InstrumentationOptions InstrumentationOptions { get; set; } = InstrumentationOptions.All;
 
     /// <summary>
     /// The topic or queue that the azure scheduler should use
@@ -59,6 +63,6 @@ public class AzureServiceBusSchedulerFactory(IServiceBusClientProvider client, R
             }
         }
         
-        return new AzureServiceBusRequeueScheduler(_sender, Topic, TimeProvider, ClientProvider, SenderOptions);
+        return new AzureServiceBusRequeueScheduler(_sender, Topic, TimeProvider, ClientProvider, SenderOptions, InstrumentationOptions);
     }
 }
