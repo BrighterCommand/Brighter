@@ -228,15 +228,8 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
             ClearPendingConfirmations();
             // ClearPendingConfirmations removed the orphan; suppress the per-tag cleanup in finally.
             pendingDeliveryTag = null;
-            // Capture the failed channel before reset; otherwise the detach fires on the recovered channel
-            // and the next send loses confirm tracking.
-            var failedChannel = Channel;
             await ResetConnectionToBrokerAsync(cancellationToken);
-            if (failedChannel is not null)
-            {
-                failedChannel.BasicAcksAsync -= OnPublishSucceeded;
-                failedChannel.BasicNacksAsync -= OnPublishFailed;
-            }
+            DetachPublisherConfirmHandlers();
             throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
         }
         finally
