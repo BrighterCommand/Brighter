@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read, Edit, Glob, Grep, Bash, AskUserQuestion, TodoWrite
 description: Bring comments into line with Brighter's comment rules, and surface refactorings a comment side-stepped
-argument-hint: [base-ref | base..head | path...]
+argument-hint: [base-ref | base..head] [path...]
 ---
 
 # Tidy Comments - Replace Comments With Intent
@@ -39,16 +39,36 @@ Resolve the scope from the arguments:
 | a git ref (e.g. `HEAD~3`) | `git diff <ref>` |
 | a range `<base>..<head>` | `git diff <base>..<head>` — work already committed or merged |
 | one or more paths | The changes to those paths on the current branch; if they have no changes, **every** comment in those files |
+| a ref or range, then paths (e.g. `abc123^1..abc123 src/Paramore.Brighter.Foo`) | The ref or range, limited to those paths. This is how a slice is named (see step 3 below) |
 
 Then:
 
 1. List the changed `*.cs` files with `git diff --stat` and show them to the user.
 2. **Exclude** generated tests (see `.agent_instructions/generated_tests.md`) — fix the template
    instead, if the template is in scope — and `*.Designer.cs`, migrations, and non-code files.
-3. With a diff scope, tidy only the comments **this diff added or changed**. Untouched comments are
+3. **Size the scope before reading it.** Count the comment lines the scope added, split into `//`
+   or `/* */` lines and `///` lines, per project (`git diff <scope> -- <project> | grep -E '^\+\s*//'`).
+   If the scope is more than one project, or more than about 150 `//` lines, a single plan is too big
+   to review. Propose slices with `AskUserQuestion`:
+   - one project per slice, `src/` before `tests/`;
+   - start with the project the others depend on (a shared base package before its backends), so
+     the first slice calibrates the decisions the rest repeat;
+   - name each slice as a command — `/refactor:tidy-comments <ref-or-range> <project-path>`.
+
+   Work only the first slice in this run. Record the remaining slices in `PROMPT.md` (see *Tracking
+   Slices* below).
+4. **If the scope is a range or ref in the past, the files may have moved on.** Check with
+   `git log --oneline <head>..HEAD -- <path>`. You tidy the files as they are now, not as they were at
+   `<head>`:
+   - A comment the range added that has since been deleted is gone; skip it.
+   - A comment the range added that has since been edited is still in scope.
+   - A comment added **after** the range, in a file the range touched, is out of scope by the
+     rule in step 5. Mark these comments **†** in the plan and ask the user, with the plan
+     approval, whether to include them. Tidying a file once is cheaper than coming back to it.
+5. With a diff scope, tidy only the comments **this diff added or changed**. Untouched comments are
    out of scope; churning them hides the real change in review. Read each file in full anyway — you
    need the surrounding method to decide whether a comment can become an extraction.
-4. Check the build is green and the relevant tests pass. If the work is still moving or the tests
+6. Check the build is green and the relevant tests pass. If the work is still moving or the tests
    fail, say so and stop: the extractions below need a green baseline.
 
 If the scope is empty, say so and stop.
@@ -144,10 +164,28 @@ comment and the code it excuses), the Fowler refactoring, kind (`structural`, `b
 2. **Run with `/test-first`** — for behaviour changes.
 3. **Add to the spec's `tasks.md`** — when a spec is active. Follow `/refactor:smells` Phase 4 for
    the task format; show the text before editing; do not commit.
-4. **Record only**, or **Skip**.
+4. **File a GitHub issue** — show the text before creating it.
+5. **Record only**, or **Skip**.
+
+If this run was one slice of a larger scope, update `PROMPT.md` (see *Tracking Slices*).
 
 Removing the comment over a side-stepped refactoring is the refactoring's job, not this one's: leave
 the comment until the refactoring makes it unnecessary.
+
+## Tracking Slices
+
+When a scope is sliced, a fresh session must be able to pick up the next slice. `PROMPT.md` in the
+repo root (gitignored, local) is where that state lives; see CLAUDE.md § *Context Management*.
+
+Keep a `## Comment tidy` section in `PROMPT.md` with:
+
+- the branch the tidy commits land on;
+- the scope as a whole, and the decisions made on the first slice that later slices should repeat
+  (for example whether † comments are included, or whether issue links in XML docs are stripped);
+- a checklist of slices, each as its exact command, ticked with its commit SHAs when it lands;
+- the issues or tasks filed in Phase 5, so they are not filed twice.
+
+Update it at the end of each run. Show the user the section before writing it, the first time.
 
 ## Rules
 
