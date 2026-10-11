@@ -27,6 +27,7 @@ using System.Runtime.CompilerServices;
 using System.Transactions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
+using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.ServiceActivator;
 
@@ -37,8 +38,9 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 /// forces the static <c>ILogger</c> fields of every closed generic Brighter type this assembly's tests
 /// touch (<see cref="PipelineBuilder{TRequest}"/>, <see cref="RequestHandler{TRequest}"/>,
 /// <see cref="RequestHandlerAsync{TRequest}"/>, <see cref="WrapPipeline{TRequest}"/>,
+/// <see cref="UseInboxHandler{T}"/>,
 /// <see cref="OutboxProducerMediator{TMessage,TTransaction}"/>) plus <see cref="TransformPipelineBuilder"/>,
-/// <see cref="Dispatcher"/> and <see cref="MessagePump"/>, to bind to it.
+/// <see cref="TransformLifetimeScope"/>, <see cref="Dispatcher"/> and <see cref="MessagePump"/>, to bind to it.
 /// </summary>
 /// <remarks>
 /// Every <c>PlaceOrderWebApplicationFactory</c> a test constructs builds its own <c>CommandProcessor</c>
@@ -60,7 +62,12 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 /// that race unconditionally: every closed type this assembly's tests use is warmed up against
 /// <see cref="Factory"/> here, before anything else in the process could have touched it or reassigned
 /// the property. Any future test that introduces a new request/command type sent or posted through a
-/// <c>PlaceOrderWebApplicationFactory</c>-based host must add its own closed generics here too.
+/// host must add its own closed generics here too, including inbox handlers added implicitly by
+/// <c>AddConsumers</c> and <see cref="UseInboxHandlerAsync{T}"/> for asynchronous consumer pipelines.
+/// </para>
+/// <para>
+/// Instance loggers cannot be warmed up here. Tests constructing SQLite outboxes use
+/// <see cref="SqliteOutboxCollection"/> and reset the factory before construction.
 /// </para>
 /// </remarks>
 internal static class Initializer
@@ -77,6 +84,7 @@ internal static class Initializer
         ApplicationLogging.LoggerFactory = Factory;
 
         RuntimeHelpers.RunClassConstructor(typeof(TransformPipelineBuilder).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(TransformLifetimeScope).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<PlaceOrder>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<SharedMarkerSentCommand>).TypeHandle);
@@ -91,11 +99,13 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<SyncPublishInnerCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<SyncPublishSendCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<TransientHandlerSendCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<TransientHandlerPublishedEvent>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<AccumulationSentCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<DepositEntityCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<MixedHostConsumerCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<DispatcherFromRequestCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<PackageNotCalledSendCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<PackageNotCalledPublishedEvent>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<PlaceOrder>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<SharedMarkerSentCommand>).TypeHandle);
@@ -118,6 +128,11 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<ConcurrentPublishInnerCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<TransientHandlerPublishedEvent>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<PackageNotCalledPublishedEvent>).TypeHandle);
+
+        // AddConsumers injects inbox handlers into these synchronous pipelines by default.
+        RuntimeHelpers.RunClassConstructor(typeof(UseInboxHandler<RegistrationAffinityCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(UseInboxHandler<MixedHostConsumerCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(UseInboxHandler<DispatcherFromRequestCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<PostedOrderCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<SharedMarkerPostedCommand>).TypeHandle);
