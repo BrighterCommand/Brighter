@@ -109,7 +109,9 @@ cases. **Do not report** these as smells:
 - **Primitives used for serialisation or interoperability**, which the design principles allow.
 - **XML documentation comments** on public members — required by
   [documentation.md](../../../.agent_instructions/documentation.md). The Comments smell is about
-  comments inside method bodies that narrate the code.
+  comments inside method bodies that narrate the code. Where the change under review has many of
+  them, report one finding and point to `/refactor:tidy-comments`, which applies the full rules,
+  rather than listing every comment.
 - **Sync/async pairs** (`Send`/`SendAsync`, `IAmA*`/`IAmA*Async`) with parallel bodies — the duplication
   is deliberate across the sync and async pipelines. Report it only where shared logic could be
   extracted without crossing that line.

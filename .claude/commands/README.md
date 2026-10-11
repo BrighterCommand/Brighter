@@ -11,6 +11,7 @@ Skills are invoked using slash commands in Claude Code:
 /adr <title>                          # Create Architecture Decision Record
 /tidy-first <change description>      # Separate structural from behavioral changes
 /refactor:smells [base-ref | base..head | path...]  # Find code smells in completed work, schedule refactorings
+/refactor:tidy-comments [base-ref | base..head | path...]  # Replace comments with intent; find side-stepped refactorings
 ```
 
 ## Available Skills
@@ -151,6 +152,7 @@ Skills are invoked using slash commands in Claude Code:
 - **`/test-first`** - TDD with an approval gate, armed by default (shift it with `/spec:gear`)
 - **`/tidy-first`** - Safe refactoring workflow
 - **`/refactor:smells`** - Opt-in code smell review of completed work; schedules refactorings
+- **`/refactor:tidy-comments`** - Brings comments into line with the comment rules; schedules refactorings a comment side-stepped
 - **`/bugfix:*`** - Diagnosis-first bug workflow (Triage → Confirm → Test-first → Fix → Verify)
 
 ### Documentation Skills
@@ -241,6 +243,7 @@ These skills enforce practices documented in `.agent_instructions/`:
 | `/adr` | ADR creation standards | [documentation.md](../../.agent_instructions/documentation.md) lines 49-62 |
 | `/tidy-first` | Structural/behavioral separation | [code_style.md](../../.agent_instructions/code_style.md) lines 74-83 |
 | `/refactor:smells` | Fowler's code smells, calibrated to Brighter's design principles | [design_principles.md](../../.agent_instructions/design_principles.md) |
+| `/refactor:tidy-comments` | Where comments may go, and Extract Method over comments | [documentation.md](../../.agent_instructions/documentation.md) → "Comments in Code" |
 
 The first three make **mandatory workflows enforceable** rather than just documented. `/refactor:smells` is opt-in.
 

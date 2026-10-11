@@ -37,6 +37,29 @@ marked `structural` (a `/tidy-first` job) or `public API change` (needs a decisi
 /refactor:smells src/Paramore.Brighter/CommandProcessor.cs
 ```
 
+### `/refactor:tidy-comments [base-ref | base..head | path...]`
+
+Brings the comments in a unit of work into line with
+[documentation.md § Comments in Code](../../../.agent_instructions/documentation.md#comments-in-code):
+XML docs on public members only, at most a comment above the signature elsewhere, and none inside
+method bodies.
+
+**Purpose**: Remove comments that narrate the code, record its history, cite issues or specs, or talk
+to a reviewer; replace comments that explain a block or expression with Extract Method, Extract
+Variable, a named constant or a rename. Comments that were written *instead of* a refactoring
+("must be called first", "can be null when…") are reported and scheduled, as `/refactor:smells` does.
+
+**It changes code, structurally only**: a comment-only `refactor:` commit, then an extraction
+`refactor:` commit, with tests green and no public signature changed. Reviewer rationale missing from
+the ADR is shown to you rather than deleted.
+
+**Usage:**
+```bash
+/refactor:tidy-comments                 # comments this branch added or changed
+/refactor:tidy-comments HEAD~3          # comments changed since a ref
+/refactor:tidy-comments src/Paramore.Brighter/CommandProcessor.cs  # every comment in a file with no changes
+```
+
 ## The Core Principle
 
 From [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md):
