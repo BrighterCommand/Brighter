@@ -1,7 +1,7 @@
 # Azure Service Bus retries and deployment
 
 Direct topic subscriptions retry by abandoning their current delivery. If a delay
-was requested, Brighter logs a warning and retries immediately. This keeps the
+was requested, Brighter warns once per consumer and retries immediately. This keeps the
 retry within the failing subscription and preserves startup compatibility.
 
 To retain delayed retries, give each independent subscriber its own forwarding
@@ -54,9 +54,15 @@ consumption there explicitly. Native mode always uses the consuming broker's con
 The queue name `subscriptions` is valid; a path such as `orders/Subscriptions/accounting`
 identifies a subscription and is rejected.
 
+The selection applies to every subscription using that consumer factory. Subscriptions
+that need different modes require separate `AzureServiceBusChannelFactory` instances,
+assigned through each `Subscription.ChannelFactory`. Other transports retain their
+existing retry behavior; this selection currently applies only to Azure Service Bus.
+
 For manual composition, `AzureServiceBusQueueConsumer` now takes an explicit retry
 scheduler in place of its producer; `AzureServiceBusTopicConsumer` no longer takes a
-producer. Use the factory above to select and validate the scheduler automatically.
+producer. A manually constructed queue consumer rejects a scheduler with neither requeue
+capability. Use the factory above to validate the capability required by the selected pump.
 
 | Channel policy | Provisioning behavior | Runtime requirements |
 |---|---|---|
@@ -95,12 +101,21 @@ Retries use the destination queue's default TTL as new broker deliveries. They d
 inherit the original delivery's remaining TTL or `AzureServiceBusPublication.TimeToLive`.
 Carry and check an application deadline when expiry must span all attempts.
 
-Sender creation is retried five times, 100 ms apart. Scheduling failures leave the
+Network retries use the client's `ServiceBusClientOptions.RetryOptions`. Sender construction
+errors fail immediately. Scheduling failures leave the
 original unacknowledged; a later abandon or lock expiry increases Azure's delivery
 count. Account for these failures when setting `MaxDeliveryCount`, even for queue retries.
 Broker failures are reported as `ChannelFailureException`, while cancellation propagates
 as cancellation. Retry publishing adds producer telemetry to the current activity and
-propagates its trace context without changing the original delivery.
+propagates its trace context without changing the original delivery. The event records the
+new broker delivery ID and the stable CloudEvents ID separately. Without a current activity,
+the retry retains the original trace context.
+
+Native retry telemetry uses the consumer factory's `instrumentationOptions` constructor
+argument. Global Azure retry telemetry uses `AzureServiceBusSchedulerFactory.InstrumentationOptions`.
+Both default to `InstrumentationOptions.All`, matching the producer. Choose `None` to
+omit event tags, or omit `Messaging` and `RequestBody` to exclude headers and body.
+Trace propagation remains enabled regardless of telemetry verbosity.
 Local-only headers are excluded from retry publishing and telemetry. If diagnostic
 header serialization fails (for example, for an AMQP `NaN` value), Brighter logs a
 warning and continues scheduling with trace context. Updating an existing baggage key is

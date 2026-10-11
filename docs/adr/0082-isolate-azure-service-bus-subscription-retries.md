@@ -65,7 +65,7 @@ Out of scope:
 **Use native abandon for direct-subscription retries and explicit native/global scheduler selection for queue retries.**
 
 A direct subscription with a positive delay remains valid at startup. At requeue time the consumer
-abandons immediately, persists the handled count and warns that `ForwardTo` is required to honor
+abandons immediately and persists the handled count. It warns once per consumer that `ForwardTo` is required to honor
 the delay. It never republishes to the topic. This applies equally to configured and handler-specific
 delays. Forwarding remains an explicit topology choice.
 
@@ -167,8 +167,8 @@ serialization failures are logged without preventing scheduling or trace propaga
 Context propagation failures are also contained within telemetry. Existing baggage keys can
 be updated at capacity; excess or unsupported ambient baggage cannot prevent delivery or
 the remaining trace headers from propagating. The received message is never modified.
-Sender acquisition uses five retries with a
-100 ms interval, matching the producer's connection policy. Cancellation interrupts the wait.
+Retry telemetry honors the configured instrumentation options and records the broker delivery ID separately from the stable CloudEvents ID.
+The Azure client's `ServiceBusClientOptions.RetryOptions` controls network retries. Sender construction failures are not retried.
 Broker errors become `ChannelFailureException`; cancellation retains its cancellation exception.
 Sender cleanup errors are logged and cannot replace the scheduling outcome.
 
