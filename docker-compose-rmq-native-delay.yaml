@@ -3,6 +3,7 @@ services:
     build:
       context: ./docker/RabbitMQ
     image: brighter-4388-rabbitmq-native:local
+    user: rabbitmq
     ports:
       - "127.0.0.1:5673:5672"
     environment:

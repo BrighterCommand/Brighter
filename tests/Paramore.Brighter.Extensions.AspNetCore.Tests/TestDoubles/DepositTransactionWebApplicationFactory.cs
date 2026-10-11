@@ -144,13 +144,8 @@ public sealed class DepositTransactionWebApplicationFactory : WebApplicationFact
     {
         builder.ConfigureServices(services =>
         {
-            // SqliteOutbox resolves ApplicationLogging.LoggerFactory (a process-wide mutable static)
-            // eagerly, in its own constructor, every time one is constructed - not once, cached, like a
-            // closed generic Brighter type's own static logger field. Constructing one directly below,
-            // during ConfigureServices and therefore before this host's own CommandProcessor has had a
-            // chance to repin that static to itself, is vulnerable to whatever value a concurrently
-            // running test's already-disposed host last left there. Re-pinning it to Initializer's own,
-            // never-disposed factory immediately before that construction closes that window.
+            // SqliteOutboxCollection prevents competing hosts from replacing this factory while
+            // SqliteOutbox creates its instance logger; a preceding host may have left a disposed factory.
             ApplicationLogging.LoggerFactory = Initializer.Factory;
 
             services.AddControllers().AddApplicationPart(typeof(DepositTransactionController).Assembly);
