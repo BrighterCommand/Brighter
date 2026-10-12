@@ -61,6 +61,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private readonly ConcurrentDictionary<ulong, PendingConfirmation> _pendingConfirmations = new ConcurrentDictionary<ulong, PendingConfirmation>();
         // The channel in confirm mode with our handlers on it; the gateway replaces a closed channel with a new instance
         private IModel? _confirmChannel;
+        // The highest delivery tag actually published on _confirmChannel; a tag at or below it means the client restarted the sequence
+        private ulong _lastPublishedDeliveryTag;
         private readonly int _waitForConfirmsTimeOutInMilliseconds;
         private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
         // The ack/nack handlers run on the client's connection loop, which must never block on a
@@ -157,6 +159,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             // raise (ack or nack) can link the settle span back to the producer (S1) span. Activity.Current
             // flows via AsyncLocal/ExecutionContext, so it is captured even when SendAsync routes via Task.Run.
             var publishContext = Activity.Current?.Context;
+            ulong? pendingDeliveryTag = null;
 
             try
             {
@@ -176,11 +179,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     Log.PublishingMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri!.GetSanitizedUri(), delay.Value.TotalMilliseconds,
                         message.Header.Topic.Value, message.Persist, message.Id.Value, message.Body.Value);
 
-                    _pendingConfirmations.TryAdd(Channel!.NextPublishSeqNo, new PendingConfirmation(message.Id, message.Header.Topic, publishContext));
+                    pendingDeliveryTag = Channel!.NextPublishSeqNo;
+                    ClearPendingConfirmationsIfTagsRestarted(pendingDeliveryTag.Value);
+                    _pendingConfirmations.TryAdd(pendingDeliveryTag.Value, new PendingConfirmation(message.Id, message.Header.Topic, publishContext));
 
                      if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null)
                      {
                          rmqMessagePublisher.PublishMessage(message, delay.Value);
+                         _lastPublishedDeliveryTag = pendingDeliveryTag.Value;
                      }
                      else if(useSchedulerAsync)
                      {
@@ -192,6 +198,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                          var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
                          schedulerSync.Schedule(message, delay.Value);
                      }
+
+                    // Sent: the broker now owns settling this tag
+                    pendingDeliveryTag = null;
 
                     Log.PublishedMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay,
                         message.Header.Topic.Value, message.Persist, message.Id.Value,
@@ -206,6 +215,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 _pendingConfirmations.Clear();
                 ResetConnectionToBroker();
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
+            }
+            finally
+            {
+                // A Send that failed before publishing never takes the tag, so the next message would collide with this entry
+                if (pendingDeliveryTag.HasValue) _pendingConfirmations.TryRemove(pendingDeliveryTag.Value, out _);
             }
         }
 
@@ -283,10 +297,23 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             if (ReferenceEquals(Channel, _confirmChannel)) return;
 
             DetachConfirms();
+            // The gateway replaced a closed channel without an IOException; the new one numbers its delivery tags
+            // from 1 again, so its acks must not settle the old channel's messages
+            _pendingConfirmations.Clear();
+            _lastPublishedDeliveryTag = 0;
             Channel!.ConfirmSelect();
             Channel.BasicAcks += OnPublishSucceeded;
             Channel.BasicNacks += OnPublishFailed;
             _confirmChannel = Channel;
+        }
+
+        // The client's auto-recovery rebuilds the channel under the same instance and restarts its delivery tags at 1,
+        // so a channel we already track can still begin a new tag sequence without the gateway replacing it
+        private void ClearPendingConfirmationsIfTagsRestarted(ulong nextDeliveryTag)
+        {
+            if (nextDeliveryTag > _lastPublishedDeliveryTag) return;
+
+            _pendingConfirmations.Clear();
         }
 
         private void DetachConfirms()
