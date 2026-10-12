@@ -75,7 +75,7 @@ public class SqliteBoxDetectionHelper :
         CancellationToken cancellationToken = default,
         SqliteTransaction? transaction = null)
     {
-        _ = historySchema; // SQLite has no schema concept; PerSchema is a no-op here.
+        _ = historySchema;
         var historyTableExists = await DoesTableExistAsync(
             connection, "__BrighterMigrationHistory", schemaName, cancellationToken, transaction);
         if (!historyTableExists)
@@ -103,7 +103,7 @@ WHERE [BoxTableName] = @BoxTableName";
         CancellationToken cancellationToken = default,
         SqliteTransaction? transaction = null)
     {
-        _ = historySchema; // SQLite has no schema concept; PerSchema is a no-op here.
+        _ = historySchema;
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
         command.CommandText = @"

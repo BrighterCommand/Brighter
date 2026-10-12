@@ -70,12 +70,11 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// <c>SqliteConnection.DefaultTimeout</c> to the lockTimeout (rounded up to whole seconds —
 /// the driver's granularity), and Microsoft.Data.Sqlite drives sqlite3_busy_timeout from that
 /// value on every internal statement, including the synthesised <c>BEGIN IMMEDIATE</c>. The
-/// driver's built-in busy handler retries with backoff inside the call; we do not wrap a
-/// retry loop in C#. If the budget elapses while the slot is still held, the original
+/// driver's busy handler retries with backoff inside the call. If the budget elapses while the slot is still held, the original
 /// <see cref="SqliteException"/> with <c>SqliteErrorCode == 5</c> (<c>SQLITE_BUSY</c>)
-/// propagates to the runner's catch path. Note: <c>PRAGMA busy_timeout</c> issued in SQL is
-/// silently overwritten by the next command's CommandTimeout-derived re-application, so
-/// DefaultTimeout is the only reliable hook.
+/// propagates to the runner's catch path. <c>PRAGMA busy_timeout</c> issued in SQL is
+/// silently overwritten by the driver before the next command, so DefaultTimeout is the only
+/// reliable hook.
 /// </para>
 /// </remarks>
 public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, SqliteTransaction>
@@ -106,10 +105,7 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     }
 
     /// <summary>
-    /// Convenience ctor used by the <c>AddSqliteOutbox</c>/<c>AddSqliteInbox</c> registration
-    /// extensions: synthesises a default <see cref="SqliteBoxDetectionHelper"/> so the
-    /// extension method doesn't have to resolve it from the container before the catalog
-    /// is in scope.
+    /// Initialises the runner with a default <see cref="SqliteBoxDetectionHelper"/>.
     /// </summary>
     public SqliteBoxMigrationRunner(
         IAmABoxMigrationCatalog catalog,
@@ -124,8 +120,8 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
 
     /// <summary>
     /// Convenience constructor using the default <see cref="BoxProvisioningOptions.MigrationLockTimeout"/>
-    /// of 30 seconds and WAL journal mode enabled. Tests and callers that need a custom timeout
-    /// or want to skip the WAL pragma should use the multi-argument form.
+    /// of 30 seconds and WAL journal mode enabled. Callers that need a custom timeout or want to
+    /// skip the WAL pragma should use the multi-argument form.
     /// </summary>
     public SqliteBoxMigrationRunner(
         IAmABoxMigrationCatalog catalog,
@@ -141,8 +137,6 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     /// <remarks>SQLite has no schema concept, so history has no qualifying schema and
     /// <see cref="MigrationHistoryScope.PerSchema"/> is a no-op.</remarks>
     protected override string? DefaultHistorySchema => null;
-
-    // ==== Per-backend hook overrides for SqlBoxMigrationRunner ====
 
     protected override async Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {
@@ -168,9 +162,9 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
             new SqliteProvisioningUnitOfWork(connection, Logger));
     }
 
-    // SQLite has no schema concept, so the schema is folded out of the lock resource. The
-    // string is symbolic only — SqliteProvisioningUnitOfWork's BeginAsync logs it for trace
-    // diagnostics but does not use it for locking (BEGIN IMMEDIATE owns that role).
+    /// <inheritdoc />
+    /// <remarks>SQLite has no schema concept, so the resource is the table name. It is only
+    /// logged: <c>BEGIN IMMEDIATE</c> is the lock.</remarks>
     protected override string LockResourceFor(string? schemaName, string tableName)
     {
         _ = schemaName;
@@ -181,14 +175,9 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
         CancellationToken cancellationToken)
     {
-        _ = schemaName; // SQLite has no schema concept.
-        _ = tableName;  // SQLite is out of scope for PerSchema; the D5 seed never fires here.
+        _ = schemaName;
+        _ = tableName;
 
-        // No race-handling needed: BEGIN IMMEDIATE above acquires SQLite's database-wide RESERVED
-        // lock, so only one writer can be inside this transaction at a time. Concurrent runners
-        // queue at the BEGIN IMMEDIATE call rather than racing on CREATE TABLE — by the time a
-        // second writer enters this method, the first has already committed and IF NOT EXISTS
-        // sees the table.
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"
@@ -206,13 +195,8 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
         string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
     {
-        _ = schemaName; // SQLite has no schema concept.
+        _ = schemaName;
 
-        // Execute the V_latest-shape DDL sourced from IAmABoxMigrationCatalog.FreshInstallDdl
-        // (the live SqliteOutboxBuilder.GetDDL / SqliteInboxBuilder.GetDDL output). Stamp
-        // directly at V_latest with a "fresh install" marker — V2..V_latest ALTERs would all be
-        // no-ops (and would in fact throw "duplicate column name" without the IdempotencyCheckSql
-        // skip), so we elide the chain entirely (spec 0027 R1 fresh-install fast path).
         await ExecuteUpScriptAsync(connection, transaction!, freshInstallDdl, cancellationToken);
 
         await InsertHistoryRowAsync(
@@ -224,7 +208,7 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
         BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
     {
-        _ = schemaName; // SQLite has no schema concept.
+        _ = schemaName;
 
         var detected = await DetectionHelper.DetectCurrentVersionAsync(
             connection, tableName, null, boxType, migrations, cancellationToken, transaction);
@@ -261,7 +245,7 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
         IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
     {
-        _ = schemaName; // SQLite has no schema concept.
+        _ = schemaName;
 
         var maxVersion = await DetectionHelper.GetMaxVersionAsync(
             connection, tableName, null, ResolveHistorySchema(), cancellationToken, transaction);
@@ -322,15 +306,9 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    // Whole seconds, at least 1: the driver reads a DefaultTimeout of 0 as "wait forever".
     private static int ToDriverBusyTimeoutSeconds(TimeSpan lockTimeout)
     {
-        // Microsoft.Data.Sqlite drives sqlite3_busy_timeout from connection.DefaultTimeout
-        // (in seconds), re-applying it before every internal command — including the BEGIN
-        // command synthesised by BeginTransaction(IsolationLevel, deferred). PRAGMA busy_timeout
-        // would be silently overwritten by that re-application, so DefaultTimeout is the only
-        // reliable way to honour lockTimeout. Driver granularity is whole seconds; sub-second
-        // lockTimeouts floor to 1s. DefaultTimeout = 0 means "wait forever" in this driver
-        // (not "fail-fast"), so callers wanting fail-fast pass TimeSpan.Zero and get ~1s.
         return (int)Math.Max(1, Math.Ceiling(lockTimeout.TotalSeconds));
     }
 
