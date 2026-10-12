@@ -26,12 +26,9 @@
 public string Status { get; set; }
 ```
 
-- Use `<remarks>` for advice to developers or LLMs working with the code directly. Include information on how the method is implemented where it is not obvious from the code or significant design decisions have been made. Consider what you would want to know if maintaining this method. Use `<see href="">` if you need to link to external documentation.  This can also be used for more detailed information than could be included in the `<summary>`.
-  - Prefer to use good variable and method names to express intent, over inline comments.
-    - Use the refactoring "Extract Method To Express Intent" to encapsulate code in a named method that explains intent, over using a comment.
-    - Do not add comments for what may be easily inferred from the code.
-    - In tests you may use //Arrange, //Act, //Assert.
-    - If code has a complex algorithm or non-obvious implementation, prefer to use `/// <remarks>`
+- The elements divide into two kinds:
+  - **How to use the API** — `<summary>`, `<param>`, `<typeparam>`, `<returns>`, `<value>`, `<exception>`. What it is for and what to pass to get the behaviour you want.
+  - **Notes to the user** — `<remarks>`. Caveats, side effects, threading or ordering constraints, and how it is implemented where that affects how you use it, or where a significant design decision has been made. Use `<see href="">` if you need to link to external documentation. This can also be used for more detailed information than could be included in the `<summary>`.
   - Example:
 
   ```csharp
@@ -45,6 +42,31 @@ public string Status { get; set; }
 
 - Documentation comments should be changed when APIs change.  
 - Document new features and changes in the Docs repository of the BrighterCommand organization.
+
+## Comments in Code
+
+Where a comment may go depends on what it is attached to.
+
+| Where | What is allowed |
+|-------|-----------------|
+| Public and protected members of public types | `///` XML documentation, as above. Required. |
+| Internal or private types and members | No XML documentation. Where a method is complex to understand, or protects against a common trap, a `//` or `/* */` comment **immediately before the signature** saying what it does or which trap it guards against. Otherwise nothing. |
+| Inside a method body | **No comments, as a rule.** |
+
+- Express intent with code, not comments, inside a method body. If a block needs a comment to be understood, use the refactoring "Extract Method To Express Intent": give the block a name that says what it does, and, if the name is not enough, put the comment above the new method's signature.
+  - The same goes for the smaller refactorings: Extract Variable for a condition that needs explaining, a named constant for a magic literal, a rename for a variable whose name needs a comment.
+  - A comment that warns about a trap ("must be called before…", "can be null when…", "do not reorder…") often hides a refactoring that removes the trap: make the ordering impossible to get wrong, make the type say it can be null, or guard it with an assertion.
+- The exceptions inside a method body are:
+  - `//Arrange`, `//Act`, `//Assert` in tests.
+  - The reason on an analyser suppression (`#pragma warning disable`, `// ReSharper disable`), on the same or preceding line.
+  - A single line marking a trap that cannot be extracted, such as a workaround for a bug in a third-party library at one call site. This is rare; reach for extraction first.
+- Every comment, wherever it sits:
+  - Explains the code as it now stands. It does not narrate *what* the code does, restate the code, or describe the change relative to how the code used to be.
+  - Is not a note to a reviewer. The fix, the alternatives considered, the previous behaviour and the history of a change are reviewer-facing rationale; they belong in the ADR or the commit message.
+  - Carries no links or references to issues, PRs or specs (e.g. `(issue #4089)`, `#4207`, `Spec 0027`). The traceability lives in git history and the ADR. Referring to an ADR by number where the design decision explains the code is fine.
+  - Is concise. Prefer one tight line over a paragraph.
+- Delete commented-out code. Git remembers it.
+- `/refactor:tidy-comments` brings existing code into line with these rules.
 
 ## Architecture Decision Records
 

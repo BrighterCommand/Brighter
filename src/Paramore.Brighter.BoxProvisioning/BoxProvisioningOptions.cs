@@ -55,8 +55,7 @@ public class BoxProvisioningOptions
     /// sequentially (one outbox/inbox table at a time per registered backend). For a deployment
     /// with T provisioned tables on a single replica, the cumulative wall-clock window in the
     /// contended worst case is <c>MigrationLockTimeout × T</c>. Multi-tenant deployments with
-    /// many tables should size their readiness-probe tolerance accordingly. Parallelising the
-    /// per-phase loop is tracked at <see href="https://github.com/BrighterCommand/Brighter/issues/4140"/>.
+    /// many tables should size their readiness-probe tolerance accordingly.
     /// </para>
     /// <para>
     /// MySQL/SQLite-specific caveat: MySQL's <c>GET_LOCK</c> takes a timeout argument as an
@@ -67,15 +66,14 @@ public class BoxProvisioningOptions
     /// on contention even if a shorter timeout is configured, and <see cref="TimeSpan.Zero"/>
     /// is NOT fail-fast. This is necessary divergence from MSSQL (<c>sp_getapplock</c> accepts
     /// milliseconds and supports fail-fast 0-ms) and PostgreSQL (<c>pg_try_advisory_lock</c>
-    /// is non-blocking and the runner loops with a monotonic deadline). Per PR #4039 reviewer
-    /// items M2-6 and F2-6.
+    /// is non-blocking and the runner loops with a monotonic deadline).
     /// </para>
     /// </remarks>
     public TimeSpan MigrationLockTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// Controls where the box migration-history table is physically placed. Default:
-    /// <see cref="MigrationHistoryScope.Global"/> — identical to behaviour prior to this feature.
+    /// <see cref="MigrationHistoryScope.Global"/>.
     /// </summary>
     /// <remarks>
     /// <see cref="MigrationHistoryScope.PerSchema"/> places history in the configured

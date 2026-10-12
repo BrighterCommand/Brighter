@@ -175,7 +175,7 @@ Options:
 1. Make the behavioral changes you identified in Phase 1
 2. Follow code style and documentation guidelines
 3. Add proper error handling
-4. Update or add XML documentation for new/changed public APIs
+4. Update or add XML documentation for new/changed public APIs; no comments inside method bodies ([documentation.md § Comments in Code](../../../.agent_instructions/documentation.md#comments-in-code))
 5. Follow test-first if adding new behavior (consider using `/test-first` for this)
 
 **If adding significant new behavior:**

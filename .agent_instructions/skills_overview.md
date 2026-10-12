@@ -15,6 +15,7 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 | `/test-first` | TDD with an approval gate, armed by default | `/test-first <behavior description>` |
 | `/tidy-first` | Separate refactoring from features | `/tidy-first <change description>` |
 | `/refactor:smells` | Find code smells in completed work, schedule refactorings | `/refactor:smells [base-ref \| base..head \| path...]` |
+| `/refactor:tidy-comments` | Bring comments into line with the comment rules; surface refactorings a comment side-stepped | `/refactor:tidy-comments [base-ref \| base..head \| path...]` |
 | `/adr` | Create Architecture Decision Record | `/adr <title>` |
 | `/bugfix:*` | Diagnosis-first bug workflow (Confirm gate) | `/bugfix:triage [issue \| description]` |
 
@@ -74,6 +75,11 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
    /refactor:smells [base-ref | base..head | path...]
    • Opt-in, after a unit of work is green: find Fowler's code smells
    • Reports and schedules refactorings; does not change code
+
+   /refactor:tidy-comments [base-ref | base..head | path...]
+   • Delete, trim or move comments that break documentation.md § Comments in Code
+   • Replaces explanatory comments with Extract Method / Variable / Rename
+   • Reports comments that side-stepped a real refactoring, and schedules it
 
 📋 ARCHITECTURE DECISIONS
    /adr <title>

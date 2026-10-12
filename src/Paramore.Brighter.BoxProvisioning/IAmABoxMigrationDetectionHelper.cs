@@ -94,8 +94,7 @@ public interface IAmABoxMigrationDetectionHelper<TConnection, TTransaction>
     /// rows by their <c>SchemaName</c> column. Null is substituted with the backend default by
     /// each implementation — see <see cref="DoesTableExistAsync"/> for the substitution rule.</param>
     /// <param name="historySchema">Optional. The physical schema that holds the history table.
-    /// <c>null</c> means "the backend default schema" — i.e. the behaviour prior to per-schema
-    /// history placement. Distinct from <paramref name="schemaName"/>: under
+    /// <c>null</c> means "the backend default schema". Distinct from <paramref name="schemaName"/>: under
     /// <see cref="MigrationHistoryScope.Global"/> the two may differ (box in <c>billing</c>,
     /// history in <c>dbo</c>); under <see cref="MigrationHistoryScope.PerSchema"/> they coincide.
     /// Ignored by backends without a distinct schema concept (MySQL/SQLite/Spanner).</param>
@@ -116,8 +115,7 @@ public interface IAmABoxMigrationDetectionHelper<TConnection, TTransaction>
     /// by their <c>SchemaName</c> column. Null is substituted with the backend default by each
     /// implementation — see <see cref="DoesTableExistAsync"/> for the substitution rule.</param>
     /// <param name="historySchema">Optional. The physical schema that holds the history table.
-    /// <c>null</c> means "the backend default schema" — i.e. the behaviour prior to per-schema
-    /// history placement. See <see cref="DoesHistoryExistAsync"/> for the distinction from
+    /// <c>null</c> means "the backend default schema". See <see cref="DoesHistoryExistAsync"/> for the distinction from
     /// <paramref name="schemaName"/>.</param>
     /// <param name="cancellationToken">Optional cancellation.</param>
     /// <param name="transaction">Optional. See <see cref="DoesTableExistAsync"/>.</param>
