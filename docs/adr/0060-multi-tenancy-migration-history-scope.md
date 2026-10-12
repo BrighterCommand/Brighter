@@ -250,6 +250,12 @@ Structural changes precede behavioural ones, in separate commits (design princip
 
 These corrections are reflected in `specs/0029-multi-tenancy-migrations/tasks.md` (S1, T3) and do not change the decision's substance (single resolver, opt-in scope, upgrade-safe default).
 
+**2026-10-12 (D5 as implemented, MSSQL and PostgreSQL):**
+
+3. **The seed runs on every `PerSchema` provision, not only when the per-schema history table is first created.** D5's "One-time" bullet gates the seed on a pre-create probe. That gate is wrong when more than one box shares the per-schema history table: the second box type to flip (e.g. the inbox after the outbox) finds the table already created by the first, skips its seed, and the bootstrap path then stamps a fresh `bootstrap: detected at V_latest` row — re-running the migration ledger and breaking FR5. The table-level gate is therefore dropped. The seed runs whenever the resolved history schema differs from the backend default; the per-row `NOT EXISTS` guard makes a steady-state run a zero-row `INSERT … SELECT`, and the cost is that one round-trip per provision. The consequence for the "Cross-schema read permission" risk is that read access to the legacy table is needed for the lifetime of the `PerSchema` deployment, not just at flip time.
+
+4. **A failure to read the legacy history table throws `ConfigurationException`.** Silently absorbing it would let an empty seed through, and the next provision would bootstrap-stamp a fresh row, again breaking FR5; the throw rolls back the surrounding transaction so no partial per-schema state is left. The catch is filtered to the provider's permission-denied codes (PostgreSQL `42501`; SQL Server `229`/`230`), and wraps both the legacy-existence probe and the seed `INSERT … SELECT`, so a deadlock, dropped connection or timeout propagates unchanged rather than being misreported as "grant SELECT on the legacy table".
+
 ## References
 
 - Requirements: [specs/0029-multi-tenancy-migrations/requirements.md](../../specs/0029-multi-tenancy-migrations/requirements.md)
