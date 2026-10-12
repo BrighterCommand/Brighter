@@ -116,46 +116,48 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
         => $"BrighterMigration_{PgIdentifier.Normalize(schemaName ?? HISTORY_TABLE_SCHEMA)}.{PgIdentifier.Normalize(tableName)}";
 
 
-    // Quoted, and so folded, the same way the detection helper reads it.
-    private string QuotedHistorySchema()
+    // Never null here: DefaultHistorySchema is "public", and the base rejects PerSchema without a
+    // SchemaName before migrating.
+    private string ValidatedHistorySchema()
     {
-        // The `!` is safe: DefaultHistorySchema returns the non-null "public" const on this runner
-        // and the D3 guard rejects PerSchema with a null SchemaName before MigrateAsync proceeds,
-        // so ResolveHistorySchema() is provably non-null here. If a future refactor breaks that
-        // invariant, NRE points at this line.
-        var schema = ResolveHistorySchema()!;
-        Identifiers.AssertSafe(schema, nameof(schema));
-        return PgIdentifier.Quote(schema);
+        var resolvedHistorySchema = ResolveHistorySchema()!;
+        Identifiers.AssertSafe(resolvedHistorySchema, nameof(resolvedHistorySchema));
+        return resolvedHistorySchema;
     }
+
+    // Quoted, and so folded, the same way the detection helper reads it.
+    private string QuotedHistorySchema() => PgIdentifier.Quote(ValidatedHistorySchema());
 
     protected override async Task EnsureHistoryTableAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName, string tableName,
         CancellationToken cancellationToken)
     {
-        // Resolve the physical history schema once. Under PerSchema it's the configured (non-null)
-        // SchemaName; under Global it is the backend default ("public"). The detection helper folds
-        // the same value the same way (PgIdentifier.Quote / Normalize), so write and read never
-        // diverge. AssertSafe guards against any unsafe schema literal leaking into the inline DDL.
-        // The `!` is safe: DefaultHistorySchema returns the non-null "public" const on this runner
-        // and the D3 guard rejects PerSchema with a null SchemaName before MigrateAsync proceeds,
-        // so ResolveHistorySchema() is provably non-null here.
-        var resolvedHistorySchema = ResolveHistorySchema()!;
-        Identifiers.AssertSafe(resolvedHistorySchema, nameof(resolvedHistorySchema));
+        var resolvedHistorySchema = ValidatedHistorySchema();
         var historySchemaQuoted = PgIdentifier.Quote(resolvedHistorySchema);
         var historySchemaFolded = PgIdentifier.Normalize(resolvedHistorySchema);
 
-        // D5 (ADR 0060): on a PerSchema run that follows a Global predecessor, copy this tenant's
-        // prior history rows from the legacy public.__BrighterMigrationHistory so the runner does
-        // NOT mis-detect the box as needing a bootstrap re-stamp (which would silently re-run
-        // migration accounting and break FR5). Skipped when the folded resolved history schema
-        // equals the folded backend default (Global, or PerSchema with SchemaName == "public") —
-        // then per-schema and legacy are the same table and there is nothing to copy.
-        var needsSeedCheck = !string.Equals(historySchemaFolded, HISTORY_TABLE_SCHEMA, StringComparison.Ordinal);
+        var historyIsSeparateFromLegacy = !string.Equals(historySchemaFolded, HISTORY_TABLE_SCHEMA, StringComparison.Ordinal);
 
-        using (var command = connection.CreateCommand())
+        await CreateHistoryTableAsync(connection, transaction, historySchemaQuoted, cancellationToken);
+
+        if (historyIsSeparateFromLegacy)
         {
-            command.Transaction = transaction;
-            command.CommandText = $@"
+            await SeedHistoryFromLegacyAsync(
+                connection, transaction, historySchemaQuoted, resolvedHistorySchema,
+                schemaName ?? resolvedHistorySchema, tableName, cancellationToken);
+        }
+    }
+
+    // A provisioner for another box can race this CREATE (ADR 0057 §3). Postgres aborts the whole
+    // transaction on the loser's duplicate error even when it is caught, so the CREATE runs inside
+    // a savepoint that the catch rolls back to.
+    private async Task CreateHistoryTableAsync(
+        NpgsqlConnection connection, NpgsqlTransaction? transaction, string historySchemaQuoted,
+        CancellationToken cancellationToken)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = $@"
 CREATE TABLE IF NOT EXISTS {historySchemaQuoted}.""{MIGRATION_HISTORY_TABLE}"" (
     ""MigrationVersion"" INT NOT NULL,
     ""SchemaName"" VARCHAR(256) NOT NULL DEFAULT 'public',
@@ -164,47 +166,33 @@ CREATE TABLE IF NOT EXISTS {historySchemaQuoted}.""{MIGRATION_HISTORY_TABLE}"" (
     ""AppliedAt"" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (""SchemaName"", ""BoxTableName"", ""MigrationVersion"")
 )";
-            // Postgres marks the outer transaction as aborted on a catalog-level duplicate-type
-            // error from CREATE TABLE IF NOT EXISTS regardless of whether we catch it. Without a
-            // savepoint the catch below leaves the transaction "poisoned" — RedetectStateAsync's
-            // next statement then fails with 25P02 even though our swallow was intentional. A
-            // SAVEPOINT around the CREATE narrows the abort to the inner sub-transaction, so
-            // ROLLBACK TO SAVEPOINT restores a usable transaction state on the racing path.
+        if (transaction is not null)
+        {
+            await transaction.SaveAsync(HistoryTableSavepoint, cancellationToken);
+        }
+        try
+        {
+            await command.ExecuteNonQueryAsync(cancellationToken);
             if (transaction is not null)
             {
-                await transaction.SaveAsync(HistoryTableSavepoint, cancellationToken);
-            }
-            try
-            {
-                await command.ExecuteNonQueryAsync(cancellationToken);
-                if (transaction is not null)
-                {
-                    await transaction.ReleaseAsync(HistoryTableSavepoint, cancellationToken);
-                }
-            }
-            catch (PostgresException ex) when (
-                ex.SqlState == PostgresErrorCodes.UniqueViolation
-                || ex.SqlState == PostgresErrorCodes.DuplicateTable
-                || ex.SqlState == PostgresErrorCodes.DuplicateObject)
-            {
-                if (transaction is not null)
-                {
-                    await transaction.RollbackAsync(HistoryTableSavepoint, cancellationToken);
-                }
-
-                Logger.LogDebug(ex,
-                    "{HistoryTable} already created by racing session (Postgres SqlState {SqlState})",
-                    MIGRATION_HISTORY_TABLE, ex.SqlState);
-                Activity.Current?.AddEvent(new ActivityEvent(
-                    BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
+                await transaction.ReleaseAsync(HistoryTableSavepoint, cancellationToken);
             }
         }
-
-        if (needsSeedCheck)
+        catch (PostgresException ex) when (
+            ex.SqlState == PostgresErrorCodes.UniqueViolation
+            || ex.SqlState == PostgresErrorCodes.DuplicateTable
+            || ex.SqlState == PostgresErrorCodes.DuplicateObject)
         {
-            await SeedHistoryFromLegacyAsync(
-                connection, transaction, historySchemaQuoted, resolvedHistorySchema,
-                schemaName ?? resolvedHistorySchema, tableName, cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(HistoryTableSavepoint, cancellationToken);
+            }
+
+            Logger.LogDebug(ex,
+                "{HistoryTable} already created by racing session (Postgres SqlState {SqlState})",
+                MIGRATION_HISTORY_TABLE, ex.SqlState);
+            Activity.Current?.AddEvent(new ActivityEvent(
+                BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
         }
     }
 
@@ -299,7 +287,7 @@ WHERE src.""SchemaName"" = @SchemaName
 
     // Only a missing privilege means "grant SELECT"; any other failure propagates unchanged.
     private static bool IsLegacyHistoryReadPermissionDenied(PostgresException ex) =>
-        ex.SqlState == "42501";
+        ex.SqlState == PostgresErrorCodes.InsufficientPrivilege;
 
     private static ConfigurationException BuildLegacyHistoryReadDeniedException(
         string legacyQuoted, string perSchemaQuoted, Exception inner) =>

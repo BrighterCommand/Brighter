@@ -113,23 +113,8 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
         var foldedHistorySchema = PgIdentifier.Normalize(historySchema ?? DefaultSchemaName);
         var quotedHistorySchema = QuotedHistorySchema(historySchema);
 
-        // System-table existence: __BrighterMigrationHistory is created via quoted DDL
-        // (`CREATE TABLE IF NOT EXISTS <schema>."__BrighterMigrationHistory"`), so its name
-        // is case-PRESERVED in pg_class. Routing through DoesTableExistAsync would lowercase
-        // the lookup to `'__brightermigrationhistory'` and miss. Inline the literal-name check,
-        // parameterising only the (folded) schema.
-        using (var existsCmd = connection.CreateCommand())
-        {
-            if (transaction != null) existsCmd.Transaction = transaction;
-            existsCmd.CommandText = @"
-SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
-WHERE TABLE_SCHEMA = @HistorySchema AND TABLE_NAME = '__BrighterMigrationHistory')";
-            existsCmd.Parameters.AddWithValue("@HistorySchema", foldedHistorySchema);
-            var existsRaw = await existsCmd.ExecuteScalarAsync(cancellationToken);
-            var historyTableExists = existsRaw is bool b && b;
-            if (!historyTableExists)
-                return false;
-        }
+        if (!await HistoryTableExistsAsync(connection, foldedHistorySchema, cancellationToken, transaction))
+            return false;
 
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
@@ -155,6 +140,22 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
                 "PostgreSqlBoxDetectionHelper.DoesHistoryExistAsync: swallowed UndefinedTable on COUNT(1) after positive existence check — __BrighterMigrationHistory was dropped between the two queries. Returning false. In production this indicates a history-table-management bug; in parallel tests it is expected because tests drop the table deliberately.");
             return false;
         }
+    }
+
+    // The history table is created with a quoted name, so its case is preserved; this cannot use
+    // DoesTableExistAsync, which folds the name to lowercase.
+    private static async Task<bool> HistoryTableExistsAsync(
+        NpgsqlConnection connection, string foldedHistorySchema,
+        CancellationToken cancellationToken, NpgsqlTransaction? transaction)
+    {
+        using var command = connection.CreateCommand();
+        if (transaction != null) command.Transaction = transaction;
+        command.CommandText = @"
+SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = @HistorySchema AND TABLE_NAME = '__BrighterMigrationHistory')";
+        command.Parameters.AddWithValue("@HistorySchema", foldedHistorySchema);
+        var raw = await command.ExecuteScalarAsync(cancellationToken);
+        return raw is bool exists && exists;
     }
 
     /// <summary>

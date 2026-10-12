@@ -59,37 +59,28 @@ public class PostgreSqlProvisioningUnitOfWork(
         }
         catch
         {
-            // Per ADR 0058 §B.3 atomic-Begin: BeginTransactionAsync threw AFTER the session-
-            // scoped lock was acquired. The §B.3 runner contract places BeginAsync OUTSIDE
-            // its try/catch (pinned by When_relational_box_migration_runner_base_begin_async_throws...),
-            // so RollbackAsync will not run — the lock would leak until connection close
-            // (bounded but messy). Release the lock at source so atomic-Begin holds: a
-            // BeginAsync that throws guarantees no resources are held. _lockResource is
-            // cleared so a subsequent best-effort RollbackAsync is a clean no-op.
-            try
-            {
-                // Pass CancellationToken.None — NOT the caller's token — mirroring §B.3
-                // rollback semantics: if BeginTransactionAsync threw because the caller's
-                // token was cancelled (or cancelled during this catch block), reusing that
-                // token here short-circuits pg_advisory_unlock with OperationCanceledException
-                // before the SQL is dispatched, and the session-scoped lock leaks to
-                // connection close. The release SQL is a single round-trip and bounded by the
-                // connection state; running it untokened guarantees the unlock attempt reaches
-                // the server even when the caller has already abandoned the operation.
-                await advisoryLock.ReleaseAsync(connection, lockResource, CancellationToken.None);
-            }
-            catch (Exception releaseEx)
-            {
-                // Release-on-cleanup MUST NOT replace the original BeginTransactionAsync
-                // exception. Log + swallow; the session-scoped lock is released by the server
-                // when the connection closes.
-                logger.LogWarning(
-                    releaseEx,
-                    "Postgres provisioning UoW: pg_advisory_unlock threw while cleaning up after BeginTransactionAsync failure for lock resource '{LockResource}' — release skipped, the session will release the lock when the connection closes.",
-                    lockResource);
-            }
+            await ReleaseLockAfterFailedBeginAsync(lockResource);
             _lockResource = null;
             throw;
+        }
+    }
+
+    // A BeginAsync that throws must hold nothing, and the runner will not call RollbackAsync
+    // (ADR 0058 §B.3). Uses CancellationToken.None because a cancelled caller token may be why
+    // Begin failed, and must not stop the unlock reaching the server. Never throws, so the Begin
+    // failure is what the caller sees; the server releases the lock when the connection closes.
+    private async Task ReleaseLockAfterFailedBeginAsync(string lockResource)
+    {
+        try
+        {
+            await advisoryLock.ReleaseAsync(connection, lockResource, CancellationToken.None);
+        }
+        catch (Exception releaseEx)
+        {
+            logger.LogWarning(
+                releaseEx,
+                "Postgres provisioning UoW: pg_advisory_unlock threw while cleaning up after BeginTransactionAsync failure for lock resource '{LockResource}' — release skipped, the session will release the lock when the connection closes.",
+                lockResource);
         }
     }
 
@@ -99,12 +90,7 @@ public class PostgreSqlProvisioningUnitOfWork(
         if (_transaction is null) return;
         await _transaction.CommitAsync(cancellationToken);
         var held = await advisoryLock.ReleaseAsync(connection, _lockResource!, cancellationToken);
-        if (!held)
-        {
-            logger.LogWarning(
-                "Postgres provisioning UoW: pg_advisory_unlock returned false for lock resource '{LockResource}' — the lock was not held by this session at release. This is likely a Brighter defect — please report it.",
-                _lockResource);
-        }
+        if (!held) LogLockNotHeld();
     }
 
     /// <inheritdoc />
@@ -128,12 +114,7 @@ public class PostgreSqlProvisioningUnitOfWork(
             try
             {
                 var held = await advisoryLock.ReleaseAsync(connection, _lockResource, cancellationToken);
-                if (!held)
-                {
-                    logger.LogWarning(
-                        "Postgres provisioning UoW: pg_advisory_unlock returned false for lock resource '{LockResource}' — the lock was not held by this session at release. This is likely a Brighter defect — please report it.",
-                        _lockResource);
-                }
+                if (!held) LogLockNotHeld();
             }
             catch (Exception ex)
             {
@@ -144,6 +125,11 @@ public class PostgreSqlProvisioningUnitOfWork(
             }
         }
     }
+
+    private void LogLockNotHeld() =>
+        logger.LogWarning(
+            "Postgres provisioning UoW: pg_advisory_unlock returned false for lock resource '{LockResource}' — the lock was not held by this session at release. This is likely a Brighter defect — please report it.",
+            _lockResource);
 
     /// <inheritdoc />
     public ValueTask DisposeAsync()
