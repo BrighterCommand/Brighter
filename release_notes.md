@@ -2,6 +2,23 @@
 
 ## Master
 
+### Azure Service Bus retry scheduler selection
+
+`Publication.RequeueScheduler` selects native scheduling on the consuming broker (the default)
+or the explicitly configured global scheduler. Pass the publication to `AzureServiceBusConsumerFactory`.
+Global mode requires a queue-targeted retry capability for the selected message pump. Reactor uses
+the synchronous capability and Proactor the asynchronous one. Retries preserve CloudEvents identity,
+record producer telemetry, retry sender acquisition, and report broker failures consistently.
+Subscription and reserved subqueue paths cannot be used as retry destinations.
+Retry telemetry and baggage propagation failures no longer prevent scheduling. Baggage
+allows updating an existing key at its 32-entry limit while still rejecting additional keys.
+
+**Composition change:** queue consumers take a scheduler instead of a producer; direct topic consumers
+no longer take a producer. The abstract consumer constructor takes a nullable scheduler and drops its
+unused `isAsync` parameter. Consumer scheduler property injection is replaced by constructor injection.
+Use the consumer factory or update manual constructor calls and rebuild. See the
+[retry configuration and migration guide](docs/guides/azure-service-bus-retries.md).
+
 ### Outbox sweeper and publish confirmations no longer depend on the thread pool (#4560)
 
 `TimedOutboxSweeper` used to run each sweep from a thread-pool `Timer`. When every pool thread was
@@ -1035,7 +1052,7 @@ throw `OutboxLimitReachedException` where they never did before. With the defaul
 nothing changes. The async count blocks a thread-pool thread while it runs, and with the change for
 issue #4554 below a mediator has at most one count queued or running.
 
-### Outbox: the outstanding message check is skipped with no limit and no longer piles up (#4554)
+### Outbox: the outstanding message check is skipped with no limit, no longer piles up and is cheaper for the `InMemoryOutbox` (#4554)
 
 With the default `AddProducers` settings (`MaxOutStandingMessages` of -1 and
 `MaxOutStandingCheckInterval` of zero), every `Post` and clear queued a background count of the
@@ -1058,6 +1075,11 @@ semaphore. The time of the last check is now recorded when the check is queued r
 starts, so `MaxOutStandingCheckInterval` is measured from then, and the debug lines "Time since last
 check is" and "Running outstanding message check" measure from the same point. A post that finds a
 check in flight does not log "Running outstanding message check".
+
+The `InMemoryOutbox` also no longer copies and sorts every entry it holds to count the outstanding
+messages. It walks its entries in place and stops as soon as it has counted one more than the limit,
+so a count no longer allocates more as the outbox grows, and writes to the outbox no longer wait for
+it. It returns the same count as before.
 
 ## 10.7.0
 

@@ -71,30 +71,28 @@ public static class BrighterBuilderBoxProvisioningExtensions
                 + "hosted service would run each migration twice.");
         }
 
-        // Run configure(options) AND apply the queued registrations BEFORE registering the
-        // marker. Any throw — from configure itself or from a per-backend registration callback
-        // inside the foreach (e.g. an NRE in an Add{Backend}{Box} extension) — must NOT leak
-        // the marker, so the operator's natural retry surfaces the actual underlying error
-        // rather than the misleading "UseBoxProvisioning has already been called" diagnostic
-        // from the duplicate-call guard above. (Partial registrations from a half-applied
-        // foreach can still leak into builder.Services on failure; the contract here is
-        // narrower — marker isolation, not full transactional rollback.)
-        var options = new BoxProvisioningOptions();
-        configure(options);
-
-        foreach (var registration in options.Registrations)
-        {
-            registration(builder.Services);
-        }
-
-        builder.Services.AddSingleton<BoxProvisioningMarker>();
+        RegisterProvisionersThenMarker(builder.Services, configure);
 
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, BoxProvisioningHostedService>());
         return builder;
     }
 
-    // Marker singleton used to detect a second UseBoxProvisioning call on the same builder.
-    // Internal because callers should never resolve or depend on it directly — its only role
-    // is to flip the "already invoked" check on subsequent calls.
+    // The marker is added only once configuration and registration have succeeded, so a retry
+    // after a failure reports the real error, not "already called". Registrations made before
+    // the failure are not rolled back.
+    private static void RegisterProvisionersThenMarker(IServiceCollection services, Action<BoxProvisioningOptions> configure)
+    {
+        var options = new BoxProvisioningOptions();
+        configure(options);
+
+        foreach (var registration in options.Registrations)
+        {
+            registration(services);
+        }
+
+        services.AddSingleton<BoxProvisioningMarker>();
+    }
+
+    // Marks a builder on which UseBoxProvisioning has already run.
     internal sealed class BoxProvisioningMarker { }
 }

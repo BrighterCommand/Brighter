@@ -701,6 +701,14 @@ The deviation from `*Base` suffix is documented here to satisfy parent C4 / AC9 
 - **TFM matrix unchanged** (NF11 / parent C6 / C7). The base uses plain generic class declaration; both type constraints (`where TConnection : DbConnection` and `where TTransaction : DbTransaction`) are pre-net5 compatible. No static virtual / static abstract / `IReadOnlySet<T>` introduced.
 - **Public surface delta**: +1 type (`SqlBoxProvisioner<TConnection, TTransaction>` — abstract) in the shared `Paramore.Brighter.BoxProvisioning` assembly. Per parent AC8 / NF6 this is a runtime production type, not testability-motivated — derived classes are the production surface; the base is the algorithm host.
 
+#### One connection for pre-lock detection and payload validation
+
+`SqlBoxProvisioner.ProvisionAsync` runs pre-lock detection and payload-mode validation sequentially against the same open connection rather than opening one for each. That saves a connection round-trip on every provisioning run, and avoids connection-pool churn in deployments with strict per-pod connection caps.
+
+#### Provisioning order
+
+`BoxProvisioningHostedService` provisions every outbox before any inbox; `OrderingOrdinal` is the single place that order is defined, and it throws for an unknown `BoxType` so a new box type fails loudly at startup rather than being silently mis-ordered. Within the outbox or inbox group, the order across several provisioners (for example one per tenant) is deliberately left to the order in which the DI container resolves them. Microsoft.Extensions.DependencyInjection preserves registration order, but third-party containers need not. We do not add a deterministic secondary sort by `BoxTableName`: the per-table startup log already says which provisioner is running, so a non-deterministic order within a group is tolerable, and a secondary sort would entrench an ordering that callers cannot influence.
+
 ---
 
 ## Adding a new BoxProvisioning backend

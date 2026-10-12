@@ -146,7 +146,8 @@ proceed once RED is proved.
 **Documentation Requirements** (from [.agent_instructions/documentation.md](../../../.agent_instructions/documentation.md)):
 1. Add XML documentation comments (`///`) for all public members
 2. Use `<summary>`, `<param>`, `<returns>`, `<exception>` tags
-3. Add `<remarks>` for complex implementation details
+3. Add `<remarks>` for notes to the user of a public API — caveats, side effects, implementation details that affect use
+4. No comments inside method bodies (tests may use `//Arrange` `//Act` `//Assert`) — extract a method to express intent instead. No XML docs on non-public members; at most a `//` above the signature when the method is complex or guards against a trap. No issue/spec references, change history or notes to a reviewer. See [documentation.md § Comments in Code](../../../.agent_instructions/documentation.md#comments-in-code)
 
 **Steps:**
 1. Write ONLY the code needed to make this specific test pass

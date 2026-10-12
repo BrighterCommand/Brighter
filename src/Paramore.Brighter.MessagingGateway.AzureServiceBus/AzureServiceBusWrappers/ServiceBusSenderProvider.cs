@@ -6,15 +6,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
     internal sealed class ServiceBusSenderProvider : IServiceBusSenderProvider
     {
         private readonly ServiceBusClient _client;
+        private readonly ServiceBusSenderOptions? _options;
 
-        public ServiceBusSenderProvider(IServiceBusClientProvider clientProvider)
+        public ServiceBusSenderProvider(IServiceBusClientProvider clientProvider, ServiceBusSenderOptions? options = null)
         {
             _client = clientProvider.GetServiceBusClient();
+            _options = options;
         }
 
         public IServiceBusSenderWrapper Get(string topicOrQueueName)
         {
-            return new ServiceBusSenderWrapper(_client.CreateSender(topicOrQueueName));
+            return new ServiceBusSenderWrapper(_client.CreateSender(topicOrQueueName, _options));
         }
     }
 }

@@ -32,9 +32,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// <summary>
 /// Creates instances of <see cref="IAmAChannelSync"/>channels using Azure Service Bus.
 /// </summary>
-public class AzureServiceBusChannelFactory : IAmAChannelFactory
+public class AzureServiceBusChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithScheduler
 {
     private readonly AzureServiceBusConsumerFactory _azureServiceBusConsumerFactory;
+
+    /// <inheritdoc />
+    public IAmAMessageScheduler? Scheduler
+    {
+        get => _azureServiceBusConsumerFactory.Scheduler;
+        set => _azureServiceBusConsumerFactory.Scheduler = value;
+    }
 
     /// <summary>
     /// Initializes an Instance of <see cref="AzureServiceBusConsumerFactory"/>

@@ -228,6 +228,7 @@ for the routine case, not a gag order.
    - Enable nullable reference types
    - Follow Responsibility Driven Design principles
    - Avoid primitive obsession
+   - Comments: XML docs on public members only; no comments inside method bodies — extract a method to express intent; no issue/spec references, history or notes to a reviewer ([documentation.md § Comments in Code](../../../.agent_instructions/documentation.md#comments-in-code))
 
 4. **Create/Update Implementation Files**: Use Write or Edit tool
 

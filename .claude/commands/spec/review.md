@@ -342,7 +342,8 @@ Every finding MUST cite concrete evidence: a file path, a line range, a diff hun
 - Primary constructors for new classes (project default)
 - `Async` suffix on async methods; `ValueTask` vs `Task` consistency with surrounding code
 - Nullability annotations consistent with the file's existing style
-- XML doc comments on public APIs (project requires them)
+- XML doc comments on public APIs (project requires them), and not on internal/private members
+- Comments follow `.agent_instructions/documentation.md` § *Comments in Code*: no comments inside method bodies (beyond `//Arrange` `//Act` `//Assert` and suppression reasons), no issue/PR/spec references, no change history or reviewer notes. A violation is a finding; suggest `/refactor:tidy-comments`
 - No dead code, speculative abstractions, or commented-out blocks
 - No mixing of structural and behavioral changes in the same commit (tidy-first rule)
 

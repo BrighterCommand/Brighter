@@ -45,6 +45,11 @@ Read the suspect code (Confirmed Root Cause + Suspected Location).
    "improvements", no default changes (CLAUDE.md → "Change Scope").
 2. Follow `.agent_instructions/code_style.md` (naming, RDD, nullable, XML docs on public members,
    MIT header on new files) and `.agent_instructions/documentation.md`.
+   - **Do not explain the fix in a comment.** The root cause, the previous behaviour and why this
+     fix was chosen belong in `bugfix.md`, the commit message and the PR — not in the code. No
+     comments inside method bodies, and no issue or bugfix numbers anywhere in the source
+     (`documentation.md` § *Comments in Code*). If the fixed code is hard to read without a
+     comment, extract a method whose name says what it guards against.
 3. If the Scope Notes listed additional defects, fix those too — they share the confirmed cause
    and each has its own red test from `/bugfix:test`.
 4. **Cross-backend parity**: if the cause touches one backend (MSSQL/PostgreSQL/MySQL/SQLite/

@@ -53,7 +53,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     where TTransaction : DbTransaction
 {
     // Static logger keeps the ctor surface unchanged across the 8 concrete provisioners; only
-    // exercised by the pre-lock-hint failure swallow below (Spec 0029 T-PERM).
+    // exercised by the pre-lock-hint failure swallow below.
     private static readonly ILogger s_logger =
         ApplicationLogging.CreateLogger<SqlBoxProvisioner<TConnection, TTransaction>>();
 
@@ -94,11 +94,24 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
-        // Defence-in-depth at the framework chokepoint. Catalogs gate AssertSafe at the entry to
-        // All(...), but the provisioner opens connections and runs detection BEFORE the catalog
-        // returns, so an unsafe identifier from configuration reaches the live DB connection
-        // unless the provisioner guards at its own entry. _configuration.SchemaName is nullable:
-        // SQLite has no schema concept per ADR 0057 §6, so a null value is legitimate.
+        GuardIdentifiers();
+
+        var migrations = _catalog.All(_configuration);
+
+        var tableState = await DetectAndValidateAsync(migrations, cancellationToken);
+
+        await _migrationRunner.MigrateAsync(
+            BoxTableName,
+            _configuration.SchemaName != null ? (SchemaName)_configuration.SchemaName : null,
+            BoxType,
+            tableState,
+            cancellationToken);
+    }
+
+    // Validates identifiers from configuration before they reach a live connection, rather than
+    // relying on the catalog to have done so.
+    private void GuardIdentifiers()
+    {
         var boxTableNameParam = BoxType == BoxType.Outbox
             ? nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName)
             : nameof(IAmARelationalDatabaseConfiguration.InBoxTableName);
@@ -108,43 +121,33 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
             Identifiers.AssertSafe(
                 _configuration.SchemaName, nameof(IAmARelationalDatabaseConfiguration.SchemaName));
         }
-
-        var migrations = _catalog.All(_configuration);
-
-        // Sync `using` for the connection: DbConnection does not implement IAsyncDisposable
-        // on netstandard2.0, so `await using` would not compile across the shared-assembly
-        // TFM matrix. Mirrors the §B.2 precedent at SqlBoxMigrationRunner.cs:112-116.
-        //
-        // Detection and validation run sequentially against the same open
-        // connection, so we cut one connection round-trip per provisioning run (and avoid the
-        // connection-pool churn in deployments with strict per-pod connection caps).
-        BoxTableState tableState;
-        using (var connection = CreateConnection(_configuration.ConnectionString))
-        {
-            await connection.OpenAsync(cancellationToken);
-
-            tableState = await DetectTableStateAsync(connection, migrations, cancellationToken);
-
-            if (tableState.TableExists)
-            {
-                await _payloadValidator.ValidateAsync(
-                    connection, BoxTableName.Value, EffectiveSchemaName,
-                    PayloadColumnName, _configuration.BinaryMessagePayload, cancellationToken);
-            }
-        }
-
-        // The runner sources its migration chain from its own injected
-        // IAmABoxMigrationCatalog (see SqlBoxMigrationRunner ctor) — the provisioner no longer
-        // forwards the list. The provisioner still calls _catalog.All(...) above so the pre-lock
-        // detection helper can infer current version from the column set.
-        await _migrationRunner.MigrateAsync(
-            BoxTableName,
-            _configuration.SchemaName != null ? (SchemaName)_configuration.SchemaName : null,
-            BoxType,
-            tableState,
-            cancellationToken);
     }
 
+    // Sync `using`: DbConnection has no DisposeAsync on netstandard2.0.
+    private async Task<BoxTableState> DetectAndValidateAsync(
+        IReadOnlyList<IAmABoxMigration> migrations,
+        CancellationToken cancellationToken)
+    {
+        using var connection = CreateConnection(_configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        var tableState = await DetectTableStateAsync(connection, migrations, cancellationToken);
+
+        if (tableState.TableExists)
+        {
+            await _payloadValidator.ValidateAsync(
+                connection, BoxTableName.Value, EffectiveSchemaName,
+                PayloadColumnName, _configuration.BinaryMessagePayload, cancellationToken);
+        }
+
+        return tableState;
+    }
+
+    // Pre-lock detection is only a hint: the runner re-detects authoritatively under the lock and
+    // resolves the history schema there (ADR 0060). So history reads use the backend-default
+    // schema, a DbException from them (commonly tenant credentials lacking SELECT on that schema)
+    // is logged at Debug and treated as "no history", and a negative detected version is clamped
+    // to 0 rather than rejected.
     private async Task<BoxTableState> DetectTableStateAsync(
         TConnection connection,
         IReadOnlyList<IAmABoxMigration> migrations,
@@ -155,35 +158,10 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        // Pre-lock read is an explicitly discarded hint (the runner re-detects authoritatively
-        // under the lock and resolves the history schema there), so this site passes
-        // historySchema: null = backend default — see ADR 0060 D4. A provider exception on the
-        // hint is most commonly tenant-isolated credentials lacking SELECT on the backend-default
-        // history schema (Spec 0029 FR5 / T-PERM). Swallow it: the runner's under-lock detection
-        // resolves the per-schema history under PerSchema scope and its D5 seed converts any
-        // legacy-read failure into a ConfigurationException with the documented operator-facing
-        // message. Logged at Debug so the swallow is observable in diagnostics. DbException is
-        // the common base for SqlException / NpgsqlException / MySqlException / SqliteException
-        // and the only failure family the hint genuinely cannot reason about.
-        bool historyExists;
-        try
-        {
-            historyExists = await _detectionHelper.DoesHistoryExistAsync(
-                connection, BoxTableName.Value, EffectiveSchemaName, historySchema: null, cancellationToken);
-        }
-        catch (DbException ex)
-        {
-            s_logger.LogDebug(ex,
-                "Pre-lock historyExists hint for '{Schema}.{Table}' unavailable; deferring to the runner's under-lock authoritative detection.",
-                EffectiveSchemaName, BoxTableName);
-            historyExists = false;
-        }
+        var historyExists = await ReadHistoryExistsHintAsync(connection, cancellationToken);
 
         if (!historyExists)
         {
-            // Pre-lock detection is a hint for the caller; the runner re-detects under the lock.
-            // Negative or zero return values are not gated here — the runner is the single source
-            // of truth for discriminator violations and unknown-schema rejections.
             var detectedVersion = await _detectionHelper.DetectCurrentVersionAsync(
                 connection, BoxTableName.Value, EffectiveSchemaName,
                 BoxType, migrations, cancellationToken);
@@ -192,12 +170,31 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
                 CurrentVersion: detectedVersion < 0 ? 0 : detectedVersion);
         }
 
-        // Same hint-swallow rationale as historyExists above: a provider failure here is a hint
-        // signal only, the runner re-detects authoritatively.
-        int maxVersion;
+        var maxVersion = await ReadMaxVersionHintAsync(connection, cancellationToken);
+        return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
+    }
+
+    private async Task<bool> ReadHistoryExistsHintAsync(TConnection connection, CancellationToken cancellationToken)
+    {
         try
         {
-            maxVersion = await _detectionHelper.GetMaxVersionAsync(
+            return await _detectionHelper.DoesHistoryExistAsync(
+                connection, BoxTableName.Value, EffectiveSchemaName, historySchema: null, cancellationToken);
+        }
+        catch (DbException ex)
+        {
+            s_logger.LogDebug(ex,
+                "Pre-lock historyExists hint for '{Schema}.{Table}' unavailable; deferring to the runner's under-lock authoritative detection.",
+                EffectiveSchemaName, BoxTableName);
+            return false;
+        }
+    }
+
+    private async Task<int> ReadMaxVersionHintAsync(TConnection connection, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _detectionHelper.GetMaxVersionAsync(
                 connection, BoxTableName.Value, EffectiveSchemaName, historySchema: null, cancellationToken);
         }
         catch (DbException ex)
@@ -205,9 +202,8 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
             s_logger.LogDebug(ex,
                 "Pre-lock maxVersion hint for '{Schema}.{Table}' unavailable; deferring to the runner's under-lock authoritative detection.",
                 EffectiveSchemaName, BoxTableName);
-            maxVersion = 0;
+            return 0;
         }
-        return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
     /// <summary>

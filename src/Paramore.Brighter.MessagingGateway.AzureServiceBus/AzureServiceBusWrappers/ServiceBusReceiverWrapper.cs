@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
@@ -34,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
     /// <summary>
     /// Wraps the <see cref="ServiceBusReceiver"/> to provide additional functionality.
     /// </summary>
-    internal sealed partial class ServiceBusReceiverWrapper : IServiceBusReceiverWrapper
+    internal sealed partial class ServiceBusReceiverWrapper : IAmAServiceBusRetryReceiver
     {
         private readonly ServiceBusReceiver _messageReceiver;
         private readonly TimeSpan _maxAutoLockRenewalDuration;
@@ -214,6 +215,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         {
             await ForgetAsync(lockToken).ConfigureAwait(false);
             await _messageReceiver.AbandonMessageAsync(CreateMessageShiv(lockToken)).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task AbandonAsync(string lockToken, IDictionary<string, object> propertiesToModify,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await ForgetAsync(lockToken).ConfigureAwait(false);
+            await _messageReceiver.AbandonMessageAsync(CreateMessageShiv(lockToken), propertiesToModify,
+                cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
