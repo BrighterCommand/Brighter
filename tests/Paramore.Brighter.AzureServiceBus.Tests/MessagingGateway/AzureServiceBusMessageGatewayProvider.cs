@@ -33,14 +33,15 @@ using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 /// <summary>
-/// Conformance harness provider for Azure Service Bus (Topic mode).
+/// Conformance harness provider for Azure Service Bus (topics forwarding to dedicated queues).
 ///
-/// ASB dead-letters natively via the built-in $DeadLetterQueue sub-queue on every
-/// topic subscription. The gateway's <c>Reject</c> path calls
+/// ASB dead-letters natively via the destination queue's built-in $DeadLetterQueue sub-queue.
+/// The gateway's <c>Reject</c> path calls
 /// <c>ServiceBusReceiver.DeadLetterAsync(lockToken, reason, description)</c> with no
 /// Brighter-stamped metadata, so <see cref="RejectionMetadataKeys"/> is all
 /// <see cref="string.Empty"/> (a native-dead-letter transport, conformant on routing alone).
@@ -54,6 +55,9 @@ public class AzureServiceBusMessageGatewayProvider
     : Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor.IAmAMessageGatewayReactorProvider,
       Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor.IAmAMessageGatewayProactorProvider
 {
+    private readonly Lazy<IServiceBusClientProvider> _clientProvider = new(() => ASBCreds.ASBClientProvider);
+    private IServiceBusClientProvider ClientProvider => _clientProvider.Value;
+
     // ── routing-key / channel-name factories ────────────────────────────────
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
@@ -96,7 +100,12 @@ public class AzureServiceBusMessageGatewayProvider
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: makeChannel,
-            requeueCount: deadLetterRoutingKey != null ? 3 : -1
+            requeueCount: deadLetterRoutingKey != null ? 3 : -1,
+            subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration
+            {
+                ForwardTo = channelName.Value,
+                DefaultMessageTimeToLive = TimeSpan.FromHours(1)
+            }
         );
     }
 
@@ -125,12 +134,12 @@ public class AzureServiceBusMessageGatewayProvider
     /// on missing infrastructure still find it missing.
     /// </para>
     /// </summary>
-    private static async Task EnsureTopicExistsAsync(AzureServiceBusPublication publication)
+    private async Task EnsureTopicExistsAsync(AzureServiceBusPublication publication)
     {
         if (publication.MakeChannels != OnMissingChannel.Create)
             return;
 
-        var administrationClient = new AdministrationClientWrapper(ASBCreds.ASBClientProvider);
+        var administrationClient = new AdministrationClientWrapper(ClientProvider);
         var topicName = publication.Topic!.Value;
 
         if (await administrationClient.TopicExistsAsync(topicName))
@@ -153,7 +162,7 @@ public class AzureServiceBusMessageGatewayProvider
         EnsureTopicExistsAsync(publication).GetAwaiter().GetResult();
 
         var factory = new AzureServiceBusMessageProducerFactory(
-            ASBCreds.ASBClientProvider,
+            ClientProvider,
             [publication],
             bulkSendBatchSize: 10);
 
@@ -163,7 +172,7 @@ public class AzureServiceBusMessageGatewayProvider
 
     public IAmAChannelSync CreateChannel(AzureServiceBusSubscription subscription)
     {
-        var consumerFactory = new AzureServiceBusConsumerFactory(ASBCreds.ASBClientProvider);
+        var consumerFactory = new AzureServiceBusConsumerFactory(ClientProvider);
         var channelFactory = new AzureServiceBusChannelFactory(consumerFactory);
         var channel = channelFactory.CreateSyncChannel(subscription);
 
@@ -184,26 +193,29 @@ public class AzureServiceBusMessageGatewayProvider
     {
         if (channel != null)
         {
-            try { channel.Purge(); } catch { /* best effort */ }
             try { channel.Dispose(); } catch { /* best effort */ }
+            var administration = ClientProvider.GetServiceBusAdministrationClient();
+            try { administration.DeleteTopicAsync(channel.RoutingKey.Value).GetAwaiter().GetResult(); } catch { /* best effort */ }
+            try { administration.DeleteQueueAsync(channel.Name.Value).GetAwaiter().GetResult(); } catch { /* best effort */ }
         }
 
         try { producer?.Dispose(); } catch { /* best effort */ }
+        if (_clientProvider.IsValueCreated)
+        {
+            try { ClientProvider.GetServiceBusClient().DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { /* best effort */ }
+        }
     }
 
     /// <summary>
     /// Genuine bounded read from ASB's native DLQ sub-queue.
     /// Uses <c>ServiceBusReceiver</c> with <c>SubQueue = SubQueue.DeadLetter</c>
-    /// to access the built-in <c>&lt;topic&gt;/Subscriptions/&lt;subscription&gt;/$DeadLetterQueue</c>
-    /// entity. Polls up to 10 times; returns MT_NONE when the bound is exhausted.
+    /// to access the forwarding queue's built-in <c>$DeadLetterQueue</c>.
+    /// Returns MT_NONE when the bounded receive finds no message.
     /// </summary>
     public Message GetMessageFromDeadLetterQueue(AzureServiceBusSubscription subscription)
     {
-        var client = ASBCreds.ASBClientProvider.GetServiceBusClient();
-        var topicName = subscription.RoutingKey.Value;
-        var subscriptionName = subscription.ChannelName.Value;
-
-        var receiver = client.CreateReceiver(topicName, subscriptionName,
+        var client = ClientProvider.GetServiceBusClient();
+        var receiver = client.CreateReceiver(subscription.Configuration.ForwardTo!,
             new ServiceBusReceiverOptions
             {
                 SubQueue = SubQueue.DeadLetter,
@@ -242,7 +254,7 @@ public class AzureServiceBusMessageGatewayProvider
     /// </summary>
     public Message GetMessageFromInvalidChannel(AzureServiceBusSubscription subscription)
     {
-        var client = ASBCreds.ASBClientProvider.GetServiceBusClient();
+        var client = ClientProvider.GetServiceBusClient();
         var invalidTopicName = $"{subscription.RoutingKey.Value}.Invalid";
         var subscriptionName = subscription.ChannelName.Value;
 
@@ -295,7 +307,7 @@ public class AzureServiceBusMessageGatewayProvider
         await EnsureTopicExistsAsync(publication);
 
         var factory = new AzureServiceBusMessageProducerFactory(
-            ASBCreds.ASBClientProvider,
+            ClientProvider,
             [publication],
             bulkSendBatchSize: 10);
 
@@ -307,7 +319,7 @@ public class AzureServiceBusMessageGatewayProvider
         AzureServiceBusSubscription subscription,
         CancellationToken cancellationToken = default)
     {
-        var consumerFactory = new AzureServiceBusConsumerFactory(ASBCreds.ASBClientProvider);
+        var consumerFactory = new AzureServiceBusConsumerFactory(ClientProvider);
         var channelFactory = new AzureServiceBusChannelFactory(consumerFactory);
         var channel = await channelFactory.CreateAsyncChannelAsync(subscription, cancellationToken);
 
@@ -323,13 +335,19 @@ public class AzureServiceBusMessageGatewayProvider
     {
         if (channel != null)
         {
-            try { await channel.PurgeAsync(); } catch { /* best effort */ }
             try { channel.Dispose(); } catch { /* best effort */ }
+            var administration = ClientProvider.GetServiceBusAdministrationClient();
+            try { await administration.DeleteTopicAsync(channel.RoutingKey.Value); } catch { /* best effort */ }
+            try { await administration.DeleteQueueAsync(channel.Name.Value); } catch { /* best effort */ }
         }
 
         if (producer != null)
         {
             try { await producer.DisposeAsync(); } catch { /* best effort */ }
+        }
+        if (_clientProvider.IsValueCreated)
+        {
+            try { await ClientProvider.GetServiceBusClient().DisposeAsync(); } catch { /* best effort */ }
         }
     }
 
@@ -341,11 +359,8 @@ public class AzureServiceBusMessageGatewayProvider
         AzureServiceBusSubscription subscription,
         CancellationToken cancellationToken = default)
     {
-        var client = ASBCreds.ASBClientProvider.GetServiceBusClient();
-        var topicName = subscription.RoutingKey.Value;
-        var subscriptionName = subscription.ChannelName.Value;
-
-        var receiver = client.CreateReceiver(topicName, subscriptionName,
+        var client = ClientProvider.GetServiceBusClient();
+        var receiver = client.CreateReceiver(subscription.Configuration.ForwardTo!,
             new ServiceBusReceiverOptions
             {
                 SubQueue = SubQueue.DeadLetter,
@@ -378,7 +393,7 @@ public class AzureServiceBusMessageGatewayProvider
         AzureServiceBusSubscription subscription,
         CancellationToken cancellationToken = default)
     {
-        var client = ASBCreds.ASBClientProvider.GetServiceBusClient();
+        var client = ClientProvider.GetServiceBusClient();
         var invalidTopicName = $"{subscription.RoutingKey.Value}.Invalid";
         var subscriptionName = subscription.ChannelName.Value;
 

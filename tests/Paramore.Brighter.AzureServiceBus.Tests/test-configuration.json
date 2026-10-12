@@ -1,5 +1,6 @@
 {
   "Namespace": "Paramore.Brighter.AzureServiceBus.Tests",
+  "MessageAssertion": "AzureServiceBusMessageAssertion",
   "MessagingGateway": {
     "Publication": "Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusPublication",
     "Subscription": "Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusSubscription",

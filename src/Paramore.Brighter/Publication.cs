@@ -46,6 +46,16 @@ namespace Paramore.Brighter
         /// What do we do with infrastructure dependencies for the producer?
         /// </summary>
         public OnMissingChannel MakeChannels { get; set; }
+
+        /// <summary>
+        /// Selects the retry scheduler for gateways that support queue-targeted requeue scheduling.
+        /// Defaults to the native scheduler on the consuming broker.
+        /// </summary>
+        /// <remarks>
+        /// Pass this publication to the gateway's consumer factory. Global scheduling requires a
+        /// configured scheduler implementing the requeue capability for the selected message pump.
+        /// </remarks>
+        public RequeueSchedulerMode RequeueScheduler { get; set; } = RequeueSchedulerMode.Native;
         
         /// <summary>
         /// The type of the request that we expect to publish on this channel

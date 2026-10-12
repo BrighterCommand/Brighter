@@ -212,7 +212,8 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
 
         if (message.Header.Topic is null) throw new ArgumentException("Topic not be null");
 
-        var serviceBusSenderWrapper = await GetSenderAsync(message.Header.Topic.Value);
+        var destination = message.Header.Topic;
+        var serviceBusSenderWrapper = await GetSenderAsync(destination.Value);
 
         try
         {

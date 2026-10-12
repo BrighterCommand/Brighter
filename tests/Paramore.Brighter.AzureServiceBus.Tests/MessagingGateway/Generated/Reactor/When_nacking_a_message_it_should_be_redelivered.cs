@@ -31,7 +31,7 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
     {
         _messageGatewayProvider = new Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.AzureServiceBusMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
-        _messageAssertion = new DefaultMessageAssertion();
+        _messageAssertion = new AzureServiceBusMessageAssertion();
     }
 
     public void Dispose()

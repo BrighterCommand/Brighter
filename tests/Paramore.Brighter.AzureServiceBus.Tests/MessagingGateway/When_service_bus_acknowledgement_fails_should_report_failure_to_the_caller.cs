@@ -72,7 +72,8 @@ public class ServiceBusAcknowledgementFailureTests
             messagePumpType: useAsync ? MessagePumpType.Proactor : MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Assume,
             subscriptionConfiguration: new AzureServiceBusSubscriptionConfiguration { UseServiceBusQueue = true });
-        using var consumer = new AzureServiceBusQueueConsumer(subscription, new FakeMessageProducer(),
+        await using var client = new InMemoryServiceBusClient(ServiceBusModelFactory.ServiceBusReceivedMessage());
+        using var consumer = new AzureServiceBusQueueConsumer(subscription, new AzureServiceBusRequeueScheduler(client),
             new FakeAdministrationClient(), new FakeServiceBusReceiverProvider(receiver));
         var received = useAsync
             ? await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1))
