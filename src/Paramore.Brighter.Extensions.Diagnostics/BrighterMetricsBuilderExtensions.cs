@@ -40,6 +40,7 @@ public static class BrighterMetricsBuilderExtensions
             services.TryAddSingleton<IAmABrighterDbMeter, DbMeter>();
             services.TryAddSingleton<IAmABrighterSweeperMeter, SweeperMeter>();
             services.TryAddSingleton<PublishConfirmationMeter>();
+            services.TryAddSingleton<IAmABrighterOutboxMeter, OutboxMeter>();
             
             builder.AddMeter(BrighterSemanticConventions.MeterName);
         });
