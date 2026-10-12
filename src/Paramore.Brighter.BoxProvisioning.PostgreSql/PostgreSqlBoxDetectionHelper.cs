@@ -55,14 +55,8 @@ public class PostgreSqlBoxDetectionHelper :
 
     private readonly ILogger _logger;
 
-    /// <summary>
-    /// Resolves and quotes the schema that physically holds the history table for a read: null
-    /// (Global default) → <c>"public"</c>; otherwise the configured SchemaName supplied by the
-    /// runner under <see cref="MigrationHistoryScope.PerSchema"/>. Folded via
-    /// <see cref="PgIdentifier.Quote"/> so it matches the case the runner created, after
-    /// <c>Identifiers.AssertSafe</c> validation since the result is interpolated into the query
-    /// text (no parameterisation of identifiers in SQL).
-    /// </summary>
+    // Null means the Global default, "public". Quoting folds the name to the case the runner
+    // created it with; it is validated first because it is interpolated into the SQL.
     private static string QuotedHistorySchema(string? historySchema)
     {
         var schema = historySchema ?? DefaultSchemaName;
@@ -72,10 +66,7 @@ public class PostgreSqlBoxDetectionHelper :
 
     /// <summary>
     /// Initialises the detection helper with an optional logger. When unspecified, falls back
-    /// to <see cref="ApplicationLogging.CreateLogger{T}"/>. Existing callers that use the
-    /// parameterless form continue to work — the logger is currently only consumed for the
-    /// rare <c>UndefinedTable</c>-swallow Debug emission in
-    /// <see cref="DoesHistoryExistAsync"/>; the helper remains a safe DI singleton.
+    /// to <see cref="ApplicationLogging.CreateLogger{T}"/>.
     /// </summary>
     public PostgreSqlBoxDetectionHelper(ILogger? logger = null)
     {
@@ -85,7 +76,7 @@ public class PostgreSqlBoxDetectionHelper :
     /// <summary>
     /// Returns true if a table with the given name exists in the given schema.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c>.</param>
     public async Task<bool> DoesTableExistAsync(
         NpgsqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
@@ -96,18 +87,9 @@ public class PostgreSqlBoxDetectionHelper :
         command.CommandText = @"
 SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
-        // information_schema.tables stores PG-folded (lowercase) names. Normalize so a
-        // mixed-case configured value (e.g. default "Outbox") matches the stored "outbox".
-        // The internal __BrighterMigrationHistory system-table existence check does NOT
-        // route through this method — its CREATE DDL quotes the name and therefore
-        // case-preserves it in pg_class, so DoesHistoryExistAsync inlines a literal-name
-        // lookup that bypasses the fold normalization done here.
         command.Parameters.AddWithValue("@SchemaName", PgIdentifier.Normalize(schemaName ?? DefaultSchemaName));
         command.Parameters.AddWithValue("@TableName", PgIdentifier.Normalize(tableName));
 
-        // Pattern-match rather than (bool)raw! so a driver returning null surfaces as a named
-        // InvalidOperationException instead of a bare NullReferenceException — Npgsql has
-        // returned null from ExecuteScalarAsync under server-side errors in the wild.
         var raw = await command.ExecuteScalarAsync(cancellationToken);
         return raw is bool b
             ? b
@@ -120,18 +102,14 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
     /// given box table.
     /// </summary>
     /// <param name="schemaName">Optional. The box-table schema used to filter history rows. Null
-    /// is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
+    /// is substituted with <c>"public"</c>.</param>
     /// <param name="historySchema">Optional. The physical schema holding the history table; null
-    /// resolves to <c>"public"</c> (today's behaviour).</param>
+    /// resolves to <c>"public"</c>, the Global default.</param>
     public async Task<bool> DoesHistoryExistAsync(
         NpgsqlConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         NpgsqlTransaction? transaction = null)
     {
-        // The physical history schema: Global → "public" (today's behaviour); PerSchema → the
-        // configured SchemaName passed by the runner. Both sides fold the same way (Normalize for
-        // the information_schema param, Quote for the qualified table ref) so a mixed-case configured
-        // value reaches the same physical schema the runner created.
         var foldedHistorySchema = PgIdentifier.Normalize(historySchema ?? DefaultSchemaName);
         var quotedHistorySchema = QuotedHistorySchema(historySchema);
 
@@ -158,9 +136,6 @@ WHERE TABLE_SCHEMA = @HistorySchema AND TABLE_NAME = '__BrighterMigrationHistory
         command.CommandText = $@"
 SELECT COUNT(1) FROM {quotedHistorySchema}.""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
-        // History rows are stored with PG-folded (lowercase) identifiers by the runner so
-        // that lookups remain consistent across mixed-case configured values; normalize
-        // here too. See PostgreSqlBoxMigrationRunner.InsertHistory.
         command.Parameters.AddWithValue("@BoxTableName", PgIdentifier.Normalize(tableName));
         command.Parameters.AddWithValue("@SchemaName", PgIdentifier.Normalize(schemaName ?? DefaultSchemaName));
 
@@ -175,17 +150,6 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         }
         catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
         {
-            // TOCTOU: another connection dropped __BrighterMigrationHistory between our
-            // existence check and this count query. In production this cannot happen — the
-            // history table is created once and never dropped — but parallel tests do drop
-            // it deliberately, and a "table dropped between two queries" outcome is
-            // semantically equivalent to "no history". Returning false lets the caller fall
-            // through to the runner, which re-creates the history table under its lock.
-            //
-            // Per PR #4039 reviewer Nit (item 4485697019): Debug-level log so the swallow is
-            // observable if a future contributor adds a DROP-history operation outside test
-            // setup. Production should never see this; if it does, the deployment has a
-            // history-table-management bug worth surfacing.
             _logger.LogDebug(
                 ex,
                 "PostgreSqlBoxDetectionHelper.DoesHistoryExistAsync: swallowed UndefinedTable on COUNT(1) after positive existence check — __BrighterMigrationHistory was dropped between the two queries. Returning false. In production this indicates a history-table-management bug; in parallel tests it is expected because tests drop the table deliberately.");
@@ -198,16 +162,14 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
     /// or 0 if no rows exist.
     /// </summary>
     /// <param name="schemaName">Optional. The box-table schema used to filter history rows. Null
-    /// is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
+    /// is substituted with <c>"public"</c>.</param>
     /// <param name="historySchema">Optional. The physical schema holding the history table; null
-    /// resolves to <c>"public"</c> (today's behaviour).</param>
+    /// resolves to <c>"public"</c>, the Global default.</param>
     public async Task<int> GetMaxVersionAsync(
         NpgsqlConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         NpgsqlTransaction? transaction = null)
     {
-        // Read max version from the same physical history schema the runner writes to: Global →
-        // "public"; PerSchema → the configured SchemaName, folded identically via PgIdentifier.Quote.
         var quotedHistorySchema = QuotedHistorySchema(historySchema);
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
@@ -228,7 +190,7 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
     /// Reads the column name set for the given table from <c>information_schema.columns</c>.
     /// Comparison is case-sensitive; PostgreSQL returns unquoted identifiers folded to lowercase.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c>.</param>
     public async Task<IReadOnlyCollection<string>> GetTableColumnsAsync(
         NpgsqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
@@ -248,7 +210,7 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
     /// </list>
     /// </summary>
     /// <param name="boxType">Selects the discriminator: <c>headerbag</c> for outbox, <c>commandbody</c> for inbox.</param>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c>.</param>
     public async Task<int> DetectCurrentVersionAsync(
         NpgsqlConnection connection, string tableName, string? schemaName,
         BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,
