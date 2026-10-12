@@ -58,6 +58,9 @@ public class CoalescingConfirmsRmqChannel : DispatchProxy
     // The next publish fails as a dropped socket would, so the producer resets its connection
     public void FailNextPublish() => _failNextPublish = true;
 
+    // The channel closes as a broker channel-level error would: nothing throws on the producer's side
+    public void Close() => _channel.Close();
+
     // One broker frame: the client raises a single event, carrying the broker's multiple flag as-is
     public void RaiseAck(ulong deliveryTag, bool multiple)
         => Raise(_acks, new BasicAckEventArgs { DeliveryTag = deliveryTag, Multiple = multiple });
