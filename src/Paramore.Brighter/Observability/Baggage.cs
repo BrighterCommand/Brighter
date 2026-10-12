@@ -71,7 +71,7 @@ public class Baggage : IEnumerable<KeyValuePair<string, string?>>
         if (!ValueRegex.IsMatch(value))
             throw new ArgumentException("Invalid value format", nameof(value));
             
-        if (_entries.Count >= MaxKeyValuePairs)
+        if (_entries.Count >= MaxKeyValuePairs && !_entries.ContainsKey(key))
             throw new InvalidOperationException($"TraceState cannot contain more than {MaxKeyValuePairs} entries");
 
         _entries[key] = value;

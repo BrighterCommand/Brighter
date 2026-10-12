@@ -17,7 +17,6 @@ public class AzureServiceBusConsumerTests
     private readonly FakeAdministrationClient _nameSpaceManagerWrapper;
     private readonly AzureServiceBusConsumer _azureServiceBusConsumer;
     private readonly FakeServiceBusReceiverWrapper _messageReceiver;
-    private readonly FakeMessageProducer _fakeMessageProducer;
     private readonly FakeServiceBusReceiverProvider _fakeMessageReceiver;
 
     private readonly AzureServiceBusSubscriptionConfiguration _subConfig = new();
@@ -25,7 +24,6 @@ public class AzureServiceBusConsumerTests
     public AzureServiceBusConsumerTests()
     {
         _nameSpaceManagerWrapper = new FakeAdministrationClient();
-        _fakeMessageProducer = new FakeMessageProducer();
         _messageReceiver = new FakeServiceBusReceiverWrapper();
         _fakeMessageReceiver = new FakeServiceBusReceiverProvider(_messageReceiver);
             
@@ -33,7 +31,7 @@ public class AzureServiceBusConsumerTests
         var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
             ,makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig);
             
-        _azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _fakeMessageProducer,
+        _azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub,
             _nameSpaceManagerWrapper, _fakeMessageReceiver);
     }
 
@@ -255,39 +253,6 @@ public class AzureServiceBusConsumerTests
     }
 
     [Fact]
-    public void When_requeue_is_called_and_the_delay_is_zero_the_send_method_is_called()
-    {
-        _nameSpaceManagerWrapper.ResetState();
-        _nameSpaceManagerWrapper.Topics.Add("topic", new ());
-        _fakeMessageProducer.SentMessages.Clear();
-        var messageLockTokenOne = Guid.NewGuid();
-        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_EVENT);
-        var message = new Message(messageHeader, new MessageBody("body"));
-        message.Header.Bag.Add("LockToken", messageLockTokenOne);
-
-        _azureServiceBusConsumer.Requeue(message, TimeSpan.Zero);
-
-        Assert.Single(_fakeMessageProducer.SentMessages);
-    }
-
-    [Fact]
-    public void When_requeue_is_called_and_the_delay_is_more_than_zero_the_sendWithDelay_method_is_called()
-    {
-        _nameSpaceManagerWrapper.ResetState();
-        _nameSpaceManagerWrapper.Topics.Add("topic", new ());
-        _fakeMessageProducer.SentMessages.Clear();
-            
-        var messageLockTokenOne = Guid.NewGuid();
-        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_EVENT);
-        var message = new Message(messageHeader, new MessageBody("body"));
-        message.Header.Bag.Add("LockToken", messageLockTokenOne);
-
-        _azureServiceBusConsumer.Requeue(message, TimeSpan.FromMilliseconds(100));
-
-        Assert.Single(_fakeMessageProducer.SentMessages);
-    }
-
-    [Fact]
     public void
         When_there_is_an_error_talking_to_servicebus_when_checking_if_subscription_exist_then_a_ChannelFailureException_is_raised()
     {
@@ -456,7 +421,7 @@ public class AzureServiceBusConsumerTests
         var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
             ,makeChannels: OnMissingChannel.Validate, subscriptionConfiguration: _subConfig);
             
-        var azureServiceBusConsumerValidate = new AzureServiceBusTopicConsumer(sub, _fakeMessageProducer,
+        var azureServiceBusConsumerValidate = new AzureServiceBusTopicConsumer(sub,
             _nameSpaceManagerWrapper, _fakeMessageReceiver);
 
         Assert.Throws<ChannelFailureException>(() => azureServiceBusConsumerValidate.Receive(TimeSpan.FromMilliseconds(400)));

@@ -51,15 +51,13 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
     /// Initializes an Instance of <see cref="AzureServiceBusQueueConsumer"/> for Service Bus Topics
     /// </summary>
     /// <param name="subscription">An Azure Service Bus Subscription.</param>
-    /// <param name="messageProducer">An instance of the Messaging Producer used for Requeue.</param>
     /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
     /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
     public AzureServiceBusTopicConsumer(
         AzureServiceBusSubscription subscription,
-        IAmAMessageProducer messageProducer,
         IAdministrationClientWrapper administrationClientWrapper,
         IServiceBusReceiverProvider serviceBusReceiverProvider) 
-        : base(subscription, messageProducer, administrationClientWrapper)
+        : base(subscription, null, administrationClientWrapper)
     {
         _subscriptionName = subscription.ChannelName.Value;
         _serviceBusReceiverProvider = serviceBusReceiverProvider;
