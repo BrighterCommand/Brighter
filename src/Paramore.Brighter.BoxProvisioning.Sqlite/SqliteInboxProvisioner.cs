@@ -52,10 +52,8 @@ public class SqliteInboxProvisioner : SqlBoxProvisioner<SqliteConnection, Sqlite
     protected override string PayloadColumnName => "CommandBody";
 
     /// <summary>
-    /// SQLite has no schema concept (per ADR 0057 §6); the detection helper and payload
-    /// validator receive <c>null</c> at every call site. The runner call inside
-    /// <c>ProvisionAsync</c> still propagates <c>_configuration.SchemaName</c> directly, which
-    /// the SQLite migration runner accepts and ignores.
+    /// SQLite has no schema concept (per ADR 0057 §6), so the detection helper and payload
+    /// validator receive <c>null</c>.
     /// </summary>
     protected override string? EffectiveSchemaName => null;
 }

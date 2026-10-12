@@ -32,10 +32,8 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// </summary>
 /// <remarks>
 /// V1's <c>UpScript</c> is the literal historical baseline DDL — the first SQLite inbox
-/// builder shape (commit <c>695522367</c>, March 2019). Spec 0027 R1 split "live builder
-/// DDL" away from V1.UpScript: the fresh-install fast path (ADR 0057 §3) now sources its
-/// DDL from <see cref="FreshInstallDdl"/>, so V1.UpScript is free to carry the honest
-/// historical shape. V2 adds the <c>ContextKey</c> column (spec version stamped 787c31c52,
+/// builder shape (commit <c>695522367</c>, March 2019). The fresh-install fast path
+/// (ADR 0057 §3) uses <see cref="FreshInstallDdl"/> instead. V2 adds the <c>ContextKey</c> column (spec version stamped 787c31c52,
 /// Oct 2018) via a plain <c>ALTER TABLE ADD COLUMN</c> — SQLite's grammar lacks
 /// <c>ALTER TABLE ADD COLUMN IF NOT EXISTS</c>, so the existence guard lives in
 /// <see cref="IAmABoxMigration.IdempotencyCheckSql"/> per ADR 0057 §6 (probing
@@ -63,13 +61,8 @@ public class SqliteInboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v3AddedColumns = ["CausationId"];
 
-    // Literal historical SQLite inbox DDL extracted from commit 695522367 (March 2019).
-    // The original source was a concatenated string literal — preserved verbatim here. The
-    // table first shipped with ContextKey already present — see the born-past-V1 note in
-    // the class remarks. {0} = table name (validated).
-    // The table identifier is bracket-quoted so legal-but-reserved SQLite keyword names
-    // bootstrap correctly — V2 already bracket-quotes the table identifier, so V1 is the
-    // only asymmetric step. Per PR #4039 reviewer item F2-1.
+    // The inbox DDL as first shipped (commit 695522367), kept verbatim, ContextKey included (see
+    // remarks). {0} is the validated table name, bracket-quoted so reserved words work.
     private const string V1HistoricalDdl =
         "CREATE TABLE [{0}] ("
         + "CommandId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY,"
