@@ -304,7 +304,9 @@ jobs:
       rabbitmq:
         image: rabbitmq:3.13-management
         ports:
-        - 5672:5672 
+        - 5672:5672
+        # the management API, used by the auto-recovery confirmation test to force-close its connection
+        - 15672:15672
         # needed because the rabbitmq container does not provide a healthcheck
         options: >-
           --health-cmd "rabbitmqctl node_health_check"
