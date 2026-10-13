@@ -79,10 +79,6 @@ public class MsSqlAdvisoryLock : IMsSqlAdvisoryLock
         command.Parameters.AddWithValue("@lockResourceName", lockResource);
         command.Parameters.AddWithValue("@lockTimeoutMs", (int)timeout.TotalMilliseconds);
 
-        // sp_getapplock returns an INT — never NULL per the documented contract. Pattern-match
-        // so a future provider/driver bug surfaces as a named InvalidOperationException rather
-        // than a bare NullReferenceException (e.g. MS.Data.SqlClient has been observed to
-        // return null from ExecuteScalarAsync under server-side errors).
         var raw = await command.ExecuteScalarAsync(cancellationToken);
         return raw is int i
             ? i
@@ -92,13 +88,6 @@ public class MsSqlAdvisoryLock : IMsSqlAdvisoryLock
 
     private static void EvaluateLockResponse(int result, string lockResource, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        // sp_getapplock contract:
-        //   0  → lock granted synchronously
-        //   1  → lock granted after a brief wait (treat as success)
-        //   -1 → wait timeout expired
-        //   -2 → request cancelled
-        //   -3 → calling session was chosen as a deadlock victim
-        //   -999 → parameter validation / call error
         switch (result)
         {
             case >= 0:
@@ -129,11 +118,6 @@ public class MsSqlAdvisoryLock : IMsSqlAdvisoryLock
 
     private static void ValidateLockParameters(string lockResource, TimeSpan timeout)
     {
-        // Defensive null guard so a future change passing a null lockResource (which the
-        // runner's LockResourceFor never does today, but the ValidateLockParameters contract
-        // doesn't formally rely on that) surfaces an ArgumentNullException rather than a
-        // bare NullReferenceException at the lockResource.Length check below. Per PR #4039
-        // reviewer item M4-3.
         if (lockResource is null)
         {
             throw new ArgumentNullException(nameof(lockResource));
