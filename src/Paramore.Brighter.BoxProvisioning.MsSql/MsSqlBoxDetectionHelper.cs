@@ -42,6 +42,15 @@ public class MsSqlBoxDetectionHelper :
 {
     private const string DefaultSchemaName = "dbo";
 
+    // Null means the Global default, "dbo". Validated because a schema cannot be a bind parameter,
+    // so it is inlined into the SQL.
+    private static string ValidatedHistorySchema(string? historySchema)
+    {
+        var historyTableSchema = historySchema ?? DefaultSchemaName;
+        Identifiers.AssertSafe(historyTableSchema, nameof(historySchema));
+        return historyTableSchema;
+    }
+
     /// <summary>
     /// Returns true if a table with the given name exists in the given schema.
     /// </summary>
@@ -86,12 +95,7 @@ WHERE t.name = @TableName AND s.name = @SchemaName";
         if (!historyTableExists)
             return false;
 
-        // historySchema is the physical location of the history table: the configured schema under
-        // PerSchema, else dbo (null). AssertSafe + bracket-quote because the schema cannot be a bind
-        // parameter for the table qualifier; the runner folds the same ResolveHistorySchema() value
-        // on the write side, so read and write target the same table.
-        var historyTableSchema = historySchema ?? DefaultSchemaName;
-        Identifiers.AssertSafe(historyTableSchema, nameof(historySchema));
+        var historyTableSchema = ValidatedHistorySchema(historySchema);
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
         command.CommandText = $@"
@@ -121,10 +125,7 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
         CancellationToken cancellationToken = default,
         SqlTransaction? transaction = null)
     {
-        // historySchema is the physical location of the history table (configured schema under
-        // PerSchema, else dbo). AssertSafe + bracket-quote — folded identically to the write side.
-        var historyTableSchema = historySchema ?? DefaultSchemaName;
-        Identifiers.AssertSafe(historyTableSchema, nameof(historySchema));
+        var historyTableSchema = ValidatedHistorySchema(historySchema);
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
         command.CommandText = $@"

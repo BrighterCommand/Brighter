@@ -123,12 +123,14 @@ public class MsSqlAdvisoryLock : IMsSqlAdvisoryLock
             throw new ArgumentNullException(nameof(lockResource));
         }
 
-        // sp_getapplock takes @LockTimeout as a SQL Server INT (milliseconds). A negative
-        // TimeSpan has no meaningful interpretation for an exclusive application lock, and a
-        // value whose TotalMilliseconds exceeds int.MaxValue (~24.85 days) silently overflows
-        // on cast and may produce -1 — which sp_getapplock interprets as "wait indefinitely".
-        // Validate up front so the failure mode is an actionable ArgumentOutOfRangeException
-        // rather than a deadlocked deployment.
+        ThrowIfTimeoutOutOfRange(timeout);
+        ThrowIfResourceTooLong(lockResource);
+    }
+
+    // sp_getapplock takes @LockTimeout as an INT of milliseconds. A timeout past int.MaxValue
+    // overflows on the cast and can become -1, which sp_getapplock reads as "wait forever".
+    private static void ThrowIfTimeoutOutOfRange(TimeSpan timeout)
+    {
         if (timeout < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "Migration lock timeout must be non-negative.");
@@ -141,10 +143,10 @@ public class MsSqlAdvisoryLock : IMsSqlAdvisoryLock
                 $"Migration lock timeout must not exceed {TimeSpan.FromMilliseconds(int.MaxValue)} " +
                 $"(int.MaxValue ms ≈ 24.85 days). sp_getapplock would silently overflow on cast.");
         }
+    }
 
-        // SQL Server limits @Resource to 255 characters. Reject longer resources up front
-        // so the failure mode is an actionable ArgumentException rather than an opaque
-        // sp_getapplock -999 (parameter validation) at runtime.
+    private static void ThrowIfResourceTooLong(string lockResource)
+    {
         if (lockResource.Length > 255)
         {
             throw new ArgumentException(
