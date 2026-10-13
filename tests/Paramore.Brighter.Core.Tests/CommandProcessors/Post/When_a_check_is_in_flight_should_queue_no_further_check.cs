@@ -41,8 +41,7 @@ public class OutstandingCountInFlightTests
         }
 
         //Assert
-        //give any check queued behind the first one time to run before we count; until then it would still be waiting on
-        //the semaphore the counts share
+        //give any further check that was queued time to run before we count
         await Task.Delay(TimeSpan.FromMilliseconds(500));
         Assert.Equal(1, outbox.OutstandingCountCalls);
     }

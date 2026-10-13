@@ -1081,6 +1081,17 @@ messages. It walks its entries in place and stops as soon as it has counted one 
 so a count no longer allocates more as the outbox grows, and writes to the outbox no longer wait for
 it. It returns the same count as before.
 
+### Outbox: a count that does not return no longer stops the outstanding message check of other mediators (#4584)
+
+The outstanding message count waited on a semaphore shared by every mediator with the same message and
+transaction types. A count that never returned, for example a relational count blocked by a lock, kept
+it, so every other mediator of those types with `MaxOutStandingMessages` set stopped counting too and
+checked its limit against a stale count. Since the change for issue #4554 each mediator has at most one
+count queued or running, so the shared semaphore only made the counts of different mediators wait for
+each other. It is gone, and each mediator counts on its own. Several mediators of the same types in one
+process, such as one per host or command processors built by hand, can now run their counts at the
+same time, one each. A count that never returns still stops the checks of its own mediator.
+
 ## 10.7.0
 
 ### Azure Service Bus: dead-letter reason and description (#4196)

@@ -70,10 +70,6 @@ namespace Paramore.Brighter
 
         private readonly SemaphoreSlim _backgroundClearSemaphore = new(1, 1);
 
-        //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static
-        //bool should be made thread-safe by locking the object
-        private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new(1, 1);
-
         private DateTimeOffset _lastOutStandingMessageCheckAt;
 
         private const string NoSyncOutboxError = "A sync Outbox must be defined.";
@@ -825,8 +821,8 @@ namespace Paramore.Brighter
 
         private void CheckOutstandingMessages(RequestContext? requestContext)
         {
-            //With no limit (-1) the count is never compared with a limit, so do not queue a task, take the
-            //semaphore shared by every mediator with the same types and query the outbox just to throw the number away
+            //With no limit (-1) the count is never compared with a limit, so do not queue a task and query the outbox
+            //just to throw the number away
             if (_maxOutStandingMessages == -1)
                 return;
 
@@ -1425,8 +1421,6 @@ namespace Paramore.Brighter
 
         private void OutstandingMessagesCheck(RequestContext? requestContext)
         {
-            s_checkOutstandingSemaphoreToken.Wait();
-
             Log.BeginCountOfOutstandingMessages(s_logger);
             try
             {
@@ -1475,7 +1469,6 @@ namespace Paramore.Brighter
             finally
             {
                 Log.CurrentOutstandingCount(s_logger, _outStandingCount);
-                s_checkOutstandingSemaphoreToken.Release();
             }
         }
 
