@@ -179,14 +179,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     Log.PublishingMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri!.GetSanitizedUri(), delay.Value.TotalMilliseconds,
                         message.Header.Topic.Value, message.Persist, message.Id.Value, message.Body.Value);
 
-                    pendingDeliveryTag = Channel!.NextPublishSeqNo;
-                    ClearPendingConfirmationsIfTagsRestarted(pendingDeliveryTag.Value);
-                    _pendingConfirmations.TryAdd(pendingDeliveryTag.Value, new PendingConfirmation(message.Id, message.Header.Topic, publishContext));
-
                      if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null)
                      {
+                         pendingDeliveryTag = RecordPendingConfirmation(message, publishContext);
                          rmqMessagePublisher.PublishMessage(message, delay.Value);
                          _lastPublishedDeliveryTag = pendingDeliveryTag.Value;
+                         pendingDeliveryTag = null;
                      }
                      else if(useSchedulerAsync)
                      {
@@ -198,9 +196,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                          var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
                          schedulerSync.Schedule(message, delay.Value);
                      }
-
-                    // Sent: the broker now owns settling this tag
-                    pendingDeliveryTag = null;
 
                     Log.PublishedMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay,
                         message.Header.Topic.Value, message.Persist, message.Id.Value,
@@ -305,6 +300,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             Channel.BasicAcks += OnPublishSucceeded;
             Channel.BasicNacks += OnPublishFailed;
             _confirmChannel = Channel;
+        }
+
+        private ulong RecordPendingConfirmation(Message message, ActivityContext? publishContext)
+        {
+            var deliveryTag = Channel!.NextPublishSeqNo;
+            ClearPendingConfirmationsIfTagsRestarted(deliveryTag);
+            _pendingConfirmations.TryAdd(deliveryTag, new PendingConfirmation(message.Id, message.Header.Topic, publishContext));
+            return deliveryTag;
         }
 
         // The client's auto-recovery rebuilds the channel under the same instance and restarts its delivery tags at 1,
