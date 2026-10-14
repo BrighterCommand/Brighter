@@ -14,7 +14,6 @@ namespace Paramore.Brighter.RMQ.Async.Tests.MessageDispatch;
 public class DispatchBuilderWithNamedGateway
 {
     private readonly IAmADispatchBuilder _builder;
-    private Dispatcher _dispatcher;
 
     public DispatchBuilderWithNamedGateway()
     {
@@ -68,13 +67,13 @@ public class DispatchBuilderWithNamedGateway
             [
                 new RmqSubscription<MyEvent>(
                     new SubscriptionName("foo"),
-                    new ChannelName("mary"),
+                    new ChannelName($"rmq-async-dispatcher-{Guid.NewGuid():N}"),
                     new RoutingKey("bob"),
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200)),
                 new RmqSubscription<MyEvent>(
                     new SubscriptionName("bar"),
-                    new ChannelName("alice"),
+                    new ChannelName($"rmq-async-dispatcher-{Guid.NewGuid():N}"),
                     new RoutingKey("simon"),
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
@@ -85,8 +84,8 @@ public class DispatchBuilderWithNamedGateway
     [Fact]
     public void When_building_a_dispatcher_with_named_gateway()
     {
-        _dispatcher = _builder.Build();
+        using var dispatcher = _builder.Build();
 
-        Assert.NotNull(_dispatcher);
+        Assert.NotNull(dispatcher);
     }
 }
