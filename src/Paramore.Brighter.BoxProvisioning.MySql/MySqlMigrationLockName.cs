@@ -63,8 +63,9 @@ public static class MySqlMigrationLockName
     private const string Prefix = "BrighterMigration_";
     private const int MySqlGetLockNameLimit = 64;
     private const int HashHexChars = 16;
-    // Long-form layout: Prefix(18) + truncatedPrefix(N) + '_'(1) + hashHex(16) ≤ 64 → N ≤ 29.
-    private const int LongFormPrefixBudget = 29;
+    private const string HashSeparator = "_";
+    private static readonly int s_longFormPrefixBudget =
+        MySqlGetLockNameLimit - Prefix.Length - HashSeparator.Length - HashHexChars;
 
     /// <summary>
     /// Builds the lock name for the given <paramref name="schema"/> and <paramref name="tableName"/>,
@@ -88,8 +89,8 @@ public static class MySqlMigrationLockName
         }
 
         var hashSuffix = ShortHashOf(composite);
-        var truncatedPrefix = composite.Substring(0, LongFormPrefixBudget);
-        return $"{Prefix}{truncatedPrefix}_{hashSuffix}";
+        var truncatedPrefix = composite.Substring(0, s_longFormPrefixBudget);
+        return $"{Prefix}{truncatedPrefix}{HashSeparator}{hashSuffix}";
     }
 
     private static string ShortHashOf(string composite)
