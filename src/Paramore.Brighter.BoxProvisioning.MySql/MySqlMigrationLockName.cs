@@ -39,8 +39,7 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// <para>
 /// The schema is folded into the lock name so two same-named tables in different schemas
 /// (e.g. <c>BrighterTests.Outbox</c> and <c>billing.Outbox</c>) acquire distinct advisory locks
-/// instead of serialising on a shared key. Matches the MSSQL runner's <c>lockResource</c> shape
-/// at <c>MsSqlBoxMigrationRunner.cs:90</c>.
+/// instead of serialising on a shared key, as the MSSQL runner's lock resource does.
 /// </para>
 /// <para>
 /// For composites that fit the simple form (<c>BrighterMigration_&lt;schema&gt;.&lt;table&gt;</c> ≤ 64 chars,
@@ -72,10 +71,8 @@ public static class MySqlMigrationLockName
     /// guaranteed not to exceed MySQL's 64-character <c>GET_LOCK</c> limit and collision-resistant
     /// across distinct (schema, table) pairs that share a long common prefix.
     /// </summary>
-    /// <param name="schema">The schema (database) the table lives in. When null or empty the
-    /// schema is omitted from the composite — the runner always passes a non-empty value
-    /// resolved via <c>SELECT DATABASE()</c> when no explicit schema is configured, so this
-    /// fallback is for direct callers of the helper.</param>
+    /// <param name="schema">The schema (database) the table lives in. When null or empty, the
+    /// lock name omits the schema.</param>
     /// <param name="tableName">The box table name.</param>
     /// <returns>A lock identifier suitable for <c>GET_LOCK</c>.</returns>
     public static string For(string? schema, string tableName)

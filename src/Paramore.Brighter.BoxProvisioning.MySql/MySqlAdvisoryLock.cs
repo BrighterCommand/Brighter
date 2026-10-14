@@ -64,12 +64,6 @@ public class MySqlAdvisoryLock : IMySqlAdvisoryLock
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
 
-        // GET_LOCK returns 1 (acquired), 0 (timeout), or NULL (server-side error: OOM, KILLed
-        // session, memory-table fault). Distinguish the latter from a timeout so operators
-        // reading logs do not chase a phantom contention issue. NULL is unreachable on
-        // current MySQL 8 paths in practice (NULL/invalid lock names raise a typed
-        // MySqlException at parse time before GET_LOCK runs); kept as defensive coverage and
-        // for parity with MSSQL's per-return-code mapping (Item N).
         if (result is null or DBNull)
         {
             throw new MySqlAdvisoryLockException(

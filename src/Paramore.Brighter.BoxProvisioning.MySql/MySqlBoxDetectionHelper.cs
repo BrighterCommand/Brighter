@@ -53,7 +53,7 @@ public class MySqlBoxDetectionHelper :
     /// <summary>
     /// Returns true if a table with the given name exists in the given schema.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c> per ADR 0057 §A.1.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c>.</param>
     /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits per ADR 0057 §5a.</param>
     public async Task<bool> DoesTableExistAsync(
         MySqlConnection connection, string tableName, string? schemaName,
@@ -77,9 +77,9 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
     /// </summary>
     /// <param name="schemaName">
     /// Optional. Filters the history rows by their <c>SchemaName</c> column. Null is substituted
-    /// with <c>connection.Database</c> Note: this parameter scopes the content lookup, NOT the
-    /// existence check for the history table itself — the history table always lives in the
-    /// connection's bound database, even when the box table is provisioned in a different schema 
+    /// with <c>connection.Database</c>. This scopes the rows looked up, not where the history table
+    /// is looked for: the history table always lives in the connection's bound database, even
+    /// when the box table is provisioned in a different schema.
     /// </param>
     /// <param name="historySchema">Accepted and ignored — MySQL's history table always lives in
     /// the connection-bound database; <see cref="MigrationHistoryScope.PerSchema"/> is a no-op.</param>
@@ -89,12 +89,7 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
         CancellationToken cancellationToken = default,
         MySqlTransaction? transaction = null)
     {
-        _ = historySchema; // MySQL keeps history in connection.Database; PerSchema is a no-op here.
-        // The history table always resides in connection.Database (the MySQL runner's
-        // EnsureHistoryTableAsync emits an unqualified CREATE TABLE IF NOT EXISTS targeting
-        // DATABASE()). Probe its existence against connection.Database — not the
-        // box-table SchemaName — so a non-default SchemaName configuration does not
-        // misreport HistoryAbsent and trigger a redundant bootstrap path.
+        _ = historySchema;
         var historyTableExists = await DoesTableExistAsync(
             connection, "__BrighterMigrationHistory", connection.Database, cancellationToken);
         if (!historyTableExists)
@@ -128,7 +123,7 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
         CancellationToken cancellationToken = default,
         MySqlTransaction? transaction = null)
     {
-        _ = historySchema; // MySQL keeps history in connection.Database; PerSchema is a no-op here.
+        _ = historySchema;
         using var command = connection.CreateCommand();
         command.CommandText = @"
 SELECT COALESCE(MAX(`MigrationVersion`), 0) FROM `__BrighterMigrationHistory`
