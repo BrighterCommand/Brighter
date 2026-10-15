@@ -34,12 +34,11 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// <remarks>
 /// V1's <c>UpScript</c> is the literal historical baseline DDL — the first MSSQL outbox
 /// builder shape (commit <c>695522367</c>, March 2019; pre-Dispatched, pre-CloudEvents).
-/// Spec 0027 R1 split "live builder DDL" away from V1.UpScript: the fresh-install fast path
-/// (ADR 0057 §3) now sources its DDL from <see cref="FreshInstallDdl"/>, so V1.UpScript is
-/// free to carry the honest historical shape it always represented. V2..V7 are conditional
+/// The fresh-install fast path (ADR 0057 §3) takes its DDL from <see cref="FreshInstallDdl"/>
+/// instead, so V1.UpScript carries the historical shape. V2..V7 are conditional
 /// <c>ALTER TABLE ADD</c> statements guarded by <c>IF COL_LENGTH(...) IS NULL</c> per ADR
 /// 0057 §5, so each one is idempotent and safe to re-execute on chain replay. V8 adds
-/// <c>CausationId</c> (Spec 0027, #2541) plus a replay index on it.
+/// <c>CausationId</c> plus a replay index on it.
 /// <para>
 /// The MSSQL outbox is the only one of the four relational outboxes whose first-shipped
 /// state matches the "logical pre-V2 baseline" — see the asymmetry note in the
@@ -55,12 +54,8 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     private static readonly string[] s_v1Columns =
         ["MessageId", "Topic", "MessageType", "Timestamp", "HeaderBag", "Body"];
 
-    // Literal historical MSSQL outbox DDL extracted from commit 695522367 (March 2019). The
-    // exact pre-Dispatched shape that shipped as "V1" — preserved here so chain replay against
-    // a legacy table sees the same starting DDL it always saw. {0} = table name (validated).
-    // The table identifier is bracket-quoted so legal-but-reserved T-SQL keyword names
-    // (User, Order, Group, …) bootstrap correctly — V2..V7 already bracket-quote, so V1
-    // is the only asymmetric step. Per PR #4039 reviewer item F2-1.
+    // From commit 695522367 (March 2019), the pre-Dispatched shape. {0} is the validated table
+    // name, bracket-quoted so reserved words (User, Order) parse.
     private const string V1HistoricalDdl =
         """
         CREATE TABLE [{0}]
@@ -93,12 +88,6 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
         Identifiers.AssertSafe(
             configuration.OutBoxTableName,
             nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName));
-        // Pass SchemaName so the builder schema-qualifies the CREATE TABLE — otherwise the
-        // table lands in the connection's default schema (typically [dbo]) regardless of
-        // SchemaName, and the V2..V7 chain ALTERs (which use [schema].[table]) cannot find
-        // it on a subsequent run. Schema identifier safety is enforced at the All(...)
-        // catalog entry below; FreshInstallDdl's contract is "pass through what the
-        // configuration provides", so the identifier check is re-applied here for defence in depth.
         if (configuration.SchemaName is not null)
         {
             Identifiers.AssertSafe(
@@ -220,11 +209,8 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
         $"IF COL_LENGTH(N'[{schema}].[{table}]', N'{column}') IS NULL{Environment.NewLine}" +
         $"    ALTER TABLE [{schema}].[{table}] ADD [{column}] {type} NULL;";
 
-    // Idempotent replay index (Spec 0027, #2541) on CausationId — none of the outbox catalogs
-    // indexed any column before V8. The CREATE INDEX is wrapped in EXEC so it compiles at run
-    // time rather than at batch parse time, which decouples it from the CausationId column the
-    // preceding ALTER adds in the same UpScript (avoiding the "invalid column name" deferred-name
-    // resolution trap when adding a column and indexing it in one batch).
+    // The CREATE INDEX runs through EXEC so it compiles after the preceding ALTER has added
+    // CausationId; in the same batch it would fail with "invalid column name".
     private static string AddCausationIndex(string schema, string table) =>
         $"IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = N'idx_{table}_CausationId' " +
         $"AND [object_id] = OBJECT_ID(N'[{schema}].[{table}]')){Environment.NewLine}" +

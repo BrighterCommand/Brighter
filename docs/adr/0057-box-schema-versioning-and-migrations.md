@@ -222,7 +222,7 @@ The asymmetry across backends is documented per-catalog: MSSQL/MySQL/SQLite outb
 
 | Backend | Strategy | Why no extra serialization |
 |---|---|---|
-| MSSQL | `IF NOT EXISTS` + `CREATE TABLE`; catch 2714 | Statement-terminating under default `XACT_ABORT OFF` — loser's tx stays usable |
+| MSSQL | `SET XACT_ABORT OFF` + `IF NOT EXISTS` + `CREATE TABLE`; catch 2714 | Statement-terminating under `XACT_ABORT OFF` — loser's tx stays usable. The batch sets `XACT_ABORT OFF` itself because a pooled connection may arrive with it `ON` (some ORMs and startup scripts set it); then 2714 would doom the transaction and the next statement would fail with 3930 |
 | PostgreSQL | `CREATE TABLE IF NOT EXISTS` inside a `SAVEPOINT`; catch 23505 / 42P07 / 42710 and `ROLLBACK TO SAVEPOINT` | pg_class check and pg_type insert are not atomic. Postgres marks the whole transaction aborted on the error even when it is caught, so without the savepoint the next statement fails with 25P02 |
 | MySQL | `CREATE TABLE IF NOT EXISTS` | `MDL_EXCLUSIVE` metadata lock makes the statement atomic |
 | SQLite | `CREATE TABLE IF NOT EXISTS` | `BEGIN IMMEDIATE` writer lock already serialises concurrent runners |
