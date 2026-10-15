@@ -15,9 +15,10 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         public  IAmAChannelFactory? DefaultChannelFactory { get; set; }
 
         /// <summary>
-        /// The configuration of our inbox
+        /// The global inbox configuration. Defaults to <see langword="null"/>, which disables the global inbox.
+        /// Set an <see cref="Brighter.InboxConfiguration"/> to opt in to inbox processing.
         /// </summary>
-        public InboxConfiguration InboxConfiguration { get; set; } = new();
+        public InboxConfiguration? InboxConfiguration { get; set; }
 
         /// <summary>
         /// An iterator over the subscriptions that this ServiceActivator has
