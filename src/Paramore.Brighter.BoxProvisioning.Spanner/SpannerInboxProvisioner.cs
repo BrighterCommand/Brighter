@@ -82,7 +82,7 @@ public class SpannerInboxProvisioner : IAmABoxProvisioner
 
         await _migrationRunner.MigrateAsync(
             _configuration.InBoxTableName,
-            _configuration.SchemaName != null ? (SchemaName)_configuration.SchemaName : null,
+            _configuration.SchemaName,
             BoxType.Inbox,
             tableState,
             cancellationToken);

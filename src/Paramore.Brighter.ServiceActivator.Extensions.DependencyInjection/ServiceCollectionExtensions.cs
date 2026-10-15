@@ -41,8 +41,10 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 BuildDispatcher,
                 ServiceLifetime.Singleton));
             
-            services.TryAddSingleton(options.InboxConfiguration);
-            var inbox = options.InboxConfiguration.Inbox;
+            if (options.InboxConfiguration != null)
+                services.TryAddSingleton(options.InboxConfiguration);
+
+            var inbox = options.InboxConfiguration?.Inbox;
             if (inbox is IAmAnInboxSync)
             {
                 services.TryAdd(
@@ -96,14 +98,14 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             services.TryAddSingleton<InboxConfiguration>(sp =>
             {
                 var options = sp.GetRequiredService<IAmConsumerOptions>();
-                return options.InboxConfiguration;
+                return options.InboxConfiguration!;
             });
 
             // Register inbox implementations with deferred resolution
             services.TryAdd(new ServiceDescriptor(typeof(IAmAnInboxSync), sp =>
             {
                 var options = sp.GetRequiredService<IAmConsumerOptions>();
-                var inbox = options.InboxConfiguration.Inbox;
+                var inbox = options.InboxConfiguration?.Inbox;
                 if (inbox is IAmAnInboxSync)
                 {
                     return BuildInbox<IAmAnInboxSync>(sp);
@@ -114,7 +116,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             services.TryAdd(new ServiceDescriptor(typeof(IAmAnInboxAsync), sp =>
             {
                 var options = sp.GetRequiredService<IAmConsumerOptions>();
-                var inbox = options.InboxConfiguration.Inbox;
+                var inbox = options.InboxConfiguration?.Inbox;
                 if (inbox is IAmAnInboxAsync)
                 {
                     return BuildInbox<IAmAnInboxAsync>(sp);
