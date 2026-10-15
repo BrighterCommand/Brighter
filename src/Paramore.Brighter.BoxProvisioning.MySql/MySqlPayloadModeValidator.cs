@@ -44,7 +44,7 @@ public class MySqlPayloadModeValidator : IAmABoxPayloadModeValidator<MySqlConnec
     /// </summary>
     /// <param name="connection">An open MySQL connection.</param>
     /// <param name="tableName">The unqualified box table name.</param>
-    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c> per ADR 0057 §A.1.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c>.</param>
     /// <param name="columnName">The unqualified payload column name (e.g. "Body" or "CommandBody").</param>
     /// <param name="binaryMessagePayload">Whether binary payload mode is configured.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

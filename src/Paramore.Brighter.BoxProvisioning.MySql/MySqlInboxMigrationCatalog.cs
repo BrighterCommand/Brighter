@@ -32,10 +32,9 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// </summary>
 /// <remarks>
 /// V1's <c>UpScript</c> is the literal historical baseline DDL — the first MySQL inbox
-/// builder shape (commit <c>b7f96957b</c>, March 2019). Spec 0027 R1 split "live builder
-/// DDL" away from V1.UpScript: the fresh-install fast path (ADR 0057 §3) now sources its
-/// DDL from <see cref="FreshInstallDdl"/>, so V1.UpScript is free to carry the honest
-/// historical shape. V2 adds <c>ContextKey</c> via the MySQL <c>information_schema.columns</c>
+/// builder shape (commit <c>b7f96957b</c>, March 2019). The fresh-install fast path (ADR
+/// 0057 §3) takes its DDL from <see cref="FreshInstallDdl"/> instead, so V1.UpScript carries
+/// the historical shape. V2 adds <c>ContextKey</c> via the MySQL <c>information_schema.columns</c>
 /// + prepared-statement idempotency pattern from ADR 0057 §5.
 /// <para>
 /// Born-past-V1 asymmetry: the MySQL inbox first shipped <em>with</em> <c>ContextKey</c>
@@ -50,7 +49,7 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// </para>
 /// <para>
 /// Note that the per-version <see cref="IAmABoxMigration.UpScript"/> and
-/// <see cref="IAmABoxMigration.LogicalColumns"/> play different roles after Spec 0027 R1:
+/// <see cref="IAmABoxMigration.LogicalColumns"/> play different roles:
 /// </para>
 /// <list type="bullet">
 /// <item><description><see cref="IAmABoxMigration.UpScript"/> on V1 is the historical
@@ -76,12 +75,8 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v3AddedColumns = ["CausationId"];
 
-    // Literal historical MySQL inbox DDL extracted from commit b7f96957b (March 2019). The
-    // table first shipped with ContextKey already present — see the born-past-V1 note in
-    // the class remarks. {0} = table name (validated).
-    // The table identifier is backtick-quoted so legal-but-reserved MySQL keyword names
-    // (User, Order, Group, …) bootstrap correctly — V2 already backtick-quotes, so V1
-    // is the only asymmetric step. 
+    // From commit b7f96957b (March 2019); born with ContextKey, see the class remarks.
+    // {0} is the table name, backtick-quoted so reserved words (Order, User) parse.
     private const string V1HistoricalDdl =
         """
         CREATE TABLE `{0}`
@@ -101,7 +96,6 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         Identifiers.AssertSafe(
             configuration.InBoxTableName,
             nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
-        // Pass SchemaName so the builder schema-qualifies the CREATE TABLE. 
         if (configuration.SchemaName is not null)
         {
             Identifiers.AssertSafe(
@@ -164,15 +158,9 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         return set;
     }
 
-    /// <summary>
-    /// MySQL 5.7+ idempotent ADD COLUMN — runtime <c>information_schema.columns</c> probe drives
-    /// a prepared-statement that conditionally emits the ALTER. When <paramref name="schema"/>
-    /// is null, the probe targets <c>DATABASE()</c> and the ALTER is unqualified — original
-    /// behaviour preserved. When non-null, both probe and ALTER are pinned to the configured
-    /// schema (per PR #4039 reviewer item M4-1 / F1c). The added column is <c>NULL</c>-able —
-    /// required because MySQL ADD COLUMN against a non-empty table must permit NULL or supply
-    /// a DEFAULT, and we make no assumption about emptiness during bootstrap.
-    /// </summary>
+    // MySQL 5.7 has no ADD COLUMN IF NOT EXISTS, so an information_schema probe decides whether a
+    // prepared statement runs the ALTER. A null schema means DATABASE() and an unqualified ALTER.
+    // Columns are added NULL-able: ADD COLUMN on a non-empty table needs NULL or a DEFAULT.
     private static string AddColumn(string? schema, string table, string column, string type)
     {
         var tableScopeForProbe = schema is null ? "DATABASE()" : $"'{schema}'";
