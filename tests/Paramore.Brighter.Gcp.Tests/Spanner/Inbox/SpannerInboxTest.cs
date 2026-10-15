@@ -5,6 +5,7 @@ using Paramore.Brighter.Inbox.Spanner;
 namespace Paramore.Brighter.Gcp.Tests.Spanner.Inbox;
 
 [Trait("Category", "Spanner")]
+[Collection("Spanner")]
 public class SpannerInboxTest : RelationalDatabaseInboxTests
 {
     protected override string DefaultConnectingString => Const.ConnectionString;

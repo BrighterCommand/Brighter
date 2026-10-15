@@ -50,6 +50,7 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning.Legacy;
 /// DDL connections and the store's internal connections detect the emulator (issue #4162).
 /// </remarks>
 [Trait("Category", "Spanner")]
+[Collection("Spanner")]
 public sealed class SpannerLegacySchemaCausationCompatibilityTests : IDisposable
 {
     private const string CausationId = "causation-A";
