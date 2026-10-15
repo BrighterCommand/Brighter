@@ -102,7 +102,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
 
         await _migrationRunner.MigrateAsync(
             BoxTableName,
-            _configuration.SchemaName != null ? (SchemaName)_configuration.SchemaName : null,
+            _configuration.SchemaName,
             BoxType,
             tableState,
             cancellationToken);

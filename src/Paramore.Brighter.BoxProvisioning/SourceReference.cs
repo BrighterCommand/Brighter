@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Paramore.Brighter.BoxProvisioning
@@ -32,8 +33,9 @@ namespace Paramore.Brighter.BoxProvisioning
     /// provisioning parameters.
     /// </summary>
     /// <remarks>
-    /// V1 migrations carry no source reference; <see langword="null"/> is a valid value (FR-7, D6).
-    /// Use <see cref="IsNullOrEmpty"/> to guard before use.
+    /// Migrations without a source reference use <see langword="null"/>.
+    /// Converting a null or empty string returns <see langword="null"/>.
+    /// Direct construction requires a non-empty string.
     /// </remarks>
     public record SourceReference
     {
@@ -46,19 +48,23 @@ namespace Paramore.Brighter.BoxProvisioning
         /// Initializes a new instance of <see cref="SourceReference"/> with the specified reference string.
         /// </summary>
         /// <param name="value">The source reference string.</param>
+        /// <exception cref="ArgumentException">The value is null or empty.</exception>
         public SourceReference(string value)
         {
+            if (string.IsNullOrEmpty(value))
+                throw new ArgumentException("A source reference cannot be null or empty.", nameof(value));
+
             Value = value;
         }
 
         /// <summary>
-        /// Returns <see langword="true"/> if <paramref name="value"/> is <see langword="null"/> or wraps an empty string;
+        /// Returns <see langword="true"/> if <paramref name="value"/> is <see langword="null"/>;
         /// otherwise <see langword="false"/>.
         /// </summary>
         /// <param name="value">The <see cref="SourceReference"/> to test.</param>
-        /// <returns><see langword="true"/> when <paramref name="value"/> is <see langword="null"/> or empty; otherwise <see langword="false"/>.</returns>
+        /// <returns><see langword="true"/> when <paramref name="value"/> is <see langword="null"/>; otherwise <see langword="false"/>.</returns>
         public static bool IsNullOrEmpty([NotNullWhen(false)] SourceReference? value)
-            => value is null || string.IsNullOrEmpty(value.Value);
+            => value is null;
 
         /// <summary>
         /// Implicitly converts a <see cref="SourceReference"/> to its underlying <see cref="string"/> value.
@@ -66,14 +72,15 @@ namespace Paramore.Brighter.BoxProvisioning
         /// </summary>
         /// <param name="value">The <see cref="SourceReference"/> to convert.</param>
         /// <returns>The underlying string, or <see langword="null"/> if <paramref name="value"/> is <see langword="null"/>.</returns>
-        public static implicit operator string?(SourceReference value) => value?.Value;
+        public static implicit operator string?(SourceReference? value) => value?.Value;
 
         /// <summary>
         /// Implicitly converts a <see cref="string"/> to a <see cref="SourceReference"/>.
         /// </summary>
-        /// <param name="value">The string to wrap.</param>
-        /// <returns>A new <see cref="SourceReference"/> wrapping <paramref name="value"/>.</returns>
-        public static implicit operator SourceReference(string value) => new(value);
+        /// <param name="value">The string to wrap, or null or empty when no source reference is supplied.</param>
+        /// <returns>A new <see cref="SourceReference"/>, or <see langword="null"/> if <paramref name="value"/> is null or empty.</returns>
+        public static implicit operator SourceReference?(string? value)
+            => string.IsNullOrEmpty(value) ? null : new(value!);
 
         /// <summary>
         /// Returns the underlying string value of this <see cref="SourceReference"/>.
