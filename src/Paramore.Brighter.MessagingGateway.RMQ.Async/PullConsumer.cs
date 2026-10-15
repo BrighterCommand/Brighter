@@ -45,14 +45,15 @@ public partial class PullConsumer(IChannel channel) : AsyncDefaultBasicConsumer(
     private bool _purging;
 
     // The cancel callback follows pending deliveries; the broker's cancel reply alone is not a buffer barrier.
-    internal async Task StopForPurgeAsync(string consumerTag)
+    internal async Task stopForPurgeAsync(string consumerTag)
     {
         Volatile.Write(ref _purging, true);
-        var cancelled = _cancelled.Task;
+        Task<bool> cancelled = _cancelled.Task;
+
         try
         {
             await Channel.BasicCancelAsync(consumerTag);
-            await WaitForCancellationAsync(cancelled);
+            await waitForCancellationAsync(cancelled);
 
             while (_messages.TryDequeue(out var message))
             {
@@ -66,12 +67,15 @@ public partial class PullConsumer(IChannel channel) : AsyncDefaultBasicConsumer(
         }
     }
 
-    private async Task WaitForCancellationAsync(Task cancelled)
+    private async Task waitForCancellationAsync(Task cancelled)
     {
         using var timeout = new CancellationTokenSource();
-        var delay = Task.Delay(Channel.ContinuationTimeout, timeout.Token);
+        Task delay = Task.Delay(Channel.ContinuationTimeout, timeout.Token);
         if (await Task.WhenAny(cancelled, delay) != cancelled)
+        {
             throw new TimeoutException("Timed out waiting for RabbitMQ consumer cancellation.");
+        }
+
         timeout.Cancel();
         await cancelled;
     }
@@ -158,11 +162,10 @@ public partial class PullConsumer(IChannel channel) : AsyncDefaultBasicConsumer(
         return Task.CompletedTask;
     }
 
-
+    /// <inheritdoc />
     protected override async Task OnCancelAsync(string[] consumerTags,
         CancellationToken cancellationToken = default)
     {
-        //try  to nack anything in the buffer.
         try
         {
             while (!Volatile.Read(ref _purging) && _messages.TryDequeue(out var message))
@@ -172,7 +175,6 @@ public partial class PullConsumer(IChannel channel) : AsyncDefaultBasicConsumer(
         }
         catch (Exception e)
         {
-            //don't impede shutdown, just log
             Log.NackUnhandledMessagesOnShutdownFailed(s_logger, e.Message);
         }
 

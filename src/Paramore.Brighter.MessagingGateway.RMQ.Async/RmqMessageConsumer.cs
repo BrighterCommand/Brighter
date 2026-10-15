@@ -210,7 +210,6 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         ThrowIfDisposed();
         try
         {
-            //Why bind a queue? Because we use purge to initialize a queue for RPC
             await EnsureChannelAsync(cancellationToken);
             
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
@@ -218,7 +217,9 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             Log.PurgingChannel(s_logger, _queueName.Value);
             cancellationToken.ThrowIfCancellationRequested();
             if (_consumer != null)
-                await _consumer.StopForPurgeAsync(_consumerTag);
+            {
+                await _consumer.stopForPurgeAsync(_consumerTag);
+            }
 
             try
             {
@@ -236,7 +237,9 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             finally
             {
                 if (Channel.IsOpen)
+                {
                     await CreateConsumerAsync(CancellationToken.None);
+                }
             }
         }
         catch (Exception exception)

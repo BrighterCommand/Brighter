@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -32,8 +32,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using RabbitMQ.Client;
@@ -77,16 +77,19 @@ public class RmqPurgeBufferedMessagesTests
         {
             new QueueFactory(connection, queueName, new RoutingKeys(routingKey), isDurable: true).Create(TimeSpan.Zero);
             for (var i = 0; i < 4; i++)
-                producer.Send(CreateMessage(routingKey));
+            {
+                producer.Send(createMessage(routingKey));
+            }
 
-            WaitForReadyMessages(adminChannel, queueName, 4);
+            waitForReadyMessages(adminChannel, queueName, 4);
             Assert.True(Assert.Single(consumer.Receive(TimeSpan.Zero)).IsEmpty);
-            WaitForReadyMessages(adminChannel, queueName, 1);
+            waitForReadyMessages(adminChannel, queueName, 1);
             if (recoverConnection)
             {
-                await RecoverConnectionAsync(connection, factory);
-                WaitForReadyMessages(adminChannel, queueName, 1);
+                await recoverConnectionAsync(connection, factory);
+                waitForReadyMessages(adminChannel, queueName, 1);
             }
+
             Message? inFlight = null;
             if (bufferInBrighterChannel)
             {
@@ -101,12 +104,17 @@ public class RmqPurgeBufferedMessagesTests
                 Assert.Throws<InvalidOperationException>(() => channel.Purge());
                 failure = null;
             }
+
             for (var i = 0; i < 2; i++)
             {
                 if (bufferInBrighterChannel)
+                {
                     channel.Purge();
+                }
                 else
+                {
                     consumer.Purge();
+                }
             }
 
             // Assert
@@ -121,7 +129,7 @@ public class RmqPurgeBufferedMessagesTests
                 channel.Acknowledge(redelivered);
             }
 
-            var fresh = CreateMessage(routingKey);
+            var fresh = createMessage(routingKey);
             producer.Send(fresh);
             var received = channel.Receive(TimeSpan.FromSeconds(5));
             Assert.Equal(fresh.Id, received.Id);
@@ -140,7 +148,7 @@ public class RmqPurgeBufferedMessagesTests
         }
     }
 
-    private static async Task RecoverConnectionAsync(RmqMessagingGatewayConnection connection, ConnectionFactory factory)
+    private static async Task recoverConnectionAsync(RmqMessagingGatewayConnection connection, ConnectionFactory factory)
     {
         var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat);
         var shared = pool.GetConnection(factory);
@@ -157,31 +165,43 @@ public class RmqPurgeBufferedMessagesTests
                     && name.GetString() == connection.Name)
                 .Select(c => c.GetProperty("name").GetString())
                 .FirstOrDefault();
-            if (brokerName == null) await Task.Delay(20);
+            if (brokerName == null)
+            {
+                await Task.Delay(20);
+            }
         }
+
         Assert.NotNull(brokerName);
         using var response = await management.DeleteAsync($"connections/{Uri.EscapeDataString(brokerName)}");
         response.EnsureSuccessStatusCode();
         timeout.Restart();
         while (shared.IsOpen && timeout.Elapsed < TimeSpan.FromSeconds(5))
+        {
             await Task.Delay(20);
+        }
+
         Assert.False(shared.IsOpen);
         while (!shared.IsOpen && timeout.Elapsed < TimeSpan.FromSeconds(30))
+        {
             await Task.Delay(20);
+        }
+
         Assert.True(shared.IsOpen);
     }
 
-    private static Message CreateMessage(RoutingKey routingKey) =>
+    private static Message createMessage(RoutingKey routingKey) =>
         new(new MessageHeader(Id.Random(), routingKey, MessageType.MT_COMMAND), new MessageBody("purge test"));
 
-    private static void WaitForReadyMessages(IModel channel, ChannelName queueName, uint expected)
+    private static void waitForReadyMessages(IModel channel, ChannelName queueName, uint expected)
     {
         var timeout = Stopwatch.StartNew();
         while (timeout.Elapsed < TimeSpan.FromSeconds(10))
         {
             var queue = channel.QueueDeclarePassive(queueName.Value);
             if (queue.MessageCount == expected)
+            {
                 return;
+            }
 
             Thread.Sleep(20);
         }

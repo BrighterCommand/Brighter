@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -81,16 +81,19 @@ public class RmqPurgeBufferedMessagesTests
         {
             await new QueueFactory(connection, queueName, new RoutingKeys(routingKey), isDurable: true, queueType: queueType).CreateAsync();
             for (var i = 0; i < 4; i++)
-                await producer.SendAsync(CreateMessage(routingKey));
+            {
+                await producer.SendAsync(createMessage(routingKey));
+            }
 
-            await WaitForReadyMessagesAsync(adminChannel, queueName, 4);
+            await waitForReadyMessagesAsync(adminChannel, queueName, 4);
             Assert.True(Assert.Single(await consumer.ReceiveAsync(TimeSpan.Zero)).IsEmpty);
-            await WaitForReadyMessagesAsync(adminChannel, queueName, 1);
+            await waitForReadyMessagesAsync(adminChannel, queueName, 1);
             if (recoverConnection)
             {
-                await RecoverConnectionAsync(connection, factory);
-                await WaitForReadyMessagesAsync(adminChannel, queueName, 1);
+                await recoverConnectionAsync(connection, factory);
+                await waitForReadyMessagesAsync(adminChannel, queueName, 1);
             }
+
             Message? inFlight = null;
             if (bufferInBrighterChannel)
             {
@@ -105,12 +108,17 @@ public class RmqPurgeBufferedMessagesTests
                 await Assert.ThrowsAsync<InvalidOperationException>(() => channel.PurgeAsync());
                 failure = null;
             }
+
             for (var i = 0; i < 2; i++)
             {
                 if (bufferInBrighterChannel)
+                {
                     await channel.PurgeAsync();
+                }
                 else
+                {
                     await consumer.PurgeAsync();
+                }
             }
 
             // Assert
@@ -125,7 +133,7 @@ public class RmqPurgeBufferedMessagesTests
                 await channel.AcknowledgeAsync(redelivered);
             }
 
-            var fresh = CreateMessage(routingKey);
+            var fresh = createMessage(routingKey);
             await producer.SendAsync(fresh);
             var received = await channel.ReceiveAsync(TimeSpan.FromSeconds(5));
             Assert.Equal(fresh.Id, received.Id);
@@ -144,7 +152,7 @@ public class RmqPurgeBufferedMessagesTests
         }
     }
 
-    private static async Task RecoverConnectionAsync(RmqMessagingGatewayConnection connection, ConnectionFactory factory)
+    private static async Task recoverConnectionAsync(RmqMessagingGatewayConnection connection, ConnectionFactory factory)
     {
         var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat);
         var shared = await pool.GetConnectionAsync(factory);
@@ -161,31 +169,43 @@ public class RmqPurgeBufferedMessagesTests
                     && name.GetString() == connection.Name)
                 .Select(c => c.GetProperty("name").GetString())
                 .FirstOrDefault();
-            if (brokerName == null) await Task.Delay(20);
+            if (brokerName == null)
+            {
+                await Task.Delay(20);
+            }
         }
+
         Assert.NotNull(brokerName);
         using var response = await management.DeleteAsync($"connections/{Uri.EscapeDataString(brokerName)}");
         response.EnsureSuccessStatusCode();
         timeout.Restart();
         while (shared.IsOpen && timeout.Elapsed < TimeSpan.FromSeconds(5))
+        {
             await Task.Delay(20);
+        }
+
         Assert.False(shared.IsOpen);
         while (!shared.IsOpen && timeout.Elapsed < TimeSpan.FromSeconds(30))
+        {
             await Task.Delay(20);
+        }
+
         Assert.True(shared.IsOpen);
     }
 
-    private static Message CreateMessage(RoutingKey routingKey) =>
+    private static Message createMessage(RoutingKey routingKey) =>
         new(new MessageHeader(Id.Random(), routingKey, MessageType.MT_COMMAND), new MessageBody("purge test"));
 
-    private static async Task WaitForReadyMessagesAsync(IChannel channel, ChannelName queueName, uint expected)
+    private static async Task waitForReadyMessagesAsync(IChannel channel, ChannelName queueName, uint expected)
     {
         var timeout = Stopwatch.StartNew();
         while (timeout.Elapsed < TimeSpan.FromSeconds(10))
         {
             var queue = await channel.QueueDeclarePassiveAsync(queueName.Value);
             if (queue.MessageCount == expected)
+            {
                 return;
+            }
 
             await Task.Delay(20);
         }

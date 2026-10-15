@@ -45,15 +45,18 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private bool _purging;
 
         // The cancel callback follows pending deliveries; the broker's cancel reply alone is not a buffer barrier.
-        internal void StopForPurge(string consumerTag)
+        internal void stopForPurge(string consumerTag)
         {
             Volatile.Write(ref _purging, true);
-            var cancelled = _cancelled.Task;
+            Task<bool> cancelled = _cancelled.Task;
+
             try
             {
                 Model.BasicCancel(consumerTag);
                 if (!cancelled.Wait(Model.ContinuationTimeout))
+                {
                     throw new TimeoutException("Timed out waiting for RabbitMQ consumer cancellation.");
+                }
 
                 while (_messages.TryDequeue(out var message))
                 {
@@ -143,9 +146,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             });
         }
 
+        /// <inheritdoc />
         public override void OnCancel(params string[] consumerTags)
         {
-            //try  to nack anything in the buffer.
             try
             {
                 while (!Volatile.Read(ref _purging) && _messages.TryDequeue(out var message))
@@ -155,7 +158,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
             catch (Exception e)
             {
-                //don't impede shutdown, just log
                 Log.NackUnhandledMessagesOnShutdownFailed(s_logger, e.Message);
             }
            

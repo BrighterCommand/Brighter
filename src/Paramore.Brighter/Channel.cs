@@ -39,7 +39,7 @@ namespace Paramore.Brighter
     public class Channel : IAmAChannelSync, IHaveAMessagingSystem
     {
         private readonly IAmAMessageConsumerSync _messageConsumer;
-        private ConcurrentQueue<Message> _queue = new();
+        private readonly ConcurrentQueue<Message> _queue = new();
         private readonly int _maxQueueLength;
         private static readonly Message s_noneMessage = new();
         private bool _disposed;
@@ -153,6 +153,7 @@ namespace Paramore.Brighter
                     }
                 }
             }
+
             _messageConsumer.Purge();
         }
 

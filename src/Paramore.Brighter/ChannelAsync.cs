@@ -42,7 +42,7 @@ namespace Paramore.Brighter
     public class ChannelAsync : IAmAChannelAsync, IHaveAMessagingSystem
     {
         private readonly IAmAMessageConsumerAsync _messageConsumer;
-        private ConcurrentQueue<Message> _queue = new();
+        private readonly ConcurrentQueue<Message> _queue = new();
         private readonly int _maxQueueLength;
         private static readonly Message s_noneMessage = new();
         private bool _disposed;
@@ -137,9 +137,11 @@ namespace Paramore.Brighter
         /// Acknowledges locally buffered messages and purges the transport queue.
         /// </summary>
         /// <param name="cancellationToken">Cancels the purge operation.</param>
+        /// <returns>A task that completes when the buffered messages and transport queue have been purged.</returns>
         public virtual async Task PurgeAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
             while (_queue.TryDequeue(out var message))
             {
 #pragma warning disable CS0618 // Message type identifies local pump control signals.
@@ -157,6 +159,7 @@ namespace Paramore.Brighter
                     }
                 }
             }
+
             await _messageConsumer.PurgeAsync(cancellationToken);
         }
 

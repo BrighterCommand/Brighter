@@ -187,12 +187,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             ThrowIfDisposed();
             try
             {
-                //Why bind a queue? Because we use purge to initialize a queue for RPC
                 EnsureChannel();
                 Log.PurgingChannel(s_logger, _queueName.Value);
-                _consumer?.StopForPurge(_consumerTag);
+                _consumer?.stopForPurge(_consumerTag);
 
-                //NOTE: Ensure Broker will create a channel if it is not already created
                 try
                 {
                     Channel!.QueuePurge(_queueName.Value);
@@ -206,7 +204,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 finally
                 {
                     if (Channel is { IsOpen: true })
+                    {
                         CreateConsumer();
+                    }
                 }
             }
             catch (Exception exception)
