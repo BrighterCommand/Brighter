@@ -84,9 +84,6 @@ public class SpannerOutboxProvisioner : IAmABoxProvisioner
             await ValidatePayloadModeAsync(cancellationToken);
         }
 
-        // Spec 0027 R1 part 2: IAmABoxMigrationRunner.MigrateAsync no longer takes a migrations
-        // list — relational runners source the chain from their injected catalog and Spanner is
-        // degenerate (fresh-only, no V_k chain — ADR 0057 §6).
         await _migrationRunner.MigrateAsync(
             _configuration.OutBoxTableName,
             _configuration.SchemaName != null ? (SchemaName)_configuration.SchemaName : null,
