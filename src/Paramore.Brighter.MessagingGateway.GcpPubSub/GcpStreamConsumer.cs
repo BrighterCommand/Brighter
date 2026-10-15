@@ -1,6 +1,8 @@
 ﻿using System.Threading.Channels;
 using Google.Cloud.PubSub.V1;
 using Google.Protobuf.WellKnownTypes;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
@@ -10,6 +12,7 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// </summary>
 public class GcpStreamConsumer(SubscriberClient client)
 {
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpStreamConsumer>();
     private readonly object _lock = new();
     private int _handlers;
     private bool _stopped;
@@ -65,6 +68,8 @@ public class GcpStreamConsumer(SubscriberClient client)
     /// callback but not settled by Brighter (buffered unread in the channel, or received and never acknowledged,
     /// rejected or requeued) is nacked for redelivery. <see cref="SubscriberClient.ShutdownMode.WaitForProcessing"/>
     /// would wait on such a message until the client's own timeout, by default about an hour.
+    /// Cancellation reported by the client during shutdown is logged and does not escape this method.
+    /// Client disposal is always attempted; other failures propagate.
     /// </remarks>
     /// <returns>A task representing the asynchronous stop operation.</returns>
     public async Task StopAsync()
@@ -82,8 +87,31 @@ public class GcpStreamConsumer(SubscriberClient client)
 
         if (lastHandler)
         {
-            await client.StopAsync(new SubscriberClient.ShutdownOptions() { Mode = SubscriberClient.ShutdownMode.NackImmediately }, CancellationToken.None);
-            await client.DisposeAsync();
+            try
+            {
+                await client.StopAsync(new SubscriberClient.ShutdownOptions { Mode = SubscriberClient.ShutdownMode.NackImmediately }, CancellationToken.None)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException ex)
+            {
+                s_logger.LogWarning(ex, "GcpStreamConsumer: shutdown was canceled; unsettled messages may be redelivered");
+            }
+            finally
+            {
+                await DisposeClientAsync().ConfigureAwait(false);
+            }
+        }
+    }
+
+    private async ValueTask DisposeClientAsync()
+    {
+        try
+        {
+            await client.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException ex)
+        {
+            s_logger.LogDebug(ex, "GcpStreamConsumer: disposal completed with shutdown cancellation");
         }
     }
 

@@ -2,6 +2,13 @@
 
 ## Master
 
+### GCP Pub/Sub stream shutdown cancellation
+
+Disposing a Stream or StreamOrdering consumer now logs cancellation reported by the subscriber client
+without throwing it out of disposal. Client disposal is attempted even when stopping fails, and
+rejection-routing resources are released on both synchronous and asynchronous disposal paths.
+Non-cancellation failures still propagate. Shutdown timing remains controlled by the Google client.
+
 ### Azure Service Bus retry scheduler selection
 
 `Publication.RequeueScheduler` selects native scheduling on the consuming broker (the default)
