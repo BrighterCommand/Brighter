@@ -68,6 +68,7 @@
     <PackageVersion Include="Grpc.Core.Api" Version="2.84.0" />
     <PackageVersion Include="Hangfire.Core" Version="1.8.25" />
     <PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />
+    <PackageVersion Include="Hangfire.NetCore" Version="1.8.25" />
     <PackageVersion Include="JustSaying" Version="8.1.1" />
     <PackageVersion Include="JustSaying.Extensions.DependencyInjection.Microsoft" Version="8.1.1" />
     <PackageVersion Include="MassTransit" Version="9.2.3" />
