@@ -134,13 +134,30 @@ namespace Paramore.Brighter
         }
  
         /// <summary>
-        /// Purges the queue
+        /// Acknowledges locally buffered messages and purges the transport queue.
         /// </summary>
-        /// <param name="cancellationToken">Cancels the acknowledge operation</param>
+        /// <param name="cancellationToken">Cancels the purge operation.</param>
         public virtual async Task PurgeAsync(CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            while (_queue.TryDequeue(out var message))
+            {
+#pragma warning disable CS0618 // Message type identifies local pump control signals.
+                if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_QUIT)
+#pragma warning restore CS0618
+                {
+                    try
+                    {
+                        await _messageConsumer.AcknowledgeAsync(message, cancellationToken);
+                    }
+                    catch
+                    {
+                        _queue.Enqueue(message);
+                        throw;
+                    }
+                }
+            }
             await _messageConsumer.PurgeAsync(cancellationToken);
-            _queue = new ConcurrentQueue<Message>();
         }
 
         /// <summary>

@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
@@ -40,6 +41,39 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         //we do end up creating a second buffer to the Brighter Channel, but controlling the flow from RMQ depends
         //on us being able to buffer up to the set QoS and then pull. This matches other implementations.
         private readonly ConcurrentQueue<BasicDeliverEventArgs> _messages = new ConcurrentQueue<BasicDeliverEventArgs>();
+        private volatile TaskCompletionSource<bool> _cancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private bool _purging;
+
+        // The cancel callback follows pending deliveries; the broker's cancel reply alone is not a buffer barrier.
+        internal void StopForPurge(string consumerTag)
+        {
+            Volatile.Write(ref _purging, true);
+            var cancelled = _cancelled.Task;
+            try
+            {
+                Model.BasicCancel(consumerTag);
+                if (!cancelled.Wait(Model.ContinuationTimeout))
+                    throw new TimeoutException("Timed out waiting for RabbitMQ consumer cancellation.");
+
+                while (_messages.TryDequeue(out var message))
+                {
+                    Model.BasicAck(message.DeliveryTag, false);
+                }
+            }
+            catch
+            {
+                Model.Abort();
+                throw;
+            }
+        }
+
+        /// <inheritdoc />
+        public override void HandleModelShutdown(object model, ShutdownEventArgs reason)
+        {
+            base.HandleModelShutdown(model, reason);
+            while (_messages.TryDequeue(out _)) { }
+            _cancelled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
 
         public PullConsumer(IModel channel, ushort batchSize)
             : base(channel)
@@ -114,7 +148,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             //try  to nack anything in the buffer.
             try
             {
-                foreach (var message in _messages)
+                while (!Volatile.Read(ref _purging) && _messages.TryDequeue(out var message))
                 {
                     Model.BasicNack(message.DeliveryTag, false, true);
                 }
@@ -125,7 +159,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 Log.NackUnhandledMessagesOnShutdownFailed(s_logger, e.Message);
             }
            
-            base.OnCancel();
+            base.OnCancel(consumerTags);
+            _cancelled.TrySetResult(true);
         }
 
         private static partial class Log

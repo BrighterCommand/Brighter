@@ -180,7 +180,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         }
 
         /// <summary>
-        /// Purges the specified queue name.
+        /// Purges the broker queue and locally prefetched messages, preserving deliveries already returned to the caller.
         /// </summary>
         public void Purge()
         {
@@ -190,14 +190,23 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 //Why bind a queue? Because we use purge to initialize a queue for RPC
                 EnsureChannel();
                 Log.PurgingChannel(s_logger, _queueName.Value);
+                _consumer?.StopForPurge(_consumerTag);
 
                 //NOTE: Ensure Broker will create a channel if it is not already created
-                try { Channel!.QueuePurge(_queueName.Value); }
+                try
+                {
+                    Channel!.QueuePurge(_queueName.Value);
+                }
                 catch (OperationInterruptedException operationInterruptedException)
                 {
                     if (operationInterruptedException.ShutdownReason.ReplyCode == 404) { return; }
 
                     throw;
+                }
+                finally
+                {
+                    if (Channel is { IsOpen: true })
+                        CreateConsumer();
                 }
             }
             catch (Exception exception)

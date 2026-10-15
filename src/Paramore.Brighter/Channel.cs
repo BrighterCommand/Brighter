@@ -132,12 +132,28 @@ namespace Paramore.Brighter
         }
  
         /// <summary>
-        /// Purges the queue
+        /// Acknowledges locally buffered messages and purges the transport queue.
         /// </summary>
         public virtual void Purge()
         {
+            while (_queue.TryDequeue(out var message))
+            {
+#pragma warning disable CS0618 // Message type identifies local pump control signals.
+                if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_QUIT)
+#pragma warning restore CS0618
+                {
+                    try
+                    {
+                        _messageConsumer.Acknowledge(message);
+                    }
+                    catch
+                    {
+                        _queue.Enqueue(message);
+                        throw;
+                    }
+                }
+            }
             _messageConsumer.Purge();
-            _queue = new ConcurrentQueue<Message>();
         }
 
         /// <summary>
