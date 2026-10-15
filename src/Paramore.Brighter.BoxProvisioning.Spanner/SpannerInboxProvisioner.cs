@@ -85,7 +85,7 @@ public class SpannerInboxProvisioner : IAmABoxProvisioner
         // degenerate (fresh-only, no V_k chain — ADR 0057 §6).
         await _migrationRunner.MigrateAsync(
             _configuration.InBoxTableName,
-            _configuration.SchemaName != null ? (SchemaName)_configuration.SchemaName : null,
+            _configuration.SchemaName,
             BoxType.Inbox,
             tableState,
             cancellationToken);

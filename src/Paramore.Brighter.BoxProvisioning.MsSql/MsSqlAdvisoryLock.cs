@@ -79,10 +79,6 @@ public class MsSqlAdvisoryLock : IMsSqlAdvisoryLock
         command.Parameters.AddWithValue("@lockResourceName", lockResource);
         command.Parameters.AddWithValue("@lockTimeoutMs", (int)timeout.TotalMilliseconds);
 
-        // sp_getapplock returns an INT — never NULL per the documented contract. Pattern-match
-        // so a future provider/driver bug surfaces as a named InvalidOperationException rather
-        // than a bare NullReferenceException (e.g. MS.Data.SqlClient has been observed to
-        // return null from ExecuteScalarAsync under server-side errors).
         var raw = await command.ExecuteScalarAsync(cancellationToken);
         return raw is int i
             ? i
@@ -92,13 +88,6 @@ public class MsSqlAdvisoryLock : IMsSqlAdvisoryLock
 
     private static void EvaluateLockResponse(int result, string lockResource, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        // sp_getapplock contract:
-        //   0  → lock granted synchronously
-        //   1  → lock granted after a brief wait (treat as success)
-        //   -1 → wait timeout expired
-        //   -2 → request cancelled
-        //   -3 → calling session was chosen as a deadlock victim
-        //   -999 → parameter validation / call error
         switch (result)
         {
             case >= 0:
@@ -129,22 +118,19 @@ public class MsSqlAdvisoryLock : IMsSqlAdvisoryLock
 
     private static void ValidateLockParameters(string lockResource, TimeSpan timeout)
     {
-        // Defensive null guard so a future change passing a null lockResource (which the
-        // runner's LockResourceFor never does today, but the ValidateLockParameters contract
-        // doesn't formally rely on that) surfaces an ArgumentNullException rather than a
-        // bare NullReferenceException at the lockResource.Length check below. Per PR #4039
-        // reviewer item M4-3.
         if (lockResource is null)
         {
             throw new ArgumentNullException(nameof(lockResource));
         }
 
-        // sp_getapplock takes @LockTimeout as a SQL Server INT (milliseconds). A negative
-        // TimeSpan has no meaningful interpretation for an exclusive application lock, and a
-        // value whose TotalMilliseconds exceeds int.MaxValue (~24.85 days) silently overflows
-        // on cast and may produce -1 — which sp_getapplock interprets as "wait indefinitely".
-        // Validate up front so the failure mode is an actionable ArgumentOutOfRangeException
-        // rather than a deadlocked deployment.
+        ThrowIfTimeoutOutOfRange(timeout);
+        ThrowIfResourceTooLong(lockResource);
+    }
+
+    // sp_getapplock takes @LockTimeout as an INT of milliseconds. A timeout past int.MaxValue
+    // overflows on the cast and can become -1, which sp_getapplock reads as "wait forever".
+    private static void ThrowIfTimeoutOutOfRange(TimeSpan timeout)
+    {
         if (timeout < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "Migration lock timeout must be non-negative.");
@@ -157,10 +143,10 @@ public class MsSqlAdvisoryLock : IMsSqlAdvisoryLock
                 $"Migration lock timeout must not exceed {TimeSpan.FromMilliseconds(int.MaxValue)} " +
                 $"(int.MaxValue ms ≈ 24.85 days). sp_getapplock would silently overflow on cast.");
         }
+    }
 
-        // SQL Server limits @Resource to 255 characters. Reject longer resources up front
-        // so the failure mode is an actionable ArgumentException rather than an opaque
-        // sp_getapplock -999 (parameter validation) at runtime.
+    private static void ThrowIfResourceTooLong(string lockResource)
+    {
         if (lockResource.Length > 255)
         {
             throw new ArgumentException(

@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Paramore.Brighter.BoxProvisioning
@@ -35,8 +36,8 @@ namespace Paramore.Brighter.BoxProvisioning
     /// <para>
     /// Used as <c>SchemaName?</c> at call sites where a schema is optional —
     /// for example, SQLite has no schema concept and passes <see langword="null"/>.
-    /// The <c>?</c> is on the wrapping reference type (D6), so <see langword="null"/>
-    /// cleanly means "not supplied", matching the existing <c>string?</c> semantics.
+    /// Converting a null or empty string returns <see langword="null"/>.
+    /// Direct construction requires a non-empty string.
     /// </para>
     /// </remarks>
     public record SchemaName
@@ -50,19 +51,23 @@ namespace Paramore.Brighter.BoxProvisioning
         /// Initializes a new instance of <see cref="SchemaName"/> with the specified schema name string.
         /// </summary>
         /// <param name="value">The schema name string.</param>
+        /// <exception cref="ArgumentException">The value is null or empty.</exception>
         public SchemaName(string value)
         {
+            if (string.IsNullOrEmpty(value))
+                throw new ArgumentException("A schema name cannot be null or empty.", nameof(value));
+
             Value = value;
         }
 
         /// <summary>
-        /// Returns <see langword="true"/> if <paramref name="value"/> is <see langword="null"/> or wraps an empty string;
+        /// Returns <see langword="true"/> if <paramref name="value"/> is <see langword="null"/>;
         /// otherwise <see langword="false"/>.
         /// </summary>
         /// <param name="value">The <see cref="SchemaName"/> to test.</param>
-        /// <returns><see langword="true"/> when <paramref name="value"/> is <see langword="null"/> or empty; otherwise <see langword="false"/>.</returns>
+        /// <returns><see langword="true"/> when <paramref name="value"/> is <see langword="null"/>; otherwise <see langword="false"/>.</returns>
         public static bool IsNullOrEmpty([NotNullWhen(false)] SchemaName? value)
-            => value is null || string.IsNullOrEmpty(value.Value);
+            => value is null;
 
         /// <summary>
         /// Implicitly converts a <see cref="SchemaName"/> to its underlying <see cref="string"/> value.
@@ -70,14 +75,15 @@ namespace Paramore.Brighter.BoxProvisioning
         /// </summary>
         /// <param name="value">The <see cref="SchemaName"/> to convert.</param>
         /// <returns>The underlying string, or <see langword="null"/> if <paramref name="value"/> is <see langword="null"/>.</returns>
-        public static implicit operator string?(SchemaName value) => value?.Value;
+        public static implicit operator string?(SchemaName? value) => value?.Value;
 
         /// <summary>
         /// Implicitly converts a <see cref="string"/> to a <see cref="SchemaName"/>.
         /// </summary>
-        /// <param name="value">The string to wrap.</param>
-        /// <returns>A new <see cref="SchemaName"/> wrapping <paramref name="value"/>.</returns>
-        public static implicit operator SchemaName(string value) => new(value);
+        /// <param name="value">The string to wrap, or null or empty when no schema is supplied.</param>
+        /// <returns>A new <see cref="SchemaName"/>, or <see langword="null"/> if <paramref name="value"/> is null or empty.</returns>
+        public static implicit operator SchemaName?(string? value)
+            => string.IsNullOrEmpty(value) ? null : new(value!);
 
         /// <summary>
         /// Returns the underlying string value of this <see cref="SchemaName"/>.

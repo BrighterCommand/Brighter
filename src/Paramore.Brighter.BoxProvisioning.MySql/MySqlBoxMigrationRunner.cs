@@ -74,10 +74,7 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
     }
 
     /// <summary>
-    /// Convenience ctor used by the <c>AddMySqlOutbox</c>/<c>AddMySqlInbox</c> registration
-    /// extensions: synthesises a default <see cref="MySqlBoxDetectionHelper"/> so the
-    /// extension method doesn't have to resolve it from the container before the catalog
-    /// is in scope.
+    /// Initialises the runner with a default <see cref="MySqlBoxDetectionHelper"/>.
     /// </summary>
     public MySqlBoxMigrationRunner(
         IAmABoxMigrationCatalog catalog,
@@ -99,8 +96,6 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
     /// so there is no constant default and <see cref="MigrationHistoryScope.PerSchema"/> is a no-op.</remarks>
     protected override string? DefaultHistorySchema => null;
 
-    // ==== Hook overrides — Phase 7.3a delegates to legacy helpers ====
-
     protected override async Task<MySqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {
         var connection = new MySqlConnection(EnsureAllowUserVariables(Configuration.ConnectionString));
@@ -112,37 +107,30 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         MySqlConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
     {
         _ = schemaName;
-        // The raw tableName threads into the UoW ctor for NF1-faithful tri-state RELEASE_LOCK
-        // Warning emission — MySqlMigrationLockName.For hash-truncates long composites for the
-        // GET_LOCK 64-char limit, so the lockResource string alone cannot surface the original
-        // name. The base runner passes it explicitly per the LockResourceFor → CreateUnitOfWorkAsync
-        // sequence; no cross-hook state is needed.
         return Task.FromResult<IAmAProvisioningUnitOfWork<MySqlTransaction>>(
             new MySqlProvisioningUnitOfWork(connection, _advisoryLock, Logger, tableName));
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Includes the schema, so same-named tables in different schemas take different locks. See
+    /// <see cref="MySqlMigrationLockName"/> for how names past <c>GET_LOCK</c>'s 64-character limit are shortened.
+    /// </remarks>
     protected override string LockResourceFor(string? schemaName, string tableName)
     {
-        // The schema is folded into the lock name so two same-named tables in different schemas
-        // acquire distinct advisory locks. MySQL's GET_LOCK has a 64-char limit; the helper
-        // hashes names exceeding it (long form) and otherwise preserves the simple form for
-        // diagnostic readability. See MySqlMigrationLockName.
         return MySqlMigrationLockName.For(schemaName ?? DatabaseName(), tableName);
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Needs no race handling: MySQL holds a metadata lock across <c>CREATE TABLE IF NOT EXISTS</c>,
+    /// so a concurrent loser sees the table and gets a warning, not an error (ADR 0057 §3).
+    /// </remarks>
     protected override async Task EnsureHistoryTableAsync(
         MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
         CancellationToken cancellationToken)
     {
-        // tableName is accepted for symmetry with the abstract signature; MySQL is out of scope
-        // for PerSchema history placement (SupportsPerSchemaHistory => false) so the D5 seed never
-        // fires here. Discard to suppress unused-parameter warnings.
         _ = tableName;
-        // No race-handling needed: MySQL acquires a metadata lock (MDL_EXCLUSIVE) on the table
-        // name for the duration of CREATE TABLE, and the IF NOT EXISTS check is evaluated under
-        // that lock. Concurrent CREATE TABLE IF NOT EXISTS statements serialize via the MDL —
-        // the loser sees the table already exists and emits a warning rather than an error.
-        // (Contrast with Postgres, where the pg_class check and pg_type insert are not atomic.)
         using var command = connection.CreateCommand();
         command.CommandText = $@"
 CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
@@ -162,11 +150,6 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
     {
         var effectiveSchema = schemaName ?? DatabaseName();
 
-        // Execute the V_latest-shape DDL sourced from IAmABoxMigrationCatalog.FreshInstallDdl
-        // (the live builder DDL — typically <Backend>OutboxBuilder.GetDDL(...) for outbox /
-        // <Backend>InboxBuilder.GetDDL(...) for inbox). We stamp directly at V_latest with a
-        // "fresh install" marker — the V2..V_latest ALTERs in the chain would be no-ops on the
-        // V_latest-shape table, so we skip the chain entirely 
         await ExecuteDdlAsync(connection, freshInstallDdl, cancellationToken);
 
         await InsertHistoryRowAsync(
@@ -269,18 +252,9 @@ VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
         return builder.Database;
     }
 
-    /// <summary>
-    /// Ensures the connection string sets <c>AllowUserVariables=true</c>. The V2..V7 outbox/inbox
-    /// migrations use the MySQL <c>information_schema.columns</c> +  prepared-statement idempotency
-    /// pattern, which depends on session-scoped user variables  (<c>SET @q = ...; PREPARE stmt FROM @q;</c>).
-    /// MySqlConnector treats <c>@variable</c> tokens as parameter markers by default and rejects them;
-    /// this flag flips that behaviour so the  prepared-statement form executes correctly. Transparent to
-    /// caller-supplied connection  strings — adds the flag if missing, preserves it if already set. When the flag is
-    /// flipped, an Information log records the mutation so a security-conscious operator who
-    /// deliberately disabled user variables (user-variable abuse via prepared-statement
-    /// injection is a documented threat surface) can correlate it against migration activity
-    /// without needing to enable Debug-level logging. 
-    /// </summary>
+    // The migrations use session user variables (SET @q = ...; PREPARE stmt FROM @q), which
+    // MySqlConnector rejects as unknown parameters unless AllowUserVariables is set. Turning it on
+    // is logged at Information, as an operator may have turned user variables off on purpose.
     private string EnsureAllowUserVariables(string connectionString)
     {
         var builder = new MySqlConnectionStringBuilder(connectionString);
