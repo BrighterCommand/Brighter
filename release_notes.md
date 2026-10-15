@@ -1092,6 +1092,19 @@ each other. It is gone, and each mediator counts on its own. Several mediators o
 process, such as one per host or command processors built by hand, can now run their counts at the
 same time, one each. A count that never returns still stops the checks of its own mediator.
 
+### Outbox: a relational outstanding count gives up after 15 seconds (#4584)
+
+The outstanding message count of a relational outbox (MSSQL, PostgreSQL, MySQL, SQLite and Spanner)
+ran with no command timeout, so a count blocked by a lock on the outbox table waited for as long as
+the lock was held, and its mediator checked `MaxOutStandingMessages` against its last count until
+then. The count now gives up after 15 seconds, so a relational count that does not return no longer
+stops the checks of its own mediator for good. As with any count that fails, the mediator logs the
+error and reads the count as 0, so while the count keeps timing out, the limit does not stop posts.
+Only a mediator with `MaxOutStandingMessages` set runs the count. The timeout is fixed and replaces
+any Command Timeout in the connection string for this query, as the unlimited timeout did before. On
+Spanner the count's timeout goes from 60 to 15 seconds. The sweeper's read of outstanding messages
+still has no timeout.
+
 ## 10.7.0
 
 ### Azure Service Bus: dead-letter reason and description (#4196)
