@@ -50,7 +50,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Registers the following with the service collection :-
         ///  - BrighterOptions - how should we configure Brighter
         ///  - Feature Switch Registry - optional if features switch support is desired
-        ///  - Inbox - defaults to InMemoryInbox if none supplied
         ///  - SubscriberRegistry - what handlers subscribe to what requests
         ///  - MapperRegistry - what mappers translate what messages
         /// </summary>
@@ -104,7 +103,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Registers the following with the service collection :-
         ///  - BrighterOptions - how should we configure Brighter
         ///  - Feature Switch Registry - optional if features switch support is desired
-        ///  - Inbox - defaults to InMemoryInbox if none supplied
         ///  - SubscriberRegistry - what handlers subscribe to what requests
         ///  - MapperRegistry - what mappers translate what messages
         ///  - Request Context Factory - how do we create a request context for a pipeline
@@ -127,7 +125,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Registers the following with the service collection :-
         ///  - BrighterOptions - how should we configure Brighter
         ///  - Feature Switch Registry - optional if features switch support is desired
-        ///  - Inbox - defaults to InMemoryInbox if none supplied
         ///  - SubscriberRegistry - what handlers subscribe to what requests
         ///  - MapperRegistry - what mappers translate what messages
         ///  - Request Context Factory - how do we create a request context for a pipeline
