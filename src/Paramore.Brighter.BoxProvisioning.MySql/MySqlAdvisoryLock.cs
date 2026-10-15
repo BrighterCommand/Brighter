@@ -52,10 +52,7 @@ public class MySqlAdvisoryLock : IMySqlAdvisoryLock
     {
         ValidateLockParameters(timeout);
 
-        // GET_LOCK takes whole seconds; truncating sub-second TimeSpans to 0 makes the call
-        // non-blocking, defeating the migration lock for callers that configure short timeouts.
-        // Floor at 1 second so a 500ms timeout still produces server-side blocking.
-        var timeoutSeconds = (int)Math.Max(1, Math.Ceiling(timeout.TotalSeconds));
+        var timeoutSeconds = ToWholeSecondsAtLeastOne(timeout);
 
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT GET_LOCK(@LockName, @Timeout)";
@@ -64,12 +61,6 @@ public class MySqlAdvisoryLock : IMySqlAdvisoryLock
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
 
-        // GET_LOCK returns 1 (acquired), 0 (timeout), or NULL (server-side error: OOM, KILLed
-        // session, memory-table fault). Distinguish the latter from a timeout so operators
-        // reading logs do not chase a phantom contention issue. NULL is unreachable on
-        // current MySQL 8 paths in practice (NULL/invalid lock names raise a typed
-        // MySqlException at parse time before GET_LOCK runs); kept as defensive coverage and
-        // for parity with MSSQL's per-return-code mapping (Item N).
         if (result is null or DBNull)
         {
             throw new MySqlAdvisoryLockException(
@@ -98,25 +89,30 @@ public class MySqlAdvisoryLock : IMySqlAdvisoryLock
         return Convert.ToInt32(raw) == 1;
     }
 
+    // GET_LOCK takes whole seconds, and GET_LOCK(name, 0) does not block; a sub-second timeout
+    // rounded down to 0 would let the migration run unlocked.
+    private static int ToWholeSecondsAtLeastOne(TimeSpan timeout)
+        => (int)Math.Max(1, Math.Ceiling(timeout.TotalSeconds));
+
     private static void ValidateLockParameters(TimeSpan timeout)
     {
-        // GET_LOCK takes its @timeout via a SQL INT bind (whole seconds). A negative TimeSpan
-        // has no meaningful interpretation for an exclusive application lock — the existing
-        // `Math.Max(1, Math.Ceiling(timeout.TotalSeconds))` floor would silently coerce it to a
-        // 1-second wait, masking the bad input from the caller. A TimeSpan whose ceil(TotalSeconds)
-        // exceeds int.MaxValue silently overflows on cast (wraps to a negative int) and GET_LOCK
-        // then interprets the bind as "wait forever" — defeating the migration lock for callers
-        // expecting bounded waits. Surface both as actionable ArgumentOutOfRangeException so the
-        // failure mode at acquire time is a clear diagnostic rather than a deadlocked deployment.
-        // Mirrors `MsSqlAdvisoryLock.ValidateLockParameters` per PR #4039 review item #7; note the
-        // MSSQL boundary is int.MaxValue *milliseconds* (~24.85 days) because sp_getapplock takes
-        // ms, whereas GET_LOCK takes seconds — so the MySQL boundary is int.MaxValue seconds (~68
-        // years).
+        ThrowIfTimeoutNegative(timeout);
+        ThrowIfTimeoutOutOfRange(timeout);
+    }
+
+    // The one-second floor would otherwise silently turn a negative timeout into a valid wait.
+    private static void ThrowIfTimeoutNegative(TimeSpan timeout)
+    {
         if (timeout < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "Migration lock timeout must be non-negative.");
         }
+    }
 
+    // GET_LOCK takes an INT of seconds. A timeout past int.MaxValue seconds overflows on the cast
+    // to a negative number, which GET_LOCK reads as "wait forever".
+    private static void ThrowIfTimeoutOutOfRange(TimeSpan timeout)
+    {
         if (timeout.TotalSeconds > int.MaxValue)
         {
             throw new ArgumentOutOfRangeException(
