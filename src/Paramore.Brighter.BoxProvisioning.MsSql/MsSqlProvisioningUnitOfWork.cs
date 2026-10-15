@@ -48,10 +48,6 @@ public class MsSqlProvisioningUnitOfWork(
     /// <inheritdoc />
     public async Task BeginAsync(string lockResource, TimeSpan lockTimeout, CancellationToken cancellationToken)
     {
-        // Per ADR 0058 §B.1: the transaction MUST be opened before the advisory lock is
-        // requested because sp_getapplock with @LockOwner='Transaction' binds the lock to the
-        // surrounding transaction's lifetime. AcquireAsync requires the SqlTransaction as a
-        // parameter — the only valid order is BeginTransaction → AcquireAsync.
         logger.LogTrace("Beginning MSSQL provisioning UoW for resource {LockResource}", lockResource);
 #if NET8_0_OR_GREATER
         _transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
@@ -65,10 +61,6 @@ public class MsSqlProvisioningUnitOfWork(
     /// <inheritdoc />
     public Task CommitAsync(CancellationToken cancellationToken)
     {
-        // Per ADR 0058 §B.1: lock release is implicit because sp_getapplock was acquired with
-        // @LockOwner='Transaction'. SQL Server releases the application lock when the
-        // surrounding transaction completes — there is no Release method on
-        // IMsSqlAdvisoryLock to call.
         if (_transaction is null) return Task.CompletedTask;
 #if NET8_0_OR_GREATER
         return _transaction.CommitAsync(cancellationToken);
@@ -81,17 +73,6 @@ public class MsSqlProvisioningUnitOfWork(
     /// <inheritdoc />
     public async Task RollbackAsync(CancellationToken cancellationToken)
     {
-        // Per ADR 0058 §B.3: best-effort after a thrown CommitAsync. The runner may call
-        // RollbackAsync after the underlying transaction has already been finalised
-        // (committed-but-client-side-failed, or zombied by a broken connection); in those
-        // cases SqlTransaction.Rollback throws InvalidOperationException ("This SqlTransaction
-        // has completed; it is no longer usable."). A zombied connection or async
-        // cancellation can surface as SqlException / ObjectDisposedException /
-        // OperationCanceledException too. RollbackAsync MUST NOT throw for any of these —
-        // the runner's catch path (catch { uow.RollbackAsync(...); throw; }) cannot have its
-        // primary migration exception masked by a cleanup-side failure. Catch Exception
-        // (matching the PG UoW stance at PostgreSqlProvisioningUnitOfWork.cs:157) and log a
-        // Warning so the unwind continues.
         if (_transaction is null) return;
         try
         {
