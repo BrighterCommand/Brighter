@@ -59,54 +59,26 @@ public class MySqlProvisioningUnitOfWork(
     /// <inheritdoc />
     public async Task BeginAsync(string lockResource, TimeSpan lockTimeout, CancellationToken cancellationToken)
     {
-        // Per ADR 0058 §B.1 / ADR 0057 §5a: MySQL DDL implicitly commits, so wrapping the
-        // migration run in a BEGIN/COMMIT yields nothing useful. The UoW therefore only
-        // acquires the session-level GET_LOCK and stores the lock resource for explicit
-        // RELEASE_LOCK on Commit/Rollback (Phase 5.3.b/5.3.c). No transaction is opened.
-        //
-        // _lockResource is assigned ONLY AFTER AcquireAsync returns successfully — PR #4039
-        // reviewer fix F2 (item M2-3). If Acquire throws, _lockResource remains null so a
-        // defensive direct Rollback (e.g. from a future runner change) is a clean no-op via
-        // the `if (_lockResource is null) return;` short-circuit in ReleaseLockAndLogTriStateAsync.
-        // Releasing a never-acquired lock would return NULL and emit a misleading
-        // "Brighter defect" Warning masking the real lock-acquisition failure.
         logger.LogTrace("Beginning MySQL provisioning UoW for resource {LockResource}", lockResource);
+        // Store _lockResource only after the acquire succeeds, so a failed Begin leaves nothing to release.
         await advisoryLock.AcquireAsync(connection, lockResource, lockTimeout, cancellationToken);
         _lockResource = lockResource;
     }
 
     /// <inheritdoc />
     public Task CommitAsync(CancellationToken cancellationToken) =>
-        // Per ADR 0058 §B.1 / ADR 0057 §5a / §5b: there is no transaction to commit (the
-        // UoW never opens one — see BeginAsync). CommitAsync's only side-effect is to
-        // release the session-level GET_LOCK acquired in BeginAsync. The tri-state
-        // RELEASE_LOCK diagnostic is shared with RollbackAsync — see
-        // ReleaseLockAndLogTriStateAsync.
         ReleaseLockAndLogTriStateAsync(cancellationToken);
 
     /// <inheritdoc />
     public Task RollbackAsync(CancellationToken cancellationToken) =>
-        // Per ADR 0058 §B.3: disposal-style semantics — RollbackAsync MUST NOT throw. There
-        // is no transaction to roll back (MySQL is transactionless per ADR 0057 §5a), so
-        // the only obligation is to release the session-level GET_LOCK acquired in
-        // BeginAsync. The tri-state RELEASE_LOCK diagnostic (NULL/0/1) Warning logging is
-        // shared with CommitAsync — see ReleaseLockAndLogTriStateAsync.
         ReleaseLockAndLogTriStateAsync(cancellationToken);
 
+    // Does nothing if Begin never acquired the lock. Never throws: the runner calls RollbackAsync
+    // from its catch path, and a throw here would hide the migration's own exception; the server
+    // releases the lock when the connection closes. RELEASE_LOCK returning 0 (held by another
+    // session) or NULL (no such lock) cannot happen after our own acquire, so both are logged.
     private async Task ReleaseLockAndLogTriStateAsync(CancellationToken cancellationToken)
     {
-        // Per spec 0027 Item M / ADR 0057 §5b / ADR 0058 §B.3: MySQL's RELEASE_LOCK has
-        // three outcomes — 1 (released by this session: clean), 0 (lock exists but held by
-        // another session: diagnostic anomaly because we just acquired it), NULL (no lock
-        // by that name: same anomaly because acquisition implied creation). Both non-true
-        // outcomes surface through a Warning-level entry preserving the marker convention
-        // (NULL/0) and the meaning text from the existing runner emission at
-        // MySqlBoxMigrationRunner.cs:138-141 — NF1 / no-information-loss.
-        //
-        // Guarded by the `_lockResource is null` short-circuit so a Commit/Rollback called
-        // without a prior BeginAsync (or after Begin threw before storing the lock
-        // resource) is a clean no-op. This is what makes RollbackAsync safe to call from
-        // the runner's catch path even if BeginAsync failed.
         if (_lockResource is null) return;
 
         bool? releaseResult;
@@ -116,12 +88,6 @@ public class MySqlProvisioningUnitOfWork(
         }
         catch (Exception ex)
         {
-            // RELEASE_LOCK executes SQL on the same connection — if the connection is dead
-            // (mid-migration driver fault, ObjectDisposedException, MySqlException) ReleaseAsync
-            // throws. RollbackAsync MUST NOT throw — otherwise the runner's catch path
-            // (catch { RollbackAsync(...); throw; }) replaces the original migration exception
-            // with this cleanup-side failure, masking the real cause. The session-scoped
-            // GET_LOCK is released by the server when the connection closes.
             logger.LogWarning(
                 ex,
                 "MySQL provisioning UoW: RELEASE_LOCK threw for lock resource '{LockResource}' — release skipped, the session will release the lock when the connection closes.",
@@ -131,25 +97,25 @@ public class MySqlProvisioningUnitOfWork(
 
         if (releaseResult is true) return;
 
+        WarnLockNotReleased(_lockResource, releaseResult);
+    }
+
+    // Names the table as well as the lock key, because MySqlMigrationLockName hashes long names.
+    private void WarnLockNotReleased(string lockResource, bool? releaseResult)
+    {
         var marker = releaseResult is null ? "NULL" : "0";
         var meaning = releaseResult is null ? "lock did not exist" : "lock held by another session";
         if (tableName is not null)
         {
-            // Phase 5.3 regression fix: restore the legacy runner's TableName+LockKey emission
-            // shape per NF1 (no information loss). MySqlMigrationLockName.For hashes long
-            // composites into a 64-char-safe GET_LOCK key, so lockResource alone cannot
-            // surface the raw table name in long-name cases. The runner threads tableName
-            // through the UoW ctor so this Warning preserves diagnostic context regardless
-            // of name length.
             logger.LogWarning(
                 "MySQL advisory lock for migration of '{TableName}' (key '{LockKey}') was not released by this session: RELEASE_LOCK returned {Result} ({Marker} = {Meaning}). This is likely a Brighter defect — please report it.",
-                tableName, _lockResource, releaseResult, marker, meaning);
+                tableName, lockResource, releaseResult, marker, meaning);
         }
         else
         {
             logger.LogWarning(
                 "MySQL advisory lock '{LockResource}' was not released by this session: RELEASE_LOCK returned {Result} ({Marker} = {Meaning}). This is likely a Brighter defect — please report it.",
-                _lockResource, releaseResult, marker, meaning);
+                lockResource, releaseResult, marker, meaning);
         }
     }
 
