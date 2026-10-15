@@ -1,7 +1,6 @@
 ﻿using Google.Api.Gax;
 using Google.Api.Gax.Grpc;
 using Google.Cloud.PubSub.V1;
-using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -28,6 +27,8 @@ public partial class GcpPullMessageConsumer(
     public MessagingSystem MessagingSystem => MessagingSystem.PubSub;
 
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPullMessageConsumer>();
+    private readonly GcpPurgeWatermark _purgeWatermark = new();
+    private readonly SemaphoreSlim _purgeLock = new(1, 1);
 
     private readonly GcpRejectionRouter _router = new GcpRejectionRouter(
         connection,
@@ -36,7 +37,7 @@ public partial class GcpPullMessageConsumer(
         makeChannels,
         subscriptionName.ProjectId,
         timeProvider);
-    
+
     /// <summary>
     /// Synchronously acknowledges a message.
     /// </summary>
@@ -106,19 +107,26 @@ public partial class GcpPullMessageConsumer(
         return Task.CompletedTask;
     }
 
-    /// <inheritdoc/>
+    /// <summary>Purges the subscription backlog using a server-derived timestamp.</summary>
+    /// <remarks>
+    /// Requires permission to create and delete temporary topics and subscriptions, attach a subscription
+    /// to the temporary topic, publish and consume its marker, and seek the source subscription.
+    /// The marker is confined to a private temporary topic. Temporary resources are removed before Seek.
+    /// This consumer retains the cutoff to acknowledge and discard late pre-purge deliveries.
+    /// Concurrent purges on this consumer run serially. Cleanup uses a separate ten-second deadline per temporary resource.
+    /// Cleanup failures are logged and attached to an original exception's Data as PubSubPurgeCleanupException.
+    /// </remarks>
+    /// <exception cref="AggregateException">Temporary resource cleanup failed without an earlier operation failure.</exception>
     public void Purge()
     {
+        _purgeLock.Wait();
         try
         {
             var client = connection.GetOrCreateSubscriberServiceApiClient();
 
             Log.PurgeStart(s_logger, subscriptionName.ToString());
-            client.Seek(new SeekRequest
-            {
-                SubscriptionAsSubscriptionName = subscriptionName,
-                Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1))
-            });
+            var publisher = connection.CreatePublisherServiceApiClient();
+            _purgeWatermark.Advance(GcpSubscriptionPurger.Purge(client, publisher, subscriptionName));
             Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
@@ -126,29 +134,30 @@ public partial class GcpPullMessageConsumer(
             Log.PurgeError(s_logger, ex, subscriptionName.ToString());
             throw;
         }
+        finally
+        {
+            _purgeLock.Release();
+        }
     }
 
     /// <summary>
     /// Asynchronously purges all unacknowledged messages from the subscription.
-    /// This is done by seeking the subscription to a point in time one minute in the future.
+    /// This is done by seeking the subscription to a server-derived timestamp.
     /// </summary>
+    /// <remarks>Uses the same permissions and late-delivery filtering as <see cref="Purge"/>.</remarks>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
+        await _purgeLock.WaitAsync(cancellationToken);
         try
         {
             var client = await connection.CreateSubscriberServiceApiClientAsync();
 
             Log.PurgeStart(s_logger, subscriptionName.ToString());
 
-            await client.SeekAsync(
-                new SeekRequest
-                {
-                    SubscriptionAsSubscriptionName = subscriptionName,
-                    Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1))
-                },
-                cancellationToken);
+            var publisher = await connection.CreatePublisherServiceApiClientAsync();
+            _purgeWatermark.Advance(await GcpSubscriptionPurger.PurgeAsync(client, publisher, subscriptionName, cancellationToken));
 
             Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }
@@ -156,6 +165,10 @@ public partial class GcpPullMessageConsumer(
         {
             Log.PurgeError(s_logger, ex, subscriptionName.ToString());
             throw;
+        }
+        finally
+        {
+            _purgeLock.Release();
         }
     }
 
@@ -190,6 +203,16 @@ public partial class GcpPullMessageConsumer(
                     MaxMessages = batchSize,
                 },
                 pullWindow.WithCancellationToken(cancellationToken));
+
+            var purged = response.ReceivedMessages.Where(message => _purgeWatermark.Includes(message.Message)).ToArray();
+            if (purged.Length > 0)
+            {
+                await client.AcknowledgeAsync(subscriptionName, purged.Select(message => message.AckId), cancellationToken);
+                foreach (var message in purged)
+                {
+                    response.ReceivedMessages.Remove(message);
+                }
+            }
 
             if (response.ReceivedMessages.Count == 0)
             {
@@ -248,7 +271,7 @@ public partial class GcpPullMessageConsumer(
             ? CallSettings.FromExpiration(Expiration.FromTimeout(window < MinimumPullDeadline ? MinimumPullDeadline : window))
             : null;
 
-    
+
     /// <summary>
     /// Synchronously receives a batch of messages from the subscription using the Pull API.
     /// </summary>
@@ -272,8 +295,19 @@ public partial class GcpPullMessageConsumer(
             var client = connection.GetOrCreateSubscriberServiceApiClient();
             response = client.Pull(new PullRequest
             {
-                SubscriptionAsSubscriptionName = subscriptionName, MaxMessages = batchSize
+                SubscriptionAsSubscriptionName = subscriptionName,
+                MaxMessages = batchSize
             }, pullWindow);
+
+            var purged = response.ReceivedMessages.Where(message => _purgeWatermark.Includes(message.Message)).ToArray();
+            if (purged.Length > 0)
+            {
+                client.Acknowledge(subscriptionName, purged.Select(message => message.AckId));
+                foreach (var message in purged)
+                {
+                    response.ReceivedMessages.Remove(message);
+                }
+            }
 
             if (response.ReceivedMessages.Count == 0)
             {
@@ -301,8 +335,8 @@ public partial class GcpPullMessageConsumer(
 
         return response.ReceivedMessages.Select(Parser.ToBrighterMessage).ToArray();
     }
-    
-       /// <summary>
+
+    /// <summary>
     /// Synchronously rejects a message, routing a stamped copy to the configured dead-letter
     /// destination before acknowledging the original.
     /// </summary>
@@ -442,7 +476,7 @@ public partial class GcpPullMessageConsumer(
             return false;
         }
     }
-    
+
     /// <summary>
     /// Asynchronously requeues a message by setting its acknowledgment deadline to zero seconds.
     /// This tells Pub/Sub to immediately redeliver the message according to the subscription's retry policy.
