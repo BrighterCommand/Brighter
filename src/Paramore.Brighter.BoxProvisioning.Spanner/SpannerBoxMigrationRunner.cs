@@ -263,10 +263,10 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             var command = connection.CreateDdlCommand(ddlStatements[0], ddlStatements[1..]);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
-        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.AlreadyExists)
+        catch (SpannerException ex) when (IsAlreadyExists(ex))
         {
         }
-        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.FailedPrecondition)
+        catch (SpannerException ex) when (IsConcurrentSchemaChange(ex))
         {
             _logger.LogDebug(ex,
                 "Box-table CREATE TABLE IF NOT EXISTS race absorbed (Spanner FAILED_PRECONDITION)");
@@ -292,7 +292,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             var command = connection.CreateDdlCommand(ddl);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
-        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.AlreadyExists)
+        catch (SpannerException ex) when (IsAlreadyExists(ex))
         {
             _logger.LogDebug(ex,
                 "{HistoryTable} already created by racing session (Spanner ALREADY_EXISTS)",
@@ -300,7 +300,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             Activity.Current?.AddEvent(new ActivityEvent(
                 BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
         }
-        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.FailedPrecondition)
+        catch (SpannerException ex) when (IsConcurrentSchemaChange(ex))
         {
             _logger.LogDebug(ex,
                 "{HistoryTable} concurrent schema change absorbed (Spanner FAILED_PRECONDITION on CREATE IF NOT EXISTS)",
@@ -309,6 +309,13 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
                 BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
         }
     }
+
+    private static bool IsAlreadyExists(SpannerException ex) =>
+        ex.RpcException.StatusCode == StatusCode.AlreadyExists;
+
+    // The emulator reports the loser of concurrent CREATE TABLE IF NOT EXISTS as FailedPrecondition.
+    private static bool IsConcurrentSchemaChange(SpannerException ex) =>
+        ex.RpcException.StatusCode == StatusCode.FailedPrecondition;
 
     private static async Task<bool> IsMigrationAppliedAsync(
         SpannerConnection connection, string tableName,
@@ -360,7 +367,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             await InsertHistoryRowAsync(
                 connection, tableName, version, description, cancellationToken);
         }
-        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.AlreadyExists)
+        catch (SpannerException ex) when (IsAlreadyExists(ex))
         {
         }
     }
