@@ -67,7 +67,7 @@ These words come from the requirements' *Definitions* section, and this ADR uses
 | 0086 (proposed) | the sweeper remedy health checks: package, registration, tags, data keys, descriptions, thresholds and the remedy-kind convention |
 | [0087](0087-consumer-remedy-health-checks.md) (proposed) | the consumer remedy checks that split `BrighterServiceActivatorHealthCheck`, its `[Obsolete]` marking, and the additive `Dispatcher` members |
 
-The sweeper records its own state once, and every signal — gauge or health check — reads that one record and never touches the sweeper's thread.
+Health checks and gauges give operators actionable guidance on the sweeper and the consumers, and never stall waiting on a stuck thread.
 
 ### A hung sweep is invisible from outside the sweeper
 
