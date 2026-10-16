@@ -9,6 +9,23 @@ without throwing it out of disposal. Client disposal is attempted even when stop
 rejection-routing resources are released on both synchronous and asynchronous disposal paths.
 Non-cancellation failures still propagate. Shutdown timing remains controlled by the Google client.
 
+### Consumer inbox processing is opt-in
+
+`AddConsumers` no longer enables a global in-memory inbox by default. `ConsumersOptions.InboxConfiguration`
+and `IAmConsumerOptions.InboxConfiguration` are nullable, and `null` means no global inbox. Both consumer
+registration overloads support this, with or without producers.
+
+This changes duplicate handling for hosts that relied on the previous default: requests now reach their
+handlers on every delivery. To retain the previous global inbox behavior, configure it explicitly:
+
+```csharp
+services.AddConsumers(options => options.InboxConfiguration = new InboxConfiguration());
+```
+
+The parameterless configuration uses `InMemoryInbox`, whose state is local to one process and lost on restart.
+Configure a persistent inbox for durable deduplication. Handler-level `[UseInbox]` and `[UseInboxAsync]`
+attributes still require an inbox store registered in the container when the global inbox is disabled.
+
 ### Azure Service Bus retry scheduler selection
 
 `Publication.RequeueScheduler` selects native scheduling on the consuming broker (the default)

@@ -31,9 +31,10 @@ public class SourceReferenceRoundTripTests
     public void When_a_source_reference_is_created_from_a_string_it_should_expose_the_value()
     {
         //Arrange
-        SourceReference r = "a1b2c3d / #4039";
+        SourceReference? r = "a1b2c3d / #4039";
 
         //Act + Assert
+        Assert.NotNull(r);
         Assert.Equal("a1b2c3d / #4039", r.Value);
     }
 
@@ -41,7 +42,7 @@ public class SourceReferenceRoundTripTests
     public void When_a_source_reference_is_implicitly_converted_to_string_it_should_yield_the_original()
     {
         //Arrange
-        SourceReference r = "a1b2c3d / #4039";
+        SourceReference? r = "a1b2c3d / #4039";
 
         //Act
         string? s = r;
@@ -65,7 +66,7 @@ public class SourceReferenceRoundTripTests
     {
         //Arrange
         var a = new SourceReference("a1b2c3d / #4039");
-        var b = (SourceReference)"a1b2c3d / #4039";
+        SourceReference? b = "a1b2c3d / #4039";
 
         //Act + Assert
         Assert.Equal(a, b);
@@ -97,7 +98,7 @@ public class SourceReferenceRoundTripTests
     public void When_source_reference_is_null_or_empty_is_called_with_empty_string_it_should_return_true()
     {
         //Arrange
-        var empty = (SourceReference)"";
+        SourceReference? empty = "";
 
         //Act + Assert
         Assert.True(SourceReference.IsNullOrEmpty(empty));
@@ -107,7 +108,7 @@ public class SourceReferenceRoundTripTests
     public void When_source_reference_is_null_or_empty_is_called_with_non_empty_string_it_should_return_false()
     {
         //Arrange
-        var r = (SourceReference)"a1b2c3d / #4039";
+        SourceReference? r = "a1b2c3d / #4039";
 
         //Act + Assert
         Assert.False(SourceReference.IsNullOrEmpty(r));

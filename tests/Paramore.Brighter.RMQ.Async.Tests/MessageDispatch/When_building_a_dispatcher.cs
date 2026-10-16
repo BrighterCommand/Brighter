@@ -9,12 +9,16 @@ using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
+using RabbitMQ.Client;
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessageDispatch;
 
-public class DispatchBuilderTests
+public class DispatchBuilderTests : IAsyncLifetime
 {
+    private static readonly Uri s_brokerUri = new("amqp://guest:guest@localhost:5672/%2f");
+    private readonly ChannelName _firstQueue = new($"rmq-async-dispatcher-{Guid.NewGuid():N}");
+    private readonly ChannelName _secondQueue = new($"rmq-async-dispatcher-{Guid.NewGuid():N}");
     private readonly IAmADispatchBuilder _builder;
     private Dispatcher? _dispatcher;
 
@@ -27,7 +31,7 @@ public class DispatchBuilderTests
 
         var rmqConnection = new RmqMessagingGatewayConnection
         {
-            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+            AmpqUri = new AmqpUriSpecification(s_brokerUri),
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
@@ -56,13 +60,13 @@ public class DispatchBuilderTests
             [
                 new RmqSubscription<MyEvent>(
                     new SubscriptionName("foo"),
-                    new ChannelName("mary"),
+                    _firstQueue,
                     new RoutingKey("bob"),
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200)),
                 new RmqSubscription<MyEvent>(
                     new SubscriptionName("bar"),
-                    new ChannelName("alice"),
+                    _secondQueue,
                     new RoutingKey("simon"),
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
@@ -92,6 +96,28 @@ public class DispatchBuilderTests
             
         Assert.Equal(DispatcherState.DS_STOPPED, _dispatcher.State);
     }
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public async Task DisposeAsync()
+    {
+        if (_dispatcher is null)
+            return;
+
+        try
+        {
+            await _dispatcher.DisposeAsync();
+        }
+        finally
+        {
+            var factory = new ConnectionFactory { Uri = s_brokerUri };
+            await using var connection = await factory.CreateConnectionAsync();
+            await using var channel = await connection.CreateChannelAsync();
+            await channel.QueueDeleteAsync(_firstQueue.Value);
+            await channel.QueueDeleteAsync(_secondQueue.Value);
+        }
+    }
+
     private Subscription GetConnection(string name)
     {
         return Enumerable.SingleOrDefault<Subscription>(_dispatcher.Subscriptions, conn => conn.Name == name);
