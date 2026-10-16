@@ -13,7 +13,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
 [Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
+[Collection("Spanner")]
 [Trait("Category", "Spanner")]
 public class When_spanner_box_provisioning_uses_connection_name_for_outbox_it_should_resolve_from_configuration : IAsyncLifetime
 {

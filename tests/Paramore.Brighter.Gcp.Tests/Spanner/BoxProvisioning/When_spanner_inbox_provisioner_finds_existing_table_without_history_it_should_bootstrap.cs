@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
 [Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
+[Collection("Spanner")]
 [Trait("Category", "Spanner")]
 public class When_spanner_inbox_provisioner_finds_existing_table_without_history_it_should_bootstrap : IAsyncLifetime
 {
