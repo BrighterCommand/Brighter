@@ -45,7 +45,22 @@ public sealed class LockedSqliteOutbox : IDisposable
     private SqliteConnection? _lockHolder;
     private Task? _release;
 
-    public LockedSqliteOutbox()
+    /// <summary>
+    /// Builds the outbox from a <see cref="RelationalDatabaseConfiguration"/>.
+    /// </summary>
+    /// <param name="outstandingCountTimeout">The outstanding count timeout to configure, or <c>null</c> for the default.</param>
+    public LockedSqliteOutbox(TimeSpan? outstandingCountTimeout = null)
+        : this((connectionString, tableName) => new RelationalDatabaseConfiguration(
+            connectionString, outBoxTableName: tableName, outstandingCountTimeout: outstandingCountTimeout))
+    {
+    }
+
+    /// <summary>
+    /// Builds the outbox from the configuration that <paramref name="configure"/> returns for the database's
+    /// connection string and outbox table name.
+    /// </summary>
+    /// <param name="configure">Returns the configuration, given the connection string and then the outbox table name.</param>
+    public LockedSqliteOutbox(Func<string, string, IAmARelationalDatabaseConfiguration> configure)
     {
         _connectionString = $"Data Source={_dbPath};Pooling=False";
         var tableName = $"locked_outbox_{Guid.NewGuid():N}";
@@ -57,8 +72,7 @@ public sealed class LockedSqliteOutbox : IDisposable
             Execute(setup, SqliteOutboxBuilder.GetDDL(tableName));
         }
 
-        var configuration = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
-        Outbox = new SqliteOutbox(configuration);
+        Outbox = new SqliteOutbox(configure(_connectionString, tableName));
         Outbox.Add(new DefaultMessageFactory().Create(DateTimeOffset.UtcNow.AddMinutes(-5)), new RequestContext());
     }
 
