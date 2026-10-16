@@ -64,7 +64,7 @@ These words come from the requirements' *Definitions* section, and this ADR uses
 | ADR | Decides |
 | --- | --- |
 | **0085** *(this one)* | how the sweeper records its state in one tear-free record, how signals find that record, and the two gauges that read it |
-| 0086 (proposed, not yet written) | the sweeper remedy health checks: package, registration, tags, data keys, descriptions, thresholds and the remedy-kind convention |
+| 0086 (proposed) | the sweeper remedy health checks: package, registration, tags, data keys, descriptions, thresholds and the remedy-kind convention |
 | 0087 (proposed, not yet written) | the consumer remedy checks that split `BrighterServiceActivatorHealthCheck`, its `[Obsolete]` marking, and the additive `Dispatcher` members |
 
 The sweeper records its own state once, and every signal — gauge or health check — reads that one record and never touches the sweeper's thread.
@@ -417,7 +417,7 @@ FR-6A.3 makes the circuit breaker the source of truth, so the gauge keeps no cop
   - [0010-brighter-semantic-conventions.md](0010-brighter-semantic-conventions.md): the `paramore.brighter.*` naming.
   - [0039-opentelemetry-builder-extension.md](0039-opentelemetry-builder-extension.md): the `AddBrighterInstrumentation` entry point.
   - [0014-di-friendly-framework.md](0014-di-friendly-framework.md): core stays container-agnostic.
-  - ADR 0086 and ADR 0087 (proposed, not yet written): the sibling ADRs for this requirement.
+  - [0086-sweeper-remedy-health-checks.md](0086-sweeper-remedy-health-checks.md) and ADR 0087 (proposed, not yet written): the sibling ADRs for this requirement.
 - External references:
   - [.NET metrics instrument types, including ObservableGauge](https://learn.microsoft.com/dotnet/core/diagnostics/metrics-instrumentation)
   - [OpenTelemetry metrics API: asynchronous gauge](https://opentelemetry.io/docs/specs/otel/metrics/api/#asynchronous-gauge)
