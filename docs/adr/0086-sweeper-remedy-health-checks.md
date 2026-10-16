@@ -64,7 +64,7 @@ These words come from the requirements' *Definitions* section, and this ADR uses
 | --- | --- |
 | 0085 (proposed) | how the sweeper records its state in one tear-free record, how signals find that record, and the two gauges that read it |
 | **0086** *(this one)* | the sweeper remedy health checks: package, registration, tags, data keys, descriptions, thresholds and the remedy-kind convention |
-| 0087 (proposed, not yet written) | the consumer remedy checks that split `BrighterServiceActivatorHealthCheck`, its `[Obsolete]` marking, and the additive `Dispatcher` members |
+| [0087](0087-consumer-remedy-health-checks.md) (proposed) | the consumer remedy checks that split `BrighterServiceActivatorHealthCheck`, its `[Obsolete]` marking, and the additive `Dispatcher` members |
 
 The sweeper records its own state once, and every signal — gauge or health check — reads that one record and never touches the sweeper's thread.
 
@@ -446,7 +446,7 @@ A writer that iterates `Data` sees the remedy kind, the list of conditions, and 
 - Requirements: [specs/0038-add-sweeper-health-check/requirements.md](../../specs/0038-add-sweeper-health-check/requirements.md). Issue [#4573](https://github.com/BrighterCommand/Brighter/issues/4573).
 - Related ADRs (none is superseded by this ADR):
   - [0085-track-outbox-sweeper-state-and-publish-gauges.md](0085-track-outbox-sweeper-state-and-publish-gauges.md): `OutboxSweeperState`, `OutboxSweeperSnapshot` and the gauges that these checks sit beside.
-  - ADR 0087 (proposed, not yet written): the consumer remedy checks that reuse this ADR's convention.
+  - [0087-consumer-remedy-health-checks.md](0087-consumer-remedy-health-checks.md): the consumer remedy checks that reuse this ADR's convention.
   - [0081-report-persistent-channel-failures-in-health-checks.md](0081-report-persistent-channel-failures-in-health-checks.md): the consumer check from #4555, its positive threshold defaulting to 3, and its readiness guidance, which this ADR's convention qualifies.
   - [0081-timed-outbox-sweeper-health-metrics.md](0081-timed-outbox-sweeper-health-metrics.md): the sweep outcomes these conditions count, and the rule that Brighter does not cancel a sweep in flight.
   - [0028-support-circuit-breaking-of-topics.md](0028-support-circuit-breaking-of-topics.md): `IAmAnOutboxCircuitBreaker` and tripped topics.

@@ -208,7 +208,7 @@ The ADR fixes the exact wording. The ACs check that the values are present, not 
 - needs no new package reference, and
 - gets no new transitive dependency other than, at most, `Microsoft.Extensions.Diagnostics.HealthChecks` (the Microsoft package that holds `IHealthChecksBuilder`, which any registration call needs; it has no ASP.NET Core dependency) and the packages it brings with it.
 
-The same holds for a user of `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics` who does not opt in to the consumer remedy checks. That package references only `Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions` today, and may gain `Microsoft.Extensions.Diagnostics.HealthChecks` and nothing else.
+The same holds for a user of `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics` who does not opt in to the consumer remedy checks. That package references only `Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions` today, and may gain `Microsoft.Extensions.Diagnostics.HealthChecks` and the packages it brings with it, and nothing else.
 
 No user is forced to take a dependency on ASP.NET Core, OpenTelemetry or `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics` to use the sweeper.
 
