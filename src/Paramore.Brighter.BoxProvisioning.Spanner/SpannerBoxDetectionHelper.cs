@@ -84,7 +84,7 @@ public class SpannerBoxDetectionHelper :
         CancellationToken cancellationToken = default,
         SpannerTransaction? transaction = null)
     {
-        _ = historySchema; // Spanner has no schema concept; PerSchema is a no-op here.
+        _ = historySchema;
         var historyTableExists = await DoesTableExistAsync(
             connection, SpannerBoxMigrationRunner.MigrationHistoryTable,
             schemaName, cancellationToken, transaction);
@@ -112,7 +112,7 @@ WHERE `BoxTableName` = @BoxTableName",
         CancellationToken cancellationToken = default,
         SpannerTransaction? transaction = null)
     {
-        _ = historySchema; // Spanner has no schema concept; PerSchema is a no-op here.
+        _ = historySchema;
         using var command = connection.CreateSelectCommand(
             @"SELECT COALESCE(MAX(`MigrationVersion`), 0) FROM `BrighterMigrationHistory`
 WHERE `BoxTableName` = @BoxTableName",
