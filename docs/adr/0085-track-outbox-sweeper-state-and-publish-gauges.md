@@ -64,7 +64,7 @@ These words come from the requirements' *Definitions* section, and this ADR uses
 | ADR | Decides |
 | --- | --- |
 | **0085** *(this one)* | how the sweeper records its state in one tear-free record, how signals find that record, and the two gauges that read it |
-| 0086 (proposed) | the sweeper remedy health checks: package, registration, tags, data keys, descriptions, thresholds and the remedy-kind convention |
+| [0086](0086-sweeper-remedy-health-checks.md) (proposed) | the sweeper remedy health checks: package, registration, tags, data keys, descriptions, thresholds and the remedy-kind convention |
 | [0087](0087-consumer-remedy-health-checks.md) (proposed) | the consumer remedy checks that split `BrighterServiceActivatorHealthCheck`, its `[Obsolete]` marking, and the additive `Dispatcher` members |
 
 Health checks and gauges give operators actionable guidance on the sweeper and the consumers, and never stall waiting on a stuck thread.
@@ -238,11 +238,11 @@ A `readonly record struct`, so returning a snapshot allocates nothing.
 | `RunningTime` | `TimeSpan` | Time since the sweep started, or `TimeSpan.Zero` when no sweep is in progress | running-time gauge, ADR 0086 restart check |
 | `HoldsLock` | `bool` | The sweep in progress holds the lock | tests (AC-26) |
 | `ConsecutiveFailedSweeps` | `int` | As defined in the requirements | ADR 0086 investigate check |
-| `LastOutcome` | `SweepOutcome?` | Outcome of the most recent ended sweep, null before the first ends | ADR 0086 investigate check, tests |
-| `IsStopped` | `bool` | Stop has been requested | ADR 0086 descriptions |
+| `LastOutcome` | `SweepOutcome?` | Outcome of the most recent ended sweep, null before the first ends | tests |
+| `IsStopped` | `bool` | Stop has been requested | tests |
 | `IsActive` | `bool` | The decision-ladder result | tripped-topics gauge, ADR 0086 investigate check |
 
-ADR 0086 needs four things from the record: running time, the consecutive-failed count, whether the sweeper is active, and the last outcome. The snapshot carries all four. It does not carry `TimerInterval`. Configuration belongs to `TimedOutboxSweeperOptions`, which the container already holds, and ADR 0086 reads it from there.
+ADR 0086 needs three things from the record: running time, the consecutive-failed count and whether the sweeper is active. The snapshot carries those, and also the last outcome, the lock state and the stop flag, because FR-2 requires the record to keep them and tests read them. It does not carry `TimerInterval`. Configuration belongs to `TimedOutboxSweeperOptions`, which the container already holds, and ADR 0086 reads it from there.
 
 #### `SweeperMeter`
 
@@ -373,7 +373,7 @@ FR-6A.3 makes the circuit breaker the source of truth, so the gauge keeps no cop
 - `InMemoryOutboxCircuitBreaker.TrippedTopics` copies its keys to an array (`InMemoryOutboxCircuitBreaker.cs:58`). Each tripped-topics observation of an active sweeper therefore allocates in proportion to the number of tripped topics. The allocation does not grow with sweeps.
 - A failing breaker lookup logs a Warning on every observation, which can be noisy at short export intervals.
 - A sweeper that the user builds by hand, outside `UseOutboxSweeper`, writes to its own record, which the gauges and checks do not see unless the user also registers that record.
-- The tripped-topics gauge reports 0 both for "no sweeper" and for "not active". ADR 0086's check descriptions tell these cases apart.
+- The tripped-topics gauge reports 0 both for "no sweeper" and for "not active". ADR 0086's checks tell "no sweeper" apart by their description, and report an inactive sweeper as having no tripped topic reported.
 - A test cannot substitute a throwing reader behind the running-time gauge, because the record is a concrete class.
 
 ### Risks and Mitigations

@@ -62,7 +62,7 @@ These words come from the requirements' *Definitions* section, and this ADR uses
 
 | ADR | Decides |
 | --- | --- |
-| 0085 (proposed) | how the sweeper records its state in one tear-free record, how signals find that record, and the two gauges that read it |
+| [0085](0085-track-outbox-sweeper-state-and-publish-gauges.md) (proposed) | how the sweeper records its state in one tear-free record, how signals find that record, and the two gauges that read it |
 | **0086** *(this one)* | the sweeper remedy health checks: package, registration, tags, data keys, descriptions, thresholds and the remedy-kind convention |
 | [0087](0087-consumer-remedy-health-checks.md) (proposed) | the consumer remedy checks that split `BrighterServiceActivatorHealthCheck`, its `[Obsolete]` marking, and the additive `Dispatcher` members |
 
@@ -149,7 +149,7 @@ Six invariants follow from the sequence and the table.
 - **No sweeper means Healthy.** When the factory finds no record, the check reports Healthy with an empty conditions collection and does no other work (FR-4A.1).
 - **An inactive sweeper never touches the breaker.** A breaker that throws on an inactive sweeper therefore logs nothing (FR-6A.5, AC-68).
 - **A failed breaker read never hides another condition.** The check catches the failure, adds the unreadable condition, and still reports the failed count (FR-13.2).
-- **The status is Healthy or Degraded.** A check returns Degraded for a reported condition. An unexpected exception becomes Degraded through the registration's failure status (FR-13.1).
+- **The status is Healthy or Degraded.** A check returns Degraded for a reported condition. An unexpected exception thrown inside a check becomes Degraded through the registration's failure status (FR-13.1).
 - **A run is synchronous and short.** A check takes one snapshot and makes at most one breaker read, and it completes with `Task.FromResult` (NFR-1, AC-17).
 
 ### Where the pieces live
@@ -290,7 +290,7 @@ A description names each condition that applies, with the values an operator nee
 | No record registered | both | `No outbox sweeper is registered.` |
 | Healthy | restart | `No outbox sweep is hung (threshold 30s).` |
 | `hung_sweep` | restart | `Outbox sweep has been running for 31s, longer than the 30s threshold (TimerInterval 10s).` |
-| Healthy | investigate | `No outbox sweeper condition needs investigation: fewer than 3 consecutive failed sweeps, no tripped topics.` |
+| Healthy | investigate | `No outbox sweeper condition needs investigation: fewer than 3 consecutive failed sweeps, no tripped topic is reported, and no tripped-topic read failed.` |
 | `consecutive_failed_sweeps` | investigate | `3 consecutive outbox sweeps have failed (threshold 3, TimerInterval 10s).` |
 | `tripped_topics` | investigate | `2 topics are circuit-broken and are not being swept until their cooldown ends: orders, payments.` |
 | `tripped_topics`, more than 10 | investigate | names the first 10 in ordinal order, then `and 2 more (12 in total).` |
@@ -347,7 +347,11 @@ The host builds a check through its registration factory on the first probe. Val
 
 #### Why the breaker lookup is a delegate called inside the check
 
-An exception thrown by the factory reaches the health-check service, which reports the registration's failure status with empty `Data`. FR-13.2 instead wants the investigate check to report its other conditions and name the exception type. Calling the lookup inside `CheckHealthAsync`, and only while active, keeps both the failure and the active-sweeper rule inside the check.
+An exception thrown inside `CheckHealthAsync` becomes the registration's failure status with empty `Data`, so the check would lose its other conditions and the exception type. FR-13.2 wants both reported. Calling the lookup inside `CheckHealthAsync`, and only while active, lets the check catch the failure, report it as a condition, and keep the active-sweeper rule inside the check.
+
+#### Why a failure to build a check is not caught
+
+The health-check service does not catch an exception thrown by a registration's factory, and `AddCheck<T>` behaves the same way. A factory here resolves the record and the options with `GetService`. Absence is a valid setup and gives Healthy (FR-4A.1). A factory that throws means a registered dependency cannot be built, which is a misconfiguration. The failure then surfaces loudly, as it does for every other health check registration, and the host's own start-up already fails for the same cause in most cases. Wrapping the factory to hide the failure as Degraded would make the misconfiguration harder to find.
 
 #### Why the checks return Degraded themselves rather than the context's failure status
 
@@ -376,8 +380,15 @@ A writer that iterates `Data` sees the remedy kind, the list of conditions, and 
 4. **Behavioural, test first: the investigate check.** Add `OutboxSweeperInvestigateHealthCheck`. Log an unreadable breaker at Error with a `[LoggerMessage]` method, as `TimedOutboxSweeper` logs its failures (`TimedOutboxSweeper.cs:281-303`). Tests cover AC-11 to AC-15, AC-28 to AC-32, AC-36, AC-38, AC-41, AC-43, AC-44, AC-51 to AC-54, AC-64, AC-65 and AC-68.
 5. **Behavioural, test first: the registration call.** Add `OutboxSweeperHealthChecksBuilderExtensions` in `src/Paramore.Brighter.Outbox.Hosting/`. Tests cover AC-9 and AC-14 (validation before the service is built), AC-37 (two registrations, one tag each), AC-66 and AC-67 (with and without `UseOutboxSweeper`), and AC-70 (failure status Degraded).
 6. **Behavioural, test first: results across checks.** Add the tests for AC-16, AC-19, AC-20, AC-25, AC-39 and AC-42. Extend ADR 0085's AC-26 observer-thread test to run both checks, and add the check half of AC-48's third bullet.
-7. **Behavioural, test first: the convention test.** Add the AC-49 reflection test over the Brighter assemblies. Its exemption list holds `BrighterServiceActivatorHealthCheck`, and its list of named registration calls holds `AddBrighterOutboxSweeperHealthChecks`. ADR 0087 adds its consumer call to that list.
-8. **Behavioural: endpoint tests.** In `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, add a reference to `Paramore.Brighter.Outbox.Hosting` and map liveness, readiness and operator endpoints as the docs show. Tests cover AC-21, AC-35, AC-50, AC-56 and AC-57, using the documented `System.Text.Json` writer.
+7. **Behavioural, test first: the convention test.** Add the AC-49 test in `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, adding a project reference to `Paramore.Brighter.Outbox.Hosting`. ADR 0087 step 9 adds the reference to `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics` to the same project, so the project can load both registration calls. The test works in four parts:
+   - It calls each named registration call on a `ServiceCollection` and reads `HealthCheckServiceOptions.Registrations`.
+   - It invokes each registration's factory to learn the check type, and asserts that the registration has exactly one tag, its remedy tag.
+   - It compares the check types it found with the public `IHealthCheck` types in the Brighter assemblies, less an exemption list that holds `BrighterServiceActivatorHealthCheck`. Any other type fails the test.
+   - It runs each check in a Healthy scenario and a Degraded scenario, and asserts that `Data` holds the remedy kind that matches the tag, and a conditions entry.
+   - Each per-check scenario test in steps 3 and 4 also asserts the remedy kind, which together with the fixed scenarios covers "every scenario" in AC-49(c).
+
+   The list of named registration calls holds `AddBrighterOutboxSweeperHealthChecks`. ADR 0087 adds its consumer call to that list.
+8. **Behavioural: endpoint tests.** In `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, which step 7 already references to `Paramore.Brighter.Outbox.Hosting`, map liveness, readiness and operator endpoints as the docs show. Tests cover AC-21, AC-35, AC-50, AC-56 and AC-57, using the documented `System.Text.Json` writer.
 9. **Docs.** Add release-note entries to `release_notes.md` for the sweeper checks, their defaults and the remedy-kind convention. Add the health-check page sections in BrighterCommand/Docs that FR-11 lists for the sweeper:
    - the four conditions and their boundaries;
    - opt-in and threshold validation;
@@ -406,6 +417,7 @@ A writer that iterates `Data` sees the remedy kind, the list of conditions, and 
 - The registration names are fixed. A second call to `AddBrighterOutboxSweeperHealthChecks` registers duplicate names, and `HealthCheckService` rejects them when it is built.
 - The investigate check reports three conditions under one status. An operator who wants to page on failures but not on tripped topics must read `Data` or the description.
 - An unexpected exception in the restart check reports Degraded, which a liveness endpoint turns into a restart (FR-13.1).
+- A registration factory that throws is not caught. `HealthCheckService.CheckHealthAsync` throws, so every check on that endpoint fails, normally with a 500, and on a liveness endpoint that normally means a restart. The cause is a misconfiguration, and the docs say so (FR-11).
 - An existing endpoint with no predicate selects the new checks once they are registered. A hung sweep would then fail that endpoint. The migration steps cover this hazard (AC-56).
 - The checks read `TimerInterval` from the registered `TimedOutboxSweeperOptions`. A sweeper built by hand with different options reports another interval.
 - An unreadable breaker logs an Error on every probe while the sweeper is active.
@@ -416,7 +428,7 @@ A writer that iterates `Data` sees the remedy kind, the list of conditions, and 
 | --- | --- |
 | A host maps the restart check to liveness with a hang threshold below its slowest healthy sweep, and restarts in the middle of slow sweeps | The docs explain sizing against `BatchSize`, send latency and the `sweep.duration` histogram, and warn about duplicate sends and `InMemoryOutbox` loss |
 | A future Brighter check forgets the convention | The AC-49 reflection test fails for any `IHealthCheck` that is neither exempt nor registered by a named call |
-| The registration factory throws, so `Data` is empty | Every factory uses `GetService`, and the record and options resolve without side effects. Any remaining failure becomes Degraded through the failure status |
+| A registration factory throws because a registered dependency cannot be built | A misconfiguration that surfaces loudly, as for any health check registration. The record and options resolve without side effects, so this cannot arise from the sweeper checks' own dependencies |
 | A breaker's `TrippedTopics` blocks and a probe times out | Not handled, as FR-13.2 states. The docs record the limitation |
 | `Data` values do not serialize with a user's writer | Values are limited to strings, numbers, string arrays and dictionaries of them. AC-57 serializes them with `System.Text.Json` |
 | The two packages' checks drift apart in `Data` shape | Both build `Data` to the documented shape with the shared keys, and the AC-49 test checks the remedy kind and the conditions entry in every remedy check's `Data` |

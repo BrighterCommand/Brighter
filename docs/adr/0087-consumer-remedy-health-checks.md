@@ -351,6 +351,10 @@ The existing check reports Unhealthy when no consumer runs, and FR-12.4 requires
 
 A consumer that keeps failing to receive should not take work, whether it is draining after `End` or belongs to a shut subscription. The existing check reads every consumer this way, and FR-12.1 keeps that rule. The check needs no lifecycle facts, so it works with any `IDispatcher`.
 
+#### Why a failure to build the dispatcher is not caught
+
+Each registration resolves `IDispatcher` with `GetService`, so a publisher-only service gives Healthy (FR-12.7). A dispatcher that is registered but cannot be built is a misconfiguration, and in most cases the host's consumer service fails at start-up for the same cause. ADR 0086 explains why a failure to build a check is not caught and reported as Degraded. This ADR follows the same rule.
+
 #### Why the existing check is marked obsolete and not changed
 
 Changing its statuses would change the result of every existing liveness or readiness endpoint that selects it (NFR-6). A compile warning points users to the new call without breaking their builds. A build that treats warnings as errors must suppress CS0618 or migrate, and the release notes say so.
@@ -380,8 +384,8 @@ The existing check is registered through `AddCheck`, which the user may call bef
 6. **Behavioural, test first: the registration call.** Add `ConsumerHealthChecksBuilderExtensions`. Tests cover AC-60 (validation before the service is built), AC-61 (two registrations, one tag each), and AC-70 (failure status Degraded, and Degraded for a non-Brighter `IDispatcher`).
 7. **Behavioural, test first: agreement.** Add AC-62, which runs the existing check and both remedy checks over the four #4555 states. The existing tests for the existing check must pass unchanged (AC-23).
 8. **Behavioural: the obsolete marking.** Add `[Obsolete]` to `BrighterServiceActivatorHealthCheck` (`BrighterServiceActivatorHealthCheck.cs:36`). Add `#pragma warning disable CS0618` to `tests/Paramore.Brighter.Extensions.Tests/When_a_running_consumer_repeatedly_fails_to_receive_should_report_degraded.cs` and `tests/Paramore.Brighter.Extensions.Tests/TestDoubles/ReceiveHealthTestHost.cs`. Move `samples/TaskQueue/ASBTaskQueue/GreetingsWorker/Program.cs:88` to the new call. Add the AC-55 reflection test. Confirm that a full build adds no warning.
-9. **Behavioural: the convention test.** Add `AddBrighterConsumerHealthChecks` to the named registration calls in ADR 0086's AC-49 test. The exemption list keeps `BrighterServiceActivatorHealthCheck` only.
-10. **Behavioural: endpoint tests.** In `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, add a reference to the diagnostics package and map liveness (restart tag, Degraded and Unhealthy mapped to 503) and readiness (take-out-of-service tag, Degraded and Unhealthy mapped to 503). Tests cover AC-22.
+9. **Behavioural: the convention test.** In `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, add a project reference to `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics`, add `AddBrighterConsumerHealthChecks` to the named registration calls in ADR 0086's AC-49 test, and add a Healthy and a Degraded scenario for each consumer check. The exemption list keeps `BrighterServiceActivatorHealthCheck` only.
+10. **Behavioural: endpoint tests.** In `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, which step 9 already references to the diagnostics package, map liveness (restart tag, Degraded and Unhealthy mapped to 503) and readiness (take-out-of-service tag, Degraded and Unhealthy mapped to 503). Tests cover AC-22.
 11. **Docs.** Add release-note entries to `release_notes.md`:
     - the consumer remedy checks, the call, and the default threshold;
     - the `[Obsolete]` marking, with the CS0618 note for builds that treat warnings as errors;
