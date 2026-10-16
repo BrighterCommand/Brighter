@@ -77,17 +77,18 @@ Zero, a negative value (including `Timeout.InfiniteTimeSpan`) and anything above
 
 `IAmARelationalDatabaseConfiguration` gains the member with no default body, since `Paramore.Brighter` targets `netstandard2.0`. That is a source break for custom implementations, called out in the release note. Spanner's `CreateCommand` passes any value above 0 through, so a configured timeout reaches it in whole seconds, rounded up, as on the other backends.
 
-The PR review adds these tests in `tests/Paramore.Brighter.Sqlite.Tests/Outbox/`. The ones that time the count use `LockedSqliteOutbox`, like the four above; the out-of-range ones only build the configuration or the outbox:
+The PR review adds these tests in `tests/Paramore.Brighter.Sqlite.Tests/Outbox/`. The ones that time the count use `LockedSqliteOutbox`, like the four above; the others only build the configuration or the outbox:
 
 - `When_the_outstanding_count_timeout_is_configured_should_time_out_after_it` and `When_the_async_outstanding_count_timeout_is_configured_should_time_out_after_it`: with 3 seconds configured, the count throws after about 3 seconds instead of 15.
 - `When_the_outstanding_count_timeout_is_out_of_range_should_throw`: the configuration constructor rejects the values above. `When_the_outbox_configuration_has_an_out_of_range_outstanding_count_timeout_should_throw` does the same for an outbox built from a custom configuration.
 - `When_the_outstanding_count_timeout_is_below_a_second_should_round_up_to_a_second` and `When_the_outbox_configuration_has_an_outstanding_count_timeout_below_a_second_should_round_up_to_a_second`: 500 ms times out after about a second, through the constructor and through a custom configuration.
 - `When_the_outstanding_count_timeout_has_a_fraction_of_a_second_should_round_up_to_the_next_second`: 1.25 seconds times out after about 2. It passed on arrival, so it was checked red on its elapsed time assertion with the seconds truncated (at least 1) and with rounding half away from zero, then green again.
+- `When_the_outstanding_count_timeout_is_the_largest_allowed_should_be_accepted` and `When_the_outbox_configuration_has_the_largest_allowed_outstanding_count_timeout_should_be_accepted`: 2147483 seconds, the cap, is accepted through the constructor and through a custom configuration. They passed on arrival, so they were checked red on their `Assert.Null` with the upper bound check changed from `>` to `>=`, then green again.
 
 ## Fix
 
 - `src/Paramore.Brighter/RelationDatabaseOutbox.cs`: `OutstandingMessages` and `OutstandingMessagesAsync` now call private `ReadOutstandingMessages` / `ReadOutstandingMessagesAsync` with a timeout of -1, as before. `GetOutstandingMessageCount` and `GetOutstandingMessageCountAsync` call them with the configuration's `OutstandingCountTimeout` in whole seconds, read once when the outbox is built, 15 when it is not set.
 - `src/Paramore.Brighter/RelationalDatabaseConfiguration.cs` and `IAmARelationalDatabaseConfiguration.cs`: `OutstandingCountTimeout`, the `outstandingCountTimeout` constructor parameter and the helper that checks it and rounds it up.
-- `tests/Paramore.Brighter.Sqlite.Tests/Outbox/`: the four regression and characterisation tests, the seven tests added after the PR review, `LockedSqliteOutbox`, which now takes the timeout or a function that builds the configuration, and `StubRelationalDatabaseConfiguration`.
+- `tests/Paramore.Brighter.Sqlite.Tests/Outbox/`: the four regression and characterisation tests, the nine tests added after the PR review, `LockedSqliteOutbox`, which now takes the timeout or a function that builds the configuration, and `StubRelationalDatabaseConfiguration`.
 - The test doubles in `Paramore.Brighter.BoxProvisioning.Tests` and `Paramore.Brighter.Extensions.Tests` that implement `IAmARelationalDatabaseConfiguration` return null for the new member.
 - `release_notes.md`: a Master entry for issue #4584.
