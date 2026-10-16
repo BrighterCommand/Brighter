@@ -48,7 +48,7 @@ Five more words matter below:
 
 **Parent requirement**: [specs/0038-outbox-stale-message-telemetry/requirements.md](../../specs/0038-outbox-stale-message-telemetry/requirements.md)
 
-This ADR decides one thing. A hosted service of its own counts the outbox's stale messages on a fixed schedule, and a meter in core publishes the results. The per-topic count goes through an optional outbox capability that ADR 0086-outbox-per-topic-stale-count decides.
+This ADR decides two things, and the second serves the first. A hosted service of its own counts the outbox's stale messages on a fixed schedule, and a meter in core publishes the results. Conformance tests check each outbox's overall count against FR-14 (a) to (c). The per-topic count goes through an optional outbox capability that ADR 0086-outbox-per-topic-stale-count decides.
 
 This ADR and ADR 0086-outbox-per-topic-stale-count together record the answers to Q-1 to Q-16. ADR 0086-outbox-per-topic-stale-count records Q-15 and Q-16, and this ADR records the rest. This ADR also fixes the defaults and maximums that FR-2 leaves to design.
 
@@ -71,7 +71,7 @@ Each requirement below is met by the mechanism named on its bullet.
 - **FR-12, the counts' arguments.** Both counts receive the same `args` that the outstanding-message check passes, a null `requestContext` and a cancellable token.
 - **FR-12.1, without the capability or a measured topic.** At start the monitor checks whether the outbox implements the capability and whether any topic is measured. If either is missing, it logs one Information entry with the reason. The per-topic count then makes no call and has no series.
 - **FR-13, stopping.** `StopAsync` cancels the loop's stop token. The loop handles the stop one asynchronous hop later, and only then cancels the token of every call in progress. Once the loop observes the stop, it starts no call and ends. *Stopping* states the one remaining window. `StopAsync` returns at the first of three events: the loop ends, T passes after the request, or the host's stop token is cancelled. The loop's hop and `StopAsync`'s own T timer each need a pool thread.
-- **FR-14 columns (a) to (c), and FR-14.1 for them, outbox conformance.** Each outbox's test project gets the age, ceiling and cancellation tests of AC-16 and AC-17. Each gap is tracked in an issue of its own and listed as a known limitation of that outbox. ADR 0086-outbox-per-topic-stale-count covers column (d).
+- **FR-14 columns (a) to (c), and FR-14.1 for them, outbox conformance.** The age, ceiling and cancellation tests of AC-16 and AC-17 are generic tests in `Paramore.Brighter.Base.Test`. The test generator renders them for every outbox it configures, and `InMemoryOutstandingCountOutboxTests` derives the AC-16 base by hand. Each gap is tracked in an issue of its own and listed as a known limitation of that outbox. Once step 13 has recorded a cell as a gap, that outbox's test configuration marks the cell with its issue. *Conformance tests for the overall count* describes the tests. ADR 0086-outbox-per-topic-stale-count covers column (d).
 - **FR-15, attributes.** All three instruments carry a new attribute, `paramore.brighter.outbox.implementation`, set to the outbox's type name. The per-topic gauge also carries `messaging.destination.name`. The counter also carries the count and the outcome.
 - **NFR-1 and NFR-2, the posting path and the check.** The monitor never calls the mediator. It shares no lock, semaphore or flag with the posting path. The posting path never reads `StaleMessageAge`.
 - **NFR-3, additive API.** This ADR adds new types, one new extension method, new constants and one nullable property on `Publication`. No meter role and no outbox interface gains a member. ADR 0086-outbox-per-topic-stale-count adds the optional capability interface.
@@ -113,7 +113,7 @@ Two ADRs deliver spec 0038. Read this one first.
 
 | ADR | Decides |
 | --- | --- |
-| **ADR 0085-outbox-stale-message-telemetry** *(this one)* | the monitor that counts on a fixed schedule, the instruments that publish the counts, and the stale age each publication may set |
+| **ADR 0085-outbox-stale-message-telemetry** *(this one)* | the monitor and its fixed schedule, the instruments that publish the counts, each publication's stale age, and the tests of the overall count |
 | ADR 0086-outbox-per-topic-stale-count | the optional outbox capability that counts several topics in one call, and which outboxes offer it |
 
 The monitor decides when each count runs, at which ages and what the meter reports, and the outbox decides only how its store counts.
@@ -365,6 +365,10 @@ The meter finds the readings only when the meter provider shares the application
 | Creates the meter with the metrics pipeline | `BrighterMetricsBuilderExtensions.AddBrighterInstrumentation` (Extensions.Diagnostics) | Registers the meter and creates it when the meter provider is built | doing | `OutboxStaleMessageMeter` |
 | Carries a publication's own stale age | `Publication` (Paramore.Brighter) | Knows A_p, or that there is none | knowing | read by the monitor at start |
 | Counts stale messages overall | Each outbox (unchanged) | Applies A, C and `args` to its store | doing | its store |
+| Checks an outbox's overall count against FR-14 (a) and (b) | `OutstandingCountOutboxBaseTests<TTransaction>` (Paramore.Brighter.Base.Test) | Adds AC-16's nine messages, counts them and asserts the age and ceiling results. | doing | the outbox that a generated or derived class supplies |
+| Checks that a count ends when its token is cancelled | `OutstandingCountCancellationOutboxBaseTests<TTransaction>` (Paramore.Brighter.Base.Test) | Runs AC-17 against the prepared store and bounds the wait. | doing | `OutstandingCountCancellationSetup<TTransaction>` |
+| Holds the store for the cancellation test | `OutstandingCountCancellationSetup<TTransaction>` (Paramore.Brighter.Base.Test) | Knows the outbox, whether the store is held and the client's cancellation exception. Releases the hold and removes the store when disposed. | knowing, doing | the provider that prepares it |
+| Supplies each store's parts to the generated tests | `IAmAnOutstandingCountOutboxProvider` (rendered into each outbox test project) | Creates and removes a store of its own for each case. Prepares the store for AC-17. | doing | the outbox under test and its store |
 
 The loop decides what happened, the readings remember it, and the meter publishes it. The meter holds no schedule state, and the monitor holds no instruments. The monitor calls the per-topic capability of ADR 0086-outbox-per-topic-stale-count, which states that capability's contract and error conditions.
 
@@ -554,6 +558,109 @@ These states can be told apart from metrics alone, for each count (FR-6):
 
 If no readings are registered, the constructor creates no instruments. `AddBrighterInstrumentation` registers the meter with `TryAddSingleton<OutboxStaleMessageMeter>()`. That registration relies on the container passing the default value for an optional parameter whose service is not registered. The optional `meter` parameter of `TimedOutboxSweeper` already relies on the same behaviour. The meter's own unit tests construct it directly, as the `PublishConfirmationMeter` test does. The listener-based ACs build it through `AddBrighterInstrumentation` instead, as *Implementation Approach* describes.
 
+#### Conformance tests for the overall count
+
+The outbox tests that every store shares are rendered from Liquid templates by the test generator (ADR 0035-generated-test). A generated file is never edited by hand (`.agent_instructions/generated_tests.md`). The AC-16 test is proven first on `InMemoryOutbox`, which needs no external store. `InMemoryOutbox` already has the overall count, so the first step is two generic tests in `Paramore.Brighter.Base.Test` and the in-memory class for AC-16. A new suite of templates then renders both tests for every outbox the generator configures. The generic tests hold the messages, the counts and the assertions. What differs per store goes in the provider class that each outbox's test project already writes by hand.
+
+```csharp
+namespace Paramore.Brighter.Base.Test.Outbox;
+
+public abstract class OutstandingCountOutboxBaseTests<TTransaction> : IDisposable
+{
+    protected abstract IAmAnOutboxAsync<Message, TTransaction> Outbox { get; }
+    protected virtual TimeSpan ReadConsistencyTimeout => TimeSpan.Zero;
+    protected virtual void CreateStore() { }
+    protected virtual void DeleteStore() { }
+    protected abstract Task AddMessageWithAgeAsync(Message message, TimeSpan age);
+    protected virtual void BeforeCount() { }
+
+    protected Task AssertAgeAsync();
+    protected Task AssertCeilingOfThreeAsync();
+    protected Task AssertCeilingOfFiveAsync();
+    protected Task<string> ObserveCountAsync(int maxCount);
+}
+
+public abstract class OutstandingCountCancellationOutboxBaseTests<TTransaction>
+{
+    protected abstract Task<OutstandingCountCancellationSetup<TTransaction>> PrepareStoreAsync(TimeSpan holdFor);
+
+    protected Task AssertCancellationEndsTheCountAsync();
+}
+
+public sealed class OutstandingCountCancellationSetup<TTransaction> : IAsyncDisposable
+{
+    public OutstandingCountCancellationSetup(
+        IAmAnOutboxAsync<Message, TTransaction> outbox,
+        bool storeHeld,
+        Type? clientCancellationException,
+        Func<ValueTask> release);
+
+    public IAmAnOutboxAsync<Message, TTransaction> Outbox { get; }
+    public bool StoreHeld { get; }
+    public Type? ClientCancellationException { get; }
+    public ValueTask DisposeAsync();
+}
+```
+
+| Member | Input | Output | Error conditions |
+| --- | --- | --- | --- |
+| `Outbox` | None | The asynchronous outbox under test, over a store that no other test writes to. The cases call the asynchronous count, as the monitor does | None |
+| `ReadConsistencyTimeout` | None | How long a case may retry a count against an eventually consistent index. Zero by default, which means one call | None |
+| `CreateStore`, `DeleteStore` | None | Create and remove the store around each case, as in `CausationTrackingOutboxBaseTests` | None |
+| `AddMessageWithAgeAsync` | A message and an age | The message is in the outbox, undispatched. It is at least that age old on the outbox's own clock when the case counts. It is older only by the time the case takes to reach the count | An exception fails the case |
+| `BeforeCount` | None | The outbox's clock is ready for the count. A case calls it once, after the adds and before the first count. It does nothing by default | None |
+| `AssertAgeAsync`, `AssertCeilingOfThreeAsync`, `AssertCeilingOfFiveAsync` | None | Each case adds AC-16's nine messages, oldest first, and then counts with A of 5 minutes. It asserts 5 for C of 100, 3 for C of 3, or 5 for C of 5 | Fails when the count still differs after `ReadConsistencyTimeout` |
+| `ObserveCountAsync` | C | Adds the nine messages, counts once with A of 5 minutes, and returns the result, or the exception, as text | Asserts nothing. An exception while adding fails the case |
+| `PrepareStoreAsync` | How long to hold the store, at least 30 seconds | A setup over an outbox, which says whether the store is held | An exception fails the case |
+| `AssertCancellationEndsTheCountAsync` | None | Runs AC-17 against the setup, as the flow below describes | Fails as the flow below describes |
+| `OutstandingCountCancellationSetup` | The outbox, whether the store is held, the client's cancellation exception or null, and the release | Disposing it releases the hold and then removes the store. The hold also ends on its own after the time asked for | `DisposeAsync` never throws |
+
+The AC-16 base class follows `CausationTrackingOutboxBaseTests` in its store hooks and `ReadConsistencyTimeout`. Unlike that class, neither base class declares a `[Fact]`. The suite's templates declare the facts, one for each case, because a gap mark acts on one column of one outbox. AC-17 leaves `InMemoryOutbox` out, so AC-17 has a base class of its own and the in-memory class derives only the AC-16 base.
+
+Each case adds AC-16's two dispatched messages and then marks them with `MarkDispatchedAsync`. AC-16 sets `Header.TimeStamp` relative to the outbox's own clock. No provider sets a clock on its outbox. The outboxes and configurations that take a `TimeProvider` default to `TimeProvider.System`. The template therefore sets the time stamps relative to the system clock. `InMemoryOutstandingCountOutboxTests`, in `Paramore.Brighter.InMemory.Tests`, derives from the AC-16 base by hand and declares its own facts. It uses a `FakeTimeProvider` as ADR 0086-outbox-per-topic-stale-count describes for its in-memory class, and advances the clock in `BeforeCount`.
+
+`OutboxConfiguration` gains two settings for the suite:
+
+- `OutstandingCountReadConsistencyTimeoutInMilliseconds`, 0 by default. DynamoDB and DynamoDB V4 set it to 10000, AC-16's 10 seconds. It is not the existing `ReadConsistencyTimeoutInMilliseconds`, which they set to 30000 for the causation suite.
+- `OutstandingCountBelowScanConcurrency`, false by default. When it is true, the template renders two more facts, for C of 1 and C of 2. Each writes the text from `ObserveCountAsync` to the test output, for step 13 to record. DynamoDB and DynamoDB V4 set it to true, because their providers build the outbox with the default `ScanConcurrency` of 3.
+
+`AssertCancellationEndsTheCountAsync` runs AC-17 in this order:
+
+1. It calls `PrepareStoreAsync` with 30 seconds.
+2. It starts the count with `Task.Run`, so a count that runs synchronously, as Sqlite's does (A-8), cannot block the test's thread. If the store is not held, it cancels the token before this call.
+3. If the store is held, it cancels the token 1 second after the count starts.
+4. It waits for the count with `Task.WhenAny`, against a delay of the 1 second before the cancellation, AC-17's 5 seconds, and a margin. This bounds the wait, as ADR 0066-conformance-test-provider-and-ungating bounds its read members, so an outbox that ignores the token fails the case instead of hanging it.
+5. It asserts that the count ended with `OperationCanceledException`, or with the setup's client exception, within 5 seconds of the cancellation.
+6. In a `finally` block, it disposes the setup, which releases the store, and then waits for the count with the same bound.
+
+A token cancelled before the call proves only that the outbox checks the token before it calls the store. AC-17 therefore adds a review that the token reaches the client. Step 13 records that review in the outbox's FR-14 (c) cell, with the file and the line that pass the token.
+
+| Outbox | How the setup holds the store |
+| --- | --- |
+| MsSql, PostgreSql, MySql | A second connection takes an exclusive lock on the outbox's table, in a mode that blocks a plain read. No mode is named here, because the mode that blocks a read differs by database |
+| Sqlite | Sqlite has no table lock, so AC-17's exclusive lock becomes a lock on the database. The setup creates a database file of its own in the `DELETE` journal mode, and a second connection holds it with `BEGIN EXCLUSIVE`. In WAL mode a writer does not block readers |
+| DynamoDB, DynamoDB V4 | Not held, because DynamoDB Local cannot be held. As AC-17 requires, the setup constructs its configuration with `timeout: 0` and builds an outbox of its own from that configuration |
+| MongoDb, Spanner | Not held |
+| Firestore | Not held. FR-14 records its column (c) as a Gap, so its fact carries a gap mark once step 13 has recorded the result |
+
+AC-16 counts every undispatched message in the store, so the store must hold only the case's nine messages. The MsSql, PostgreSql, MySql, Sqlite, MongoDb and Spanner providers already create a table or a collection for each test. The DynamoDB providers share one table, and the Firestore provider shares one collection. The suite therefore asks each provider for a store of its own. The DynamoDB providers create a table for each case and delete it afterwards, as their tests for tripped topics already do. The Firestore provider creates a collection with a unique name for each case, and deletes its documents afterwards.
+
+The suite is the fourth that `OutboxGenerator.SuitesFor` yields, beside the Sync, Async and Causation suites, with its templates in `Templates/Outbox/OutstandingCount/`. It renders `IAmAnOutstandingCountOutboxProvider` into the suite's folder of each outbox test project, as the Sync and Async suites render their provider interfaces:
+
+| Member | Input | Output | Error conditions |
+| --- | --- | --- | --- |
+| `CreateOutstandingCountStore` | None | Creates a store that no other test writes to, and returns an asynchronous outbox over it | An exception fails the case |
+| `DeleteOutstandingCountStore` | None | Removes that store | Never throws |
+| `PrepareCancellationAsync` | How long to hold the store | The setup, over a store of its own that no other test writes to, as the table above describes for each outbox | An exception fails the case |
+
+Each outbox's provider class implements `IAmAnOutstandingCountOutboxProvider`, beside `IAmAnOutboxProviderSync` and `IAmAnOutboxProviderAsync`. The generated test classes derive from the base classes, as the causation template does. They override `Outbox`, the store hooks and `PrepareStoreAsync` with calls to the provider. `SuitesFor` gives the suite no `SkipTest` filter, so the generator renders each of the suite's templates for every outbox, whatever the template's name. ADR 0066-conformance-test-provider-and-ungating does not rely on names either, because a `SkipTest` matches parts of file names.
+
+`OutboxConfiguration` also gains three gap marks, empty by default: `OutstandingCountAgeGap`, `OutstandingCountCeilingGap` and `OutstandingCountCancellationGap`. Each holds the issue number of one FR-14 cell: (a) for the age fact, (b) for both ceiling facts and (c) for the cancellation fact. When a mark is set, the template renders that column's facts with `Skip = "Deferred: #<n> ..."` and a fixed reason for the column. The FR-14 table stays the source of truth, and each project's `test-configuration.json` mirrors it. Step 13 sets a mark only after it has run the column's facts with no mark, recorded the result and opened the issue.
+
+`Deferred: #<n>` is the form that `GatewaySkipConventionAudit` requires of a messaging-gateway Skip (ADR 0067-conformance-rollout-and-deferral-governance). Both that audit and `LedgerSkipCrossCheckAudit` scan every `Generated` folder under `tests/`, through `GatewaySkipConventionAudit.EnumerateGatewayArtifacts`. An outbox Skip would therefore fail `LedgerSkipCrossCheckAudit`, which matches each Skip to a deferred row of the gateway ledger. Before the first mark, step 13 restricts that scan to the messaging-gateway folders, test first. The rule in the summary of `GatewaySkipConventionAudit` names only messaging-gateway artifacts, so the restricted scan matches that rule. After that, no audit checks the outbox marks. The FR-14 table and step 13 keep each mark in step with its issue.
+
+The `gcp-ci` job leaves out the Spanner tests, and it does not run for a pull request from a fork. The Spanner facts therefore run locally, against the emulator. The Firestore tests connect to a Google Cloud project and have no emulator setting. Their results come from a run with that project's credentials. The `gcp-ci` job runs the Firestore tests on every push to master, so step 13 sets their marks before the merge.
+
 #### Where each type is touched
 
 | Assembly | Type | Change |
@@ -565,6 +672,11 @@ If no readings are registered, the constructor creates no instruments. `AddBrigh
 | Paramore.Brighter.Outbox.Hosting | `TimedOutboxStaleMessageMonitor`, `TimedOutboxStaleMessageMonitorOptions` | New |
 | Paramore.Brighter.Outbox.Hosting | `HostedServiceCollectionExtensions` | New `UseOutboxStaleMessageMonitor`, beside `UseOutboxArchiver` |
 | Paramore.Brighter.Extensions.Diagnostics | `BrighterMetricsBuilderExtensions` | Registers the meter beside `PublishConfirmationMeter`, and creates it in the same deferred `Configure` |
+| Paramore.Brighter.Base.Test | `OutstandingCountOutboxBaseTests<TTransaction>`, `OutstandingCountCancellationOutboxBaseTests<TTransaction>`, `OutstandingCountCancellationSetup<TTransaction>` | New, beside `CausationTrackingOutboxBaseTests` |
+| Paramore.Brighter.InMemory.Tests | `InMemoryOutstandingCountOutboxTests` | New, derived from the AC-16 base by hand, as `InMemoryCausationTrackingOutboxTests` is |
+| Paramore.Brighter.Test.Generator | `OutboxConfiguration`, `OutboxGenerator` | Two new settings and three gap marks. A fourth suite in `SuitesFor`, with no `SkipTest` filter and its templates in `Templates/Outbox/OutstandingCount/`. The comments that name the Sync, Async and Causation suites name the fourth too. `.agent_instructions/generated_tests.md` and the generator's `README.md` describe it |
+| Paramore.Brighter.Test.Generator.Tests | The generator's tests, `GatewaySkipConventionAudit` | Tests for the new suite and its gap marks. The collection test gains the new suite, and its filter also leaves out `IAmAnOutstandingCountOutboxProvider`, as it leaves out the Sync and Async provider interfaces. The scan that both audits share covers only the messaging-gateway folders |
+| Each outbox's test project | Its outbox provider class, and `test-configuration.json` | The provider implements `IAmAnOutstandingCountOutboxProvider`. The configuration sets the suite's settings and, after step 13, its gap marks. The generated files are regenerated |
 
 ADR 0086-outbox-per-topic-stale-count adds `IAmATopicCountingOutbox` and implements it on `InMemoryOutbox`.
 
@@ -692,6 +804,10 @@ ADR 0084-outbox-metrics names its outbox instruments with the noun as its own do
 
 The outcome key, `paramore.brighter.outbox.stale.outcome`, ends in `outcome` as the sweeper's `paramore.brighter.outbox_sweeper.outcome` does. The count key, `paramore.brighter.outbox.stale.count`, takes the values `overall` and `per_topic`, the requirement's names for the two counts. All five names share the `paramore.brighter.outbox.stale.` prefix. FR-5's `stale_messages` was a working name.
 
+#### Why generated tests with a provider hook?
+
+Brighter renders the outbox tests that every store shares, and a generated test changes only through its template (`.agent_instructions/generated_tests.md`). The overall count's tests are shared by every store, so they are rendered too. A test copied into each outbox's project would drift, the hazard that ADR 0073-gateway-channel-factory-type-regression-guard names for near-identical tests across test projects. Holding a store, though, cannot be written once in Liquid, because each database is held in its own way. Each outbox's test project already writes its provider class by hand, so the suite reaches the per-store parts through one interface on that class. The facts stay in the suite's templates, and the messages and the assertions in the base classes. Alternatives 30 to 34 record the shapes this ADR does not take.
+
 ### Implementation Approach
 
 Line numbers refer to commit 1ce331eb2.
@@ -768,7 +884,7 @@ The loop resumes on a pool thread, so a fake clock alone does not make a monitor
     - Test that no call of either count starts after the loop observes the stop, even 10 minutes of fake time later.
 11. **Behavioural: isolation (AC-13, AC-20, AC-21).** Add tests that run measurement beside a hung sweep and beside a blocked outstanding-message check. Add tests that compare posting-path calls with the feature on and off, with both counts blocked. No production code is expected to change in this step.
 12. **Behavioural: registration end to end (AC-1, AC-24, AC-35).** AC-1 uses `AddProducers` with the counting outbox and `AddBrighterInstrumentation` on the shared-container setup, with and without the stale step. AC-24 runs without `AddBrighterInstrumentation`. AC-35 sets an invalid `StaleMessageAge` without the stale step. No production code is expected to change in this step.
-13. **Outbox conformance for the overall count (AC-16, AC-17, and AC-18 for columns (a) to (c)).** Add the count tests to each outbox's test project in the definition of done. Record the observed results in the FR-14 table. Open one issue per gap, and list each gap under that outbox's known limitations (Q-9). Column (d) is steps 2 and 3 of ADR 0086-outbox-per-topic-stale-count.
+13. **Outbox conformance for the overall count (AC-16, AC-17, and AC-18 for columns (a) to (c)).** As *Conformance tests for the overall count* describes, add the generic tests, the setup and `InMemoryOutstandingCountOutboxTests` first. Then add the suite to the generator, implement its interface on every outbox's provider, set each outbox's settings, and regenerate. Run the facts with no gap mark set, against each real store or emulator. Run the Spanner and Firestore facts by hand, for the reason that subsection gives. Record the observed results in the FR-14 table, with the review that the token reaches the client for each outbox whose store is not held. Open one issue per gap, and list each gap under that outbox's known limitations (Q-9). Restrict the scan that the Skip audits share to the messaging-gateway folders, test first. Then set the gap marks. Column (d) is steps 2 and 3 of ADR 0086-outbox-per-topic-stale-count.
 14. **Documentation (AC-26).** Write the XML documentation for every new public type and member, and add an entry to `release_notes.md`. Add the telemetry page section, covering each item of NFR-7 and these points:
     - the example alert, for each gauge;
     - that the overall value is not the sum of the topic values;
@@ -808,6 +924,10 @@ The loop resumes on a pool thread, so a fake clock alone does not make a monitor
 - Where a tracer is configured, each measurement may start a trace of its own (Q-12).
 - Brighter gains a second outbox attribute key, `paramore.brighter.outbox.implementation`, beside `paramore.brighter.outbox.type`. The names are close but carry different values. One is the outbox's type name, and the other is the write mode on spans.
 - Until the FR-14 gaps are closed, the overall values are less accurate for some outboxes. Firestore ignores A, C and the token. DynamoDB can undercount when C is split across scan segments, and it reads more than C items.
+- No CI job runs the Spanner tests, so the Spanner facts run only by hand. The `gcp-ci` job does not run for a pull request from a fork, so step 13 also runs the Firestore facts by hand.
+- No audit checks the outbox gap marks. The FR-14 table and step 13 keep each mark in step with its issue.
+- The DynamoDB and Firestore providers create and remove a store for each AC-16 case.
+- The test generator gains a fourth outbox suite, two settings and three gap marks. Every outbox's provider implements one more interface.
 - A count that ignores cancellation holds one pool thread until it returns. Every due time of that count until then is skipped (FR-8). The skips are visible, but no reading of that count arrives.
 - An outbox's cancellation callback that blocks holds one more pool thread until it returns. It does not hold the loop, `StopAsync` or `FakeTimeProvider.Advance`.
 - A count that ignores cancellation can still use up to T of the host's shutdown budget, which every hosted service shares. The services that stop after the monitor lose that time. With the defaults, the monitor uses at most 10 of the 30 seconds. The documentation advises a T well below `ShutdownTimeout`.
@@ -843,6 +963,7 @@ The loop resumes on a pool thread, so a fake clock alone does not make a monitor
 | A result arrives at almost the same moment as the deadline | The loop decides an ended call by the end timestamp its task recorded, not by when the loop reads it. The outcome therefore does not depend on which task `Task.WhenAny` returned |
 | An abandoned call faults later and raises an unobserved task exception | A continuation on each count's task observes its exception |
 | A later ADR wants these instruments on `OutboxMeter`, so the outbox has one meter | They live in a sealed class with no role interface, so a later ADR can move them without breaking any implementer |
+| A gap mark outlives its issue, or hides a regression | The FR-14 table is the source of truth. Step 13 sets a mark only after it records the result, and the fix for each issue removes its mark |
 
 ## Alternatives Considered
 
@@ -875,13 +996,19 @@ The loop resumes on a pool thread, so a fake clock alone does not make a monitor
 27. **Derive the overall count from the per-topic counts.** This would make one call per due time. Rejected because topics can have different ages and each stops at C, so the sum is not the overall count. Topics with no publication in this process would also be missed.
 28. **An age per topic in the monitor's options.** This would keep `Publication` unchanged. Rejected because OOS-13 excludes it, and the age belongs to what the application publishes. A second place to set an age would also need a rule for which one wins.
 29. **Two loops, one for each count.** Each loop would be the single-count loop. Rejected because two loops need two stop paths, two grids and two writers of the readings. The two counts of a due time could then start at different instants, against AC-8. One loop with state for each count keeps one of each.
+30. **Write AC-16 and AC-17 by hand in each outbox's test project.** Each project would derive from the generic tests, as `InMemoryCausationTrackingOutboxTests` does for `InMemoryOutbox`, and would need no generator change. Rejected because Brighter generates the outbox tests that every store shares, and copies in each project drift apart.
+31. **Generate AC-16 and write AC-17 by hand for each store.** Holding a store differs for each database, so a hand-written test would sit beside the code that holds it. Rejected because the timing, the bounded wait and the assertions would then be repeated in every project. The cancellation base class keeps them in one place, and the generated test reaches the hold through the provider.
+32. **Mark a gap by leaving its fact out of the rendered file, or by not rendering the file.** Leaving a fact out, with a comment that names the issue, needs no change to the audits. Not rendering the file needs one flag, as `SupportsTransactions` does. Rejected because a skipped fact still shows in every test run, with its issue. A fact that is left out or not rendered shows nowhere. ADR 0066-conformance-test-provider-and-ungating also keeps its canonical templates ungated, and ADR 0067-conformance-rollout-and-deferral-governance allows no silent skip.
+33. **Reach the per-store parts through another hook.** ADR 0066-conformance-test-provider-and-ungating adds members to the generated messaging-gateway provider interfaces for its tests. The same move here would add members to `IAmAnOutboxProviderAsync` that the async suite never calls. Methods only on each concrete provider class, which the template calls by name, would leave the contract with no type that states it. One generic interface in `Paramore.Brighter.Base.Test` would also work, but no provider interface lives there. Rejected because an interface that the suite renders in its own folder states the contract. It adds no member to a suite that does not call it, and the Sync and Async suites render theirs the same way.
+34. **Check the outbox gap marks against a ledger, as ADR 0067-conformance-rollout-and-deferral-governance does for the messaging gateways.** The generator would read each mark from a ledger table, and an audit would match each Skip to its row. Rejected because columns (a) to (c) of FR-14 have few Gap cells. A ledger, a parser and an audit for so few cells cost more than they protect. ADR 0067-conformance-rollout-and-deferral-governance rejects Skips with no ledger in its alternative 4, partly because they give no coverage view and nothing to check them against. Here the FR-14 table is that view. No audit checks the marks against the table, so step 13 sets each mark only after recording the result in the table. The template builds each Skip from the issue number in its mark, so the Skip's form holds by construction. The generator's tests check that form.
 
 ## References
 
 - Parent requirement: [specs/0038-outbox-stale-message-telemetry/requirements.md](../../specs/0038-outbox-stale-message-telemetry/requirements.md), spec 0038, issue [#4489](https://github.com/BrighterCommand/Brighter/issues/4489)
 - Review on PR [#4598](https://github.com/BrighterCommand/Brighter/pull/4598):
   - [comment on the age per publication](https://github.com/BrighterCommand/Brighter/pull/4598#issuecomment-6141309069), 2026-10-13, which asks for an age per publication because a topic can be circuit broken;
-  - [review comment on the requirements](https://github.com/BrighterCommand/Brighter/pull/4598#discussion_r4256375898), 2026-10-13, which suggests a per-topic outstanding count beside the overall count.
+  - [review comment on the requirements](https://github.com/BrighterCommand/Brighter/pull/4598#discussion_r4256375898), 2026-10-13, which suggests a per-topic outstanding count beside the overall count;
+  - [comment on the generated tests](https://github.com/BrighterCommand/Brighter/pull/4598#issuecomment-6196267020), 2026-10-15, which points out that the box tests are generated from Liquid templates. The comment gives the usual order: the in-memory outbox, then a generic test, then every outbox.
 - Related ADRs (none is superseded by this ADR):
   - ADR [0086-outbox-per-topic-stale-count](0086-outbox-per-topic-stale-count.md) decides the optional capability that the per-topic count calls, its contract and which outboxes offer it.
   - ADR [0081-timed-outbox-sweeper-health-metrics](0081-timed-outbox-sweeper-health-metrics.md) is the closest precedent: directly recorded health metrics, and the `PublishConfirmationMeter` registration pattern this ADR copies.
@@ -891,6 +1018,10 @@ The loop resumes on a pool thread, so a fake clock alone does not make a monitor
   - ADR [0039-opentelemetry-builder-extension](0039-opentelemetry-builder-extension.md) is the `AddBrighterInstrumentation` entry point that creates the meter.
   - ADR [0021-move-archive-from-esb](0021-move-archive-from-esb.md) moved `Archive` and `ArchiveAsync` out of the mediator into `OutboxArchiver`, because they had a different reason to change.
   - ADR [0012-provide-in-memory-and-simple-implementations](0012-provide-in-memory-and-simple-implementations.md) explains why the core tests use `InMemoryOutbox`, with a test double only for failure, blocking and cancellation behaviour.
+  - ADR [0035-generated-test](0035-generated-test.md) is the test generator that renders the outbox suites, and [`.agent_instructions/generated_tests.md`](../../.agent_instructions/generated_tests.md) is its working guide.
+  - ADR [0066-conformance-test-provider-and-ungating](0066-conformance-test-provider-and-ungating.md) extends the generated messaging-gateway provider interfaces for its conformance tests, and bounds the waits of its read members.
+  - ADR [0067-conformance-rollout-and-deferral-governance](0067-conformance-rollout-and-deferral-governance.md) sets the `Deferred: #<n>` form of a Skip that the gap marks reuse.
+  - ADR [0073-gateway-channel-factory-type-regression-guard](0073-gateway-channel-factory-type-regression-guard.md) names the drift of near-identical tests copied across test projects.
 - Related issues and work:
   - Issue [#4573](https://github.com/BrighterCommand/Brighter/issues/4573): hung sweeper detection, the direction that the sweeper's new gauge follow `PublishConfirmationMeter` into `AddBrighterInstrumentation`, and the rule against new members on meter roles.
   - Issue [#4584](https://github.com/BrighterCommand/Brighter/issues/4584): the outstanding-message check's unbounded relational count. PR [#4597](https://github.com/BrighterCommand/Brighter/pull/4597) removed its static semaphore.

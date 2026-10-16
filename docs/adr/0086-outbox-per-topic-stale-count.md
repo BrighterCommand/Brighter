@@ -69,7 +69,7 @@ Each requirement below is met by the mechanism named on its bullet. Where the mo
 
 - **The monitor, its schedule and its instruments.** ADR 0085-outbox-stale-message-telemetry decides them, together with how the monitor treats an invalid result.
 - **`Publication.StaleMessageAge` and the smallest-age rule (Q-14).** ADR 0085-outbox-stale-message-telemetry decides them. This ADR receives each topic's age as an input.
-- **The capability on the other outbox families (OOS-15).** Four follow-up issues track it, one for each family. Each follow-up adds an implementation and a derived conformance test class.
+- **The capability on the other outbox families (OOS-15).** Four follow-up issues track it, one for each family. Each follow-up adds an implementation and turns on the generated conformance tests for its outboxes (*Why only `InMemoryOutbox` implements the capability here?*).
 - **An age-aware count for the overall count (Q-5).** ADR 0085-outbox-stale-message-telemetry leaves it to a follow-up. The capability counts only measured topics, so it cannot replace the overall count.
 - **The overall count's gaps in FR-14 columns (a) to (c) (Q-9).** Separate issues track them, as step 13 of ADR 0085-outbox-stale-message-telemetry states.
 - **The circuit breaker.** It does not change, and the capability reads no breaker state (OOS-14).
@@ -80,7 +80,7 @@ Two ADRs deliver spec 0038. Read ADR 0085-outbox-stale-message-telemetry first.
 
 | ADR | Decides |
 | --- | --- |
-| ADR 0085-outbox-stale-message-telemetry | the monitor that counts on a fixed schedule, the instruments that publish the counts, and the stale age each publication may set |
+| ADR 0085-outbox-stale-message-telemetry | the monitor and its fixed schedule, the instruments that publish the counts, each publication's stale age, and the tests of the overall count |
 | **ADR 0086-outbox-per-topic-stale-count** *(this one)* | the optional outbox capability that counts several topics in one call, and which outboxes offer it |
 
 The monitor decides when each count runs, at which ages and what the meter reports, and the outbox decides only how its store counts.
@@ -176,7 +176,7 @@ flowchart LR
     Later -.->|may implement later| Cap
 ```
 
-Every new production dependency points into core. The capability sits in core beside `IAmACausationTrackingOutbox`, so a third-party outbox can implement it without referencing `Outbox.Hosting`. The monitor reaches the capability only through the outbox instance. The conformance base test sits beside `CausationTrackingOutboxBaseTests`, and each outbox's test project derives a class from it.
+Every new production dependency points into core. The capability sits in core beside `IAmACausationTrackingOutbox`, so a third-party outbox can implement it without referencing `Outbox.Hosting`. The monitor reaches the capability only through the outbox instance. The conformance base test sits beside `CausationTrackingOutboxBaseTests`. `InMemoryTopicCountingOutboxTests` derives from it, and so do the generated topic-counting tests of each follow-up.
 
 ### Key Components
 
@@ -288,7 +288,6 @@ The following stay unchanged:
 - Every outbox other than `InMemoryOutbox`. Four follow-up issues add the capability to them.
 - `IAmAnOutboxCircuitBreaker` and its implementations. The capability takes no tripped topics.
 - `MessageHeader`, `WrapPipeline` and the `ProducerTopic` bag entry. The capability reads the header topic as it is.
-- The test generator. A follow-up can add a topic-counting suite beside the Sync, Async and Causation suites it renders for each outbox.
 
 ### Technology Choices
 
@@ -349,7 +348,7 @@ The requirement bounds every age so that a store's `now - age` cannot overflow (
 
 Each outbox family needs its own query and its own container-based tests. The relational outboxes need one query per dialect. MongoDb, DynamoDB and Firestore each need a count that loads no bodies. One pull request for all of them would be large and slow to review. The work on issue #4554 was split into three small pull requests for the same reason.
 
-This ADR therefore lands the contract, the conformance base test and the in-memory implementation. A follow-up for a family only adds an implementation and a derived test class. Some families have a natural starting point:
+This ADR therefore lands the contract, the conformance base test and the in-memory implementation. The outbox tests that every store shares are generated (ADR 0035-generated-test, `.agent_instructions/generated_tests.md`). So the first family's follow-up also adds a topic-counting suite to the test generator. The suite has a setting for each outbox, `SupportsTopicCounting`, false by default. The generator renders the suite only for an outbox whose setting is true. Each family's follow-up adds its implementation and turns the setting on in the `test-configuration.json` of its outboxes. The suite lands with the first family, not here. With the setting off for every outbox, the generator would render none of the suite's tests. Some families have a natural starting point:
 
 - MongoDb's overall count already filters on the bag's topic, through `OutstandingMessagesAsync`;
 - DynamoDB already has an outstanding index keyed by topic.
@@ -360,6 +359,8 @@ The cost is that a database outbox reports the overall count only until its foll
 - MongoDb;
 - DynamoDB and DynamoDB V4;
 - Firestore.
+
+Unlike the causation suite, the topic-counting suite needs its setting. The test generator renders the causation suite for every configured outbox, with no setting, because every outbox family already implements `IAmACausationTrackingOutbox`. Rendered for every outbox, the topic-counting suite's cases would fail on each outbox that does not implement the capability yet. `SkipTest` cannot prevent that, because it skips a template only for an outbox without transactions. The overall count's suite in ADR 0085-outbox-stale-message-telemetry uses gap marks, but the topic-counting suite uses none. Implementing the capability on any outbox but `InMemoryOutbox` is out of scope (OOS-15), so no case of the suite can pass before its family's follow-up. Each column (d) gap still shows in the FR-14 table, in the family's issue and in the outbox's known limitations (AC-18).
 
 ### Implementation Approach
 
@@ -380,8 +381,8 @@ These steps land after step 2 of ADR 0085-outbox-stale-message-telemetry and bef
    - a ceiling of 0 throws `ArgumentOutOfRangeException`;
    - the call runs while other tasks add messages, mark them dispatched and run the overall count on the same instance. Every result has one entry for each requested topic. Those tasks add through the outbox itself, not through `AddMessageWithAgeAsync`.
 
-   The cancellation case of FR-14 (c) belongs to each family's follow-up, as AC-17 does for the overall count. `InMemoryOutbox` does no I/O, so FR-14 (c) does not apply to it.
-3. **Follow-up issues (FR-14.1, OOS-15, AC-18).** Open one issue for each family: the relational outboxes (MsSql, PostgreSql, MySql, Sqlite and Spanner), MongoDb, DynamoDB and DynamoDB V4, and Firestore. Each issue points at `TopicCountingOutboxBaseTests` as the test to derive from. The MongoDb issue names the bag-topic filter of its overall count (`MongoDbOutbox.cs:497-500`). The DynamoDB issue names the outstanding index keyed by topic (`DynamoDbConfiguration.cs:23-25`). The test generator renders the causation suite for each configured outbox (`OutboxGenerator.cs:146`). A follow-up can add a topic-counting suite there the same way. Step 14 of ADR 0085-outbox-stale-message-telemetry lists each family's limitation in the documentation.
+   The cancellation case of FR-14 (c) for the capability belongs to each family's follow-up. AC-17, the overall count's cancellation case, is part of step 13 of ADR 0085-outbox-stale-message-telemetry. `InMemoryOutbox` does no I/O, so FR-14 (c) does not apply to it.
+3. **Follow-up issues (FR-14.1, OOS-15, AC-18).** Open one issue for each family: the relational outboxes (MsSql, PostgreSql, MySql, Sqlite and Spanner), MongoDb, DynamoDB and DynamoDB V4, and Firestore. Each issue points at `TopicCountingOutboxBaseTests` as the base test that the generated suite derives from. The MongoDb issue names the bag-topic filter of its overall count (`MongoDbOutbox.cs:497-500`). The DynamoDB issue names the outstanding index keyed by topic (`DynamoDbConfiguration.cs:23-25`). Each issue says that the first family to land adds the topic-counting suite to `OutboxGenerator.SuitesFor` (`OutboxGenerator.cs:146`), with the `SupportsTopicCounting` setting. *Why only `InMemoryOutbox` implements the capability here?* explains the setting. Each issue asks its family to turn the setting on for its outboxes. Step 14 of ADR 0085-outbox-stale-message-telemetry lists each family's limitation in the documentation.
 
 ## Consequences
 
@@ -433,9 +434,11 @@ These steps land after step 2 of ADR 0085-outbox-stale-message-telemetry and bef
 
 - Parent requirement: [specs/0038-outbox-stale-message-telemetry/requirements.md](../../specs/0038-outbox-stale-message-telemetry/requirements.md), spec 0038, issue [#4489](https://github.com/BrighterCommand/Brighter/issues/4489)
 - Review on PR [#4598](https://github.com/BrighterCommand/Brighter/pull/4598): [review comment on the requirements](https://github.com/BrighterCommand/Brighter/pull/4598#discussion_r4256375898), 2026-10-13, which suggests a per-topic outstanding count beside the overall count.
+- Comment on PR [#4598](https://github.com/BrighterCommand/Brighter/pull/4598): [comment on the generated tests](https://github.com/BrighterCommand/Brighter/pull/4598#issuecomment-6196267020), 2026-10-15, which points out that the box tests are generated from Liquid templates.
 - Related ADRs (none is superseded by this ADR):
   - ADR [0085-outbox-stale-message-telemetry](0085-outbox-stale-message-telemetry.md) decides the monitor that detects and calls the capability, and the instruments that report its results.
   - ADR [0057-replay-outbox-on-inbox-duplicate](0057-replay-outbox-on-inbox-duplicate.md) adds `IAmACausationTrackingOutbox`, the opt-in outbox role interface beside which the capability sits.
+  - ADR [0035-generated-test](0035-generated-test.md) is the test generator that renders the outbox suites, and that the first family's follow-up extends with a topic-counting suite.
   - ADR [0081-report-persistent-channel-failures-in-health-checks](0081-report-persistent-channel-failures-in-health-checks.md) adds `IHaveAChannelFailureCount`, the optional capability the requirement names as its model.
 - Related issues:
   - Issue [#4554](https://github.com/BrighterCommand/Brighter/issues/4554): the cost of the outstanding-message count, and the precedent for splitting outbox work into small pull requests.
