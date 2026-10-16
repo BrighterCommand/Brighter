@@ -31,8 +31,9 @@ using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 namespace Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 
 public class CleanupFailureRmqConsumer(
-    RmqMessagingGatewayConnection connection, ChannelName queue, RoutingKey routingKey, Func<string?> failingOperation)
-    : RmqMessageConsumer(connection, queue, routingKey, isDurable: true)
+    RmqMessagingGatewayConnection connection, ChannelName queue, RoutingKey routingKey, Func<string?> failingOperation,
+    int batchSize = 1)
+    : RmqMessageConsumer(connection, queue, routingKey, isDurable: true, batchSize: batchSize)
 {
     protected override void ConnectToBroker(OnMissingChannel makeExchange)
     {

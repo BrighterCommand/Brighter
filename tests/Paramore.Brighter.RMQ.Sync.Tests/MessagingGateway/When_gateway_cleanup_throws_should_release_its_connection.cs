@@ -55,7 +55,7 @@ public class RmqSharedConnectionCleanupFailureTests
         var queueName = new ChannelName(Guid.NewGuid().ToString());
         var factory = new ConnectionFactory { Uri = connection.AmpqUri.Uri };
         var pool = new RmqMessageGatewayConnectionPool(connection.Name!, connection.Heartbeat);
-        string? failure = failingOperation;
+        string? failure = null;
         using var producer = new CleanupFailureRmqProducer(connection, () => failure);
         using var consumer = new CleanupFailureRmqConsumer(connection, queueName, routingKey, () => failure);
         var message = new Message(new MessageHeader(Id.Random(), routingKey, MessageType.MT_COMMAND),
@@ -71,6 +71,7 @@ public class RmqSharedConnectionCleanupFailureTests
         try
         {
             // Act
+            failure = failingOperation;
             var error = await Record.ExceptionAsync(async () =>
             {
                 if (disposeConsumer)
