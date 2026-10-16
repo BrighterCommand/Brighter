@@ -336,6 +336,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     /// <remarks>
     /// Idempotent: the streaming client is shared by every consumer on the subscription, so a repeated
     /// dispose must not count as another consumer leaving and stop the client under the others.
+    /// Rejection-routing resources are disposed even if stopping the streaming client fails.
     /// </remarks>
     public void Dispose()
     {
@@ -344,8 +345,14 @@ public partial class GcpPubSubStreamMessageConsumer(
             return;
         }
 
-        consumer.StopAsync().GetAwaiter().GetResult();
-        _router.Dispose();
+        try
+        {
+            consumer.StopAsync().GetAwaiter().GetResult();
+        }
+        finally
+        {
+            _router.Dispose();
+        }
     }
 
     /// <summary>
@@ -354,6 +361,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     /// <remarks>
     /// Idempotent: the streaming client is shared by every consumer on the subscription, so a repeated
     /// dispose must not count as another consumer leaving and stop the client under the others.
+    /// Rejection-routing resources are disposed even if stopping the streaming client fails.
     /// </remarks>
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous disposal operation.</returns>
     public async ValueTask DisposeAsync()
@@ -363,8 +371,14 @@ public partial class GcpPubSubStreamMessageConsumer(
             return;
         }
 
-        await consumer.StopAsync();
-        await _router.DisposeAsync();
+        try
+        {
+            await consumer.StopAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            await _router.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
     /// <summary>
