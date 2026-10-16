@@ -34,9 +34,6 @@ namespace Paramore.Brighter
 
         protected IRelationDatabaseOutboxQueries Queries => queries;
 
-        // Command timeout in seconds for the outstanding message count; the sweep is not bounded by it.
-        private const int OutstandingCountTimeoutSeconds = 15;
-
         // Non-null only when the backend's query set supports causation tracking; gates the IAmACausationTrackingOutbox behaviour.
         private IRelationalDatabaseOutboxCausationQueries? CausationQueries => queries as IRelationalDatabaseOutboxCausationQueries;
 
@@ -1012,13 +1009,13 @@ namespace Paramore.Brighter
         /// <inheritdoc/>
         public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
         {
-            return ReadOutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, OutstandingCountTimeoutSeconds).Count();
+            return ReadOutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, RelationalDatabaseConfiguration.OUTSTANDING_COUNT_TIMEOUT_SECONDS).Count();
         }
 
         /// <inheritdoc/>
         public async Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
-            return (await ReadOutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, OutstandingCountTimeoutSeconds, cancellationToken))
+            return (await ReadOutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, RelationalDatabaseConfiguration.OUTSTANDING_COUNT_TIMEOUT_SECONDS, cancellationToken))
                 .Count();
         }
 

@@ -69,6 +69,6 @@ All four use `LockedSqliteOutbox`, which holds a real `BEGIN EXCLUSIVE` lock on 
 
 ## Fix
 
-- `src/Paramore.Brighter/RelationDatabaseOutbox.cs`: `OutstandingMessages` and `OutstandingMessagesAsync` now call private `ReadOutstandingMessages` / `ReadOutstandingMessagesAsync` with a timeout of -1, as before. `GetOutstandingMessageCount` and `GetOutstandingMessageCountAsync` call them with `OutstandingCountTimeoutSeconds`, 15.
+- `src/Paramore.Brighter/RelationDatabaseOutbox.cs`: `OutstandingMessages` and `OutstandingMessagesAsync` now call private `ReadOutstandingMessages` / `ReadOutstandingMessagesAsync` with a timeout of -1, as before. `GetOutstandingMessageCount` and `GetOutstandingMessageCountAsync` call them with `RelationalDatabaseConfiguration.OUTSTANDING_COUNT_TIMEOUT_SECONDS`, 15.
 - `tests/Paramore.Brighter.Sqlite.Tests/Outbox/`: the four tests above and `LockedSqliteOutbox`.
 - `release_notes.md`: a Master entry for issue #4584.

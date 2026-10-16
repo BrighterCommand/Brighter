@@ -7,6 +7,9 @@
         private const string INBOX_TABLE_NAME = "Inbox";
         private const string QUEUE_TABLE_NAME = "Queue";
 
+        // Command timeout in seconds for the outstanding message count; the sweep is not bounded by it.
+        internal const int OUTSTANDING_COUNT_TIMEOUT_SECONDS = 15;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RelationalDatabaseConfiguration"/> class. 
         /// </summary>
