@@ -659,7 +659,9 @@ Each outbox's provider class implements `IAmAnOutstandingCountOutboxProvider`, b
 
 `Deferred: #<n>` is the form that `GatewaySkipConventionAudit` requires of a messaging-gateway Skip (ADR 0067-conformance-rollout-and-deferral-governance). Both that audit and `LedgerSkipCrossCheckAudit` scan every `Generated` folder under `tests/`, through `GatewaySkipConventionAudit.EnumerateGatewayArtifacts`. An outbox Skip would therefore fail `LedgerSkipCrossCheckAudit`, which matches each Skip to a deferred row of the gateway ledger. Before the first mark, step 13 restricts that scan to the messaging-gateway folders, test first. The rule in the summary of `GatewaySkipConventionAudit` names only messaging-gateway artifacts, so the restricted scan matches that rule. After that, no audit checks the outbox marks. The FR-14 table and step 13 keep each mark in step with its issue.
 
-The `gcp-ci` job leaves out the Spanner tests, and it does not run for a pull request from a fork. The Spanner facts therefore run locally, against the emulator. The Firestore tests connect to a Google Cloud project and have no emulator setting. Their results come from a run with that project's credentials. The `gcp-ci` job runs the Firestore tests on every push to master, so step 13 sets their marks before the merge.
+The `gcp-ci` job leaves out the Spanner tests, and it does not run for a pull request from a fork. Step 13 therefore runs the Spanner and Firestore facts by hand, each against its emulator. `FirestoreClientBuilder` has no public `EmulatorDetection` setting like the one the Spanner providers put in their connection strings. When `FIRESTORE_EMULATOR_HOST` is set, the Firestore provider therefore sets a `Configure` action on the `FirestoreConfiguration` it builds for each case. The action clears the builder's `Credential`, because the builder takes only one source of credentials. The action then sets `Endpoint` to the value of `FIRESTORE_EMULATOR_HOST` and `ChannelCredentials` to `ChannelCredentials.Insecure`. With the variable unset, as in `gcp-ci`, the Firestore facts still connect to a Google Cloud project.
+
+The Firestore gaps in columns (a) to (c) of FR-14 come from the outbox's code, not from the store. A run against the Firestore emulator therefore shows those gaps. The `gcp-ci` job runs the Firestore tests on every push to master, so step 13 sets the Firestore gap marks before the merge.
 
 #### Where each type is touched
 
@@ -924,7 +926,7 @@ The loop resumes on a pool thread, so a fake clock alone does not make a monitor
 - Where a tracer is configured, each measurement may start a trace of its own (Q-12).
 - Brighter gains a second outbox attribute key, `paramore.brighter.outbox.implementation`, beside `paramore.brighter.outbox.type`. The names are close but carry different values. One is the outbox's type name, and the other is the write mode on spans.
 - Until the FR-14 gaps are closed, the overall values are less accurate for some outboxes. Firestore ignores A, C and the token. DynamoDB can undercount when C is split across scan segments, and it reads more than C items.
-- No CI job runs the Spanner tests, so the Spanner facts run only by hand. The `gcp-ci` job does not run for a pull request from a fork, so step 13 also runs the Firestore facts by hand.
+- No CI job runs the Spanner tests, so the Spanner facts run only by hand. The `gcp-ci` job does not run for a pull request from a fork, so step 13 also runs the Firestore facts by hand. Step 13 runs both sets of facts against an emulator, so FR-14 records no result from Google Cloud for Spanner or Firestore.
 - No audit checks the outbox gap marks. The FR-14 table and step 13 keep each mark in step with its issue.
 - The DynamoDB and Firestore providers create and remove a store for each AC-16 case.
 - The test generator gains a fourth outbox suite, two settings and three gap marks. Every outbox's provider implements one more interface.

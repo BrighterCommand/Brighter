@@ -1,6 +1,6 @@
 # Review: design — 0038-outbox-stale-message-telemetry
 
-**Date**: 2026-10-16
+**Date**: 2026-10-17
 **Threshold**: 60
 **Verdict**: PASS
 
@@ -20,56 +20,40 @@ No findings at or above threshold 60. Consider addressing lower-scored items.
 > After the maintainer's reminder on PR #4598 that the box tests are generated from Liquid templates, the age,
 > ceiling and cancellation tests of the overall count became generated tests: pass 12 NEEDS WORK (12, 2: rationale
 > resting on the review instead of durable reasons, and a second decision that the scope left out); pass 13 PASS
-> (8, 0) over the fixes, recorded below. The mermaid diagrams render on every pass, and from pass 6 every table was
-> also checked to render (mermaid-cli 11 and markdown-it 14.1).
+> (8, 0) over the fixes. Pass 13's findings 5 and 8, on the observation facts and the collection test, stay open
+> for the task breakdown. The Firestore facts of step 13 then moved to the Firestore emulator, because the `gcp-ci`
+> job does not run for a pull request from a fork: pass 14 PASS (5, 0), recorded below. The mermaid diagrams render
+> on every pass, and from pass 6 every table was also checked to render (mermaid-cli 11 and markdown-it 14.1).
 
 ## Findings
 
-### 1. Alternative 34 of ADR `0085-outbox-stale-message-telemetry` takes the shape that ADR `0067-conformance-rollout-and-deferral-governance` rejects in its alternative 4, without answering its reasons (Score: 52)
+### 1. No alternative of ADR `0085-outbox-stale-message-telemetry` considers running the Spanner and Firestore facts in the `gcp-emulator-ci` job (Score: 52)
 
-**Status**: Fixed: alternative 34 now names that alternative and answers it with the FR-14 table and the order of step 13.
-
----
-
-### 2. The `SupportsTopicCounting` setting of ADR `0086-outbox-per-topic-stale-count` is the not-rendered shape that alternative 32 of ADR `0085-outbox-stale-message-telemetry` rejects (Score: 48)
-
-**Status**: Fixed: ADR `0086-outbox-per-topic-stale-count` now says why the topic-counting suite uses no gap mark, and where each column (d) gap still shows.
+**Status**: Not changed: running the Spanner and Firestore facts in CI is a build change that the requirements do not ask for.
 
 ---
 
-### 3. The last sentence on the `gcp-ci` job states a consequence that does not follow as written (Score: 40)
+### 2. ADR `0085-outbox-stale-message-telemetry` does not say how the Firestore emulator is started or which variables the run needs (Score: 42)
 
-**Status**: Fixed: the sentence now says that step 13 sets the Firestore marks before the merge.
-
----
-
-### 4. The base classes of ADR `0085-outbox-stale-message-telemetry` and the base test of ADR `0086-outbox-per-topic-stale-count` differ in shape and hook contracts, with no reason given (Score: 38)
-
-**Status**: Not changed: the members table already says that the cases call the asynchronous count, as the monitor does.
+**Status**: Open, for the task breakdown: the task for step 13 is to name the Firestore emulator and the variables `FIRESTORE_EMULATOR_HOST` and `GOOGLE_CLOUD_PROJECT`.
 
 ---
 
-### 5. The C of 1 and C of 2 observation facts assert nothing and stay green for good (Score: 35)
+### 3. Neither the table under *Where each type is touched* nor step 13 mentions the emulator switch of the Firestore provider (Score: 35)
 
-**Status**: Open, for the task breakdown: AC-16 asks for both counts with no expected value, so the facts stay.
-
----
-
-### 6. The paragraph after the members table credits both base classes with hooks that only the AC-16 base has (Score: 30)
-
-**Status**: Fixed.
+**Status**: Not changed: one row of the table covers each outbox's provider class, and step 13 points to the subsection that describes the `Configure` action.
 
 ---
 
-### 7. The reason given for restricting the audits' scan is only half true (Score: 28)
+### 4. The sentence on an unset `FIRESTORE_EMULATOR_HOST` blurs the scope of the emulator switch (Score: 28)
 
-**Status**: Fixed: the text now names the rule in the summary of `GatewaySkipConventionAudit`.
+**Status**: Fixed: the sentence now says that the Firestore facts still connect to a Google Cloud project.
 
 ---
 
-### 8. The collection test requires exactly one `[Collection(` line per generated file (Score: 20)
+### 5. The sentence on why the emulator shows each Firestore gap also covers column (d), which no run shows (Score: 18)
 
-**Status**: Open, for the task breakdown: each template renders one test class per file.
+**Status**: Fixed: the sentence now names columns (a) to (c).
 
 ---
 
@@ -80,7 +64,7 @@ No findings at or above threshold 60. Consider addressing lower-scored items.
 | 90-100 (Critical) | 0 |
 | 70-89 (High) | 0 |
 | 50-69 (Medium) | 1 |
-| 0-49 (Low) | 7 |
+| 0-49 (Low) | 4 |
 
-**Total findings**: 8
+**Total findings**: 5
 **Findings at or above threshold (60)**: 0
