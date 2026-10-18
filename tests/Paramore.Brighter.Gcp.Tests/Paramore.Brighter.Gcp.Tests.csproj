@@ -3,6 +3,8 @@
   <PropertyGroup>
     <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
     <IsPackable>false</IsPackable>
+    <!-- Spanner collections share an emulator database across framework test processes. -->
+    <TestTfmsInParallel>false</TestTfmsInParallel>
   </PropertyGroup>
 
   <ItemGroup>

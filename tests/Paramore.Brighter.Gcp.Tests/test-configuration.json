@@ -59,13 +59,13 @@
       "Transaction": "System.Data.Common.DbTransaction",
       "OutboxProvider": "SpannerBinaryOutboxProvider",
       "Category": "Spanner",
-      "CollectionName": "SpannerBinaryOutbox"
+      "CollectionName": "Spanner"
     },
     "SpannerText": {
       "Transaction": "System.Data.Common.DbTransaction",
       "OutboxProvider": "SpannerTextOutboxProvider",
       "Category": "Spanner",
-      "CollectionName": "SpannerTextOutbox"
+      "CollectionName": "Spanner"
     }
   },
   "GatewayConformance": {

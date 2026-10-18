@@ -36,7 +36,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.Spanner;
 
 [Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
+[Collection("Spanner")]
 public class SpannerOutstandingMessagesTrippedTopicsTests
 {
     [Theory]
