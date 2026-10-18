@@ -15,6 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Confluent.Kafka" />
+    <PackageReference Include="Confluent.SchemaRegistry" />
     <PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" />
     <PackageReference Include="NJsonSchema.NewtonsoftJson" />
   </ItemGroup>
