@@ -85,7 +85,7 @@ Three consequences follow from this table.
 
 The mechanism behind these consequences is in the code and the framework.
 
-- `BrighterServiceActivatorHealthCheck` returns one result, with no tags and no `Data` (`src/Paramore.Brighter.ServiceActivator.Extensions.Diagnostics/HealthChecks/BrighterServiceActivatorHealthCheck.cs:83-98`).
+- `BrighterServiceActivatorHealthCheck` returns one result, with no tags and no `Data` (`src/Paramore.Brighter.ServiceActivator.Extensions.Diagnostics/HealthChecks/BrighterServiceActivatorHealthCheck.cs:77-94`).
 - `Microsoft.Extensions.Diagnostics.HealthChecks` routes by registration: a predicate selects registrations, usually by tag, and an endpoint maps each `HealthStatus` to an HTTP status. One registration can be routed one way only.
 - No Brighter assembly registers a health check today. No source file under `src/` names `IHealthChecksBuilder` or `HealthCheckRegistration`.
 
@@ -195,13 +195,11 @@ Every Brighter dependency points into core. The convention types sit in core bec
 
 | Role | Type | Responsibilities | Responsibility classifier | Collaborators |
 | --- | --- | --- | --- | --- |
-| Names a remedy kind | `RemedyKind` (core, new enum) | Distinguishes restart, take out of service and investigate | knowing | none |
-| States the remedy-kind convention | `RemedyCheckConvention` (core, new static class) | Holds the three remedy tags and the two `Data` keys; maps a kind to its tag and its `Data` value | knowing | `RemedyKind` |
 | Reports whether a sweep is hung | `OutboxSweeperRestartHealthCheck` (Outbox.Hosting, new) | Reads one snapshot; decides the hung-sweep condition; describes it; builds its own `Data` to the convention | knowing, deciding | `OutboxSweeperState`, `TimedOutboxSweeperOptions`, `RemedyCheckConvention` |
 | Reports sweeper conditions that need an operator | `OutboxSweeperInvestigateHealthCheck` (Outbox.Hosting, new) | Reads one snapshot; decides the failure condition; while active, reads the breaker and decides the tripped and unreadable conditions; logs an unreadable breaker; describes it; builds its own `Data` to the convention | knowing, doing, deciding | `OutboxSweeperState`, `TimedOutboxSweeperOptions`, `IAmAnOutboxCircuitBreaker`, `RemedyCheckConvention` |
 | Opts a host in to the sweeper checks | `AddBrighterOutboxSweeperHealthChecks` (Outbox.Hosting, new extension) | Validates thresholds; registers both checks with their names, remedy tags, failure status and per-run factories | doing | `IHealthChecksBuilder`, `HealthCheckRegistration` |
 
-The record decides "active sweeper", and the investigate check reads `IsActive` without re-deriving it. Each check decides only its own conditions. Neither check holds state between runs, so the host may build a fresh check on every run.
+`RemedyKind` and `RemedyCheckConvention` are values and constants, not roles, so the table leaves them out. The record decides "active sweeper", and the investigate check reads `IsActive` without re-deriving it. Each check decides only its own conditions. Neither check holds state between runs, so the host may build a fresh check on every run.
 
 #### The remedy-kind convention
 
@@ -216,7 +214,7 @@ The convention is the rule every Brighter remedy check follows, now and in futur
 | Remedy kind | Remedy tag | `Data` value of `remedy_kind` | Typical endpoint |
 | --- | --- | --- | --- |
 | `RemedyKind.Restart` | `brighter-restart` | `restart` | liveness, with Degraded mapped to 503 |
-| `RemedyKind.TakeOutOfService` | `brighter-out-of-service` | `take_out_of_service` | readiness, with Degraded mapped to 503 |
+| `RemedyKind.TakeOutOfService` | `brighter-take-out-of-service` | `take_out_of_service` | readiness, with Degraded mapped to 503 |
 | `RemedyKind.Investigate` | `brighter-investigate` | `investigate` | operator monitoring, with the default status codes |
 
 | Member of `RemedyCheckConvention` | Input | Output | Error conditions |
@@ -339,7 +337,7 @@ Each check has one threshold. Two optional parameters cover the whole configurat
 
 #### Why validation happens in the call and again in the constructors
 
-The host builds a check through its registration factory on the first probe. Validation in the constructor alone would let a bad threshold survive start-up and fail the first probe. The registration call therefore validates first and throws `ArgumentOutOfRangeException` before it adds anything (AC-9, AC-14). The constructors validate again, so a check built directly cannot hold an invalid threshold (FR-7.3). `BrighterServiceActivatorHealthCheck` follows the same pattern in its constructor (`BrighterServiceActivatorHealthCheck.cs:59-60`).
+The host builds a check through its registration factory on the first probe. Validation in the constructor alone would let a bad threshold survive start-up and fail the first probe. The registration call therefore validates first and throws `ArgumentOutOfRangeException` before it adds anything (AC-9, AC-14). The constructors validate again, so a check built directly cannot hold an invalid threshold (FR-7.3). `BrighterServiceActivatorHealthCheck` follows the same pattern in its constructor (`BrighterServiceActivatorHealthCheck.cs:57-58`).
 
 #### Why the factories look up the record on every run
 

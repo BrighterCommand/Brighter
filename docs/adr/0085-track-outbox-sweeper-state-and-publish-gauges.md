@@ -123,7 +123,7 @@ sequenceDiagram
     participant Breaker as IAmAnOutboxCircuitBreaker
 
     Sweeper->>Sweeper: record tick lag (unchanged)
-    Sweeper->>Record: SweepStarted(start timestamp)
+    Sweeper->>Record: SweepStarted()
     Sweeper->>Lock: ObtainLockAsync
     Lock-->>Sweeper: lock id
     Sweeper->>Record: LockObtained()
@@ -146,7 +146,7 @@ The exporter's calls run while the sweeper's thread is blocked, and they complet
 
 | Operation | Called by the sweeper | Fields written |
 | --- | --- | --- |
-| `SweepStarted` | after tick lag is recorded, before lock acquisition starts | start timestamp, in progress = true, holds lock = false |
+| `SweepStarted` | after tick lag is recorded, before lock acquisition starts | start timestamp (read from the record's clock), in progress = true, holds lock = false |
 | `LockObtained` | when `ObtainLockAsync` returns a lock | holds lock = true |
 | `SweepEnded` | when the sweep has its outcome, after any lock release | in progress = false, last outcome, last sweep obtained lock = holds lock, holds lock = false, and the failed count (completed sets 0, failed adds 1, lock_unavailable leaves it) |
 | `Stopped` | first thing in `StopAsync` and `Dispose` | stopped = true |
@@ -209,7 +209,7 @@ Every dependency points into core. The sweeper and `SweeperMeter` both know the 
 | Keeps one sweeper's state | `OutboxSweeperState` (core, new) | Accepts the four transitions; holds the fields; measures running time on the sweeper's clock; decides "active sweeper"; returns one consistent snapshot without waiting on sweep work | knowing, doing, deciding | `TimeProvider`, `SweepOutcome`, `OutboxSweeperSnapshot` |
 | Carries one instant of state | `OutboxSweeperSnapshot` (core, new) | Holds the values a signal needs, as copied | knowing | none |
 | Publishes the sweeper's instruments | `SweeperMeter` (core, changed) | Records tick lag, sweep duration and outcomes as today; owns the two observable gauges; reads the record on each observation; reads the circuit breaker only while active; turns any failure into 0 and a log line | doing, deciding | `IMeterFactory`, `OutboxSweeperState`, `IAmAnOutboxCircuitBreaker`, `BrighterSemanticConventions` |
-| Sweeps the outbox and records its own state | `TimedOutboxSweeper` (Outbox.Hosting, changed) | Writes the four transitions at the right points | doing | `OutboxSweeperState` |
+| Sweeps the outbox | `TimedOutboxSweeper` (Outbox.Hosting, changed) | Writes the four transitions at the right points | doing | `OutboxSweeperState` |
 | Wires the sweeper into the host | `UseOutboxSweeper` (Outbox.Hosting, changed) | Registers the one record beside the options | doing | `IServiceCollection` |
 | Wires the instruments into metrics | `AddBrighterInstrumentation` (Diagnostics, changed) | Builds `SweeperMeter` with the record and a circuit-breaker lookup; creates it when the meter provider is built | doing | `SweeperMeter`, `IServiceProvider` |
 
@@ -220,7 +220,7 @@ The record is the only type that decides "active sweeper". The gauges and ADR 00
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
 | constructor | `TimeProvider clock`: the sweeper's clock | A record with nothing recorded: no sweep in progress, count 0, no last outcome, not stopped | `ArgumentNullException` when `clock` is null |
-| `SweepStarted` | `long startTimestamp` from `clock.GetTimestamp()` | none | Never throws |
+| `SweepStarted` | none. The record reads its own clock | none | Never throws |
 | `LockObtained` | none | none | Never throws. Ignored when no sweep is in progress |
 | `SweepEnded` | `SweepOutcome outcome` | none | Never throws for a defined `SweepOutcome` |
 | `Stopped` | none | none | Never throws. Idempotent |
@@ -338,8 +338,8 @@ FR-6A.3 makes the circuit breaker the source of truth, so the gauge keeps no cop
    - a stop that keeps the count and the in-progress sweep (FR-1.2, AC-45 and AC-64 at record level);
    - zero bytes from `GC.GetAllocatedBytesForCurrentThread` over 10,000 sweeps' worth of transitions after a warm-up (AC-48, first bullet).
 3. **Behavioural, test first: the sweeper writes its record.** In `TimedOutboxSweeper`:
-   - add the optional `OutboxSweeperState? state = null` parameter to the constructor (`TimedOutboxSweeper.cs:76-82`), and create `new OutboxSweeperState(_timeProvider)` when it is null (`:88`);
-   - in `Sweep()` (`:219-221`), pass the existing `started` timestamp to `SweepStarted`, and call `SweepEnded(outcome)` immediately after `SweepOnce()` returns, before `RecordSweep`;
+   - add the optional `OutboxSweeperState? state = null` parameter to the constructor (`TimedOutboxSweeper.cs:73-79`), and create `new OutboxSweeperState(_timeProvider)` when it is null (`:88`);
+   - in `Sweep()` (`:219-221`), call `SweepStarted()` where the sweep begins, and call `SweepEnded(outcome)` immediately after `SweepOnce()` returns, before `RecordSweep`;
    - in `SweepAsync()` (`:244-249`), call `LockObtained()` after the null check on `lockId`;
    - call `Stopped()` first in `StopAsync` (`:115`), before the early return for a sweeper that never started, and first in `Dispose` (`:129`), before the `_disposed` guard.
 
