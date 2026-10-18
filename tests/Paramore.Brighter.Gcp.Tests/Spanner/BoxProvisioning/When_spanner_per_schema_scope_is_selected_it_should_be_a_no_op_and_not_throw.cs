@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 // BrighterMigrationHistory table, and the D3 "PerSchema + null SchemaName" guard MUST NOT fire.
 // These characterization tests pin that no-op for both a non-null SchemaName (accepted and ignored
 // by Spanner) and a null SchemaName.
-[Collection("SpannerBoxProvisioning")]
+[Collection("Spanner")]
 [Trait("Category", "Spanner")]
 public class SpannerPerSchemaNoOpTests : IAsyncLifetime
 {
