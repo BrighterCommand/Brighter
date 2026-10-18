@@ -1,7 +1,7 @@
 ---
 id: 0086-sweeper-remedy-health-checks
 title: "Sweeper remedy health checks"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-10-16
@@ -18,7 +18,7 @@ Date: 2026-10-16
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

@@ -1,7 +1,7 @@
 ---
 id: 0085-track-outbox-sweeper-state-and-publish-gauges
 title: "Track outbox sweeper state and publish gauges"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-10-16
@@ -19,7 +19,7 @@ Date: 2026-10-16
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

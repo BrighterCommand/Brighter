@@ -1,7 +1,7 @@
 ---
 id: 0087-consumer-remedy-health-checks
 title: "Consumer remedy health checks"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-10-16
@@ -18,7 +18,7 @@ Date: 2026-10-16
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
