@@ -44,9 +44,8 @@ namespace Paramore.Brighter.BoxProvisioning.Spanner;
 /// <para>
 /// Spanner column types are reported by <c>INFORMATION_SCHEMA.COLUMNS.SPANNER_TYPE</c>
 /// as type literals such as <c>BYTES(MAX)</c>, <c>BYTES(1024)</c>, <c>STRING(MAX)</c>,
-/// or <c>STRING(255)</c>. Per ADR 0057 §A.3 we match the prefix using
-/// <c>STARTS_WITH</c> so that any size-parameterised variant compares correctly to the
-/// configured payload mode.
+/// or <c>STRING(255)</c>. The type is matched by prefix, so any size-parameterised variant
+/// compares correctly to the configured payload mode.
 /// </para>
 /// </remarks>
 public class SpannerPayloadModeValidator : IAmABoxPayloadModeValidator<SpannerConnection>

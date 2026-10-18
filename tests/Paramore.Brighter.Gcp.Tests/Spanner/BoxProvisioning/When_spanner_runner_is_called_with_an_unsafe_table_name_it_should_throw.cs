@@ -43,6 +43,7 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 // is opened. Connection string is "Data Source=ignored;".
 
 [Trait("Category", "Spanner")]
+[Collection("Spanner")]
 public class SpannerRunnerUnsafeIdentifierTests
 {
     [Theory]
