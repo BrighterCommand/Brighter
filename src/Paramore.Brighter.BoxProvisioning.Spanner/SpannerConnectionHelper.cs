@@ -26,10 +26,7 @@ using Google.Cloud.Spanner.Data;
 
 namespace Paramore.Brighter.BoxProvisioning.Spanner;
 
-/// <summary>
-/// Creates Spanner connections with emulator detection enabled, allowing the
-/// provisioner to work transparently against both real Spanner and the emulator.
-/// </summary>
+// Enables emulator detection, so the provisioner works against both real Spanner and the emulator.
 internal static class SpannerConnectionHelper
 {
     internal static SpannerConnection CreateConnection(string connectionString)

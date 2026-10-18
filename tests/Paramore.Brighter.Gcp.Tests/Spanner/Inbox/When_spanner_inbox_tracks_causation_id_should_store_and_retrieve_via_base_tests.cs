@@ -7,6 +7,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.Spanner.Inbox;
 
 [Trait("Category", "Spanner")]
+[Collection("Spanner")]
 public class SpannerCausationTrackingInboxTest : CausationTrackingInboxBaseTests
 {
     private RelationalDatabaseConfiguration _configuration = null!;
