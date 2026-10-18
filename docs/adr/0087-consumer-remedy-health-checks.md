@@ -35,7 +35,7 @@ These words come from the requirements' *Definitions* section and FR-12.2, and t
   - **FR-12 (two checks, one call)**: `AddBrighterConsumerHealthChecks` on `IHealthChecksBuilder` registers both consumer remedy checks. Each registration resolves `IDispatcher` on every run.
   - **FR-12.1 (persistent channel failures)**: the take-out-of-service check reads every consumer's `IHaveAChannelFailureCount`, whatever the dispatcher's state, as the existing check does.
   - **FR-12.2 (missing consumers)**: the restart check compares running and expected totals only while the dispatcher is running and no consumer operation is in progress. It leaves out subscriptions shut on purpose, and reports Unhealthy when no consumer is running.
-  - **FR-12.2's dispatcher members**: `Dispatcher` gains `GetLifecycleSnapshot`, which returns its state, whether `End` was requested, the subscriptions shut on purpose, the number of consumer operations in progress, and copies of its consumers and of each subscription's expected consumer count, all taken under its lifecycle lock. `IDispatcher` does not change.
+  - **FR-12.2's dispatcher members**: `Dispatcher` gains `GetLifecycleSnapshot`, which takes its values under the lifecycle lock. The snapshot holds the state, whether `End` was requested, the subscriptions shut on purpose, and the number of consumer operations in progress. It also holds copies of the consumers and of each subscription's expected consumer count. `IDispatcher` does not change.
   - **FR-12.3 (threshold)**: the registration call validates the channel-failure threshold before it registers anything. The check's constructor validates it again.
   - **FR-12.4 (agreement with the existing check)**: both checks reuse the existing check's description phrases and status rules.
   - **FR-12.5, FR-10.5 (`Data`)**: each check builds `Data` to ADR 0086's documented shape, with the two consumer conditions defined here.
@@ -237,7 +237,7 @@ No new role is added. Each check fills the existing `IHealthCheck` role. The fai
 | `EndRequested` | `bool` | True from any call to `End` until the next operation that moves the dispatcher to `DS_RUNNING` |
 | `ShutSubscriptions` | `IReadOnlyCollection<SubscriptionName>` | The subscriptions shut on purpose |
 | `ConsumerOperationsInFlight` | `int` | The number of consumer operations that have begun and not finished |
-| `ExpectedConsumers` | `IReadOnlyDictionary<SubscriptionName, int>` | Each subscription's expected consumer count, copied under the lock |
+| `ExpectedConsumers` | `IReadOnlyDictionary<SubscriptionName, int>` | Each subscription's expected consumer count, copied under the lock. Counts for subscriptions with the same name are summed, as the existing check sums them |
 | `Consumers` | `IReadOnlyList<IAmAConsumer>` | A copy of the dispatcher's consumers |
 
 The backing fields are a `bool` and a `HashSet<SubscriptionName>`, and neither is public. `SubscriptionName` implements value equality (`src/Paramore.Brighter/SubscriptionName.cs:37`). `Dispose` and `DisposeAsync` call `End`, so a disposed dispatcher also reports `EndRequested`. A pump that stops and removes its consumer after the snapshot is read leaves the snapshot unchanged, so a probe can be one probe period stale and no more. `ConsumerOperationsInFlight` is the existing `_pendingConsumerOperations` counter, which `BeginConsumerOperation` raises and `ExecuteConsumerOperation` lowers under `_lifecycleLock`.
@@ -278,7 +278,7 @@ The extension and both checks live in `Paramore.Brighter.ServiceActivator.Extens
 
 #### `Data`
 
-Both checks build `Data` to ADR 0086's documented shape: `remedy_kind`, `conditions`, and one entry per reported condition. The consumer conditions carry these values:
+Both checks build `Data` to ADR 0086's documented shape: `remedy_kind`, `conditions`, and one entry per reported condition. The restart check also adds `consumer_operations_in_flight` (`int`) at the top level of `Data`, whether it is Healthy or Degraded. The consumer conditions carry these values:
 
 | Condition | Value key | Type |
 | --- | --- | --- |
@@ -309,6 +309,7 @@ The condition phrases repeat the existing check's phrases, so the two describe a
 | --- | --- | --- |
 | No dispatcher registered | both | `No dispatcher is registered.` |
 | Dispatcher not running | restart | `The dispatcher is not running, so missing consumers are not reported.` |
+| Consumer operation in progress | restart | `A consumer operation is in progress, so missing consumers are not reported.` |
 | Healthy | restart | `All 2 expected consumers are running.` |
 | `missing_consumers`, Degraded | restart | `orders has 1 of 2 expected consumers` |
 | `missing_consumers`, Unhealthy | restart | `No consumers are running: orders has 0 of 2 expected consumers` |
@@ -374,7 +375,7 @@ Each registration resolves `IDispatcher` with `GetService`, so a publisher-only 
 
 #### Why a consumer operation in progress reports Healthy
 
-The counter that already guards the dispatcher's shutdown, `_pendingConsumerOperations`, covers the whole of a start, a reopen and a scale-up. While it is above zero, some consumers may not be registered yet, so a shortfall says nothing about a dead pump. Reporting Healthy then removes a restart loop that a slow broker could cause at start-up. The cost is that an operation that hangs, such as a channel creation that never returns, keeps the check Healthy. Detecting a hung start is not this check's job, and the docs say so.
+The counter that already guards the dispatcher's shutdown, `_pendingConsumerOperations`, covers the whole of a start, a reopen and a scale-up. While it is above zero, some consumers may not be registered yet, so a shortfall says nothing about a dead pump. Reporting Healthy then removes a restart loop that a slow broker could cause at start-up. The cost is that an operation that hangs, such as a channel creation that never returns, keeps the check Healthy. A hung operation at any time, including one that a control-bus command triggers after start-up, hides missing consumers on every subscription. Detecting a hung operation is not this check's job. The restart check reports the number of operations in progress in its `Data`, so an operator can alert on an operation that stays in flight, and the docs say so.
 
 #### Why the existing check is marked obsolete and not changed
 
@@ -405,7 +406,12 @@ The existing check is registered through `AddCheck`, which the user may call bef
 6. **Behavioural, test first: the registration call.** Add `ConsumerHealthChecksBuilderExtensions`. Tests cover AC-60 (validation before the service is built), AC-61 (two registrations, one tag each), and AC-70 (failure status Degraded, and Degraded for a non-Brighter `IDispatcher`).
 7. **Behavioural, test first: agreement.** Add AC-62, which runs the existing check and both remedy checks over the four #4555 states. The existing tests for the existing check must pass unchanged (AC-23).
 8. **Behavioural: the obsolete marking.** Add `[Obsolete]` to `BrighterServiceActivatorHealthCheck` (`BrighterServiceActivatorHealthCheck.cs:36`). Add `#pragma warning disable CS0618` to every test file that names the obsolete type: `tests/Paramore.Brighter.Extensions.Tests/When_a_running_consumer_repeatedly_fails_to_receive_should_report_degraded.cs`, `tests/Paramore.Brighter.Extensions.Tests/TestDoubles/ReceiveHealthTestHost.cs`, and each test this spec adds that names it, such as the AC-49, AC-55, AC-56 and AC-62 tests. Move `samples/TaskQueue/ASBTaskQueue/GreetingsWorker/Program.cs:88` to the new call. Add the AC-55 reflection test. Confirm that a full build adds no warning.
-9. **Behavioural: the convention test.** In `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, which ADR 0086 step 7 already references to the diagnostics package, add `AddBrighterConsumerHealthChecks` to the named registration calls in ADR 0086's AC-49 test, add the AC-5 public-API test (with `#pragma warning disable CS0618`, because it names the obsolete type), and add a Healthy and a Degraded scenario for each consumer check. The exemption list keeps `BrighterServiceActivatorHealthCheck` only.
+9. **Behavioural: the convention test.** In `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, which ADR 0086 step 7 already references to the diagnostics package:
+   - add `AddBrighterConsumerHealthChecks` to the named registration calls in ADR 0086's AC-49 test;
+   - add a Healthy and a Degraded scenario for each consumer check;
+   - add the AC-5 public-API test, with `#pragma warning disable CS0618` because it names the obsolete type.
+
+   The exemption list keeps `BrighterServiceActivatorHealthCheck` only.
 10. **Behavioural: endpoint tests.** In `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, which ADR 0086 step 7 already references to the diagnostics package, map liveness (restart tag, Degraded and Unhealthy mapped to 503) and readiness (take-out-of-service tag, Degraded and Unhealthy mapped to 503). Tests cover AC-22.
 11. **Docs.** Add release-note entries to `release_notes.md`:
     - the consumer remedy checks, the call, and the default threshold;
@@ -414,7 +420,7 @@ The existing check is registered through `AddCheck`, which the user may call bef
 
     In BrighterCommand/Docs, add to the health-check page:
     - the consumer remedy checks, their two conditions, their remedy kinds and their boundaries;
-    - when the restart check is Healthy (not running, a consumer operation in progress, shut on purpose, excess consumers), and that a consumer operation that never finishes is not detected and needs a startup probe or a host timeout;
+    - when the restart check is Healthy (not running, a consumer operation in progress, shut on purpose, excess consumers), and that a consumer operation that never finishes is not detected and needs an operator alert on the number of consumer operations in progress, which the restart check's `Data` reports;
     - probe period and failure-threshold advice for scale-up and reopen;
     - the coexistence rule, and that the existing check is untagged and obsolete;
     - the readiness endpoint and the consumer checks in the routing example from ADR 0086;
@@ -448,7 +454,8 @@ The existing check is registered through `AddCheck`, which the user may call bef
 | `EndRequested` drifts from the real lifecycle after a later change to `End` or `BeginConsumerOperation` | The dispatcher tests pin each transition, including `End` in `DS_AWAITING` and `DS_STOPPED`, and restart |
 | A probe reads the lifecycle facts across a concurrent start, `End` or `Shut` | The restart check reads one snapshot taken under `_lifecycleLock`, so it never mixes the states before and after a change. A pump that stops after the snapshot makes one probe stale, which the probe-period advice covers |
 | A liveness probe fires after a scale-up finishes with consumers still missing | The docs advise a probe period and failure threshold that tolerate a short Degraded window (FR-12.2, FR-11) |
-| A consumer operation hangs, so the restart check stays Healthy | Accepted. The restart check reports missing consumers, and a hung start needs a startup probe or a timeout in the host. The docs say so (FR-11) |
+| `BeginConsumerOperation` raises the operation counter and then fails to start the control loop, so the counter never falls and the restart check stays Healthy | The counter's life cycle is ADR 0083's. The failure needs a thread that cannot be created, so the process is already failing. A later structural change can move the increment after the loop starts |
+| A consumer operation hangs, so the restart check stays Healthy | Accepted. The restart check reports missing consumers, and a hung operation needs an operator alert on `consumer_operations_in_flight` in `Data`. The docs say so (FR-11) |
 | A host keeps an untagged endpoint that selected the existing check, and its monitoring stops silently after the cut-over | Migration step 5 calls out the silent-drop hazard, and AC-56 tests the exclusion predicate |
 
 ## Alternatives Considered
