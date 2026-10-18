@@ -277,6 +277,8 @@ jobs:
         image: rabbitmq:4.2-management
         ports:
         - 5672:5672 
+        # used by the purge recovery tests to force-close their own connection
+        - 15672:15672
         # needed because the rabbitmq container does not provide a healthcheck
         options: >-
           --health-cmd "rabbitmqctl node_health_check"

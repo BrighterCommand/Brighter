@@ -41,6 +41,52 @@ public partial class PullConsumer(IChannel channel) : AsyncDefaultBasicConsumer(
     //we do end up creating a second buffer to the Brighter Channel, but controlling the flow from RMQ depends
     //on us being able to buffer up to the set QoS and then pull. This matches other implementations.
     private readonly ConcurrentQueue<BasicDeliverEventArgs> _messages = new();
+    private volatile TaskCompletionSource<bool> _cancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private bool _purging;
+
+    // The cancel callback follows pending deliveries; the broker's cancel reply alone is not a buffer barrier.
+    internal async Task stopForPurgeAsync(string consumerTag)
+    {
+        Volatile.Write(ref _purging, true);
+        Task<bool> cancelled = _cancelled.Task;
+
+        try
+        {
+            await Channel.BasicCancelAsync(consumerTag);
+            await waitForCancellationAsync(cancelled);
+
+            while (_messages.TryDequeue(out var message))
+            {
+                await Channel.BasicAckAsync(message.DeliveryTag, false);
+            }
+        }
+        catch
+        {
+            await Channel.AbortAsync();
+            throw;
+        }
+    }
+
+    private async Task waitForCancellationAsync(Task cancelled)
+    {
+        using var timeout = new CancellationTokenSource();
+        Task delay = Task.Delay(Channel.ContinuationTimeout, timeout.Token);
+        if (await Task.WhenAny(cancelled, delay) != cancelled)
+        {
+            throw new TimeoutException("Timed out waiting for RabbitMQ consumer cancellation.");
+        }
+
+        timeout.Cancel();
+        await cancelled;
+    }
+
+    /// <inheritdoc />
+    public override async Task HandleChannelShutdownAsync(object channel, ShutdownEventArgs reason)
+    {
+        await base.HandleChannelShutdownAsync(channel, reason);
+        while (_messages.TryDequeue(out _)) { }
+        _cancelled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
 
     /// <summary>
     /// Sets the number of messages to fetch from the broker in a single batch
@@ -116,25 +162,24 @@ public partial class PullConsumer(IChannel channel) : AsyncDefaultBasicConsumer(
         return Task.CompletedTask;
     }
 
-
+    /// <inheritdoc />
     protected override async Task OnCancelAsync(string[] consumerTags,
         CancellationToken cancellationToken = default)
     {
-        //try  to nack anything in the buffer.
         try
         {
-            foreach (var message in _messages)
+            while (!Volatile.Read(ref _purging) && _messages.TryDequeue(out var message))
             {
                 await Channel.BasicNackAsync(message.DeliveryTag, false, true, cancellationToken);
             }
         }
         catch (Exception e)
         {
-            //don't impede shutdown, just log
             Log.NackUnhandledMessagesOnShutdownFailed(s_logger, e.Message);
         }
 
         await base.OnCancelAsync(consumerTags, cancellationToken);
+        _cancelled.TrySetResult(true);
     }
 
     private static partial class Log
