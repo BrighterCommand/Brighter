@@ -38,7 +38,7 @@ namespace Paramore.Brighter.PostgreSql;
 /// by the parser. Lowercase-then-quote yields <c>"outbox"</c> — same name as the historical
 /// folded form, but as a quoted identifier so reserved keywords parse cleanly.
 /// <para>
-/// Inputs must already pass <see cref="Paramore.Brighter.BoxProvisioning.Identifiers.AssertSafe"/>
+/// Inputs must already pass <c>Identifiers.AssertSafe</c>
 /// (ASCII letters, digits, underscores). This helper does no validation — call sites validate at
 /// their entry points to keep error messages close to the configured value.
 /// </para>
