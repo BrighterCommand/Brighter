@@ -378,14 +378,13 @@ A writer that iterates `Data` sees the remedy kind, the list of conditions, and 
 4. **Behavioural, test first: the investigate check.** Add `OutboxSweeperInvestigateHealthCheck`. Log an unreadable breaker at Error with a `[LoggerMessage]` method, as `TimedOutboxSweeper` logs its failures (`TimedOutboxSweeper.cs:281-303`). Tests cover AC-11 to AC-15, AC-28 to AC-32, AC-36, AC-38, AC-41, AC-43, AC-44, AC-51 to AC-54, AC-64, AC-65 and AC-68.
 5. **Behavioural, test first: the registration call.** Add `OutboxSweeperHealthChecksBuilderExtensions` in `src/Paramore.Brighter.Outbox.Hosting/`. Tests cover AC-9 and AC-14 (validation before the service is built), AC-37 (two registrations, one tag each), AC-66 and AC-67 (with and without `UseOutboxSweeper`), and AC-70 (failure status Degraded).
 6. **Behavioural, test first: results across checks.** Add the tests for AC-16, AC-19, AC-20, AC-25, AC-39 and AC-42. Extend ADR 0085's AC-26 observer-thread test to run both checks, and add the check half of AC-48's third bullet.
-7. **Behavioural, test first: the convention test.** Add the AC-49 test in `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, adding a project reference to `Paramore.Brighter.Outbox.Hosting`. ADR 0087 step 9 adds the reference to `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics` to the same project, so the project can load both registration calls. The test works in four parts:
+7. **Behavioural, test first: the convention test.** Add the AC-49 test in `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, adding project references to `Paramore.Brighter.Outbox.Hosting` and `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics`, because the exemption list and the existing-endpoint test in step 8 name the existing consumer check. The test works in four parts:
    - It calls each named registration call on a `ServiceCollection` and reads `HealthCheckServiceOptions.Registrations`.
    - It invokes each registration's factory to learn the check type, and asserts that the registration has exactly one tag, its remedy tag.
-   - It compares the check types it found with the public `IHealthCheck` types in the Brighter assemblies, less an exemption list that holds `BrighterServiceActivatorHealthCheck`. Any other type fails the test.
+   - It compares the check types it found with the public `IHealthCheck` types in every `Paramore.Brighter*` assembly in the test's output folder, less an exemption list that holds `BrighterServiceActivatorHealthCheck`. Any other type fails the test.
    - It runs each check in a Healthy scenario and a Degraded scenario, and asserts that `Data` holds the remedy kind that matches the tag, and a conditions entry.
-   - Each per-check scenario test in steps 3 and 4 also asserts the remedy kind, which together with the fixed scenarios covers "every scenario" in AC-49(c).
 
-   The list of named registration calls holds `AddBrighterOutboxSweeperHealthChecks`. ADR 0087 adds its consumer call to that list.
+   Each per-check scenario test in steps 3 and 4 also asserts the remedy kind, which together with the fixed scenarios covers "every scenario" in AC-49(c). The list of named registration calls holds `AddBrighterOutboxSweeperHealthChecks`. ADR 0087 adds its consumer call to that list.
 8. **Behavioural: endpoint tests.** In `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, which step 7 already references to `Paramore.Brighter.Outbox.Hosting`, map liveness, readiness and operator endpoints as the docs show. Tests cover AC-21, AC-35, AC-50, AC-56 and AC-57, using the documented `System.Text.Json` writer.
 9. **Docs.** Add release-note entries to `release_notes.md` for the sweeper checks, their defaults and the remedy-kind convention. Add the health-check page sections in BrighterCommand/Docs that FR-11 lists for the sweeper:
    - the four conditions and their boundaries;
@@ -395,7 +394,8 @@ A writer that iterates `Data` sees the remedy kind, the list of conditions, and 
    - hang-threshold sizing, the duplicate-send risk, and the `InMemoryOutbox` warning;
    - one sweeper per service provider;
    - the breaker-registration and blocking-breaker limitations;
-   - the tripped-topic gaps.
+   - the tripped-topic gaps;
+   - that a failure to build a check, because its registration factory throws, is a misconfiguration that is not reported as Degraded and fails the whole endpoint.
 
 ## Consequences
 

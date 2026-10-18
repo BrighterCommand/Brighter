@@ -47,7 +47,7 @@ These words come from the requirements' *Definitions* section, and this ADR uses
   - **FR-13.2 and FR-13.3 for the gauges (failed reads)**: each gauge callback catches an exception, logs the exception and reports 0 for that observation.
   - **NFR-1, NFR-2 (reads while blocked, tear-free)**: a private lock guards the record's fields. The lock is held only while those fields are copied or written.
   - **NFR-3 (no allocation)**: every operation on the record writes or copies value fields, and a read returns a struct.
-  - **NFR-4 (testable time)**: the record measures running time with the sweeper's `TimeProvider`.
+  - **NFR-4 (testable time)**: the record measures running time with its own `TimeProvider`, which the container makes the sweeper's. A record supplied to a hand-built sweeper must share the sweeper's `TimeProvider`.
   - **NFR-6 for these types (backward compatibility)**: `IAmABrighterSweeperMeter` and `IAmAnOutboxCircuitBreaker` gain no member. The sweeper gains one optional constructor parameter, and `SweeperMeter` gains two.
   - **NFR-9 (recording failures do not affect sweeping)**: the record's operations never throw. The gauges run on the exporter's thread, never on the sweeper's thread.
   - **FR-11 for the gauges (documentation)**: the Telemetry page entries and the release-note entries for the two gauges.
@@ -206,7 +206,7 @@ Every dependency points into core. The sweeper and `SweeperMeter` both know the 
 
 | Role | Type | Responsibilities | Responsibility classifier | Collaborators |
 | --- | --- | --- | --- | --- |
-| Keeps one sweeper's state | `OutboxSweeperState` (core, new) | Accepts the four transitions; holds the fields; measures running time on the sweeper's clock; decides "active sweeper"; returns one consistent snapshot without waiting on sweep work | knowing, doing, deciding | `TimeProvider`, `SweepOutcome`, `OutboxSweeperSnapshot` |
+| Keeps one sweeper's state | `OutboxSweeperState` (core, new) | Accepts the four transitions; holds the fields; measures running time on the record's clock, which the container makes the sweeper's clock; decides "active sweeper"; returns one consistent snapshot without waiting on sweep work | knowing, doing, deciding | `TimeProvider`, `SweepOutcome`, `OutboxSweeperSnapshot` |
 | Carries one instant of state | `OutboxSweeperSnapshot` (core, new) | Holds the values a signal needs, as copied | knowing | none |
 | Publishes the sweeper's instruments | `SweeperMeter` (core, changed) | Records tick lag, sweep duration and outcomes as today; owns the two observable gauges; reads the record on each observation; reads the circuit breaker only while active; turns any failure into 0 and a log line | doing, deciding | `IMeterFactory`, `OutboxSweeperState`, `IAmAnOutboxCircuitBreaker`, `BrighterSemanticConventions` |
 | Sweeps the outbox | `TimedOutboxSweeper` (Outbox.Hosting, changed) | Writes the four transitions at the right points | doing | `OutboxSweeperState` |

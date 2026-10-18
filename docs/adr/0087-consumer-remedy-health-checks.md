@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-10-16
-summary: "Paramore.Brighter.ServiceActivator.Extensions.Diagnostics gains an opt-in IHealthChecksBuilder call that splits the consumer health check into two remedy checks: a take-out-of-service check for persistent channel failures and a restart check for missing consumers, which reports only while the dispatcher is running. Both follow ADR 0086's remedy-kind convention. Dispatcher gains one read-only method, GetLifecycleSnapshot, so the restart check can ignore a dispatcher that is not running and subscriptions shut on purpose. BrighterServiceActivatorHealthCheck is marked [Obsolete] and is otherwise unchanged."
+summary: "Paramore.Brighter.ServiceActivator.Extensions.Diagnostics gains an opt-in IHealthChecksBuilder call that splits the consumer health check into two remedy checks: a take-out-of-service check for persistent channel failures and a restart check for missing consumers, which reports only while the dispatcher is running and no consumer operation is in progress. Both follow ADR 0086's remedy-kind convention. Dispatcher gains one read-only method, GetLifecycleSnapshot, so the restart check can ignore a dispatcher that is not running and subscriptions shut on purpose. BrighterServiceActivatorHealthCheck is marked [Obsolete] and is otherwise unchanged."
 tags:
   - "observability"
   - "dispatcher"
@@ -34,8 +34,8 @@ These words come from the requirements' *Definitions* section and FR-12.2, and t
 - **In scope**
   - **FR-12 (two checks, one call)**: `AddBrighterConsumerHealthChecks` on `IHealthChecksBuilder` registers both consumer remedy checks. Each registration resolves `IDispatcher` on every run.
   - **FR-12.1 (persistent channel failures)**: the take-out-of-service check reads every consumer's `IHaveAChannelFailureCount`, whatever the dispatcher's state, as the existing check does.
-  - **FR-12.2 (missing consumers)**: the restart check compares running and expected totals only while the dispatcher is running. It leaves out subscriptions shut on purpose, and reports Unhealthy when no consumer is running.
-  - **FR-12.2's dispatcher members**: `Dispatcher` gains `GetLifecycleSnapshot`, which returns its state, whether `End` was requested, the subscriptions shut on purpose, and copies of its subscriptions and consumers, all taken under its lifecycle lock. `IDispatcher` does not change.
+  - **FR-12.2 (missing consumers)**: the restart check compares running and expected totals only while the dispatcher is running and no consumer operation is in progress. It leaves out subscriptions shut on purpose, and reports Unhealthy when no consumer is running.
+  - **FR-12.2's dispatcher members**: `Dispatcher` gains `GetLifecycleSnapshot`, which returns its state, whether `End` was requested, the subscriptions shut on purpose, the number of consumer operations in progress, and copies of its consumers and of each subscription's expected consumer count, all taken under its lifecycle lock. `IDispatcher` does not change.
   - **FR-12.3 (threshold)**: the registration call validates the channel-failure threshold before it registers anything. The check's constructor validates it again.
   - **FR-12.4 (agreement with the existing check)**: both checks reuse the existing check's description phrases and status rules.
   - **FR-12.5, FR-10.5 (`Data`)**: each check builds `Data` to ADR 0086's documented shape, with the two consumer conditions defined here.
@@ -46,7 +46,7 @@ These words come from the requirements' *Definitions* section and FR-12.2, and t
   - **NFR-5 for this package**: one new package reference, `Microsoft.Extensions.Diagnostics.HealthChecks`.
   - **NFR-6 (no new warnings)**: Brighter's tests suppress CS0618 where they use the existing check. The one sample that uses it moves to the new call.
   - **FR-11 for the consumer checks and the migration**: the health-check page's consumer sections, the six migration steps, and the consumer endpoints in the routing example. The release-note entries cover the consumer checks, the `[Obsolete]` marking with the CS0618 note, and the change to #4555's readiness guidance.
-  - **AC-5 (public API unchanged)**: a reflection test holds a baseline of the public members of the types the criterion names and asserts that each still exists with the same signature, and that `IAmAnOutboxCircuitBreaker` declares the same members. It lives in `tests/Paramore.Brighter.Extensions.AspNetCore.Tests` beside the AC-49 test, because that project references every assembly involved. Step 8 adds it.
+  - **AC-5 (public API unchanged)**: a reflection test holds a baseline of the public members of the types the criterion names and asserts that each still exists with the same signature, and that `IAmAnOutboxCircuitBreaker` declares the same members. It lives in `tests/Paramore.Brighter.Extensions.AspNetCore.Tests` beside the AC-49 test, because that project references every assembly involved. Step 9 adds it.
   - **AC-49 (convention test)**: `AddBrighterConsumerHealthChecks` joins the list of named registration calls in ADR 0086's reflection test.
 - **Contributed to here, discharged elsewhere**
   - **FR-10.1, FR-10.3, FR-10.4 (the remedy-kind convention)**: ADR 0086 defines the convention, the tags and the `Data` keys. This ADR applies them to two more checks.
@@ -107,7 +107,7 @@ The mechanism behind these consequences is in the code.
 
 **The consumer check splits into a take-out-of-service check and a restart check, which one opt-in call registers beside the existing check.**
 
-The take-out-of-service check reports persistent channel failures, as the existing check does today. The restart check reports missing consumers, and only while the dispatcher has been started and `End` has not been called since. Both checks follow ADR 0086's convention: one `brighter-*` remedy tag each, failure status Degraded, and `Data` in the documented shape. `Dispatcher` also gains one read-only snapshot method, so the restart check can ignore a dispatcher that is not running and subscriptions shut on purpose. The dispatcher records when `End` was requested, and which subscriptions an operator shut, and it returns both with its state and consumers in one snapshot taken under its lifecycle lock. It records nothing else, and its admission and shutdown rules do not change. The existing check keeps working and is marked obsolete in favour of the new call.
+The take-out-of-service check reports persistent channel failures, as the existing check does today. The restart check reports missing consumers, and only while the dispatcher has been started, `End` has not been called since, and no consumer operation is in progress. Both checks follow ADR 0086's convention: one `brighter-*` remedy tag each, failure status Degraded, and `Data` in the documented shape. `Dispatcher` also gains one read-only snapshot method, so the restart check can ignore a dispatcher that is not running and subscriptions shut on purpose. The dispatcher records when `End` was requested, and which subscriptions an operator shut, and it returns both with its state and consumers in one snapshot taken under its lifecycle lock. It records nothing else, and its admission and shutdown rules do not change. The existing check keeps working and is marked obsolete in favour of the new call.
 
 ### The mechanism, end to end
 
@@ -125,7 +125,7 @@ sequenceDiagram
     D->>D: in DS_RUNNING, so record orders as shut
     Probe->>R: CheckHealthAsync
     R->>D: GetLifecycleSnapshot()
-    D-->>R: state, EndRequested, ShutSubscriptions, subscriptions, consumers
+    D-->>R: state, EndRequested, ShutSubscriptions, operations in flight, expected counts, consumers
     R-->>Probe: Healthy, orders left out
     Ops->>D: Open(orders)
     D->>D: consumer created for orders, so clear orders
@@ -152,21 +152,22 @@ The restart check decides in this order. The first row that matches decides.
 | 2 | The registered `IDispatcher` is not a `Dispatcher` | the check throws, and the service reports Degraded (failure status) | the service's exception message |
 | 3 | `State` is `DS_NOTREADY` or `DS_AWAITING`, so the dispatcher was never started | Healthy | the dispatcher is not running |
 | 4 | `EndRequested` is true | Healthy | the dispatcher is not running |
-| 5 | The running total is at least the expected total | Healthy | all expected consumers are running |
-| 6 | The running total is 0 | Unhealthy | `missing_consumers`, every short subscription |
-| 7 | Otherwise | Degraded | `missing_consumers`, every subscription whose count differs |
+| 5 | One or more consumer operations are in progress (`Receive`, `Open` or `SetActivePerformers` has not finished creating and opening its consumers) | Healthy | a consumer operation is in progress |
+| 6 | The running total is at least the expected total | Healthy | all expected consumers are running |
+| 7 | The running total is 0 | Unhealthy | `missing_consumers`, every short subscription |
+| 8 | Otherwise | Degraded | `missing_consumers`, every subscription whose count differs |
 
-Rows 3 and 4 together are FR-12.2's "dispatcher running". `DS_STOPPED` passes both rows when `End` was not called, so a dispatcher whose pumps all died still reaches rows 5 to 7. The totals leave out every subscription in `ShutSubscriptions` and every consumer of those subscriptions. The restart check decides from one snapshot, so a concurrent `End`, `Shut` or start cannot give it a mixture of the states before and after the change.
+Rows 3 and 4 together are FR-12.2's "dispatcher running". `DS_STOPPED` passes both rows when `End` was not called, so a dispatcher whose pumps all died still reaches rows 6 to 8 once no operation is in progress. Row 5 exists because a start is not one locked step: the dispatcher enters `DS_RUNNING` under its lock, creates its consumers outside the lock (channel creation is broker I/O), and registers them under the lock afterwards. Without row 5, a probe in that window would see a running dispatcher with no consumers and report Unhealthy. The totals leave out every subscription in `ShutSubscriptions` and every consumer of those subscriptions. The restart check decides from one snapshot. A concurrent `End`, `Shut` or `SetActivePerformers` cannot give it a mixture of the states before and after the change, and a start in progress is reported through row 5.
 
 The take-out-of-service check has no ladder. It reads every consumer in `Consumers`, whatever the dispatcher's state. It is Degraded when any consumer's `ConsecutiveChannelFailures` is at least the threshold, and Healthy otherwise. A null dispatcher gives Healthy.
 
 Five invariants follow from the tables.
 
-- **A deliberate state never fails a restart probe.** A dispatcher before its start, after `End`, or with a subscription shut on purpose reports Healthy on the restart check.
-- **The existing check's verdicts survive in the common state.** When the dispatcher is running, nothing is shut and nothing is in excess, the worse of the two remedy statuses equals the existing check's status (FR-12.4). Missing consumers give Degraded or Unhealthy exactly as before. Failures on a running consumer give Degraded.
+- **A deliberate state or a start in progress never fails a restart probe.** A dispatcher before its start, after `End`, with a subscription shut on purpose, or while a consumer operation is in progress reports Healthy on the restart check.
+- **The existing check's verdicts survive in the common state.** When the dispatcher is running, no consumer operation is in progress, nothing is shut and nothing is in excess, the worse of the two remedy statuses equals the existing check's status (FR-12.4). Missing consumers give Degraded or Unhealthy exactly as before. Failures on a running consumer give Degraded.
 - **The restart check reports Unhealthy only for zero running consumers.** That is a reported condition, not a check failure (FR-13.1).
 - **Admission does not change.** `EndRequested` is a new field. `_stopping` still decides admission, so `End` before `Receive` does not make `Receive` throw.
-- **A probe never waits on a pump.** The new members take `_lifecycleLock` only for a field read or a set copy. ADR 0083 keeps I/O and task waits outside that lock.
+- **A probe never waits on a pump.** The snapshot takes `_lifecycleLock` only to read three fields and copy three collections. ADR 0083 keeps I/O and task waits outside that lock.
 
 ### Where the pieces live
 
@@ -195,6 +196,7 @@ flowchart LR
         TOS --> ID
         TOS --> FC
         RS --> D
+        RS --> LS
         TOS --> Conv
         RS --> Conv
         Ext --> Conv
@@ -213,9 +215,9 @@ Every Brighter dependency points inward. The diagnostics package reaches core th
 
 | Role | Type | Responsibilities | Responsibility classifier | Collaborators |
 | --- | --- | --- | --- | --- |
-| Runs consumers | `Dispatcher` (ServiceActivator, changed) | As today; also knows whether `End` was requested since the last start, and which subscriptions are shut on purpose | knowing, doing, deciding | `IAmAConsumer`, `Subscription`, `SubscriptionName` |
+| Runs consumers | `Dispatcher` (ServiceActivator, changed) | As today; also knows whether `End` was requested since the last start, which subscriptions are shut on purpose, and how many consumer operations are in progress | knowing, doing, deciding | `IAmAConsumer`, `Subscription`, `SubscriptionName` |
 | Reports consumers that cannot receive | `ConsumerTakeOutOfServiceHealthCheck` (Diagnostics, new) | Reads every consumer's failure count; decides the persistent-channel-failures condition; describes it; builds its own `Data` to the convention | knowing, deciding | `IDispatcher`, `IHaveAChannelFailureCount`, `RemedyCheckConvention` |
-| Reports consumers that are missing while running | `ConsumerRestartHealthCheck` (Diagnostics, new) | Decides whether the dispatcher is running; totals running and expected consumers outside shut subscriptions; decides Healthy, Degraded or Unhealthy; describes it; builds its own `Data` to the convention | knowing, deciding | `Dispatcher`, `RemedyCheckConvention` |
+| Reports consumers that are missing while running | `ConsumerRestartHealthCheck` (Diagnostics, new) | Decides whether the dispatcher is running and no consumer operation is in progress; totals running and expected consumers outside shut subscriptions; decides Healthy, Degraded or Unhealthy; describes it; builds its own `Data` to the convention | knowing, deciding | `Dispatcher`, `RemedyCheckConvention` |
 | Opts a host in to the consumer checks | `AddBrighterConsumerHealthChecks` (Diagnostics, new extension) | Validates the threshold; registers both checks with names, one remedy tag each, failure status Degraded and per-run factories | doing | `IHealthChecksBuilder`, `HealthCheckRegistration` |
 | Reports every consumer condition at once | `BrighterServiceActivatorHealthCheck` (Diagnostics, obsolete) | Unchanged | knowing, deciding | `IDispatcher` |
 
@@ -234,10 +236,11 @@ No new role is added. Each check fills the existing `IHealthCheck` role. The fai
 | `State` | `DispatcherState` | The dispatcher's state at the snapshot |
 | `EndRequested` | `bool` | True from any call to `End` until the next operation that moves the dispatcher to `DS_RUNNING` |
 | `ShutSubscriptions` | `IReadOnlyCollection<SubscriptionName>` | The subscriptions shut on purpose |
-| `Subscriptions` | `IReadOnlyList<Subscription>` | A copy of the dispatcher's subscriptions |
+| `ConsumerOperationsInFlight` | `int` | The number of consumer operations that have begun and not finished |
+| `ExpectedConsumers` | `IReadOnlyDictionary<SubscriptionName, int>` | Each subscription's expected consumer count, copied under the lock |
 | `Consumers` | `IReadOnlyList<IAmAConsumer>` | A copy of the dispatcher's consumers |
 
-The backing fields are a `bool` and a `HashSet<SubscriptionName>`, and neither is public. `SubscriptionName` implements value equality (`src/Paramore.Brighter/SubscriptionName.cs:37`). `Dispose` and `DisposeAsync` call `End`, so a disposed dispatcher also reports `EndRequested`. A pump that stops and removes its consumer after the snapshot is read leaves the snapshot unchanged, so a probe can be one probe period stale and no more.
+The backing fields are a `bool` and a `HashSet<SubscriptionName>`, and neither is public. `SubscriptionName` implements value equality (`src/Paramore.Brighter/SubscriptionName.cs:37`). `Dispose` and `DisposeAsync` call `End`, so a disposed dispatcher also reports `EndRequested`. A pump that stops and removes its consumer after the snapshot is read leaves the snapshot unchanged, so a probe can be one probe period stale and no more. `ConsumerOperationsInFlight` is the existing `_pendingConsumerOperations` counter, which `BeginConsumerOperation` raises and `ExecuteConsumerOperation` lowers under `_lifecycleLock`.
 
 Two existing members change inside their bodies only. Their signatures and their effect on consumers do not change:
 
@@ -328,7 +331,7 @@ The tests check values and not exact text, apart from the shared phrases that AC
 | Paramore.Brighter.ServiceActivator.Extensions.Diagnostics | `ConsumerTakeOutOfServiceHealthCheck`, `ConsumerRestartHealthCheck` | New |
 | Paramore.Brighter.ServiceActivator.Extensions.Diagnostics | `ConsumerHealthChecksBuilderExtensions` | New static class holding `AddBrighterConsumerHealthChecks` |
 | Paramore.Brighter.ServiceActivator.Extensions.Diagnostics | `BrighterServiceActivatorHealthCheck` | `[Obsolete]` only |
-| tests/Paramore.Brighter.Extensions.Tests | the two files that use the existing check | `#pragma warning disable CS0618` |
+| tests | every test file that names `BrighterServiceActivatorHealthCheck`: two in `tests/Paramore.Brighter.Extensions.Tests`, and the AC-5, AC-49, AC-55, AC-56 and AC-62 tests | `#pragma warning disable CS0618` |
 | samples/TaskQueue/ASBTaskQueue/GreetingsWorker | `Program.cs` | Moves from `AddCheck<BrighterServiceActivatorHealthCheck>` to `AddBrighterConsumerHealthChecks` |
 
 The following stay unchanged:
@@ -347,7 +350,7 @@ Users of the existing check already reference `Paramore.Brighter.ServiceActivato
 
 #### Why one snapshot method on `Dispatcher`, rather than a "running" property or a new role
 
-The dispatcher owns its lifecycle, so it is the only object that knows when `End` was called and which subscriptions were shut. A property named `IsRunning` would be true in `DS_STOPPED`, which contradicts the `DispatcherState` documentation. The facts are therefore named for what happened: `EndRequested` and `ShutSubscriptions`. The restart check combines them with the state and the consumers in one snapshot. Separate property reads can cross a transition: `End` followed by a pump drain between two reads would show no consumers with the dispatcher still running, which is a false Unhealthy on a liveness probe during graceful shutdown. An interface such as `IAmADispatcherLifecycle` would have one implementation and one reader. The requirements' constraint rules that out. Adding the facts to `IDispatcher` would break every implementer of that interface, and FR-12.2 places the additions on the class.
+The dispatcher owns its lifecycle, so it is the only object that knows when `End` was called and which subscriptions were shut. A property named `IsRunning` would be true in `DS_STOPPED`, which contradicts the `DispatcherState` documentation. The facts are therefore named for what happened: `EndRequested` and `ShutSubscriptions`. The restart check combines them with the state and the consumers in one snapshot. Separate property reads can cross a transition: `End` followed by a pump drain between two reads would show no consumers with the dispatcher still running, which is a false Unhealthy on a liveness probe during graceful shutdown. The requirements' constraint rules out an interface such as `IAmADispatcherLifecycle`, which would have one implementation and one reader. Adding the facts to `IDispatcher` would break every implementer, and FR-12.2 places the additions on the class.
 
 #### Why `EndRequested` is a new field and not `_stopping`
 
@@ -369,6 +372,10 @@ A consumer that keeps failing to receive should not take work, whether it is dra
 
 Each registration resolves `IDispatcher` with `GetService`, so a publisher-only service gives Healthy (FR-12.7). A dispatcher that is registered but cannot be built is a misconfiguration, and in most cases the host's consumer service fails at start-up for the same cause. ADR 0086 explains why a failure to build a check is not caught and reported as Degraded. This ADR follows the same rule.
 
+#### Why a consumer operation in progress reports Healthy
+
+The counter that already guards the dispatcher's shutdown, `_pendingConsumerOperations`, covers the whole of a start, a reopen and a scale-up. While it is above zero, some consumers may not be registered yet, so a shortfall says nothing about a dead pump. Reporting Healthy then removes a restart loop that a slow broker could cause at start-up. The cost is that an operation that hangs, such as a channel creation that never returns, keeps the check Healthy. Detecting a hung start is not this check's job, and the docs say so.
+
 #### Why the existing check is marked obsolete and not changed
 
 Changing its statuses would change the result of every existing liveness or readiness endpoint that selects it (NFR-6). A compile warning points users to the new call without breaking their builds. A build that treats warnings as errors must suppress CS0618 or migrate, and the release notes say so.
@@ -380,7 +387,7 @@ The existing check is registered through `AddCheck`, which the user may call bef
 #### How tests reach the checks
 
 - **Dispatcher tests** in `tests/Paramore.Brighter.Core.Tests/MessageDispatch/` drive a real `Dispatcher` over in-memory channels. They cover every row of the fact-change table: `End` in each state, start after `End`, `Shut` in and out of `DS_RUNNING`, and `Open` or `SetActivePerformers` after a shut.
-- **Check tests** in `tests/Paramore.Brighter.Extensions.Tests/` reuse the receive-health test host and its failing in-memory transport. They cover AC-58 to AC-63 and AC-71.
+- **Check tests** in `tests/Paramore.Brighter.Extensions.Tests/` reuse the receive-health test host and its failing in-memory transport. They cover AC-58 to AC-63, AC-71 and AC-72.
 - **Endpoint tests** in `tests/Paramore.Brighter.Extensions.AspNetCore.Tests` cover AC-22.
 
 ### Implementation Approach
@@ -392,14 +399,14 @@ The existing check is registered through `AddCheck`, which the user may call bef
    - `End` after the dispatcher reached `DS_STOPPED`;
    - restart after an awaited `End`;
    - `Dispose`.
-3. **Behavioural, test first: `ShutSubscriptions` and the snapshot.** Add `DispatcherLifecycleSnapshot` and `Dispatcher.GetLifecycleSnapshot`, which copies the state, `EndRequested`, the shut names, the subscriptions and the consumers under `_lifecycleLock`. Tests also assert that a snapshot taken after `End` reports `EndRequested`, and that a returned snapshot does not change after later operations. In `Shut(Subscription)` (`:427-439`), move the state test and the consumer snapshot under `_lifecycleLock`, record the name, and tell the consumers to stop outside the lock. In `ExecuteConsumerOperation` (`:491-495`), remove each added consumer's subscription name. Tests cover a `Shut` while awaiting (no effect), a `Shut` while running, `Open` after a shut, `SetActivePerformers` that creates none and that creates some, and a copy that does not change after it is read.
+3. **Behavioural, test first: `ShutSubscriptions` and the snapshot.** Add `DispatcherLifecycleSnapshot` and `Dispatcher.GetLifecycleSnapshot`, which copies the state, `EndRequested`, the shut names, the operations in flight, each subscription's expected count and the consumers under `_lifecycleLock`. Tests also assert that a snapshot taken after `End` reports `EndRequested`, that a snapshot taken while channel creation blocks reports one operation in flight, and that a returned snapshot does not change after later operations. In `Shut(Subscription)` (`:427-439`), move the state test and the consumer snapshot under `_lifecycleLock`, record the name, and tell the consumers to stop outside the lock. In `ExecuteConsumerOperation` (`:491-495`), remove each added consumer's subscription name. Tests cover a `Shut` while awaiting (no effect), a `Shut` while running, `Open` after a shut, `SetActivePerformers` that creates none and that creates some, and a copy that does not change after it is read.
 4. **Behavioural, test first: the take-out-of-service check.** Tests cover AC-59, the take-out-of-service half of AC-63, AC-71, and constructor validation (AC-60).
-5. **Behavioural, test first: the restart check.** Tests cover every case in AC-58, the restart half of AC-63, AC-71, and the throw for a dispatcher that is not a `Dispatcher` (AC-70).
+5. **Behavioural, test first: the restart check.** Tests cover every case in AC-58, the restart half of AC-63, AC-71, AC-72 (using a channel factory double that blocks), and the throw for a dispatcher that is not a `Dispatcher` (AC-70).
 6. **Behavioural, test first: the registration call.** Add `ConsumerHealthChecksBuilderExtensions`. Tests cover AC-60 (validation before the service is built), AC-61 (two registrations, one tag each), and AC-70 (failure status Degraded, and Degraded for a non-Brighter `IDispatcher`).
 7. **Behavioural, test first: agreement.** Add AC-62, which runs the existing check and both remedy checks over the four #4555 states. The existing tests for the existing check must pass unchanged (AC-23).
-8. **Behavioural: the obsolete marking.** Add `[Obsolete]` to `BrighterServiceActivatorHealthCheck` (`BrighterServiceActivatorHealthCheck.cs:36`). Add `#pragma warning disable CS0618` to `tests/Paramore.Brighter.Extensions.Tests/When_a_running_consumer_repeatedly_fails_to_receive_should_report_degraded.cs` and `tests/Paramore.Brighter.Extensions.Tests/TestDoubles/ReceiveHealthTestHost.cs`. Move `samples/TaskQueue/ASBTaskQueue/GreetingsWorker/Program.cs:88` to the new call. Add the AC-55 reflection test and the AC-5 public-API test. Confirm that a full build adds no warning.
-9. **Behavioural: the convention test.** In `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, add a project reference to `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics`, add `AddBrighterConsumerHealthChecks` to the named registration calls in ADR 0086's AC-49 test, and add a Healthy and a Degraded scenario for each consumer check. The exemption list keeps `BrighterServiceActivatorHealthCheck` only.
-10. **Behavioural: endpoint tests.** In `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, which step 9 already references to the diagnostics package, map liveness (restart tag, Degraded and Unhealthy mapped to 503) and readiness (take-out-of-service tag, Degraded and Unhealthy mapped to 503). Tests cover AC-22.
+8. **Behavioural: the obsolete marking.** Add `[Obsolete]` to `BrighterServiceActivatorHealthCheck` (`BrighterServiceActivatorHealthCheck.cs:36`). Add `#pragma warning disable CS0618` to every test file that names the obsolete type: `tests/Paramore.Brighter.Extensions.Tests/When_a_running_consumer_repeatedly_fails_to_receive_should_report_degraded.cs`, `tests/Paramore.Brighter.Extensions.Tests/TestDoubles/ReceiveHealthTestHost.cs`, and each test this spec adds that names it, such as the AC-49, AC-55, AC-56 and AC-62 tests. Move `samples/TaskQueue/ASBTaskQueue/GreetingsWorker/Program.cs:88` to the new call. Add the AC-55 reflection test. Confirm that a full build adds no warning.
+9. **Behavioural: the convention test.** In `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, which ADR 0086 step 7 already references to the diagnostics package, add `AddBrighterConsumerHealthChecks` to the named registration calls in ADR 0086's AC-49 test, add the AC-5 public-API test (with `#pragma warning disable CS0618`, because it names the obsolete type), and add a Healthy and a Degraded scenario for each consumer check. The exemption list keeps `BrighterServiceActivatorHealthCheck` only.
+10. **Behavioural: endpoint tests.** In `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, which ADR 0086 step 7 already references to the diagnostics package, map liveness (restart tag, Degraded and Unhealthy mapped to 503) and readiness (take-out-of-service tag, Degraded and Unhealthy mapped to 503). Tests cover AC-22.
 11. **Docs.** Add release-note entries to `release_notes.md`:
     - the consumer remedy checks, the call, and the default threshold;
     - the `[Obsolete]` marking, with the CS0618 note for builds that treat warnings as errors;
@@ -407,7 +414,7 @@ The existing check is registered through `AddCheck`, which the user may call bef
 
     In BrighterCommand/Docs, add to the health-check page:
     - the consumer remedy checks, their two conditions, their remedy kinds and their boundaries;
-    - when the restart check is Healthy (not running, shut on purpose, excess consumers);
+    - when the restart check is Healthy (not running, a consumer operation in progress, shut on purpose, excess consumers), and that a consumer operation that never finishes is not detected and needs a startup probe or a host timeout;
     - probe period and failure-threshold advice for scale-up and reopen;
     - the coexistence rule, and that the existing check is untagged and obsolete;
     - the readiness endpoint and the consumer checks in the routing example from ADR 0086;
@@ -440,7 +447,8 @@ The existing check is registered through `AddCheck`, which the user may call bef
 | The new lock in `Shut` deadlocks with a consumer callback | `Shut` holds the lock only for the state test, the record and the snapshot. Consumers are told to stop outside the lock, as in `End` |
 | `EndRequested` drifts from the real lifecycle after a later change to `End` or `BeginConsumerOperation` | The dispatcher tests pin each transition, including `End` in `DS_AWAITING` and `DS_STOPPED`, and restart |
 | A probe reads the lifecycle facts across a concurrent start, `End` or `Shut` | The restart check reads one snapshot taken under `_lifecycleLock`, so it never mixes the states before and after a change. A pump that stops after the snapshot makes one probe stale, which the probe-period advice covers |
-| A liveness probe fires during a scale-up window and restarts the process | The docs advise a probe period and failure threshold that tolerate the window (FR-12.2, FR-11) |
+| A liveness probe fires after a scale-up finishes with consumers still missing | The docs advise a probe period and failure threshold that tolerate a short Degraded window (FR-12.2, FR-11) |
+| A consumer operation hangs, so the restart check stays Healthy | Accepted. The restart check reports missing consumers, and a hung start needs a startup probe or a timeout in the host. The docs say so (FR-11) |
 | A host keeps an untagged endpoint that selected the existing check, and its monitoring stops silently after the cut-over | Migration step 5 calls out the silent-drop hazard, and AC-56 tests the exclusion predicate |
 
 ## Alternatives Considered
@@ -453,7 +461,7 @@ The existing check is registered through `AddCheck`, which the user may call bef
 
 **4. Reuse `_stopping` as the end flag.** **Rejected because** setting it in `DS_AWAITING` makes the next `Receive` throw, which changes ADR 0083's admission rules.
 
-**5. A lifecycle observer role that the dispatcher notifies, such as `IAmADispatcherLifecycleObserver`.** **Rejected because** it adds a role with one implementation and one reader. Two read-only properties on the owner of the lifecycle carry the same knowledge.
+**5. A lifecycle observer role that the dispatcher notifies, such as `IAmADispatcherLifecycleObserver`.** **Rejected because** it adds a role with one implementation and one reader. One snapshot method on the owner of the lifecycle carries the same knowledge.
 
 **6. Infer a deliberate shut from consumer state, for example a consumer in `Shut` state.** **Rejected because** a shut consumer is removed when its pump stops, so a subscription shut on purpose and one whose pumps died look the same: both have no consumers.
 
