@@ -13,7 +13,7 @@ namespace Paramore.Brighter.MongoDb;
 /// to offer both connection and transaction management.
 /// </remarks>
 /// <param name="configuration">The MongoDB configuration used to obtain the client.</param>
-public class MongoDbUnitOfWork(IAmAMongoDbConfiguration configuration) : IAmAMongoDbTransactionProvider, IAmABoxTransactionProvider<IClientSessionHandle>
+public class MongoDbUnitOfWork(IAmAMongoDbConfiguration configuration) : IAmAMongoDbTransactionProvider
 {
     private IClientSessionHandle? _session;
 
@@ -130,15 +130,5 @@ public class MongoDbUnitOfWork(IAmAMongoDbConfiguration configuration) : IAmAMon
         }
         
         return _session;
-    }
-
-    async Task<IClientSession> IAmABoxTransactionProvider<IClientSession>.GetTransactionAsync(CancellationToken cancellationToken)
-    {
-        return await GetTransactionAsync(cancellationToken);
-    }
-
-    IClientSession IAmABoxTransactionProvider<IClientSession>.GetTransaction()
-    {
-        return GetTransaction();
     }
 }
