@@ -33,13 +33,9 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// When provisioning multiple box tables (across schemas, multiple inboxes, multiple
-/// outboxes), an operator reading the startup log needs to know which table the hosted
-/// service is acting on — the BoxType alone collapses every outbox under one label and
-/// every inbox under another, which is ambiguous when several are registered. The
-/// hosted service must therefore include the box table name in each progress entry,
-/// both on the success and the failure paths, and the failure-path
-/// <see cref="ConfigurationException"/> message must also identify the offending table.
+/// The hosted service names the box table in each start, success and failure log entry, and in
+/// the failure's <see cref="ConfigurationException"/>, because the <see cref="BoxType"/> alone is
+/// ambiguous when several outboxes or inboxes are registered.
 /// </summary>
 public class BoxProvisioningHostedServiceLoggingTests
 {
@@ -59,8 +55,6 @@ public class BoxProvisioningHostedServiceLoggingTests
             logger.Entries,
             e => e.Level == LogLevel.Information && e.Message.Contains("OrdersOutbox"));
 
-        // Both the start and success entries must name the table — two Information entries
-        // mention the table name, distinguishing concurrent outbox/inbox provisioning steps.
         var informationalMentions = logger.Entries
             .Count(e => e.Level == LogLevel.Information && e.Message.Contains("OrdersOutbox"));
         Assert.Equal(2, informationalMentions);

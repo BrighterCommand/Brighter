@@ -29,11 +29,6 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 
-/// <summary>
-/// Configurable <see cref="IAmABoxProvisioner"/> test double. Honours either a happy-path
-/// completion or a forced exception so tests can drive the hosted service through both
-/// success and failure log paths.
-/// </summary>
 internal sealed class StubBoxProvisioner : IAmABoxProvisioner
 {
     private readonly Exception? _throwOnProvision;
@@ -48,11 +43,6 @@ internal sealed class StubBoxProvisioner : IAmABoxProvisioner
     public BoxType BoxType { get; }
     public BoxTableName BoxTableName { get; }
 
-    /// <summary>
-    /// Set when <see cref="ProvisionAsync"/> has been entered (regardless of whether the stub
-    /// then throws). Lets tests assert that a later provisioner did NOT run after an earlier
-    /// one failed.
-    /// </summary>
     public bool ProvisionCalled { get; private set; }
 
     public Task ProvisionAsync(CancellationToken cancellationToken = default)

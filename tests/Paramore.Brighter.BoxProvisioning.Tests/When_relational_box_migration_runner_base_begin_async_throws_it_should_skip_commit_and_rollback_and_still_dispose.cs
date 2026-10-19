@@ -34,19 +34,13 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// When the per-backend UoW's <c>BeginAsync</c> throws — e.g. advisory-lock acquisition
-/// times out or the underlying <c>BeginTransaction</c> fails — the runner base must
-/// neither call <c>CommitAsync</c> nor <c>RollbackAsync</c>, but the <c>await using</c>
-/// declaration must still dispatch <c>DisposeAsync</c> on the UoW. The original
-/// <c>BeginAsync</c> exception must propagate to the caller of <c>MigrateAsync</c>.
+/// When the unit of work's <c>BeginAsync</c> throws (a lock timeout, or a failed <c>BeginTransaction</c>),
+/// the runner must call neither <c>CommitAsync</c> nor <c>RollbackAsync</c>, must still dispose the
+/// unit of work, and must let the original exception propagate.
 /// </summary>
 /// <remarks>
-/// Locks the structural placement of <c>BeginAsync</c> OUTSIDE the runner's try/catch
-/// per ADR 0058 §B.3: the catch unwinds the BeginAsync→CommitAsync window only, so a
-/// failure during BeginAsync itself must NOT trigger RollbackAsync (the UoW has nothing
-/// to roll back) yet must still dispose (per the <c>await using</c> contract). A future
-/// mutation that wrapped BeginAsync in the try would call RollbackAsync on an unbegun
-/// UoW; this test would catch that regression.
+/// Pins <c>BeginAsync</c> outside the runner's try/catch (ADR 0058 §B.3): there is nothing to roll
+/// back before the unit of work has begun, but <c>await using</c> still disposes it.
 /// </remarks>
 public class SqlBoxMigrationRunnerBeginFailureTests
 {
@@ -68,37 +62,18 @@ public class SqlBoxMigrationRunnerBeginFailureTests
             cancellationToken: cts.Token));
 
         //Assert
-        // The original sentinel from BeginAsync must propagate to the caller — neither
-        // swallowed nor wrapped — proving no exception-substitution occurred during the
-        // (skipped) post-Begin try/catch path.
         Assert.Same(sentinel, thrown);
 
-        // BeginAsync was reached so the runner did get past CreateUnitOfWorkAsync.
         Assert.True(unitOfWork.BeginAsyncCalled);
 
-        // CommitAsync MUST NOT be called — there is nothing to commit if Begin failed.
         Assert.False(unitOfWork.CommitAsyncCalled);
 
-        // RollbackAsync MUST NOT be called — there is nothing to roll back if Begin failed.
-        // This is the load-bearing assertion: it pins BeginAsync as OUTSIDE the runner's
-        // try/catch (ADR 0058 §B.3). A future mutation that moved BeginAsync inside the
-        // try would call Rollback on an unbegun UoW and fail this assertion.
         Assert.False(unitOfWork.RollbackAsyncCalled);
 
-        // DisposeAsync MUST be called via `await using`, regardless of BeginAsync's throw.
-        // This pins the runner's UoW declaration as `await using var uow = ...` (not a
-        // bare assignment); a future mutation that dropped `await using` would skip
-        // disposal and fail this assertion.
         Assert.True(unitOfWork.DisposeAsyncCalled);
     }
 
-    /// <summary>
-    /// Minimal derivative of <see cref="SqlBoxMigrationRunner{TConnection,TTransaction}"/>
-    /// whose CreateUnitOfWorkAsync returns the supplied capturing spy; all post-Begin
-    /// hooks throw <see cref="NotSupportedException"/> as defense-in-depth — if the
-    /// runner ever called them despite Begin throwing, the test would observe the wrong
-    /// exception type rather than the sentinel.
-    /// </summary>
+    // Post-Begin hooks throw NotSupportedException, so reaching one surfaces as the wrong exception rather than the sentinel.
     private sealed class BeginFailureTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         private readonly CapturingProvisioningUnitOfWork _unitOfWork;
@@ -152,11 +127,6 @@ public class SqlBoxMigrationRunnerBeginFailureTests
             => throw new NotSupportedException("RunNormalPathAsync must not be reached when BeginAsync throws.");
     }
 
-    /// <summary>
-    /// UoW spy that throws <see cref="_throwOnBegin"/> from <see cref="BeginAsync"/>
-    /// and records which lifecycle methods were invoked. Each flag is exposed so the
-    /// test can pin "Begin reached, Commit/Rollback skipped, Dispose still ran".
-    /// </summary>
     private sealed class CapturingProvisioningUnitOfWork : IAmAProvisioningUnitOfWork<FakeDbTransaction>
     {
         private readonly Exception _throwOnBegin;

@@ -30,20 +30,12 @@ using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
+/// <summary>
+/// A provisioner whose <see cref="BoxType"/> the hosted service does not recognise must fail
+/// startup, naming the value and <c>OrderingOrdinal</c>, rather than be silently mis-ordered.
+/// </summary>
 public class BoxProvisioningHostedServiceUnknownBoxTypeTests
 {
-    // BoxProvisioningHostedService previously ordered provisioners with
-    //     OrderBy(p => p.BoxType == BoxType.Outbox ? 0 : 1)
-    // — works for the current { Outbox, Inbox } enum but degrades silently if a third
-    // BoxType is added: a future Lockbox / DeadLetterBox would land in the "everything
-    // else" bucket and provision in DI registration order, intermittent and unobservable.
-    // The fix replaces the lambda with a switch over BoxType whose default arm throws
-    // ArgumentOutOfRangeException — the next contributor adding an enum value gets a
-    // loud startup failure that names the file and method to update, instead of a quiet
-    // mis-ordering in production. This test pins that contract using (BoxType)999 as
-    // the probe — a value safely outside the declared enum range that any future
-    // BoxType addition will not collide with.
-
     [Fact]
     public async Task When_hosted_service_is_started_with_a_provisioner_for_an_unrecognised_box_type_it_should_throw_argument_out_of_range()
     {
@@ -58,9 +50,7 @@ public class BoxProvisioningHostedServiceUnknownBoxTypeTests
         var ex = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             service.StartAsync(default));
 
-        //Assert — the message names the unknown value (so the operator sees which BoxType
-        //         tripped the guard) and the switch method (so the next contributor knows
-        //         exactly where to add the new arm).
+        //Assert
         Assert.Contains("999", ex.Message, StringComparison.Ordinal);
         Assert.Contains("OrderingOrdinal", ex.Message, StringComparison.Ordinal);
     }

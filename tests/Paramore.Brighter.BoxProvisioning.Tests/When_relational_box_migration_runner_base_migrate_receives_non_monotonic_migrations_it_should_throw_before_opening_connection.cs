@@ -34,21 +34,9 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// The runner base must reject a non-monotonic migration list BEFORE opening any
-/// connection, acquiring any advisory lock, or beginning any transaction. Invalid lists
-/// corrupt every path branch (PK violation on history insert, skipped ALTERs, double-applied
-/// DDL — see spec 0027 Items H/I/Q), so the validation sits at <see cref="MigrateAsync"/>
-/// entry per ADR 0058 §B.2.
-/// <para>
-/// Spec 0027 R1 (PR #4039 part 2): the chain is sourced from the injected catalog, so a
-/// malformed list is wired in via <see cref="StubBoxMigrationCatalog.Migrations"/> rather
-/// than passed as a <c>MigrateAsync</c> argument.
-/// </para>
-/// <para>
-/// This test pins the ordering by recording <see cref="OrderProbeTestRunner.OpenConnectionCalled"/>
-/// inside the <see cref="OrderProbeTestRunner.OpenConnectionAsync"/> override. A non-monotonic
-/// list must produce a <see cref="ConfigurationException"/> with that flag still <c>false</c>.
-/// </para>
+/// The runner must reject a non-monotonic migration chain with <see cref="ConfigurationException"/>
+/// before opening a connection, taking a lock or beginning a transaction: a gap or a repeat corrupts
+/// every path (ADR 0058 §B.2).
 /// </summary>
 public class SqlBoxMigrationRunnerMonotonicityValidationTests
 {
@@ -79,14 +67,7 @@ public class SqlBoxMigrationRunnerMonotonicityValidationTests
         Assert.False(runner.OpenConnectionCalled);
     }
 
-    /// <summary>
-    /// Records whether <c>OpenConnectionAsync</c> was invoked. All other hooks throw
-    /// <see cref="NotSupportedException"/> as defense-in-depth — the test asserts the
-    /// validation throws BEFORE the connection opens, so no other hook should ever be
-    /// reached. If the ordering regresses (e.g. validation moves to AFTER OpenConnection),
-    /// either <see cref="OpenConnectionCalled"/> flips true or one of the post-Open hooks
-    /// throws <see cref="NotSupportedException"/> instead of <see cref="ConfigurationException"/>.
-    /// </summary>
+    // Hooks after OpenConnectionAsync throw NotSupportedException, so a validation that runs too late surfaces as the wrong exception.
     private sealed class OrderProbeTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         public bool OpenConnectionCalled { get; private set; }

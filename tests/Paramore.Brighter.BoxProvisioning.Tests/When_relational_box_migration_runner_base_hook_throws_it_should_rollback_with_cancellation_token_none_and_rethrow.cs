@@ -34,18 +34,10 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// On any exception thrown by a hook between <c>BeginAsync</c> and <c>CommitAsync</c> the
-/// runner base must call <c>uow.RollbackAsync(CancellationToken.None)</c> — NOT the
-/// caller's token — and rethrow the original exception. The <c>CancellationToken.None</c>
-/// detail is load-bearing per ADR 0058 §B.3: passing the caller's token would cause
-/// <c>RollbackAsync</c> itself to throw <see cref="OperationCanceledException"/> and
-/// abandon the unwind when the caller's token is signalled.
+/// When a hook between <c>BeginAsync</c> and <c>CommitAsync</c> throws, the runner must call
+/// <c>RollbackAsync(CancellationToken.None)</c>, not the caller's token, and rethrow the original
+/// exception. Passing the caller's token would let a cancelled caller abandon the unwind (ADR 0058 §B.3).
 /// </summary>
-/// <remarks>
-/// Four <c>[Fact]</c>s — one per hook between <c>BeginAsync</c> and <c>CommitAsync</c>
-/// (<c>EnsureHistoryTableAsync</c>, <c>RunFreshPathAsync</c>, <c>RunBootstrapPathAsync</c>,
-/// <c>RunNormalPathAsync</c>) — share an arrange/act/assert helper.
-/// </remarks>
 public class SqlBoxMigrationRunnerHookFailureTests
 {
     [Fact]
@@ -84,14 +76,9 @@ public class SqlBoxMigrationRunnerHookFailureTests
             cancellationToken: cts.Token));
 
         //Assert
-        // The original sentinel exception must propagate to the caller — neither swallowed
-        // nor wrapped — so callers can pattern-match on the type they actually threw.
         Assert.IsType<InvalidOperationException>(thrown);
         Assert.Equal(ThrowingHookTestRunner.SentinelMessage, thrown!.Message);
 
-        // RollbackAsync must have been called (so the unwind ran) AND it must have been
-        // called with CancellationToken.None — proving the runner did NOT forward the
-        // caller's cts.Token.
         Assert.NotNull(unitOfWork.RollbackToken);
         Assert.Equal(CancellationToken.None, unitOfWork.RollbackToken!.Value);
     }
@@ -104,11 +91,6 @@ public class SqlBoxMigrationRunnerHookFailureTests
         RunNormalPath
     }
 
-    /// <summary>
-    /// Throws an <see cref="InvalidOperationException"/> with <see cref="SentinelMessage"/>
-    /// from one configured hook; the other hooks complete successfully. <c>RedetectStateAsync</c>
-    /// drives which path-hook is reached when the throw target is one of the path hooks.
-    /// </summary>
     private sealed class ThrowingHookTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         public const string SentinelMessage = "spec 0028 Phase 6.2 sentinel — hook failure";
@@ -149,12 +131,12 @@ public class SqlBoxMigrationRunnerHookFailureTests
             return Task.CompletedTask;
         }
 
+        // EnsureHistoryTable throws before this hook is reached, so it takes the default arm.
         protected override Task<(bool tableExists, bool historyExists)> RedetectStateAsync(
             FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
             CancellationToken cancellationToken)
             => _hookToThrow switch
             {
-                // EnsureHistoryTable throws before this method is reached; default the result.
                 ThrowFromHook.RunFreshPath => Task.FromResult((false, false)),
                 ThrowFromHook.RunBootstrapPath => Task.FromResult((true, false)),
                 ThrowFromHook.RunNormalPath => Task.FromResult((true, true)),
@@ -189,12 +171,6 @@ public class SqlBoxMigrationRunnerHookFailureTests
         }
     }
 
-    /// <summary>
-    /// Captures the cancellation token passed to <see cref="RollbackAsync"/> so the test can
-    /// assert it equals <see cref="CancellationToken.None"/>. The token is exposed as
-    /// nullable so a never-called <see cref="RollbackAsync"/> is distinguishable from a
-    /// "called with None" invocation.
-    /// </summary>
     private sealed class CapturingProvisioningUnitOfWork : IAmAProvisioningUnitOfWork<FakeDbTransaction>
     {
         public FakeDbTransaction? Transaction => null;
