@@ -43,6 +43,8 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
     // Long enough that a runner which does not retry SQLITE_BUSY fails before the writer releases.
     private static readonly TimeSpan WriterHold = TimeSpan.FromMilliseconds(600);
 
+    private static readonly TimeSpan SchedulerJitterSlack = TimeSpan.FromMilliseconds(120);
+
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_contention_{Guid.NewGuid():N}.db");
 
@@ -71,11 +73,7 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
         var writerTransaction = (SqliteTransaction)await writer.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable);
 
-        //Force an immediate writer-lock acquisition by issuing a write inside the transaction.
-        //SQLite's serializable isolation acquires the reserved lock lazily; doing a write
-        //promotes it to a writer lock, which is what we need to make the runner contend.
-        await ExecuteWriteAsync(writer, writerTransaction,
-            "CREATE TABLE IF NOT EXISTS [__sqlite_contention_marker] ([id] INTEGER NOT NULL)");
+        await TakeWriterSlotAsync(writer, writerTransaction);
 
         var releaseWriter = Task.Run(async () =>
         {
@@ -99,7 +97,7 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
         //Assert
         Assert.Null(thrown);
         Assert.Equal(1, await GetHistoryRowCountAsync(_tableName, version: 1));
-        var minimumExpectedWait = WriterHold - TimeSpan.FromMilliseconds(120);
+        var minimumExpectedWait = WriterHold - SchedulerJitterSlack;
         Assert.True(
             stopwatch.Elapsed >= minimumExpectedWait,
             $"Runner returned in {stopwatch.Elapsed.TotalMilliseconds:F0}ms but writer held the " +
@@ -134,12 +132,12 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
-    private static async Task ExecuteWriteAsync(
-        SqliteConnection connection, SqliteTransaction transaction, string sql)
+    // Serializable takes SQLite's reserved lock lazily; a write takes it now.
+    private static async Task TakeWriterSlotAsync(SqliteConnection connection, SqliteTransaction transaction)
     {
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = sql;
+        command.CommandText = "CREATE TABLE IF NOT EXISTS [__sqlite_contention_marker] ([id] INTEGER NOT NULL)";
         await command.ExecuteNonQueryAsync();
     }
 

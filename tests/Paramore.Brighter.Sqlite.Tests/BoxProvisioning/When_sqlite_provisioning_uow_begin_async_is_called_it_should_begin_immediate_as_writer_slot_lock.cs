@@ -42,6 +42,11 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// </summary>
 public class ProvisioningUnitOfWorkBeginTests : IAsyncLifetime
 {
+    private const int SqliteBusy = 5;
+
+    // The driver reads a DefaultTimeout of 0 as "wait forever", and overwrites PRAGMA busy_timeout.
+    private const int SmallestBusyTimeoutSeconds = 1;
+
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_uow_begin_{Guid.NewGuid():N}.db");
 
@@ -86,12 +91,12 @@ public class ProvisioningUnitOfWorkBeginTests : IAsyncLifetime
         Assert.NotNull(uow.Transaction);
 
         await using var sibling = new SqliteConnection(_connectionString);
-        sibling.DefaultTimeout = 1;
+        sibling.DefaultTimeout = SmallestBusyTimeoutSeconds;
         await sibling.OpenAsync();
 
         var siblingException = Record.Exception(
             () => sibling.BeginTransaction(IsolationLevel.Serializable, deferred: false));
         var sqliteException = Assert.IsType<SqliteException>(siblingException);
-        Assert.Equal(5, sqliteException.SqliteErrorCode);
+        Assert.Equal(SqliteBusy, sqliteException.SqliteErrorCode);
     }
 }

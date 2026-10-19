@@ -46,6 +46,11 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
     // The smallest lockTimeout SQLite honours: DefaultTimeout is in whole seconds.
     private static readonly TimeSpan TightLockTimeout = TimeSpan.FromSeconds(1);
 
+    // Under WriterHold, and far under the driver's 30-second default, with room for CI scheduler jitter.
+    private static readonly TimeSpan FailFastCeiling = TimeSpan.FromMilliseconds(1500);
+
+    private const int SqliteBusy = 5;
+
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_lock_timeout_{Guid.NewGuid():N}.db");
 
@@ -75,8 +80,7 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
         var writerTransaction = (SqliteTransaction)await writer.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable);
 
-        await ExecuteWriteAsync(writer, writerTransaction,
-            "CREATE TABLE IF NOT EXISTS [__sqlite_lock_timeout_marker] ([id] INTEGER NOT NULL)");
+        await TakeWriterSlotAsync(writer, writerTransaction);
 
         var releaseWriter = Task.Run(async () =>
         {
@@ -97,14 +101,13 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
 
         // Assert
         var sqliteException = Assert.IsType<SqliteException>(thrown);
-        Assert.Equal(5, sqliteException.SqliteErrorCode);
+        Assert.Equal(SqliteBusy, sqliteException.SqliteErrorCode);
 
-        var failFastCeiling = TimeSpan.FromMilliseconds(1500);
         Assert.True(
-            stopwatch.Elapsed < failFastCeiling,
+            stopwatch.Elapsed < FailFastCeiling,
             $"Runner returned in {stopwatch.Elapsed.TotalMilliseconds:F0}ms but lockTimeout " +
             $"was {TightLockTimeout.TotalMilliseconds:F0}ms — expected the runner to give up " +
-            $"under {failFastCeiling.TotalMilliseconds:F0}ms, suggesting it ignored lockTimeout " +
+            $"under {FailFastCeiling.TotalMilliseconds:F0}ms, suggesting it ignored lockTimeout " +
             $"and inherited the driver's 30s default.");
     }
 
@@ -138,12 +141,12 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
-    private static async Task ExecuteWriteAsync(
-        SqliteConnection connection, SqliteTransaction transaction, string sql)
+    // Serializable takes SQLite's reserved lock lazily; a write takes it now.
+    private static async Task TakeWriterSlotAsync(SqliteConnection connection, SqliteTransaction transaction)
     {
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = sql;
+        command.CommandText = "CREATE TABLE IF NOT EXISTS [__sqlite_lock_timeout_marker] ([id] INTEGER NOT NULL)";
         await command.ExecuteNonQueryAsync();
     }
 
