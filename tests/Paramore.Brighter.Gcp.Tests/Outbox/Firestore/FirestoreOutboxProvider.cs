@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Google.Cloud.Firestore.V1;
 using Paramore.Brighter.Firestore;
 using Paramore.Brighter.Gcp.Tests.Firestore;
+using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.Outbox.Firestore.Async;
 using Paramore.Brighter.Gcp.Tests.Outbox.Firestore.Sync;
 using Paramore.Brighter.Outbox.Firestore;
@@ -35,6 +36,7 @@ public class FirestoreOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
 
     public void DeleteStore(IEnumerable<Message> messages)
     {
+        GatewayFactory.VerifyLocalCloudServiceAsync("firestore").GetAwaiter().GetResult();
         var config = Configuration.CreateOutbox();
         var firestore = new FirestoreConnectionProvider(config).GetFirestoreClient();
 
@@ -58,6 +60,7 @@ public class FirestoreOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
 
     public async Task DeleteStoreAsync(IEnumerable<Message> messages)
     {
+        await GatewayFactory.VerifyLocalCloudServiceAsync("firestore");
         var config = Configuration.CreateOutbox();
         var firestore = new FirestoreConnectionProvider(config).GetFirestoreClient();
 

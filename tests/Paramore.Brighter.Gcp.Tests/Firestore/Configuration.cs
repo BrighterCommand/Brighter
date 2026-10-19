@@ -11,6 +11,7 @@ public static class Configuration
         return new FirestoreConfiguration(GatewayFactory.GetProjectId(), DatabaseName)
         {
             Credential = GatewayFactory.GetCredential(),
+            Configure = GatewayFactory.ConfigureFirestoreClient,
             Inbox = new FirestoreCollection
             {
                 Name = InboxCollection,
@@ -24,6 +25,7 @@ public static class Configuration
         return new FirestoreConfiguration(GatewayFactory.GetProjectId(), DatabaseName)
         {
             Credential = GatewayFactory.GetCredential(),
+            Configure = GatewayFactory.ConfigureFirestoreClient,
             Outbox = new FirestoreCollection
             {
                 Name = OutboxCollection,
@@ -37,6 +39,7 @@ public static class Configuration
         return new FirestoreConfiguration(GatewayFactory.GetProjectId(), DatabaseName)
         {
             Credential = GatewayFactory.GetCredential(),
+            Configure = GatewayFactory.ConfigureFirestoreClient,
             Locking = new FirestoreCollection
             {
                 Name = LockingCollection,

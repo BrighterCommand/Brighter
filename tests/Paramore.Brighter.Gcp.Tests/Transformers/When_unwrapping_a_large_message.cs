@@ -36,6 +36,7 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
         {
             ProjectId = GatewayFactory.GetProjectId(),
             Credential = GatewayFactory.GetCredential(),
+            ClientBuilderConfigurator = GatewayFactory.ConfigureStorageClient,
             BucketName = _bucketName
         };
         

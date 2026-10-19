@@ -26,27 +26,70 @@ using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Scheduler.Events;
 using TickerQ.Utilities.Base;
+using TickerQ.Utilities.Interfaces;
 
 namespace Paramore.Brighter.MessageScheduler.TickerQ
 {
     /// <summary>
     /// The TickerQ Message scheduler Job
     /// </summary>
-    /// <param name="processor"></param>
-    public class BrighterTickerQSchedulerJob(IAmACommandProcessor processor)
+    public class BrighterTickerQSchedulerJob
     {
+        private readonly IAmACommandProcessor _processor;
+        private readonly ITickerClock _clock;
+
+        /// <summary>
+        /// Creates a scheduler job using the system clock.
+        /// </summary>
+        /// <param name="processor">The command processor used to dispatch scheduled work.</param>
+        public BrighterTickerQSchedulerJob(IAmACommandProcessor processor)
+            : this(processor, new SystemTickerClock())
+        {
+        }
+
+        /// <summary>
+        /// Creates a scheduler job using TickerQ's configured clock.
+        /// </summary>
+        /// <param name="processor">The command processor used to dispatch scheduled work.</param>
+        /// <param name="clock">The clock used to determine when scheduled work is due.</param>
+        [TickerQConstructor]
+        public BrighterTickerQSchedulerJob(IAmACommandProcessor processor, ITickerClock clock)
+        {
+            _processor = processor;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        }
+
         [TickerFunction(nameof(FireSchedulerMessageAsync))]
         public async Task FireSchedulerMessageAsync(TickerFunctionContext<string> tickerContext, CancellationToken cancellationToken)
         {
+            await WaitUntilScheduledAsync(tickerContext, cancellationToken);
             var schedulerRequest = JsonSerializer.Deserialize<FireSchedulerMessage>(tickerContext.Request, JsonSerialisationOptions.Options)!;
-            await processor.SendAsync(schedulerRequest);
+            await _processor.SendAsync(schedulerRequest, cancellationToken: cancellationToken);
         }
 
         [TickerFunction(nameof(FireSchedulerRequestAsync))]
         public async Task FireSchedulerRequestAsync(TickerFunctionContext<string> tickerContext, CancellationToken cancellationToken)
         {
+            await WaitUntilScheduledAsync(tickerContext, cancellationToken);
             var schedulerRequest = JsonSerializer.Deserialize<FireSchedulerRequest>(tickerContext.Request, JsonSerialisationOptions.Options)!;
-            await processor.SendAsync(schedulerRequest);
+            await _processor.SendAsync(schedulerRequest, cancellationToken: cancellationToken);
+        }
+
+        private async Task WaitUntilScheduledAsync(TickerFunctionContext tickerContext, CancellationToken cancellationToken)
+        {
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var remaining = tickerContext.ScheduledFor - _clock.UtcNow;
+                if (remaining <= TimeSpan.Zero) return;
+                await Task.Delay(remaining < TimeSpan.FromMilliseconds(50)
+                    ? remaining : TimeSpan.FromMilliseconds(50), cancellationToken);
+            }
+        }
+
+        private sealed class SystemTickerClock : ITickerClock
+        {
+            public DateTime UtcNow => DateTime.UtcNow;
         }
     }
 }

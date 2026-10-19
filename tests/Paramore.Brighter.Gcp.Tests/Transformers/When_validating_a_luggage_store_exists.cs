@@ -18,7 +18,8 @@ public class LuggageStoreExistsTests
             Strategy = StorageStrategy.CreateIfMissing,
             BucketName = bucketName,
             ProjectId = GatewayFactory.GetProjectId(),
-            Credential = GatewayFactory.GetCredential()
+            Credential = GatewayFactory.GetCredential(),
+            ClientBuilderConfigurator = GatewayFactory.ConfigureStorageClient
         };
         
         var luggageStore = new GcsLuggageStore(options);
@@ -45,7 +46,8 @@ public class LuggageStoreExistsTests
                      Strategy = StorageStrategy.Validate,
                      BucketName =  $"brightertestbucket-{Guid.NewGuid()}",
                      ProjectId = GatewayFactory.GetProjectId(),
-                     Credential = GatewayFactory.GetCredential()
+                     Credential = GatewayFactory.GetCredential(),
+                     ClientBuilderConfigurator = GatewayFactory.ConfigureStorageClient
                  };
         
                  var luggageStore = new GcsLuggageStore(options);

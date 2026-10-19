@@ -21,6 +21,7 @@ public class LuggageUploadTests : IDisposable
         {
             ProjectId = GatewayFactory.GetProjectId(),
             Credential = GatewayFactory.GetCredential(),
+            ClientBuilderConfigurator = GatewayFactory.ConfigureStorageClient,
             BucketName = _bucketName
         };
         
@@ -53,6 +54,8 @@ public class LuggageUploadTests : IDisposable
         var result = await _luggageStore.RetrieveAsync(claim);
         var resultAsString = await new StreamReader(result).ReadToEndAsync();
         Assert.Equal(testContent, resultAsString);
+
+        await GatewayFactory.VerifyLocalCloudServiceAsync("gcs");
 
         await _luggageStore.DeleteAsync(claim);
 

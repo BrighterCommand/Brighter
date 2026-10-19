@@ -12,7 +12,7 @@ using TickerQ.Utilities.Interfaces.Managers;
 
 namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
 {
-    public abstract class BaseTickerQFixture
+    public abstract class BaseTickerQFixture : IAsyncLifetime
     {
         public TickerQSchedulerFactory SchedulerFactory { get; }
         public IAmACommandProcessor Processor { get; }
@@ -104,6 +104,14 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
         protected abstract IAmAHandlerFactory GetHandlerFactory();
         protected abstract IAmASubscriberRegistry GetSubscriberServiceRegistry();
         protected abstract IAmAMessageMapperRegistry GetMapperRegistery();
+
+        public Task InitializeAsync() => Task.CompletedTask;
+
+        public async Task DisposeAsync()
+        {
+            await ServiceProvider.GetRequiredService<ITickerQHostScheduler>().StopAsync();
+            await ((IAsyncDisposable)ServiceProvider).DisposeAsync();
+        }
 
         public void Clear()
         {
