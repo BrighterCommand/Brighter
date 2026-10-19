@@ -37,24 +37,13 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
 /// <summary>
-/// Companion to <c>ProvisioningUnitOfWorkRollbackTests</c>:
-/// that test pins the post-finalised-commit path (<see cref="InvalidOperationException"/>);
-/// this test pins the broader contract — RollbackAsync MUST NOT throw FOR ANY exception type.
-/// Sibling backends (MSSQL
-/// <c>When_mssql_provisioning_uow_rollback_throws_non_invalid_operation_exception_it_should_log_without_throwing</c>,
-/// Postgres <c>When_postgres_provisioning_uow_rollback_release_throws_it_should_log_without_throwing</c>)
-/// already catch <see cref="Exception"/> on the equivalent unwind seam; SQLite caught only
-/// <see cref="InvalidOperationException"/>, which let a zombied-connection
-/// <see cref="ObjectDisposedException"/> — or cancellation — escape and mask the runner's
-/// primary migration error.
+/// RollbackAsync does not throw for any exception type, not only <see cref="InvalidOperationException"/>;
+/// it logs a Warning instead, so the runner's primary migration error is not masked (ADR 0058 §B.3).
 /// </summary>
 /// <remarks>
-/// We force a non-<see cref="InvalidOperationException"/> by handing <c>uow.RollbackAsync</c>
-/// a pre-cancelled token: Microsoft.Data.Sqlite's <c>SqliteTransaction.RollbackAsync</c>
-/// short-circuits on a cancelled token via <c>Task.FromCanceled</c>, surfacing
-/// <see cref="TaskCanceledException"/> on await, which the old narrow catch did not handle.
-/// This is the simplest deterministic surface; the same widened catch covers the
-/// zombied-connection cases the reviewer cited.
+/// A pre-cancelled token makes <c>SqliteTransaction.RollbackAsync</c> surface
+/// <see cref="TaskCanceledException"/>: a deterministic failure that is not an
+/// <see cref="InvalidOperationException"/>.
 /// </remarks>
 public class ProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLifetime
 {
@@ -96,21 +85,14 @@ public class ProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLife
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None);
 
-        // Pre-cancel the token handed to RollbackAsync. SqliteTransaction.RollbackAsync honours
-        // the token via Task.FromCanceled — a representative non-IOE surface covering the same
-        // contract gap as a zombied connection raising ObjectDisposedException.
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        // Act — RollbackAsync MUST NOT throw even though the inner _transaction.RollbackAsync
-        // raises TaskCanceledException. Disposal-style contract: runner's catch path
-        // (catch { uow.RollbackAsync(...); throw; }) cannot have its primary exception masked.
+        // Act
         var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(cts.Token));
 
         Assert.Null(thrown);
 
-        // Best-effort path emitted a Warning carrying the original exception, matching the
-        // existing finalised-tx branch's diagnostic shape.
         var warnings = capturingLogger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
         Assert.Single(warnings);
     }
