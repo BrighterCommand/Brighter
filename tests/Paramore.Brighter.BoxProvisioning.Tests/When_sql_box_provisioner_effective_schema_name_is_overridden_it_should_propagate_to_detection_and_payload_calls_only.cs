@@ -51,13 +51,8 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
             detection, new RecordingMigrationCatalog(), payloadValidator,
             configuration, migrationRunner, BoxType.Outbox);
 
-        //Act — run twice to exercise both detection branches:
-        //  pass 1: bootstrap branch (DoesTableExist + DoesHistoryExist + DetectCurrentVersion + Validate + Migrate)
-        detection.HistoryExistsResult = false;
-        await provisioner.ProvisionAsync();
-        //  pass 2: history-exists branch (DoesTableExist + DoesHistoryExist + GetMaxVersion + Validate + Migrate)
-        detection.HistoryExistsResult = true;
-        await provisioner.ProvisionAsync();
+        //Act
+        await ProvisionOnBootstrapThenHistoryBranchAsync(provisioner, detection);
 
         //Assert
         Assert.Equal(new string?[] { "dbo", "dbo" }, detection.DoesTableExistSchemas);
@@ -80,11 +75,8 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
             detection, new RecordingMigrationCatalog(), payloadValidator,
             configuration, migrationRunner, BoxType.Outbox);
 
-        //Act — both branches.
-        detection.HistoryExistsResult = false;
-        await provisioner.ProvisionAsync();
-        detection.HistoryExistsResult = true;
-        await provisioner.ProvisionAsync();
+        //Act
+        await ProvisionOnBootstrapThenHistoryBranchAsync(provisioner, detection);
 
         //Assert
         Assert.Equal(new string?[] { null, null }, detection.DoesTableExistSchemas);
@@ -93,6 +85,16 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         Assert.Equal(new string?[] { null }, detection.GetMaxVersionSchemas);
         Assert.Equal(new string?[] { null, null }, payloadValidator.ValidateSchemas);
         Assert.Equal(new string?[] { "dbo", "dbo" }, migrationRunner.MigrateSchemas);
+    }
+
+    private static async Task ProvisionOnBootstrapThenHistoryBranchAsync(
+        SqlBoxProvisioner<FakeDbConnection, FakeDbTransaction> provisioner,
+        SchemaCapturingDetectionHelper detection)
+    {
+        detection.HistoryExistsResult = false;
+        await provisioner.ProvisionAsync();
+        detection.HistoryExistsResult = true;
+        await provisioner.ProvisionAsync();
     }
 
     private sealed class TestSqlBoxProvisionerWithDefaultSchema : SqlBoxProvisioner<FakeDbConnection, FakeDbTransaction>

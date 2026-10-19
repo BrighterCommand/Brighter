@@ -61,11 +61,8 @@ public class SqlBoxMigrationRunnerHookFailureTests
         //Arrange
         var unitOfWork = new CapturingProvisioningUnitOfWork();
         var runner = new ThrowingHookTestRunner(unitOfWork, hookToThrow);
-        // The caller's token must be non-default — we are proving the runner does NOT
-        // forward it to RollbackAsync. A fresh CancellationTokenSource produces a token
-        // whose underlying source is non-null, so it is not equal to CancellationToken.None.
-        using var cts = new CancellationTokenSource();
-        Assert.NotEqual(CancellationToken.None, cts.Token);
+        using var callerCancellation = new CancellationTokenSource();
+        Assert.NotEqual(CancellationToken.None, callerCancellation.Token);
 
         //Act
         var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
@@ -73,7 +70,7 @@ public class SqlBoxMigrationRunnerHookFailureTests
             schemaName: null,
             boxType: BoxType.Outbox,
             tableState: new BoxTableState(false, false, 0),
-            cancellationToken: cts.Token));
+            cancellationToken: callerCancellation.Token));
 
         //Assert
         Assert.IsType<InvalidOperationException>(thrown);

@@ -44,15 +44,12 @@ public class SqlBoxMigrationRunnerMonotonicityValidationTests
     public async Task When_migration_list_has_a_version_gap_migrate_should_throw_before_opening_connection()
     {
         //Arrange
-        // Gap discriminator: V1 → V3 skips V2. ValidateMigrationsMonotonic enforces curr == prev + 1.
-        var catalog = new StubBoxMigrationCatalog
+        var chainWithGapAtV2 = new IAmABoxMigration[]
         {
-            Migrations = new IAmABoxMigration[]
-            {
-                new StubBoxMigration(version: 1),
-                new StubBoxMigration(version: 3)
-            }
+            new StubBoxMigration(version: 1),
+            new StubBoxMigration(version: 3)
         };
+        var catalog = new StubBoxMigrationCatalog { Migrations = chainWithGapAtV2 };
         var runner = new OrderProbeTestRunner(catalog);
 
         //Act

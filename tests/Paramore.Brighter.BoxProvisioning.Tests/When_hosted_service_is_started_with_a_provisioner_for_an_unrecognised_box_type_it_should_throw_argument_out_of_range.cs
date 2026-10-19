@@ -36,12 +36,13 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class BoxProvisioningHostedServiceUnknownBoxTypeTests
 {
+    private const int BoxTypeValueNoEnumMemberWillUse = 999;
+
     [Fact]
     public async Task When_hosted_service_is_started_with_a_provisioner_for_an_unrecognised_box_type_it_should_throw_argument_out_of_range()
     {
-        //Arrange — drive the default arm of the new OrderingOrdinal switch with a BoxType
-        //          value that no current or future enum addition is expected to use.
-        var unknownBoxType = (BoxType)999;
+        //Arrange
+        var unknownBoxType = (BoxType)BoxTypeValueNoEnumMemberWillUse;
         var provisioner = new StubBoxProvisioner(unknownBoxType, "MysteryTable");
         var logger = new CapturingLogger<BoxProvisioningHostedService>();
         var service = new BoxProvisioningHostedService(new[] { provisioner }, logger);
@@ -51,7 +52,7 @@ public class BoxProvisioningHostedServiceUnknownBoxTypeTests
             service.StartAsync(default));
 
         //Assert
-        Assert.Contains("999", ex.Message, StringComparison.Ordinal);
+        Assert.Contains(BoxTypeValueNoEnumMemberWillUse.ToString(), ex.Message, StringComparison.Ordinal);
         Assert.Contains("OrderingOrdinal", ex.Message, StringComparison.Ordinal);
     }
 }

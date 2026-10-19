@@ -45,20 +45,18 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 [Collection("BoxProvisioningObservability")]
 public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
 {
+    // Exported by the same TracerProvider, so the parent span does not race a separate ActivityListener.
+    private const string ParentActivitySourceName = "Paramore.Brighter.Tests";
+
     private readonly List<Activity> _exportedActivities = new();
     private readonly TracerProvider _tracerProvider;
     private readonly BrighterTracer _tracer;
 
     public SqlBoxMigrationRunnerObservabilityTests()
     {
-        // Subscribe to the standard "Paramore.Brighter" source so migration spans land in the
-        // same trace stream operators already use for outbox / publish / dispatch spans. The
-        // "Paramore.Brighter.Tests" source is also added so the parent-activity test can pin
-        // the child-parent relationship without a separate ActivityListener (whose sampling
-        // decision would race the TracerProvider's).
         _tracer = new BrighterTracer();
         _tracerProvider = Sdk.CreateTracerProviderBuilder()
-            .AddSource(BrighterSemanticConventions.SourceName, "Paramore.Brighter.Tests")
+            .AddSource(BrighterSemanticConventions.SourceName, ParentActivitySourceName)
             .AddInMemoryExporter(_exportedActivities)
             .Build()!;
     }
@@ -183,7 +181,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
     public async Task When_migrate_async_runs_under_a_parent_activity_it_should_emit_a_child_span()
     {
         //Arrange
-        using var parentSource = new ActivitySource("Paramore.Brighter.Tests");
+        using var parentSource = new ActivitySource(ParentActivitySourceName);
         using var parentActivity = parentSource.StartActivity("test-parent")!;
 
         var unitOfWork = new ObservabilityTestUnitOfWork();
