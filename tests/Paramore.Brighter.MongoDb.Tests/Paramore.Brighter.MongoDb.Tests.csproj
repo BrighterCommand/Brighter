@@ -28,6 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.MongoDb\Paramore.Brighter.Inbox.MongoDb.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.MongoDb\Paramore.Brighter.Locking.MongoDb.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MongoDb\Paramore.Brighter.MongoDb.csproj" />

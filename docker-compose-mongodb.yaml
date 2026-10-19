@@ -7,3 +7,25 @@ services:
       MONGO_INITDB_DATABASE: brighter
     ports:
       - "27017:27017"
+  mongo-transactions:
+    image: mongo:7
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--port", "27018"]
+    ports:
+      - "127.0.0.1:27018:27018"
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - --port
+        - "27018"
+        - --quiet
+        - --eval
+        - >-
+          try { rs.status(); } catch (error) {
+            if (error.code !== 94) throw error;
+            rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27018'}]});
+          }
+          quit(db.hello().isWritablePrimary ? 0 : 1);
+      interval: 2s
+      timeout: 10s
+      retries: 30
