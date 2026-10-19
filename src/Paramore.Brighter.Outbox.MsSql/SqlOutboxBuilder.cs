@@ -114,8 +114,8 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="schemaName">
         /// Optional MSSQL schema name. When non-null, the emitted DDL schema-qualifies the
         /// table as <c>[schemaName].[outboxTableName]</c>; otherwise the table is emitted
-        /// unqualified and lands in the connection's default schema. Per PR #4039 reviewer
-        /// item M4-1 (F1a): callers configuring <see cref="IAmARelationalDatabaseConfiguration.SchemaName"/>
+        /// unqualified and lands in the connection's default schema. Callers configuring
+        /// <see cref="IAmARelationalDatabaseConfiguration.SchemaName"/>
         /// rely on the table actually landing in that schema, which the unqualified form
         /// cannot guarantee.
         /// </param>

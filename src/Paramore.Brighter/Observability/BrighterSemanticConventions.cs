@@ -31,11 +31,7 @@ public static class BrighterSemanticConventions
 {
     public const string ArchiveAge = "paramore.brighter.archive_age_in_milliseconds";
     public const string ArchiveMessages = "paramore.brighter.archive_messages";
-    // BoxProvisioning migration span / event conventions. The span wraps a full
-    // <c>IAmABoxMigrationRunner.MigrateAsync</c> call; <c>BoxMigrationPath</c> records
-    // which of fresh/bootstrap/normal was taken after the under-lock re-detection; the
-    // event names are emitted as child <see cref="System.Diagnostics.ActivityEvent"/>s
-    // on the migration span so an operator can trace the path without correlating logs.
+    // Box migration span: the path tag and child events record which of fresh/bootstrap/normal was taken.
     public const string BoxMigration = "paramore.brighter.box_migration";
     public const string BoxMigrationPath = "paramore.brighter.box_migration.path";
     public const string BoxMigrationFromVersion = "paramore.brighter.box_migration.from_version";

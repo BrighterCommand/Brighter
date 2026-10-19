@@ -64,8 +64,7 @@ namespace Paramore.Brighter
         /// other backends accept them, so the regex picks the strictest backend's rule to keep
         /// portable configuration safe. Schema names that fail the regex surface as
         /// <see cref="ConfigurationException"/> at provisioning entry rather than as a
-        /// downstream SQL error. Per PR #4039 reviewer items M2-7 and the multi-part 2026-05-20
-        /// review item 1.
+        /// downstream SQL error.
         /// </remarks>
         string? SchemaName { get; }
     }
