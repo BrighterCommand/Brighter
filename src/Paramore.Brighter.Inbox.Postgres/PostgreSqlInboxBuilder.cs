@@ -101,7 +101,7 @@ namespace Paramore.Brighter.Inbox.Postgres
         /// table as <c>"schemaname"."inboxtablename"</c> (lowercase-then-quote via
         /// <see cref="PgIdentifier"/>) so reserved-keyword names parse cleanly while still
         /// resolving to the same physical table that PG's natural case-fold of unquoted
-        /// identifiers would have produced. See the outbox builder for the full rationale.
+        /// identifiers would have produced.
         /// </param>
         /// <returns>The required DDL</returns>
         public static string GetDDL(string inboxTableName, bool binaryMessagePayload = false, bool jsonMessagePayload = false, string? schemaName = null)
@@ -123,8 +123,6 @@ namespace Paramore.Brighter.Inbox.Postgres
         /// <returns>The required SQL</returns>
         public static string GetExistsQuery(string tableSchema, string inboxTableName)
         {
-            // information_schema.tables stores PG-folded (lowercase) names. Normalize both
-            // configured values so mixed-case defaults match the stored folded form.
             return string.Format(
                 InboxExistsSQL,
                 PgIdentifier.Normalize(tableSchema),

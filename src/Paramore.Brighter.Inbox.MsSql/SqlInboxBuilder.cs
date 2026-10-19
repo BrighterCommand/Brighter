@@ -76,8 +76,8 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// <param name="schemaName">
         /// Optional MSSQL schema name. When non-null, the emitted DDL schema-qualifies the
         /// table as <c>[schemaName].[inboxTableName]</c>; otherwise the table is emitted
-        /// unqualified and lands in the connection's default schema. Per PR #4039 reviewer
-        /// item M4-1 (F1a): callers configuring <see cref="Paramore.Brighter.IAmARelationalDatabaseConfiguration.SchemaName"/>
+        /// unqualified and lands in the connection's default schema. Callers configuring
+        /// <see cref="Paramore.Brighter.IAmARelationalDatabaseConfiguration.SchemaName"/>
         /// rely on the table actually landing in that schema, which the unqualified form
         /// cannot guarantee.
         /// </param>

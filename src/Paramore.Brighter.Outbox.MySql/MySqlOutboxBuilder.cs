@@ -112,7 +112,7 @@ namespace Paramore.Brighter.Outbox.MySql
         /// Optional MySQL schema (database) name. When non-null, the emitted DDL schema-qualifies
         /// the table as <c>`schemaName`.`outboxTableName`</c>; otherwise the table is emitted
         /// unqualified and lands in the connection's bound database (<c>DATABASE()</c>). In MySQL
-        /// "schema" is synonymous with "database"; per PR #4039 reviewer item M4-1 (F1c),
+        /// "schema" is synonymous with "database";
         /// configuring <see cref="Paramore.Brighter.IAmARelationalDatabaseConfiguration.SchemaName"/>
         /// to a database different from the connection's bound database requires schema-qualified
         /// DDL — without it, detection looks in SchemaName while creation lands in DATABASE().

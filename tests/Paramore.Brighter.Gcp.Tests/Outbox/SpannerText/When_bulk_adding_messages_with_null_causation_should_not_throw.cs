@@ -36,6 +36,7 @@ namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerText;
 // exact-name ("@CausationId") special case in SpannerOutbox.CreateSqlParameter, so it produced an
 // untyped DBNull that the emulator/production rejects. A bulk Add of >1 message therefore threw.
 [Trait("Category", "Spanner")]
+[Collection("Spanner")]
 public class SpannerBulkAddNullCausationTests : IDisposable
 {
     private readonly SpannerTextOutboxProvider _outboxProvider;
@@ -55,7 +56,11 @@ public class SpannerBulkAddNullCausationTests : IDisposable
     {
         // Arrange
         var context = new RequestContext(); // no causation id in the bag -> causation binds as null
-        var messages = new List<Message> { _messageBuilder.Build(), _messageBuilder.Build() };
+        var messages = new List<Message>
+        {
+            _messageBuilder.SetMessageId(Id.Random()).Build(),
+            _messageBuilder.SetMessageId(Id.Random()).Build()
+        };
         _createdMessages.AddRange(messages);
 
         var outbox = _outboxProvider.CreateOutbox();

@@ -84,8 +84,7 @@ namespace Paramore.Brighter.Inbox.MySql
         /// <param name="schemaName">
         /// Optional MySQL schema (database) name. When non-null, the emitted DDL schema-qualifies
         /// the table as <c>`schemaName`.`inboxTableName`</c>; otherwise the table is emitted
-        /// unqualified and lands in the connection's bound database. Per PR #4039 reviewer
-        /// item M4-1 (F1c). See the outbox builder for the full rationale.
+        /// unqualified and lands in the connection's bound database.
         /// </param>
         /// <returns></returns>
         public static string GetDDL(string inboxTableName, bool binaryMessage = false, bool jsonMessage = false, string? schemaName = null)
