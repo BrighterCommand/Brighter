@@ -41,7 +41,7 @@
 
 *ADR 0086 step 1, ADR 0087 step 1, ADR 0085 step 1, the ADR 0086 step 7 test-project references, and AC-24.*
 
-- [ ] **PROJECT: T1.1 — Reference `Microsoft.Extensions.Diagnostics.HealthChecks` from `Paramore.Brighter.Outbox.Hosting`**
+- [x] **PROJECT: T1.1 — Reference `Microsoft.Extensions.Diagnostics.HealthChecks` from `Paramore.Brighter.Outbox.Hosting`**
   - Add `<PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks"/>` to `src/Paramore.Brighter.Outbox.Hosting/Paramore.Brighter.Outbox.Hosting.csproj`. No version attribute: central package management pins 10.0.12 at `Directory.Packages.props:93`.
   - No code change. Build `src` for every target in `$(BrighterTargetFrameworks)` with warnings as errors.
   - References: ADR 0086 *Technology Choices: Why the checks live in Outbox.Hosting*; NFR-5.
