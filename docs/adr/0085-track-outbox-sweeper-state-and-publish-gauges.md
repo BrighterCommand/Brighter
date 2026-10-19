@@ -100,7 +100,7 @@ The mechanism behind these consequences is in the code.
 - **The shared type must live in `Paramore.Brighter`.** The Diagnostics project references only core (`Paramore.Brighter.Extensions.Diagnostics.csproj:12`).
 - **Core stays container-agnostic.** No type in `src/Paramore.Brighter` names `IServiceProvider`, following `0014-di-friendly-framework.md`.
 - **The user's call to `UseOutboxSweeper` does not change (FR-4A).** What the call registers internally may change.
-- **Add no abstraction without necessity.** Existing types carry a responsibility where they can. Public API changes stay source compatible (NFR-6).
+- **Add no abstraction without necessity.** Existing types carry a responsibility where they can. Public API changes stay source compatible (NFR-6): a trailing optional parameter on an existing constructor is allowed, and binary compatibility is not required.
 - **Both signals are pulled.** The exporter and the health-check host call them on their own threads. The sweeper never pushes, so a hung sweeper cannot make a signal go stale.
 - **The circuit breaker is the user's.** Brighter does not register it. The mediator resolves it with `GetService` (`ServiceCollectionExtensions.cs:1016`), so it may be absent, and a third-party implementation may throw.
 
@@ -360,7 +360,7 @@ FR-6A.3 makes the circuit breaker the source of truth, so the gauge keeps no cop
 - An operator can alert on `max(paramore.brighter.outbox_sweeper.sweep.running_time) > 3 × TimerInterval`. The alert fires during a hang, including a hang inside lock acquisition, on one instance or many (FR-3, FR-9).
 - A sweeper that is skipping tripped topics shows a non-zero gauge while it keeps reporting `completed` sweeps (FR-3A).
 - The gauges and ADR 0086's checks read one record, so they never disagree about state, apart from the moment of observation.
-- The design adds two data types and no interface, no gauge class and no sweeper property. `UseOutboxSweeper` keeps its hosted-service registration.
+- The design adds two data types and no interface, no gauge class and no sweeper property. No existing member is removed or changed in a source-incompatible way (NFR-6); the one change to an existing signature is the optional trailing parameter on the `TimedOutboxSweeper` constructor. `UseOutboxSweeper` keeps its hosted-service registration.
 - Tracking adds a constant number of field writes per sweep and allocates nothing (NFR-3).
 - No existing member of any public type changes, and `IAmABrighterSweeperMeter` and `IAmAnOutboxCircuitBreaker` gain none (NFR-6).
 - Tests reach running time exactly through `FakeTimeProvider`, with no real delays (NFR-4).
