@@ -305,7 +305,7 @@
   - References: FR-4A, FR-4A.2; NFR-4; ADR 0085 *Why the container creates the record*.
   - Depends on: T3.4.
 
-- [ ] **CHARACTERISE: T3.8 — The sweeper's per-sweep allocation does not grow with sweeps**
+- [x] **CHARACTERISE: T3.8 — The sweeper's per-sweep allocation does not grow with sweeps**
   - **USE COMMAND**: `/test-first when ten thousand sweeps run the sweeper per sweep allocation should not grow`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_ten_thousand_sweeps_run_should_not_grow_the_per_sweep_allocation.cs`
