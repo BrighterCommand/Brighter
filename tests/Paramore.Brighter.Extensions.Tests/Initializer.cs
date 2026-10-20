@@ -85,6 +85,9 @@ internal static class Initializer
             diPackage.GetType("Paramore.Brighter.Extensions.DependencyInjection.ServiceProviderLifetimeScope")!.TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(HandlerLifetimeScope).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<ConsumerOptionalInboxEvent>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<ConsumerOptionalInboxEvent>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(Paramore.Brighter.Inbox.Handlers.UseInboxHandler<ConsumerOptionalInboxEvent>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<SharedRegistryCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<SharedRegistryCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(ResilienceExceptionPolicyHandlerAsync<SharedRegistryCommand>).TypeHandle);

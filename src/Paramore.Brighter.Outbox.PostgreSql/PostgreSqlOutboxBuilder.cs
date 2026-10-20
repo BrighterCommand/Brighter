@@ -130,8 +130,6 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <returns>The required SQL</returns>
         public static string GetExistsQuery(string tableCatalog, string outboxTableName)
         {
-            // information_schema.tables stores PG-folded (lowercase) names. Normalize the
-            // configured name so a mixed-case default like "Outbox" matches the stored "outbox".
             return string.Format(OutboxExistsSQL, tableCatalog, PgIdentifier.Normalize(outboxTableName));
         }
     }

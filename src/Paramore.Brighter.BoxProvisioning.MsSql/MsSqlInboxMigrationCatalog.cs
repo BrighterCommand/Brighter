@@ -33,10 +33,9 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// </summary>
 /// <remarks>
 /// V1's <c>UpScript</c> is the literal historical baseline DDL — the first MSSQL inbox
-/// builder shape (commit <c>b7f96957b</c>, March 2019). Spec 0027 R1 split "live builder
-/// DDL" away from V1.UpScript: the fresh-install fast path (ADR 0057 §3) now sources its
-/// DDL from <see cref="FreshInstallDdl"/>, so V1.UpScript is free to carry the honest
-/// historical shape. V2 adds <c>ContextKey</c> as a conditional <c>ALTER TABLE ADD</c>
+/// builder shape (commit <c>b7f96957b</c>, March 2019). The fresh-install fast path
+/// (ADR 0057 §3) takes its DDL from <see cref="FreshInstallDdl"/> instead, so V1.UpScript
+/// carries the historical shape. V2 adds <c>ContextKey</c> as a conditional <c>ALTER TABLE ADD</c>
 /// guarded by <c>IF COL_LENGTH(...) IS NULL</c> per ADR 0057 §5.
 /// <para>
 /// Born-past-V1 asymmetry: the MSSQL inbox first shipped <em>with</em> <c>ContextKey</c> —
@@ -48,7 +47,7 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// still distinguish a hypothetical pre-V2 table.
 /// </para>
 /// <para>
-/// V3 adds <c>CausationId</c> (Spec 0027, #2541) via the same idempotency-guarded
+/// V3 adds <c>CausationId</c> via the same idempotency-guarded
 /// <c>ALTER TABLE ADD</c> pattern. The accumulated <c>LogicalColumns</c> across V1..V3 plus the
 /// MSSQL inbox housekeeping <c>Id</c> column equals the live builder's column set — verified by the drift test in
 /// <c>tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning</c>.
@@ -65,12 +64,8 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v3AddedColumns = ["CausationId"];
 
-    // Literal historical MSSQL inbox DDL extracted from commit b7f96957b (March 2019). The
-    // table first shipped with ContextKey already present — see the born-past-V1 note in the
-    // class remarks. {0} = table name (validated).
-    // The table identifier is bracket-quoted so legal-but-reserved T-SQL keyword names
-    // (User, Order, Group, …) bootstrap correctly — V2 already bracket-quotes, so V1
-    // is the only asymmetric step. 
+    // From commit b7f96957b (March 2019); born with ContextKey, see the class remarks. {0} is
+    // the validated table name, bracket-quoted so reserved words (User, Order) parse.
     private const string V1HistoricalDdl =
         """
         CREATE TABLE [{0}]
@@ -91,9 +86,6 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         Identifiers.AssertSafe(
             configuration.InBoxTableName,
             nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
-        // Pass SchemaName so the builder schema-qualifies the CREATE TABLE — otherwise the
-        // table lands in the connection's default schema (typically [dbo]) regardless of
-        // SchemaName. 
         if (configuration.SchemaName is not null)
         {
             Identifiers.AssertSafe(

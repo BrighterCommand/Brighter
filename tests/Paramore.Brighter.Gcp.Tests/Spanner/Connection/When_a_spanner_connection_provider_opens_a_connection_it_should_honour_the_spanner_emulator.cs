@@ -8,6 +8,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.Spanner.Connection;
 
 [Trait("Category", "Spanner")]
+[Collection("Spanner")]
 public class SpannerConnectionProviderEmulatorTests
 {
     // A bare connection string with no EmulatorDetection keyword — the shape production code

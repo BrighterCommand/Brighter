@@ -31,9 +31,10 @@ public class SchemaNameRoundTripTests
     public void When_a_schema_name_is_created_from_a_string_it_should_expose_the_value()
     {
         //Arrange
-        SchemaName sn = "dbo";
+        SchemaName? sn = "dbo";
 
         //Act + Assert
+        Assert.NotNull(sn);
         Assert.Equal("dbo", sn.Value);
     }
 
@@ -41,7 +42,7 @@ public class SchemaNameRoundTripTests
     public void When_a_schema_name_is_implicitly_converted_to_string_it_should_yield_the_original()
     {
         //Arrange
-        SchemaName sn = "dbo";
+        SchemaName? sn = "dbo";
 
         //Act
         string? s = sn;
@@ -65,7 +66,7 @@ public class SchemaNameRoundTripTests
     {
         //Arrange
         var a = new SchemaName("dbo");
-        var b = (SchemaName)"dbo";
+        SchemaName? b = "dbo";
 
         //Act + Assert
         Assert.Equal(a, b);
@@ -97,7 +98,7 @@ public class SchemaNameRoundTripTests
     public void When_schema_name_is_null_or_empty_is_called_with_empty_string_it_should_return_true()
     {
         //Arrange
-        var empty = (SchemaName)"";
+        SchemaName? empty = "";
 
         //Act + Assert
         Assert.True(SchemaName.IsNullOrEmpty(empty));
@@ -107,7 +108,7 @@ public class SchemaNameRoundTripTests
     public void When_schema_name_is_null_or_empty_is_called_with_non_empty_string_it_should_return_false()
     {
         //Arrange
-        var sn = (SchemaName)"dbo";
+        SchemaName? sn = "dbo";
 
         //Act + Assert
         Assert.False(SchemaName.IsNullOrEmpty(sn));

@@ -180,7 +180,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
     {
-        schemaName = GuardIdentifiers(tableName, schemaName);
+        GuardIdentifiers(tableName, schemaName);
         ThrowIfPerSchemaHasNoSchema();
 
         var migrations = GetMigrations(tableName, schemaName);
@@ -259,18 +259,15 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     }
 
     // The runner is callable without going through a catalog, so it asserts identifier safety
-    // itself. A SchemaName that wraps a null or empty string is absent, the same as a null one.
-    private static SchemaName? GuardIdentifiers(BoxTableName tableName, SchemaName? schemaName)
+    // itself.
+    private static void GuardIdentifiers(BoxTableName tableName, SchemaName? schemaName)
     {
         Identifiers.AssertSafe(tableName.Value, nameof(tableName));
 
-        if (SchemaName.IsNullOrEmpty(schemaName))
+        if (schemaName is not null)
         {
-            return null;
+            Identifiers.AssertSafe(schemaName.Value, nameof(schemaName));
         }
-
-        Identifiers.AssertSafe(schemaName.Value, nameof(schemaName));
-        return schemaName;
     }
 
     private void ThrowIfPerSchemaHasNoSchema()

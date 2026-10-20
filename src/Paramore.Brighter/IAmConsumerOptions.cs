@@ -12,9 +12,9 @@ namespace Paramore.Brighter
         IAmAChannelFactory? DefaultChannelFactory { get; set; }
         
         /// <summary>
-        /// The configuration of our inbox
+        /// The global inbox configuration. A value of <see langword="null"/> disables the global inbox.
         /// </summary>
-        InboxConfiguration InboxConfiguration { get; set; }
+        InboxConfiguration? InboxConfiguration { get; set; }
 
         /// <summary>
         /// An iterator over the subscriptions that this ServiceActivator has

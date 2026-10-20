@@ -277,6 +277,8 @@ jobs:
         image: rabbitmq:4.2-management
         ports:
         - 5672:5672 
+        # used by the purge recovery tests to force-close their own connection
+        - 15672:15672
         # needed because the rabbitmq container does not provide a healthcheck
         options: >-
           --health-cmd "rabbitmqctl node_health_check"
@@ -777,6 +779,8 @@ jobs:
             10.0.x
       - name: Install dependencies
         run: dotnet restore
+      - name: Start MongoDB replica set for transaction tests
+        run: docker compose -f docker-compose-mongodb.yaml up -d --wait mongo-transactions
       - name: MongoDB Tests
         run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
     
@@ -816,7 +820,10 @@ jobs:
       # The Pull and PullOrdering messaging tests run in gcp-emulator-ci instead: against real Pub/Sub
       # their DLQ, requeue and delivery-count tests take over an hour, far past this job's cap.
       - name: GCP Tests
-        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Fragile!=CI&Requires!=PubSubEmulator&FullyQualifiedName!~Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.&FullyQualifiedName!~Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering." --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --blame-hang-timeout 15min --framework net10.0
+        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Category!=GcpPubSubPurge&Fragile!=CI&Requires!=PubSubEmulator&FullyQualifiedName!~Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.&FullyQualifiedName!~Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering." --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --blame-hang-timeout 15min --framework net10.0
+
+      - name: GCP Purge Tests (service)
+        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category=GcpPubSubPurge&Requires!=PubSubEmulator&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --blame-hang-timeout 5min --framework net10.0
 
   gcp-emulator-ci:
     runs-on: ubuntu-latest
@@ -847,11 +854,11 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
 
-      - name: GCP Pull Tests (emulator)
+      - name: GCP Pull and Purge Tests (emulator)
         env:
           PUBSUB_EMULATOR_HOST: localhost:8085
           GOOGLE_CLOUD_PROJECT: brighter-test
-        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "(FullyQualifiedName~Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.|FullyQualifiedName~Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering.)&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --blame-hang-timeout 15min --framework net10.0
+        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "(FullyQualifiedName~Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.|FullyQualifiedName~Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering.|Category=GcpPubSubPurge)&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --blame-hang-timeout 15min --framework net10.0
 
   rocketmq-ci:
     runs-on: ubuntu-latest

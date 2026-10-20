@@ -1,5 +1,4 @@
 ﻿using Google.Cloud.PubSub.V1;
-using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
@@ -55,7 +54,7 @@ public partial class GcpPubSubStreamMessageConsumer(
         Accept(gcpStreamMessage);
         Log.AcknowledgeSuccess(s_logger, message.Id.Value, "", subscriptionName.ToString());
     }
-    
+
     /// <summary>
     /// Asynchronously acknowledges a message, signalling the Pub/Sub service that the message
     /// has been successfully processed and can be discarded.
@@ -176,24 +175,28 @@ public partial class GcpPubSubStreamMessageConsumer(
 
     /// <summary>
     /// Synchronously purges all messages from the subscription backlog by executing a 
-    /// Pub/Sub Seek operation to a timestamp slightly in the future.
+    /// Pub/Sub Seek operation to a server-derived timestamp.
     /// </summary>
-    /// <exception cref="Exception">Throws if the underlying Seek operation fails.</exception>
+    /// <remarks>
+    /// Requires permission to create and delete temporary topics and subscriptions, attach a subscription
+    /// to the temporary topic, publish and consume its marker, and seek the source subscription.
+    /// The marker is confined to a private temporary topic. Temporary resources are removed before Seek.
+    /// The shared stream retains the cutoff to acknowledge and discard late pre-purge deliveries.
+    /// Purges sharing this stream run serially. Cleanup follows the failure and deadline rules of <see cref="GcpPullMessageConsumer.Purge"/>.
+    /// </remarks>
+    /// <exception cref="Exception">Throws if boundary acquisition, cleanup, or Seek fails.</exception>
     public void Purge()
     {
+        consumer.PurgeLock.Wait();
         try
         {
             var client = connection.GetOrCreateSubscriberServiceApiClient();
 
             Log.PurgeStart(s_logger, subscriptionName.ToString());
 
-            var purgeStarted = timeProvider.GetUtcNow();
-            client.Seek(new SeekRequest
-            {
-                SubscriptionAsSubscriptionName = subscriptionName,
-                Time = Timestamp.FromDateTimeOffset(purgeStarted.AddMinutes(1))
-            });
-            consumer.PurgeBuffered();
+            var publisher = connection.CreatePublisherServiceApiClient();
+            var purgeBefore = GcpSubscriptionPurger.Purge(client, publisher, subscriptionName);
+            consumer.PurgeBuffered(purgeBefore);
 
             Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }
@@ -202,32 +205,32 @@ public partial class GcpPubSubStreamMessageConsumer(
             Log.PurgeError(s_logger, ex, subscriptionName.ToString());
             throw;
         }
+        finally
+        {
+            consumer.PurgeLock.Release();
+        }
     }
-    
+
     /// <summary>
     /// Asynchronously purges all messages from the subscription backlog by executing a 
-    /// Pub/Sub Seek operation to a timestamp slightly in the future.
+    /// Pub/Sub Seek operation to a server-derived timestamp.
     /// </summary>
+    /// <remarks>Uses the same permissions and late-delivery filtering as <see cref="Purge"/>.</remarks>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    /// <exception cref="Exception">Throws if the underlying Seek operation fails.</exception>
+    /// <exception cref="Exception">Throws if boundary acquisition, cleanup, or Seek fails.</exception>
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
+        await consumer.PurgeLock.WaitAsync(cancellationToken);
         try
         {
             var client = await connection.CreateSubscriberServiceApiClientAsync();
 
             Log.PurgeStart(s_logger, subscriptionName.ToString());
 
-            var purgeStarted = timeProvider.GetUtcNow();
-            await client.SeekAsync(
-                new SeekRequest
-                {
-                    SubscriptionAsSubscriptionName = subscriptionName,
-                    Time = Timestamp.FromDateTimeOffset(purgeStarted.AddMinutes(1))
-                },
-                cancellationToken);
-            consumer.PurgeBuffered();
+            var publisher = await connection.CreatePublisherServiceApiClientAsync();
+            var purgeBefore = await GcpSubscriptionPurger.PurgeAsync(client, publisher, subscriptionName, cancellationToken);
+            consumer.PurgeBuffered(purgeBefore);
 
             Log.PurgeComplete(s_logger, subscriptionName.ToString());
         }
@@ -235,6 +238,10 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             Log.PurgeError(s_logger, ex, subscriptionName.ToString());
             throw;
+        }
+        finally
+        {
+            consumer.PurgeLock.Release();
         }
     }
 
@@ -248,7 +255,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     {
         return BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
     }
-    
+
     /// <summary>
     /// Asynchronously reads the next message from the internal channel reader, waiting 
     /// until a message is available or the timeout is reached.
@@ -270,12 +277,18 @@ public partial class GcpPubSubStreamMessageConsumer(
             while (!cts.IsCancellationRequested)
             {
                 var message = await reader.ReadAsync(cts.Token);
+                if (consumer.IsPurged(message.Message))
+                {
+                    message.Accepted();
+                    continue;
+                }
+
                 if (message.CanProcess)
                 {
                     return [Parser.ToBrighterMessage(message)];
                 }
             }
-            
+
             return [new Message()];
         }
         catch (OperationCanceledException)
@@ -316,13 +329,14 @@ public partial class GcpPubSubStreamMessageConsumer(
     {
         return Task.FromResult(Requeue(message, delay));
     }
-    
+
     /// <summary>
     /// Disposes of the consumer's resources synchronously.
     /// </summary>
     /// <remarks>
     /// Idempotent: the streaming client is shared by every consumer on the subscription, so a repeated
     /// dispose must not count as another consumer leaving and stop the client under the others.
+    /// Rejection-routing resources are disposed even if stopping the streaming client fails.
     /// </remarks>
     public void Dispose()
     {
@@ -331,8 +345,14 @@ public partial class GcpPubSubStreamMessageConsumer(
             return;
         }
 
-        consumer.StopAsync().GetAwaiter().GetResult();
-        _router.Dispose();
+        try
+        {
+            consumer.StopAsync().GetAwaiter().GetResult();
+        }
+        finally
+        {
+            _router.Dispose();
+        }
     }
 
     /// <summary>
@@ -341,6 +361,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     /// <remarks>
     /// Idempotent: the streaming client is shared by every consumer on the subscription, so a repeated
     /// dispose must not count as another consumer leaving and stop the client under the others.
+    /// Rejection-routing resources are disposed even if stopping the streaming client fails.
     /// </remarks>
     /// <returns>A <see cref="ValueTask"/> that represents the asynchronous disposal operation.</returns>
     public async ValueTask DisposeAsync()
@@ -350,8 +371,14 @@ public partial class GcpPubSubStreamMessageConsumer(
             return;
         }
 
-        await consumer.StopAsync();
-        await _router.DisposeAsync();
+        try
+        {
+            await consumer.StopAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            await _router.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
     /// <summary>

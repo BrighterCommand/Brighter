@@ -18,10 +18,6 @@ public static class MsSqlBoxProvisioningExtensions
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
     {
-        // MigrationLockTimeout is read inside the registration lambda so it stays late-bound:
-        // the configure delegate may set the timeout AFTER calling Add*Outbox/Add*Inbox and
-        // the change still takes effect (registrations only run once the configure delegate
-        // has fully completed inside UseBoxProvisioning).
         options.Add(services =>
         {
             RegisterSharedRoleImpls(services);
@@ -147,11 +143,7 @@ public static class MsSqlBoxProvisioningExtensions
         return options;
     }
 
-    // Detection helper + payload validator are shared across Outbox and Inbox extensions;
-    // TryAddSingleton makes the registration idempotent so calling both Add*Outbox and
-    // Add*Inbox does not produce duplicate singletons. Catalogue registration is per
-    // box-type and lives in the call-site (Outbox catalogue from Add*Outbox; Inbox
-    // catalogue from Add*Inbox) per ADR 0058 §A.4 Alternatives.
+    // Shared by the outbox and inbox registrations; TryAdd makes calling both safe.
     private static void RegisterSharedRoleImpls(IServiceCollection services)
     {
         services.TryAddSingleton<MsSqlBoxDetectionHelper>();
