@@ -26,6 +26,18 @@ The parameterless configuration uses `InMemoryInbox`, whose state is local to on
 Configure a persistent inbox for durable deduplication. Handler-level `[UseInbox]` and `[UseInboxAsync]`
 attributes still require an inbox store registered in the container when the global inbox is disabled.
 
+### Detect a hung or failing outbox sweeper, and say what remedy each health condition needs (spec 0038, #4573)
+<!-- spec: 0038-add-sweeper-health-check -->
+
+A sweeper that hangs, keeps failing, or skips tripped topics looked healthy from outside. Two gauges now report the running time of the current sweep and the number of tripped topics on an active sweeper. Opt-in health checks tell an orchestrator or operator whether to restart the process, take it out of service, or investigate. Consumer checks follow the same convention.
+
+#### Breaking changes
+
+- `BrighterServiceActivatorHealthCheck` is marked `[Obsolete]`, so builds that treat warnings as errors fail with CS0618. *(source)* Suppress CS0618, or move to `AddBrighterConsumerHealthChecks`.
+- `Paramore.Brighter.Outbox.Hosting` and `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics` now reference `Microsoft.Extensions.Diagnostics.HealthChecks` and its dependencies. *(compatibility)* Align package versions; no code change is needed.
+- `TimedOutboxSweeper` and `SweeperMeter` constructors gain trailing optional parameters. *(binary)* Callers compiled against the old signatures must be recompiled; source is unchanged.
+- Once registered, the new sweeper and consumer checks are selected by a health endpoint that has no tag predicate. *(behavioural)* Add the exclusion predicate to existing endpoints before registering them.
+
 ### Azure Service Bus retry scheduler selection
 
 `Publication.RequeueScheduler` selects native scheduling on the consuming broker (the default)
