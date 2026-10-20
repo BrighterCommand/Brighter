@@ -38,6 +38,8 @@ public sealed class OutboxSweeperState
     private readonly TimeProvider _clock;
     private readonly object _lock = new();
     private bool _isSweepInProgress;
+    private bool _holdsLock;
+    private bool _lastSweepObtainedLock;
     private long _sweepStartTimestamp;
     private int _consecutiveFailedSweeps;
     private SweepOutcome? _lastOutcome;
@@ -61,6 +63,18 @@ public sealed class OutboxSweeperState
         {
             _sweepStartTimestamp = _clock.GetTimestamp();
             _isSweepInProgress = true;
+            _holdsLock = false;
+        }
+    }
+
+    /// <summary>
+    /// Records that the sweep in progress has obtained the lock. Ignored when no sweep is in progress.
+    /// </summary>
+    public void LockObtained()
+    {
+        lock (_lock)
+        {
+            if (_isSweepInProgress) _holdsLock = true;
         }
     }
 
@@ -73,6 +87,8 @@ public sealed class OutboxSweeperState
         lock (_lock)
         {
             _isSweepInProgress = false;
+            _lastSweepObtainedLock = _holdsLock;
+            _holdsLock = false;
             _lastOutcome = outcome;
             _consecutiveFailedSweeps = NextFailedCount(outcome);
         }
@@ -86,9 +102,11 @@ public sealed class OutboxSweeperState
     {
         lock (_lock)
         {
-            return new OutboxSweeperSnapshot(_isSweepInProgress, RunningTime(), false, _consecutiveFailedSweeps, _lastOutcome, false, false);
+            return new OutboxSweeperSnapshot(_isSweepInProgress, RunningTime(), _holdsLock, _consecutiveFailedSweeps, _lastOutcome, false, IsActive());
         }
     }
+
+    private bool IsActive() => _isSweepInProgress ? _holdsLock : _lastSweepObtainedLock;
 
     private int NextFailedCount(SweepOutcome outcome) => outcome switch
     {
