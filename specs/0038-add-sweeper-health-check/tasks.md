@@ -225,7 +225,7 @@
   - Why no test of its own: these are fixtures. They are consumed by Phases 3, 4, 5, 8, 9 and 10. Phase 17 is in another project and uses T16.0. The pass-first, gated-after-N and switchable doubles serve T10.4, T10.5, T10.7, T10.11, T10.12, T10.15, T10.17, T10.18, T10.19 and T10.21.
   - Depends on: nothing.
 
-- [ ] **TEST + IMPLEMENT: T3.2 — A sweep blocked in lock acquisition is in progress, with its running time, and not active**
+- [x] **TEST + IMPLEMENT: T3.2 — A sweep blocked in lock acquisition is in progress, with its running time, and not active**
   - **USE COMMAND**: `/test-first when a sweep is blocked acquiring the lock the sweeper state should report it in progress with its running time and not active`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_sweep_is_blocked_acquiring_the_lock_should_record_it_in_progress_and_not_active.cs`
