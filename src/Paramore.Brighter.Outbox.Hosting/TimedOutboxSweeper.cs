@@ -223,6 +223,7 @@ namespace Paramore.Brighter.Outbox.Hosting
             _state.SweepStarted();
             var started = _timeProvider.GetTimestamp();
             var outcome = SweepOnce();
+            _state.SweepEnded(outcome);
             var duration = _timeProvider.GetElapsedTime(started);
             Record(() => _meter.RecordSweep(outcome, duration));
 
