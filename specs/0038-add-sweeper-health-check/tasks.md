@@ -53,7 +53,7 @@
   - References: ADR 0087 step 1; NFR-5.
   - Depends on: nothing.
 
-- [ ] **PROJECT: T1.3 — Wire `tests/Paramore.Brighter.Extensions.AspNetCore.Tests` to the packages its guard and endpoint tests need**
+- [x] **PROJECT: T1.3 — Wire `tests/Paramore.Brighter.Extensions.AspNetCore.Tests` to the packages its guard and endpoint tests need**
   - Add `ProjectReference`s to `src/Paramore.Brighter.Outbox.Hosting` and `src/Paramore.Brighter.ServiceActivator.Extensions.Diagnostics`. Add `<PackageReference Include="Microsoft.Extensions.TimeProvider.Testing"/>`, which the project lacks today.
   - Build the test project. No new warnings.
   - References: ADR 0086 step 7 (the AC-49 and endpoint tests name both assemblies); ADR 0087 steps 9–10.
