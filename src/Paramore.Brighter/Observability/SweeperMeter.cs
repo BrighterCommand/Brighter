@@ -107,7 +107,7 @@ public sealed class SweeperMeter : IAmABrighterSweeperMeter
 
     private long ObserveTrippedTopics()
     {
-        if (_state is null) return 0;
+        if (_state is null || !_state.Read().IsActive) return 0;
         var breaker = _findCircuitBreaker?.Invoke();
         return breaker is null ? 0 : breaker.TrippedTopics.Count();
     }
