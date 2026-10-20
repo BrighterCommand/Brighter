@@ -96,7 +96,7 @@
   - References: AC-24; NFR-5; ADR 0086 *Why the checks live in Outbox.Hosting*.
   - Depends on: T1.1, T1.2.
 
-- [ ] **PROJECT: T1.8 — Reference `Paramore.Brighter.Outbox.Hosting` from `tests/Paramore.Brighter.Extensions.Tests`**
+- [x] **PROJECT: T1.8 — Reference `Paramore.Brighter.Outbox.Hosting` from `tests/Paramore.Brighter.Extensions.Tests`**
   - Add a `ProjectReference` to `src/Paramore.Brighter.Outbox.Hosting` to `tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj`, which does not reference it today. T15.3 calls `AddBrighterOutboxSweeperHealthChecks` from this project.
   - Build the test project. No new warnings.
   - References: AC-55; T15.3.
