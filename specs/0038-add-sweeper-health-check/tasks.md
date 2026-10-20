@@ -59,7 +59,7 @@
   - References: ADR 0086 step 7 (the AC-49 and endpoint tests name both assemblies); ADR 0087 steps 9–10.
   - Depends on: T1.1, T1.2.
 
-- [ ] **STRUCTURAL: T1.4 — Gauge-name constants in `BrighterSemanticConventions`**
+- [x] **STRUCTURAL: T1.4 — Gauge-name constants in `BrighterSemanticConventions`**
   - Add `OutboxSweeperSweepRunningTime = "paramore.brighter.outbox_sweeper.sweep.running_time"` and `OutboxSweeperTrippedTopics = "paramore.brighter.outbox_sweeper.tripped_topics"` beside the existing sweeper names (`src/Paramore.Brighter/Observability/BrighterSemanticConventions.cs:109-112`), with XML docs.
   - References: ADR 0085 step 1; NFR-8; ADR 0010.
   - Depends on: nothing.
