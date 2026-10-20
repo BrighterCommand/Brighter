@@ -40,8 +40,6 @@ namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class SweeperRunningTimeGaugeTests
 {
-    private const string RunningTime = "paramore.brighter.outbox_sweeper.sweep.running_time";
-
     [Fact]
     public async Task When_a_sweep_blocks_in_the_outbox_should_report_the_running_time_gauge()
     {
@@ -101,35 +99,5 @@ public class SweeperRunningTimeGaugeTests
 
         //Assert
         Assert.Equal([0.0], recorded.Values);
-    }
-
-    private sealed class RunningTimeListener : IDisposable
-    {
-        private readonly MeterListener _listener = new();
-        private readonly List<double> _values = [];
-
-        public RunningTimeListener(IMeterFactory meterFactory)
-        {
-            _listener.InstrumentPublished = (instrument, listener) =>
-            {
-                if (!ReferenceEquals(instrument.Meter.Scope, meterFactory) || instrument.Name != RunningTime) return;
-                Unit = instrument.Unit;
-                listener.EnableMeasurementEvents(instrument);
-            };
-            _listener.SetMeasurementEventCallback<double>((_, value, tags, _) =>
-            {
-                TagCount = tags.Length;
-                _values.Add(value);
-            });
-            _listener.Start();
-        }
-
-        public string? Unit { get; private set; }
-        public int TagCount { get; private set; }
-        public IReadOnlyList<double> Values => _values;
-
-        public void Observe() => _listener.RecordObservableInstruments();
-
-        public void Dispose() => _listener.Dispose();
     }
 }
