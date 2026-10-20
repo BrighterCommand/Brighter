@@ -34,6 +34,7 @@ public sealed class RecordedSweeperMeasurements : IDisposable
                 listener.EnableMeasurementEvents(instrument);
         };
         _listener.SetMeasurementEventCallback<double>((instrument, value, tags, _) => Record(instrument, value, tags));
+        _listener.SetMeasurementEventCallback<int>((instrument, value, tags, _) => Record(instrument, value, tags));
         _listener.SetMeasurementEventCallback<long>((instrument, value, tags, _) => Record(instrument, value, tags));
         _listener.Start();
     }
@@ -42,6 +43,12 @@ public sealed class RecordedSweeperMeasurements : IDisposable
 
     public IReadOnlyList<SweeperMeasurement> Of(string instrument) =>
         _measurements.Where(m => m.Instrument == instrument).ToList();
+
+    /// <summary>
+    /// Asks every enabled observable instrument to report now, and records what it reports. Only instruments of
+    /// meters this class's <see cref="MeterFactory"/> created are enabled, so other tests' gauges are not seen.
+    /// </summary>
+    public void RecordObservableInstruments() => _listener.RecordObservableInstruments();
 
     public bool WaitFor(Func<RecordedSweeperMeasurements, bool> condition, TimeSpan timeout) =>
         SpinWait.SpinUntil(() => condition(this), timeout);

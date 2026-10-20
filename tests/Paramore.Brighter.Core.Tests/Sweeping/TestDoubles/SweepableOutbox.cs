@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Transactions;
+using Paramore.Brighter.CircuitBreaker;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
@@ -16,7 +17,12 @@ public sealed class SweepableOutbox : IDisposable
 {
     private readonly ServiceProvider _provider;
 
-    public SweepableOutbox()
+    public SweepableOutbox() : this(null)
+    {
+    }
+
+    /// <summary>Shares <paramref name="outboxCircuitBreaker"/> with the mediator, so a test can read the breaker the mediator trips.</summary>
+    public SweepableOutbox(IAmAnOutboxCircuitBreaker? outboxCircuitBreaker)
     {
         var producer = new InMemoryMessageProducer(Bus, new Publication { Topic = RoutingKey });
         var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
@@ -27,7 +33,8 @@ public sealed class SweepableOutbox : IDisposable
             new EmptyMessageTransformerFactoryAsync(),
             new BrighterTracer(TimeProvider.System),
             new FindPublicationByPublicationTopicOrRequestType(),
-            Outbox);
+            Outbox,
+            outboxCircuitBreaker: outboxCircuitBreaker);
 
         var services = new ServiceCollection();
         services.AddSingleton<IAmAnOutboxProducerMediator>(mediator);
