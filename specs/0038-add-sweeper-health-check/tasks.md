@@ -137,7 +137,7 @@
   - References: FR-1, FR-3.1, FR-3.2, NFR-4; ADR 0085 *operations table*.
   - Depends on: T2.1.
 
-- [ ] **TEST + IMPLEMENT: T2.3 — The record counts consecutive failed sweeps and keeps the last outcome**
+- [x] **TEST + IMPLEMENT: T2.3 — The record counts consecutive failed sweeps and keeps the last outcome**
   - **USE COMMAND**: `/test-first when sweeps end with mixed outcomes the sweeper state should count consecutive failures and keep the last outcome`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/SweeperState"
   - Test file: `When_sweeps_end_with_mixed_outcomes_should_count_consecutive_failures_and_keep_the_last_outcome.cs`
