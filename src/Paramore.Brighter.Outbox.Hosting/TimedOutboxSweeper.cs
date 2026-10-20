@@ -119,6 +119,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         public Task StopAsync(CancellationToken cancellationToken)
         {
             Log.OutboxSweeperServiceIsStopping(s_logger);
+            _state.Stopped();
 
             if (_sweepThread is null)
                 return Task.CompletedTask;
@@ -132,6 +133,8 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// </summary>
         public void Dispose()
         {
+            _state.Stopped();
+
             if (_disposed) return;
             _disposed = true;
 
