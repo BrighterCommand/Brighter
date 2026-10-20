@@ -171,7 +171,7 @@
   - References: FR-2, the *Active sweeper* definition; ADR 0085 *decision ladder* rows 2–5.
   - Depends on: T2.3.
 
-- [ ] **TEST + IMPLEMENT: T2.5 — A stop makes the sweeper inactive and resets nothing else**
+- [x] **TEST + IMPLEMENT: T2.5 — A stop makes the sweeper inactive and resets nothing else**
   - **USE COMMAND**: `/test-first when stop is requested the sweeper state should become inactive and keep its count last outcome and sweep in progress`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/SweeperState"
   - Test file: `When_stop_is_requested_should_become_inactive_and_keep_everything_else.cs`
