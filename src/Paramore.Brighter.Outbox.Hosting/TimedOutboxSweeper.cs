@@ -52,6 +52,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         private readonly TimedOutboxSweeperOptions _options;
         private readonly TimeProvider _timeProvider;
         private readonly IAmABrighterSweeperMeter _meter;
+        private readonly OutboxSweeperState _state;
         private readonly TimeSpan _interval;
         private readonly CancellationTokenSource _stopping = new();
         private readonly AutoResetEvent _due = new(false);
@@ -69,13 +70,15 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <param name="options">The <see cref="TimedOutboxSweeperOptions"/> that can be used to configure how this runs, such as interval or age</param>
         /// <param name="timeProvider">The clock that schedules sweeps; defaults to <see cref="TimeProvider.System"/></param>
         /// <param name="meter">Records the sweeper's health (see ADR 0081); defaults to <see cref="NullSweeperMeter"/>, which records nothing</param>
+        /// <param name="state">Holds what the sweeper is doing, for gauges and health checks to read; defaults to a new <see cref="OutboxSweeperState"/> on the sweeper's clock</param>
         /// <exception cref="ConfigurationException">Thrown when <see cref="TimedOutboxSweeperOptions.TimerInterval"/> is less than one second</exception>
         public TimedOutboxSweeper(
             IServiceScopeFactory serviceScopeFactory,
             IDistributedLock distributedLock,
             TimedOutboxSweeperOptions options,
             TimeProvider? timeProvider = null,
-            IAmABrighterSweeperMeter? meter = null
+            IAmABrighterSweeperMeter? meter = null,
+            OutboxSweeperState? state = null
         )
         {
             if (options.TimerInterval < 1)
@@ -87,6 +90,7 @@ namespace Paramore.Brighter.Outbox.Hosting
             _options = options;
             _timeProvider = timeProvider ?? TimeProvider.System;
             _meter = meter ?? NullSweeperMeter.Instance;
+            _state = state ?? new OutboxSweeperState(_timeProvider);
             _interval = TimeSpan.FromSeconds(options.TimerInterval);
         }
 
@@ -216,6 +220,7 @@ namespace Paramore.Brighter.Outbox.Hosting
 
         private void Sweep()
         {
+            _state.SweepStarted();
             var started = _timeProvider.GetTimestamp();
             var outcome = SweepOnce();
             var duration = _timeProvider.GetElapsedTime(started);
