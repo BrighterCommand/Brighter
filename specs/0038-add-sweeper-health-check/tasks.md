@@ -122,7 +122,7 @@
   - References: ADR 0085 *Key Components: OutboxSweeperState, OutboxSweeperSnapshot*; FR-2 (before the first sweep ends).
   - Depends on: nothing.
 
-- [ ] **TEST + IMPLEMENT: T2.2 — Running time is measured on the record's clock from sweep start, and returns to 0 when the sweep ends**
+- [x] **TEST + IMPLEMENT: T2.2 — Running time is measured on the record's clock from sweep start, and returns to 0 when the sweep ends**
   - **USE COMMAND**: `/test-first when a sweep has started and the clock advances the sweeper state should report its running time and zero once it ends`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/SweeperState"
   - Test file: `When_a_sweep_has_started_and_the_clock_advances_should_report_its_running_time.cs`
