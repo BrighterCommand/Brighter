@@ -206,7 +206,7 @@
 
 *ADR 0085 step 3. Real `TimedOutboxSweeper`, `FakeTimeProvider`, and blocking doubles at each blocking point.*
 
-- [ ] **STRUCTURAL: T3.1 — Test doubles for blocked, failing and tripped sweeps**
+- [x] **STRUCTURAL: T3.1 — Test doubles for blocked, failing and tripped sweeps**
   - Location: `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/`, one class per file, each with an XML summary.
   - Reuse the existing `HeldDistributedLock` (always lock-unavailable), `ThrowingSweeperMeter`, `RecordedSweeperMeasurements` and `SweepableOutbox`.
   - Extend the existing `GatedDistributedLock` (`Sweeping/TestDoubles/GatedDistributedLock.cs`), which starts closed and cannot be closed again, so it can pass the first N calls before it gates (`PassFirst(n)`). Existing users keep their behaviour by default.
