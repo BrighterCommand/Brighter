@@ -341,7 +341,7 @@
   - References: FR-3, FR-3.1, FR-3.4, FR-4A.1 (null state), NFR-1; AC-1; ADR 0085 *SweeperMeter*.
   - Depends on: T1.4, T3.3.
 
-- [ ] **CHARACTERISE: T4.2 — The running-time gauge includes lock acquisition**
+- [x] **CHARACTERISE: T4.2 — The running-time gauge includes lock acquisition**
   - **USE COMMAND**: `/test-first when a sweep blocks acquiring the lock the running time gauge should include the time spent waiting`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_a_sweep_blocks_acquiring_the_lock_should_include_it_in_the_running_time_gauge.cs`
