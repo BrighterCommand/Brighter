@@ -380,7 +380,7 @@
   - References: FR-3A, FR-6A.3, FR-6A.4; AC-33 at meter level; FR-4A.1 and AC-66 at meter level (the null-state half); ADR 0085 *Why the breaker is read on each observation*.
   - Depends on: T4.1.
 
-- [ ] **TEST + IMPLEMENT: T4.5 — The tripped-topics gauge reports 0, without reading the breaker, when the sweeper is not active**
+- [x] **TEST + IMPLEMENT: T4.5 — The tripped-topics gauge reports 0, without reading the breaker, when the sweeper is not active**
   - **USE COMMAND**: `/test-first when the sweeper is not active the tripped topics gauge should report zero without reading the circuit breaker`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_the_sweeper_is_not_active_should_report_zero_tripped_topics.cs`
