@@ -25,13 +25,26 @@ public static class SweeperContainer
         var producers = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer } });
 
         var services = new ServiceCollection();
-        services.AddSingleton(distributedLock);
         services.AddSingleton(timeProvider);
         if (meterFactory is not null) services.AddSingleton(meterFactory);
 
-        var builder = services.AddBrighter().AddProducers(configuration => configuration.ProducerRegistry = producers);
+        var builder = NewBuilder(services).AddProducers(configuration =>
+        {
+            configuration.ProducerRegistry = producers;
+            configuration.DistributedLock = distributedLock;
+        });
         if (useOutboxSweeper) builder.UseOutboxSweeper(configureSweeper);
 
         return services;
     }
+
+    /// <summary>
+    /// A builder over <paramref name="services"/> that skips <c>AddBrighter</c>'s assembly scan, which this test assembly's
+    /// own conflicting mappers would trip.
+    /// </summary>
+    public static IBrighterBuilder NewBuilder(IServiceCollection services) =>
+        new ServiceCollectionBrighterBuilder(
+            services,
+            new ServiceCollectionSubscriberRegistry(services),
+            new ServiceCollectionMessageMapperRegistryBuilder(services));
 }
