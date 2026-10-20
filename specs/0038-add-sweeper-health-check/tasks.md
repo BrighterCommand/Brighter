@@ -239,7 +239,7 @@
   - References: FR-1 (the sweep includes lock acquisition), AC-2 at record level; ADR 0085 step 3.
   - Depends on: T2.5, T3.1.
 
-- [ ] **TEST + IMPLEMENT: T3.3 — A sweep blocked in the outbox holds the lock and is active**
+- [x] **TEST + IMPLEMENT: T3.3 — A sweep blocked in the outbox holds the lock and is active**
   - **USE COMMAND**: `/test-first when a sweep is blocked in the outbox after obtaining the lock the sweeper state should report it holds the lock and is active`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_sweep_is_blocked_in_the_outbox_should_record_that_it_holds_the_lock.cs`
