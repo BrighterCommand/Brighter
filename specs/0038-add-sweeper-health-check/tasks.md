@@ -187,7 +187,7 @@
   - References: FR-1.1, FR-1.2; AC-45 and AC-64 at record level; ADR 0085 invariant *a stop changes one field*.
   - Depends on: T2.4.
 
-- [ ] **CHARACTERISE: T2.6 — Tracking transitions allocate nothing**
+- [x] **CHARACTERISE: T2.6 — Tracking transitions allocate nothing**
   - **USE COMMAND**: `/test-first when the sweeper state is driven through ten thousand sweeps it should allocate nothing`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/SweeperState"
   - Test file: `When_the_sweeper_state_is_driven_through_ten_thousand_sweeps_should_allocate_nothing.cs`
