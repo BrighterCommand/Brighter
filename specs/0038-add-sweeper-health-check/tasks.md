@@ -264,7 +264,7 @@
   - References: FR-1, FR-2, FR-3.2 (AC-3 at record level); ADR 0085 step 3.
   - Depends on: T3.3.
 
-- [ ] **CHARACTERISE: T3.5 — A failure thrown by the lock counts as failed and leaves the sweeper inactive**
+- [x] **CHARACTERISE: T3.5 — A failure thrown by the lock counts as failed and leaves the sweeper inactive**
   - **USE COMMAND**: `/test-first when obtaining the lock throws the sweeper state should count a failed sweep and not be active`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_obtaining_the_lock_throws_should_count_a_failed_sweep_and_not_be_active.cs`
