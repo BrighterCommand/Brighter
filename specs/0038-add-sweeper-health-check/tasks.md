@@ -367,7 +367,7 @@
   - References: FR-3.2; AC-3.
   - Depends on: T4.1.
 
-- [ ] **TEST + IMPLEMENT: T4.4 — The tripped-topics gauge reports the number of tripped topics on an active sweeper**
+- [x] **TEST + IMPLEMENT: T4.4 — The tripped-topics gauge reports the number of tripped topics on an active sweeper**
   - **USE COMMAND**: `/test-first when an active sweeper has topics tripped the tripped topics gauge should report how many`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_an_active_sweeper_has_topics_tripped_should_report_the_tripped_topics_gauge.cs`
