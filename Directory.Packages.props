@@ -186,6 +186,7 @@
     <PackageVersion Include="MongoDB.EntityFrameworkCore" Version="8.4.4" />
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.3" />
     <PackageVersion Include="Npgsql" Version="8.0.9" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
     <PackageVersion Include="TickerQ" Version="8.3.0" />
     <PackageVersion Include="TickerQ.Dashboard" Version="8.3.0" />
     <PackageVersion Include="TickerQ.EntityFrameworkCore" Version="8.3.0" />
@@ -201,6 +202,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.20" />
     <PackageVersion Include="MongoDB.EntityFrameworkCore" Version="9.1.4" />
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="9.0.21" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="TickerQ" Version="9.3.0" />
     <PackageVersion Include="TickerQ.Dashboard" Version="9.3.0" />
@@ -216,12 +218,14 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
     <PackageVersion Include="MongoDB.EntityFrameworkCore" Version="10.0.4" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
     <PackageVersion Include="TickerQ" Version="10.4.0" />
   </ItemGroup>
   <ItemGroup>
     <GlobalPackageReference Include="MinVer" Version="7.0.0" Condition="'$(IsPackable)' != 'false' And '$(ContinuousIntegrationBuild)' == 'true'" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net462' Or '$(TargetFramework)' == 'net472'">
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
     <GlobalPackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
