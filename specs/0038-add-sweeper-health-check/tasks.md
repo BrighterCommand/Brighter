@@ -291,7 +291,7 @@
   - References: FR-1.1, FR-1.2; AC-45 at record level; ADR 0085 step 3.
   - Depends on: T3.4.
 
-- [ ] **TEST + IMPLEMENT: T3.7 — `UseOutboxSweeper` registers one record, built from the container's clock, and the sweeper writes to it**
+- [x] **TEST + IMPLEMENT: T3.7 — `UseOutboxSweeper` registers one record, built from the container's clock, and the sweeper writes to it**
   - **USE COMMAND**: `/test-first when use outbox sweeper is called it should register one sweeper state the hosted sweeper writes to even when called twice`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_use_outbox_sweeper_is_called_should_register_one_sweeper_state_the_sweeper_writes_to.cs`
