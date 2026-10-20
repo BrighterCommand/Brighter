@@ -39,6 +39,8 @@ public sealed class OutboxSweeperState
     private readonly object _lock = new();
     private bool _isSweepInProgress;
     private long _sweepStartTimestamp;
+    private int _consecutiveFailedSweeps;
+    private SweepOutcome? _lastOutcome;
 
     /// <summary>
     /// Creates a state with nothing recorded.
@@ -71,6 +73,8 @@ public sealed class OutboxSweeperState
         lock (_lock)
         {
             _isSweepInProgress = false;
+            _lastOutcome = outcome;
+            _consecutiveFailedSweeps = NextFailedCount(outcome);
         }
     }
 
@@ -82,9 +86,16 @@ public sealed class OutboxSweeperState
     {
         lock (_lock)
         {
-            return new OutboxSweeperSnapshot(_isSweepInProgress, RunningTime(), false, 0, null, false, false);
+            return new OutboxSweeperSnapshot(_isSweepInProgress, RunningTime(), false, _consecutiveFailedSweeps, _lastOutcome, false, false);
         }
     }
+
+    private int NextFailedCount(SweepOutcome outcome) => outcome switch
+    {
+        SweepOutcome.Completed => 0,
+        SweepOutcome.Failed => _consecutiveFailedSweeps + 1,
+        _ => _consecutiveFailedSweeps
+    };
 
     private TimeSpan RunningTime()
     {
