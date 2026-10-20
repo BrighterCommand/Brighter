@@ -277,7 +277,7 @@
   - References: Definitions (a failed sweep includes lock acquisition); AC-15 and AC-52 at record level.
   - Depends on: T3.4.
 
-- [ ] **TEST + IMPLEMENT: T3.6 — Stopping the sweeper marks the record stopped, even before it started, and an abandoned sweep keeps running**
+- [x] **TEST + IMPLEMENT: T3.6 — Stopping the sweeper marks the record stopped, even before it started, and an abandoned sweep keeps running**
   - **USE COMMAND**: `/test-first when the sweeper is stopped with a sweep in flight the sweeper state should be stopped and the abandoned sweep keep its running time`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_sweeper_is_stopped_with_a_sweep_in_flight_should_mark_stopped_and_keep_the_sweep_running.cs`
