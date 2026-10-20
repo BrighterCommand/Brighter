@@ -354,7 +354,7 @@
   - References: FR-1, FR-3.1; AC-2.
   - Depends on: T4.1.
 
-- [ ] **CHARACTERISE: T4.3 — The running-time gauge is 0 whenever no sweep is in progress**
+- [x] **CHARACTERISE: T4.3 — The running-time gauge is 0 whenever no sweep is in progress**
   - **USE COMMAND**: `/test-first when no sweep is in progress the running time gauge should report zero`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_no_sweep_is_in_progress_should_report_a_zero_running_time_gauge.cs`
