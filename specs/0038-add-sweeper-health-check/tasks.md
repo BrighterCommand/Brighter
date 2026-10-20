@@ -90,7 +90,7 @@
   - References: AC-24; ADR 0087 step 1.
   - Depends on: T1.2.
 
-- [ ] **PROJECT: T1.7 — Record the resolved package graph before and after, for both packages (AC-24)**
+- [x] **PROJECT: T1.7 — Record the resolved package graph before and after, for both packages (AC-24)**
   - Run `dotnet list <csproj> package --include-transitive` for `Paramore.Brighter.Outbox.Hosting` and for `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics`, at the branch point (`git merge-base HEAD master`) and after T1.1/T1.2. Diff the outputs.
   - Pass condition: there are no new direct references other than `Microsoft.Extensions.Diagnostics.HealthChecks`, and the only new transitive packages are those it brings (expected: its `.Abstractions`, plus `Microsoft.Extensions.Hosting.Abstractions` and its dependencies for the ServiceActivator diagnostics package, as ADR 0087 *Negative* states). Paste the diff into the PR description.
   - References: AC-24; NFR-5; ADR 0086 *Why the checks live in Outbox.Hosting*.
