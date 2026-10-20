@@ -43,9 +43,9 @@ public class SweeperLockFailureStateTests
             Assert.True(recorded, $"The sweeper recorded only {measurements.Of(RecordedSweeperMeasurements.Sweeps).Count} of {sweepsToRun} sweeps");
         }
 
+        var ended = state.Read();
         await sweeper.StopAsync(CancellationToken.None).WaitAsync(s_guard);
         sweeper.Dispose();
-        var ended = state.Read();
 
         //Assert
         Assert.Equal(sweepsToRun, ended.ConsecutiveFailedSweeps);

@@ -80,10 +80,11 @@ public class SweeperEndedSweepStateTests
 
         await sweeper.StartAsync(CancellationToken.None);
         var recorded = measurements.WaitFor(m => m.Of(RecordedSweeperMeasurements.Sweeps).Any(), TimeSpan.FromSeconds(10));
+        var ended = state.Read();
         await sweeper.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
         sweeper.Dispose();
 
         Assert.True(recorded, "The sweeper recorded no sweep");
-        return state.Read();
+        return ended;
     }
 }
