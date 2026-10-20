@@ -77,7 +77,7 @@
   - References: AC-24 (first half); ADR 0086 step 1.
   - Depends on: T1.1.
 
-- [ ] **CHARACTERISE: T1.6 — `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics` references no ASP.NET Core or OpenTelemetry assembly**
+- [x] **CHARACTERISE: T1.6 — `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics` references no ASP.NET Core or OpenTelemetry assembly**
   - **USE COMMAND**: `/test-first when the consumer diagnostics assembly is loaded it should reference no asp net core or opentelemetry assembly`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_consumer_diagnostics_assembly_is_loaded_should_reference_no_aspnetcore_or_opentelemetry.cs`
