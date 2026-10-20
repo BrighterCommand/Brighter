@@ -37,6 +37,8 @@ public sealed class OutboxSweeperState
 {
     private readonly TimeProvider _clock;
     private readonly object _lock = new();
+    private bool _isSweepInProgress;
+    private long _sweepStartTimestamp;
 
     /// <summary>
     /// Creates a state with nothing recorded.
@@ -49,6 +51,30 @@ public sealed class OutboxSweeperState
     }
 
     /// <summary>
+    /// Records that a sweep has started, timing it from now on the record's clock.
+    /// </summary>
+    public void SweepStarted()
+    {
+        lock (_lock)
+        {
+            _sweepStartTimestamp = _clock.GetTimestamp();
+            _isSweepInProgress = true;
+        }
+    }
+
+    /// <summary>
+    /// Records that the sweep in progress has ended.
+    /// </summary>
+    /// <param name="outcome">How the sweep ended.</param>
+    public void SweepEnded(SweepOutcome outcome)
+    {
+        lock (_lock)
+        {
+            _isSweepInProgress = false;
+        }
+    }
+
+    /// <summary>
     /// Copies the current state.
     /// </summary>
     /// <returns>A consistent snapshot.</returns>
@@ -56,7 +82,15 @@ public sealed class OutboxSweeperState
     {
         lock (_lock)
         {
-            return new OutboxSweeperSnapshot(false, TimeSpan.Zero, false, 0, null, false, false);
+            return new OutboxSweeperSnapshot(_isSweepInProgress, RunningTime(), false, 0, null, false, false);
         }
+    }
+
+    private TimeSpan RunningTime()
+    {
+        if (!_isSweepInProgress) return TimeSpan.Zero;
+
+        var elapsed = _clock.GetElapsedTime(_sweepStartTimestamp);
+        return elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed;
     }
 }
