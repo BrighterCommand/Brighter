@@ -251,7 +251,7 @@
   - References: FR-1, FR-2, AC-1 at record level; ADR 0085 step 3.
   - Depends on: T3.2.
 
-- [ ] **TEST + IMPLEMENT: T3.4 — Each sweep outcome ends the sweep in the record**
+- [x] **TEST + IMPLEMENT: T3.4 — Each sweep outcome ends the sweep in the record**
   - **USE COMMAND**: `/test-first when a sweep ends completed failed or lock unavailable the sweeper state should record the outcome and no sweep in progress`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_sweep_ends_should_record_its_outcome_and_no_sweep_in_progress.cs`
