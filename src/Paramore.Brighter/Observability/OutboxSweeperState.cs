@@ -39,6 +39,7 @@ public sealed class OutboxSweeperState
     private readonly object _lock = new();
     private bool _isSweepInProgress;
     private bool _holdsLock;
+    private bool _isStopped;
     private bool _lastSweepObtainedLock;
     private long _sweepStartTimestamp;
     private int _consecutiveFailedSweeps;
@@ -95,6 +96,17 @@ public sealed class OutboxSweeperState
     }
 
     /// <summary>
+    /// Records that the sweeper has been asked to stop. Nothing else is reset.
+    /// </summary>
+    public void Stopped()
+    {
+        lock (_lock)
+        {
+            _isStopped = true;
+        }
+    }
+
+    /// <summary>
     /// Copies the current state.
     /// </summary>
     /// <returns>A consistent snapshot.</returns>
@@ -102,11 +114,11 @@ public sealed class OutboxSweeperState
     {
         lock (_lock)
         {
-            return new OutboxSweeperSnapshot(_isSweepInProgress, RunningTime(), _holdsLock, _consecutiveFailedSweeps, _lastOutcome, false, IsActive());
+            return new OutboxSweeperSnapshot(_isSweepInProgress, RunningTime(), _holdsLock, _consecutiveFailedSweeps, _lastOutcome, _isStopped, IsActive());
         }
     }
 
-    private bool IsActive() => _isSweepInProgress ? _holdsLock : _lastSweepObtainedLock;
+    private bool IsActive() => !_isStopped && (_isSweepInProgress ? _holdsLock : _lastSweepObtainedLock);
 
     private int NextFailedCount(SweepOutcome outcome) => outcome switch
     {
