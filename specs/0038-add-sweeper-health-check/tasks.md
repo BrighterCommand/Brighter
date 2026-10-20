@@ -64,7 +64,7 @@
   - References: ADR 0085 step 1; NFR-8; ADR 0010.
   - Depends on: nothing.
 
-- [ ] **CHARACTERISE: T1.5 — `Paramore.Brighter.Outbox.Hosting` references no ASP.NET Core, OpenTelemetry or ServiceActivator diagnostics assembly**
+- [x] **CHARACTERISE: T1.5 — `Paramore.Brighter.Outbox.Hosting` references no ASP.NET Core, OpenTelemetry or ServiceActivator diagnostics assembly**
   - **USE COMMAND**: `/test-first when the outbox hosting assembly is loaded it should reference no asp net core opentelemetry or service activator diagnostics assembly`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_outbox_hosting_assembly_is_loaded_should_reference_no_aspnetcore_opentelemetry_or_consumer_diagnostics.cs`
