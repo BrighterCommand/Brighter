@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
+using Paramore.Brighter.CircuitBreaker;
 
 namespace Paramore.Brighter.Observability;
 
@@ -42,13 +43,23 @@ public sealed class SweeperMeter : IAmABrighterSweeperMeter
     private readonly Histogram<double> _tickLag;
     private readonly Histogram<double> _sweepDuration;
     private readonly Counter<long> _sweeps;
+    private readonly OutboxSweeperState? _state;
+    private readonly Func<IAmAnOutboxCircuitBreaker?>? _findCircuitBreaker;
 
     /// <summary>
     /// Creates the sweeper's instruments on the Brighter meter.
     /// </summary>
     /// <param name="meterFactory">Creates the <see cref="BrighterSemanticConventions.MeterName"/> meter.</param>
-    public SweeperMeter(IMeterFactory meterFactory)
+    /// <param name="state">What the sweeper is doing, read by the gauges. When null, the gauges report zero.</param>
+    /// <param name="findCircuitBreaker">Finds the outbox circuit breaker, if one is registered.</param>
+    public SweeperMeter(
+        IMeterFactory meterFactory,
+        OutboxSweeperState? state = null,
+        Func<IAmAnOutboxCircuitBreaker?>? findCircuitBreaker = null)
     {
+        _state = state;
+        _findCircuitBreaker = findCircuitBreaker;
+
         var meter = meterFactory.Create(BrighterSemanticConventions.MeterName);
 
         _tickLag = meter.CreateHistogram<double>(
@@ -65,6 +76,12 @@ public sealed class SweeperMeter : IAmABrighterSweeperMeter
             name: BrighterSemanticConventions.OutboxSweeperSweeps,
             unit: "{sweep}",
             description: "Number of outbox sweeps, by how each ended.");
+
+        meter.CreateObservableGauge(
+            name: BrighterSemanticConventions.OutboxSweeperSweepRunningTime,
+            observeValue: ObserveRunningTime,
+            unit: "s",
+            description: "How long the sweep in progress has been running, or 0 when none is.");
     }
 
     /// <inheritdoc />
@@ -78,6 +95,8 @@ public sealed class SweeperMeter : IAmABrighterSweeperMeter
         _sweepDuration.Record(duration.TotalSeconds, outcomeTag);
         _sweeps.Add(1, outcomeTag);
     }
+
+    private double ObserveRunningTime() => _state is null ? 0 : _state.Read().RunningTime.TotalSeconds;
 
     private static string ToTagValue(SweepOutcome outcome) => outcome switch
     {
