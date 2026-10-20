@@ -393,7 +393,7 @@
   - References: FR-3A, FR-6A.5, FR-6A.6, FR-1.2; AC-52, AC-54, AC-64 and AC-65 (gauge halves at meter level), AC-68 (inactive half).
   - Depends on: T4.4.
 
-- [ ] **TEST + IMPLEMENT: T4.7 — A failing breaker read is caught, logged at Warning, and reported as 0**
+- [x] **TEST + IMPLEMENT: T4.7 — A failing breaker read is caught, logged at Warning, and reported as 0**
   - **USE COMMAND**: `/test-first when reading the circuit breaker throws on an active sweeper the tripped topics gauge should log a warning and report zero`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_reading_the_circuit_breaker_throws_should_log_and_report_zero_tripped_topics.cs`
