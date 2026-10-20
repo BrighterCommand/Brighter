@@ -325,7 +325,7 @@
 
 *ADR 0085 step 4. `SweeperMeter` is built over the `IMeterFactory` from `ServiceCollection.AddMetrics()`, with a record and a breaker lambda. Observe with `MeterListener.RecordObservableInstruments()`.*
 
-- [ ] **TEST + IMPLEMENT: T4.1 — The running-time gauge reports the running time while the sweep blocks in the outbox**
+- [x] **TEST + IMPLEMENT: T4.1 — The running-time gauge reports the running time while the sweep blocks in the outbox**
   - **USE COMMAND**: `/test-first when a sweep blocks in the outbox the running time gauge should report its running time in seconds`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_a_sweep_blocks_in_the_outbox_should_report_the_running_time_gauge.cs`
