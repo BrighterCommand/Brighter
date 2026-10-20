@@ -408,7 +408,7 @@
   - References: FR-13.2 (gauge), FR-13.3, NFR-9; AC-68 (gauge half), AC-69 (the circuit-breaker alternative, because the record is concrete).
   - Depends on: T4.5.
 
-- [ ] **CHARACTERISE: T4.8 — Both gauges have a fixed attribute set and `outbox_sweeper` names**
+- [x] **CHARACTERISE: T4.8 — Both gauges have a fixed attribute set and `outbox_sweeper` names**
   - **USE COMMAND**: `/test-first when the gauges are observed after many sweeps and topics they should publish one attribute set each and outbox sweeper names`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_the_gauges_are_observed_after_many_sweeps_and_topics_should_keep_a_fixed_attribute_set.cs`
