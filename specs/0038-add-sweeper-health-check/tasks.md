@@ -151,7 +151,7 @@
   - References: FR-2 examples; ADR 0085 *operations table*, invariant *the failed count changes only on SweepEnded*.
   - Depends on: T2.2.
 
-- [ ] **TEST + IMPLEMENT: T2.4 — The record decides "active sweeper" by the decision ladder**
+- [x] **TEST + IMPLEMENT: T2.4 — The record decides "active sweeper" by the decision ladder**
   - **USE COMMAND**: `/test-first when the sweeper state moves through lock and outcome transitions it should report active exactly as the active sweeper ladder decides`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/SweeperState"
   - Test file: `When_the_sweeper_state_moves_through_lock_transitions_should_decide_active_by_the_ladder.cs`
