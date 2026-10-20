@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
+using System.Linq;
 using Paramore.Brighter.CircuitBreaker;
 
 namespace Paramore.Brighter.Observability;
@@ -82,6 +83,12 @@ public sealed class SweeperMeter : IAmABrighterSweeperMeter
             observeValue: ObserveRunningTime,
             unit: "s",
             description: "How long the sweep in progress has been running, or 0 when none is.");
+
+        meter.CreateObservableGauge(
+            name: BrighterSemanticConventions.OutboxSweeperTrippedTopics,
+            observeValue: ObserveTrippedTopics,
+            unit: "{topic}",
+            description: "Number of topics whose outbox circuit breaker is tripped.");
     }
 
     /// <inheritdoc />
@@ -97,6 +104,13 @@ public sealed class SweeperMeter : IAmABrighterSweeperMeter
     }
 
     private double ObserveRunningTime() => _state is null ? 0 : _state.Read().RunningTime.TotalSeconds;
+
+    private long ObserveTrippedTopics()
+    {
+        if (_state is null) return 0;
+        var breaker = _findCircuitBreaker?.Invoke();
+        return breaker is null ? 0 : breaker.TrippedTopics.Count();
+    }
 
     private static string ToTagValue(SweepOutcome outcome) => outcome switch
     {
