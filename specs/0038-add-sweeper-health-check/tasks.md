@@ -47,7 +47,7 @@
   - References: ADR 0086 *Technology Choices: Why the checks live in Outbox.Hosting*; NFR-5.
   - Depends on: nothing.
 
-- [ ] **PROJECT: T1.2 — Reference `Microsoft.Extensions.Diagnostics.HealthChecks` from `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics`**
+- [x] **PROJECT: T1.2 — Reference `Microsoft.Extensions.Diagnostics.HealthChecks` from `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics`**
   - Add the same `<PackageReference/>` to `src/Paramore.Brighter.ServiceActivator.Extensions.Diagnostics/Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.csproj`, beside the existing `...HealthChecks.Abstractions` reference.
   - No code change. Build `src` with warnings as errors.
   - References: ADR 0087 step 1; NFR-5.
