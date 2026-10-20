@@ -108,7 +108,7 @@
 
 *ADR 0085 step 2. These tests drive the record directly on the test thread with `FakeTimeProvider`.*
 
-- [ ] **TEST + IMPLEMENT: T2.1 — A new sweeper state reports nothing recorded**
+- [x] **TEST + IMPLEMENT: T2.1 — A new sweeper state reports nothing recorded**
   - **USE COMMAND**: `/test-first when a sweeper state has recorded nothing it should report no sweep in progress no failures no last outcome and not active`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/SweeperState"
   - Test file: `When_a_sweeper_state_has_recorded_nothing_should_report_no_sweep_in_progress_and_not_active.cs`
