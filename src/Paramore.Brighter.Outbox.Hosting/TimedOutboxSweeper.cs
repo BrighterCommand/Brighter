@@ -253,6 +253,8 @@ namespace Paramore.Brighter.Outbox.Hosting
                 return SweepOutcome.LockUnavailable;
             }
 
+            _state.LockObtained();
+
             try
             {
                 Log.OutboxSweeperLookingForUnsentMessages(s_logger);
