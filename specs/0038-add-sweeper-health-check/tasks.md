@@ -1082,7 +1082,7 @@
   - References: FR-6A, FR-3A, Definitions; AC-65.
   - Depends on: T10.11, T10.2.
 
-- [ ] **CHARACTERISE: T10.20 — A throwing sweeper meter does not stop sweeping or disturb the checks**
+- [x] **CHARACTERISE: T10.20 — A throwing sweeper meter does not stop sweeping or disturb the checks**
   - **USE COMMAND**: `/test-first when the sweeper meter throws on every recording the sweeps should complete and both health checks report healthy`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_sweeper_meter_throws_should_complete_sweeps_and_keep_both_checks_healthy.cs`
