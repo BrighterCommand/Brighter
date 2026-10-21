@@ -1069,7 +1069,7 @@
   - References: FR-6A.6; AC-54.
   - Depends on: T10.17.
 
-- [ ] **CHARACTERISE: T10.19 — Blocked in lock acquisition is not active, and becomes active once the lock is granted**
+- [x] **CHARACTERISE: T10.19 — Blocked in lock acquisition is not active, and becomes active once the lock is granted**
   - **USE COMMAND**: `/test-first when a sweep is blocked acquiring the lock after a completed sweep it should not report tripped topics until the lock is obtained`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_sweep_is_blocked_acquiring_the_lock_should_not_report_tripped_topics_until_obtained.cs`
