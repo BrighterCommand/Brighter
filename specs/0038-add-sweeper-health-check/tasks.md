@@ -895,7 +895,7 @@
   - References: FR-2, FR-6; AC-11.
   - Depends on: T8.2, T3.4.
 
-- [ ] **CHARACTERISE: T10.4 — A lock-unavailable sweep neither counts nor resets the failures**
+- [x] **CHARACTERISE: T10.4 — A lock-unavailable sweep neither counts nor resets the failures**
   - **USE COMMAND**: `/test-first when a lock unavailable sweep falls between failures the investigate check should neither count nor reset it`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_lock_unavailable_sweep_falls_between_failures_should_neither_count_nor_reset.cs`
