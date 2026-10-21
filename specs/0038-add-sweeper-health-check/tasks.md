@@ -453,7 +453,7 @@
   - References: FR-3.3, FR-4A; AC-67 (gauge half); ADR 0085 step 5; Risk *the sweeper and the meter get different record instances*.
   - Depends on: T5.1, T3.7.
 
-- [ ] **TEST + IMPLEMENT: T5.3 — The gauge reads the circuit breaker registered in the container, shared with the mediator**
+- [x] **TEST + IMPLEMENT: T5.3 — The gauge reads the circuit breaker registered in the container, shared with the mediator**
   - **USE COMMAND**: `/test-first when a circuit breaker is registered as a singleton shared with the mediator the tripped topics gauge should see its trips`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_a_circuit_breaker_is_registered_as_a_shared_singleton_should_report_its_trips_on_the_gauge.cs`
