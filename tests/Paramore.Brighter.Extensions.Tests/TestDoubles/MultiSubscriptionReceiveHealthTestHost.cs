@@ -48,13 +48,13 @@ internal sealed class MultiSubscriptionReceiveHealthTestHost : IAsyncDisposable
 
     public MultiSubscriptionReceiveHealthTestHost(IReadOnlyCollection<ReceiveHealthSubscription> subscriptions,
         MessagePumpType messagePumpType = MessagePumpType.Reactor, IAmAChannelFactory? channelFactory = null,
-        bool registerHealthCheck = true)
+        bool registerHealthCheck = true, Func<IAmAChannelFactory, IAmAChannelFactory>? decorateChannelFactory = null)
     {
         _factory = new InMemoryPerSubscriptionReceiveHealthChannelFactory(new InternalBus(), subscriptions);
         var services = new ServiceCollection();
         services.AddConsumers(options =>
         {
-            options.DefaultChannelFactory = channelFactory ?? _factory;
+            options.DefaultChannelFactory = channelFactory ?? decorateChannelFactory?.Invoke(_factory) ?? _factory;
             options.Subscriptions = subscriptions
                 .Select(subscription => (Subscription)new Subscription(new SubscriptionName(subscription.Name),
                     new ChannelName($"{subscription.Name}:in-memory"), new RoutingKey(subscription.Name),
