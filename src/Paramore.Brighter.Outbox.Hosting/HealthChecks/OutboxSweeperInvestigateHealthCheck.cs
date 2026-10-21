@@ -30,7 +30,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.CircuitBreaker;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Outbox.Hosting.HealthChecks;
@@ -39,8 +41,10 @@ namespace Paramore.Brighter.Outbox.Hosting.HealthChecks;
 /// An investigate remedy check that reports Degraded when consecutive sweeps have failed, when topics are
 /// circuit-broken, or when the tripped topics cannot be read.
 /// </summary>
-public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
+public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
 {
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<OutboxSweeperInvestigateHealthCheck>();
+
     /// <summary>The name of the condition reported while consecutive sweeps have failed.</summary>
     public const string ConsecutiveFailedSweeps = "consecutive_failed_sweeps";
 
@@ -91,9 +95,17 @@ public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
 
         if (snapshot.IsActive)
         {
-            var names = TrippedTopicNames();
-            if (names.Length > 0)
-                conditions.Add(TrippedTopicsCondition(names));
+            try
+            {
+                var names = TrippedTopicNames();
+                if (names.Length > 0)
+                    conditions.Add(TrippedTopicsCondition(names));
+            }
+            catch (Exception e)
+            {
+                Log.TrippedTopicsUnreadable(s_logger, e);
+                conditions.Add(TrippedTopicsUnreadableCondition(e));
+            }
         }
 
         if (conditions.Count == 0)
@@ -143,6 +155,20 @@ public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
             : listed;
         var description = $"{names.Length} topics are circuit-broken and are not being swept until their cooldown ends: {named}.";
         return (TrippedTopics, description, values);
+    }
+
+    private static (string Name, string Description, Dictionary<string, object> Values) TrippedTopicsUnreadableCondition(Exception e)
+    {
+        var type = e.GetType().FullName ?? e.GetType().Name;
+        var values = new Dictionary<string, object> { ["exception_type"] = type };
+        var description = $"The tripped topics could not be read from the circuit breaker ({type}).";
+        return (TrippedTopicsUnreadable, description, values);
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Error, "The outbox sweeper health check could not read the tripped topics from the circuit breaker")]
+        public static partial void TrippedTopicsUnreadable(ILogger logger, Exception e);
     }
 
     private static Dictionary<string, object> Data(string[] conditions) => new()
