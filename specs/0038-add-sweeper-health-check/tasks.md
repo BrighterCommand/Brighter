@@ -917,7 +917,7 @@
   - References: FR-6.1; AC-13.
   - Depends on: T10.3.
 
-- [ ] **CHARACTERISE: T10.6 — Failures thrown by the lock count towards the threshold**
+- [x] **CHARACTERISE: T10.6 — Failures thrown by the lock count towards the threshold**
   - **USE COMMAND**: `/test-first when obtaining the lock throws on three sweeps the investigate check should report consecutive failures`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_obtaining_the_lock_throws_on_three_sweeps_should_report_consecutive_failures.cs`
