@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -248,5 +249,6 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         public string OutBoxTableName => "Messages";
         public string QueueStoreTable => "Queues";
         public string? SchemaName => "dbo";
+        public TimeSpan? OutstandingCountTimeout => null;
     }
 }

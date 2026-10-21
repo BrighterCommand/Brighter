@@ -30,6 +30,9 @@ namespace Paramore.Brighter
         /// <value>The configuration instance supplied when the outbox was constructed.</value>
         public IAmARelationalDatabaseConfiguration DatabaseConfiguration { get; } = configuration;
 
+        private readonly int _outstandingCountTimeoutSeconds = RelationalDatabaseConfiguration.ToOutstandingCountTimeoutSeconds(
+            configuration.OutstandingCountTimeout, nameof(configuration));
+
         protected IAmARelationalDbConnectionProvider ConnectionProvider { get; } = connectionProvider;
 
         protected IRelationDatabaseOutboxQueries Queries => queries;
@@ -924,6 +927,11 @@ namespace Paramore.Brighter
             IEnumerable<RoutingKey>? trippedTopics = null,
             Dictionary<string, object>? args = null)
         {
+            return ReadOutstandingMessages(dispatchedSince, requestContext, pageSize, pageNumber, trippedTopics, -1);
+        }
+
+        private IEnumerable<Message> ReadOutstandingMessages(TimeSpan dispatchedSince, RequestContext? requestContext, int pageSize, int pageNumber, IEnumerable<RoutingKey>? trippedTopics, int commandTimeout)
+        {
             var dbAttributes = new Dictionary<string, string>()
             {
                 { "db.operation.name", ExtractSqlOperationName(queries.PagedOutstandingCommand) },
@@ -938,7 +946,7 @@ namespace Paramore.Brighter
             try
             {
                 var result = ReadFromStore(
-                    connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber, trippedTopics ?? [], - 1),
+                    connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber, trippedTopics ?? [], commandTimeout),
                     MapListFunction);
 
                 span?.AddTag("db.response.returned_rows", result.Count());
@@ -970,6 +978,11 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            return await ReadOutstandingMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, trippedTopics, -1, cancellationToken);
+        }
+
+        private async Task<IEnumerable<Message>> ReadOutstandingMessagesAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int pageSize, int pageNumber, IEnumerable<RoutingKey>? trippedTopics, int commandTimeout, CancellationToken cancellationToken)
+        {
             var dbAttributes = new Dictionary<string, string>()
             {
                 { "db.operation.name", ExtractSqlOperationName(queries.PagedOutstandingCommand) },
@@ -984,7 +997,7 @@ namespace Paramore.Brighter
             try
             {
                 var result = await ReadFromStoreAsync(
-                    connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber, trippedTopics ?? [],  -1),
+                    connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber, trippedTopics ?? [], commandTimeout),
                     dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
 
                 span?.AddTag("db.response.returned_rows", result.Count());
@@ -999,13 +1012,13 @@ namespace Paramore.Brighter
         /// <inheritdoc/>
         public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
         {
-            return OutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, args).Count();
+            return ReadOutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds).Count();
         }
 
         /// <inheritdoc/>
         public async Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
-            return (await OutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, args, cancellationToken))
+            return (await ReadOutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds, cancellationToken))
                 .Count();
         }
 
