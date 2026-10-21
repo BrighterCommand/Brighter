@@ -57,7 +57,7 @@ public class OutboxSweeperRestartHealthCheck : IHealthCheck
         _state = state;
         options ??= new TimedOutboxSweeperOptions();
         _timerInterval = TimeSpan.FromSeconds(options.TimerInterval);
-        _hangThreshold = 3 * _timerInterval;
+        _hangThreshold = hangThreshold ?? 3 * _timerInterval;
     }
 
     /// <inheritdoc />
