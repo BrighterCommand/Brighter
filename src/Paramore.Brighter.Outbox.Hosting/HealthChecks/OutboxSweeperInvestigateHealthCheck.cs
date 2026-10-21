@@ -50,6 +50,8 @@ public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
     /// <summary>The name of the condition reported when the tripped topics could not be read.</summary>
     public const string TrippedTopicsUnreadable = "tripped_topics_unreadable";
 
+    private const int MaxNamedTopics = 10;
+
     private readonly OutboxSweeperState? _state;
     private readonly int _timerIntervalSeconds;
     private readonly int _failureThreshold;
@@ -135,7 +137,11 @@ public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
             ["count"] = names.Length,
             ["topics"] = names
         };
-        var description = $"{names.Length} topics are circuit-broken and are not being swept until their cooldown ends: {string.Join(", ", names)}.";
+        var listed = string.Join(", ", names.Take(MaxNamedTopics));
+        var named = names.Length > MaxNamedTopics
+            ? $"{listed} and {names.Length - MaxNamedTopics} more ({names.Length} in total)"
+            : listed;
+        var description = $"{names.Length} topics are circuit-broken and are not being swept until their cooldown ends: {named}.";
         return (TrippedTopics, description, values);
     }
 
