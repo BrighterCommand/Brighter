@@ -965,7 +965,7 @@
   - References: FR-9; AC-18.
   - Depends on: T10.2, T4.1.
 
-- [ ] **CHARACTERISE: T10.10 — Two sweepers on a shared lock: only the active sweeper reports tripped topics**
+- [x] **CHARACTERISE: T10.10 — Two sweepers on a shared lock: only the active sweeper reports tripped topics**
   - **USE COMMAND**: `/test-first when two sweepers share a lock only the sweeper that obtains it should report its tripped topics`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_two_sweepers_share_a_lock_should_report_tripped_topics_only_on_the_active_sweeper.cs`
