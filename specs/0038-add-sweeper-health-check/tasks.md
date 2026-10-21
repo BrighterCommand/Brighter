@@ -1260,7 +1260,7 @@
   - References: FR-12.1, FR-12.4, FR-10.5; AC-59, AC-63 (take-out-of-service half).
   - Depends on: T12.1, T12.0.
 
-- [ ] **CHARACTERISE: T12.3 — Failures count whatever the dispatcher state: shut, draining or awaiting**
+- [x] **CHARACTERISE: T12.3 — Failures count whatever the dispatcher state: shut, draining or awaiting**
   - **USE COMMAND**: `/test-first when a shut or draining consumer is at the failure threshold the take out of service check should still report degraded`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_shut_or_draining_consumer_is_at_the_failure_threshold_should_still_report_degraded.cs`
