@@ -828,7 +828,7 @@
   - References: FR-4A, FR-4A.1; AC-66.
   - Depends on: T9.1, T5.1.
 
-- [ ] **CHARACTERISE: T9.6 — The checks find the sweeper registered by an unchanged `UseOutboxSweeper` call**
+- [x] **CHARACTERISE: T9.6 — The checks find the sweeper registered by an unchanged `UseOutboxSweeper` call**
   - **USE COMMAND**: `/test-first when the sweeper is registered with use outbox sweeper and a sweep is hung the restart check should report the hung sweep`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_sweeper_is_registered_with_use_outbox_sweeper_should_report_its_hung_sweep.cs`
