@@ -763,7 +763,7 @@
 
 *ADR 0086 step 5. `AddHealthChecks().AddBrighterOutboxSweeperHealthChecks()`; container tests run `HealthCheckService.CheckHealthAsync`.*
 
-- [ ] **TEST + IMPLEMENT: T9.1 — One opt-in call registers the restart and investigate checks, one remedy tag each**
+- [x] **TEST + IMPLEMENT: T9.1 — One opt-in call registers the restart and investigate checks, one remedy tag each**
   - **USE COMMAND**: `/test-first when the sweeper health checks are added it should register a restart check and an investigate check each with only its remedy tag`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_sweeper_health_checks_are_added_should_register_two_checks_each_with_its_remedy_tag.cs`
