@@ -57,12 +57,12 @@ public static class OutboxSweeperHealthChecksBuilderExtensions
             .Add(new HealthCheckRegistration(
                 "brighter-outbox-sweeper-restart",
                 sp => new OutboxSweeperRestartHealthCheck(sp.GetService<OutboxSweeperState>(), sp.GetService<TimedOutboxSweeperOptions>(), hangThreshold),
-                failureStatus: null,
+                failureStatus: HealthStatus.Degraded,
                 tags: new[] { RemedyCheckConvention.RestartTag }))
             .Add(new HealthCheckRegistration(
                 "brighter-outbox-sweeper-investigate",
                 sp => new OutboxSweeperInvestigateHealthCheck(sp.GetService<OutboxSweeperState>(), sp.GetService<TimedOutboxSweeperOptions>(), () => sp.GetService<IAmAnOutboxCircuitBreaker>(), failureThreshold),
-                failureStatus: null,
+                failureStatus: HealthStatus.Degraded,
                 tags: new[] { RemedyCheckConvention.InvestigateTag }));
     }
 }
