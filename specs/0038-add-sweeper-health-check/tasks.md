@@ -1303,7 +1303,7 @@
   - References: FR-12.7; AC-71 (restart half).
   - Depends on: T11.7, T6.1.
 
-- [ ] **TEST + IMPLEMENT: T13.3 — A running dispatcher missing a consumer is Degraded with the subscription's counts**
+- [x] **TEST + IMPLEMENT: T13.3 — A running dispatcher missing a consumer is Degraded with the subscription's counts**
   - **USE COMMAND**: `/test-first when a running dispatcher has fewer consumers than expected the consumer restart check should report degraded with the counts`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_running_dispatcher_has_fewer_consumers_than_expected_should_report_missing_consumers.cs`
