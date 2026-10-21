@@ -2,11 +2,11 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-    <AwsDynamoDbV4>4.0.107</AwsDynamoDbV4>
-    <AWSSDKIdentityManagementV4>4.0.103.3</AWSSDKIdentityManagementV4>
+    <AwsDynamoDbV4>4.0.107.3</AwsDynamoDbV4>
+    <AWSSDKIdentityManagementV4>4.0.103.10</AWSSDKIdentityManagementV4>
     <AWSSDKSchedulerV4>4.0.100.15</AWSSDKSchedulerV4>
-    <AWSSDKV4>4.0.104.1</AWSSDKV4>
-    <AWSSecurityTokenV4>4.0.101.1</AWSSecurityTokenV4>
+    <AWSSDKV4>4.0.104.4</AWSSDKV4>
+    <AWSSecurityTokenV4>4.0.101.4</AWSSecurityTokenV4>
     <AWSSQSV4>4.0.100.15</AWSSQSV4>
     <AWSSDKSimpleNotificationServiceV4>4.0.100.16</AWSSDKSimpleNotificationServiceV4>
     <AWSSDKExtensionsNETCoreSetup>4.0.102.1</AWSSDKExtensionsNETCoreSetup>
@@ -22,8 +22,8 @@
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
   </ItemGroup>
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.0" />
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.0" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.1" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.1" />
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.513.4, 4)" />
     <PackageVersion Include="AWSSDK.IdentityManagement" Version="[3.7.507.47, 4)" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="[3.7.400.2, 4)" />
@@ -35,10 +35,10 @@
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.21.0" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.0" />
-    <PackageVersion Include="Confluent.Kafka" Version="2.15.1" />
-    <PackageVersion Include="Confluent.SchemaRegistry" Version="2.15.1" />
-    <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.15.1" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
+    <PackageVersion Include="Confluent.Kafka" Version="2.16.0" />
+    <PackageVersion Include="Confluent.SchemaRegistry" Version="2.16.0" />
+    <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.16.0" />
     <PackageVersion Include="coverlet.collector" Version="10.1.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
