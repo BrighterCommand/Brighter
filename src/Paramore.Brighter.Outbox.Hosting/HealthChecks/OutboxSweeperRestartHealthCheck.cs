@@ -52,8 +52,12 @@ public class OutboxSweeperRestartHealthCheck : IHealthCheck
     /// <param name="state">The sweeper's shared record, or null when no sweeper is registered.</param>
     /// <param name="options">The sweeper's options, or null to use the defaults.</param>
     /// <param name="hangThreshold">How long a sweep may run before it is hung, or null for three times the timer interval.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="hangThreshold"/> is supplied and is zero or negative.</exception>
     public OutboxSweeperRestartHealthCheck(OutboxSweeperState? state, TimedOutboxSweeperOptions? options, TimeSpan? hangThreshold = null)
     {
+        if (hangThreshold <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(hangThreshold), hangThreshold, "The hang threshold must be greater than zero.");
+
         _state = state;
         options ??= new TimedOutboxSweeperOptions();
         _timerInterval = TimeSpan.FromSeconds(options.TimerInterval);
