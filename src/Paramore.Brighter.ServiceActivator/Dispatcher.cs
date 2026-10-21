@@ -428,15 +428,22 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="subscription">The subscription.</param>
         public void Shut(Subscription subscription)
         {
-            if (State == DispatcherState.DS_RUNNING)
+            var consumersForConnection = SnapshotConsumersToShut(subscription);
+            if (consumersForConnection is null) return;
+
+            Log.StoppingSubscription(s_logger, subscription.Name.Value);
+            for (int i = 0; i < consumersForConnection.Length; ++i)
             {
-                Log.StoppingSubscription(s_logger, subscription.Name.Value);
-                var consumersForConnection = Consumers.Where(consumer => consumer.Subscription.Name == subscription.Name).ToArray();
-                var noOfConsumers = consumersForConnection.Length;
-                for (int i = 0; i < noOfConsumers; ++i)
-                {
-                    consumersForConnection[i].Shut(subscription.RoutingKey);
-                }
+                consumersForConnection[i].Shut(subscription.RoutingKey);
+            }
+        }
+
+        private IAmAConsumer[]? SnapshotConsumersToShut(Subscription subscription)
+        {
+            lock (_lifecycleLock)
+            {
+                if (State != DispatcherState.DS_RUNNING) return null;
+                return Consumers.Where(consumer => consumer.Subscription.Name == subscription.Name).ToArray();
             }
         }
 
