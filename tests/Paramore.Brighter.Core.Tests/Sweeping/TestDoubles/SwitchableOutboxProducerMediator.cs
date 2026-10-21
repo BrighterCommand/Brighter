@@ -11,6 +11,10 @@ namespace Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 public sealed class SwitchableOutboxProducerMediator : SweepOnlyOutboxProducerMediator
 {
     private string? _failure;
+    private int _sweepsAttempted;
+
+    /// <summary>The number of sweeps that have reached the mediator.</summary>
+    public int SweepsAttempted => Volatile.Read(ref _sweepsAttempted);
 
     /// <summary>Makes later sweeps complete.</summary>
     public void Complete() => Volatile.Write(ref _failure, null);
@@ -25,6 +29,7 @@ public sealed class SwitchableOutboxProducerMediator : SweepOnlyOutboxProducerMe
         Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
     {
+        Interlocked.Increment(ref _sweepsAttempted);
         var failure = Volatile.Read(ref _failure);
         return failure is null ? Task.CompletedTask : throw new InvalidOperationException(failure);
     }
