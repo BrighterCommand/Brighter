@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -52,6 +53,7 @@ public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
     private readonly OutboxSweeperState? _state;
     private readonly int _timerIntervalSeconds;
     private readonly int _failureThreshold;
+    private readonly Func<IAmAnOutboxCircuitBreaker?>? _findCircuitBreaker;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OutboxSweeperInvestigateHealthCheck"/> class.
@@ -70,6 +72,7 @@ public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         options ??= new TimedOutboxSweeperOptions();
         _timerIntervalSeconds = options.TimerInterval;
         _failureThreshold = failureThreshold;
+        _findCircuitBreaker = findCircuitBreaker;
     }
 
     /// <inheritdoc />
@@ -78,9 +81,21 @@ public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         if (_state is null)
             return Task.FromResult(HealthCheckResult.Healthy("No outbox sweeper is registered.", Data(Array.Empty<string>())));
 
-        var failed = _state.Read().ConsecutiveFailedSweeps;
+        var snapshot = _state.Read();
+        var failed = snapshot.ConsecutiveFailedSweeps;
         if (failed < _failureThreshold)
         {
+            if (snapshot.IsActive)
+            {
+                var tripped = _findCircuitBreaker?.Invoke()?.TrippedTopics;
+                if (tripped is not null)
+                {
+                    var names = tripped.Select(topic => topic.Value).OrderBy(name => name, StringComparer.Ordinal).ToArray();
+                    if (names.Length > 0)
+                        return Task.FromResult(TrippedTopicsResult(names));
+                }
+            }
+
             var healthy = HealthCheckResult.Healthy($"No outbox sweeper condition needs investigation: fewer than {_failureThreshold} consecutive failed sweeps.", Data(Array.Empty<string>()));
             return Task.FromResult(healthy);
         }
@@ -95,6 +110,18 @@ public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         var interval = _timerIntervalSeconds.ToString(CultureInfo.InvariantCulture);
         var description = $"{failed} consecutive outbox sweeps have failed (threshold {_failureThreshold}, TimerInterval {interval}s).";
         return Task.FromResult(new HealthCheckResult(HealthStatus.Degraded, description, null, data));
+    }
+
+    private static HealthCheckResult TrippedTopicsResult(string[] names)
+    {
+        var data = Data(new[] { TrippedTopics });
+        data[TrippedTopics] = new Dictionary<string, object>
+        {
+            ["count"] = names.Length,
+            ["topics"] = names
+        };
+        var description = $"{names.Length} topics are circuit-broken and are not being swept until their cooldown ends: {string.Join(", ", names)}.";
+        return new HealthCheckResult(HealthStatus.Degraded, description, null, data);
     }
 
     private static Dictionary<string, object> Data(string[] conditions) => new()
