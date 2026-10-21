@@ -941,7 +941,7 @@
   - References: FR-4, FR-8, FR-10.1; AC-16, AC-39 (bullets 1–2).
   - Depends on: T10.3.
 
-- [ ] **CHARACTERISE: T10.8 — Both checks complete while the sweeper's thread is blocked**
+- [x] **CHARACTERISE: T10.8 — Both checks complete while the sweeper's thread is blocked**
   - **USE COMMAND**: `/test-first when the sweep is blocked indefinitely both health checks should complete within one second`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_sweep_is_blocked_indefinitely_should_complete_both_health_checks_within_a_second.cs`
