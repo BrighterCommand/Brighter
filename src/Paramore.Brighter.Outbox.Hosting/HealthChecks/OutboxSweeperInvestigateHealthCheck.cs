@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -48,6 +49,10 @@ public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
     /// <summary>The name of the condition reported when the tripped topics could not be read.</summary>
     public const string TrippedTopicsUnreadable = "tripped_topics_unreadable";
 
+    private readonly OutboxSweeperState? _state;
+    private readonly int _timerIntervalSeconds;
+    private readonly int _failureThreshold;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="OutboxSweeperInvestigateHealthCheck"/> class.
     /// </summary>
@@ -57,16 +62,40 @@ public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
     /// <param name="failureThreshold">How many consecutive failed sweeps raise the condition.</param>
     public OutboxSweeperInvestigateHealthCheck(OutboxSweeperState? state, TimedOutboxSweeperOptions? options, Func<IAmAnOutboxCircuitBreaker?>? findCircuitBreaker = null, int failureThreshold = 3)
     {
+        _state = state;
+        options ??= new TimedOutboxSweeperOptions();
+        _timerIntervalSeconds = options.TimerInterval;
+        _failureThreshold = failureThreshold;
     }
 
     /// <inheritdoc />
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
-        var data = new Dictionary<string, object>
+        if (_state is null)
+            return Task.FromResult(HealthCheckResult.Healthy("No outbox sweeper is registered.", Data(Array.Empty<string>())));
+
+        var failed = _state.Read().ConsecutiveFailedSweeps;
+        if (failed < _failureThreshold)
         {
-            [RemedyCheckConvention.RemedyKindKey] = RemedyCheckConvention.Name(RemedyKind.Investigate),
-            [RemedyCheckConvention.ConditionsKey] = Array.Empty<string>()
+            var healthy = HealthCheckResult.Healthy($"No outbox sweeper condition needs investigation: fewer than {_failureThreshold} consecutive failed sweeps.", Data(Array.Empty<string>()));
+            return Task.FromResult(healthy);
+        }
+
+        var data = Data(new[] { ConsecutiveFailedSweeps });
+        data[ConsecutiveFailedSweeps] = new Dictionary<string, object>
+        {
+            ["count"] = failed,
+            ["threshold"] = _failureThreshold,
+            ["timer_interval_seconds"] = (double)_timerIntervalSeconds
         };
-        return Task.FromResult(HealthCheckResult.Healthy("No outbox sweeper is registered.", data));
+        var interval = _timerIntervalSeconds.ToString(CultureInfo.InvariantCulture);
+        var description = $"{failed} consecutive outbox sweeps have failed (threshold {_failureThreshold}, TimerInterval {interval}s).";
+        return Task.FromResult(new HealthCheckResult(HealthStatus.Degraded, description, null, data));
     }
+
+    private static Dictionary<string, object> Data(string[] conditions) => new()
+    {
+        [RemedyCheckConvention.RemedyKindKey] = RemedyCheckConvention.Name(RemedyKind.Investigate),
+        [RemedyCheckConvention.ConditionsKey] = conditions
+    };
 }
