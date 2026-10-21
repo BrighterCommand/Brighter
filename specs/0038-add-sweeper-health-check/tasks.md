@@ -1025,7 +1025,7 @@
   - References: FR-1.2, FR-6A.5; AC-64.
   - Depends on: T10.13, T8.6.
 
-- [ ] **CHARACTERISE: T10.15 — A hung sweep that fails counts as a failure and clears the hang**
+- [x] **CHARACTERISE: T10.15 — A hung sweep that fails counts as a failure and clears the hang**
   - **USE COMMAND**: `/test-first when a hung sweep ends as failed after two failures the restart check should be healthy and the investigate check count three`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_hung_sweep_ends_as_failed_should_count_it_as_the_third_failure.cs`
