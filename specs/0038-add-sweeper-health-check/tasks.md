@@ -814,7 +814,7 @@
   - References: FR-13.1; AC-70 (sweeper half; the record is concrete, so the registration's failure status is the evidence).
   - Depends on: T9.1.
 
-- [ ] **CHARACTERISE: T9.5 — With no sweeper registered, both checks are Healthy and both gauges read 0**
+- [x] **CHARACTERISE: T9.5 — With no sweeper registered, both checks are Healthy and both gauges read 0**
   - **USE COMMAND**: `/test-first when the sweeper health checks are added without use outbox sweeper both checks should report no sweeper registered and both gauges zero`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_sweeper_checks_are_added_without_a_sweeper_should_report_no_sweeper_registered.cs`
