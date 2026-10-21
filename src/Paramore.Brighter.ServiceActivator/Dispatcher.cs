@@ -531,7 +531,10 @@ namespace Paramore.Brighter.ServiceActivator
                 lock (_lifecycleLock)
                 {
                     foreach (var consumer in consumers)
+                    {
                         _consumers.TryAdd(consumer.Name.Value, consumer);
+                        _shutSubscriptions.Remove(consumer.Subscription.Name);
+                    }
                 }
 
                 if (starting)
