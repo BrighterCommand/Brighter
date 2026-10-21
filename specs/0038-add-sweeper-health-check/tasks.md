@@ -1329,7 +1329,7 @@
   - References: FR-12.2; AC-58 (Unhealthy and DS_STOPPED cases); ADR 0087 *Why the restart check keeps Unhealthy for zero consumers*.
   - Depends on: T13.3, T12.0.
 
-- [ ] **TEST + IMPLEMENT: T13.5 — A dispatcher that is not running is Healthy**
+- [x] **TEST + IMPLEMENT: T13.5 — A dispatcher that is not running is Healthy**
   - **USE COMMAND**: `/test-first when the dispatcher is awaiting or end has been called the consumer restart check should report healthy and say it is not running`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_dispatcher_is_not_running_should_report_healthy_and_say_so.cs`
