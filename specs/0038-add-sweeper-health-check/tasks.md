@@ -1213,7 +1213,7 @@
   - References: FR-12.2; ADR 0087 step 3.
   - Depends on: T11.6.
 
-- [ ] **PROJECT: T11.8 — The full dispatcher suite is green and admission is unchanged**
+- [x] **PROJECT: T11.8 — The full dispatcher suite is green and admission is unchanged**
   - Run all of `tests/Paramore.Brighter.Core.Tests/MessageDispatch` (Reactor and Proactor) and the ADR 0083 shutdown tests. Confirm that `IDispatcher`, `DispatcherState` and the admission rules are untouched (`git diff` shows no change to those members).
   - References: ADR 0087 invariant *admission does not change*; NFR-6.
   - Depends on: T11.7.
