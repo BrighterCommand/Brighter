@@ -729,7 +729,7 @@
   - References: FR-6A.1, FR-6A.2; AC-41.
   - Depends on: T8.4.
 
-- [ ] **CHARACTERISE: T8.12 — The check agrees with a real breaker's cooldown shared with the mediator**
+- [x] **CHARACTERISE: T8.12 — The check agrees with a real breaker's cooldown shared with the mediator**
   - **USE COMMAND**: `/test-first when a topic trips on the breaker shared with the mediator the investigate check should report it until the cooldown evicts it`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_topic_trips_on_the_shared_breaker_should_report_it_until_cooldown_evicts_it.cs`
