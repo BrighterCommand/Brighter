@@ -1156,7 +1156,7 @@
   - References: FR-12.2 (consumer operation in progress); ADR 0087 *ConsumerOperationsInFlight*.
   - Depends on: T11.1.
 
-- [ ] **TEST + IMPLEMENT: T11.3 — `End` is recorded in any state, and `End` before `Receive` still lets `Receive` start**
+- [x] **TEST + IMPLEMENT: T11.3 — `End` is recorded in any state, and `End` before `Receive` still lets `Receive` start**
   - **USE COMMAND**: `/test-first when end is called on an awaiting dispatcher the snapshot should report end requested and a later receive should start and clear it`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch"
   - Test file: `When_end_is_called_on_an_awaiting_dispatcher_should_record_it_and_allow_receive.cs`
