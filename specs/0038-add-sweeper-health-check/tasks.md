@@ -676,7 +676,7 @@
   - References: FR-8 (more than one condition), FR-10.5; AC-38, AC-39 (combined bullet).
   - Depends on: T8.4.
 
-- [ ] **TEST + IMPLEMENT: T8.8 — More than 10 tripped topics: the description names the first 10 and the total, and `Data` lists all of them**
+- [x] **TEST + IMPLEMENT: T8.8 — More than 10 tripped topics: the description names the first 10 and the total, and `Data` lists all of them**
   - **USE COMMAND**: `/test-first when more than ten topics are tripped the investigate check should name the first ten and the total and list all in data`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_more_than_ten_topics_are_tripped_should_name_the_first_ten_and_the_total.cs`
