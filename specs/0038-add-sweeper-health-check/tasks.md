@@ -1271,7 +1271,7 @@
   - References: FR-12.1; AC-59; ADR 0087 *Why the take-out-of-service check reads every consumer in every state*.
   - Depends on: T12.2.
 
-- [ ] **TEST + IMPLEMENT: T12.4 — The channel-failure threshold defaults to 3, may be 1, and must be positive**
+- [x] **TEST + IMPLEMENT: T12.4 — The channel-failure threshold defaults to 3, may be 1, and must be positive**
   - **USE COMMAND**: `/test-first when the take out of service check is constructed with a threshold of one or not positive it should degrade on one failure or throw`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_take_out_of_service_threshold_is_one_or_not_positive_should_degrade_or_reject.cs`
