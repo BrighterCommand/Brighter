@@ -532,7 +532,7 @@
   - References: FR-4A.1, FR-10.5; ADR 0086 *Descriptions*, *Data shape*.
   - Depends on: T1.1, T6.1, T2.2.
 
-- [ ] **TEST + IMPLEMENT: T7.2 — The restart check is Degraded only when running time is strictly greater than 3 × TimerInterval**
+- [x] **TEST + IMPLEMENT: T7.2 — The restart check is Degraded only when running time is strictly greater than 3 × TimerInterval**
   - **USE COMMAND**: `/test-first when a sweep runs past the default hang threshold the restart check should report degraded with the running time threshold and timer interval`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_sweep_runs_past_the_hang_threshold_should_report_a_hung_sweep.cs`
