@@ -1000,7 +1000,7 @@
   - References: FR-4, FR-6A, FR-10.1; AC-42.
   - Depends on: T10.11.
 
-- [ ] **CHARACTERISE: T10.13 — An abandoned sweep keeps growing after stop and keeps the restart check Degraded**
+- [x] **CHARACTERISE: T10.13 — An abandoned sweep keeps growing after stop and keeps the restart check Degraded**
   - **USE COMMAND**: `/test-first when stop abandons a blocked sweep the running time gauge should keep growing and the restart check stay degraded`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_stop_abandons_a_blocked_sweep_should_keep_growing_its_running_time.cs`
