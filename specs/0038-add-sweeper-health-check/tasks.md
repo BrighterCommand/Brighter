@@ -1169,7 +1169,7 @@
   - References: FR-12.2 (dispatcher running); ADR 0087 step 2, *Why EndRequested is a new field*.
   - Depends on: T11.1.
 
-- [ ] **CHARACTERISE: T11.4 — `End` while running, after `DS_STOPPED`, and through `Dispose` all set `EndRequested`; a restart clears it**
+- [x] **CHARACTERISE: T11.4 — `End` while running, after `DS_STOPPED`, and through `Dispose` all set `EndRequested`; a restart clears it**
   - **USE COMMAND**: `/test-first when end is called in running or stopped states or by dispose the snapshot should report end requested until the next start`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch"
   - Test file: `When_end_is_called_in_running_or_stopped_states_should_report_end_requested_until_restarted.cs`
