@@ -1188,7 +1188,7 @@
   - References: ADR 0087 *Why shut subscriptions are recorded under the lifecycle lock*; ADR 0083; Risk *the new lock in Shut deadlocks*.
   - Depends on: T11.1.
 
-- [ ] **TEST + IMPLEMENT: T11.6 — A `Shut` that takes effect records the subscription; a `Shut` while awaiting does not**
+- [x] **TEST + IMPLEMENT: T11.6 — A `Shut` that takes effect records the subscription; a `Shut` while awaiting does not**
   - **USE COMMAND**: `/test-first when a subscription is shut on a running dispatcher the snapshot should list it as shut and not when the dispatcher is awaiting`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch"
   - Test file: `When_a_subscription_is_shut_on_a_running_dispatcher_should_list_it_as_shut.cs`
