@@ -1288,7 +1288,7 @@
 
 *ADR 0087 step 5. The decision ladder rows 1–8.*
 
-- [ ] **STRUCTURAL: T13.1 — A gated channel factory for the consumer-check tests**
+- [x] **STRUCTURAL: T13.1 — A gated channel factory for the consumer-check tests**
   - Add `InMemoryGatedReceiveHealthChannelFactory` in `tests/Paramore.Brighter.Extensions.Tests/TestDoubles/` (one class per file). It blocks channel creation until released, modelled on `InMemoryUnopenedConsumerChannelFactory`, which is internal to Core.Tests. Allow the multi-subscription host from T12.0 to be given it (T13.8 needs the gate with `orders` expecting 2).
   - Depends on: T12.0.
 
