@@ -1246,7 +1246,7 @@
   - References: FR-12.7, FR-10.5; AC-71 (take-out-of-service half).
   - Depends on: T1.2, T6.1.
 
-- [ ] **TEST + IMPLEMENT: T12.2 — Degraded when any consumer reaches the channel-failure threshold, never Unhealthy**
+- [x] **TEST + IMPLEMENT: T12.2 — Degraded when any consumer reaches the channel-failure threshold, never Unhealthy**
   - **USE COMMAND**: `/test-first when a consumer reaches the channel failure threshold the take out of service check should report degraded naming it`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_consumer_reaches_the_channel_failure_threshold_should_report_take_out_of_service.cs`
