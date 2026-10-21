@@ -862,7 +862,7 @@
 
 *ADR 0086 step 6 and ADR 0085 step 6. A real `TimedOutboxSweeper` with blocking doubles, driven by the Standing obligation *Sweeper loop timing*; checks and gauges read the same record from another thread. Most tasks are `CHARACTERISE`: the behaviour already exists, and these tests pin the acceptance criteria.*
 
-- [ ] **CHARACTERISE: T10.1 — A hung sweep that ends clears the restart check**
+- [x] **CHARACTERISE: T10.1 — A hung sweep that ends clears the restart check**
   - **USE COMMAND**: `/test-first when a hung sweep is released and completes the restart check should report healthy again`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_hung_sweep_is_released_and_completes_should_report_healthy_again.cs`
