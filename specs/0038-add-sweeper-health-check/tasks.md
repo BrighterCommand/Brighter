@@ -560,7 +560,7 @@
   - References: FR-7.1; AC-8, AC-10; ADR 0086 *Descriptions* (formatting).
   - Depends on: T7.2.
 
-- [ ] **TEST + IMPLEMENT: T7.4 — Constructing the restart check with a non-positive hang threshold throws**
+- [x] **TEST + IMPLEMENT: T7.4 — Constructing the restart check with a non-positive hang threshold throws**
   - **USE COMMAND**: `/test-first when the restart check is constructed with a zero or negative hang threshold it should throw argument out of range`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_restart_check_is_constructed_with_a_non_positive_hang_threshold_should_throw.cs`
