@@ -662,7 +662,7 @@
   - References: FR-6A, FR-6A.5, FR-6A.6, FR-1.2; AC-52, AC-54, AC-64, AC-65 (check halves at check level), AC-68 (inactive half); ADR 0086 invariant *an inactive sweeper never touches the breaker*.
   - Depends on: T8.4, T2.5, T3.1.
 
-- [ ] **TEST + IMPLEMENT: T8.7 — Failures and tripped topics on one check are both reported, in order**
+- [x] **TEST + IMPLEMENT: T8.7 — Failures and tripped topics on one check are both reported, in order**
   - **USE COMMAND**: `/test-first when failures and a tripped topic apply together the investigate check should report both conditions`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_failures_and_a_tripped_topic_apply_together_should_report_both_conditions.cs`
