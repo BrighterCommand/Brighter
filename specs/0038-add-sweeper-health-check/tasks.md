@@ -989,7 +989,7 @@
   - References: FR-3A, FR-6A, NFR-1; AC-34.
   - Depends on: T8.6, T4.5.
 
-- [ ] **CHARACTERISE: T10.12 — A hung active sweep with a tripped topic degrades both checks with their own remedy kinds**
+- [x] **CHARACTERISE: T10.12 — A hung active sweep with a tripped topic degrades both checks with their own remedy kinds**
   - **USE COMMAND**: `/test-first when an active sweep hangs with a topic tripped both checks should report degraded with their own remedy kinds`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_an_active_sweep_hangs_with_a_topic_tripped_should_degrade_both_checks.cs`
