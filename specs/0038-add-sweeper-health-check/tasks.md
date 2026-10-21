@@ -802,7 +802,7 @@
   - References: FR-7.2; AC-14 (call half).
   - Depends on: T9.1.
 
-- [ ] **TEST + IMPLEMENT: T9.4 — Both sweeper registrations carry failure status Degraded**
+- [x] **TEST + IMPLEMENT: T9.4 — Both sweeper registrations carry failure status Degraded**
   - **USE COMMAND**: `/test-first when the sweeper health checks are registered each registration should have failure status degraded`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_sweeper_health_checks_are_registered_should_have_failure_status_degraded.cs`
