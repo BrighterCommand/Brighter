@@ -1371,7 +1371,7 @@
   - References: FR-12.2 (totals, excess); AC-58 (remaining cases).
   - Depends on: T13.6, T12.0.
 
-- [ ] **TEST + IMPLEMENT: T13.8 — A consumer operation in progress is Healthy**
+- [x] **TEST + IMPLEMENT: T13.8 — A consumer operation in progress is Healthy**
   - **USE COMMAND**: `/test-first when a consumer operation is blocked in channel creation the consumer restart check should report healthy and say an operation is in progress`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_consumer_operation_is_blocked_in_channel_creation_should_report_healthy_in_progress.cs`
