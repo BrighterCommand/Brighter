@@ -1224,7 +1224,7 @@
 
 *ADR 0087 step 4. `tests/Paramore.Brighter.Extensions.Tests`, reusing `ReceiveHealthTestHost` and `InMemoryReceiveHealthChannelFactory`, extended by T12.0.*
 
-- [ ] **STRUCTURAL: T12.0 — Multi-subscription fixtures for the consumer-check tests in `Extensions.Tests`**
+- [x] **STRUCTURAL: T12.0 — Multi-subscription fixtures for the consumer-check tests in `Extensions.Tests`**
   - `ReceiveHealthTestHost` (`tests/Paramore.Brighter.Extensions.Tests/TestDoubles/ReceiveHealthTestHost.cs:48-63`) has one subscription, `receive-health`, and one shared `InMemoryReceiveHealthConsumer` transport with a single fixed `failures` count. Extend it, or add a new host beside it, one class per file, so that:
     - it takes several named subscriptions, each with its performer count (T13.3–T13.7: `orders` expecting 2, `payments` expecting 1 or 2);
     - each consumer gets its own channel-failure count (T12.2: counts 0, 2, 2 and 0, 3, 2);
