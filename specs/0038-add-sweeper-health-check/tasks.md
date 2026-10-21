@@ -479,7 +479,7 @@
   - References: FR-3.3, FR-3A; AC-4, AC-33 (last sentence).
   - Depends on: T5.2.
 
-- [ ] **CHARACTERISE: T5.5 — Existing sweeper instruments and circuit-breaker option defaults are unchanged**
+- [x] **CHARACTERISE: T5.5 — Existing sweeper instruments and circuit-breaker option defaults are unchanged**
   - **USE COMMAND**: `/test-first when a sweep completes with instrumentation the existing sweeper instruments and circuit breaker defaults should be unchanged`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_a_sweep_completes_with_instrumentation_should_keep_the_existing_instruments_unchanged.cs`
