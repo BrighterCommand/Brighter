@@ -1292,7 +1292,7 @@
   - Add `InMemoryGatedReceiveHealthChannelFactory` in `tests/Paramore.Brighter.Extensions.Tests/TestDoubles/` (one class per file). It blocks channel creation until released, modelled on `InMemoryUnopenedConsumerChannelFactory`, which is internal to Core.Tests. Allow the multi-subscription host from T12.0 to be given it (T13.8 needs the gate with `orders` expecting 2).
   - Depends on: T12.0.
 
-- [ ] **TEST + IMPLEMENT: T13.2 — With no dispatcher, the restart check is Healthy**
+- [x] **TEST + IMPLEMENT: T13.2 — With no dispatcher, the restart check is Healthy**
   - **USE COMMAND**: `/test-first when the consumer restart check has no dispatcher it should report healthy and say no dispatcher is registered`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_consumer_restart_check_has_no_dispatcher_should_report_healthy.cs`
