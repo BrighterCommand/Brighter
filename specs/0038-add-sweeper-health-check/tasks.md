@@ -716,7 +716,7 @@
   - References: FR-6A.1, FR-6A.3; AC-29.
   - Depends on: T8.4.
 
-- [ ] **CHARACTERISE: T8.11 — A re-tripped topic stays counted once**
+- [x] **CHARACTERISE: T8.11 — A re-tripped topic stays counted once**
   - **USE COMMAND**: `/test-first when a tripped topic is tripped again the investigate check should still name it once`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_tripped_topic_is_tripped_again_should_still_name_it_once.cs`
