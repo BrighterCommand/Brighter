@@ -52,6 +52,7 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly object _lifecycleLock = new();
         private int _pendingConsumerOperations;
         private bool _stopping;
+        private bool _endRequested;
         private volatile DispatcherState _state;
         //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange,
         //making the disposal body run exactly once even under concurrent Dispose (an application-level
@@ -353,6 +354,7 @@ namespace Paramore.Brighter.ServiceActivator
             lock (_lifecycleLock)
             {
                 controlTask = _controlTask ?? Task.CompletedTask;
+                _endRequested = true;
                 if (State != DispatcherState.DS_RUNNING)
                     return controlTask;
 
@@ -448,7 +450,7 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 return new DispatcherLifecycleSnapshot(
                     State,
-                    endRequested: false,
+                    endRequested: _endRequested,
                     Array.Empty<SubscriptionName>(),
                     consumerOperationsInFlight: _pendingConsumerOperations,
                     ExpectedConsumersBySubscription(),
@@ -564,6 +566,7 @@ namespace Paramore.Brighter.ServiceActivator
                     return false;
 
                 _stopping = false;
+                _endRequested = false;
                 State = DispatcherState.DS_RUNNING;
                 _controlTask = Task.Factory.StartNew(RunControlLoop, CancellationToken.None,
                     TaskCreationOptions.LongRunning, TaskScheduler.Default);
