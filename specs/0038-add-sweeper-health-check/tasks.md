@@ -466,7 +466,7 @@
   - References: FR-6A.4, FR-3A; AC-44 (gauge half), AC-33 (container half).
   - Depends on: T5.2.
 
-- [ ] **CHARACTERISE: T5.4 — Without `AddBrighterInstrumentation`, no sweeper gauge is published and sweeping is unchanged**
+- [x] **CHARACTERISE: T5.4 — Without `AddBrighterInstrumentation`, no sweeper gauge is published and sweeping is unchanged**
   - **USE COMMAND**: `/test-first when brighter instrumentation is not added the sweeper gauges should not be published and the sweep should complete`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_brighter_instrumentation_is_not_added_should_publish_no_sweeper_gauges.cs`
