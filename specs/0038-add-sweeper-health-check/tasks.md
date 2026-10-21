@@ -621,7 +621,7 @@
   - References: FR-7.2, FR-7.3; AC-14 (constructor half).
   - Depends on: T8.2.
 
-- [ ] **TEST + IMPLEMENT: T8.4 — An active sweeper with tripped topics is Degraded and names them**
+- [x] **TEST + IMPLEMENT: T8.4 — An active sweeper with tripped topics is Degraded and names them**
   - **USE COMMAND**: `/test-first when an active sweeper has topics tripped the investigate check should report degraded naming the topics`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_an_active_sweeper_has_topics_tripped_should_report_degraded_naming_them.cs`
