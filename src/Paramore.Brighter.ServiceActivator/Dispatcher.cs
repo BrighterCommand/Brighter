@@ -438,6 +438,35 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
 
+        /// <summary>
+        /// Takes a consistent copy of the dispatcher's lifecycle, under the lifecycle lock.
+        /// </summary>
+        /// <returns>A snapshot that does not change after it is returned.</returns>
+        public DispatcherLifecycleSnapshot GetLifecycleSnapshot()
+        {
+            lock (_lifecycleLock)
+            {
+                return new DispatcherLifecycleSnapshot(
+                    State,
+                    endRequested: false,
+                    Array.Empty<SubscriptionName>(),
+                    consumerOperationsInFlight: 0,
+                    ExpectedConsumersBySubscription(),
+                    _consumers.Values.ToArray());
+            }
+        }
+
+        private Dictionary<SubscriptionName, int> ExpectedConsumersBySubscription()
+        {
+            var expected = new Dictionary<SubscriptionName, int>();
+            foreach (var subscription in Subscriptions)
+            {
+                expected.TryGetValue(subscription.Name, out var count);
+                expected[subscription.Name] = count + subscription.NoOfPerformers;
+            }
+            return expected;
+        }
+
         public DispatcherStateItem[] GetState()
         {
             return Subscriptions.Select(s => new DispatcherStateItem(s.Name.Value,
