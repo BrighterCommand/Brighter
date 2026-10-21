@@ -428,7 +428,7 @@
 
 *ADR 0085 step 5. Container tests; `Core.Tests` reaches `AddBrighterInstrumentation` through `Paramore.Brighter.Extensions.OpenTelemetry`.*
 
-- [ ] **TEST + IMPLEMENT: T5.1 — With instrumentation and no sweeper, both gauges are published and report 0**
+- [x] **TEST + IMPLEMENT: T5.1 — With instrumentation and no sweeper, both gauges are published and report 0**
   - **USE COMMAND**: `/test-first when brighter instrumentation is added without an outbox sweeper both sweeper gauges should be published and report zero`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_instrumentation_is_added_without_an_outbox_sweeper_should_publish_both_gauges_at_zero.cs`
