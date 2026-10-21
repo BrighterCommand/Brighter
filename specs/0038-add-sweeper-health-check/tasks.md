@@ -1144,7 +1144,7 @@
   - References: FR-12.2 (dispatcher members); ADR 0087 *The new Dispatcher members*.
   - Depends on: nothing.
 
-- [ ] **TEST + IMPLEMENT: T11.2 — The snapshot counts consumer operations in progress**
+- [x] **TEST + IMPLEMENT: T11.2 — The snapshot counts consumer operations in progress**
   - **USE COMMAND**: `/test-first when channel creation blocks during receive the lifecycle snapshot should report one consumer operation in flight`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch"
   - Test file: `When_channel_creation_blocks_during_receive_should_report_a_consumer_operation_in_flight.cs`
