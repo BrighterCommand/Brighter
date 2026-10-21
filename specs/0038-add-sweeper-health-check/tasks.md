@@ -579,7 +579,7 @@
 
 *ADR 0086 step 4. Check tests construct `OutboxSweeperInvestigateHealthCheck` directly. Sweeper-level investigate ACs are in Phase 10.*
 
-- [ ] **TEST + IMPLEMENT: T8.1 — With no sweeper state, the investigate check is Healthy and says no sweeper is registered**
+- [x] **TEST + IMPLEMENT: T8.1 — With no sweeper state, the investigate check is Healthy and says no sweeper is registered**
   - **USE COMMAND**: `/test-first when the investigate check has no sweeper state it should report healthy and say no outbox sweeper is registered`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_investigate_check_has_no_sweeper_state_should_report_healthy_with_no_sweeper_registered.cs`
