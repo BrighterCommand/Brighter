@@ -1358,7 +1358,7 @@
   - References: FR-12.2 (shut on purpose, running consumer); AC-58 (shut cases).
   - Depends on: T13.5, T11.7, T12.0.
 
-- [ ] **CHARACTERISE: T13.7 — Excess consumers, none expected, and a partial start by `SetActivePerformers`**
+- [x] **CHARACTERISE: T13.7 — Excess consumers, none expected, and a partial start by `SetActivePerformers`**
   - **USE COMMAND**: `/test-first when more consumers run than expected or none are expected the consumer restart check should report healthy`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_more_consumers_run_than_expected_should_report_healthy.cs`
