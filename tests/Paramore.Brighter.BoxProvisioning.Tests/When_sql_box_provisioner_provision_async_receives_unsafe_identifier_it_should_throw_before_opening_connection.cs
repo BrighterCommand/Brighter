@@ -138,6 +138,7 @@ public class SqlBoxProvisionerIdentifierValidationTests
         public string OutBoxTableName { get; }
         public string QueueStoreTable => "Queues";
         public string? SchemaName { get; }
+        public TimeSpan? OutstandingCountTimeout => null;
     }
 
     private sealed class EmptyCatalog : IAmABoxMigrationCatalog

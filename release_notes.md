@@ -1116,6 +1116,45 @@ each other. It is gone, and each mediator counts on its own. Several mediators o
 process, such as one per host or command processors built by hand, can now run their counts at the
 same time, one each. A count that never returns still stops the checks of its own mediator.
 
+### Outbox: a relational outstanding count gives up after a configurable timeout, 15 seconds by default (#4584)
+
+The outstanding message count of a relational outbox (MSSQL, PostgreSQL, MySQL, SQLite and Spanner)
+ran with no command timeout, so a count blocked by a lock on the outbox table waited for as long as
+the lock was held, and its mediator checked `MaxOutStandingMessages` against its last count until
+then. The count now gives up after a timeout, 15 seconds by default, so a relational count that does
+not return no longer stops the checks of its own mediator for good. As with any count that fails, the
+mediator logs the error and reads the count as 0, so while the count keeps timing out, the limit does
+not stop posts. Only a mediator with `MaxOutStandingMessages` set runs the count. The timeout replaces
+any Command Timeout in the connection string for this query, as the unlimited timeout did before. On
+Spanner the count's timeout goes from 60 to 15 seconds by default. The sweeper's read of outstanding
+messages keeps the timeout it had: none, or 60 seconds on Spanner.
+
+To change it, pass `outstandingCountTimeout` to the `RelationalDatabaseConfiguration` constructor. The
+configuration exposes it as `OutstandingCountTimeout`, and null keeps the 15 seconds. A command timeout
+takes whole seconds, so the value is rounded up: 500 ms becomes 1 second and 1.25 seconds becomes 2. A
+timeout of zero or less, or of more than 2147483 seconds, throws an `ArgumentOutOfRangeException` when
+the configuration is built. If a custom implementation of `IAmARelationalDatabaseConfiguration` returns
+such a value, the outbox throws when it is built. The `RelationalDatabaseConfiguration` constructor
+gains a parameter, which is binary-breaking, so recompile code built against an earlier version.
+
+```csharp
+var configuration = new RelationalDatabaseConfiguration(
+    connectionString,
+    outstandingCountTimeout: TimeSpan.FromSeconds(30));
+```
+
+#### Source-breaking change: `IAmARelationalDatabaseConfiguration.OutstandingCountTimeout`
+
+`IAmARelationalDatabaseConfiguration` gains a `TimeSpan? OutstandingCountTimeout` member with no default
+body, as `Paramore.Brighter` targets `netstandard2.0`, which does not support default interface
+members. A custom implementation of the interface must add it to compile; returning null keeps the
+default of 15 seconds. Code that only uses `RelationalDatabaseConfiguration` needs no source change.
+
+```csharp
+// A custom IAmARelationalDatabaseConfiguration must add:
+public TimeSpan? OutstandingCountTimeout => null;
+```
+
 ## 10.7.0
 
 ### Azure Service Bus: dead-letter reason and description (#4196)
