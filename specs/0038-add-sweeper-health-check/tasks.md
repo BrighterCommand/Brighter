@@ -1011,7 +1011,7 @@
   - References: FR-1.1, FR-3.2; AC-45.
   - Depends on: T3.6, T7.2, T4.1.
 
-- [ ] **CHARACTERISE: T10.14 — A stopped sweeper keeps its failures and drops its tripped topics**
+- [x] **CHARACTERISE: T10.14 — A stopped sweeper keeps its failures and drops its tripped topics**
   - **USE COMMAND**: `/test-first when the sweeper is stopped it should keep reporting its failures and stop reporting its tripped topics`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_sweeper_is_stopped_should_keep_its_failures_and_drop_its_tripped_topics.cs`
