@@ -952,7 +952,7 @@
   - References: NFR-1; AC-17.
   - Depends on: T7.2, T8.2.
 
-- [ ] **CHARACTERISE: T10.9 — Two sweepers on a shared lock: only the holder is hung, and max equals the holder's running time**
+- [x] **CHARACTERISE: T10.9 — Two sweepers on a shared lock: only the holder is hung, and max equals the holder's running time**
   - **USE COMMAND**: `/test-first when two sweepers share a lock and the holder hangs only the holder should report a hung sweep`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_two_sweepers_share_a_lock_and_the_holder_hangs_should_report_only_the_holder_hung.cs`
