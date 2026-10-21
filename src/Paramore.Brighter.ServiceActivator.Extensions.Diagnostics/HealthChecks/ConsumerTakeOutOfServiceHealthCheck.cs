@@ -51,8 +51,12 @@ public class ConsumerTakeOutOfServiceHealthCheck : IHealthCheck
     /// </summary>
     /// <param name="dispatcher">The dispatcher whose consumers are monitored, or null when none is registered.</param>
     /// <param name="channelFailureThreshold">The number of consecutive channel failures at which a consumer is reported.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="channelFailureThreshold"/> is zero or negative.</exception>
     public ConsumerTakeOutOfServiceHealthCheck(IDispatcher? dispatcher, int channelFailureThreshold = 3)
     {
+        if (channelFailureThreshold < 1)
+            throw new ArgumentOutOfRangeException(nameof(channelFailureThreshold), channelFailureThreshold, "The channel failure threshold must be at least one.");
+
         _dispatcher = dispatcher;
         _channelFailureThreshold = channelFailureThreshold;
     }
