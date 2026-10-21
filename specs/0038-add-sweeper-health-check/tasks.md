@@ -1095,7 +1095,7 @@
   - References: NFR-9; AC-25.
   - Depends on: T10.3.
 
-- [ ] **CHARACTERISE: T10.21 — Reads from another thread are never torn**
+- [x] **CHARACTERISE: T10.21 — Reads from another thread are never torn**
   - **USE COMMAND**: `/test-first when another thread observes the gauges and checks while sweeps rotate outcomes every read should be internally consistent`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_another_thread_observes_while_sweeps_rotate_outcomes_should_never_see_a_torn_read.cs`
