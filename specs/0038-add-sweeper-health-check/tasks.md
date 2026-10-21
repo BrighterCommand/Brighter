@@ -547,7 +547,7 @@
   - References: ADR 0086 *OutboxSweeperInvestigateHealthCheck* ("When options is null, both checks use the defaults"); FR-5, FR-7.1, FR-8, FR-10.1, FR-10.5; AC-6, AC-19 (restart half), AC-39 (hung and Healthy bullets).
   - Depends on: T7.1.
 
-- [ ] **TEST + IMPLEMENT: T7.3 — An overridden hang threshold replaces the default, and seconds format to three decimals**
+- [x] **TEST + IMPLEMENT: T7.3 — An overridden hang threshold replaces the default, and seconds format to three decimals**
   - **USE COMMAND**: `/test-first when the hang threshold is overridden or the timer interval is one second the restart check should use that threshold`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_hang_threshold_is_overridden_should_judge_a_hung_sweep_against_it.cs`
