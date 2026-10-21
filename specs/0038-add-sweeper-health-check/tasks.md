@@ -1235,7 +1235,7 @@
   - Why no test of its own: these are fixtures. T16.0 needs the same capabilities for `Extensions.AspNetCore.Tests` and copies them.
   - Depends on: T1.2.
 
-- [ ] **TEST + IMPLEMENT: T12.1 — With no dispatcher, the take-out-of-service check is Healthy**
+- [x] **TEST + IMPLEMENT: T12.1 — With no dispatcher, the take-out-of-service check is Healthy**
   - **USE COMMAND**: `/test-first when the take out of service check has no dispatcher it should report healthy and say no dispatcher is registered`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_take_out_of_service_check_has_no_dispatcher_should_report_healthy.cs`
