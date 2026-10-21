@@ -703,7 +703,7 @@
   - References: FR-13.2; AC-68 (check half); ADR 0086 invariant *a failed breaker read never hides another condition*.
   - Depends on: T8.7, T3.1.
 
-- [ ] **CHARACTERISE: T8.10 — Tripped-topic recovery follows the circuit breaker on the next run**
+- [x] **CHARACTERISE: T8.10 — Tripped-topic recovery follows the circuit breaker on the next run**
   - **USE COMMAND**: `/test-first when the circuit breaker stops listing a topic the next investigate check should stop naming it`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_circuit_breaker_stops_listing_a_topic_should_stop_naming_it.cs`
