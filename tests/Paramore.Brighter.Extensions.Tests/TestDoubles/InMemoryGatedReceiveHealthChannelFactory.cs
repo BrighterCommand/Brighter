@@ -40,7 +40,16 @@ internal sealed class InMemoryGatedReceiveHealthChannelFactory(IAmAChannelFactor
     /// <summary>
     /// Completed when the first creation reaches the gate.
     /// </summary>
-    public TaskCompletionSource<bool> CreationBlocked { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource<bool> CreationBlocked { get; private set; } = NewCreationBlocked();
+
+    /// <summary>
+    /// Closes the gate again and re-arms <see cref="CreationBlocked"/>, so a later creation blocks.
+    /// </summary>
+    public void Reset()
+    {
+        CreationBlocked = NewCreationBlocked();
+        _gate.Reset();
+    }
 
     /// <summary>
     /// Opens the gate, letting blocked and later creations proceed.
@@ -71,6 +80,9 @@ internal sealed class InMemoryGatedReceiveHealthChannelFactory(IAmAChannelFactor
         await Task.Run(WaitForGate, cancellationToken);
         return await inner.CreateAsyncChannelAsync(subscription, cancellationToken);
     }
+
+    private static TaskCompletionSource<bool> NewCreationBlocked()
+        => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private void WaitForGate()
     {

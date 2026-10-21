@@ -63,6 +63,9 @@ public class ConsumerRestartHealthCheck : IHealthCheck
         if (snapshot.State is DispatcherState.DS_NOTREADY or DispatcherState.DS_AWAITING || snapshot.EndRequested)
             return Task.FromResult(HealthCheckResult.Healthy("The dispatcher is not running, so missing consumers are not reported.", Data(Array.Empty<string>(), snapshot)));
 
+        if (snapshot.ConsumerOperationsInFlight > 0)
+            return Task.FromResult(HealthCheckResult.Healthy("A consumer operation is in progress, so missing consumers are not reported.", Data(Array.Empty<string>(), snapshot)));
+
         var shut = snapshot.ShutSubscriptions.ToHashSet();
         var running = snapshot.Consumers
             .Where(consumer => !shut.Contains(consumer.Subscription.Name))
