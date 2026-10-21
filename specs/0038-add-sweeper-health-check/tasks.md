@@ -884,7 +884,7 @@
   - References: FR-1, FR-9; AC-40.
   - Depends on: T7.2, T3.2.
 
-- [ ] **CHARACTERISE: T10.3 — Failed sweeps from a throwing mediator reach the failure threshold**
+- [x] **CHARACTERISE: T10.3 — Failed sweeps from a throwing mediator reach the failure threshold**
   - **USE COMMAND**: `/test-first when the outbox mediator throws on every sweep the investigate check should degrade at the third failure`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_outbox_mediator_throws_on_every_sweep_should_degrade_at_the_third_failure.cs`
