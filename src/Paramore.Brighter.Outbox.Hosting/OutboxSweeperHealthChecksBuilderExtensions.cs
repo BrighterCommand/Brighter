@@ -44,11 +44,14 @@ public static class OutboxSweeperHealthChecksBuilderExtensions
     /// <param name="hangThreshold">How long a sweep may run before it is reported hung, or null for the default.</param>
     /// <param name="failureThreshold">How many consecutive failed sweeps raise the failure condition.</param>
     /// <returns>The builder.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="hangThreshold"/> is zero or negative.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="hangThreshold"/> or <paramref name="failureThreshold"/> is zero or negative.</exception>
     public static IHealthChecksBuilder AddBrighterOutboxSweeperHealthChecks(this IHealthChecksBuilder builder, TimeSpan? hangThreshold = null, int failureThreshold = 3)
     {
         if (hangThreshold.HasValue && hangThreshold.Value <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(hangThreshold), hangThreshold, "The hang threshold must be greater than zero.");
+
+        if (failureThreshold <= 0)
+            throw new ArgumentOutOfRangeException(nameof(failureThreshold), failureThreshold, "The failure threshold must be greater than zero.");
 
         return builder
             .Add(new HealthCheckRegistration(
