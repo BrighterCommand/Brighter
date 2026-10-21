@@ -777,7 +777,7 @@
   - References: FR-4, FR-10.3; AC-37; ADR 0086 *AddBrighterOutboxSweeperHealthChecks*, *Why the factories look up the record on every run*.
   - Depends on: T7.2, T8.9.
 
-- [ ] **TEST + IMPLEMENT: T9.2 — The call rejects a non-positive hang threshold before anything is registered**
+- [x] **TEST + IMPLEMENT: T9.2 — The call rejects a non-positive hang threshold before anything is registered**
   - **USE COMMAND**: `/test-first when the sweeper health checks are added with a non positive hang threshold the call should throw before registering anything`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_sweeper_checks_are_added_with_a_non_positive_hang_threshold_should_throw_before_registering.cs`
