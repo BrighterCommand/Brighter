@@ -649,7 +649,7 @@
   - References: FR-6A, FR-6A.4; AC-30.
   - Depends on: T8.4.
 
-- [ ] **TEST + IMPLEMENT: T8.6 — A sweeper that is not active reports no tripped topics and never reads the breaker**
+- [x] **TEST + IMPLEMENT: T8.6 — A sweeper that is not active reports no tripped topics and never reads the breaker**
   - **USE COMMAND**: `/test-first when the sweeper is not active the investigate check should not report tripped topics nor read the circuit breaker`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_sweeper_is_not_active_should_not_report_tripped_topics.cs`
