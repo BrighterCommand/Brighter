@@ -906,7 +906,7 @@
   - References: FR-2, FR-6; AC-12.
   - Depends on: T10.3.
 
-- [ ] **CHARACTERISE: T10.5 — A completed sweep resets the failures**
+- [x] **CHARACTERISE: T10.5 — A completed sweep resets the failures**
   - **USE COMMAND**: `/test-first when a sweep completes after three failures the investigate check should report healthy and count from zero`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_sweep_completes_after_three_failures_should_report_healthy_and_count_from_zero.cs`
