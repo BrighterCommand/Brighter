@@ -520,7 +520,7 @@
 
 *ADR 0086 step 3. Check tests construct `OutboxSweeperRestartHealthCheck` directly over a record driven on the test thread.*
 
-- [ ] **TEST + IMPLEMENT: T7.1 — With no sweeper state, the restart check is Healthy and says no sweeper is registered**
+- [x] **TEST + IMPLEMENT: T7.1 — With no sweeper state, the restart check is Healthy and says no sweeper is registered**
   - **USE COMMAND**: `/test-first when the restart check has no sweeper state it should report healthy and say no outbox sweeper is registered`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_restart_check_has_no_sweeper_state_should_report_healthy_with_no_sweeper_registered.cs`
