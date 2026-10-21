@@ -1036,7 +1036,7 @@
   - References: FR-5.1, FR-6; AC-51.
   - Depends on: T10.3.
 
-- [ ] **CHARACTERISE: T10.16 — A failing lock store reports failures only, never tripped topics**
+- [x] **CHARACTERISE: T10.16 — A failing lock store reports failures only, never tripped topics**
   - **USE COMMAND**: `/test-first when the lock store fails on every sweep with a topic tripped the investigate check should report failures only`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_lock_store_fails_with_a_topic_tripped_should_report_failures_only.cs`
