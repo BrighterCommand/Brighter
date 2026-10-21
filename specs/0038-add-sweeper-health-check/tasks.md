@@ -592,7 +592,7 @@
   - References: FR-4A.1, FR-10.5; ADR 0086 invariant *no sweeper means Healthy*.
   - Depends on: T7.1.
 
-- [ ] **TEST + IMPLEMENT: T8.2 — The investigate check is Degraded at N consecutive failed sweeps**
+- [x] **TEST + IMPLEMENT: T8.2 — The investigate check is Degraded at N consecutive failed sweeps**
   - **USE COMMAND**: `/test-first when consecutive failed sweeps reach the failure threshold the investigate check should report degraded with the count threshold and timer interval`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_consecutive_failed_sweeps_reach_the_threshold_should_report_degraded.cs`
