@@ -635,7 +635,7 @@
   - References: FR-6A, FR-6A.2, FR-6A.3, FR-8, FR-10.5; AC-28, AC-39 (tripped bullet).
   - Depends on: T8.2, T2.4.
 
-- [ ] **CHARACTERISE: T8.5 — No circuit breaker, or none tripped, is Healthy**
+- [x] **CHARACTERISE: T8.5 — No circuit breaker, or none tripped, is Healthy**
   - **USE COMMAND**: `/test-first when no circuit breaker is registered or none is tripped the investigate check should report healthy`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_no_circuit_breaker_is_registered_or_none_is_tripped_should_report_healthy.cs`
