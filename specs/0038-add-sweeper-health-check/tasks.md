@@ -1385,7 +1385,7 @@
   - References: FR-12.2 (consumer operation in progress, transients), FR-12.5; AC-72.
   - Depends on: T13.1, T13.5, T11.2, T12.0.
 
-- [ ] **CHARACTERISE: T13.9 — The restart check requires the Brighter `Dispatcher`**
+- [x] **CHARACTERISE: T13.9 — The restart check requires the Brighter `Dispatcher`**
   - **USE COMMAND**: `/test-first when the consumer restart check is given a dispatcher that is not the brighter dispatcher it should throw invalid cast`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_consumer_restart_check_is_given_a_non_brighter_dispatcher_should_throw.cs`
