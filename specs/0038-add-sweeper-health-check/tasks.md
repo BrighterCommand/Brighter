@@ -978,7 +978,7 @@
   - References: FR-6A, FR-6A.5, FR-9; AC-43.
   - Depends on: T8.6, T4.5.
 
-- [ ] **CHARACTERISE: T10.11 — Tripped topics are reported while the active sweeper's thread is blocked in the outbox**
+- [x] **CHARACTERISE: T10.11 — Tripped topics are reported while the active sweeper's thread is blocked in the outbox**
   - **USE COMMAND**: `/test-first when an active sweeper is blocked in the outbox with a topic tripped the gauge and the investigate check should report it within one second`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_an_active_sweeper_is_blocked_in_the_outbox_should_report_its_tripped_topic.cs`
