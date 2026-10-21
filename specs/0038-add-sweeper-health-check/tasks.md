@@ -608,7 +608,7 @@
   - References: FR-6, FR-8, FR-10.1, FR-10.5; AC-11 at check level, AC-19 (investigate half), AC-39 (failure and Healthy bullets).
   - Depends on: T8.1, T2.3.
 
-- [ ] **TEST + IMPLEMENT: T8.3 — The failure threshold can be 1 and must be positive**
+- [x] **TEST + IMPLEMENT: T8.3 — The failure threshold can be 1 and must be positive**
   - **USE COMMAND**: `/test-first when the failure threshold is one or not positive the investigate check should degrade on one failure or throw argument out of range`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_failure_threshold_is_one_or_not_positive_should_degrade_or_reject.cs`
