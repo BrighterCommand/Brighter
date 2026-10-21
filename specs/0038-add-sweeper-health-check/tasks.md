@@ -440,7 +440,7 @@
   - References: FR-4A.1 (gauges), FR-3.3; AC-66 (gauge half); ADR 0085 *Why SweeperMeter is created when the meter provider is built*.
   - Depends on: T4.5.
 
-- [ ] **CHARACTERISE: T5.2 — With `UseOutboxSweeper` as users call it, the gauge reads the sweeper's record**
+- [x] **CHARACTERISE: T5.2 — With `UseOutboxSweeper` as users call it, the gauge reads the sweeper's record**
   - **USE COMMAND**: `/test-first when the sweeper is registered with use outbox sweeper and a sweep is blocked the running time gauge should report its running time`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_the_sweeper_is_registered_with_use_outbox_sweeper_should_report_its_running_time_gauge.cs`
