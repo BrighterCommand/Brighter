@@ -1182,7 +1182,7 @@
   - References: FR-12.2; ADR 0087 step 2 bullets; Risk *EndRequested drifts*.
   - Depends on: T11.3.
 
-- [ ] **STRUCTURAL: T11.5 — Tidy-first: move `Shut`'s state test and consumer snapshot under `_lifecycleLock`**
+- [x] **STRUCTURAL: T11.5 — Tidy-first: move `Shut`'s state test and consumer snapshot under `_lifecycleLock`**
   - In `Dispatcher.Shut(Subscription)` (`:427-439`), take the `DS_RUNNING` test and the copy of the subscription's consumers under `_lifecycleLock`. Tell the consumers to stop **outside** the lock, as `End` does. No behaviour change.
   - The safety net is the existing `MessageDispatch` suite, including `When_consumers_are_shut_before_open_should_dispose_their_transports.cs`. Run it green before and after. Commit as `refactor:`.
   - References: ADR 0087 *Why shut subscriptions are recorded under the lifecycle lock*; ADR 0083; Risk *the new lock in Shut deadlocks*.
