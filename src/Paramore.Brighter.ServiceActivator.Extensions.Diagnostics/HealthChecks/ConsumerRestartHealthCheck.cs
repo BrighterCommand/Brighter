@@ -86,7 +86,8 @@ public class ConsumerRestartHealthCheck : IHealthCheck
             }).ToArray()
         };
         var description = string.Join("; ", missing.Select(count => $"{count.Name} has {count.Running} of {count.Expected} expected consumers"));
-        return Task.FromResult(new HealthCheckResult(HealthStatus.Degraded, description, null, data));
+        var status = runningTotal == 0 ? HealthStatus.Unhealthy : HealthStatus.Degraded;
+        return Task.FromResult(new HealthCheckResult(status, description, null, data));
     }
 
     private static Dictionary<string, object> Data(string[] conditions) => new()
