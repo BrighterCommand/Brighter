@@ -1129,7 +1129,7 @@
 
 *ADR 0087 steps 2–3. Real `Dispatcher` over in-memory channels in `tests/Paramore.Brighter.Core.Tests/MessageDispatch`. Admission rules (`_stopping`, `_pendingConsumerOperations`) do not change (ADR 0083).*
 
-- [ ] **TEST + IMPLEMENT: T11.1 — A dispatcher returns a consistent lifecycle snapshot that does not change after it is read**
+- [x] **TEST + IMPLEMENT: T11.1 — A dispatcher returns a consistent lifecycle snapshot that does not change after it is read**
   - **USE COMMAND**: `/test-first when a running dispatcher is asked for its lifecycle snapshot it should copy its state consumers and expected counts`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch"
   - Test file: `When_a_running_dispatcher_is_asked_for_its_lifecycle_snapshot_should_copy_its_state_and_consumers.cs`
