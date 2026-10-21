@@ -450,7 +450,7 @@ namespace Paramore.Brighter.ServiceActivator
                     State,
                     endRequested: false,
                     Array.Empty<SubscriptionName>(),
-                    consumerOperationsInFlight: 0,
+                    consumerOperationsInFlight: _pendingConsumerOperations,
                     ExpectedConsumersBySubscription(),
                     _consumers.Values.ToArray());
             }
