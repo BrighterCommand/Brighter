@@ -1344,7 +1344,7 @@
   - References: FR-12.2 (dispatcher running); AC-58 (awaiting, End, restart cases).
   - Depends on: T13.4, T11.4, T12.0.
 
-- [ ] **TEST + IMPLEMENT: T13.6 — Subscriptions shut on purpose are left out of the totals, the description and `Data`**
+- [x] **TEST + IMPLEMENT: T13.6 — Subscriptions shut on purpose are left out of the totals, the description and `Data`**
   - **USE COMMAND**: `/test-first when a subscription is shut on purpose the consumer restart check should leave it out of totals description and data`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_subscription_is_shut_on_purpose_should_leave_it_out_of_missing_consumers.cs`
