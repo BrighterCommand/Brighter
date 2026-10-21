@@ -499,7 +499,7 @@
 
 *ADR 0086 step 2. Core values and constants shared by sweeper and consumer checks.*
 
-- [ ] **TEST + IMPLEMENT: T6.1 — Each remedy kind maps to its remedy tag and its `Data` name, and an undefined kind is rejected**
+- [x] **TEST + IMPLEMENT: T6.1 — Each remedy kind maps to its remedy tag and its `Data` name, and an undefined kind is rejected**
   - **USE COMMAND**: `/test-first when mapping a remedy kind it should give its brighter remedy tag and its data name and reject an undefined kind`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/RemedyChecks"
   - Test file: `When_mapping_a_remedy_kind_should_give_its_remedy_tag_and_data_name_and_reject_an_undefined_kind.cs`
