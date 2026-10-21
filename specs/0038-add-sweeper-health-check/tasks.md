@@ -873,7 +873,7 @@
   - References: FR-5.1; AC-7.
   - Depends on: T7.2, T3.4.
 
-- [ ] **CHARACTERISE: T10.2 — A hang inside lock acquisition degrades the restart check**
+- [x] **CHARACTERISE: T10.2 — A hang inside lock acquisition degrades the restart check**
   - **USE COMMAND**: `/test-first when a sweep hangs acquiring the lock past the threshold the restart check should report a hung sweep`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_sweep_hangs_acquiring_the_lock_should_report_a_hung_sweep.cs`
