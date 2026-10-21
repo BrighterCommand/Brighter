@@ -928,7 +928,7 @@
   - References: FR-2, Definitions; AC-15.
   - Depends on: T10.3, T3.5.
 
-- [ ] **CHARACTERISE: T10.7 — A hung sweep after failures shows each condition on its own check**
+- [x] **CHARACTERISE: T10.7 — A hung sweep after failures shows each condition on its own check**
   - **USE COMMAND**: `/test-first when a sweep hangs after three failures each check should report only its own condition and remedy kind`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_sweep_hangs_after_three_failures_should_report_each_condition_on_its_own_check.cs`
