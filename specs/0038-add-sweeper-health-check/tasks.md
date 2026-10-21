@@ -688,7 +688,7 @@
   - References: FR-8; AC-32.
   - Depends on: T8.4.
 
-- [ ] **TEST + IMPLEMENT: T8.9 — An unreadable breaker is a condition, logged at Error, and the other conditions are still reported**
+- [x] **TEST + IMPLEMENT: T8.9 — An unreadable breaker is a condition, logged at Error, and the other conditions are still reported**
   - **USE COMMAND**: `/test-first when reading tripped topics throws on an active sweeper the investigate check should report the unreadable condition with the exception type and still report failures`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_reading_tripped_topics_throws_should_report_tripped_topics_unreadable.cs`
