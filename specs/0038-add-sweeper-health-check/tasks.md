@@ -1201,7 +1201,7 @@
   - References: FR-12.2 (shut on purpose); ADR 0087 step 3.
   - Depends on: T11.5.
 
-- [ ] **TEST + IMPLEMENT: T11.7 — Creating a consumer for a shut subscription clears it; creating none leaves it shut**
+- [x] **TEST + IMPLEMENT: T11.7 — Creating a consumer for a shut subscription clears it; creating none leaves it shut**
   - **USE COMMAND**: `/test-first when a shut subscription gets a consumer again the snapshot should stop listing it as shut`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch"
   - Test file: `When_a_shut_subscription_gets_a_consumer_again_should_stop_listing_it_as_shut.cs`
