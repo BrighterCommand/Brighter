@@ -1058,7 +1058,7 @@
   - References: FR-6A, Definitions; AC-53.
   - Depends on: T10.11.
 
-- [ ] **CHARACTERISE: T10.18 — A lock collision gives a one-interval gap in the tripped-topic signals**
+- [x] **CHARACTERISE: T10.18 — A lock collision gives a one-interval gap in the tripped-topic signals**
   - **USE COMMAND**: `/test-first when an active sweeper's next sweep collides on the lock the tripped topic signals should drop for that interval and return`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_an_active_sweepers_next_sweep_collides_on_the_lock_should_drop_and_restore_tripped_topics.cs`
