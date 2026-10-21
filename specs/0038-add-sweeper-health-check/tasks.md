@@ -1110,7 +1110,7 @@
   - References: NFR-2; AC-26.
   - Depends on: T9.1, T5.2.
 
-- [ ] **CHARACTERISE: T10.22 — Reading a fixed state costs the same after 10 sweeps and after 10,000**
+- [x] **CHARACTERISE: T10.22 — Reading a fixed state costs the same after 10 sweeps and after 10,000**
   - **USE COMMAND**: `/test-first when the sweeper state is read after ten or ten thousand sweeps the gauge and check should allocate the same per read`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_sweeper_state_is_read_after_many_sweeps_should_allocate_the_same_per_read.cs`
