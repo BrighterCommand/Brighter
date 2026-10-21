@@ -60,8 +60,12 @@ public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
     /// <param name="options">The sweeper's options, or null to use the defaults.</param>
     /// <param name="findCircuitBreaker">Looks up the circuit breaker in use, or null when there is none.</param>
     /// <param name="failureThreshold">How many consecutive failed sweeps raise the condition.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="failureThreshold"/> is zero or negative.</exception>
     public OutboxSweeperInvestigateHealthCheck(OutboxSweeperState? state, TimedOutboxSweeperOptions? options, Func<IAmAnOutboxCircuitBreaker?>? findCircuitBreaker = null, int failureThreshold = 3)
     {
+        if (failureThreshold < 1)
+            throw new ArgumentOutOfRangeException(nameof(failureThreshold), failureThreshold, "The failure threshold must be at least one.");
+
         _state = state;
         options ??= new TimedOutboxSweeperOptions();
         _timerIntervalSeconds = options.TimerInterval;
