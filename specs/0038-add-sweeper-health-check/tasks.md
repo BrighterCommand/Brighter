@@ -790,7 +790,7 @@
   - References: FR-7.1; AC-9 (call half).
   - Depends on: T9.1.
 
-- [ ] **TEST + IMPLEMENT: T9.3 — The call rejects a non-positive failure threshold before anything is registered**
+- [x] **TEST + IMPLEMENT: T9.3 — The call rejects a non-positive failure threshold before anything is registered**
   - **USE COMMAND**: `/test-first when the sweeper health checks are added with a non positive failure threshold the call should throw before registering anything`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_sweeper_checks_are_added_with_a_non_positive_failure_threshold_should_throw_before_registering.cs`
