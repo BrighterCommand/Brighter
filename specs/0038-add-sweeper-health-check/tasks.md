@@ -842,7 +842,7 @@
   - References: FR-4A; AC-67.
   - Depends on: T9.1, T5.2.
 
-- [ ] **CHARACTERISE: T9.7 — The investigate check reads the breaker registered in the container**
+- [x] **CHARACTERISE: T9.7 — The investigate check reads the breaker registered in the container**
   - **USE COMMAND**: `/test-first when a circuit breaker is registered as a singleton shared with the mediator the investigate check should see its trips`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_shared_singleton_breaker_trips_a_topic_should_be_reported_by_the_investigate_check.cs`
