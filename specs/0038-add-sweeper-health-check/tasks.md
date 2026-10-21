@@ -743,7 +743,7 @@
   - References: FR-6A.3; AC-31; ADR 0028.
   - Depends on: T8.4, T3.4.
 
-- [ ] **CHARACTERISE: T8.13 — A third-party breaker written against the unchanged interface is reported**
+- [x] **CHARACTERISE: T8.13 — A third-party breaker written against the unchanged interface is reported**
   - **USE COMMAND**: `/test-first when a third party circuit breaker reports tripped topics the investigate check should report them`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_third_party_circuit_breaker_reports_tripped_topics_should_report_them.cs`
