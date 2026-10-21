@@ -26,6 +26,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -59,11 +60,41 @@ public class ConsumerTakeOutOfServiceHealthCheck : IHealthCheck
     /// <inheritdoc />
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
-        var data = new Dictionary<string, object>
+        if (_dispatcher is null)
+            return Task.FromResult(HealthCheckResult.Healthy("No dispatcher is registered.", Data(Array.Empty<string>())));
+
+        var failing = _dispatcher.Consumers
+            .Select(consumer => (Consumer: consumer, Count: (consumer.Performer as IHaveAChannelFailureCount)?.ConsecutiveChannelFailures ?? 0))
+            .Where(failure => failure.Count >= _channelFailureThreshold)
+            .ToArray();
+
+        if (failing.Length == 0)
         {
-            [RemedyCheckConvention.RemedyKindKey] = RemedyCheckConvention.Name(RemedyKind.TakeOutOfService),
-            [RemedyCheckConvention.ConditionsKey] = Array.Empty<string>()
+            var healthy = HealthCheckResult.Healthy(
+                $"The {PersistentChannelFailures} condition is absent: no consumer has {_channelFailureThreshold} consecutive channel failures.",
+                Data(Array.Empty<string>()));
+            return Task.FromResult(healthy);
+        }
+
+        var data = Data([PersistentChannelFailures]);
+        data[PersistentChannelFailures] = new Dictionary<string, object>
+        {
+            ["threshold"] = _channelFailureThreshold,
+            ["consumers"] = failing.Select(failure => new Dictionary<string, object>
+            {
+                ["subscription"] = failure.Consumer.Subscription.Name.Value,
+                ["consumer"] = failure.Consumer.Name.Value,
+                ["count"] = failure.Count
+            }).ToArray()
         };
-        return Task.FromResult(HealthCheckResult.Healthy("No dispatcher is registered.", data));
+        var description = string.Join(";", failing.Select(failure =>
+            $"{failure.Consumer.Subscription.Name} consumer {failure.Consumer.Name} has {failure.Count} consecutive channel failures"));
+        return Task.FromResult(new HealthCheckResult(HealthStatus.Degraded, description, null, data));
     }
+
+    private static Dictionary<string, object> Data(string[] conditions) => new()
+    {
+        [RemedyCheckConvention.RemedyKindKey] = RemedyCheckConvention.Name(RemedyKind.TakeOutOfService),
+        [RemedyCheckConvention.ConditionsKey] = conditions
+    };
 }
