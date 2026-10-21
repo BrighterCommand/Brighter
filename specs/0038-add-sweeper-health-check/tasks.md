@@ -1316,7 +1316,7 @@
   - References: FR-12.2, FR-12.4, FR-12.5; AC-58 (first cases), AC-63 (restart half).
   - Depends on: T13.2, T12.0.
 
-- [ ] **TEST + IMPLEMENT: T13.4 — No running consumer while the dispatcher runs is Unhealthy**
+- [x] **TEST + IMPLEMENT: T13.4 — No running consumer while the dispatcher runs is Unhealthy**
   - **USE COMMAND**: `/test-first when a running dispatcher has no consumers running the consumer restart check should report unhealthy`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_running_dispatcher_has_no_consumers_running_should_report_unhealthy.cs`
