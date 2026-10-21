@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -41,6 +42,10 @@ public class OutboxSweeperRestartHealthCheck : IHealthCheck
     /// <summary>The name of the condition reported while a sweep is hung.</summary>
     public const string HungSweep = "hung_sweep";
 
+    private readonly OutboxSweeperState? _state;
+    private readonly TimeSpan _timerInterval;
+    private readonly TimeSpan _hangThreshold;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="OutboxSweeperRestartHealthCheck"/> class.
     /// </summary>
@@ -49,17 +54,41 @@ public class OutboxSweeperRestartHealthCheck : IHealthCheck
     /// <param name="hangThreshold">How long a sweep may run before it is hung, or null for three times the timer interval.</param>
     public OutboxSweeperRestartHealthCheck(OutboxSweeperState? state, TimedOutboxSweeperOptions? options, TimeSpan? hangThreshold = null)
     {
+        _state = state;
+        options ??= new TimedOutboxSweeperOptions();
+        _timerInterval = TimeSpan.FromSeconds(options.TimerInterval);
+        _hangThreshold = 3 * _timerInterval;
     }
 
     /// <inheritdoc />
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
-        var data = new Dictionary<string, object>
-        {
-            [RemedyCheckConvention.RemedyKindKey] = RemedyCheckConvention.Name(RemedyKind.Restart),
-            [RemedyCheckConvention.ConditionsKey] = Array.Empty<string>()
-        };
+        if (_state is null)
+            return Task.FromResult(HealthCheckResult.Healthy("No outbox sweeper is registered.", Data(Array.Empty<string>())));
 
-        return Task.FromResult(HealthCheckResult.Healthy("No outbox sweeper is registered.", data));
+        var runningTime = _state.Read().RunningTime;
+        if (runningTime <= _hangThreshold)
+        {
+            var healthy = HealthCheckResult.Healthy($"No outbox sweep is hung (threshold {Seconds(_hangThreshold)}s).", Data(Array.Empty<string>()));
+            return Task.FromResult(healthy);
+        }
+
+        var data = Data(new[] { HungSweep });
+        data[HungSweep] = new Dictionary<string, object>
+        {
+            ["running_time_seconds"] = runningTime.TotalSeconds,
+            ["hang_threshold_seconds"] = _hangThreshold.TotalSeconds,
+            ["timer_interval_seconds"] = _timerInterval.TotalSeconds
+        };
+        var description = $"Outbox sweep has been running for {Seconds(runningTime)}s, longer than the {Seconds(_hangThreshold)}s threshold (TimerInterval {Seconds(_timerInterval)}s).";
+        return Task.FromResult(new HealthCheckResult(HealthStatus.Degraded, description, null, data));
     }
+
+    private static Dictionary<string, object> Data(string[] conditions) => new()
+    {
+        [RemedyCheckConvention.RemedyKindKey] = RemedyCheckConvention.Name(RemedyKind.Restart),
+        [RemedyCheckConvention.ConditionsKey] = conditions
+    };
+
+    private static string Seconds(TimeSpan value) => value.TotalSeconds.ToString("0.###", CultureInfo.InvariantCulture);
 }
