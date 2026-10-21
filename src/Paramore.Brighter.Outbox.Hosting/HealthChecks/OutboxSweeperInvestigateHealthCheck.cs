@@ -82,26 +82,42 @@ public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
             return Task.FromResult(HealthCheckResult.Healthy("No outbox sweeper is registered.", Data(Array.Empty<string>())));
 
         var snapshot = _state.Read();
-        var failed = snapshot.ConsecutiveFailedSweeps;
-        if (failed < _failureThreshold)
-        {
-            if (snapshot.IsActive)
-            {
-                var tripped = _findCircuitBreaker?.Invoke()?.TrippedTopics;
-                if (tripped is not null)
-                {
-                    var names = tripped.Select(topic => topic.Value).OrderBy(name => name, StringComparer.Ordinal).ToArray();
-                    if (names.Length > 0)
-                        return Task.FromResult(TrippedTopicsResult(names));
-                }
-            }
+        var conditions = new List<(string Name, string Description, Dictionary<string, object> Values)>();
 
+        if (snapshot.ConsecutiveFailedSweeps >= _failureThreshold)
+            conditions.Add(FailedSweepsCondition(snapshot.ConsecutiveFailedSweeps));
+
+        if (snapshot.IsActive)
+        {
+            var names = TrippedTopicNames();
+            if (names.Length > 0)
+                conditions.Add(TrippedTopicsCondition(names));
+        }
+
+        if (conditions.Count == 0)
+        {
             var healthy = HealthCheckResult.Healthy($"No outbox sweeper condition needs investigation: fewer than {_failureThreshold} consecutive failed sweeps.", Data(Array.Empty<string>()));
             return Task.FromResult(healthy);
         }
 
-        var data = Data(new[] { ConsecutiveFailedSweeps });
-        data[ConsecutiveFailedSweeps] = new Dictionary<string, object>
+        var data = Data(conditions.Select(condition => condition.Name).ToArray());
+        foreach (var condition in conditions)
+            data[condition.Name] = condition.Values;
+        var description = string.Join("; ", conditions.Select(condition => condition.Description));
+        return Task.FromResult(new HealthCheckResult(HealthStatus.Degraded, description, null, data));
+    }
+
+    private string[] TrippedTopicNames()
+    {
+        var tripped = _findCircuitBreaker?.Invoke()?.TrippedTopics;
+        if (tripped is null) return Array.Empty<string>();
+
+        return tripped.Select(topic => topic.Value).OrderBy(name => name, StringComparer.Ordinal).ToArray();
+    }
+
+    private (string Name, string Description, Dictionary<string, object> Values) FailedSweepsCondition(int failed)
+    {
+        var values = new Dictionary<string, object>
         {
             ["count"] = failed,
             ["threshold"] = _failureThreshold,
@@ -109,19 +125,18 @@ public class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         };
         var interval = _timerIntervalSeconds.ToString(CultureInfo.InvariantCulture);
         var description = $"{failed} consecutive outbox sweeps have failed (threshold {_failureThreshold}, TimerInterval {interval}s).";
-        return Task.FromResult(new HealthCheckResult(HealthStatus.Degraded, description, null, data));
+        return (ConsecutiveFailedSweeps, description, values);
     }
 
-    private static HealthCheckResult TrippedTopicsResult(string[] names)
+    private static (string Name, string Description, Dictionary<string, object> Values) TrippedTopicsCondition(string[] names)
     {
-        var data = Data(new[] { TrippedTopics });
-        data[TrippedTopics] = new Dictionary<string, object>
+        var values = new Dictionary<string, object>
         {
             ["count"] = names.Length,
             ["topics"] = names
         };
         var description = $"{names.Length} topics are circuit-broken and are not being swept until their cooldown ends: {string.Join(", ", names)}.";
-        return new HealthCheckResult(HealthStatus.Degraded, description, null, data);
+        return (TrippedTopics, description, values);
     }
 
     private static Dictionary<string, object> Data(string[] conditions) => new()
