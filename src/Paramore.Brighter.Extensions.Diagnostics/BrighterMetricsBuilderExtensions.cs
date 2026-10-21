@@ -45,9 +45,13 @@ public static class BrighterMetricsBuilderExtensions
             builder.AddMeter(BrighterSemanticConventions.MeterName);
         });
 
-        // Nothing depends on the queue-depth meter, so create it when the meter provider is built
+        // Nothing depends on the queue-depth or sweeper meters, so create them when the meter provider is built
         if (builder is IDeferredMeterProviderBuilder deferred)
-            deferred.Configure((serviceProvider, _) => serviceProvider.GetRequiredService<PublishConfirmationMeter>());
+            deferred.Configure((serviceProvider, _) =>
+            {
+                serviceProvider.GetRequiredService<PublishConfirmationMeter>();
+                serviceProvider.GetRequiredService<IAmABrighterSweeperMeter>();
+            });
         
         return builder;
     }
