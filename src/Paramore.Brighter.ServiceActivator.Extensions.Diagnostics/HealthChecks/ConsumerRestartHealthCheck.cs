@@ -60,6 +60,9 @@ public class ConsumerRestartHealthCheck : IHealthCheck
             return Task.FromResult(HealthCheckResult.Healthy("No dispatcher is registered.", Data(Array.Empty<string>())));
 
         var snapshot = ((Dispatcher)_dispatcher).GetLifecycleSnapshot();
+        if (snapshot.State is DispatcherState.DS_NOTREADY or DispatcherState.DS_AWAITING || snapshot.EndRequested)
+            return Task.FromResult(HealthCheckResult.Healthy("The dispatcher is not running, so missing consumers are not reported.", Data(Array.Empty<string>(), snapshot)));
+
         var running = snapshot.Consumers
             .GroupBy(consumer => consumer.Subscription.Name)
             .ToDictionary(group => group.Key, group => group.Count());
