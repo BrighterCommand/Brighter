@@ -1047,7 +1047,7 @@
   - References: FR-6A, Definitions; AC-52.
   - Depends on: T10.6, T8.6.
 
-- [ ] **CHARACTERISE: T10.17 — A hung lock holder after a lock-unavailable sweep reports its tripped topics**
+- [x] **CHARACTERISE: T10.17 — A hung lock holder after a lock-unavailable sweep reports its tripped topics**
   - **USE COMMAND**: `/test-first when a sweep obtains the lock after a lock unavailable sweep and hangs it should report the tripped topic throughout the hang`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_sweep_obtains_the_lock_after_a_lock_unavailable_sweep_and_hangs_should_report_the_tripped_topic.cs`
