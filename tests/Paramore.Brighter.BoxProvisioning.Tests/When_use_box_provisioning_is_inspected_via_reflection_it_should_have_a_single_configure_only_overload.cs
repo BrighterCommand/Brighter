@@ -28,20 +28,12 @@ using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
+/// <summary>
+/// <c>UseBoxProvisioning</c> has a single overload taking only the builder and the configure
+/// delegate, so <see cref="BoxProvisioningOptions.MigrationLockTimeout"/> has one way to be set.
+/// </summary>
 public class UseBoxProvisioningPublicApiTests
 {
-    // Pre-spec-0027 the extension exposed two ways to set the migration lock timeout:
-    // a `TimeSpan? migrationLockTimeout` parameter on UseBoxProvisioning AND
-    // BoxProvisioningOptions.MigrationLockTimeout assignable from the configure delegate.
-    // The dual surface had a real ordering bug — the parameter was applied to options
-    // BEFORE the configure delegate ran, so a delegate that called AddMsSqlOutbox(...) then
-    // set opts.MigrationLockTimeout would silently lose the assignment (the backend
-    // extension captures the timeout at registration time). The fix consolidates on the
-    // delegate path: the parameter is removed so MigrationLockTimeout is set exclusively
-    // through BoxProvisioningOptions, with the documented requirement that callers set
-    // it BEFORE invoking AddXxxOutbox/AddXxxInbox in the same delegate. Source-breaking
-    // on netstandard2.0 (no DIM workaround); rolled into the existing Breaking Change PR.
-
     [Fact]
     public void When_use_box_provisioning_is_inspected_it_should_have_exactly_one_overload()
     {

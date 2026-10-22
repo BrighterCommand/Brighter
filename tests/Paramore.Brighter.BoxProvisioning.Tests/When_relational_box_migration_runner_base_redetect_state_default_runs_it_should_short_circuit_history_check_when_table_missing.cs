@@ -34,18 +34,9 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// The base class supplies a default <c>RedetectStateAsync</c> implementation that calls
-/// the injected detection helper and short-circuits the history check when the table is
-/// missing (per ADR 0058 §B.2). This test exercises the base default — the runner derivative
-/// here does NOT override <c>RedetectStateAsync</c> — across the three detection-result
-/// combinations and asserts:
-///   1. <c>DoesTableExistAsync = false</c> → <c>DoesHistoryExistAsync</c> NOT called → returns <c>(false, false)</c>.
-///   2. <c>DoesTableExistAsync = true, DoesHistoryExistAsync = true</c> → returns <c>(true, true)</c>.
-///   3. <c>DoesTableExistAsync = true, DoesHistoryExistAsync = false</c> → returns <c>(true, false)</c>.
-/// The return value is observed indirectly by which dispatch path <c>MigrateAsync</c> selects:
-/// (false, _) → fresh, (true, false) → bootstrap, (true, true) → normal. Combined with the
-/// <see cref="StubBoxDetectionHelper.DoesHistoryExistCallCount"/> counter, this pins both the
-/// short-circuit (Fact 1) and the return value (all three Facts).
+/// The base's default <c>RedetectStateAsync</c> asks the detection helper and skips the history check
+/// when the table is missing (ADR 0058 §B.2). The returned state is observed through the path
+/// <c>MigrateAsync</c> dispatches to.
 /// </summary>
 public class SqlBoxMigrationRunnerRedetectStateDefaultTests
 {
@@ -55,7 +46,6 @@ public class SqlBoxMigrationRunnerRedetectStateDefaultTests
         //Arrange
         var detectionHelper = new StubBoxDetectionHelper
         {
-            // Short-circuit discriminator: table missing → default impl MUST NOT call DoesHistoryExistAsync.
             TableExistsResult = false,
             HistoryExistsResult = false
         };
@@ -80,7 +70,6 @@ public class SqlBoxMigrationRunnerRedetectStateDefaultTests
         //Arrange
         var detectionHelper = new StubBoxDetectionHelper
         {
-            // Normal-path discriminator: table AND history both present → returns (true, true).
             TableExistsResult = true,
             HistoryExistsResult = true
         };
@@ -105,7 +94,6 @@ public class SqlBoxMigrationRunnerRedetectStateDefaultTests
         //Arrange
         var detectionHelper = new StubBoxDetectionHelper
         {
-            // Bootstrap-path discriminator: legacy table present, no history rows → returns (true, false).
             TableExistsResult = true,
             HistoryExistsResult = false
         };
@@ -124,11 +112,7 @@ public class SqlBoxMigrationRunnerRedetectStateDefaultTests
         Assert.Equal("RunBootstrapPath", runner.PathInvoked);
     }
 
-    /// <summary>
-    /// Exercises the base's default <c>RedetectStateAsync</c> — the override is intentionally
-    /// absent. Path-dispatch is recorded into <see cref="PathInvoked"/> so the test can observe
-    /// the value the default implementation returned via the branch <c>MigrateAsync</c> took.
-    /// </summary>
+    // Deliberately does not override RedetectStateAsync, so the base default is the code under test.
     private sealed class PathRecordingTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         public string? PathInvoked { get; private set; }
