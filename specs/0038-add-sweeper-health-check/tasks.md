@@ -1713,7 +1713,7 @@
 
 *Scheduled by `/refactor:smells` against spec 0038's production code on 2026-10-22, after Phase 17. Run T19.1–T19.3 (structural, no public API change) first, then T19.4 (decision), then T19.5 and T19.6. Run Phase 19 before T18.8, so the final verification covers it. Each task is its own `/tidy-first` run and its own `refactor:` commit; the existing suites stay green before and after.*
 
-- [ ] **STRUCTURAL: T19.1 — Extract Method to express intent in `ConsumerRestartHealthCheck.CheckHealthAsync`**
+- [x] **STRUCTURAL: T19.1 — Extract Method to express intent in `ConsumerRestartHealthCheck.CheckHealthAsync`**
   - Smell: Long Function — `src/Paramore.Brighter.ServiceActivator.Extensions.Diagnostics/HealthChecks/ConsumerRestartHealthCheck.cs:26-69`
   - Refactoring: Extract Function, Decompose Conditional, Introduce Parameter Object. Name the two guards (`IsNotRunning(snapshot)`, `OperationInProgress(snapshot)`); extract `CountBySubscription(snapshot)` returning a private `SubscriptionConsumers(Name, Running, Expected)` record struct in place of the tuple; extract `MissingConsumersData`, `MissingConsumersDescription` and `StatusFor(runningTotal)`. `CheckHealthAsync` reads as the sequence of decisions.
   - Run with: `/tidy-first extract named methods from ConsumerRestartHealthCheck.CheckHealthAsync to remove Long Function`
