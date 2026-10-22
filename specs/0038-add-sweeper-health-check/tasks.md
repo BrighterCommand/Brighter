@@ -1471,7 +1471,7 @@
   - References: FR-10.2, NFR-6; AC-55 (attribute half), AC-27 (no new warnings); ADR 0087 *The obsolete marking*, step 8.
   - Depends on: T14.1.
 
-- [ ] **CHARACTERISE: T15.2 — The existing check reports "some consumers missing" exactly as before**
+- [x] **CHARACTERISE: T15.2 — The existing check reports "some consumers missing" exactly as before**
   - **USE COMMAND**: `/test-first when some expected consumers are missing the existing consumer health check should still report degraded`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_some_expected_consumers_are_missing_should_still_report_degraded_on_the_existing_check.cs`
