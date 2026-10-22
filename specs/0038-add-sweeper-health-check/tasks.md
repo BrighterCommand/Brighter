@@ -1415,7 +1415,7 @@
   - References: FR-12, FR-10.3; AC-61.
   - Depends on: T12.2, T13.3.
 
-- [ ] **TEST + IMPLEMENT: T14.2 — The call rejects a non-positive channel-failure threshold before anything is registered**
+- [x] **TEST + IMPLEMENT: T14.2 — The call rejects a non-positive channel-failure threshold before anything is registered**
   - **USE COMMAND**: `/test-first when the consumer health checks are added with a non positive threshold the call should throw before registering anything`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_consumer_checks_are_added_with_a_non_positive_threshold_should_throw_before_registering.cs`
