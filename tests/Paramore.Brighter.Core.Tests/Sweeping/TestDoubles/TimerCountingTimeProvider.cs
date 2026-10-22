@@ -24,6 +24,8 @@ THE SOFTWARE. */
 #endregion
 
 
+#nullable enable
+
 using System;
 using System.Threading;
 using Microsoft.Extensions.Time.Testing;

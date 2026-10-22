@@ -1,4 +1,3 @@
-using System;
 #region Licence
 
 /* The MIT License (MIT)
@@ -23,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+#nullable enable
 
 using System;
 using System.Collections.Generic;

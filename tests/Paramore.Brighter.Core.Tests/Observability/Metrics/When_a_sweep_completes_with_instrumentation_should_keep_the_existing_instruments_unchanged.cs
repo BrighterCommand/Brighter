@@ -22,6 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+#nullable enable
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -45,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
 public class ExistingSweeperInstrumentsUnchangedTests
 {
-    private record Published(string Name, string? Unit, string Kind, HashSet<string> TagKeys);
+    private sealed record Published(string Name, string? Unit, string Kind, HashSet<string> TagKeys);
 
     [Fact]
     public async Task When_a_sweep_completes_with_instrumentation_should_keep_the_existing_instruments_unchanged()
