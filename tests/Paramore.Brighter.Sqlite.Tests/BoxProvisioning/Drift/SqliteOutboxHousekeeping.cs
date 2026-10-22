@@ -26,19 +26,8 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning.Drift;
 
-/// <summary>
-/// Backend-specific housekeeping columns present in the SQLite outbox builder DDL but excluded
-/// from logical-version <see cref="IAmABoxMigration.LogicalColumns"/>. Used by drift tests to
-/// bridge between the builder's actual column set and the cross-backend logical model.
-/// </summary>
-/// <remarks>
-/// SQLite outbox has no declared housekeeping columns — <c>MessageId</c> (the de facto unique
-/// key, declared <c>COLLATE NOCASE</c> to dodge the GUID-comparison bug noted on the builder)
-/// is itself a logical column, and the engine's implicit <c>rowid</c> is not part of the DDL
-/// surface. <see cref="V1"/> is therefore empty.
-/// </remarks>
+// No housekeeping columns: MessageId is a logical column, and SQLite's rowid is implicit (ADR 0057 §1).
 internal static class SqliteOutboxHousekeeping
 {
-    /// <summary>V1 baseline: empty — <c>MessageId</c> is logical and SQLite's <c>rowid</c> is implicit.</summary>
     public static readonly ISet<string> V1 = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 }

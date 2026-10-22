@@ -33,14 +33,17 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
+/// <summary>
+/// A mid-chain failure rolls back the whole chain (the applied ALTERs, their history rows and the synthetic
+/// bootstrap row) because SQLite runs it in one BEGIN IMMEDIATE transaction (ADR 0057 §5a); a retry with
+/// the real chain then completes.
+/// </summary>
 public class RunnerMidChainFailureRollbackTests : IAsyncLifetime
 {
     private const int SeedVersion = 3;
     private const int BrokenVersion = 6;
 
-    //SQLite has no RAISE-EXCEPTION-from-DML form (RAISE is only valid inside triggers), so we
-    //force a SQL error by referencing a non-existent table — SqliteException with code 1
-    //(SQLITE_ERROR), which is propagated by the runner without retry (only SQLITE_BUSY=5 retries).
+    //SQLite allows RAISE only in triggers, so a missing table forces SQLITE_ERROR, which the runner does not retry.
     private const string BrokenUpScript =
         "SELECT 1 FROM [__forced_failure_for_spec_0027_task_4_8a];";
 
@@ -52,8 +55,7 @@ public class RunnerMidChainFailureRollbackTests : IAsyncLifetime
     [Fact]
     public async Task When_sqlite_runner_fails_mid_chain_it_should_roll_back_all_migrations_and_history_rows_atomically()
     {
-        //Arrange — seed an outbox at V3 (no history) plus a marker row to prove preservation
-        //across the rollback.
+        //Arrange
         SqliteOutboxLegacySeeder.SeedAtV(SeedVersion, _connectionString, _tableName);
         await SeedMarkerRow();
 
@@ -67,27 +69,21 @@ public class RunnerMidChainFailureRollbackTests : IAsyncLifetime
         var brokenRunner = new SqliteBoxMigrationRunner(brokenCatalog, config);
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
-        //Act + Assert (1) — broken V6 in chain: runner throws and rolls back everything.
-        //Per ADR §5a SQLite is whole-chain transactional like MSSQL/Postgres — the BEGIN IMMEDIATE
-        //transaction wraps EnsureHistoryTableAsync + bootstrap path + per-migration ALTER+history,
-        //so a mid-chain failure rolls back V4 ALTER + V5 ALTER + their history rows + the
-        //synthetic V3 history row + (if newly-created in this tx) the history table itself.
+        //Act + Assert
         await Assert.ThrowsAsync<SqliteException>(() => brokenRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint));
 
-        //Assert — no history rows for this box (synthetic V3 + V4/V5 applied rows all rolled back).
+        //Assert
         Assert.Empty(await GetHistoryRowsByVersion());
 
-        //Assert — table still at V3 shape (V4 PartitionKey ALTER rolled back; V5+ never reached).
         var columnsAfterFailure = await GetTableColumns();
-        Assert.Contains("ContentType", columnsAfterFailure); // V3 column present (pre-transactional)
-        Assert.DoesNotContain("PartitionKey", columnsAfterFailure); // V4 column rolled back
-        Assert.DoesNotContain("Source", columnsAfterFailure); // V5 column never applied
+        Assert.Contains("ContentType", columnsAfterFailure);
+        Assert.DoesNotContain("PartitionKey", columnsAfterFailure);
+        Assert.DoesNotContain("Source", columnsAfterFailure);
 
-        //Assert — seeded marker row preserved (no DROP/recreate happened).
         Assert.Equal(1, await GetMarkerRowCount());
 
-        //Act + Assert (2) — retry with the real migration list: bootstrap path completes V4..V7.
+        //Act
         var realRunner = new SqliteBoxMigrationRunner(realCatalog, config);
         var provisioner = new SqliteOutboxProvisioner(
             new SqliteBoxDetectionHelper(),
@@ -97,7 +93,7 @@ public class RunnerMidChainFailureRollbackTests : IAsyncLifetime
             realRunner);
         await provisioner.ProvisionAsync();
 
-        //Assert — exactly one synthetic V3 + one applied per V4..V7 (no duplicates).
+        //Assert
         var rowsByVersion = await GetHistoryRowsByVersion();
         Assert.Equal(ExpectedMigrationVersions.OutboxLatest - SeedVersion + 1, rowsByVersion.Count);
 
@@ -113,10 +109,9 @@ public class RunnerMidChainFailureRollbackTests : IAsyncLifetime
                 $"(description was: '{appliedDescription}')");
         }
 
-        //Assert — table now at V7 shape with marker row still present.
         var columnsAfterRetry = await GetTableColumns();
-        Assert.Contains("DataRef", columnsAfterRetry); // V7 column
-        Assert.Contains("PartitionKey", columnsAfterRetry); // V4 column applied on retry
+        Assert.Contains("DataRef", columnsAfterRetry);
+        Assert.Contains("PartitionKey", columnsAfterRetry);
         Assert.Equal(1, await GetMarkerRowCount());
     }
 

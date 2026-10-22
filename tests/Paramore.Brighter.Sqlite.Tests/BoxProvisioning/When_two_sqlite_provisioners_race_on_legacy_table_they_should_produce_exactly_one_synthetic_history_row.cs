@@ -31,6 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
+/// <summary>
+/// Two provisioners racing on a legacy table produce exactly one synthetic bootstrap row: BEGIN IMMEDIATE
+/// serialises them, the winner bootstraps, and the loser re-detects history inside its own transaction and
+/// has nothing left to do.
+/// </summary>
 public class LegacyTableRaceTests : IAsyncLifetime
 {
     private const int OutboxSeedVersion = 3;
@@ -44,10 +49,7 @@ public class LegacyTableRaceTests : IAsyncLifetime
     [Fact]
     public async Task When_two_outbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v3()
     {
-        //Arrange — seed an outbox at V3 (no history row) plus a marker row to prove preservation.
-        //Two independent provisioners (each with its own runner) race against the same table.
-        //SQLite serializes via the writer slot — BEGIN IMMEDIATE in runner A acquires; runner B's
-        //BEGIN IMMEDIATE returns SQLITE_BUSY and retries (per Task 4.4) until A commits.
+        //Arrange
         SqliteOutboxLegacySeeder.SeedAtV(OutboxSeedVersion, _connectionString, _outboxTableName);
         await SeedOutboxMarkerRow();
 
@@ -65,13 +67,10 @@ public class LegacyTableRaceTests : IAsyncLifetime
             config,
             new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
 
-        //Act — race two provisioners against the same legacy table.
+        //Act
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
 
-        //Assert — history has exactly one synthetic V3 + one applied per V4..V7 (no duplicates).
-        //Whichever runner acquires the writer slot first enters the bootstrap path and stamps
-        //V3..V_latest; the loser, on its second attempt, sees historyExistsNow=true under the
-        //lock-bearing transaction and enters the normal path (no-op since MAX(V)=V_latest).
+        //Assert
         var rowsByVersion = await GetHistoryRowsByVersion(_outboxTableName);
         Assert.Equal(ExpectedMigrationVersions.OutboxLatest - OutboxSeedVersion + 1, rowsByVersion.Count);
 
@@ -87,7 +86,6 @@ public class LegacyTableRaceTests : IAsyncLifetime
                 $"(description was: '{appliedDescription}')");
         }
 
-        //Assert — table ends at V7 with seeded marker preserved.
         Assert.Contains("DataRef", await GetTableColumns(_outboxTableName));
         Assert.Equal(1, await GetOutboxMarkerRowCount());
     }
@@ -95,7 +93,7 @@ public class LegacyTableRaceTests : IAsyncLifetime
     [Fact]
     public async Task When_two_inbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v1()
     {
-        //Arrange — seed a V1 inbox (no ContextKey, no history) plus a marker command row.
+        //Arrange
         SqliteInboxLegacySeeder.SeedAtV1(_connectionString, _inboxTableName);
         await SeedInboxMarkerRow();
 
@@ -113,10 +111,10 @@ public class LegacyTableRaceTests : IAsyncLifetime
             config,
             new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config));
 
-        //Act — race two provisioners against the same legacy table.
+        //Act
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
 
-        //Assert — exactly one synthetic V1 + one applied V2 (no duplicates).
+        //Assert
         var rowsByVersion = await GetHistoryRowsByVersion(_inboxTableName);
         Assert.Equal(ExpectedMigrationVersions.InboxLatest, rowsByVersion.Count);
 
@@ -129,7 +127,6 @@ public class LegacyTableRaceTests : IAsyncLifetime
             $"V2 should be an applied migration row, not a synthetic bootstrap row " +
             $"(description was: '{appliedDescription}')");
 
-        //Assert — table ends at V2 with seeded marker preserved (ContextKey NULL on existing row).
         Assert.Contains("ContextKey", await GetTableColumns(_inboxTableName));
         Assert.True(await InboxMarkerRowExistsWithNullContextKey());
     }

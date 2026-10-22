@@ -26,11 +26,6 @@ using Paramore.Brighter.BoxProvisioning;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning.TestDoubles;
 
-/// <summary>
-/// Builds a migration list that is identical to a real backend's list except for one entry,
-/// whose <c>UpScript</c> is replaced with SQL that intentionally throws when executed. Used
-/// by mid-chain-failure tests to verify the runner's whole-chain rollback semantics.
-/// </summary>
 internal static class BrokenMigrationFactory
 {
     public static IReadOnlyList<IAmABoxMigration> WithBrokenVersion(

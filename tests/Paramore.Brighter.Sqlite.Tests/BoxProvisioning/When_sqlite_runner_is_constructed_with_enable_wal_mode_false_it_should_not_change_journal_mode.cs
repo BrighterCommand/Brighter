@@ -33,17 +33,12 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
+/// <summary>
+/// With enableWalMode false the runner leaves the file's journal mode alone: journal mode is persistent and
+/// file-wide, and a host may have chosen DELETE. Each test uses its own database file.
+/// </summary>
 public class RunnerWalModeJournalTests : IAsyncLifetime
 {
-    // PRAGMA journal_mode is database-file-wide and persistent (the choice survives connection
-    // close). A host application that has deliberately picked DELETE or TRUNCATE journal mode
-    // does not want the box-provisioning runner silently switching its file to WAL on startup.
-    // The opt-out flag enableWalMode=false skips the pragma entirely so the existing journal
-    // mode is preserved. This Fact pins that contract.
-    //
-    // We use an isolated file per test (not the shared test.db) so the assertion observes
-    // exactly the runner's effect and isn't polluted by other tests already in WAL mode.
-
     private readonly string _databasePath = Path.Combine(
         Path.GetTempPath(), $"brighter_wal_optout_{Guid.NewGuid():N}.db");
 
@@ -52,8 +47,7 @@ public class RunnerWalModeJournalTests : IAsyncLifetime
     [Fact]
     public async Task When_wal_mode_disabled_it_should_preserve_existing_delete_journal_mode()
     {
-        //Arrange — start the database in DELETE journal mode and create an empty placeholder
-        //          table so the file persists between connections.
+        //Arrange
         await SetJournalModeAsync(ConnectionString, "DELETE");
         Assert.Equal("delete", await GetJournalModeAsync(ConnectionString));
 
@@ -63,19 +57,18 @@ public class RunnerWalModeJournalTests : IAsyncLifetime
         var runner = new SqliteBoxMigrationRunner(
             new SqliteOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), enableWalMode: false);
 
-        //Act — let the runner provision a fresh outbox.
+        //Act
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
         await runner.MigrateAsync(tableName, schemaName: null, BoxType.Outbox, freshHint);
 
-        //Assert — journal mode is still DELETE (the runner did not run the WAL pragma).
+        //Assert
         Assert.Equal("delete", await GetJournalModeAsync(ConnectionString));
     }
 
     [Fact]
     public async Task When_wal_mode_enabled_it_should_switch_to_wal_journal_mode()
     {
-        //Arrange — start in DELETE so the assertion observes the runner's effect, not a
-        //          pre-existing state.
+        //Arrange
         await SetJournalModeAsync(ConnectionString, "DELETE");
         Assert.Equal("delete", await GetJournalModeAsync(ConnectionString));
 
@@ -89,7 +82,7 @@ public class RunnerWalModeJournalTests : IAsyncLifetime
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
         await runner.MigrateAsync(tableName, schemaName: null, BoxType.Outbox, freshHint);
 
-        //Assert — journal mode is now WAL.
+        //Assert
         Assert.Equal("wal", await GetJournalModeAsync(ConnectionString));
     }
 
@@ -116,7 +109,6 @@ public class RunnerWalModeJournalTests : IAsyncLifetime
 
     public Task DisposeAsync()
     {
-        // Best-effort cleanup of the per-test database file plus any WAL/SHM sidecars.
         foreach (var suffix in new[] { "", "-wal", "-shm" })
         {
             try { File.Delete(_databasePath + suffix); } catch { }

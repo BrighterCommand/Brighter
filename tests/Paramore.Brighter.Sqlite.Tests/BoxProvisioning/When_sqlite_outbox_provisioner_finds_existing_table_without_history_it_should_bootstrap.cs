@@ -32,7 +32,7 @@ public class OutboxProvisionerBootstrapTests : IAsyncLifetime
     [Fact]
     public async Task When_sqlite_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
     {
-        // Arrange — create outbox table directly (simulating pre-migration install)
+        // Arrange
         using (var setupConn = new SqliteConnection(_connectionString))
         {
             await setupConn.OpenAsync();

@@ -46,7 +46,7 @@ public class InboxV1ToV3UpgradeTests : IAsyncLifetime
     [Fact]
     public async Task When_sqlite_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v3()
     {
-        //Arrange — seed a V1 inbox (no ContextKey, no history) plus a marker command row.
+        //Arrange
         SqliteInboxLegacySeeder.SeedAtV1(_connectionString, _tableName);
         await SeedMarkerRow();
 
@@ -62,14 +62,13 @@ public class InboxV1ToV3UpgradeTests : IAsyncLifetime
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — the table now has the V3 column set (ContextKey + CausationId ALTERs applied).
+        //Assert
         var actualColumns = await GetTableColumns();
         foreach (var expected in s_v3ExpectedColumns)
         {
             Assert.Contains(expected, actualColumns);
         }
 
-        //Assert — history rows: one synthetic at V1 + one applied at V2 + one applied at V3.
         var rowsByVersion = await GetHistoryRowsByVersion();
         Assert.Equal(ExpectedMigrationVersions.InboxLatest, rowsByVersion.Count);
 
@@ -88,7 +87,6 @@ public class InboxV1ToV3UpgradeTests : IAsyncLifetime
             $"V3 should be an applied migration row, not a synthetic bootstrap row " +
             $"(description was: '{appliedV3Description}')");
 
-        //Assert — the seeded marker row survived with NULL ContextKey on the new column.
         Assert.True(await MarkerRowExistsWithNullContextKey());
     }
 
