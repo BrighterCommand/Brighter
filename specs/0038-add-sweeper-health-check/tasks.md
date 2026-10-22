@@ -1523,7 +1523,7 @@
   - Why no test of its own: these are fixtures, consumed by T16.2 and T17.2–T17.7.
   - Depends on: T1.3, T2.5, T12.0.
 
-- [ ] **CHARACTERISE: T16.1 — Every public Brighter `IHealthCheck` is exempt or registered by a named call with exactly one remedy tag**
+- [x] **CHARACTERISE: T16.1 — Every public Brighter `IHealthCheck` is exempt or registered by a named call with exactly one remedy tag**
   - **USE COMMAND**: `/test-first when reflecting over brighter assemblies every public health check should be exempt or registered by a named call with only its remedy tag`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_reflecting_over_brighter_assemblies_every_health_check_should_follow_the_remedy_convention.cs`
