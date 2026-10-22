@@ -42,9 +42,7 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// no schema configured, the probe's <c>table_schema</c> filter is the runtime <c>DATABASE()</c>
 /// function — the database the connection is bound to, which the unqualified ALTER targets.
 /// <para>
-/// MySQL outbox V1 is one of three relational outboxes whose first-shipped state matches
-/// the "logical pre-V2 baseline" (alongside MSSQL and SQLite). The PostgreSQL outbox is
-/// the lone exception — see the born-past-V1 note in <c>PostgreSqlOutboxMigrationCatalog</c>.
+/// MySQL outbox V1, like every relational outbox's, is the pre-<c>Dispatched</c> baseline.
 /// </para>
 /// <para>
 /// LogicalColumns are stored PascalCase with <see cref="StringComparer.OrdinalIgnoreCase"/> —

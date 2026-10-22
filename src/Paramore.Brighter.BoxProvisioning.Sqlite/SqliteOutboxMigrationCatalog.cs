@@ -41,9 +41,7 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// evaluates this scalar before running <c>UpScript</c> and skips the ALTER (still stamping
 /// history) when the column is already present.
 /// <para>
-/// SQLite outbox V1 is one of three relational outboxes whose first-shipped state matches
-/// the "logical pre-V2 baseline" (alongside MSSQL and MySQL). The PostgreSQL outbox is the
-/// lone exception — see the born-past-V1 note in <see cref="PostgreSqlOutboxMigrationCatalog"/>.
+/// SQLite outbox V1, like every relational outbox's, is the pre-<c>Dispatched</c> baseline.
 /// V8 adds <c>CausationId</c> plus a replay index on it.
 /// The accumulated <c>LogicalColumns</c> across V1..V8 equals the live builder's column set
 /// — verified by the drift test in <c>tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning</c>.

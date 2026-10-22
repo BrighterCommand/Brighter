@@ -169,24 +169,21 @@ public class SqliteInboxBuilderDriftTests
     }
 
     [Fact]
-    public void When_sqlite_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey()
+    public void When_sqlite_inbox_v1_upscript_is_inspected_it_should_carry_the_pre_contextkey_historical_baseline()
     {
-        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
-        //695522367, March 2019). The SQLite inbox is one of the five "born past V1" backends:
-        //it shipped with ContextKey from the first commit, so V1.UpScript already contains it
-        //and V2's IdempotencyCheckSql (pragma_table_info probe) skips the ALTER on chain
-        //replay. This tripwire prevents a future "helpful" rewrite from dropping ContextKey
-        //out of V1. See spec 0027 README archaeology and ADR 0057 §3.
+        //Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Data Source=:memory:",
             inboxTableName: tableName);
 
+        //Act
         var migrations = new SqliteInboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
+        //Assert
         Assert.Equal(1, v1.Version.Value);
-        Assert.Contains("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
     }
 

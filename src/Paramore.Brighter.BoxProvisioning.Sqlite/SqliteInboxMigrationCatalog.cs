@@ -31,8 +31,8 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// Defines the migration history for SQLite inbox tables.
 /// </summary>
 /// <remarks>
-/// V1's <c>UpScript</c> is the literal historical baseline DDL — the first SQLite inbox
-/// builder shape (commit <c>695522367</c>, March 2019). The fresh-install fast path
+/// V1's <c>UpScript</c> is the literal historical baseline DDL — the SQLite inbox builder
+/// shape before <c>ContextKey</c> (first shipped in commit <c>2af33f3e7</c>, August 2016). The fresh-install fast path
 /// (ADR 0057 §3) uses <see cref="FreshInstallDdl"/> instead. V2 adds the <c>ContextKey</c> column (spec version stamped 787c31c52,
 /// Oct 2018) via a plain <c>ALTER TABLE ADD COLUMN</c> — SQLite's grammar lacks
 /// <c>ALTER TABLE ADD COLUMN IF NOT EXISTS</c>, so the existence guard lives in
@@ -41,15 +41,8 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// before running <c>UpScript</c> and skips the ALTER (still stamping history) when the
 /// column is already present.
 /// <para>
-/// Born-past-V1 asymmetry: the SQLite inbox first shipped <em>with</em> <c>ContextKey</c>
-/// already present — there is no pre-ContextKey SQLite inbox in the wild despite the
-/// October-2018 spec version stamp on V2 (the catch-up exists for cross-backend
-/// consistency, not because pre-ContextKey rows ever shipped on SQLite). V1.UpScript
-/// therefore creates a table whose physical column set already includes <c>ContextKey</c>;
-/// V2's <see cref="IAmABoxMigration.IdempotencyCheckSql"/> probe sees the column and skips
-/// the ALTER on chain replay. V1.LogicalColumns remains the "logical pre-V2" set (no
-/// <c>ContextKey</c>) so the bootstrap-detection contract (ADR 0057 §4) can still
-/// distinguish a hypothetical pre-V2 table.
+/// The SQLite inbox shipped without <c>ContextKey</c> until commit <c>787c31c52</c> added it,
+/// so a legacy table may be at V1, and V2 adds the column to it.
 /// </para>
 /// </remarks>
 public class SqliteInboxMigrationCatalog : IAmABoxMigrationCatalog
@@ -61,15 +54,14 @@ public class SqliteInboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v3AddedColumns = ["CausationId"];
 
-    // The inbox DDL as first shipped (commit 695522367), kept verbatim, ContextKey included (see
-    // remarks). {0} is the validated table name, bracket-quoted so reserved words work.
+    // The inbox DDL before ContextKey (as at 787c31c52^), kept verbatim. {0} is the validated
+    // table name, bracket-quoted so reserved words work.
     private const string V1HistoricalDdl =
         "CREATE TABLE [{0}] ("
         + "CommandId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY,"
         + "CommandType nvarchar(256),"
         + "CommandBody ntext,"
-        + "Timestamp dateTime,"
-        + "ContextKey nvarchar(256)"
+        + "Timestamp dateTime"
         + ")";
 
     /// <inheritdoc />
