@@ -1699,7 +1699,7 @@
   - References: FR-10.3, FR-11; AC-27, AC-56, AC-57.
   - Depends on: T18.6, T17.5, T17.6.
 
-- [ ] **PROJECT: T18.8 — Final verification before merge**
+- [x] **PROJECT: T18.8 — Final verification before merge**
   - Full solution build (src, tests, samples) on every target framework: `src` builds with warnings as errors, and there are **no new warnings anywhere** compared with the branch point (NFR-6, AC-27).
   - Run the full suites of `Paramore.Brighter.Core.Tests`, `Paramore.Brighter.Extensions.Tests` and `Paramore.Brighter.Extensions.AspNetCore.Tests`.
   - Confirm `git grep BrighterServiceActivatorHealthCheck -- src samples` finds only the type itself.
