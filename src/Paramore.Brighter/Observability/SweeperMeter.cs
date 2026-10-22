@@ -26,6 +26,10 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
+using System.Linq;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.CircuitBreaker;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Observability;
 
@@ -37,18 +41,30 @@ namespace Paramore.Brighter.Observability;
 /// The instruments are recorded directly, not derived from spans, so they report every sweep even when
 /// traces are sampled out.
 /// </remarks>
-public sealed class SweeperMeter : IAmABrighterSweeperMeter
+public sealed partial class SweeperMeter : IAmABrighterSweeperMeter
 {
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SweeperMeter>();
+
     private readonly Histogram<double> _tickLag;
     private readonly Histogram<double> _sweepDuration;
     private readonly Counter<long> _sweeps;
+    private readonly OutboxSweeperState? _state;
+    private readonly Func<IAmAnOutboxCircuitBreaker?>? _findCircuitBreaker;
 
     /// <summary>
     /// Creates the sweeper's instruments on the Brighter meter.
     /// </summary>
     /// <param name="meterFactory">Creates the <see cref="BrighterSemanticConventions.MeterName"/> meter.</param>
-    public SweeperMeter(IMeterFactory meterFactory)
+    /// <param name="state">What the sweeper is doing, read by the gauges. When null, the gauges report zero.</param>
+    /// <param name="findCircuitBreaker">Finds the outbox circuit breaker, if one is registered.</param>
+    public SweeperMeter(
+        IMeterFactory meterFactory,
+        OutboxSweeperState? state = null,
+        Func<IAmAnOutboxCircuitBreaker?>? findCircuitBreaker = null)
     {
+        _state = state;
+        _findCircuitBreaker = findCircuitBreaker;
+
         var meter = meterFactory.Create(BrighterSemanticConventions.MeterName);
 
         _tickLag = meter.CreateHistogram<double>(
@@ -65,6 +81,18 @@ public sealed class SweeperMeter : IAmABrighterSweeperMeter
             name: BrighterSemanticConventions.OutboxSweeperSweeps,
             unit: "{sweep}",
             description: "Number of outbox sweeps, by how each ended.");
+
+        meter.CreateObservableGauge(
+            name: BrighterSemanticConventions.OutboxSweeperSweepRunningTime,
+            observeValue: ObserveRunningTime,
+            unit: "s",
+            description: "How long the sweep in progress has been running, or 0 when none is.");
+
+        meter.CreateObservableGauge(
+            name: BrighterSemanticConventions.OutboxSweeperTrippedTopics,
+            observeValue: ObserveTrippedTopics,
+            unit: "{topic}",
+            description: "Number of topics whose outbox circuit breaker is tripped.");
     }
 
     /// <inheritdoc />
@@ -79,6 +107,34 @@ public sealed class SweeperMeter : IAmABrighterSweeperMeter
         _sweeps.Add(1, outcomeTag);
     }
 
+    private double ObserveRunningTime()
+    {
+        try
+        {
+            return _state is null ? 0 : _state.Read().RunningTime.TotalSeconds;
+        }
+        catch (Exception e)
+        {
+            Log.SweeperGaugeFault(s_logger, e);
+            return 0;
+        }
+    }
+
+    private long ObserveTrippedTopics()
+    {
+        try
+        {
+            if (_state is null || !_state.Read().IsActive) return 0;
+            var breaker = _findCircuitBreaker?.Invoke();
+            return breaker is null ? 0 : breaker.TrippedTopics.Count();
+        }
+        catch (Exception e)
+        {
+            Log.SweeperGaugeFault(s_logger, e);
+            return 0;
+        }
+    }
+
     private static string ToTagValue(SweepOutcome outcome) => outcome switch
     {
         SweepOutcome.Completed => "completed",
@@ -86,4 +142,12 @@ public sealed class SweeperMeter : IAmABrighterSweeperMeter
         SweepOutcome.LockUnavailable => "lock_unavailable",
         _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null)
     };
+
+    private static partial class Log
+    {
+        [LoggerMessage(
+            LogLevel.Warning,
+            "Outbox sweeper gauge fault; the gauge has reported zero and the sweeper was unaffected")]
+        public static partial void SweeperGaugeFault(ILogger logger, Exception e);
+    }
 }
