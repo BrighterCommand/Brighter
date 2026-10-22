@@ -1667,7 +1667,7 @@
   - References: FR-11; AC-27; ADR 0086 step 9.
   - Depends on: T9.4.
 
-- [ ] **DOC: T18.3 — Release notes: consumer remedy checks, the obsolete marking, and the change to #4555's guidance**
+- [x] **DOC: T18.3 — Release notes: consumer remedy checks, the obsolete marking, and the change to #4555's guidance**
   - `AddBrighterConsumerHealthChecks(channelFailureThreshold = 3)`, its two conditions and remedy kinds, `Dispatcher.GetLifecycleSnapshot` / `DispatcherLifecycleSnapshot`, and the new package dependency.
   - `[Obsolete]` on `BrighterServiceActivatorHealthCheck`, **including that builds treating warnings as errors fail with CS0618** until they suppress it or migrate, and retirement in V11.
   - "Map Degraded to 503 on readiness" now applies to the take-out-of-service tag only.
