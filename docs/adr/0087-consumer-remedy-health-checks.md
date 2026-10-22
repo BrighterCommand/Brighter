@@ -64,6 +64,7 @@ These words come from the requirements' *Definitions* section and FR-12.2, and t
 | [0085](0085-track-outbox-sweeper-state-and-publish-gauges.md) (proposed) | how the sweeper records its state in one tear-free record, how signals find that record, and the two gauges that read it |
 | [0086](0086-sweeper-remedy-health-checks.md) (proposed) | the sweeper remedy health checks: package, registration, tags, data keys, descriptions, thresholds and the remedy-kind convention |
 | **0087** *(this one)* | the consumer remedy checks that split `BrighterServiceActivatorHealthCheck`, its `[Obsolete]` marking, and the additive `Dispatcher` members |
+| [0088](0088-shared-remedy-check-data-and-condition.md) (proposed) | where the shared remedy `Data` builder and the condition value live |
 
 Health checks and gauges give operators actionable guidance on the sweeper and the consumers, and never stall waiting on a stuck thread.
 
