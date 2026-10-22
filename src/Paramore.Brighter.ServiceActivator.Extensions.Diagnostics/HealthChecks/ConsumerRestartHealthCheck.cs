@@ -66,14 +66,14 @@ public class ConsumerRestartHealthCheck : IHealthCheck
         if (snapshot.ConsumerOperationsInFlight > 0)
             return Task.FromResult(HealthCheckResult.Healthy("A consumer operation is in progress, so missing consumers are not reported.", Data(Array.Empty<string>(), snapshot)));
 
-        var shut = snapshot.ShutSubscriptions.ToHashSet();
+        var shut = new HashSet<SubscriptionName>(snapshot.ShutSubscriptions);
         var running = snapshot.Consumers
             .Where(consumer => !shut.Contains(consumer.Subscription.Name))
             .GroupBy(consumer => consumer.Subscription.Name)
             .ToDictionary(group => group.Key, group => group.Count());
         var counts = snapshot.ExpectedConsumers
             .Where(expected => !shut.Contains(expected.Key))
-            .Select(expected => (Name: expected.Key, Running: running.GetValueOrDefault(expected.Key), Expected: expected.Value))
+            .Select(expected => (Name: expected.Key, Running: running.TryGetValue(expected.Key, out var runningCount) ? runningCount : 0, Expected: expected.Value))
             .ToArray();
         var runningTotal = counts.Sum(count => count.Running);
         var expectedTotal = counts.Sum(count => count.Expected);
