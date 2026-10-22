@@ -1693,7 +1693,7 @@
   - References: FR-10.2.1, FR-10.4, FR-11, FR-12.6; AC-27; ADR 0087 step 11.
   - Depends on: T18.3, T18.5.
 
-- [ ] **DOC: T18.7 — Health-check page: the six migration steps and the JSON response writer**
+- [x] **DOC: T18.7 — Health-check page: the six migration steps and the JSON response writer**
   - The six FR-11 migration steps in order, with the exclusion predicate (step 1) and the silent-drop hazard (step 5). No step points a probe at an endpoint that loses a condition the probe covered before, unless another probe covers it after the same step.
   - The complete `System.Text.Json` writer, **copied verbatim from T17.1's fixture**, used on the operator endpoint only. Mention the community `UIResponseWriter` as an alternative that adds a package.
   - References: FR-10.3, FR-11; AC-27, AC-56, AC-57.
