@@ -1497,7 +1497,7 @@
   - References: FR-10.2, NFR-6; AC-55 (remaining clauses).
   - Depends on: T15.1, T9.1, T1.8, T12.0.
 
-- [ ] **CHARACTERISE: T15.4 — In the shared state, the consumer remedy checks agree with the existing check**
+- [x] **CHARACTERISE: T15.4 — In the shared state, the consumer remedy checks agree with the existing check**
   - **USE COMMAND**: `/test-first when the dispatcher is running with nothing shut or in excess the worst consumer remedy status should equal the existing check status`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_dispatcher_is_running_should_agree_with_the_existing_consumer_check.cs`
