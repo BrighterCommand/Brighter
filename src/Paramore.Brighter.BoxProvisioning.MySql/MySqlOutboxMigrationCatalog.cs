@@ -32,8 +32,9 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// Defines the migration history for MySQL outbox tables.
 /// </summary>
 /// <remarks>
-/// V1's <c>UpScript</c> is the literal historical baseline DDL — the first MySQL outbox
-/// builder shape (commit <c>695522367</c>, March 2019; pre-Dispatched). The fresh-install fast
+/// V1's <c>UpScript</c> is the literal historical baseline DDL — the MySQL outbox builder
+/// shape before <c>Dispatched</c> (as at commit <c>3c30343fa^</c>; first shipped in commit
+/// <c>3a80d74e2</c>, August 2017). The fresh-install fast
 /// path (ADR 0057 §3) takes its DDL from <see cref="FreshInstallDdl"/> instead, so V1.UpScript
 /// carries the historical shape. V2..V7 use the MySQL <c>information_schema.columns</c> +
 /// prepared-statement idempotency pattern (ADR 0057 §5) — MySQL 5.7 lacks native
@@ -68,7 +69,7 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     private static readonly string[] s_v7AddedColumns = ["DataRef", "SpecVersion"];
     private static readonly string[] s_v8AddedColumns = ["CausationId"];
 
-    // From commit 695522367 (March 2019), before Dispatched; Created/CreatedID are MySQL
+    // The outbox DDL before Dispatched (as at 3c30343fa^); Created/CreatedID are MySQL
     // housekeeping columns. {0} is the table name, backtick-quoted so reserved words (Order,
     // User) parse.
     private const string V1HistoricalDdl =

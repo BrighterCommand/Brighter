@@ -73,8 +73,8 @@ public class MsSqlOutboxBuilderDriftTests
     public void When_mssql_outbox_v1_upscript_is_inspected_it_should_carry_pre_dispatched_historical_baseline(
         bool hasBinaryMessagePayload)
     {
-        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
-        //44a405b79, April 2019 — pre-Dispatched). The Dispatched column was introduced in V2
+        //V1.UpScript is the literal historical DDL (Spec 0027 R1, commit
+        //3c30343fa^, the shape before Dispatched). The Dispatched column was introduced in V2
         //(3c30343fa, July 2019). This tripwire prevents a future "helpful" refactor from
         //quietly rewriting V1.UpScript back to live-builder shape: chain replay against a
         //legacy installation that bootstrapped at V1 must see the same starting DDL it always

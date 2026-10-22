@@ -206,4 +206,12 @@ Each V1 historical literal is now the builder DDL as it stood just before the co
 - `docs/adr/0057-box-schema-versioning-and-migrations.md` §3 (`:167`, `:219`) — only the Postgres inbox
   is born past V1.
 
+Follow-up (owner request, same PR): the MSSQL/MySQL/SQLite outbox catalogs and their drift-test comments
+cited rename commits (`695522367`, `44a405b79`) as first ship. Their V1 literals equal the builders at
+`3c30343fa^`, so they now cite that, plus the real first ships (MSSQL `3cf37bbe9`, `Id` added in
+`e6ff9e673`; MySQL `3a80d74e2`; SQLite `2af33f3e7`). The MSSQL outbox remark calling it "the only one of
+the four" outboxes with a pre-V2 first ship is removed. SQLite's IdempotencyCheckSql references
+"ADR 0057 §6" → §5; the provisioners' "(per ADR 0057 §6)" for "no schema concept" is stripped (the ADR
+does not cover it).
+
 Regression tests: all 6 cases green (SQLite 1, MSSQL 2, MySQL 1, Postgres 2).

@@ -32,17 +32,17 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// Defines the migration history for MSSQL outbox tables.
 /// </summary>
 /// <remarks>
-/// V1's <c>UpScript</c> is the literal historical baseline DDL — the first MSSQL outbox
-/// builder shape (commit <c>695522367</c>, March 2019; pre-Dispatched, pre-CloudEvents).
+/// V1's <c>UpScript</c> is the literal historical baseline DDL — the MSSQL outbox builder
+/// shape before <c>Dispatched</c> (as at commit <c>3c30343fa^</c>; pre-CloudEvents). The outbox
+/// first shipped in commit <c>3cf37bbe9</c> (June 2015); the <c>Id</c> column was added in
+/// <c>e6ff9e673</c> (October 2016).
 /// The fresh-install fast path (ADR 0057 §3) takes its DDL from <see cref="FreshInstallDdl"/>
 /// instead, so V1.UpScript carries the historical shape. V2..V7 are conditional
 /// <c>ALTER TABLE ADD</c> statements guarded by <c>IF COL_LENGTH(...) IS NULL</c> per ADR
 /// 0057 §5, so each one is idempotent and safe to re-execute on chain replay. V8 adds
 /// <c>CausationId</c> plus a replay index on it.
 /// <para>
-/// The MSSQL outbox is the only one of the four relational outboxes whose first-shipped
-/// state matches the "logical pre-V2 baseline" — see the asymmetry note in the
-/// PostgreSQL/MySQL/SQLite outbox catalogs. The accumulated <c>LogicalColumns</c> across
+/// The accumulated <c>LogicalColumns</c> across
 /// V1..V8 plus the MSSQL housekeeping <c>Id</c> column equals the live builder's column set
 /// — verified by the drift test in <c>tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning</c>.
 /// </para>
@@ -54,7 +54,7 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     private static readonly string[] s_v1Columns =
         ["MessageId", "Topic", "MessageType", "Timestamp", "HeaderBag", "Body"];
 
-    // From commit 695522367 (March 2019), the pre-Dispatched shape. {0} is the validated table
+    // The outbox DDL before Dispatched (as at 3c30343fa^). {0} is the validated table
     // name, bracket-quoted so reserved words (User, Order) parse.
     private const string V1HistoricalDdl =
         """

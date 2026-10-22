@@ -32,12 +32,13 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// Defines the migration history for SQLite outbox tables.
 /// </summary>
 /// <remarks>
-/// V1's <c>UpScript</c> is the literal historical baseline DDL — the first SQLite outbox
-/// builder shape (commit <c>695522367</c>, March 2019; pre-Dispatched). The fresh-install fast
+/// V1's <c>UpScript</c> is the literal historical baseline DDL — the SQLite outbox builder
+/// shape before <c>Dispatched</c> (as at commit <c>3c30343fa^</c>; first shipped in commit
+/// <c>2af33f3e7</c>, August 2016). The fresh-install fast
 /// path (ADR 0057 §3) uses <see cref="FreshInstallDdl"/> instead. V2..V7 are plain <c>ALTER TABLE ADD COLUMN</c> statements —
 /// SQLite's grammar lacks <c>ALTER TABLE ADD COLUMN IF NOT EXISTS</c>, so the idempotency
 /// guard lives in a separate <see cref="IAmABoxMigration.IdempotencyCheckSql"/> field per
-/// ADR 0057 §6 (probing <c>pragma_table_info</c>). The <c>SqliteBoxMigrationRunner</c>
+/// ADR 0057 §5 (probing <c>pragma_table_info</c>). The <c>SqliteBoxMigrationRunner</c>
 /// evaluates this scalar before running <c>UpScript</c> and skips the ALTER (still stamping
 /// history) when the column is already present.
 /// <para>
@@ -52,7 +53,7 @@ public class SqliteOutboxMigrationCatalog : IAmABoxMigrationCatalog
     private static readonly string[] s_v1Columns =
         ["MessageId", "Topic", "MessageType", "Timestamp", "HeaderBag", "Body"];
 
-    // The outbox DDL as first shipped (commit 695522367), kept verbatim so chain replay starts
+    // The outbox DDL before Dispatched (as at 3c30343fa^), kept verbatim so chain replay starts
     // from the same shape. {0} is the validated table name, bracket-quoted so reserved words work.
     private const string V1HistoricalDdl =
         """

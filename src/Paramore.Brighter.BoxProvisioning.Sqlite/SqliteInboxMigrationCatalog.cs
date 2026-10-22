@@ -36,7 +36,7 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// (ADR 0057 §3) uses <see cref="FreshInstallDdl"/> instead. V2 adds the <c>ContextKey</c> column (spec version stamped 787c31c52,
 /// Oct 2018) via a plain <c>ALTER TABLE ADD COLUMN</c> — SQLite's grammar lacks
 /// <c>ALTER TABLE ADD COLUMN IF NOT EXISTS</c>, so the existence guard lives in
-/// <see cref="IAmABoxMigration.IdempotencyCheckSql"/> per ADR 0057 §6 (probing
+/// <see cref="IAmABoxMigration.IdempotencyCheckSql"/> per ADR 0057 §5 (probing
 /// <c>pragma_table_info</c>). The <c>SqliteBoxMigrationRunner</c> evaluates this scalar
 /// before running <c>UpScript</c> and skips the ALTER (still stamping history) when the
 /// column is already present.
