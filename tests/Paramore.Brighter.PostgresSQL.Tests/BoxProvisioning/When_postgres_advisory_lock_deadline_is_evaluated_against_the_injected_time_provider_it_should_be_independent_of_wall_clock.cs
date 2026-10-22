@@ -46,6 +46,10 @@ public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
 {
     private const int LOCK_NAMESPACE = 74726;
 
+    private static readonly TimeSpan s_lockTimeoutFarBeyondWallClockCeiling = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan s_wallClockCeiling = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan s_timeForAcquireToReadItsStartTimestamp = TimeSpan.FromMilliseconds(300);
+
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _lockKey = $"BrighterMigrationTimeProviderTest_{Guid.NewGuid():N}";
 
@@ -73,14 +77,14 @@ public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
         var fakeTimeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
         var advisoryLock = new PostgreSqlAdvisoryLock(fakeTimeProvider);
 
-        var timeout = TimeSpan.FromSeconds(30);
+        var timeout = s_lockTimeoutFarBeyondWallClockCeiling;
 
         // Act
         var stopwatch = Stopwatch.StartNew();
         var acquireTask = Task.Run(() => advisoryLock.AcquireAsync(
             _contenderConnection, _lockKey, timeout, CancellationToken.None));
 
-        await Task.Delay(TimeSpan.FromMilliseconds(300));
+        await Task.Delay(s_timeForAcquireToReadItsStartTimestamp);
 
         fakeTimeProvider.Advance(timeout + TimeSpan.FromSeconds(1));
 
@@ -89,7 +93,7 @@ public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
 
         // Assert
         Assert.Contains(_lockKey, thrown.Message, StringComparison.Ordinal);
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5),
+        Assert.True(stopwatch.Elapsed < s_wallClockCeiling,
             $"Wall-clock elapsed {stopwatch.Elapsed.TotalSeconds:F2}s — deadline should have fired against the fake provider, not the wall clock.");
     }
 
