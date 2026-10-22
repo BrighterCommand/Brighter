@@ -75,7 +75,7 @@
 
 *Depends on no earlier phase.*
 
-- [ ] **STRUCTURAL: T1.1 Add the six stale-message constants to `BrighterSemanticConventions`**
+- [x] **STRUCTURAL: T1.1 Add the six stale-message constants to `BrighterSemanticConventions`**
   - **USE COMMAND**: `/tidy-first add the six outbox stale-message constants to BrighterSemanticConventions`
   - In `src/Paramore.Brighter/Observability/BrighterSemanticConventions.cs`, add these beside the ADR 0084-outbox-metrics outbox constants at `:100-104` (ADR: `:104-108`):
     - `OutboxStaleMessages` = `paramore.brighter.outbox.stale.messages`
