@@ -1,7 +1,7 @@
 ---
 id: 0088-shared-remedy-check-data-and-condition
 title: "Shared remedy check data and condition value"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-10-22
@@ -17,7 +17,7 @@ Date: 2026-10-22
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
