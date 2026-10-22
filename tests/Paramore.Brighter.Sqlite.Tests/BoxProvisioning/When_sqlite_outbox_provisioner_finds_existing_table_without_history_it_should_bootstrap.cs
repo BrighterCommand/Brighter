@@ -33,17 +33,7 @@ public class OutboxProvisionerBootstrapTests : IAsyncLifetime
     public async Task When_sqlite_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
     {
         // Arrange
-        using (var setupConn = new SqliteConnection(_connectionString))
-        {
-            await setupConn.OpenAsync();
-            using var walCmd = setupConn.CreateCommand();
-            walCmd.CommandText = "PRAGMA journal_mode=WAL;";
-            await walCmd.ExecuteNonQueryAsync();
-
-            using var ddl = setupConn.CreateCommand();
-            ddl.CommandText = SqliteOutboxBuilder.GetDDL(_tableName);
-            await ddl.ExecuteNonQueryAsync();
-        }
+        await CreatePreMigrationOutboxAsync();
 
         // Act
         await _provisioner.ProvisionAsync();
@@ -60,6 +50,19 @@ WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.OutboxLatest);
         var historyCount = Convert.ToInt64(await historyCheck.ExecuteScalarAsync());
         Assert.Equal(1, historyCount);
+    }
+
+    private async Task CreatePreMigrationOutboxAsync()
+    {
+        using var setupConn = new SqliteConnection(_connectionString);
+        await setupConn.OpenAsync();
+        using var walCmd = setupConn.CreateCommand();
+        walCmd.CommandText = "PRAGMA journal_mode=WAL;";
+        await walCmd.ExecuteNonQueryAsync();
+
+        using var ddl = setupConn.CreateCommand();
+        ddl.CommandText = SqliteOutboxBuilder.GetDDL(_tableName);
+        await ddl.ExecuteNonQueryAsync();
     }
 
     public Task InitializeAsync() => Task.CompletedTask;

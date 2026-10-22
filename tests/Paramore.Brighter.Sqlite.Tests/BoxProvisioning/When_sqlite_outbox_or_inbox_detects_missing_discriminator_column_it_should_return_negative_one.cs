@@ -54,25 +54,13 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         var migrations = new SqliteOutboxMigrationCatalog().All(config);
 
         //Act
-        int detected;
-        await using (var connection = new SqliteConnection(_connectionString))
-        {
-            await connection.OpenAsync();
-            detected = await new SqliteBoxDetectionHelper().DetectCurrentVersionAsync(
-                connection, tableName, null, BoxType.Outbox, migrations, default);
-        }
+        var detected = await DetectVersionAsync(tableName, BoxType.Outbox, migrations);
 
         //Assert
         Assert.Equal(-1, detected);
 
         //Act
-        var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config);
-        var provisioner = new SqliteOutboxProvisioner(
-            new SqliteBoxDetectionHelper(),
-            new SqliteOutboxMigrationCatalog(),
-            new SqlitePayloadModeValidator(),
-            config,
-            runner);
+        var provisioner = CreateOutboxProvisioner(config);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
         //Assert
@@ -92,25 +80,13 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         var migrations = new SqliteInboxMigrationCatalog().All(config);
 
         //Act
-        int detected;
-        await using (var connection = new SqliteConnection(_connectionString))
-        {
-            await connection.OpenAsync();
-            detected = await new SqliteBoxDetectionHelper().DetectCurrentVersionAsync(
-                connection, tableName, null, BoxType.Inbox, migrations, default);
-        }
+        var detected = await DetectVersionAsync(tableName, BoxType.Inbox, migrations);
 
         //Assert
         Assert.Equal(-1, detected);
 
         //Act
-        var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config);
-        var provisioner = new SqliteInboxProvisioner(
-            new SqliteBoxDetectionHelper(),
-            new SqliteInboxMigrationCatalog(),
-            new SqlitePayloadModeValidator(),
-            config,
-            runner);
+        var provisioner = CreateInboxProvisioner(config);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
         //Assert
@@ -130,25 +106,13 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         var migrations = new SqliteOutboxMigrationCatalog().All(config);
 
         //Act
-        int detected;
-        await using (var connection = new SqliteConnection(_connectionString))
-        {
-            await connection.OpenAsync();
-            detected = await new SqliteBoxDetectionHelper().DetectCurrentVersionAsync(
-                connection, tableName, null, BoxType.Outbox, migrations, default);
-        }
+        var detected = await DetectVersionAsync(tableName, BoxType.Outbox, migrations);
 
         //Assert
         Assert.Equal(0, detected);
 
         //Act
-        var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config);
-        var provisioner = new SqliteOutboxProvisioner(
-            new SqliteBoxDetectionHelper(),
-            new SqliteOutboxMigrationCatalog(),
-            new SqlitePayloadModeValidator(),
-            config,
-            runner);
+        var provisioner = CreateOutboxProvisioner(config);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
         //Assert
@@ -178,13 +142,7 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         var migrations = new SqliteOutboxMigrationCatalog().All(config);
 
         //Act
-        int detected;
-        await using (var connection = new SqliteConnection(_connectionString))
-        {
-            await connection.OpenAsync();
-            detected = await new SqliteBoxDetectionHelper().DetectCurrentVersionAsync(
-                connection, tableName, null, BoxType.Outbox, migrations, default);
-        }
+        var detected = await DetectVersionAsync(tableName, BoxType.Outbox, migrations);
 
         //Assert
         Assert.Equal(3, detected);
@@ -208,13 +166,7 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         var migrations = new SqliteInboxMigrationCatalog().All(config);
 
         //Act
-        int detected;
-        await using (var connection = new SqliteConnection(_connectionString))
-        {
-            await connection.OpenAsync();
-            detected = await new SqliteBoxDetectionHelper().DetectCurrentVersionAsync(
-                connection, tableName, null, BoxType.Inbox, migrations, default);
-        }
+        var detected = await DetectVersionAsync(tableName, BoxType.Inbox, migrations);
 
         //Assert
         Assert.Equal(1, detected);
@@ -228,6 +180,29 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         command.CommandText = sql;
         await command.ExecuteNonQueryAsync();
     }
+
+    private async Task<int> DetectVersionAsync(
+        string tableName, BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations)
+    {
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync();
+        return await new SqliteBoxDetectionHelper().DetectCurrentVersionAsync(
+            connection, tableName, null, boxType, migrations, default);
+    }
+
+    private static SqliteOutboxProvisioner CreateOutboxProvisioner(RelationalDatabaseConfiguration config) =>
+        new(new SqliteBoxDetectionHelper(),
+            new SqliteOutboxMigrationCatalog(),
+            new SqlitePayloadModeValidator(),
+            config,
+            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
+
+    private static SqliteInboxProvisioner CreateInboxProvisioner(RelationalDatabaseConfiguration config) =>
+        new(new SqliteBoxDetectionHelper(),
+            new SqliteInboxMigrationCatalog(),
+            new SqlitePayloadModeValidator(),
+            config,
+            new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config));
 
     private string TrackTable(string tableName)
     {
