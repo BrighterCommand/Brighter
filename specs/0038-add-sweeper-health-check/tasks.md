@@ -1636,7 +1636,7 @@
   - References: FR-11 (migration step 1), NFR-6; AC-56.
   - Depends on: T17.2, T15.1, T16.0.
 
-- [ ] **CHARACTERISE: T17.7 — Consumer conditions route to readiness or liveness only**
+- [x] **CHARACTERISE: T17.7 — Consumer conditions route to readiness or liveness only**
   - **USE COMMAND**: `/test-first when consumer conditions apply the liveness and readiness endpoints should return the documented status codes`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_consumer_conditions_apply_should_route_them_to_the_documented_endpoints.cs`
