@@ -1623,7 +1623,7 @@
   - References: FR-10.3, FR-10.5, FR-11; AC-57.
   - Depends on: T17.2, T16.0.
 
-- [ ] **CHARACTERISE: T17.6 — An existing endpoint with the exclusion predicate is unchanged; one without a predicate selects the restart check**
+- [x] **CHARACTERISE: T17.6 — An existing endpoint with the exclusion predicate is unchanged; one without a predicate selects the restart check**
   - **USE COMMAND**: `/test-first when sweeper checks are added beside an existing endpoint with the exclusion predicate its status and body should not change`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_sweeper_checks_are_added_beside_an_existing_endpoint_should_leave_it_unchanged.cs`
