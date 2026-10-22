@@ -1599,7 +1599,7 @@
   - References: FR-10.1, FR-10.3; AC-35.
   - Depends on: T17.2, T16.0.
 
-- [ ] **CHARACTERISE: T17.4 — Conditions are visible in the `HealthReport` and through a publisher, without a writer**
+- [x] **CHARACTERISE: T17.4 — Conditions are visible in the `HealthReport` and through a publisher, without a writer**
   - **USE COMMAND**: `/test-first when the health check service runs with no predicate the report and a publisher should carry each check status description and data`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_health_check_service_runs_with_no_predicate_should_carry_each_check_to_a_publisher.cs`
