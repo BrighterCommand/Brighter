@@ -4,7 +4,7 @@
 
 **Linked Issue**: #4489
 
-**Related**: issue #4554 (outstanding-message check cost), issue #4584 (outstanding-message check with no time bound; PR #4597 removed the shared semaphore it also reported), issue #4573 (hung sweeper detection), PR #4484 (outbox metrics, ADR `0084-outbox-metrics`), PR #4597 (removes the outstanding count semaphore shared across mediators), PR #4598 (this spec, ADR `0085-outbox-stale-message-telemetry` and ADR `0086-outbox-per-topic-stale-count`; on 2026-10-13 the maintainer asked there for an age per publication, in comment `issuecomment-6141309069`, and suggested a count per topic beside the overall count, in review comment `discussion_r4256375898` on this document), ADR `0081-timed-outbox-sweeper-health-metrics`, ADR `0063-failed-delivery-context`, ADR `0022-generate-metrics-from-traces`, ADR `0010-brighter-semantic-conventions`.
+**Related**: issue #4554 (outstanding-message check cost), issue #4584 (outstanding-message check with no time bound; PR #4597 removed the shared semaphore it also reported, and PR #4613 bounded the relational count), issue #4573 (hung sweeper detection), PR #4484 (outbox metrics, ADR `0084-outbox-metrics`), PR #4597 (removes the outstanding count semaphore shared across mediators), PR #4598 (this spec, ADR `0085-outbox-stale-message-telemetry` and ADR `0086-outbox-per-topic-stale-count`; on 2026-10-13 the maintainer asked there for an age per publication, in comment `issuecomment-6141309069`, and suggested a count per topic beside the overall count, in review comment `discussion_r4256375898` on this document), ADR `0081-timed-outbox-sweeper-health-metrics`, ADR `0063-failed-delivery-context`, ADR `0022-generate-metrics-from-traces`, ADR `0010-brighter-semantic-conventions`.
 
 Code locations refer to commit 1ce331eb2 on the PR #4598 branch, which merges master at commit ef2a459d9, PR #4597 included. The version approved on 2026-10-11 pinned commit c98bd40ea; every location was checked again at commit 1ce331eb2.
 
@@ -216,14 +216,14 @@ If Q-1's hosted-service proposal is taken, the ADR states how T relates to `Host
 - **(c) Cancellation.** If the token is cancelled before the store answers, the call ends with `OperationCanceledException` or the store client's own cancellation exception, without waiting for the store to answer. The exact bound for each outbox is Q-10. AC-17 uses a test tolerance.
 - **(d) Count per topic.** The outbox offers the per-topic capability. With no concurrent writers, it returns exactly `min(S_t, C)` for each requested topic t, counting only messages stale on t at the requested A_t, and 0 for a requested topic with no such message. It counts each requested topic this way whatever `args` holds: it never narrows the requested topics by `args`, which it receives for other uses (FR-12). It answers every requested topic, excludes no tripped topic, transfers no message body, loads at most C entries per topic into the process or counts on the server, and meets (c) for its own token.
 
-The table below is from reading the code at commit 1ce331eb2. AC-16, AC-17 and AC-34 settle the "To verify" cells.
+The table below is from reading the code at commit 1ce331eb2, with the relational (c) cells updated for PR #4613. AC-16, AC-17 and AC-34 settle the "To verify" cells.
 
 | Outbox | (a) Age | (b) Ceiling | (c) Cancellation | (d) Count per topic | Notes |
 |---|---|---|---|---|---|
 | `InMemoryOutbox` | Meets | Meets | Not applicable: no I/O | Added in this spec; AC-34 verifies it | PR #4583 removed the sort each count did (issue #4554) |
-| MsSql, PostgreSql, MySql | Meets | Meets | To verify: the command has no timeout (A-9) | **Gap.** Not in this spec; one issue for the relational family (FR-14.1) | Loads up to C whole rows |
-| Sqlite | Meets | Meets | To verify: async runs synchronously (A-8) | **Gap.** Relational family | Loads up to C whole rows |
-| Spanner | Meets | Meets | To verify: 60 s command timeout (A-9) | **Gap.** Relational family; `SpannerOutbox` derives from `RelationDatabaseOutbox` (`SpannerOutbox.cs:32-33`) | Loads up to C whole rows |
+| MsSql, PostgreSql, MySql | Meets | Meets | To verify: 15 s command timeout by default (A-9) | **Gap.** Not in this spec; one issue for the relational family (FR-14.1) | Loads up to C whole rows |
+| Sqlite | Meets | Meets | To verify: async runs synchronously (A-8); 15 s command timeout by default (A-9) | **Gap.** Relational family | Loads up to C whole rows |
+| Spanner | Meets | Meets | To verify: 15 s command timeout by default (A-9) | **Gap.** Relational family; `SpannerOutbox` derives from `RelationDatabaseOutbox` (`SpannerOutbox.cs:32-33`) | Loads up to C whole rows |
 | MongoDb | Meets, but narrowed to `args["Topic"]` when the bag sets a topic (FR-12) | Meets | To verify | **Gap.** Not in this spec; one issue | Loads up to C whole documents. Its overall count already filters on one topic |
 | DynamoDB, DynamoDB V4 | Meets, on an eventually consistent index (A-7) | **Gap.** C is split across `ScanConcurrency` segments, and each stops at its share. With C of 100 and 3 segments (shares 34, 33, 33) and S of 100 spread 50, 30, 20, V is 84 (`DynamoDbOutbox.cs:851-924`, `:974`; V4 `:863`, `:986`). To verify: a C below `ScanConcurrency` gives a segment a share of 0, so it sends a Scan with `Limit = 0` (`:906`). | Meets: the token is linked with the outbox's own timeout | **Gap.** Not in this spec; one issue for both | `Select.COUNT`, so no bodies are read. The age filter is applied after the read, so read volume is not bounded by C (NFR-4) |
 | Firestore | **Gap.** Filters only on the dispatched flag | **Gap.** No limit | **Gap.** The token is not passed to the aggregation query or its stream (`FirestoreOutbox.cs:1191-1246`) | **Gap.** Not in this spec; one issue | The count runs on the server |
@@ -285,7 +285,7 @@ The release notes describe the feature.
 
 - **C-1.** The value is recorded directly, never derived from spans. The reason is the one ADR `0081-timed-outbox-sweeper-health-metrics` gives: sampling drops spans.
 - **C-2.** Public API changes are additive only (NFR-3).
-- **C-3.** The outstanding-message check is not changed (NFR-2). PR #4597 has fixed the semaphore shared across mediators that issue #4584 reported. The part of issue #4584 still open, a bound on the outstanding-message count so that a count that never returns does not freeze the check (the relational count has no timeout, A-9), is not addressed here.
+- **C-3.** The outstanding-message check is not changed (NFR-2). PR #4597 has fixed the semaphore shared across mediators that issue #4584 reported, and PR #4613 has bounded the relational count with a command timeout (A-9). Neither change is part of this spec.
 - **C-4.** `TimedOutboxSweeper`, its options, `IAmABrighterSweeperMeter` and the sweeper instruments are not changed.
 - **C-5.** Names follow ADR `0010-brighter-semantic-conventions` and are added to `BrighterSemanticConventions`.
 - **C-6.** A third-party outbox is measured through the same count and gets whatever accuracy its count provides. It gets a per-topic count only if it offers the per-topic capability (FR-12.1).
@@ -308,14 +308,14 @@ The release notes describe the feature.
 - **A-6.** Each instance sharing a store counts the same rows, so summing their values overcounts and max does not. For the per-topic gauge, max is taken per topic. This holds when the instances pass the same bag and, for a topic, use the same A_t; an instance with a smaller A_t counts more, so max reports the count at the smallest A_t among the instances, and an instance that does not publish to a topic reports no series for it. MongoDb instances with different topics in their bags count different sets in the overall count (FR-12). Each `InMemoryOutbox` reports only its own process.
 - **A-7.** DynamoDB scans `OutstandingAllTopics` with `ConsistentRead = false` and has its own operation timeout (`DynamoDbConfiguration.Timeout`, 500 ms by default). When T is greater than that timeout, a count that exceeds it fails before T applies.
 - **A-8.** Microsoft.Data.Sqlite runs its async ADO.NET methods synchronously.
-- **A-9.** The relational count always passes a timeout of -1 (`RelationDatabaseOutbox.cs:987`), which `CreateCommand` turns into `CommandTimeout` 0, no limit (`:1398`). Spanner turns it into 60 seconds (`SpannerOutbox.cs:57`). The app cannot configure this timeout.
+- **A-9.** Since PR #4613, the relational count runs with a command timeout of 15 seconds by default, Spanner included. The app can set it with `outstandingCountTimeout` on `RelationalDatabaseConfiguration`, rounded up to whole seconds. These locations refer to commit 62099d908 on master: `RelationDatabaseOutbox.cs:1015` and `:1021` (the count), `RelationalDatabaseConfiguration.cs:13` (the default), `:38` (the parameter) and `:114` (the rounding), and `SpannerOutbox.cs:57` (60 seconds only for a timeout of 0 or less).
 
 ### Out of Scope
 
 - **OOS-1.** The channel that notifies each failed `Clear(Async)`, and any option that makes `PostAsync` throw.
 - **OOS-2.** Alerting rules, beyond one documented example.
 - **OOS-3.** Changes to the sweeper, its schedule, its lock or its metrics.
-- **OOS-4.** Changes to the outstanding-message check or `MaxOutStandingMessages`, including the part of issue #4584 still open: a bound on the outstanding-message count so that a count that never returns does not freeze the check (the relational count has no timeout, A-9). PR #4597 already fixed the semaphore shared across mediators that the issue also reported.
+- **OOS-4.** Changes to the outstanding-message check or `MaxOutStandingMessages`. Work on issue #4584 stays outside this spec: PR #4597 removed the semaphore shared across mediators, and PR #4613 bounded the relational count with a command timeout (A-9).
 - **OOS-5.** Per-message detail in either gauge (message id, correlation id and the like); a topic attribute on the overall gauge or on the FR-6 signal; and per-topic series for topics with no publication in this process.
 - **OOS-6.** A health check for stale messages.
 - **OOS-7.** Sending, retrying, deleting or archiving stale messages.
