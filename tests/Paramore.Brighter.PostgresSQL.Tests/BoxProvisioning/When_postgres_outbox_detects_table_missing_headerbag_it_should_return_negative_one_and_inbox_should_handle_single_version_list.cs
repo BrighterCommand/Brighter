@@ -31,6 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// The detection helper returns -1 for a table without the box's discriminator column (headerbag, commandbody), 0 for one
+/// with it but no known version's columns, and otherwise the highest version whose columns are all present; the provisioner
+/// refuses a table it cannot identify.
+/// </summary>
 public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
@@ -39,8 +44,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
     [Fact]
     public async Task When_postgres_outbox_detects_table_missing_headerbag_discriminator_it_should_return_negative_one()
     {
-        //Arrange — a foreign table with neither headerbag (outbox discriminator) nor V1
-        //columns. Helper must report -1; provisioner must refuse to touch a non-Brighter table.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         var tableName = TrackTable($"foreign_{Guid.NewGuid():N}");
         await ExecuteDdl(
@@ -49,7 +53,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
         var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
 
-        //Act — direct helper call.
+        //Act
         int detected;
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
@@ -58,10 +62,10 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, "public", BoxType.Outbox, migrations, default);
         }
 
-        //Assert — helper returns -1 (no discriminator).
+        //Assert
         Assert.Equal(-1, detected);
 
-        //Act — provisioner end-to-end.
+        //Act
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new PostgreSqlOutboxProvisioner(
             new PostgreSqlBoxDetectionHelper(),
@@ -71,7 +75,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
-        //Assert — message identifies this as not a Brighter outbox and names the discriminator.
+        //Assert
         Assert.Contains("not a Brighter outbox", ex.Message);
         Assert.Contains("headerbag", ex.Message);
     }
@@ -79,7 +83,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
     [Fact]
     public async Task When_postgres_inbox_detects_table_missing_commandbody_discriminator_it_should_return_negative_one()
     {
-        //Arrange — a foreign table without commandbody (inbox discriminator).
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         var tableName = TrackTable($"foreign_{Guid.NewGuid():N}");
         await ExecuteDdl(
@@ -88,7 +92,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName);
         var migrations = new PostgreSqlInboxMigrationCatalog().All(config);
 
-        //Act — direct helper call.
+        //Act
         int detected;
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
@@ -97,10 +101,10 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, "public", BoxType.Inbox, migrations, default);
         }
 
-        //Assert — helper returns -1.
+        //Assert
         Assert.Equal(-1, detected);
 
-        //Act — provisioner end-to-end.
+        //Act
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new PostgreSqlInboxProvisioner(
             new PostgreSqlBoxDetectionHelper(),
@@ -110,7 +114,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
-        //Assert — message identifies this as not a Brighter inbox and names the discriminator.
+        //Assert
         Assert.Contains("not a Brighter inbox", ex.Message);
         Assert.Contains("commandbody", ex.Message);
     }
@@ -118,8 +122,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
     [Fact]
     public async Task When_postgres_outbox_detects_headerbag_present_but_no_v1_columns_it_should_return_zero()
     {
-        //Arrange — table has headerbag (passes discriminator gate) but is missing other V1
-        //columns like messageid, topic, body. Helper must return 0; provisioner must throw.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         var tableName = TrackTable($"unknown_{Guid.NewGuid():N}");
         await ExecuteDdl(
@@ -128,7 +131,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
         var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
 
-        //Act — direct helper call.
+        //Act
         int detected;
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
@@ -137,10 +140,10 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, "public", BoxType.Outbox, migrations, default);
         }
 
-        //Assert — helper returns 0 (discriminator OK, but unknown schema).
+        //Assert
         Assert.Equal(0, detected);
 
-        //Act — provisioner end-to-end.
+        //Act
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new PostgreSqlOutboxProvisioner(
             new PostgreSqlBoxDetectionHelper(),
@@ -150,15 +153,14 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
-        //Assert — message identifies the table as not matching any known schema version.
+        //Assert
         Assert.Contains("does not match any known schema version", ex.Message);
     }
 
     [Fact]
     public async Task When_postgres_outbox_detects_v3_shaped_table_it_should_return_three()
     {
-        //Arrange — V3 columns: V1 baseline + V2 (dispatched) + V3 (correlationid, replyto,
-        //contenttype). Crucially, no partitionkey (V4) so the helper must STOP at 3.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         var tableName = TrackTable($"v3_outbox_{Guid.NewGuid():N}");
         await ExecuteDdl(
@@ -188,15 +190,14 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, "public", BoxType.Outbox, migrations, default);
         }
 
-        //Assert — V3 is the highest cumulative match (V4 column partitionkey absent stops the walk).
+        //Assert
         Assert.Equal(3, detected);
     }
 
     [Fact]
     public async Task When_postgres_inbox_detects_v1_shaped_table_it_should_return_one()
     {
-        //Arrange — Postgres inbox V1 column set with single-entry migration list. Detection
-        //must work with a 1-entry list (Postgres inbox is V1-only by design).
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         var tableName = TrackTable($"v1_inbox_{Guid.NewGuid():N}");
         await ExecuteDdl(
@@ -221,7 +222,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, "public", BoxType.Inbox, migrations, default);
         }
 
-        //Assert — V1 is the only and highest match.
+        //Assert
         Assert.Equal(1, detected);
     }
 
