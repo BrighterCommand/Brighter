@@ -60,21 +60,13 @@ public class ConsumerRestartHealthCheck : IHealthCheck
             return Task.FromResult(HealthCheckResult.Healthy("No dispatcher is registered.", Data(Array.Empty<string>())));
 
         var snapshot = ((Dispatcher)_dispatcher).GetLifecycleSnapshot();
-        if (snapshot.State is DispatcherState.DS_NOTREADY or DispatcherState.DS_AWAITING || snapshot.EndRequested)
+        if (IsNotRunning(snapshot))
             return Task.FromResult(HealthCheckResult.Healthy("The dispatcher is not running, so missing consumers are not reported.", Data(Array.Empty<string>(), snapshot)));
 
-        if (snapshot.ConsumerOperationsInFlight > 0)
+        if (IsConsumerOperationInProgress(snapshot))
             return Task.FromResult(HealthCheckResult.Healthy("A consumer operation is in progress, so missing consumers are not reported.", Data(Array.Empty<string>(), snapshot)));
 
-        var shut = new HashSet<SubscriptionName>(snapshot.ShutSubscriptions);
-        var running = snapshot.Consumers
-            .Where(consumer => !shut.Contains(consumer.Subscription.Name))
-            .GroupBy(consumer => consumer.Subscription.Name)
-            .ToDictionary(group => group.Key, group => group.Count());
-        var counts = snapshot.ExpectedConsumers
-            .Where(expected => !shut.Contains(expected.Key))
-            .Select(expected => (Name: expected.Key, Running: running.TryGetValue(expected.Key, out var runningCount) ? runningCount : 0, Expected: expected.Value))
-            .ToArray();
+        var counts = CountBySubscription(snapshot);
         var runningTotal = counts.Sum(count => count.Running);
         var expectedTotal = counts.Sum(count => count.Expected);
 
@@ -82,6 +74,31 @@ public class ConsumerRestartHealthCheck : IHealthCheck
             return Task.FromResult(HealthCheckResult.Healthy($"All {expectedTotal} expected consumers are running.", Data(Array.Empty<string>(), snapshot)));
 
         var missing = counts.Where(count => count.Running != count.Expected).ToArray();
+        var data = MissingConsumersData(snapshot, runningTotal, expectedTotal, missing);
+        return Task.FromResult(new HealthCheckResult(StatusFor(runningTotal), MissingConsumersDescription(missing), null, data));
+    }
+
+    private static bool IsNotRunning(DispatcherLifecycleSnapshot snapshot) =>
+        snapshot.State is DispatcherState.DS_NOTREADY or DispatcherState.DS_AWAITING || snapshot.EndRequested;
+
+    private static bool IsConsumerOperationInProgress(DispatcherLifecycleSnapshot snapshot) =>
+        snapshot.ConsumerOperationsInFlight > 0;
+
+    private static SubscriptionConsumers[] CountBySubscription(DispatcherLifecycleSnapshot snapshot)
+    {
+        var shut = new HashSet<SubscriptionName>(snapshot.ShutSubscriptions);
+        var running = snapshot.Consumers
+            .Where(consumer => !shut.Contains(consumer.Subscription.Name))
+            .GroupBy(consumer => consumer.Subscription.Name)
+            .ToDictionary(group => group.Key, group => group.Count());
+        return snapshot.ExpectedConsumers
+            .Where(expected => !shut.Contains(expected.Key))
+            .Select(expected => new SubscriptionConsumers(expected.Key, running.TryGetValue(expected.Key, out var runningCount) ? runningCount : 0, expected.Value))
+            .ToArray();
+    }
+
+    private static Dictionary<string, object> MissingConsumersData(DispatcherLifecycleSnapshot snapshot, int runningTotal, int expectedTotal, SubscriptionConsumers[] missing)
+    {
         var data = Data([MissingConsumers], snapshot);
         data[MissingConsumers] = new Dictionary<string, object>
         {
@@ -94,10 +111,13 @@ public class ConsumerRestartHealthCheck : IHealthCheck
                 ["expected"] = count.Expected
             }).ToArray()
         };
-        var description = string.Join("; ", missing.Select(count => $"{count.Name} has {count.Running} of {count.Expected} expected consumers"));
-        var status = runningTotal == 0 ? HealthStatus.Unhealthy : HealthStatus.Degraded;
-        return Task.FromResult(new HealthCheckResult(status, description, null, data));
+        return data;
     }
+
+    private static string MissingConsumersDescription(SubscriptionConsumers[] missing) =>
+        string.Join("; ", missing.Select(count => $"{count.Name} has {count.Running} of {count.Expected} expected consumers"));
+
+    private static HealthStatus StatusFor(int runningTotal) => runningTotal == 0 ? HealthStatus.Unhealthy : HealthStatus.Degraded;
 
     private static Dictionary<string, object> Data(string[] conditions) => new()
     {
@@ -111,4 +131,6 @@ public class ConsumerRestartHealthCheck : IHealthCheck
         data["consumer_operations_in_flight"] = snapshot.ConsumerOperationsInFlight;
         return data;
     }
+
+    private readonly record struct SubscriptionConsumers(SubscriptionName Name, int Running, int Expected);
 }
