@@ -88,7 +88,7 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
             return Task.FromResult(Healthy("No outbox sweeper is registered."));
 
         var snapshot = _state.Read();
-        var conditions = new List<(string Name, string Description, Dictionary<string, object> Values)>();
+        var conditions = new List<RemedyCondition>();
 
         if (snapshot.ConsecutiveFailedSweeps >= _failureThreshold)
             conditions.Add(FailedSweepsCondition(snapshot.ConsecutiveFailedSweeps));
@@ -101,7 +101,7 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         return Task.FromResult(Degraded(conditions));
     }
 
-    private (string Name, string Description, Dictionary<string, object> Values)[] TrippedTopicsConditionOrNone(OutboxSweeperSnapshot snapshot)
+    private RemedyCondition[] TrippedTopicsConditionOrNone(OutboxSweeperSnapshot snapshot)
     {
         if (!snapshot.IsActive) return [];
 
@@ -117,15 +117,12 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         }
     }
 
-    private static HealthCheckResult Healthy(string description) => HealthCheckResult.Healthy(description, Data(Array.Empty<string>()));
+    private static HealthCheckResult Healthy(string description) => HealthCheckResult.Healthy(description, RemedyCheckConvention.Data(RemedyKind.Investigate));
 
-    private static HealthCheckResult Degraded(List<(string Name, string Description, Dictionary<string, object> Values)> conditions)
+    private static HealthCheckResult Degraded(List<RemedyCondition> conditions)
     {
-        var data = Data(conditions.Select(condition => condition.Name).ToArray());
-        foreach (var condition in conditions)
-            data[condition.Name] = condition.Values;
-        var description = string.Join("; ", conditions.Select(condition => condition.Description));
-        return new HealthCheckResult(HealthStatus.Degraded, description, null, data);
+        var data = RemedyCheckConvention.Data(RemedyKind.Investigate, conditions);
+        return new HealthCheckResult(HealthStatus.Degraded, RemedyCheckConvention.Describe(conditions), null, data);
     }
 
     private string[] TrippedTopicNames()
@@ -136,7 +133,7 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         return tripped.Select(topic => topic.Value).OrderBy(name => name, StringComparer.Ordinal).ToArray();
     }
 
-    private (string Name, string Description, Dictionary<string, object> Values) FailedSweepsCondition(int failed)
+    private RemedyCondition FailedSweepsCondition(int failed)
     {
         var values = new Dictionary<string, object>
         {
@@ -146,10 +143,10 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         };
         var interval = _timerIntervalSeconds.ToString(CultureInfo.InvariantCulture);
         var description = $"{failed} consecutive outbox sweeps have failed (threshold {_failureThreshold}, TimerInterval {interval}s).";
-        return (ConsecutiveFailedSweeps, description, values);
+        return new RemedyCondition(ConsecutiveFailedSweeps, description, values);
     }
 
-    private static (string Name, string Description, Dictionary<string, object> Values) TrippedTopicsCondition(string[] names)
+    private static RemedyCondition TrippedTopicsCondition(string[] names)
     {
         var values = new Dictionary<string, object>
         {
@@ -161,15 +158,15 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
             ? $"{listed} and {names.Length - MaxNamedTopics} more ({names.Length} in total)"
             : listed;
         var description = $"{names.Length} topics are circuit-broken and are not being swept until their cooldown ends: {named}.";
-        return (TrippedTopics, description, values);
+        return new RemedyCondition(TrippedTopics, description, values);
     }
 
-    private static (string Name, string Description, Dictionary<string, object> Values) TrippedTopicsUnreadableCondition(Exception e)
+    private static RemedyCondition TrippedTopicsUnreadableCondition(Exception e)
     {
         var type = e.GetType().FullName ?? e.GetType().Name;
         var values = new Dictionary<string, object> { ["exception_type"] = type };
         var description = $"The tripped topics could not be read from the circuit breaker ({type}).";
-        return (TrippedTopicsUnreadable, description, values);
+        return new RemedyCondition(TrippedTopicsUnreadable, description, values);
     }
 
     private static partial class Log
@@ -177,10 +174,4 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         [LoggerMessage(LogLevel.Error, "The outbox sweeper health check could not read the tripped topics from the circuit breaker")]
         public static partial void TrippedTopicsUnreadable(ILogger logger, Exception e);
     }
-
-    private static Dictionary<string, object> Data(string[] conditions) => new()
-    {
-        [RemedyCheckConvention.RemedyKindKey] = RemedyCheckConvention.Name(RemedyKind.Investigate),
-        [RemedyCheckConvention.ConditionsKey] = conditions
-    };
 }

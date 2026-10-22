@@ -65,7 +65,7 @@ public class ConsumerTakeOutOfServiceHealthCheck : IHealthCheck
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
         if (_dispatcher is null)
-            return Task.FromResult(HealthCheckResult.Healthy("No dispatcher is registered.", Data(Array.Empty<string>())));
+            return Task.FromResult(Healthy("No dispatcher is registered."));
 
         var failing = _dispatcher.Consumers
             .Select(consumer => (Consumer: consumer, Count: (consumer.Performer as IHaveAChannelFailureCount)?.ConsecutiveChannelFailures ?? 0))
@@ -73,15 +73,16 @@ public class ConsumerTakeOutOfServiceHealthCheck : IHealthCheck
             .ToArray();
 
         if (failing.Length == 0)
-        {
-            var healthy = HealthCheckResult.Healthy(
-                $"The {PersistentChannelFailures} condition is absent: no consumer has {_channelFailureThreshold} consecutive channel failures.",
-                Data(Array.Empty<string>()));
-            return Task.FromResult(healthy);
-        }
+            return Task.FromResult(Healthy($"The {PersistentChannelFailures} condition is absent: no consumer has {_channelFailureThreshold} consecutive channel failures."));
 
-        var data = Data([PersistentChannelFailures]);
-        data[PersistentChannelFailures] = new Dictionary<string, object>
+        RemedyCondition[] conditions = [PersistentChannelFailuresCondition(failing)];
+        var data = RemedyCheckConvention.Data(RemedyKind.TakeOutOfService, conditions);
+        return Task.FromResult(new HealthCheckResult(HealthStatus.Degraded, RemedyCheckConvention.Describe(conditions), null, data));
+    }
+
+    private RemedyCondition PersistentChannelFailuresCondition((IAmAConsumer Consumer, int Count)[] failing)
+    {
+        var values = new Dictionary<string, object>
         {
             ["threshold"] = _channelFailureThreshold,
             ["consumers"] = failing.Select(failure => new Dictionary<string, object>
@@ -93,12 +94,9 @@ public class ConsumerTakeOutOfServiceHealthCheck : IHealthCheck
         };
         var description = string.Join("; ", failing.Select(failure =>
             $"{failure.Consumer.Subscription.Name} consumer {failure.Consumer.Name} has {failure.Count} consecutive channel failures"));
-        return Task.FromResult(new HealthCheckResult(HealthStatus.Degraded, description, null, data));
+        return new RemedyCondition(PersistentChannelFailures, description, values);
     }
 
-    private static Dictionary<string, object> Data(string[] conditions) => new()
-    {
-        [RemedyCheckConvention.RemedyKindKey] = RemedyCheckConvention.Name(RemedyKind.TakeOutOfService),
-        [RemedyCheckConvention.ConditionsKey] = conditions
-    };
+    private static HealthCheckResult Healthy(string description) =>
+        HealthCheckResult.Healthy(description, RemedyCheckConvention.Data(RemedyKind.TakeOutOfService));
 }

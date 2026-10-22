@@ -68,31 +68,33 @@ public class OutboxSweeperRestartHealthCheck : IHealthCheck
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
         if (_state is null)
-            return Task.FromResult(HealthCheckResult.Healthy("No outbox sweeper is registered.", Data(Array.Empty<string>())));
+            return Task.FromResult(Healthy("No outbox sweeper is registered."));
 
         var runningTime = _state.Read().RunningTime;
         if (runningTime <= _hangThreshold)
         {
-            var healthy = HealthCheckResult.Healthy($"No outbox sweep is hung (threshold {Seconds(_hangThreshold)}s).", Data(Array.Empty<string>()));
-            return Task.FromResult(healthy);
+            return Task.FromResult(Healthy($"No outbox sweep is hung (threshold {Seconds(_hangThreshold)}s)."));
         }
 
-        var data = Data(new[] { HungSweep });
-        data[HungSweep] = new Dictionary<string, object>
+        RemedyCondition[] conditions = [HungSweepCondition(runningTime)];
+        var data = RemedyCheckConvention.Data(RemedyKind.Restart, conditions);
+        return Task.FromResult(new HealthCheckResult(HealthStatus.Degraded, RemedyCheckConvention.Describe(conditions), null, data));
+    }
+
+    private RemedyCondition HungSweepCondition(TimeSpan runningTime)
+    {
+        var values = new Dictionary<string, object>
         {
             ["running_time_seconds"] = runningTime.TotalSeconds,
             ["hang_threshold_seconds"] = _hangThreshold.TotalSeconds,
             ["timer_interval_seconds"] = _timerInterval.TotalSeconds
         };
         var description = $"Outbox sweep has been running for {Seconds(runningTime)}s, longer than the {Seconds(_hangThreshold)}s threshold (TimerInterval {Seconds(_timerInterval)}s).";
-        return Task.FromResult(new HealthCheckResult(HealthStatus.Degraded, description, null, data));
+        return new RemedyCondition(HungSweep, description, values);
     }
 
-    private static Dictionary<string, object> Data(string[] conditions) => new()
-    {
-        [RemedyCheckConvention.RemedyKindKey] = RemedyCheckConvention.Name(RemedyKind.Restart),
-        [RemedyCheckConvention.ConditionsKey] = conditions
-    };
+    private static HealthCheckResult Healthy(string description) =>
+        HealthCheckResult.Healthy(description, RemedyCheckConvention.Data(RemedyKind.Restart));
 
     private static string Seconds(TimeSpan value) => value.TotalSeconds.ToString("0.###", CultureInfo.InvariantCulture);
 }

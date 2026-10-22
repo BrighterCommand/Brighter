@@ -57,25 +57,26 @@ public class ConsumerRestartHealthCheck : IHealthCheck
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
         if (_dispatcher is null)
-            return Task.FromResult(HealthCheckResult.Healthy("No dispatcher is registered.", Data(Array.Empty<string>())));
+            return Task.FromResult(Healthy("No dispatcher is registered."));
 
         var snapshot = ((Dispatcher)_dispatcher).GetLifecycleSnapshot();
         if (IsNotRunning(snapshot))
-            return Task.FromResult(HealthCheckResult.Healthy("The dispatcher is not running, so missing consumers are not reported.", Data(Array.Empty<string>(), snapshot)));
+            return Task.FromResult(Healthy("The dispatcher is not running, so missing consumers are not reported.", snapshot));
 
         if (IsConsumerOperationInProgress(snapshot))
-            return Task.FromResult(HealthCheckResult.Healthy("A consumer operation is in progress, so missing consumers are not reported.", Data(Array.Empty<string>(), snapshot)));
+            return Task.FromResult(Healthy("A consumer operation is in progress, so missing consumers are not reported.", snapshot));
 
         var counts = CountBySubscription(snapshot);
         var runningTotal = counts.Sum(count => count.Running);
         var expectedTotal = counts.Sum(count => count.Expected);
 
         if (runningTotal >= expectedTotal)
-            return Task.FromResult(HealthCheckResult.Healthy($"All {expectedTotal} expected consumers are running.", Data(Array.Empty<string>(), snapshot)));
+            return Task.FromResult(Healthy($"All {expectedTotal} expected consumers are running.", snapshot));
 
         var missing = counts.Where(count => count.Running != count.Expected).ToArray();
-        var data = MissingConsumersData(snapshot, runningTotal, expectedTotal, missing);
-        return Task.FromResult(new HealthCheckResult(StatusFor(runningTotal), MissingConsumersDescription(missing), null, data));
+        RemedyCondition[] conditions = [MissingConsumersCondition(runningTotal, expectedTotal, missing)];
+        var data = Data(conditions, snapshot);
+        return Task.FromResult(new HealthCheckResult(StatusFor(runningTotal), RemedyCheckConvention.Describe(conditions), null, data));
     }
 
     private static bool IsNotRunning(DispatcherLifecycleSnapshot snapshot) =>
@@ -97,10 +98,9 @@ public class ConsumerRestartHealthCheck : IHealthCheck
             .ToArray();
     }
 
-    private static Dictionary<string, object> MissingConsumersData(DispatcherLifecycleSnapshot snapshot, int runningTotal, int expectedTotal, SubscriptionConsumers[] missing)
+    private static RemedyCondition MissingConsumersCondition(int runningTotal, int expectedTotal, SubscriptionConsumers[] missing)
     {
-        var data = Data([MissingConsumers], snapshot);
-        data[MissingConsumers] = new Dictionary<string, object>
+        var values = new Dictionary<string, object>
         {
             ["running_total"] = runningTotal,
             ["expected_total"] = expectedTotal,
@@ -111,23 +111,21 @@ public class ConsumerRestartHealthCheck : IHealthCheck
                 ["expected"] = count.Expected
             }).ToArray()
         };
-        return data;
+        var description = string.Join("; ", missing.Select(count => $"{count.Name} has {count.Running} of {count.Expected} expected consumers"));
+        return new RemedyCondition(MissingConsumers, description, values);
     }
-
-    private static string MissingConsumersDescription(SubscriptionConsumers[] missing) =>
-        string.Join("; ", missing.Select(count => $"{count.Name} has {count.Running} of {count.Expected} expected consumers"));
 
     private static HealthStatus StatusFor(int runningTotal) => runningTotal == 0 ? HealthStatus.Unhealthy : HealthStatus.Degraded;
 
-    private static Dictionary<string, object> Data(string[] conditions) => new()
-    {
-        [RemedyCheckConvention.RemedyKindKey] = RemedyCheckConvention.Name(RemedyKind.Restart),
-        [RemedyCheckConvention.ConditionsKey] = conditions
-    };
+    private static HealthCheckResult Healthy(string description) =>
+        HealthCheckResult.Healthy(description, RemedyCheckConvention.Data(RemedyKind.Restart));
 
-    private static Dictionary<string, object> Data(string[] conditions, DispatcherLifecycleSnapshot snapshot)
+    private static HealthCheckResult Healthy(string description, DispatcherLifecycleSnapshot snapshot) =>
+        HealthCheckResult.Healthy(description, Data([], snapshot));
+
+    private static Dictionary<string, object> Data(RemedyCondition[] conditions, DispatcherLifecycleSnapshot snapshot)
     {
-        var data = Data(conditions);
+        var data = RemedyCheckConvention.Data(RemedyKind.Restart, conditions);
         data["consumer_operations_in_flight"] = snapshot.ConsumerOperationsInFlight;
         return data;
     }
