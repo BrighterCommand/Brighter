@@ -37,6 +37,7 @@ internal sealed class InMemoryReceiveHealthConsumer(RoutingKey routingKey, Inter
     private readonly TaskCompletionSource<bool> _failuresObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource<bool> _recovered = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource<bool> _recoveryObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<bool> _quit = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _attempts;
 
     public Task FailuresObserved => _failuresObserved.Task;
@@ -45,15 +46,20 @@ internal sealed class InMemoryReceiveHealthConsumer(RoutingKey routingKey, Inter
 
     public void Recover() => _recovered.TrySetResult(true);
 
+    public void Quit() => _quit.TrySetResult(true);
+
     Message[] IAmAMessageConsumerSync.Receive(TimeSpan? timeOut)
     {
         FailOrWaitForRecoveryAsync(CancellationToken.None).GetAwaiter().GetResult();
-        return _inner.Receive(timeOut);
+        return _quit.Task.IsCompleted ? [MessageFactory.CreateQuitMessage(routingKey)] : _inner.Receive(timeOut);
     }
 
     async Task<Message[]> IAmAMessageConsumerAsync.ReceiveAsync(TimeSpan? timeOut, CancellationToken cancellationToken)
     {
         await FailOrWaitForRecoveryAsync(cancellationToken).ConfigureAwait(false);
+        if (_quit.Task.IsCompleted)
+            return [MessageFactory.CreateQuitMessage(routingKey)];
+
         return await _inner.ReceiveAsync(timeOut, cancellationToken).ConfigureAwait(false);
     }
 
@@ -101,6 +107,6 @@ internal sealed class InMemoryReceiveHealthConsumer(RoutingKey routingKey, Inter
 
         // Reaching the next receive guarantees the pump has caught every preceding failure.
         _failuresObserved.TrySetResult(true);
-        await _recovered.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await Task.WhenAny(_recovered.Task, _quit.Task).WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 }
