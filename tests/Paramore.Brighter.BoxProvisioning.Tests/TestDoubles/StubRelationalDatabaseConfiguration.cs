@@ -23,14 +23,10 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using System;
+
 namespace Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 
-/// <summary>
-/// Minimal <see cref="IAmARelationalDatabaseConfiguration"/> stub used to satisfy the
-/// <c>SqlBoxMigrationRunner</c> ctor. Properties return empty strings; tests
-/// that exercise behaviour driven by configuration values should use a more specific
-/// double or set fields explicitly.
-/// </summary>
 internal sealed class StubRelationalDatabaseConfiguration : IAmARelationalDatabaseConfiguration
 {
     public bool BinaryMessagePayload => false;
@@ -41,4 +37,5 @@ internal sealed class StubRelationalDatabaseConfiguration : IAmARelationalDataba
     public string OutBoxTableName => string.Empty;
     public string QueueStoreTable => string.Empty;
     public string? SchemaName => null;
+    public TimeSpan? OutstandingCountTimeout => null;
 }

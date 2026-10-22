@@ -33,14 +33,10 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// <see cref="SqlBoxProvisioner{TConnection, TTransaction}.ProvisionAsync"/> is the framework
-/// chokepoint for the provisioner. It reads <c>BoxTableName</c> from configuration and passes
-/// it through to the detection helper, payload validator, and runner. Catalogs guard their own
-/// <c>All</c> entry, but the provisioner opens connections and runs detection BEFORE the catalog
-/// is invoked, so an unsafe identifier reaches the live DB connection unless the provisioner
-/// guards at its own entry. This test pins defence-in-depth: an unsafe
-/// <see cref="IAmARelationalDatabaseConfiguration.OutBoxTableName"/> must fail with
-/// <see cref="ConfigurationException"/> BEFORE the first <c>CreateConnection</c>.
+/// The provisioner runs detection before any catalog is asked for migrations, so
+/// <see cref="SqlBoxProvisioner{TConnection, TTransaction}.ProvisionAsync"/> must reject an unsafe
+/// table or schema name with <see cref="ConfigurationException"/> before it creates a connection.
+/// A null schema (SQLite) passes.
 /// </summary>
 public class SqlBoxProvisionerIdentifierValidationTests
 {
@@ -77,27 +73,19 @@ public class SqlBoxProvisionerIdentifierValidationTests
     [Fact]
     public async Task When_schema_name_is_null_it_should_not_throw_for_identifier_validation()
     {
-        //Arrange: SQLite has no schema concept — null SchemaName must pass identifier
-        //         validation. Pinning this prevents an over-eager AssertSafe(null) from
-        //         regressing the SQLite provisioner path.
+        //Arrange
         var provisioner = new IdentifierProbeProvisioner(
             new IdentifierProbeConfiguration(outBoxTableName: "Outbox", schemaName: null));
 
         //Act
         var thrown = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());
 
-        //Assert: not a ConfigurationException — provisioner gets past the identifier guard
-        //        and reaches CreateConnection, which throws NotSupportedException.
+        //Assert
         Assert.IsNotType<ConfigurationException>(thrown);
         Assert.True(provisioner.CreateConnectionCalled);
     }
 
-    /// <summary>
-    /// Records whether <c>CreateConnection</c> was invoked. The identifier guard must fire
-    /// BEFORE the first connection is created — if validation regresses to AFTER
-    /// CreateConnection, either <see cref="CreateConnectionCalled"/> flips true or the
-    /// resulting NotSupportedException replaces the expected ConfigurationException.
-    /// </summary>
+    // CreateConnection throws NotSupportedException, so a late guard shows up as the wrong exception.
     private sealed class IdentifierProbeProvisioner : SqlBoxProvisioner<FakeDbConnection, FakeDbTransaction>
     {
         public bool CreateConnectionCalled { get; private set; }
@@ -138,6 +126,7 @@ public class SqlBoxProvisionerIdentifierValidationTests
         public string OutBoxTableName { get; }
         public string QueueStoreTable => "Queues";
         public string? SchemaName { get; }
+        public TimeSpan? OutstandingCountTimeout => null;
     }
 
     private sealed class EmptyCatalog : IAmABoxMigrationCatalog

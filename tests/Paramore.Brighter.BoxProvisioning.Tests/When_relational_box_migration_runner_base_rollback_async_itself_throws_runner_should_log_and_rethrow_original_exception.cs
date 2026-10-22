@@ -35,26 +35,21 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// Item #10 (PR #4039 third review). The IAmAProvisioningUnitOfWork contract says
-/// <c>RollbackAsync</c> MUST NOT throw, and the four per-backend implementations comply (PG and
-/// MySQL were tightened explicitly in <c>3c8417fd6</c>). Defense in depth: if a future regression
-/// breaks that contract, the rollback exception MUST NOT mask the original triggering
-/// exception. The original cause is more diagnostically valuable than a defect in our own
-/// unwind, and existing callers pattern-match on the type they actually threw.
+/// <c>IAmAProvisioningUnitOfWork.RollbackAsync</c> must not throw, but if one does, the runner must log it
+/// at Error and rethrow the original exception: the original cause is the one worth diagnosing, and
+/// callers match on the type they threw.
 /// </summary>
 public class SqlBoxMigrationRunnerRollbackFailureTests
 {
     [Fact]
     public async Task When_rollback_async_throws_the_original_hook_exception_should_propagate_and_rollback_failure_should_be_logged()
     {
-        // Arrange — EnsureHistoryTableAsync throws the PRIMARY sentinel; RollbackAsync throws the
-        // ROLLBACK sentinel during the unwind. The runner is expected to swallow the ROLLBACK
-        // sentinel (and log it) and rethrow the PRIMARY sentinel to the caller.
+        //Arrange
         var unitOfWork = new ThrowingRollbackUnitOfWork();
         var logger = new CapturingLogger<TestableRollbackFailureRunner>();
         var runner = new TestableRollbackFailureRunner(unitOfWork, logger);
 
-        // Act
+        //Act
         var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
             tableName: "Orders",
             schemaName: null,
@@ -62,16 +57,10 @@ public class SqlBoxMigrationRunnerRollbackFailureTests
             tableState: new BoxTableState(false, false, 0),
             cancellationToken: CancellationToken.None));
 
-        // Assert — the PRIMARY sentinel reaches the caller. If the rollback exception was
-        // allowed to escape, this would be an InvalidProgramException ("rollback sentinel"),
-        // not the InvalidOperationException primary sentinel.
+        //Assert
         Assert.IsType<InvalidOperationException>(thrown);
         Assert.Equal(TestableRollbackFailureRunner.PrimarySentinelMessage, thrown!.Message);
 
-        // The rollback exception must have been logged (so operators can see that both a primary
-        // failure AND a rollback failure happened — diagnosing one without the other would be
-        // misleading). Log level should be Error since RollbackAsync violating its no-throw
-        // contract is a defect in our own unwind, not a routine condition.
         Assert.Contains(
             logger.Entries,
             e => e.Level == LogLevel.Error
@@ -131,12 +120,7 @@ public class SqlBoxMigrationRunnerRollbackFailureTests
             => Task.CompletedTask;
     }
 
-    /// <summary>
-    /// A UoW that violates its no-throw RollbackAsync contract. Used distinct exception types
-    /// for the primary sentinel (<see cref="InvalidOperationException"/>) and the rollback
-    /// sentinel (<see cref="InvalidProgramException"/>) so the test can tell which one
-    /// propagated by type rather than by message-matching.
-    /// </summary>
+    // Throws InvalidProgramException, a different type from the primary sentinel, so the test can tell which one propagated.
     private sealed class ThrowingRollbackUnitOfWork : IAmAProvisioningUnitOfWork<FakeDbTransaction>
     {
         public const string RollbackSentinelMessage = "PR #4039 item #10 rollback sentinel — should not propagate";

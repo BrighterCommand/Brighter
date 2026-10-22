@@ -34,34 +34,22 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
+/// <summary>
+/// The runner derives the connection's DefaultTimeout from lockTimeout, so a tight lockTimeout surfaces
+/// SQLITE_BUSY before a longer writer hold ends, rather than waiting out the driver's 30-second default.
+/// </summary>
 public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
 {
-    // Sibling to SqliteRunnerSqliteBusyContentionTests. That test pins "the runner retries
-    // SQLITE_BUSY transparently" using the default lockTimeout (30s) and a brief writer hold
-    // (~600ms). It cannot distinguish "the runner honours lockTimeout" from "the driver's
-    // default DefaultTimeout=30s is doing the waiting", because under default settings the two
-    // are indistinguishable.
-    //
-    // This test pins the second property: the runner constructs the SqliteConnection with
-    // DefaultTimeout derived from the caller-supplied lockTimeout, so a tight lockTimeout
-    // surfaces SQLITE_BUSY quickly even when the writer would have released later. A failing
-    // runner that ignored lockTimeout would inherit the driver's 30s default and silently
-    // outlast WriterHold, masking the bug.
-    //
-    // Why this matters: per ADR 0058 §B.1 lockTimeout is the per-backend wait budget for
-    // advisory-lock acquisition. SQLite has no advisory lock — BEGIN IMMEDIATE is itself the
-    // acquisition — so honouring lockTimeout in SQLite means setting connection.DefaultTimeout
-    // (Microsoft.Data.Sqlite drives sqlite3_busy_timeout from this; PRAGMA busy_timeout is
-    // silently overwritten by the next command per the comment at
-    // When_sqlite_provisioning_uow_begin_async_is_called_it_should_begin_immediate_as_writer_slot_lock.cs:53-60).
-
-    // Writer holds the slot well past the runner's tight lockTimeout, so a runner that honours
-    // lockTimeout MUST give up before the writer releases. 3s is well above CI scheduler jitter.
+    // Outlasts TightLockTimeout by more than CI scheduler jitter.
     private static readonly TimeSpan WriterHold = TimeSpan.FromSeconds(3);
 
-    // 1 second is the smallest meaningful lockTimeout for SQLite (Microsoft.Data.Sqlite's
-    // DefaultTimeout is an int seconds value; the runner floors anything sub-second at 1s).
+    // The smallest lockTimeout SQLite honours: DefaultTimeout is in whole seconds.
     private static readonly TimeSpan TightLockTimeout = TimeSpan.FromSeconds(1);
+
+    // Under WriterHold, and far under the driver's 30-second default, with room for CI scheduler jitter.
+    private static readonly TimeSpan FailFastCeiling = TimeSpan.FromMilliseconds(1500);
+
+    private const int SqliteBusy = 5;
 
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_lock_timeout_{Guid.NewGuid():N}.db");
@@ -82,10 +70,7 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
     [Fact]
     public async Task When_writer_hold_outlasts_lock_timeout_it_should_throw_sqlite_busy()
     {
-        // Arrange — file-backed SQLite in WAL mode; a separate writer connection takes the
-        // writer slot and holds it for WriterHold (3s). The runner is constructed with a tight
-        // 1s lockTimeout — well under WriterHold so a correct implementation MUST surface
-        // SQLITE_BUSY before the writer releases.
+        // Arrange
         await EnsureWalModeAsync(_connectionString);
 
         var freshState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
@@ -95,8 +80,7 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
         var writerTransaction = (SqliteTransaction)await writer.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable);
 
-        await ExecuteWriteAsync(writer, writerTransaction,
-            "CREATE TABLE IF NOT EXISTS [__sqlite_lock_timeout_marker] ([id] INTEGER NOT NULL)");
+        await TakeWriterSlotAsync(writer, writerTransaction);
 
         var releaseWriter = Task.Run(async () =>
         {
@@ -105,9 +89,7 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
             await writer.DisposeAsync();
         });
 
-        // Act — runner kicks off concurrent with the writer hold, retries SQLITE_BUSY for its
-        // 1s lockTimeout budget, then surfaces SqliteException(SqliteErrorCode == 5) when the
-        // budget expires (before WriterHold elapses).
+        // Act
         var stopwatch = Stopwatch.StartNew();
         var thrown = await Record.ExceptionAsync(async () => await _runner.MigrateAsync(
             _tableName,
@@ -117,20 +99,15 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
         stopwatch.Stop();
         await releaseWriter;
 
-        // Assert — SQLITE_BUSY surfaced as the bounded retry expired. SqliteErrorCode 5 is
-        // SQLITE_BUSY; anything else means the runner waited the driver's 30s default and the
-        // writer released first (the bug this test exists to prevent).
+        // Assert
         var sqliteException = Assert.IsType<SqliteException>(thrown);
-        Assert.Equal(5, sqliteException.SqliteErrorCode);
+        Assert.Equal(SqliteBusy, sqliteException.SqliteErrorCode);
 
-        // Assert — the runner gave up well before WriterHold. Slack (1.5s ceiling) accommodates
-        // CI scheduler jitter while still proving the runner did not silently inherit 30s.
-        var failFastCeiling = TimeSpan.FromMilliseconds(1500);
         Assert.True(
-            stopwatch.Elapsed < failFastCeiling,
+            stopwatch.Elapsed < FailFastCeiling,
             $"Runner returned in {stopwatch.Elapsed.TotalMilliseconds:F0}ms but lockTimeout " +
             $"was {TightLockTimeout.TotalMilliseconds:F0}ms — expected the runner to give up " +
-            $"under {failFastCeiling.TotalMilliseconds:F0}ms, suggesting it ignored lockTimeout " +
+            $"under {FailFastCeiling.TotalMilliseconds:F0}ms, suggesting it ignored lockTimeout " +
             $"and inherited the driver's 30s default.");
     }
 
@@ -164,12 +141,12 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
-    private static async Task ExecuteWriteAsync(
-        SqliteConnection connection, SqliteTransaction transaction, string sql)
+    // Serializable takes SQLite's reserved lock lazily; a write takes it now.
+    private static async Task TakeWriterSlotAsync(SqliteConnection connection, SqliteTransaction transaction)
     {
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = sql;
+        command.CommandText = "CREATE TABLE IF NOT EXISTS [__sqlite_lock_timeout_marker] ([id] INTEGER NOT NULL)";
         await command.ExecuteNonQueryAsync();
     }
 

@@ -34,19 +34,9 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// The third escape hatch documented in ADR 0058 §B.2: a derived runner whose backend has
-/// a non-standard detection model (e.g. a backend that combines the
-/// <c>DoesTableExistAsync</c>/<c>DoesHistoryExistAsync</c> probes into a single round-trip)
-/// can override <see cref="SqlBoxMigrationRunner{TConnection,TTransaction}.RedetectStateAsync"/>
-/// without overriding any other hook. This test pins the contract by arranging a runner
-/// whose override returns a tuple inconsistent with what the injected detection helper
-/// would otherwise produce: the override drives <c>RunNormalPath</c> dispatch even though
-/// the helper's <c>TableExistsResult</c>/<c>HistoryExistsResult</c> are both false.
-/// Asserts:
-///   1. The override is invoked (<see cref="OverrideTestRunner.RedetectOverrideCallCount"/> == 1).
-///   2. The dispatch matches the override's return (<c>PathInvoked == "RunNormalPath"</c>).
-///   3. The injected detection helper is NOT touched (call counts both zero) — proves the
-///      base default was completely bypassed by the override.
+/// A derived runner can override <see cref="SqlBoxMigrationRunner{TConnection,TTransaction}.RedetectStateAsync"/>
+/// alone, for a backend with a different detection model (ADR 0058 §B.2). The override here contradicts
+/// the detection helper, so the dispatched path shows which one <c>MigrateAsync</c> used.
 /// </summary>
 public class SqlBoxMigrationRunnerRedetectStateOverrideTests
 {
@@ -56,9 +46,6 @@ public class SqlBoxMigrationRunnerRedetectStateOverrideTests
         //Arrange
         var detectionHelper = new StubBoxDetectionHelper
         {
-            // Override-bypass discriminator: the helper would say (false, false) → fresh path,
-            // but the override returns (true, true) → normal path. The dispatch we observe
-            // proves which one MigrateAsync used.
             TableExistsResult = false,
             HistoryExistsResult = false
         };
@@ -78,11 +65,6 @@ public class SqlBoxMigrationRunnerRedetectStateOverrideTests
         Assert.Equal(0, detectionHelper.DoesHistoryExistCallCount);
     }
 
-    /// <summary>
-    /// Overrides <c>RedetectStateAsync</c> to return constant <c>(true, true)</c> so the
-    /// dispatched branch is <c>RunNormalPath</c> regardless of the injected helper's stub
-    /// values. No other hook is overridden beyond the abstract minimum required to compile.
-    /// </summary>
     private sealed class OverrideTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         public int RedetectOverrideCallCount { get; private set; }

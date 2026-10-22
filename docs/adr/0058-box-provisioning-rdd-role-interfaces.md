@@ -709,6 +709,16 @@ The deviation from `*Base` suffix is documented here to satisfy parent C4 / AC9 
 
 `BoxProvisioningHostedService` provisions every outbox before any inbox; `OrderingOrdinal` is the single place that order is defined, and it throws for an unknown `BoxType` so a new box type fails loudly at startup rather than being silently mis-ordered. Within the outbox or inbox group, the order across several provisioners (for example one per tenant) is deliberately left to the order in which the DI container resolves them. Microsoft.Extensions.DependencyInjection preserves registration order, but third-party containers need not. We do not add a deterministic secondary sort by `BoxTableName`: the per-table startup log already says which provisioner is running, so a non-deterministic order within a group is tolerable, and a secondary sort would entrench an ordering that callers cannot influence.
 
+`StartAsync` stops at the first provisioner that fails; it does not collect failures with `Task.WhenAll` or carry on to the next provisioner. An inbox whose outbox failed to migrate must not start against a half-provisioned database, and the wrapped `ConfigurationException` names the table that failed.
+
+#### Guards and contracts
+
+- **`UseBoxProvisioning` is single-call, and a second call throws `ConfigurationException`.** The hosted-service registration is idempotent (`TryAddEnumerable`), but the per-backend `Add{Backend}{Box}` registrations are not: a second call would register every provisioner twice and run each migration twice. A guard is louder than a documented contract. The marker that records the call is registered only after `configure` and every queued registration have succeeded, so a failed first call can be retried.
+- **`MigrationLockTimeout` is set only through `BoxProvisioningOptions`.** A `UseBoxProvisioning` parameter for it was removed: it was applied before the `configure` delegate ran, and backend extensions capture the timeout when they register, so the two surfaces could silently disagree. Callers set it before the `Add…` calls in the same delegate.
+- **`IAmABoxMigration.LogicalColumns` is `IReadOnlyCollection<string>`**, so callers cannot mutate a set that is documented as fixed after construction. The runner's set comparisons accept any `IEnumerable<T>`.
+- **`Identifiers.AssertSafe` accepts `^[A-Za-z_][A-Za-z0-9_]*$`.** That is not what each backend allows (quoted identifiers allow much more); it is what is safe to interpolate into DDL and `information_schema` probes without escaping. It runs at catalog entry and again at `MigrateAsync` and `ProvisionAsync` entry, before any connection opens, because the runner and provisioner can be called without going through a catalog. A null identifier is reported as missing configuration, not as a pattern mismatch.
+- **The runner rejects a null migration chain but accepts an empty one.** A null chain fails with `ConfigurationException` before any connection opens. Relational catalogs always return at least V1, so an empty chain only occurs in tests that use it as a "don't care" payload.
+
 ---
 
 ## Adding a new BoxProvisioning backend
