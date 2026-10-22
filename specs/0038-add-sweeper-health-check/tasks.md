@@ -1574,7 +1574,7 @@
   - Add a helper that maps `/health/live` (restart tag; Degraded and Unhealthy → 503), `/health/ready` (take-out-of-service tag; Degraded and Unhealthy → 503) and `/health/operator` (investigate tag; the writer).
   - Depends on: T1.3.
 
-- [ ] **CHARACTERISE: T17.2 — Sweeper conditions route to liveness or the operator endpoint only**
+- [x] **CHARACTERISE: T17.2 — Sweeper conditions route to liveness or the operator endpoint only**
   - **USE COMMAND**: `/test-first when sweeper conditions apply the liveness readiness and operator endpoints should return the documented status codes`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_sweeper_conditions_apply_should_route_them_to_the_documented_endpoints.cs`
