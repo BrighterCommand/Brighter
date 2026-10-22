@@ -1,0 +1,52 @@
+﻿#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 gabisonia <irakli.gabisonia94@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
+#pragma warning disable CS0618
+
+using System;
+using System.Reflection;
+using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
+using Xunit;
+
+namespace Paramore.Brighter.Extensions.Tests;
+
+/// <summary>
+/// Verifies that the existing consumer health check is marked obsolete as a warning and points to the consumer remedy checks.
+/// </summary>
+public class ObsoleteConsumerHealthCheckTests
+{
+    [Fact]
+    public void When_the_existing_consumer_health_check_is_inspected_should_be_obsolete_naming_the_remedy_checks()
+    {
+        //Arrange
+        var type = typeof(BrighterServiceActivatorHealthCheck);
+
+        //Act
+        var obsolete = type.GetCustomAttribute<ObsoleteAttribute>(inherit: false);
+
+        //Assert
+        Assert.NotNull(obsolete);
+        Assert.False(obsolete.IsError);
+        Assert.Contains("AddBrighterConsumerHealthChecks", obsolete.Message);
+    }
+}

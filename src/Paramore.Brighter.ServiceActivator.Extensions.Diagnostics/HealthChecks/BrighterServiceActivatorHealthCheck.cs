@@ -33,6 +33,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks
 /// <summary>
 /// Reports consumer availability and persistent failures to receive from message channels.
 /// </summary>
+[Obsolete("BrighterServiceActivatorHealthCheck reports every consumer condition with one status. Register the consumer remedy checks with IHealthChecksBuilder.AddBrighterConsumerHealthChecks instead. This type is removed in V11.")]
 public class BrighterServiceActivatorHealthCheck : IHealthCheck
 {
     private readonly IDispatcher _dispatcher;
