@@ -6,7 +6,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests.Drift;
 
 /// <summary>
 /// Test-project helper that parses a <c>CREATE TABLE</c> string and returns the set of column
-/// identifiers declared in its body. Used by per-backend drift tests in Phases 1–4 to verify
+/// identifiers declared in its body. Used by per-backend drift tests to verify
 /// that the migration chain's <c>LogicalColumns</c> + housekeeping union matches the live
 /// builder DDL — catching the case where a developer adds a column to the builder but forgets
 /// to add a corresponding migration.

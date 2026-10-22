@@ -34,15 +34,9 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// <see cref="SqlBoxMigrationRunner{TConnection, TTransaction}.MigrateAsync"/> is the framework
-/// chokepoint for the runner. Catalogs already gate <see cref="Identifiers.AssertSafe"/> on
-/// <c>configuration.OutBoxTableName</c> / <c>SchemaName</c> at the entry to <c>All</c> — but
-/// the runner accepts <paramref name="tableName"/> and <paramref name="schemaName"/> as
-/// parameters, so a host that bypasses the catalog (or supplies a forged value to a direct
-/// runner call) must still be gated at the framework boundary. This test pins
-/// defence-in-depth: an unsafe identifier must fail with <see cref="ConfigurationException"/>
-/// BEFORE <c>OpenConnectionAsync</c> is invoked, mirroring the existing
-/// <c>ValidateMigrationsMonotonic</c> ordering contract at §B.2.
+/// <see cref="SqlBoxMigrationRunner{TConnection, TTransaction}.MigrateAsync"/> must reject an unsafe
+/// table or schema name with <see cref="ConfigurationException"/> before opening a connection. A caller
+/// can reach the runner without going through a catalog, so the runner guards its own entry.
 /// </summary>
 public class SqlBoxMigrationRunnerIdentifierValidationTests
 {
@@ -52,7 +46,7 @@ public class SqlBoxMigrationRunnerIdentifierValidationTests
         //Arrange
         var runner = new IdentifierProbeTestRunner();
 
-        //Act: classic injection vector — quoted identifier with embedded statement.
+        //Act
         var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
             tableName: "Outbox; DROP TABLE x",
             schemaName: null,
@@ -85,9 +79,7 @@ public class SqlBoxMigrationRunnerIdentifierValidationTests
     [Fact]
     public async Task When_migrate_schema_name_is_null_it_should_not_throw_for_identifier_validation()
     {
-        //Arrange: SQLite has no schema concept (ADR 0057 §6) — a null schemaName must pass
-        //         identifier validation. Pinning this prevents an over-eager AssertSafe(null)
-        //         from regressing the SQLite path.
+        //Arrange
         var runner = new IdentifierProbeTestRunner();
 
         //Act
@@ -97,22 +89,12 @@ public class SqlBoxMigrationRunnerIdentifierValidationTests
             boxType: BoxType.Outbox,
             tableState: new BoxTableState(false, false, 0)));
 
-        //Assert: not a ConfigurationException about identifiers — the runner gets past the
-        //        identifier guard and reaches OpenConnectionAsync, where the probe's
-        //        FakeDbConnection returns. Subsequent hooks throw NotSupportedException; the
-        //        first one reached confirms identifier validation did NOT reject null schema.
+        //Assert
         Assert.IsNotType<ConfigurationException>(thrown);
         Assert.True(runner.OpenConnectionCalled);
     }
 
-    /// <summary>
-    /// Records whether <c>OpenConnectionAsync</c> was invoked. The identifier guard must fire
-    /// BEFORE this hook — if validation regresses to AFTER OpenConnection, either
-    /// <see cref="OpenConnectionCalled"/> flips true or one of the post-Open hooks throws
-    /// <see cref="NotSupportedException"/> instead of <see cref="ConfigurationException"/>.
-    /// Mirrors the sibling probe at
-    /// <c>SqlBoxMigrationRunnerMonotonicityValidationTests.OrderProbeTestRunner</c>.
-    /// </summary>
+    // Hooks after OpenConnectionAsync throw NotSupportedException, so a validation that runs too late surfaces as the wrong exception.
     private sealed class IdentifierProbeTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         public bool OpenConnectionCalled { get; private set; }

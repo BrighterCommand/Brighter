@@ -35,25 +35,12 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
+/// <summary>
+/// After a failed commit the transaction may already be finalised; RollbackAsync swallows that failure,
+/// logs a Warning and returns (ADR 0058 §B.3). An out-of-band <c>Commit()</c> gives the finalised state.
+/// </summary>
 public class ProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
 {
-    // Per ADR 0058 §B.3: if CommitAsync throws, the runner enters its catch path and calls
-    // RollbackAsync — even though the commit was already attempted. The underlying
-    // SqliteTransaction may already be finalised by that point (committed-but-client-side-failed,
-    // or zombied by a closed connection). RollbackAsync MUST therefore be best-effort: attempt
-    // the rollback, swallow the "already finalised" failure, log a Warning, and return cleanly.
-    // It MUST NOT throw — the runner's unwind cannot be allowed to abandon. This contract is
-    // shared with MSSQL 5.1.c and Postgres 5.2.c; only the underlying-driver exception shape
-    // changes (Microsoft.Data.Sqlite throws InvalidOperationException with message
-    // "Transaction has completed; it is no longer usable." — same as MSSQL and Postgres).
-    //
-    // The post-failed-commit state is simulated by calling SqliteTransaction.Commit() directly
-    // out-of-band: externally indistinguishable from a thrown CommitAsync — both leave the
-    // SqliteTransaction in the completed state where Rollback() throws InvalidOperationException.
-    // The 5.4.b RollbackAsync stub is `Task.CompletedTask` — it returns silently and emits no
-    // log entry, so the Warning assertion fails until the impl actually calls through to the
-    // underlying transaction AND catches the resulting exception with a Warning-level log entry.
-
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_uow_rollback_{Guid.NewGuid():N}.db");
 
@@ -93,15 +80,12 @@ public class ProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None);
         var transaction = uow.Transaction!;
-        transaction.Commit();   // Force the post-failed-commit finalised state
+        transaction.Commit();
 
         // Act
         var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
 
-        // Assert: best-effort rollback returns cleanly AND emits a Warning. A no-op stub
-        // returns cleanly too, but emits no log entry — the Warning assertion is the
-        // discriminator that pins the impl actually called through to the underlying
-        // SqliteTransaction.RollbackAsync and caught the resulting InvalidOperationException.
+        // Assert
         Assert.Null(thrown);
         Assert.Contains(capturingLogger.Entries, e => e.Level == LogLevel.Warning);
     }

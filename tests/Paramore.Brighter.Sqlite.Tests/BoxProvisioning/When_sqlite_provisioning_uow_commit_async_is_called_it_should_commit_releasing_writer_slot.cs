@@ -34,24 +34,12 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
+/// <summary>
+/// CommitAsync commits the BEGIN IMMEDIATE transaction, which is what releases SQLite's writer slot
+/// (ADR 0058 §B.1); a completed transaction throws when committed again.
+/// </summary>
 public class ProvisioningUnitOfWorkCommitTests : IAsyncLifetime
 {
-    // Per ADR 0058 §B.1: SQLite's BEGIN IMMEDIATE transaction IS the lock — there is no
-    // separate advisory-lock primitive to release. CommitAsync therefore only needs to commit
-    // the underlying SqliteTransaction; SQLite releases the database-wide RESERVED writer slot
-    // implicitly when the transaction completes. This is structurally analogous to the MSSQL
-    // contract where sp_getapplock with @LockOwner='Transaction' is auto-released on tx
-    // completion (see When_mssql_provisioning_uow_commit_async_…). The SQLite UoW has no
-    // IAmA*AdvisoryLock collaborator, so this test pins only the commit half — proving the
-    // tx was committed is proof the writer slot was released, because in SQLite they are the
-    // same thing.
-    //
-    // Re-invoking Commit() on a completed SqliteTransaction throws InvalidOperationException
-    // ("Transaction has completed; it is no longer usable."). A no-op CommitAsync (the 5.4.a
-    // stub returned Task.CompletedTask) would leave the transaction active and the second
-    // Commit() would succeed silently — so this single assertion fails for the stub and passes
-    // only when CommitAsync actually committed.
-
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_uow_commit_{Guid.NewGuid():N}.db");
 
@@ -83,7 +71,7 @@ public class ProvisioningUnitOfWorkCommitTests : IAsyncLifetime
     [Fact]
     public async Task When_sqlite_provisioning_uow_commit_async_is_called_it_should_commit_releasing_writer_slot()
     {
-        // Arrange — SqliteProvisioningUnitOfWork ctor takes only (SqliteConnection, ILogger).
+        // Arrange
         await using var uow = new SqliteProvisioningUnitOfWork(_connection, NullLogger.Instance);
         await uow.BeginAsync(
             lockResource: "test_lock_resource",
@@ -94,10 +82,7 @@ public class ProvisioningUnitOfWorkCommitTests : IAsyncLifetime
         // Act
         await uow.CommitAsync(CancellationToken.None);
 
-        // Assert: post-commit, re-issuing Commit on the same SqliteTransaction throws because
-        // the transaction is already completed. A no-op CommitAsync would leave the tx active
-        // and this call would succeed silently — committing the BEGIN IMMEDIATE transaction
-        // is what releases the writer slot in SQLite.
+        // Assert
         Assert.Throws<InvalidOperationException>(() => transaction.Commit());
     }
 }
