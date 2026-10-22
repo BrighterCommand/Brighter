@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using System;
+
 namespace Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 
 /// <summary>
@@ -41,4 +43,5 @@ internal sealed class StubRelationalDatabaseConfiguration : IAmARelationalDataba
     public string OutBoxTableName => string.Empty;
     public string QueueStoreTable => string.Empty;
     public string? SchemaName => null;
+    public TimeSpan? OutstandingCountTimeout => null;
 }
