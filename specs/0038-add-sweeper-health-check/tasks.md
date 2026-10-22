@@ -1679,7 +1679,7 @@
   - References: FR-11; AC-27 bullet 2; ADR 0085 step 7.
   - Depends on: T18.1.
 
-- [ ] **DOC: T18.5 — Health-check page: the sweeper checks**
+- [x] **DOC: T18.5 — Health-check page: the sweeper checks**
   - The four conditions and their boundaries; opt-in and threshold validation; hang-threshold sizing (`BatchSize`, send latency, the `sweep.duration` histogram); the duplicate-send risk after a liveness restart; the `InMemoryOutbox` loss warning with the advice to route restart to monitoring.
   - One sweeper per service provider (more is undefined, FR-4A.2). The breaker must be a singleton shared with the mediator (FR-6A.4), and a blocking `TrippedTopics` stalls the signals (FR-13.2). The tripped-topic gaps during lock acquisition and after a collision (FR-6A.6).
   - An unexpected exception in a check reports Degraded, so on a liveness endpoint it restarts the process. A factory that throws is a misconfiguration that fails the whole endpoint.
