@@ -34,10 +34,13 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
+/// <summary>
+/// A runner constructed without a lockTimeout passes a 30-second default to the unit of work's
+/// BeginAsync. The spy unit of work records it, then throws to stop the migration.
+/// </summary>
 public class RunnerDefaultLockTimeoutTests : IAsyncLifetime
 {
-    // Per-test DB file so the test does not interact with siblings running against the shared
-    // test.db (same isolation pattern as the cancellation test).
+    // Per-test DB file, so the test does not interact with sibling tests on test.db.
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_default_timeout_{Guid.NewGuid():N}.db");
     private readonly string _connectionString;
@@ -51,18 +54,7 @@ public class RunnerDefaultLockTimeoutTests : IAsyncLifetime
     [Fact]
     public async Task When_sqlite_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds()
     {
-        //Arrange — the runner is constructed via the detection-helper ctor with `lockTimeout`
-        // OMITTED, exercising the optional-parameter default path. SQLite has no advisory-lock
-        // abstraction (BEGIN IMMEDIATE takes the writer slot directly), so the observable
-        // capture point is the IAmAProvisioningUnitOfWork.BeginAsync(lockTimeout: ...)
-        // parameter. The spy wraps the real SQLite UoW, records the timeout, then throws to
-        // short-circuit the migration.
-        //
-        // This test is a regression pin: SqliteBoxMigrationRunner.cs:82 already defaults to
-        // TimeSpan.FromSeconds(30). The cross-backend Fix #1 commits (`acff5eb34`,
-        // `ba8813e6f`, `080e93c96`) harmonised MSSQL / MySql / PostgreSql to match. Without
-        // this pin, a future change that reverts SQLite to `?? default` would re-introduce the
-        // divergence silently.
+        //Arrange
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
 
         var capturingRunner = new TimeoutCapturingSqliteBoxMigrationRunner(config);
@@ -72,9 +64,7 @@ public class RunnerDefaultLockTimeoutTests : IAsyncLifetime
         await Assert.ThrowsAsync<TimeoutException>(() => capturingRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
-        //Assert — the omitted `lockTimeout` resolves to the 30-second default flowed into the
-        // UoW's BeginAsync(lockTimeout: ...) call. SqliteBoxMigrationRunner is the reference
-        // value the other three relational runners are now harmonised against.
+        //Assert
         var spy = capturingRunner.LastUnitOfWork;
         Assert.NotNull(spy);
         Assert.Equal(TimeSpan.FromSeconds(30), spy!.CapturedLockTimeout);
@@ -101,7 +91,7 @@ file sealed class TimeoutCapturingSqliteBoxMigrationRunner : SqliteBoxMigrationR
 {
     public TimeoutCapturingSqliteUnitOfWork? LastUnitOfWork { get; private set; }
 
-    // Uses the detection-helper ctor with `lockTimeout` OMITTED — the path under regression-pin.
+    // Omits lockTimeout: its default is what the test pins.
     public TimeoutCapturingSqliteBoxMigrationRunner(IAmARelationalDatabaseConfiguration configuration)
         : base(new SqliteBoxDetectionHelper(), new SqliteOutboxMigrationCatalog(), configuration)
     {
@@ -126,12 +116,10 @@ file sealed class TimeoutCapturingSqliteUnitOfWork : IAmAProvisioningUnitOfWork<
 
     public SqliteTransaction? Transaction => _inner.Transaction;
 
+    // Throws before the inner BeginAsync, so no writer slot is taken.
     public Task BeginAsync(string lockResource, TimeSpan lockTimeout, CancellationToken cancellationToken)
     {
         CapturedLockTimeout = lockTimeout;
-        // Short-circuit: throw before the inner BeginAsync runs so no SQLite writer slot is
-        // taken and no DB state is touched. The runner's catch-path then unwinds without a
-        // transaction to roll back (DisposeAsync still runs on the inner UoW).
         throw new TimeoutException("short-circuit to read captured timeout");
     }
 
