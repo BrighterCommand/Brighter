@@ -1,7 +1,7 @@
 ---
 id: 0085-outbox-stale-message-telemetry
 title: "Outbox stale-message telemetry"
-status: Proposed
+status: Accepted
 author:
   - "Guilherme Appel"
 created: 2026-10-11
@@ -19,7 +19,7 @@ Date: 2026-10-11
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

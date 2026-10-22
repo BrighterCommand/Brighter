@@ -13,7 +13,7 @@ spec.
 ## Status
 
 - [x] Requirements (`/spec:requirements`), approved 2026-10-11, revised on 2026-10-13 after the maintainer's review on PR #4598 and approved again
-- [x] Design / ADR (`/spec:design`): ADR `0085-outbox-stale-message-telemetry`, written and reviewed on 2026-10-11, then renumbered from ADR 0084 and reviewed again on 2026-10-12 after ADR `0084-outbox-metrics` merged; revised on 2026-10-13 after the maintainer's review on PR #4598, together with the new ADR `0086-outbox-per-topic-stale-count`; both stay Proposed until the maintainer agrees on the pull request
+- [x] Design / ADR (`/spec:design`): ADR `0085-outbox-stale-message-telemetry`, written and reviewed on 2026-10-11, then renumbered from ADR 0084 and reviewed again on 2026-10-12 after ADR `0084-outbox-metrics` merged; revised on 2026-10-13 after the maintainer's review on PR #4598, together with the new ADR `0086-outbox-per-topic-stale-count`; both Accepted on 2026-10-21, when the maintainer asked on PR #4598 to mark them Accepted (`/spec:approve design`)
 - [x] Adversarial review rounds (requirements: 4 passes, then 4 more after the maintainer's review on PR #4598; design: 4 passes before the renumbering, 4 after it, and 3 more over both ADRs after the maintainer's review on PR #4598)
 - [ ] Task breakdown (`/spec:tasks`)
 - [ ] Implementation

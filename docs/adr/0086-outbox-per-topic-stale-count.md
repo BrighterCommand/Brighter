@@ -1,7 +1,7 @@
 ---
 id: 0086-outbox-per-topic-stale-count
 title: "Outbox per-topic stale count"
-status: Proposed
+status: Accepted
 author:
   - "Guilherme Appel"
 created: 2026-10-13
@@ -19,7 +19,7 @@ Date: 2026-10-13
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
