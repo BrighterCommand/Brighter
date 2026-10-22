@@ -1569,7 +1569,7 @@
 
 *ADR 0086 step 8, ADR 0087 step 10. ASP.NET Core test host in `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, endpoints mapped exactly as the docs show, using only `Predicate` and `ResultStatusCodes`.*
 
-- [ ] **STRUCTURAL: T17.1 — The documented `System.Text.Json` response writer as a test fixture**
+- [x] **STRUCTURAL: T17.1 — The documented `System.Text.Json` response writer as a test fixture**
   - Add `BrighterHealthReportJsonWriter` in `tests/Paramore.Brighter.Extensions.AspNetCore.Tests/TestDoubles/`. It writes the overall status and, per entry, name, status, tags, description and `Data`. **Its text is the text T18.7 puts on the docs page**, so the docs and the test cannot drift. No Brighter production code ships a writer.
   - Add a helper that maps `/health/live` (restart tag; Degraded and Unhealthy → 503), `/health/ready` (take-out-of-service tag; Degraded and Unhealthy → 503) and `/health/operator` (investigate tag; the writer).
   - Depends on: T1.3.
