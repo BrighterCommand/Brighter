@@ -1662,7 +1662,7 @@
   - References: FR-11; AC-27 bullet 1; ADR 0085 step 7.
   - Depends on: T5.3.
 
-- [ ] **DOC: T18.2 — Release notes: sweeper remedy checks and the remedy-kind convention**
+- [x] **DOC: T18.2 — Release notes: sweeper remedy checks and the remedy-kind convention**
   - `AddBrighterOutboxSweeperHealthChecks(hangThreshold, failureThreshold)`, defaults (3 × `TimerInterval`, 3), validation, the four conditions, tags `brighter-restart`, `brighter-take-out-of-service` and `brighter-investigate`, failure status Degraded, `Data` keys, and the new `Microsoft.Extensions.Diagnostics.HealthChecks` dependency of `Paramore.Brighter.Outbox.Hosting`.
   - References: FR-11; AC-27; ADR 0086 step 9.
   - Depends on: T9.4.
