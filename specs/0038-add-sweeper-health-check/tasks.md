@@ -1482,7 +1482,7 @@
   - References: NFR-6, FR-10.2; AC-23.
   - Depends on: T15.1, T12.0.
 
-- [ ] **CHARACTERISE: T15.3 — Registering the new checks does not change the existing check's results**
+- [x] **CHARACTERISE: T15.3 — Registering the new checks does not change the existing check's results**
   - **USE COMMAND**: `/test-first when the sweeper or consumer remedy checks are registered the existing consumer check should report the same statuses and descriptions`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_remedy_checks_are_registered_should_leave_the_existing_consumer_check_unchanged.cs`
