@@ -469,13 +469,9 @@ namespace Paramore.Brighter.ServiceActivator
 
         private Dictionary<SubscriptionName, int> ExpectedConsumersBySubscription()
         {
-            var expected = new Dictionary<SubscriptionName, int>();
-            foreach (var subscription in Subscriptions)
-            {
-                expected.TryGetValue(subscription.Name, out var count);
-                expected[subscription.Name] = count + subscription.NoOfPerformers;
-            }
-            return expected;
+            return Subscriptions
+                .GroupBy(subscription => subscription.Name)
+                .ToDictionary(group => group.Key, group => group.Sum(subscription => subscription.NoOfPerformers));
         }
 
         public DispatcherStateItem[] GetState()
