@@ -1741,7 +1741,7 @@
   - Implementation should: add the `RemedyCondition` readonly record struct (`Name`, `Description`, `Values`) and the three static members, with XML docs. Nothing else changes; the checks do not use them yet (T19.6). `src/Paramore.Brighter` targets netstandard2.0.
   - References: ADR 0088.
 
-- [ ] **STRUCTURAL: T19.6 — Move the four remedy checks onto `RemedyCondition` and the convention**
+- [x] **STRUCTURAL: T19.6 — Move the four remedy checks onto `RemedyCondition` and the convention**
   - Smell: Duplicated Code, Feature Envy, Primitive Obsession and Data Clump — see T19.4.
   - Refactoring: Move Function, Replace Primitive with Object. Each check drops its private `Data` copy and its condition tuples and calls `RemedyCheckConvention.Data` and `Describe`; add `Healthy(description)` where a check repeats the empty-conditions early return. Statuses, descriptions and `Data` stay byte-for-byte as they are.
   - Run with: `/tidy-first move the four remedy health checks onto RemedyCondition and the RemedyCheckConvention Data builder`
