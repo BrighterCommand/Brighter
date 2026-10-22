@@ -87,7 +87,7 @@
   - Each constant has `///` documentation. Leave `OutboxType` unchanged.
   - Verification: nothing reads the constants; the solution builds; existing tests stay green.
 
-- [ ] **STRUCTURAL: T1.2 Add the nullable `Publication.StaleMessageAge`**
+- [x] **STRUCTURAL: T1.2 Add the nullable `Publication.StaleMessageAge`**
   - **USE COMMAND**: `/tidy-first add the nullable StaleMessageAge property to Publication`
   - Add `public TimeSpan? StaleMessageAge { get; set; }` beside `Topic` (`src/Paramore.Brighter/Publication.cs:96`).
   - Its `///` documentation states, in prose:
