@@ -1657,7 +1657,7 @@
 
 *ADR 0085 step 7, ADR 0086 step 9, ADR 0087 step 11. BrighterCommand/Docs changes go in a PR to that repo, linked from the Brighter PR.*
 
-- [ ] **DOC: T18.1 — Release notes: the two sweeper gauges**
+- [x] **DOC: T18.1 — Release notes: the two sweeper gauges**
   - `release_notes.md` under `## Master`: `paramore.brighter.outbox_sweeper.sweep.running_time` (s) and `paramore.brighter.outbox_sweeper.tripped_topics` (`{topic}`), no attributes, registered by `AddBrighterInstrumentation`. State the recommended alerts. Name the additive public types and parameters (`OutboxSweeperState`, `OutboxSweeperSnapshot`, the optional constructor parameters on `SweeperMeter` and `TimedOutboxSweeper`).
   - References: FR-11; AC-27 bullet 1; ADR 0085 step 7.
   - Depends on: T5.3.
