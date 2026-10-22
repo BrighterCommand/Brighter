@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -44,7 +45,8 @@ public static class BrighterHealthReportJsonWriter
     {
         context.Response.ContentType = "application/json; charset=utf-8";
 
-        await using var writer = new Utf8JsonWriter(context.Response.Body, new JsonWriterOptions { Indented = true });
+        using var buffer = new MemoryStream();
+        await using var writer = new Utf8JsonWriter(buffer, new JsonWriterOptions { Indented = true });
         writer.WriteStartObject();
         writer.WriteString("status", report.Status.ToString());
         writer.WriteStartArray("entries");
@@ -78,5 +80,7 @@ public static class BrighterHealthReportJsonWriter
         writer.WriteEndArray();
         writer.WriteEndObject();
         await writer.FlushAsync();
+        buffer.Position = 0;
+        await buffer.CopyToAsync(context.Response.Body);
     }
 }
