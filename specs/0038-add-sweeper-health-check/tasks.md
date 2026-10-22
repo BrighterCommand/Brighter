@@ -1610,7 +1610,7 @@
   - References: FR-10.3, NFR-7; AC-50.
   - Depends on: T17.2, T16.0.
 
-- [ ] **CHARACTERISE: T17.5 — The documented JSON writer produces valid JSON with every check's `Data`**
+- [x] **CHARACTERISE: T17.5 — The documented JSON writer produces valid JSON with every check's `Data`**
   - **USE COMMAND**: `/test-first when the operator endpoint uses the documented writer the body should be valid json with each check name status tags description and data`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_operator_endpoint_uses_the_documented_writer_should_write_valid_json_with_data.cs`
