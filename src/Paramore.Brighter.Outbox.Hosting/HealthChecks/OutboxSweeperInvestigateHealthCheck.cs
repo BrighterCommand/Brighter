@@ -85,7 +85,7 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
         if (_state is null)
-            return Task.FromResult(HealthCheckResult.Healthy("No outbox sweeper is registered.", Data(Array.Empty<string>())));
+            return Task.FromResult(Healthy("No outbox sweeper is registered."));
 
         var snapshot = _state.Read();
         var conditions = new List<(string Name, string Description, Dictionary<string, object> Values)>();
@@ -93,32 +93,39 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         if (snapshot.ConsecutiveFailedSweeps >= _failureThreshold)
             conditions.Add(FailedSweepsCondition(snapshot.ConsecutiveFailedSweeps));
 
-        if (snapshot.IsActive)
-        {
-            try
-            {
-                var names = TrippedTopicNames();
-                if (names.Length > 0)
-                    conditions.Add(TrippedTopicsCondition(names));
-            }
-            catch (Exception e)
-            {
-                Log.TrippedTopicsUnreadable(s_logger, e);
-                conditions.Add(TrippedTopicsUnreadableCondition(e));
-            }
-        }
+        conditions.AddRange(TrippedTopicsConditionOrNone(snapshot));
 
         if (conditions.Count == 0)
-        {
-            var healthy = HealthCheckResult.Healthy($"No outbox sweeper condition needs investigation: fewer than {_failureThreshold} consecutive failed sweeps.", Data(Array.Empty<string>()));
-            return Task.FromResult(healthy);
-        }
+            return Task.FromResult(Healthy($"No outbox sweeper condition needs investigation: fewer than {_failureThreshold} consecutive failed sweeps."));
 
+        return Task.FromResult(Degraded(conditions));
+    }
+
+    private (string Name, string Description, Dictionary<string, object> Values)[] TrippedTopicsConditionOrNone(OutboxSweeperSnapshot snapshot)
+    {
+        if (!snapshot.IsActive) return [];
+
+        try
+        {
+            var names = TrippedTopicNames();
+            return names.Length > 0 ? [TrippedTopicsCondition(names)] : [];
+        }
+        catch (Exception e)
+        {
+            Log.TrippedTopicsUnreadable(s_logger, e);
+            return [TrippedTopicsUnreadableCondition(e)];
+        }
+    }
+
+    private static HealthCheckResult Healthy(string description) => HealthCheckResult.Healthy(description, Data(Array.Empty<string>()));
+
+    private static HealthCheckResult Degraded(List<(string Name, string Description, Dictionary<string, object> Values)> conditions)
+    {
         var data = Data(conditions.Select(condition => condition.Name).ToArray());
         foreach (var condition in conditions)
             data[condition.Name] = condition.Values;
         var description = string.Join("; ", conditions.Select(condition => condition.Description));
-        return Task.FromResult(new HealthCheckResult(HealthStatus.Degraded, description, null, data));
+        return new HealthCheckResult(HealthStatus.Degraded, description, null, data);
     }
 
     private string[] TrippedTopicNames()
