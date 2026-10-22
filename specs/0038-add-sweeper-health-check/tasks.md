@@ -1550,7 +1550,7 @@
   - References: FR-10.5; AC-49 (c).
   - Depends on: T16.1, T16.0.
 
-- [ ] **CHARACTERISE: T16.3 — The public API of the named types is a superset of its branch-point baseline**
+- [x] **CHARACTERISE: T16.3 — The public API of the named types is a superset of its branch-point baseline**
   - **USE COMMAND**: `/test-first when comparing public members with the baseline every existing member should still exist and the circuit breaker interface should be unchanged`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_comparing_public_members_with_the_baseline_should_keep_every_existing_member.cs`
