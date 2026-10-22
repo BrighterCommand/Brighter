@@ -1718,7 +1718,7 @@
   - Refactoring: Extract Function, Decompose Conditional, Introduce Parameter Object. Name the two guards (`IsNotRunning(snapshot)`, `OperationInProgress(snapshot)`); extract `CountBySubscription(snapshot)` returning a private `SubscriptionConsumers(Name, Running, Expected)` record struct in place of the tuple; extract `MissingConsumersData`, `MissingConsumersDescription` and `StatusFor(runningTotal)`. `CheckHealthAsync` reads as the sequence of decisions.
   - Run with: `/tidy-first extract named methods from ConsumerRestartHealthCheck.CheckHealthAsync to remove Long Function`
 
-- [ ] **STRUCTURAL: T19.2 — Extract Method to express intent in `OutboxSweeperInvestigateHealthCheck.CheckHealthAsync`**
+- [x] **STRUCTURAL: T19.2 — Extract Method to express intent in `OutboxSweeperInvestigateHealthCheck.CheckHealthAsync`**
   - Smell: Long Function — `src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs:47-84` (try/catch inside an if: two levels of nesting)
   - Refactoring: Extract Function. `TrippedTopicsConditionOrNone(snapshot)` takes the try/catch and returns zero or one condition; `Degraded(conditions)` builds the data, joins the description and returns the result; `Healthy()` replaces the repeated early return.
   - Run with: `/tidy-first extract named methods from OutboxSweeperInvestigateHealthCheck.CheckHealthAsync to remove Long Function and nesting`
