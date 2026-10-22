@@ -1733,17 +1733,19 @@
   - Decide: (a) a static `RemedyCheckConvention.Data(RemedyKind, params string[])` in core, which is an additive public member; or a private copy per package; (b) a `RemedyCondition` readonly record struct and one fold of conditions into a `HealthCheckResult`, in core (additive public type, a value type and not a role) or internal to each package. Record the decision in the ADR 0086 and 0087 text (or an amendment, via `/adr`); if anything new is public, name the test that pins it, because new public API is behaviour and goes through `/test-first`, not `/tidy-first`.
   - Separator: decided on 2026-10-22 as `"; "`, as ADR 0087 says; see T19.7. The fold writes `"; "`.
 
-- [ ] **STRUCTURAL: T19.5 — Move the remedy `Data` builder to where its constants live**
-  - Smell: Duplicated Code and Feature Envy — see T19.4.
-  - Refactoring: Move Function, then Extract Function (`Healthy(description)`) in each check, as T19.4 decided. If T19.4 decides on a public member, this task is replaced by a `/test-first` task, not run as a tidy.
-  - Run with: `/tidy-first move the remedy Data builder from the four health checks to RemedyCheckConvention`
-  - Depends on: T19.4.
+- [ ] **TEST + IMPLEMENT: T19.5 — Core gains `RemedyCondition` and the shared `RemedyCheckConvention` Data builder and description join**
+  - **USE COMMAND**: `/test-first when remedy conditions are given to the convention it builds the remedy Data dictionary and joins their descriptions with a semicolon and a space`
+  - Decided by ADR 0088 (public, additive, in `Paramore.Brighter`); replaces the structural move first scheduled here.
+  - Test location: "tests/Paramore.Brighter.Core.Tests/Observability"
+  - Test should verify: `RemedyCheckConvention.Data(kind)` has `remedy_kind` equal to `Name(kind)` and an empty `conditions` array; `Data(kind, conditions)` lists the condition names in order and holds each condition's `Values` under its name; the dictionary is mutable; `Describe(conditions)` joins descriptions with `"; "`; an undefined kind throws `ArgumentOutOfRangeException`.
+  - Implementation should: add the `RemedyCondition` readonly record struct (`Name`, `Description`, `Values`) and the three static members, with XML docs. Nothing else changes; the checks do not use them yet (T19.6). `src/Paramore.Brighter` targets netstandard2.0.
+  - References: ADR 0088.
 
-- [ ] **STRUCTURAL: T19.6 — Replace the condition tuple with a `RemedyCondition` value and one result fold**
-  - Smell: Primitive Obsession and Data Clump — see T19.4.
-  - Refactoring: Replace Primitive with Object, Combine Functions into Class, as T19.4 decided. The same condition applies as T19.5 if the value is public.
-  - Run with: `/tidy-first replace the condition tuple in the remedy health checks with a RemedyCondition value`
-  - Depends on: T19.4, T19.1, T19.2, T19.5, T19.7.
+- [ ] **STRUCTURAL: T19.6 — Move the four remedy checks onto `RemedyCondition` and the convention**
+  - Smell: Duplicated Code, Feature Envy, Primitive Obsession and Data Clump — see T19.4.
+  - Refactoring: Move Function, Replace Primitive with Object. Each check drops its private `Data` copy and its condition tuples and calls `RemedyCheckConvention.Data` and `Describe`; add `Healthy(description)` where a check repeats the empty-conditions early return. Statuses, descriptions and `Data` stay byte-for-byte as they are.
+  - Run with: `/tidy-first move the four remedy health checks onto RemedyCondition and the RemedyCheckConvention Data builder`
+  - Depends on: T19.5, T19.1, T19.2, T19.7.
 
 - [x] **TEST + IMPLEMENT: T19.7 — The take-out-of-service check joins several descriptions with `"; "`**
   - **USE COMMAND**: `/test-first when several consumers have persistent channel failures the take-out-of-service description should join their phrases with a semicolon and a space`
