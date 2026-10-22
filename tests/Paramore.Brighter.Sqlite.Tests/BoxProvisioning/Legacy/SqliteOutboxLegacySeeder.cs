@@ -27,30 +27,13 @@ using Microsoft.Data.Sqlite;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning.Legacy;
 
-/// <summary>
-/// Seeds a SQLite outbox table at a historical logical version (V1..V7) using hand-rolled
-/// <c>CREATE TABLE</c> DDL per ADR 0057 §1 archaeology. Used by mid-chain-failure /
-/// bootstrap-at-V_k tests so the runner exercises real legacy schemas — not migration UpScript
-/// round-trips.
-/// </summary>
-/// <remarks>
-/// Cumulative column sets match <see cref="BoxProvisioning.Sqlite.SqliteOutboxMigrationCatalog"/>
-/// LogicalColumns. SQLite has no declared housekeeping (the engine's implicit <c>rowid</c> is
-/// not part of the DDL surface) and no synthetic identity column (unlike MSSQL <c>Id</c>,
-/// MySQL <c>Created</c>/<c>CreatedID</c>, Postgres <c>id</c>). Column types align with the
-/// live <see cref="BoxProvisioning.Sqlite.SqliteOutboxMigrationCatalog"/> (TEXT for everything
-/// except <c>Body</c> in binary mode — text-mode is the default this seeder uses) so the V7
-/// hand-rolled shape and the live builder shape have identical column-name sets. Column order
-/// differs from the live builder, which interleaves V_k columns; the migration-list-order
-/// chosen here is the simpler mental model and the detection helper / drift extractor are
-/// both order-insensitive.
-/// </remarks>
+// Hand-rolled legacy DDL per version (ADR 0057 §1), so tests run against real legacy schemas, not replayed
+// UpScripts. Column order differs from the live builder; detection and drift checks are order-insensitive.
 internal static class SqliteOutboxLegacySeeder
 {
     private static readonly IReadOnlyDictionary<int, string[]> ColumnsByVersion = new Dictionary<int, string[]>
     {
-        // V1 baseline: V1 logical columns. MessageId carries COLLATE NOCASE for the GUID
-        // case-insensitivity workaround documented on the live SqliteOutboxBuilder.
+        // V1 baseline. MessageId carries COLLATE NOCASE, as SqliteOutboxBuilder does.
         [1] =
         [
             "[MessageId] TEXT NOT NULL COLLATE NOCASE",
@@ -60,18 +43,18 @@ internal static class SqliteOutboxLegacySeeder
             "[HeaderBag] TEXT NULL",
             "[Body] TEXT NULL"
         ],
-        // V2 adds: Dispatched (#3c30343fa, 2019-07).
+        // V2 adds: Dispatched (3c30343fa, 2019-07).
         [2] = ["[Dispatched] TEXT NULL"],
-        // V3 adds: CorrelationId, ReplyTo, ContentType (#79100f509 / PR #1401).
+        // V3 adds: CorrelationId, ReplyTo, ContentType (79100f509).
         [3] =
         [
             "[CorrelationId] TEXT NULL",
             "[ReplyTo] TEXT NULL",
             "[ContentType] TEXT NULL"
         ],
-        // V4 adds: PartitionKey (#1cdc04b60 / PR #2560 — same as MSSQL/MySQL; Postgres lagged).
+        // V4 adds: PartitionKey (1cdc04b60).
         [4] = ["[PartitionKey] TEXT NULL"],
-        // V5 adds: CloudEvents columns (#b740a68ed / PR #3633).
+        // V5 adds: CloudEvents columns (b740a68ed).
         [5] =
         [
             "[Source] TEXT NULL",
@@ -82,13 +65,13 @@ internal static class SqliteOutboxLegacySeeder
             "[TraceState] TEXT NULL",
             "[Baggage] TEXT NULL"
         ],
-        // V6 adds: WorkflowId, JobId (#0e79332f1 / PR #3693).
+        // V6 adds: WorkflowId, JobId (0e79332f1).
         [6] =
         [
             "[WorkflowId] TEXT NULL",
             "[JobId] TEXT NULL"
         ],
-        // V7 adds: DataRef, SpecVersion (#d67dac947 / PR #3790).
+        // V7 adds: DataRef, SpecVersion (d67dac947).
         [7] =
         [
             "[DataRef] TEXT NULL",

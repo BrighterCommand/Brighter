@@ -52,6 +52,8 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly object _lifecycleLock = new();
         private int _pendingConsumerOperations;
         private bool _stopping;
+        private bool _endRequested;
+        private readonly HashSet<SubscriptionName> _shutSubscriptions = new();
         private volatile DispatcherState _state;
         //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange,
         //making the disposal body run exactly once even under concurrent Dispose (an application-level
@@ -353,6 +355,7 @@ namespace Paramore.Brighter.ServiceActivator
             lock (_lifecycleLock)
             {
                 controlTask = _controlTask ?? Task.CompletedTask;
+                _endRequested = true;
                 if (State != DispatcherState.DS_RUNNING)
                     return controlTask;
 
@@ -426,16 +429,49 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="subscription">The subscription.</param>
         public void Shut(Subscription subscription)
         {
-            if (State == DispatcherState.DS_RUNNING)
+            var consumersForConnection = SnapshotConsumersToShut(subscription);
+            if (consumersForConnection is null) return;
+
+            Log.StoppingSubscription(s_logger, subscription.Name.Value);
+            for (int i = 0; i < consumersForConnection.Length; ++i)
             {
-                Log.StoppingSubscription(s_logger, subscription.Name.Value);
-                var consumersForConnection = Consumers.Where(consumer => consumer.Subscription.Name == subscription.Name).ToArray();
-                var noOfConsumers = consumersForConnection.Length;
-                for (int i = 0; i < noOfConsumers; ++i)
-                {
-                    consumersForConnection[i].Shut(subscription.RoutingKey);
-                }
+                consumersForConnection[i].Shut(subscription.RoutingKey);
             }
+        }
+
+        private IAmAConsumer[]? SnapshotConsumersToShut(Subscription subscription)
+        {
+            lock (_lifecycleLock)
+            {
+                if (State != DispatcherState.DS_RUNNING) return null;
+                _shutSubscriptions.Add(subscription.Name);
+                return Consumers.Where(consumer => consumer.Subscription.Name == subscription.Name).ToArray();
+            }
+        }
+
+        /// <summary>
+        /// Takes a consistent copy of the dispatcher's lifecycle, under the lifecycle lock.
+        /// </summary>
+        /// <returns>A snapshot that does not change after it is returned.</returns>
+        public DispatcherLifecycleSnapshot GetLifecycleSnapshot()
+        {
+            lock (_lifecycleLock)
+            {
+                return new DispatcherLifecycleSnapshot(
+                    State,
+                    endRequested: _endRequested,
+                    _shutSubscriptions.ToArray(),
+                    consumerOperationsInFlight: _pendingConsumerOperations,
+                    ExpectedConsumersBySubscription(),
+                    _consumers.Values.ToArray());
+            }
+        }
+
+        private Dictionary<SubscriptionName, int> ExpectedConsumersBySubscription()
+        {
+            return Subscriptions
+                .GroupBy(subscription => subscription.Name)
+                .ToDictionary(group => group.Key, group => group.Sum(subscription => subscription.NoOfPerformers));
         }
 
         public DispatcherStateItem[] GetState()
@@ -491,7 +527,10 @@ namespace Paramore.Brighter.ServiceActivator
                 lock (_lifecycleLock)
                 {
                     foreach (var consumer in consumers)
+                    {
                         _consumers.TryAdd(consumer.Name.Value, consumer);
+                        _shutSubscriptions.Remove(consumer.Subscription.Name);
+                    }
                 }
 
                 if (starting)
@@ -535,6 +574,7 @@ namespace Paramore.Brighter.ServiceActivator
                     return false;
 
                 _stopping = false;
+                _endRequested = false;
                 State = DispatcherState.DS_RUNNING;
                 _controlTask = Task.Factory.StartNew(RunControlLoop, CancellationToken.None,
                     TaskCreationOptions.LongRunning, TaskScheduler.Default);

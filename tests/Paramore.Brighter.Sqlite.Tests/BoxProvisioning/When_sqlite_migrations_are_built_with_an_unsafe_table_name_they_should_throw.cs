@@ -26,22 +26,14 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-// Item Q-sqlite (spec 0027 PR #4039 third review). Pins the factory-entry wiring of
-// Identifiers.AssertSafe at the SQLite *MigrationCatalog.All(...) entry: any unsafe table name must be
-// rejected before the factory builds migration up-scripts and idempotency-check SQL. The
-// injection vector sits in two places per migration: the bracket-quoted ALTER TABLE [{table}]
-// and the single-quoted pragma_table_info('{table}') predicate at SqliteOutboxMigrationCatalog.cs:150
-// (and the inbox mirror at :73). The helper guarantees no quote ever reaches either path.
-//
-// SQLite has no schema concept (single attached database), so only the table identifier is
-// validated at the factory. ConfigurationException is the documented contract; no SQLite
-// connection is required because the rejection happens before any DDL is rendered (connection
-// string is "Data Source=ignored;").
-
+/// <summary>
+/// The SQLite catalogs reject an unsafe table name with a ConfigurationException before rendering any DDL,
+/// so no quote reaches <c>ALTER TABLE [{table}]</c> or <c>pragma_table_info('{table}')</c>.
+/// </summary>
 public class SqliteMigrationsUnsafeIdentifierTests
 {
     [Theory]
-    [InlineData("O'Brien")]    // single quote — exact injection vector at pragma_table_info('{table}')
+    [InlineData("O'Brien")]    // single quote
     [InlineData("1Outbox")]    // leading digit — invalid as bare identifier
     [InlineData("my-outbox")]  // hyphen — would need bracket-quoting to be legal
     public void When_sqlite_outbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)

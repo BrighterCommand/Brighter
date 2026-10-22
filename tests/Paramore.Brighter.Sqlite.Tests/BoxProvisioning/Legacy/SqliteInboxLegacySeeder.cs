@@ -25,20 +25,8 @@ using Microsoft.Data.Sqlite;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning.Legacy;
 
-/// <summary>
-/// Seeds a SQLite inbox table at the V1 logical version (pre-October 2018, before
-/// <c>ContextKey</c> was added in commit <c>787c31c52</c>) using hand-rolled DDL per ADR 0057
-/// §1 archaeology. Used by bootstrap-at-V1 tests so the runner exercises the real legacy
-/// schema rather than a migration UpScript round-trip.
-/// </summary>
-/// <remarks>
-/// Inbox archaeology is short — V1 (baseline) and V2 (added <c>ContextKey</c>) — so a single
-/// <see cref="SeedAtV1"/> entry point is sufficient. Column types match the live
-/// <c>SqliteInboxBuilder</c> minus <c>ContextKey</c>: <c>UNIQUEIDENTIFIER</c> /
-/// <c>NVARCHAR</c> / <c>NTEXT</c> / <c>TIMESTAMPTZ</c> are accepted as type names by SQLite
-/// even though it stores everything as TEXT under dynamic typing — this preserves byte-level
-/// fidelity to a real pre-2018 inbox installation.
-/// </remarks>
+// Hand-rolled legacy DDL (ADR 0057 §1), so bootstrap tests run against real legacy schemas,
+// not replayed UpScripts. Column type names match the old builder; SQLite accepts them.
 internal static class SqliteInboxLegacySeeder
 {
     private const string V1Ddl = """
@@ -51,9 +39,7 @@ internal static class SqliteInboxLegacySeeder
         );
         """;
 
-    // V2 adds ContextKey (787c31c52) but is still pre-CausationId (V3). This is the schema a
-    // user has after upgrading Brighter past the ContextKey era but before the Replay feature
-    // migration — the realistic "no CausationId column" inbox the backward-compat fix must tolerate.
+    // After ContextKey (787c31c52), before CausationId (V3): the pre-Replay schema.
     private const string V2Ddl = """
         CREATE TABLE [{0}]
         (
@@ -65,10 +51,7 @@ internal static class SqliteInboxLegacySeeder
         );
         """;
 
-    /// <summary>
-    /// Creates an inbox table with the V1 column set (no <c>ContextKey</c>). The history
-    /// table is NOT seeded — the test under verification expects the runner to stamp it.
-    /// </summary>
+    // Leaves the history table for the runner to create.
     public static void SeedAtV1(string connectionString, string tableName)
     {
         using var connection = new SqliteConnection(connectionString);
@@ -78,11 +61,6 @@ internal static class SqliteInboxLegacySeeder
         command.ExecuteNonQuery();
     }
 
-    /// <summary>
-    /// Creates an inbox table with the V2 column set (<c>ContextKey</c> present, but no
-    /// <c>CausationId</c>) — the pre-Replay schema a user runs after upgrading Brighter
-    /// without applying the V3 causation migration.
-    /// </summary>
     public static void SeedAtV2(string connectionString, string tableName)
     {
         using var connection = new SqliteConnection(connectionString);

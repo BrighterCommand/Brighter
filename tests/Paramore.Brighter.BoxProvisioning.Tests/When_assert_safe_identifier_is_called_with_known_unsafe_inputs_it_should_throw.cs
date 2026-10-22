@@ -25,29 +25,19 @@ using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
-// Item Q (spec 0027 PR #4039 third review). Identifiers.AssertSafe is a defence-in-depth
-// helper that runs at *MigrationCatalog.All(...) factory entry and at runner MigrateAsync entry to
-// reject SQL identifiers that fall outside the regex ^[A-Za-z_][A-Za-z0-9_]*$. The point of
-// this regex is not "what does the backend allow" — quoted identifiers in MSSQL/PG/Spanner
-// (and backticked identifiers in MySQL) accept much more — but "what is safe to interpolate
-// into ALTER TABLE / CREATE TABLE strings without escaping". Spec 0027 has not yet shipped,
-// so the runtime rejection of unusual identifiers does not break any released configuration.
-//
-// This test exercises the helper directly with the canonical unsafe inputs called out in the
-// reviewer comment: a single quote (the actual injection vector at MySqlOutboxMigrationCatalog.cs:165
-// where the table name is inlined into an information_schema probe), a semicolon (statement
-// separator), a hyphen (rejected outside backticks/brackets), a leading digit (rejected by every
-// backend's bare-identifier rule), and the empty string (degenerate).
-
+/// <summary>
+/// <see cref="Identifiers.AssertSafe"/> rejects identifiers that are unsafe to interpolate into
+/// DDL unescaped, accepts plain ones, and reports a null identifier as missing configuration.
+/// </summary>
 public class AssertSafeIdentifierTests
 {
     [Theory]
-    [InlineData("O'Brien")]              // single quote — breaks information_schema probe at MySqlOutboxMigrationCatalog.cs:165
+    [InlineData("O'Brien")]              // single quote — breaks an information_schema probe
     [InlineData("Outbox; DROP")]         // semicolon — statement terminator
     [InlineData("my-outbox")]            // hyphen — invalid in bare identifiers
     [InlineData("1Outbox")]              // leading digit — invalid as bare identifier across all backends
     [InlineData("")]                     // empty
-    [InlineData("_underscore_leading")]  // leading underscore — Spanner rejects `_`-prefixed identifiers as reserved (PR #4039 review item E4)
+    [InlineData("_underscore_leading")]  // leading underscore — Spanner reserves `_`-prefixed identifiers
     public void When_assert_safe_identifier_is_called_with_known_unsafe_inputs_it_should_throw(string unsafeIdentifier)
     {
         //Arrange
@@ -57,8 +47,7 @@ public class AssertSafeIdentifierTests
         var exception = Assert.Throws<ConfigurationException>(
             () => Identifiers.AssertSafe(unsafeIdentifier, parameterName));
 
-        //Assert — message must name both the offending identifier (so operators see the bad value)
-        // and the parameter (so contributors see which call-site rejected it).
+        //Assert
         Assert.Contains(parameterName, exception.Message);
         Assert.Contains(unsafeIdentifier, exception.Message);
     }
@@ -69,8 +58,7 @@ public class AssertSafeIdentifierTests
     [InlineData("Outbox123")]
     public void When_assert_safe_identifier_is_called_with_safe_inputs_it_should_not_throw(string safeIdentifier)
     {
-        //Act + Assert — the regex must accept canonical legal identifiers; an over-strict
-        // helper would reject the very names the BrighterCommand defaults use.
+        //Act + Assert
         Identifiers.AssertSafe(safeIdentifier, "tableName");
     }
 
@@ -81,26 +69,18 @@ public class AssertSafeIdentifierTests
         var exception = Assert.Throws<ConfigurationException>(
             () => Identifiers.AssertSafe(null!, "tableName"));
 
-        //Assert — null fails the same defence-in-depth check; the helper is the only place
-        // a null leak would surface as an actionable error rather than a downstream NRE.
+        //Assert
         Assert.Contains("tableName", exception.Message);
     }
 
     [Fact]
     public void When_assert_safe_identifier_is_called_with_a_null_identifier_it_should_not_blame_the_regex()
     {
-        // The null path is a missing-configuration failure, not a malformed-identifier failure.
-        // The original message conflated the two by rendering '<null>' against the regex hint,
-        // which sent operators looking for an "invalid character" in their config when the real
-        // problem was that no identifier was supplied at all.
-
         //Act
         var exception = Assert.Throws<ConfigurationException>(
             () => Identifiers.AssertSafe(null!, "tableName"));
 
-        //Assert — the null path must surface as a named missing-configuration error, not
-        // a regex-pattern complaint. Mention the null-ness explicitly so operators see the
-        // real root cause.
+        //Assert
         Assert.DoesNotContain("regex", exception.Message);
         Assert.Contains("null", exception.Message);
     }

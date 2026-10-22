@@ -33,39 +33,29 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// The <c>SqlBoxProvisioner</c> base exposes <c>EffectiveSchemaName</c> as a virtual hook so
-/// SQLite (which has no schema concept per ADR 0057 §6) can override to <c>null</c> without
-/// affecting the runner call (per ADR 0058 §B.5 line 608-614). The detection-helper and
-/// payload-validator calls inside <c>DetectTableStateAsync</c> and <c>ValidatePayloadModeAsync</c>
-/// observe this property, while the runner's <c>MigrateAsync</c> call inside <c>ProvisionAsync</c>
-/// always propagates <c>_configuration.SchemaName</c> directly. These tests pin the propagation
-/// contract on both code paths (default and override-to-null) across both detection branches
-/// (bootstrap and history-exists) so all five detection/validator call sites are exercised.
+/// <c>SqlBoxProvisioner.EffectiveSchemaName</c> is a virtual hook so SQLite, which has no schema
+/// (ADR 0057 §6), can override it to <c>null</c> (ADR 0058 §B.5). Detection and payload validation
+/// use it on both detection branches; the runner's <c>MigrateAsync</c> always gets the configured
+/// schema.
 /// </summary>
 public class SqlBoxProvisionerEffectiveSchemaNameTests
 {
     [Fact]
     public async Task When_effective_schema_name_is_default_it_should_pass_configured_schema_to_detection_and_validator_and_runner()
     {
-        //Arrange — derivation with NO override: inherits the default `_configuration.SchemaName`.
+        //Arrange
         var detection = new SchemaCapturingDetectionHelper { TableExistsResult = true };
         var payloadValidator = new SchemaCapturingPayloadValidator();
         var migrationRunner = new SchemaCapturingMigrationRunner();
-        var configuration = new RecordingConfiguration(); // SchemaName = "dbo"
+        var configuration = new RecordingConfiguration();
         var provisioner = new TestSqlBoxProvisionerWithDefaultSchema(
             detection, new RecordingMigrationCatalog(), payloadValidator,
             configuration, migrationRunner, BoxType.Outbox);
 
-        //Act — run twice to exercise both detection branches:
-        //  pass 1: bootstrap branch (DoesTableExist + DoesHistoryExist + DetectCurrentVersion + Validate + Migrate)
-        detection.HistoryExistsResult = false;
-        await provisioner.ProvisionAsync();
-        //  pass 2: history-exists branch (DoesTableExist + DoesHistoryExist + GetMaxVersion + Validate + Migrate)
-        detection.HistoryExistsResult = true;
-        await provisioner.ProvisionAsync();
+        //Act
+        await ProvisionOnBootstrapThenHistoryBranchAsync(provisioner, detection);
 
-        //Assert — every detection/validator call observes the configured "dbo"; both runner calls
-        //also observe "dbo" (the runner call propagates `_configuration.SchemaName` directly).
+        //Assert
         Assert.Equal(new string?[] { "dbo", "dbo" }, detection.DoesTableExistSchemas);
         Assert.Equal(new string?[] { "dbo", "dbo" }, detection.DoesHistoryExistSchemas);
         Assert.Equal(new string?[] { "dbo" }, detection.DetectCurrentVersionSchemas);
@@ -77,24 +67,19 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
     [Fact]
     public async Task When_effective_schema_name_is_overridden_to_null_it_should_pass_null_to_detection_and_validator_but_configured_schema_to_runner()
     {
-        //Arrange — derivation overrides `EffectiveSchemaName` to null (the SQLite shape).
+        //Arrange
         var detection = new SchemaCapturingDetectionHelper { TableExistsResult = true };
         var payloadValidator = new SchemaCapturingPayloadValidator();
         var migrationRunner = new SchemaCapturingMigrationRunner();
-        var configuration = new RecordingConfiguration(); // SchemaName = "dbo"
+        var configuration = new RecordingConfiguration();
         var provisioner = new TestSqlBoxProvisionerWithNullSchema(
             detection, new RecordingMigrationCatalog(), payloadValidator,
             configuration, migrationRunner, BoxType.Outbox);
 
-        //Act — both branches.
-        detection.HistoryExistsResult = false;
-        await provisioner.ProvisionAsync();
-        detection.HistoryExistsResult = true;
-        await provisioner.ProvisionAsync();
+        //Act
+        await ProvisionOnBootstrapThenHistoryBranchAsync(provisioner, detection);
 
-        //Assert — every detection/validator call observes null (the override); the runner call
-        //still observes the configured "dbo" — only detection/validation routes through
-        //EffectiveSchemaName, per ADR §B.5 line 611-612.
+        //Assert
         Assert.Equal(new string?[] { null, null }, detection.DoesTableExistSchemas);
         Assert.Equal(new string?[] { null, null }, detection.DoesHistoryExistSchemas);
         Assert.Equal(new string?[] { null }, detection.DetectCurrentVersionSchemas);
@@ -103,10 +88,16 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         Assert.Equal(new string?[] { "dbo", "dbo" }, migrationRunner.MigrateSchemas);
     }
 
-    /// <summary>
-    /// Derivation with no <c>EffectiveSchemaName</c> override — inherits the base default
-    /// (<c>_configuration.SchemaName</c>). Represents the MSSQL/PostgreSQL/MySQL shape.
-    /// </summary>
+    private static async Task ProvisionOnBootstrapThenHistoryBranchAsync(
+        SqlBoxProvisioner<FakeDbConnection, FakeDbTransaction> provisioner,
+        SchemaCapturingDetectionHelper detection)
+    {
+        detection.HistoryExistsResult = false;
+        await provisioner.ProvisionAsync();
+        detection.HistoryExistsResult = true;
+        await provisioner.ProvisionAsync();
+    }
+
     private sealed class TestSqlBoxProvisionerWithDefaultSchema : SqlBoxProvisioner<FakeDbConnection, FakeDbTransaction>
     {
         public TestSqlBoxProvisionerWithDefaultSchema(
@@ -126,10 +117,6 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         protected override string PayloadColumnName => "Body";
     }
 
-    /// <summary>
-    /// Derivation that overrides <c>EffectiveSchemaName</c> to null — represents the SQLite shape
-    /// (no schema concept per ADR 0057 §6).
-    /// </summary>
     private sealed class TestSqlBoxProvisionerWithNullSchema : SqlBoxProvisioner<FakeDbConnection, FakeDbTransaction>
     {
         public TestSqlBoxProvisionerWithNullSchema(
@@ -151,10 +138,6 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         protected override string? EffectiveSchemaName => null;
     }
 
-    /// <summary>
-    /// Captures the <c>schemaName</c> argument passed on every detection-helper call so the
-    /// assertion can verify per-call propagation across both detection branches.
-    /// </summary>
     private sealed class SchemaCapturingDetectionHelper : IAmAVersionDetectingMigrationHelper<FakeDbConnection, FakeDbTransaction>
     {
         public bool TableExistsResult { get; set; }
@@ -214,9 +197,6 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         }
     }
 
-    /// <summary>
-    /// Captures the <c>schemaName</c> argument passed on every payload-validator call.
-    /// </summary>
     private sealed class SchemaCapturingPayloadValidator : IAmABoxPayloadModeValidator<FakeDbConnection>
     {
         public List<string?> ValidateSchemas { get; } = new();
@@ -234,10 +214,6 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         }
     }
 
-    /// <summary>
-    /// Captures the <c>schemaName</c> argument passed to <c>MigrateAsync</c> so the assertion
-    /// can verify the runner-call schema is always the configured value (never the override).
-    /// </summary>
     private sealed class SchemaCapturingMigrationRunner : IAmABoxMigrationRunner
     {
         public List<string?> MigrateSchemas { get; } = new();

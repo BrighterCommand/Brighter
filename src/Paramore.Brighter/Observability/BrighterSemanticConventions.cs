@@ -104,8 +104,16 @@ public static class BrighterSemanticConventions
     public const string OutboxSharedTransaction = "paramore.brighter.outbox.shared_transaction";
     public const string OutboxSweeperOutcome = "paramore.brighter.outbox_sweeper.outcome";
     public const string OutboxSweeperSweepDuration = "paramore.brighter.outbox_sweeper.sweep.duration";
+    /// <summary>
+    /// Gauge: how long the sweep now in progress has been running, or 0 when none is.
+    /// </summary>
+    public const string OutboxSweeperSweepRunningTime = "paramore.brighter.outbox_sweeper.sweep.running_time";
     public const string OutboxSweeperSweeps = "paramore.brighter.outbox_sweeper.sweeps";
     public const string OutboxSweeperTickLag = "paramore.brighter.outbox_sweeper.tick.lag";
+    /// <summary>
+    /// Gauge: the number of topics whose outbox circuit breaker is tripped while a sweep is active.
+    /// </summary>
+    public const string OutboxSweeperTrippedTopics = "paramore.brighter.outbox_sweeper.tripped_topics";
     public const string PublishConfirmationQueueDepth = "paramore.brighter.publish_confirmation.queue.depth";
     public const string OutboxType = "paramore.brighter.outbox.type";
     public const string ReplyTo = "paramore.brighter.replyto";

@@ -35,6 +35,10 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <summary>
         /// Use a timer based outbox sweeper as a Hosted Service.
         /// </summary>
+        /// <remarks>
+        /// Also registers the <see cref="OutboxSweeperState"/> the sweeper writes to, on the container's <see cref="TimeProvider"/>
+        /// (or <see cref="TimeProvider.System"/> when none is registered), so gauges and health checks can read it.
+        /// </remarks>
         /// <param name="brighterBuilder">The Brighter Builder</param>
         /// <param name="timedOutboxSweeperOptionsAction">Configuration actions for the Timed outbox Sweeper <see cref="TimedOutboxSweeper"/></param>
         /// <returns>The Brighter Builder</returns>
@@ -45,6 +49,8 @@ namespace Paramore.Brighter.Outbox.Hosting
             timedOutboxSweeperOptionsAction?.Invoke(options);
             
             brighterBuilder.Services.TryAddSingleton(options);
+            brighterBuilder.Services.TryAddSingleton(sp =>
+                new OutboxSweeperState(sp.GetService<TimeProvider>() ?? TimeProvider.System));
             brighterBuilder.Services.AddHostedService<TimedOutboxSweeper>();
             return brighterBuilder;
         }

@@ -23,9 +23,11 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Diagnostics.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenTelemetry.Metrics;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Extensions.Diagnostics;
@@ -38,16 +40,23 @@ public static class BrighterMetricsBuilderExtensions
         {
             services.TryAddSingleton<IAmABrighterMessagingMeter, MessagingMeter>();
             services.TryAddSingleton<IAmABrighterDbMeter, DbMeter>();
-            services.TryAddSingleton<IAmABrighterSweeperMeter, SweeperMeter>();
+            services.TryAddSingleton<IAmABrighterSweeperMeter>(serviceProvider => new SweeperMeter(
+                serviceProvider.GetRequiredService<IMeterFactory>(),
+                serviceProvider.GetService<OutboxSweeperState>(),
+                () => serviceProvider.GetService<IAmAnOutboxCircuitBreaker>()));
             services.TryAddSingleton<PublishConfirmationMeter>();
             services.TryAddSingleton<IAmABrighterOutboxMeter, OutboxMeter>();
             
             builder.AddMeter(BrighterSemanticConventions.MeterName);
         });
 
-        // Nothing depends on the queue-depth meter, so create it when the meter provider is built
+        // Nothing depends on the queue-depth or sweeper meters, so create them when the meter provider is built
         if (builder is IDeferredMeterProviderBuilder deferred)
-            deferred.Configure((serviceProvider, _) => serviceProvider.GetRequiredService<PublishConfirmationMeter>());
+            deferred.Configure((serviceProvider, _) =>
+            {
+                serviceProvider.GetRequiredService<PublishConfirmationMeter>();
+                serviceProvider.GetRequiredService<IAmABrighterSweeperMeter>();
+            });
         
         return builder;
     }

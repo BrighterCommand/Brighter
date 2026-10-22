@@ -34,12 +34,16 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
+/// <summary>
+/// The runner retries SQLITE_BUSY with backoff while another connection holds the writer slot, and
+/// succeeds once it is released.
+/// </summary>
 public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
 {
-    //Writer holds the SQLite reserved/exclusive lock long enough that any "no retry" runner must
-    //fail with SQLITE_BUSY before the writer releases. 600ms is well above CI scheduler jitter
-    //but short enough to keep the test cheap.
+    // Long enough that a runner which does not retry SQLITE_BUSY fails before the writer releases.
     private static readonly TimeSpan WriterHold = TimeSpan.FromMilliseconds(600);
+
+    private static readonly TimeSpan SchedulerJitterSlack = TimeSpan.FromMilliseconds(120);
 
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_contention_{Guid.NewGuid():N}.db");
@@ -59,18 +63,9 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
     [Fact]
     public async Task When_runner_contends_with_concurrent_writer_it_should_retry_sqlite_busy_with_backoff_and_succeed()
     {
-        //Arrange — file-backed SQLite database in WAL mode so writers contend on a single
-        //writer slot. A separate "writer" connection takes BEGIN IMMEDIATE and dirties the
-        //database (issues a write so the reserved lock is upgraded to a real writer lock),
-        //then releases after WriterHold. Concurrently, the runner must call MigrateAsync —
-        //its own attempt to acquire the writer slot must wait, retry on SQLITE_BUSY, and
-        //ultimately succeed once the writer commits.
+        //Arrange
         await EnsureWalModeAsync(_connectionString);
 
-        //Use a 1-entry V1-only migration list so this test isolates the SQLITE_BUSY retry
-        //concern. Multi-version V1..V7 migrations bring in IdempotencyCheckSql skip / TOCTOU
-        //re-check / bootstrap branching — those are verified by Tasks 4.6 / 4.7 / 4.8 / 4.9
-        //per spec line 684. Here we just want: "runner can wait for a writer to release".
         var freshState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         var writer = new SqliteConnection(_connectionString);
@@ -78,11 +73,7 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
         var writerTransaction = (SqliteTransaction)await writer.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable);
 
-        //Force an immediate writer-lock acquisition by issuing a write inside the transaction.
-        //SQLite's serializable isolation acquires the reserved lock lazily; doing a write
-        //promotes it to a writer lock, which is what we need to make the runner contend.
-        await ExecuteWriteAsync(writer, writerTransaction,
-            "CREATE TABLE IF NOT EXISTS [__sqlite_contention_marker] ([id] INTEGER NOT NULL)");
+        await TakeWriterSlotAsync(writer, writerTransaction);
 
         var releaseWriter = Task.Run(async () =>
         {
@@ -91,9 +82,7 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
             await writer.DisposeAsync();
         });
 
-        //Act — runner kicks off concurrent with the writer hold and must observe SQLITE_BUSY,
-        //back off, and retry until the writer releases (~600ms later) and it can acquire the
-        //lock itself.
+        //Act
         var stopwatch = Stopwatch.StartNew();
         var migrateTask = _runner.MigrateAsync(
             _tableName,
@@ -105,13 +94,10 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
         stopwatch.Stop();
         await releaseWriter;
 
-        //Assert — the runner finished without surfacing SQLITE_BUSY (i.e. it retried internally
-        //and succeeded), the V1 history row landed exactly once (no duplicates), and the wall
-        //clock spans at least ~80% of WriterHold so we know the runner actually waited rather
-        //than racing past the lock by accident. The slack accommodates CI scheduler jitter.
+        //Assert
         Assert.Null(thrown);
         Assert.Equal(1, await GetHistoryRowCountAsync(_tableName, version: 1));
-        var minimumExpectedWait = WriterHold - TimeSpan.FromMilliseconds(120);
+        var minimumExpectedWait = WriterHold - SchedulerJitterSlack;
         Assert.True(
             stopwatch.Elapsed >= minimumExpectedWait,
             $"Runner returned in {stopwatch.Elapsed.TotalMilliseconds:F0}ms but writer held the " +
@@ -146,12 +132,12 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
-    private static async Task ExecuteWriteAsync(
-        SqliteConnection connection, SqliteTransaction transaction, string sql)
+    // Serializable takes SQLite's reserved lock lazily; a write takes it now.
+    private static async Task TakeWriterSlotAsync(SqliteConnection connection, SqliteTransaction transaction)
     {
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = sql;
+        command.CommandText = "CREATE TABLE IF NOT EXISTS [__sqlite_contention_marker] ([id] INTEGER NOT NULL)";
         await command.ExecuteNonQueryAsync();
     }
 
