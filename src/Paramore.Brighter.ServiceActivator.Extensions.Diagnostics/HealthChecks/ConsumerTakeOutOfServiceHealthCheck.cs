@@ -91,7 +91,7 @@ public class ConsumerTakeOutOfServiceHealthCheck : IHealthCheck
                 ["count"] = failure.Count
             }).ToArray()
         };
-        var description = string.Join(";", failing.Select(failure =>
+        var description = string.Join("; ", failing.Select(failure =>
             $"{failure.Consumer.Subscription.Name} consumer {failure.Consumer.Name} has {failure.Count} consecutive channel failures"));
         return Task.FromResult(new HealthCheckResult(HealthStatus.Degraded, description, null, data));
     }
