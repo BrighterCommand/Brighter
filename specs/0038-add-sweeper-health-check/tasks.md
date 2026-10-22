@@ -1403,7 +1403,7 @@
 
 *ADR 0087 step 6.*
 
-- [ ] **TEST + IMPLEMENT: T14.1 — One opt-in call registers both consumer checks, one remedy tag each**
+- [x] **TEST + IMPLEMENT: T14.1 — One opt-in call registers both consumer checks, one remedy tag each**
   - **USE COMMAND**: `/test-first when the consumer health checks are added it should register a take out of service check and a restart check each with only its remedy tag`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_consumer_health_checks_are_added_should_register_two_checks_each_with_its_remedy_tag.cs`
