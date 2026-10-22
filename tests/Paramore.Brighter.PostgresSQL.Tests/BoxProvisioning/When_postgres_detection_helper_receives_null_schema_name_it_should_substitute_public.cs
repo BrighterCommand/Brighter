@@ -36,6 +36,8 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// </summary>
 public class PostgreSqlDetectionHelperNullSchemaTests : IAsyncLifetime
 {
+    private const int SeededVersion = 3;
+
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly List<string> _tablesToCleanup = [];
 
@@ -49,7 +51,7 @@ public class PostgreSqlDetectionHelperNullSchemaTests : IAsyncLifetime
             $"CREATE TABLE \"{tableName}\" (id BIGSERIAL PRIMARY KEY, headerbag TEXT NULL);");
 
         await EnsureHistoryTable();
-        await SeedHistoryRow(tableName, schemaName: "public", migrationVersion: 3);
+        await SeedHistoryRow(tableName, schemaName: "public", migrationVersion: SeededVersion);
 
         var helper = new PostgreSqlBoxDetectionHelper();
 
@@ -69,8 +71,8 @@ public class PostgreSqlDetectionHelperNullSchemaTests : IAsyncLifetime
 
         var maxWithPublic = await helper.GetMaxVersionAsync(connection, tableName, "public", historySchema: null);
         var maxWithNull = await helper.GetMaxVersionAsync(connection, tableName, schemaName: null, historySchema: null);
-        Assert.Equal(3, maxWithPublic);
-        Assert.Equal(3, maxWithNull);
+        Assert.Equal(SeededVersion, maxWithPublic);
+        Assert.Equal(SeededVersion, maxWithNull);
 
         var colsWithPublic = await helper.GetTableColumnsAsync(connection, tableName, "public");
         var colsWithNull = await helper.GetTableColumnsAsync(connection, tableName, schemaName: null);

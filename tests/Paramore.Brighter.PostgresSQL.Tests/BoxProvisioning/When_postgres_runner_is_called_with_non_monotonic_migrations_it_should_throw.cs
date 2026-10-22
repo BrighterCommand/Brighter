@@ -38,28 +38,26 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// </summary>
 public class PostgreSqlRunnerNonMonotonicMigrationsTests : IAsyncLifetime
 {
-
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
     public Task When_versions_contain_a_duplicate_it_should_throw() =>
-        AssertMigrationListRejected(BuildList(0, 0), expectedMarker: "V1 followed by V1");
+        AssertMigrationListRejected(BuildList(1, 1), expectedMarker: "V1 followed by V1");
 
     [Fact]
     public Task When_versions_have_a_gap_it_should_throw() =>
-        AssertMigrationListRejected(BuildList(0, 2), expectedMarker: "V1 followed by V3");
+        AssertMigrationListRejected(BuildList(1, 3), expectedMarker: "V1 followed by V3");
 
     [Fact]
     public Task When_versions_are_not_strictly_ascending_it_should_throw() =>
-        // [V1, V2, V3, V2] — valid prefix isolates the V3→V2 descent as the sole violation.
-        AssertMigrationListRejected(BuildList(0, 1, 2, 1), expectedMarker: "V3 followed by V2");
+        AssertMigrationListRejected(BuildList(1, 2, 3, 2), expectedMarker: "V3 followed by V2");
 
-    private IReadOnlyList<IAmABoxMigration> BuildList(params int[] indices)
+    private IReadOnlyList<IAmABoxMigration> BuildList(params int[] versions)
     {
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         var realMigrations = new PostgreSqlOutboxMigrationCatalog().All(config);
-        return indices.Select(i => realMigrations[i]).ToList();
+        return versions.Select(version => realMigrations[version - 1]).ToList();
     }
 
     private async Task AssertMigrationListRejected(IReadOnlyList<IAmABoxMigration> malformed, string expectedMarker)

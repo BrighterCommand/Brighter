@@ -44,6 +44,10 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
     private const string BrokenUpScript =
         "DO $$ BEGIN RAISE EXCEPTION 'forced failure for spec 0027 task 2.7a'; END $$;";
     private const string MarkerMessageId = "marker-row-must-survive";
+    private const string ColumnAddedInV3 = "contenttype";
+    private const string ColumnAddedInV4 = "partitionkey";
+    private const string ColumnAddedInV5 = "source";
+    private const string ColumnAddedInV7 = "dataref";
 
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -73,9 +77,9 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
         Assert.Empty(await GetHistoryRowsByVersion());
 
         var columnsAfterFailure = await GetTableColumns();
-        Assert.Contains("contenttype", columnsAfterFailure);
-        Assert.DoesNotContain("partitionkey", columnsAfterFailure);
-        Assert.DoesNotContain("source", columnsAfterFailure);
+        Assert.Contains(ColumnAddedInV3, columnsAfterFailure);
+        Assert.DoesNotContain(ColumnAddedInV4, columnsAfterFailure);
+        Assert.DoesNotContain(ColumnAddedInV5, columnsAfterFailure);
 
         Assert.Equal(1, await GetMarkerRowCount());
 
@@ -106,8 +110,8 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
         }
 
         var columnsAfterRetry = await GetTableColumns();
-        Assert.Contains("dataref", columnsAfterRetry);
-        Assert.Contains("partitionkey", columnsAfterRetry);
+        Assert.Contains(ColumnAddedInV7, columnsAfterRetry);
+        Assert.Contains(ColumnAddedInV4, columnsAfterRetry);
         Assert.Equal(1, await GetMarkerRowCount());
     }
 
@@ -160,9 +164,8 @@ ORDER BY ""MigrationVersion""";
                 rows[reader.GetInt32(0)] = reader.GetString(1);
             }
         }
-        catch (PostgresException ex) when (ex.SqlState == "42P01")
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
         {
-            // undefined_table — history table does not exist (rolled back before EnsureHistoryTableAsync committed).
         }
         return rows;
     }
