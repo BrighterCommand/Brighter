@@ -1745,7 +1745,7 @@
   - Run with: `/tidy-first replace the condition tuple in the remedy health checks with a RemedyCondition value`
   - Depends on: T19.4, T19.1, T19.2, T19.5, T19.7.
 
-- [ ] **TEST + IMPLEMENT: T19.7 — The take-out-of-service check joins several descriptions with `"; "`**
+- [x] **TEST + IMPLEMENT: T19.7 — The take-out-of-service check joins several descriptions with `"; "`**
   - **USE COMMAND**: `/test-first when several consumers have persistent channel failures the take-out-of-service description should join their phrases with a semicolon and a space`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_several_consumers_fail_persistently_should_join_the_descriptions_with_a_semicolon_and_space.cs`
