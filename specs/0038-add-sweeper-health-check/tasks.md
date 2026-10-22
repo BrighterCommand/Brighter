@@ -1538,7 +1538,7 @@
   - References: FR-10.3, FR-10.4; AC-49 (a), (b); ADR 0086 step 7.
   - Depends on: T1.3, T9.1, T14.1, T15.1.
 
-- [ ] **CHARACTERISE: T16.2 — Each remedy check's `Data` names the remedy kind its tag identifies, Healthy and Degraded**
+- [x] **CHARACTERISE: T16.2 — Each remedy check's `Data` names the remedy kind its tag identifies, Healthy and Degraded**
   - **USE COMMAND**: `/test-first when each remedy check runs healthy and degraded its data should name the remedy kind its tag identifies`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_each_remedy_check_runs_should_name_the_remedy_kind_its_tag_identifies.cs`
