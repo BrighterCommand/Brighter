@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 
 
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.Observability;
@@ -42,8 +43,12 @@ public static class ConsumerHealthChecksBuilderExtensions
     /// <param name="builder">The health checks builder.</param>
     /// <param name="channelFailureThreshold">The number of consecutive channel failures at which a consumer is reported.</param>
     /// <returns>The builder.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="channelFailureThreshold"/> is zero or negative.</exception>
     public static IHealthChecksBuilder AddBrighterConsumerHealthChecks(this IHealthChecksBuilder builder, int channelFailureThreshold = 3)
     {
+        if (channelFailureThreshold <= 0)
+            throw new ArgumentOutOfRangeException(nameof(channelFailureThreshold), channelFailureThreshold, "The channel failure threshold must be greater than zero.");
+
         return builder
             .Add(new HealthCheckRegistration(
                 "brighter-consumer-take-out-of-service",
