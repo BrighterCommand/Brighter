@@ -21,8 +21,6 @@ public enum QuoteStyle
     Sqlite,
 
     /// <summary>Spanner (GoogleSQL dialect): identifiers wrapped in <c>`backticks`</c>; case-insensitive.
-    /// Wire-equivalent to <see cref="MySql"/> today, but kept as a distinct enum value so the
-    /// Spanner drift test reads as Spanner-specific and so a future GoogleSQL-only quoting quirk
-    /// has a place to live without touching MySQL extraction.</summary>
+    /// Parsed as <see cref="MySql"/> is, but kept distinct so the Spanner drift test names its backend.</summary>
     Spanner
 }

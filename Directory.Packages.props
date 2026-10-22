@@ -3,10 +3,10 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
     <AwsDynamoDbV4>4.0.107.3</AwsDynamoDbV4>
-    <AWSSDKIdentityManagementV4>4.0.103.10</AWSSDKIdentityManagementV4>
+    <AWSSDKIdentityManagementV4>4.0.103.11</AWSSDKIdentityManagementV4>
     <AWSSDKSchedulerV4>4.0.100.15</AWSSDKSchedulerV4>
-    <AWSSDKV4>4.0.104.4</AWSSDKV4>
-    <AWSSecurityTokenV4>4.0.101.4</AWSSecurityTokenV4>
+    <AWSSDKV4>4.0.104.5</AWSSDKV4>
+    <AWSSecurityTokenV4>4.0.101.5</AWSSecurityTokenV4>
     <AWSSQSV4>4.0.100.15</AWSSQSV4>
     <AWSSDKSimpleNotificationServiceV4>4.0.100.16</AWSSDKSimpleNotificationServiceV4>
     <AWSSDKExtensionsNETCoreSetup>4.0.102.1</AWSSDKExtensionsNETCoreSetup>

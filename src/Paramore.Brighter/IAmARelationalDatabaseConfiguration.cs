@@ -1,4 +1,6 @@
-﻿namespace Paramore.Brighter
+﻿using System;
+
+namespace Paramore.Brighter
 {
     public interface IAmARelationalDatabaseConfiguration
     {
@@ -40,6 +42,13 @@
         /// Gets the name of the queue table.
         /// </summary>
         string QueueStoreTable { get; }
+
+        /// <summary>
+        /// Gets the command timeout for the outbox's outstanding message count.
+        /// </summary>
+        /// <value>The timeout, or <c>null</c> for the default of 15 seconds.</value>
+        /// <remarks>Only the count uses it, rounded up to whole seconds; reading the outstanding messages is not bounded by it.</remarks>
+        TimeSpan? OutstandingCountTimeout { get; }
 
         /// <summary>
         /// Gets the name of the schema containing the tables.

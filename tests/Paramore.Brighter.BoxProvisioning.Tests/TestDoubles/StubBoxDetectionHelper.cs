@@ -30,14 +30,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 
-/// <summary>
-/// Minimal <see cref="IAmAVersionDetectingMigrationHelper{TConnection,TTransaction}"/>
-/// stub used to satisfy the <c>SqlBoxMigrationRunner</c> ctor. Members
-/// throw <see cref="NotSupportedException"/> by default; tests that exercise the
-/// base's default <c>RedetectStateAsync</c> set <see cref="TableExistsResult"/> and
-/// <see cref="HistoryExistsResult"/> to drive <see cref="DoesTableExistAsync"/> and
-/// <see cref="DoesHistoryExistAsync"/> instead.
-/// </summary>
+// Only DoesTableExistAsync and DoesHistoryExistAsync are implemented; the other members throw NotSupportedException.
 internal sealed class StubBoxDetectionHelper : IAmAVersionDetectingMigrationHelper<FakeDbConnection, FakeDbTransaction>
 {
     public bool TableExistsResult { get; set; }

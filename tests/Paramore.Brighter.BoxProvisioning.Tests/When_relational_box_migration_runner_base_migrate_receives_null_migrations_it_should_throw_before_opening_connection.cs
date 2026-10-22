@@ -34,27 +34,9 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// A catalog whose <see cref="IAmABoxMigrationCatalog.All"/> returns null at the runner's
-/// framework chokepoint must surface as <see cref="ConfigurationException"/> with a
-/// descriptive message BEFORE any connection is opened. The legacy failure mode was an
-/// opaque NRE inside
-/// <see cref="SqlBoxMigrationRunner{TConnection, TTransaction}.ValidateMigrationsMonotonic"/>
-/// (<c>migrations[i - 1].Version</c>) or, on an empty list that snuck past, a misleading
-/// <c>EnsureHistoryTableAsync</c> call against the live DB. Defence at the boundary is one
-/// line and replaces both with a clear operator-facing diagnostic.
-/// <para>
-/// Spec 0027 R1 (PR #4039 part 2): the runner sources the chain from the injected catalog
-/// rather than via a <c>MigrateAsync</c> argument; this test wires a null-returning catalog
-/// via <see cref="StubBoxMigrationCatalog.AllReturnsNull"/>.
-/// </para>
-/// <para>
-/// The empty-list case is intentionally NOT guarded — relational catalogs always return
-/// at least a V1 migration, and many internal tests deliberately use an empty
-/// <see cref="StubBoxMigrationCatalog.Migrations"/> as a "don't care" payload when
-/// exercising hook-ordering, re-detection, or failure-path contracts. Adding an empty-list
-/// guard would churn 8+ tests for no operational gain (a misconfigured catalog already
-/// surfaces in catalog-construction tests).
-/// </para>
+/// A catalog whose <see cref="IAmABoxMigrationCatalog.All"/> returns null must fail with a descriptive
+/// <see cref="ConfigurationException"/> before any connection is opened, rather than with an opaque
+/// <c>NullReferenceException</c> later.
 /// </summary>
 public class SqlBoxMigrationRunnerNullMigrationsValidationTests
 {
@@ -77,13 +59,7 @@ public class SqlBoxMigrationRunnerNullMigrationsValidationTests
         Assert.False(runner.OpenConnectionCalled);
     }
 
-    /// <summary>
-    /// Records whether <c>OpenConnectionAsync</c> was invoked. Null-migrations validation
-    /// must fire BEFORE the connection opens — if validation regresses to AFTER
-    /// <c>OpenConnectionAsync</c>, either <see cref="OpenConnectionCalled"/> flips true or
-    /// one of the post-Open hooks throws <see cref="NotSupportedException"/> instead of
-    /// <see cref="ConfigurationException"/>.
-    /// </summary>
+    // Hooks after OpenConnectionAsync throw NotSupportedException, so a validation that runs too late surfaces as the wrong exception.
     private sealed class NullMigrationsProbeTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         public bool OpenConnectionCalled { get; private set; }
