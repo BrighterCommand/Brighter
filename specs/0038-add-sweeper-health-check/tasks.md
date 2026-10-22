@@ -1686,7 +1686,7 @@
   - References: FR-11; AC-27 bullets 3–4; ADR 0086 step 9.
   - Depends on: T18.2.
 
-- [ ] **DOC: T18.6 — Health-check page: the remedy-kind convention, the routing example, and the consumer checks**
+- [x] **DOC: T18.6 — Health-check page: the remedy-kind convention, the routing example, and the consumer checks**
   - The convention (one kind per registration, one tag, failure status Degraded, `Data` shape). The existing check is the single documented exception: untagged and obsolete.
   - A liveness / readiness / operator example with Degraded **and Unhealthy** mapped to 503 on liveness and readiness, noting that the default `ResultStatusCodes` maps Degraded to 200. Suggested URLs as guidance only.
   - The consumer checks' conditions, remedy kinds, threshold default and option. When the restart check is Healthy (not running, operation in progress, shut on purpose, excess). That a hung consumer operation is not detected, with an alert on `consumer_operations_in_flight`. Probe period and failure-threshold advice for scale-up and reopen. The coexistence rule (FR-10.2.1). Replace #4555's readiness-only advice.
