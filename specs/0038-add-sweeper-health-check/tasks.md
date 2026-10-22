@@ -1426,7 +1426,7 @@
   - References: FR-12.3; AC-60 (call half).
   - Depends on: T14.1.
 
-- [ ] **CHARACTERISE: T14.3 — Consumer registrations fail Degraded, including for a non-Brighter dispatcher**
+- [x] **CHARACTERISE: T14.3 — Consumer registrations fail Degraded, including for a non-Brighter dispatcher**
   - **USE COMMAND**: `/test-first when a non brighter dispatcher is registered the health check service should report the consumer restart check as degraded`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_non_brighter_dispatcher_is_registered_should_report_the_consumer_restart_check_degraded.cs`
