@@ -1588,7 +1588,7 @@
   - References: FR-10.1, FR-10.3, NFR-7; AC-21.
   - Depends on: T17.1, T9.1, T16.0.
 
-- [ ] **CHARACTERISE: T17.3 — A tripped topic shows as Degraded investigate in the report and fails no probe**
+- [x] **CHARACTERISE: T17.3 — A tripped topic shows as Degraded investigate in the report and fails no probe**
   - **USE COMMAND**: `/test-first when only a tripped topic applies the probes should pass and the report show degraded investigate`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_only_a_tripped_topic_applies_should_pass_the_probes_and_report_investigate.cs`
