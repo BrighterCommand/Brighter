@@ -1439,7 +1439,7 @@
   - References: FR-13.1, FR-13.4; AC-70 (consumer half).
   - Depends on: T14.1, T13.9.
 
-- [ ] **CHARACTERISE: T14.4 — With no dispatcher registered, both consumer checks are Healthy through the health-check service**
+- [x] **CHARACTERISE: T14.4 — With no dispatcher registered, both consumer checks are Healthy through the health-check service**
   - **USE COMMAND**: `/test-first when no dispatcher is registered the health check service should report both consumer checks healthy`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_no_dispatcher_is_registered_should_report_both_consumer_checks_healthy.cs`
