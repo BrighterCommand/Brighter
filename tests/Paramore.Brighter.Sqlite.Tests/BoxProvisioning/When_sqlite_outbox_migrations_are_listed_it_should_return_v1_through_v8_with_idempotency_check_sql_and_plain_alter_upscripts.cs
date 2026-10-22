@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 public class SqliteOutboxMigrationsTests
 {
     private const string TableName = "outbox_test";
+    private const int LastPlainAlterVersion = 7;
 
     private static readonly string[] s_v1Columns =
         ["MessageId", "Topic", "MessageType", "Timestamp", "HeaderBag", "Body"];
@@ -96,7 +97,7 @@ public class SqliteOutboxMigrationsTests
             Assert.Contains("WHERE name=", check, StringComparison.OrdinalIgnoreCase);
         }
 
-        for (var v = 2; v <= 7; v++)
+        for (var v = 2; v <= LastPlainAlterVersion; v++)
         {
             var script = migrations[v - 1].UpScript;
             Assert.Contains($"ALTER TABLE [{TableName}]", script, StringComparison.OrdinalIgnoreCase);
