@@ -1674,7 +1674,7 @@
   - References: FR-11, NFR-6; AC-27; ADR 0087 step 11.
   - Depends on: T15.1.
 
-- [ ] **DOC: T18.4 — Telemetry page (BrighterCommand/Docs): both gauges and their alerts**
+- [x] **DOC: T18.4 — Telemetry page (BrighterCommand/Docs): both gauges and their alerts**
   - Units. `max(paramore.brighter.outbox_sweeper.sweep.running_time) > 3 × TimerInterval`, and why it is preferred to alerting on the absence of `completed` sweeps. `tripped_topics > 0` at any point in a 3 × `TimerInterval` window (e.g. `max_over_time`). The gauge reads 0 on an instance that is not an active sweeper, and during lock acquisition.
   - References: FR-11; AC-27 bullet 2; ADR 0085 step 7.
   - Depends on: T18.1.
