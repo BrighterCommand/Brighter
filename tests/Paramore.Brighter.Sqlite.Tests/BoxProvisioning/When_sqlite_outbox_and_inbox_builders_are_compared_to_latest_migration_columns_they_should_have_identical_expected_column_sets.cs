@@ -33,6 +33,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
+/// <summary>
+/// The live builder, FreshInstallDdl and V_latest LogicalColumns must not drift apart, and V1.UpScript stays the
+/// historical first-shipped DDL (ADR 0057 §3). The builder also emits the CausationId replay index.
+/// </summary>
 public class SqliteOutboxBuilderDriftTests
 {
     [Theory]
@@ -41,10 +45,7 @@ public class SqliteOutboxBuilderDriftTests
     public void When_sqlite_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
         bool hasBinaryMessagePayload)
     {
-        //Arrange — drive the builder DDL and the V_latest LogicalColumns from the same config so
-        //any developer change to one without the other surfaces here. SQLite identifiers are
-        //wrapped in [brackets] in Brighter's builder DDL; QuoteStyle.Sqlite extraction is
-        //case-insensitive and copes with inline COLLATE NOCASE on MessageId.
+        //Arrange
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Data Source=:memory:",
@@ -75,12 +76,6 @@ public class SqliteOutboxBuilderDriftTests
     public void When_sqlite_outbox_v1_upscript_is_inspected_it_should_carry_pre_dispatched_historical_baseline(
         bool hasBinaryMessagePayload)
     {
-        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
-        //695522367, March 2019 — pre-Dispatched). The Dispatched column was introduced in V2
-        //(3c30343fa, July 2019). This tripwire prevents a future "helpful" refactor from
-        //quietly rewriting V1.UpScript back to live-builder shape: chain replay against a
-        //legacy installation that bootstrapped at V1 must see the same starting DDL it always
-        //saw. See spec 0027 README archaeology and ADR 0057 §3.
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Data Source=:memory:",
@@ -101,10 +96,6 @@ public class SqliteOutboxBuilderDriftTests
     public void When_sqlite_outbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
         bool hasBinaryMessagePayload)
     {
-        //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
-        //for the fresh-install fast path (ADR 0057 §3), distinct from V1.UpScript which now
-        //carries the historical baseline (Part 4). This tripwire holds the fast-path DDL
-        //identical to the live builder so the two cannot diverge silently.
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Data Source=:memory:",
@@ -123,10 +114,6 @@ public class SqliteOutboxBuilderDriftTests
     public void When_sqlite_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index(
         bool hasBinaryMessagePayload)
     {
-        //The drift test above compares columns only; the new CausationId replay index (Spec 0027,
-        //#2541) is asserted separately here per AC9. The builder appends a CREATE INDEX IF NOT
-        //EXISTS after the CREATE TABLE IF NOT EXISTS so a fresh install lands the same index a V8
-        //migration does.
         const string tableName = "outbox_test";
         var ddl = SqliteOutboxBuilder.GetDDL(tableName, hasBinaryMessagePayload);
 
@@ -136,15 +123,16 @@ public class SqliteOutboxBuilderDriftTests
     }
 }
 
+/// <summary>
+/// The live builder, FreshInstallDdl and V_latest LogicalColumns must not drift apart, and V1.UpScript stays the
+/// historical first-shipped DDL, which carries ContextKey (ADR 0057 §3).
+/// </summary>
 public class SqliteInboxBuilderDriftTests
 {
     [Fact]
     public void When_sqlite_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
     {
-        //Arrange — SQLite inbox has V1 + V2 (V2 adds ContextKey, mirroring MSSQL/MySQL). After
-        //Task 4.3 the migration list should reach V_latest=2 and the live builder column set
-        //should match V2. Today the builder ships ContextKey but the migration list is V1-only,
-        //so this Fact is RED for Task 4.1 and goes GREEN with Task 4.3.
+        //Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Data Source=:memory:",
@@ -171,12 +159,6 @@ public class SqliteInboxBuilderDriftTests
     [Fact]
     public void When_sqlite_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey()
     {
-        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
-        //695522367, March 2019). The SQLite inbox is one of the five "born past V1" backends:
-        //it shipped with ContextKey from the first commit, so V1.UpScript already contains it
-        //and V2's IdempotencyCheckSql (pragma_table_info probe) skips the ALTER on chain
-        //replay. This tripwire prevents a future "helpful" rewrite from dropping ContextKey
-        //out of V1. See spec 0027 README archaeology and ADR 0057 §3.
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Data Source=:memory:",
@@ -193,10 +175,6 @@ public class SqliteInboxBuilderDriftTests
     [Fact]
     public void When_sqlite_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder()
     {
-        //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
-        //for the fresh-install fast path (ADR 0057 §3), distinct from V1.UpScript which now
-        //carries the historical baseline (Part 4). This tripwire holds the fast-path DDL
-        //identical to the live builder so the two cannot diverge silently.
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Data Source=:memory:",

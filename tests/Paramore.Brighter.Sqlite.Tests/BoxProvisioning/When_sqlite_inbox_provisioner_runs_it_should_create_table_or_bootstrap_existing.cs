@@ -60,7 +60,7 @@ WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @ExpectedVersion";
     [Fact]
     public async Task When_inbox_provisioner_runs_against_existing_table_without_history_it_should_bootstrap_existing()
     {
-        // Arrange — create inbox table directly (simulating pre-migration install)
+        // Arrange
         using (var setupConn = new SqliteConnection(_connectionString))
         {
             await setupConn.OpenAsync();

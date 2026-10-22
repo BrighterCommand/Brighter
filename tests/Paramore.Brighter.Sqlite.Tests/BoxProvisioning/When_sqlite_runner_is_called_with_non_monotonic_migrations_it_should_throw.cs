@@ -32,16 +32,12 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
+/// <summary>
+/// The runner rejects a migration list that is not contiguous and strictly ascending, naming the offending pair,
+/// before any DDL runs (ADR 0057 §3).
+/// </summary>
 public class RunnerNonMonotonicMigrationsTests : IAsyncLifetime
 {
-    // The runner validates that the supplied migrations list is contiguous and strictly
-    // ascending (each V_{i+1} == V_i + 1) at MigrateAsync entry — before path branching, so
-    // the rule applies uniformly across fresh / bootstrap / normal paths. Duplicates corrupt
-    // the history-table PK; gaps silently skip ALTERs that V_latest depends on; out-of-order
-    // lists double-apply DDL or stamp history rows in the wrong sequence. Rejecting these
-    // up-front turns silent corruption into an actionable ConfigurationException naming the
-    // offending pair.
-
     private readonly string _connectionString = Configuration.ConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
@@ -55,7 +51,6 @@ public class RunnerNonMonotonicMigrationsTests : IAsyncLifetime
 
     [Fact]
     public Task When_versions_are_not_strictly_ascending_it_should_throw() =>
-        // [V1, V2, V3, V2] — valid prefix isolates the V3→V2 descent as the sole violation.
         AssertMigrationListRejected(BuildList(0, 1, 2, 1), expectedMarker: "V3 followed by V2");
 
     private IReadOnlyList<IAmABoxMigration> BuildList(params int[] indices)
@@ -67,19 +62,18 @@ public class RunnerNonMonotonicMigrationsTests : IAsyncLifetime
 
     private async Task AssertMigrationListRejected(IReadOnlyList<IAmABoxMigration> malformed, string expectedMarker)
     {
-        //Arrange — do NOT create the box table (so fresh path is selected).
+        //Arrange
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         var malformedCatalog = new MalformedListCatalog(malformed);
         var runner = new SqliteBoxMigrationRunner(malformedCatalog, config);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        //Act + Assert — runner refuses to begin migration when the version sequence is malformed.
+        //Act + Assert
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => runner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
         Assert.Contains(expectedMarker, ex.Message, StringComparison.Ordinal);
 
-        //Assert — guard fired before any DDL: the box table was not created.
         Assert.Equal(0, await GetTableCount());
     }
 
