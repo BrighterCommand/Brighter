@@ -24,6 +24,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Paramore.Brighter.Observability;
 
@@ -75,4 +77,35 @@ public static class RemedyCheckConvention
         RemedyKind.Investigate => "investigate",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Not a defined remedy kind.")
     };
+
+    /// <summary>Builds the <c>Data</c> for a remedy check with no applicable conditions.</summary>
+    /// <param name="kind">The remedy kind.</param>
+    /// <returns>A mutable dictionary holding the kind's name and an empty conditions array.</returns>
+    public static Dictionary<string, object> Data(RemedyKind kind) => new()
+    {
+        [RemedyKindKey] = Name(kind),
+        [ConditionsKey] = Array.Empty<string>()
+    };
+
+    /// <summary>Builds the <c>Data</c> for a remedy check with applicable conditions.</summary>
+    /// <param name="kind">The remedy kind.</param>
+    /// <param name="conditions">The applicable conditions.</param>
+    /// <returns>A mutable dictionary holding the kind's name, the condition names in order, and each condition's values under its name.</returns>
+    public static Dictionary<string, object> Data(RemedyKind kind, IReadOnlyCollection<RemedyCondition> conditions)
+    {
+        var data = new Dictionary<string, object>
+        {
+            [RemedyKindKey] = Name(kind),
+            [ConditionsKey] = conditions.Select(condition => condition.Name).ToArray()
+        };
+        foreach (var condition in conditions)
+            data[condition.Name] = condition.Values;
+        return data;
+    }
+
+    /// <summary>Joins the descriptions of the applicable conditions.</summary>
+    /// <param name="conditions">The applicable conditions.</param>
+    /// <returns>The descriptions separated by a semicolon and a space.</returns>
+    public static string Describe(IEnumerable<RemedyCondition> conditions) =>
+        string.Join("; ", conditions.Select(condition => condition.Description));
 }
