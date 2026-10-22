@@ -1733,7 +1733,7 @@
   - Decide: (a) a static `RemedyCheckConvention.Data(RemedyKind, params string[])` in core, which is an additive public member; or a private copy per package; (b) a `RemedyCondition` readonly record struct and one fold of conditions into a `HealthCheckResult`, in core (additive public type, a value type and not a role) or internal to each package. Record the decision in the ADR 0086 and 0087 text (or an amendment, via `/adr`); if anything new is public, name the test that pins it, because new public API is behaviour and goes through `/test-first`, not `/tidy-first`.
   - Separator: decided on 2026-10-22 as `"; "`, as ADR 0087 says; see T19.7. The fold writes `"; "`.
 
-- [ ] **TEST + IMPLEMENT: T19.5 — Core gains `RemedyCondition` and the shared `RemedyCheckConvention` Data builder and description join**
+- [x] **TEST + IMPLEMENT: T19.5 — Core gains `RemedyCondition` and the shared `RemedyCheckConvention` Data builder and description join**
   - **USE COMMAND**: `/test-first when remedy conditions are given to the convention it builds the remedy Data dictionary and joins their descriptions with a semicolon and a space`
   - Decided by ADR 0088 (public, additive, in `Paramore.Brighter`); replaces the structural move first scheduled here.
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability"
