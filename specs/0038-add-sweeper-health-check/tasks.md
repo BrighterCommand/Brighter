@@ -1728,7 +1728,7 @@
   - Refactoring: Replace Loop with Pipeline (`GroupBy` the subscription name, sum `NoOfPerformers`, `ToDictionary`). The src project targets netstandard2.0: run `dotnet build Brighter.slnx` after the change.
   - Run with: `/tidy-first replace the foreach in Dispatcher.ExpectedConsumersBySubscription with a LINQ pipeline`
 
-- [ ] **DOC: T19.4 — Decide where the shared remedy `Data` builder and the condition value live**
+- [x] **DOC: T19.4 — Decide where the shared remedy `Data` builder and the condition value live**
   - Smells: Duplicated Code and Feature Envy (`Data(string[] conditions)` copied into all four checks; `Data(Array.Empty<string>())` repeated seven times); Primitive Obsession and Data Clump (the `(Name, Description, Values)` tuple, and the same fold of conditions into a result in all four checks) — `OutboxSweeperInvestigateHealthCheck.cs:53,94,107,122,136`, `OutboxSweeperRestartHealthCheck.cs:45-56`, `ConsumerRestartHealthCheck.cs:54-77`, `ConsumerTakeOutOfServiceHealthCheck.cs:49-69`.
   - Decide: (a) a static `RemedyCheckConvention.Data(RemedyKind, params string[])` in core, which is an additive public member; or a private copy per package; (b) a `RemedyCondition` readonly record struct and one fold of conditions into a `HealthCheckResult`, in core (additive public type, a value type and not a role) or internal to each package. Record the decision in the ADR 0086 and 0087 text (or an amendment, via `/adr`); if anything new is public, name the test that pins it, because new public API is behaviour and goes through `/test-first`, not `/tidy-first`.
   - Separator: decided on 2026-10-22 as `"; "`, as ADR 0087 says; see T19.7. The fold writes `"; "`.
