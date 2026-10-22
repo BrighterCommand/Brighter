@@ -37,6 +37,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
+[Collection(DispatcherHealthCheckCollection.NAME)]
 public class ConsumerTakeOutOfServiceDispatcherStateTests
 {
     private static readonly TimeSpan s_guard = TimeSpan.FromSeconds(10);
