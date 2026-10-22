@@ -1709,6 +1709,53 @@
 
 ---
 
+## Phase 19 — Refactoring
+
+*Scheduled by `/refactor:smells` against spec 0038's production code on 2026-10-22, after Phase 17. Run T19.1–T19.3 (structural, no public API change) first, then T19.4 (decision), then T19.5 and T19.6. Run Phase 19 before T18.8, so the final verification covers it. Each task is its own `/tidy-first` run and its own `refactor:` commit; the existing suites stay green before and after.*
+
+- [ ] **STRUCTURAL: T19.1 — Extract Method to express intent in `ConsumerRestartHealthCheck.CheckHealthAsync`**
+  - Smell: Long Function — `src/Paramore.Brighter.ServiceActivator.Extensions.Diagnostics/HealthChecks/ConsumerRestartHealthCheck.cs:26-69`
+  - Refactoring: Extract Function, Decompose Conditional, Introduce Parameter Object. Name the two guards (`IsNotRunning(snapshot)`, `OperationInProgress(snapshot)`); extract `CountBySubscription(snapshot)` returning a private `SubscriptionConsumers(Name, Running, Expected)` record struct in place of the tuple; extract `MissingConsumersData`, `MissingConsumersDescription` and `StatusFor(runningTotal)`. `CheckHealthAsync` reads as the sequence of decisions.
+  - Run with: `/tidy-first extract named methods from ConsumerRestartHealthCheck.CheckHealthAsync to remove Long Function`
+
+- [ ] **STRUCTURAL: T19.2 — Extract Method to express intent in `OutboxSweeperInvestigateHealthCheck.CheckHealthAsync`**
+  - Smell: Long Function — `src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs:47-84` (try/catch inside an if: two levels of nesting)
+  - Refactoring: Extract Function. `TrippedTopicsConditionOrNone(snapshot)` takes the try/catch and returns zero or one condition; `Degraded(conditions)` builds the data, joins the description and returns the result; `Healthy()` replaces the repeated early return.
+  - Run with: `/tidy-first extract named methods from OutboxSweeperInvestigateHealthCheck.CheckHealthAsync to remove Long Function and nesting`
+
+- [ ] **STRUCTURAL: T19.3 — Replace the loop in `Dispatcher.ExpectedConsumersBySubscription` with a pipeline**
+  - Smell: Loops — `src/Paramore.Brighter.ServiceActivator/Dispatcher.cs` (`ExpectedConsumersBySubscription`)
+  - Refactoring: Replace Loop with Pipeline (`GroupBy` the subscription name, sum `NoOfPerformers`, `ToDictionary`). The src project targets netstandard2.0: run `dotnet build Brighter.slnx` after the change.
+  - Run with: `/tidy-first replace the foreach in Dispatcher.ExpectedConsumersBySubscription with a LINQ pipeline`
+
+- [ ] **DOC: T19.4 — Decide where the shared remedy `Data` builder and the condition value live**
+  - Smells: Duplicated Code and Feature Envy (`Data(string[] conditions)` copied into all four checks; `Data(Array.Empty<string>())` repeated seven times); Primitive Obsession and Data Clump (the `(Name, Description, Values)` tuple, and the same fold of conditions into a result in all four checks) — `OutboxSweeperInvestigateHealthCheck.cs:53,94,107,122,136`, `OutboxSweeperRestartHealthCheck.cs:45-56`, `ConsumerRestartHealthCheck.cs:54-77`, `ConsumerTakeOutOfServiceHealthCheck.cs:49-69`.
+  - Decide: (a) a static `RemedyCheckConvention.Data(RemedyKind, params string[])` in core, which is an additive public member; or a private copy per package; (b) a `RemedyCondition` readonly record struct and one fold of conditions into a `HealthCheckResult`, in core (additive public type, a value type and not a role) or internal to each package. Record the decision in the ADR 0086 and 0087 text (or an amendment, via `/adr`); if anything new is public, name the test that pins it, because new public API is behaviour and goes through `/test-first`, not `/tidy-first`.
+  - Separator: decided on 2026-10-22 as `"; "`, as ADR 0087 says; see T19.7. The fold writes `"; "`.
+
+- [ ] **STRUCTURAL: T19.5 — Move the remedy `Data` builder to where its constants live**
+  - Smell: Duplicated Code and Feature Envy — see T19.4.
+  - Refactoring: Move Function, then Extract Function (`Healthy(description)`) in each check, as T19.4 decided. If T19.4 decides on a public member, this task is replaced by a `/test-first` task, not run as a tidy.
+  - Run with: `/tidy-first move the remedy Data builder from the four health checks to RemedyCheckConvention`
+  - Depends on: T19.4.
+
+- [ ] **STRUCTURAL: T19.6 — Replace the condition tuple with a `RemedyCondition` value and one result fold**
+  - Smell: Primitive Obsession and Data Clump — see T19.4.
+  - Refactoring: Replace Primitive with Object, Combine Functions into Class, as T19.4 decided. The same condition applies as T19.5 if the value is public.
+  - Run with: `/tidy-first replace the condition tuple in the remedy health checks with a RemedyCondition value`
+  - Depends on: T19.4, T19.1, T19.2, T19.5, T19.7.
+
+- [ ] **TEST + IMPLEMENT: T19.7 — The take-out-of-service check joins several descriptions with `"; "`**
+  - **USE COMMAND**: `/test-first when several consumers have persistent channel failures the take-out-of-service description should join their phrases with a semicolon and a space`
+  - Test location: "tests/Paramore.Brighter.Extensions.Tests"
+  - Test file: `When_several_consumers_fail_persistently_should_join_the_descriptions_with_a_semicolon_and_space.cs`
+  - Test should verify: two consumers at the threshold give a description whose two phrases are separated by exactly `"; "`. The class carries `[Collection(DispatcherHealthCheckCollection.NAME)]`; the test asserts `Data["remedy_kind"]` equals `RemedyCheckConvention.Name(RemedyKind.TakeOutOfService)`.
+  - Implementation should: change `string.Join(";", ...)` to `string.Join("; ", ...)` in `ConsumerTakeOutOfServiceHealthCheck`. The existing `BrighterServiceActivatorHealthCheck` keeps `";"` (it is obsolete and unchanged).
+  - Decided by the maintainer on 2026-10-22 (ADR 0087 says `"; "`; no existing test pins the separator).
+  - References: ADR 0087 *Descriptions*.
+
+---
+
 ## Dependency summary
 
 - **Critical path (sweeper)**: T1.4 → Phase 2 (T2.1–T2.5) → Phase 3 (T3.2–T3.4, T3.6, T3.7) → Phase 4 (T4.1, T4.4, T4.5, T4.7) → Phase 5 (T5.1–T5.3).
