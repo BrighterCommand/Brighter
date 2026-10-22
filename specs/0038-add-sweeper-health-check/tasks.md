@@ -1723,7 +1723,7 @@
   - Refactoring: Extract Function. `TrippedTopicsConditionOrNone(snapshot)` takes the try/catch and returns zero or one condition; `Degraded(conditions)` builds the data, joins the description and returns the result; `Healthy()` replaces the repeated early return.
   - Run with: `/tidy-first extract named methods from OutboxSweeperInvestigateHealthCheck.CheckHealthAsync to remove Long Function and nesting`
 
-- [ ] **STRUCTURAL: T19.3 — Replace the loop in `Dispatcher.ExpectedConsumersBySubscription` with a pipeline**
+- [x] **STRUCTURAL: T19.3 — Replace the loop in `Dispatcher.ExpectedConsumersBySubscription` with a pipeline**
   - Smell: Loops — `src/Paramore.Brighter.ServiceActivator/Dispatcher.cs` (`ExpectedConsumersBySubscription`)
   - Refactoring: Replace Loop with Pipeline (`GroupBy` the subscription name, sum `NoOfPerformers`, `ToDictionary`). The src project targets netstandard2.0: run `dotnet build Brighter.slnx` after the change.
   - Run with: `/tidy-first replace the foreach in Dispatcher.ExpectedConsumersBySubscription with a LINQ pipeline`
