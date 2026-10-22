@@ -1456,7 +1456,7 @@
 
 *ADR 0087 steps 7–8. From T15.1 onward, every test file naming `BrighterServiceActivatorHealthCheck` carries `#pragma warning disable CS0618`.*
 
-- [ ] **TEST + IMPLEMENT: T15.1 — The existing consumer check is obsolete (warning, not error) and points to the new call**
+- [x] **TEST + IMPLEMENT: T15.1 — The existing consumer check is obsolete (warning, not error) and points to the new call**
   - **USE COMMAND**: `/test-first when the existing consumer health check is inspected it should be obsolete as a warning naming add brighter consumer health checks`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_existing_consumer_health_check_is_inspected_should_be_obsolete_naming_the_remedy_checks.cs`
