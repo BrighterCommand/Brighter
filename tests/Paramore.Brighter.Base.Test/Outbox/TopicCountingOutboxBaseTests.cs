@@ -290,6 +290,24 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         Assert.Equal(expected, counts);
     }
 
+    [Fact]
+    public async Task When_counting_by_topic_with_a_ceiling_of_zero_should_throw_out_of_range()
+    {
+        // Arrange
+        var request = new Dictionary<RoutingKey, TimeSpan>
+        {
+            [Orders] = TimeSpan.FromMinutes(5)
+        };
+        BeforeCount();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(request, new RequestContext(), 0));
+
+        // Assert
+        Assert.Equal("maxCountPerTopic", exception.ParamName);
+    }
+
     private async Task AddTopicStoreAsync()
     {
         var tenMinutes = TimeSpan.FromMinutes(10);

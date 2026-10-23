@@ -665,6 +665,8 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default)
         {
             if (dispatchedSinceByTopic is null) throw new ArgumentNullException(nameof(dispatchedSinceByTopic));
+            if (maxCountPerTopic < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxCountPerTopic), maxCountPerTopic, "The ceiling per topic must be at least 1.");
             CheckRequestedTopics(dispatchedSinceByTopic);
 
             var tcs = new TaskCompletionSource<IReadOnlyDictionary<RoutingKey, int>>(TaskCreationOptions.RunContinuationsAsynchronously);
