@@ -149,6 +149,35 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         Assert.False(counts.ContainsKey(Audit));
     }
 
+    [Fact]
+    public async Task When_counting_by_topic_with_a_topic_in_args_should_not_narrow_the_topics()
+    {
+        // Arrange
+        await AddTopicStoreAsync();
+        var request = new Dictionary<RoutingKey, TimeSpan>
+        {
+            [Orders] = TimeSpan.FromMinutes(5),
+            [Payments] = TimeSpan.FromMinutes(2),
+            [Refunds] = TimeSpan.FromMinutes(5)
+        };
+        var args = new Dictionary<string, object> { ["Topic"] = Orders.Value };
+
+        // Act
+        var counts = await WaitForCountsByTopicAsync(request, 100,
+            result => result.TryGetValue(Orders, out var orders) && orders == 5, args);
+
+        // Assert
+        IReadOnlyDictionary<RoutingKey, int> expected = new Dictionary<RoutingKey, int>
+        {
+            [Orders] = 5,
+            [Payments] = 1,
+            [Refunds] = 0
+        };
+        Assert.Equal(expected, counts);
+
+        Assert.Equal(new Dictionary<string, object> { ["Topic"] = Orders.Value }, args);
+    }
+
     private async Task AddTopicStoreAsync()
     {
         var tenMinutes = TimeSpan.FromMinutes(10);
@@ -179,14 +208,15 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
     private async Task<IReadOnlyDictionary<RoutingKey, int>> WaitForCountsByTopicAsync(
         IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic,
         int maxCountPerTopic,
-        Func<IReadOnlyDictionary<RoutingKey, int>, bool> expectedState)
+        Func<IReadOnlyDictionary<RoutingKey, int>, bool> expectedState,
+        Dictionary<string, object> args = null)
     {
         var stopwatch = Stopwatch.StartNew();
         while (true)
         {
             BeforeCount();
             var counts = await TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(
-                dispatchedSinceByTopic, new RequestContext(), maxCountPerTopic);
+                dispatchedSinceByTopic, new RequestContext(), maxCountPerTopic, args);
             if (expectedState(counts) || stopwatch.Elapsed >= ReadConsistencyTimeout)
                 return counts;
 
