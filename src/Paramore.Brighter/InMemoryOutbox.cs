@@ -83,6 +83,8 @@ namespace Paramore.Brighter
     public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>, IAmACausationTrackingOutbox, IAmATopicCountingOutbox
 #pragma warning restore CS0618
     {
+        private const int MAX_TOPIC_AGE_DAYS = 365;
+
         private readonly TimeProvider _timeProvider;
         private readonly InstrumentationOptions _instrumentationOptions;
 
@@ -674,10 +676,14 @@ namespace Paramore.Brighter
 
         private static void CheckRequestedTopics(IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic)
         {
-            foreach (var topic in dispatchedSinceByTopic.Keys)
+            foreach (var request in dispatchedSinceByTopic)
             {
-                if (RoutingKey.IsNullOrEmpty(topic))
+                if (RoutingKey.IsNullOrEmpty(request.Key))
                     throw new ArgumentException("A requested topic is null or empty.", nameof(dispatchedSinceByTopic));
+                if (request.Value <= TimeSpan.Zero || request.Value > TimeSpan.FromDays(MAX_TOPIC_AGE_DAYS))
+                    throw new ArgumentException(
+                        $"The age requested for topic {request.Key} must be greater than zero and no greater than {MAX_TOPIC_AGE_DAYS} days.",
+                        nameof(dispatchedSinceByTopic));
             }
         }
 

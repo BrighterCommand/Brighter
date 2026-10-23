@@ -249,6 +249,47 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
             TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(request, new RequestContext(), 100));
     }
 
+    [Theory]
+    [InlineData(0L)]
+    [InlineData(-TimeSpan.TicksPerSecond)]
+    [InlineData(365 * TimeSpan.TicksPerDay + 1)]
+    public async Task When_counting_by_topic_with_an_age_out_of_range_should_throw_argument(long ageTicks)
+    {
+        // Arrange
+        var request = new Dictionary<RoutingKey, TimeSpan>
+        {
+            [Orders] = TimeSpan.FromTicks(ageTicks)
+        };
+        BeforeCount();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(request, new RequestContext(), 100));
+
+        // Assert
+        Assert.Contains(Orders.Value, exception.Message);
+    }
+
+    [Fact]
+    public async Task When_counting_by_topic_with_an_age_of_365_days_should_count()
+    {
+        // Arrange
+        var request = new Dictionary<RoutingKey, TimeSpan>
+        {
+            [Orders] = TimeSpan.FromDays(365)
+        };
+
+        // Act
+        var counts = await WaitForCountsByTopicAsync(request, 100, result => result.ContainsKey(Orders));
+
+        // Assert
+        IReadOnlyDictionary<RoutingKey, int> expected = new Dictionary<RoutingKey, int>
+        {
+            [Orders] = 0
+        };
+        Assert.Equal(expected, counts);
+    }
+
     private async Task AddTopicStoreAsync()
     {
         var tenMinutes = TimeSpan.FromMinutes(10);
