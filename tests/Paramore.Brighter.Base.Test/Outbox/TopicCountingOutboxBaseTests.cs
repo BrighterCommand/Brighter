@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -124,6 +125,28 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         Assert.Equal(0, cappedCounts[Refunds]);
 
         Assert.Equal(7, youngerCounts[Orders]);
+    }
+
+    [Fact]
+    public async Task When_counting_by_topic_should_answer_exactly_the_requested_topics()
+    {
+        // Arrange
+        await AddTopicStoreAsync();
+        var request = new Dictionary<RoutingKey, TimeSpan>
+        {
+            [Orders] = TimeSpan.FromMinutes(5),
+            [Payments] = TimeSpan.FromMinutes(2),
+            [Refunds] = TimeSpan.FromMinutes(5)
+        };
+
+        // Act
+        var counts = await WaitForCountsByTopicAsync(request, 100,
+            result => result.TryGetValue(Orders, out var orders) && orders == 5);
+
+        // Assert
+        Assert.Equal(new HashSet<RoutingKey> { Orders, Payments, Refunds }, counts.Keys.ToHashSet());
+        Assert.Equal(0, counts[Refunds]);
+        Assert.False(counts.ContainsKey(Audit));
     }
 
     private async Task AddTopicStoreAsync()
