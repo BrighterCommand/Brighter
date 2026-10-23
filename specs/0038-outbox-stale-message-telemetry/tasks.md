@@ -222,7 +222,7 @@
   - Implementation should:
     - guard the ceiling at entry in `src/Paramore.Brighter/InMemoryOutbox.cs`.
 
-- [ ] **CHARACTERISE: T2.11 The per-topic count is safe beside adds, marks and the overall count (ADR 0086 risk :418)**
+- [x] **CHARACTERISE: T2.11 The per-topic count is safe beside adds, marks and the overall count (ADR 0086 risk :418)**
   - **USE COMMAND**: `/test-first the per-topic count runs safely while other tasks add, mark dispatched and run the overall count on the same outbox`
   - Test location: "tests/Paramore.Brighter.Base.Test/Outbox/"
   - Test file: `TopicCountingOutboxBaseTests.cs` with the case `When_counting_by_topic_beside_posting_path_calls_should_answer_every_requested_topic`, run through `tests/Paramore.Brighter.InMemory.Tests/Outbox/InMemoryTopicCountingOutboxTests.cs`
