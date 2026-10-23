@@ -663,12 +663,22 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default)
         {
             if (dispatchedSinceByTopic is null) throw new ArgumentNullException(nameof(dispatchedSinceByTopic));
+            CheckRequestedTopics(dispatchedSinceByTopic);
 
             var tcs = new TaskCompletionSource<IReadOnlyDictionary<RoutingKey, int>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             tcs.SetResult(GetOutstandingMessageCountsByTopic(dispatchedSinceByTopic, requestContext, maxCountPerTopic));
 
             return tcs.Task;
+        }
+
+        private static void CheckRequestedTopics(IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic)
+        {
+            foreach (var topic in dispatchedSinceByTopic.Keys)
+            {
+                if (RoutingKey.IsNullOrEmpty(topic))
+                    throw new ArgumentException("A requested topic is null or empty.", nameof(dispatchedSinceByTopic));
+            }
         }
 
         private Dictionary<RoutingKey, int> GetOutstandingMessageCountsByTopic(

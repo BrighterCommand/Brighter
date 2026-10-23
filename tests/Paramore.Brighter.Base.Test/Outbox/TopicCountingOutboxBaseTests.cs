@@ -234,6 +234,21 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         Assert.Equal("dispatchedSinceByTopic", exception.ParamName);
     }
 
+    [Fact]
+    public async Task When_counting_by_topic_with_an_empty_topic_should_throw_argument()
+    {
+        // Arrange
+        var request = new Dictionary<RoutingKey, TimeSpan>
+        {
+            [RoutingKey.Empty] = TimeSpan.FromMinutes(5)
+        };
+        BeforeCount();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(request, new RequestContext(), 100));
+    }
+
     private async Task AddTopicStoreAsync()
     {
         var tenMinutes = TimeSpan.FromMinutes(10);
