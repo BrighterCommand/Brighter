@@ -101,7 +101,7 @@
 
 *Depends on no earlier phase.*
 
-- [ ] **STRUCTURAL: T2.1 Add the `IAmATopicCountingOutbox` capability interface**
+- [x] **STRUCTURAL: T2.1 Add the `IAmATopicCountingOutbox` capability interface**
   - **USE COMMAND**: `/tidy-first add the IAmATopicCountingOutbox capability interface`
   - Add `src/Paramore.Brighter/IAmATopicCountingOutbox.cs`, beside `IAmACausationTrackingOutbox` (`src/Paramore.Brighter/IAmACausationTrackingOutbox.cs:41`). It has one member, `Task<IReadOnlyDictionary<RoutingKey, int>> GetOutstandingMessageCountsByTopicAsync(IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic, RequestContext? requestContext, int maxCountPerTopic, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)`.
   - Its `///` documentation states every contract bullet:
