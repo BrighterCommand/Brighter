@@ -212,7 +212,7 @@
   - Implementation should:
     - validate each age before the pass, in `src/Paramore.Brighter/InMemoryOutbox.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.10 A ceiling of 0 throws `ArgumentOutOfRangeException`**
+- [x] **TEST + IMPLEMENT: T2.10 A ceiling of 0 throws `ArgumentOutOfRangeException`**
   - **USE COMMAND**: `/test-first a per-topic ceiling below one throws ArgumentOutOfRangeException`
   - Test location: "tests/Paramore.Brighter.Base.Test/Outbox/"
   - Test file: `TopicCountingOutboxBaseTests.cs` with the case `When_counting_by_topic_with_a_ceiling_of_zero_should_throw_out_of_range`, run through `tests/Paramore.Brighter.InMemory.Tests/Outbox/InMemoryTopicCountingOutboxTests.cs`
