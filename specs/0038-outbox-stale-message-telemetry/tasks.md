@@ -158,7 +158,7 @@
   - Implementation should (only if the test is RED on arrival):
     - ignore `args` in the capability, as the overall count does (`src/Paramore.Brighter/InMemoryOutbox.cs:617-643`).
 
-- [ ] **CHARACTERISE: T2.5 A message counts toward its header topic, not its `ProducerTopic` bag entry**
+- [x] **CHARACTERISE: T2.5 A message counts toward its header topic, not its `ProducerTopic` bag entry**
   - **USE COMMAND**: `/test-first a message whose header topic differs from its ProducerTopic bag entry counts toward its header topic`
   - Test location: "tests/Paramore.Brighter.Base.Test/Outbox/"
   - Test file: `TopicCountingOutboxBaseTests.cs` with the case `When_counting_by_topic_should_count_a_message_toward_its_header_topic`, run through `tests/Paramore.Brighter.InMemory.Tests/Outbox/InMemoryTopicCountingOutboxTests.cs`
