@@ -16,6 +16,8 @@ namespace Paramore.Brighter.Base.Test.Outbox;
 /// <typeparam name="TTransaction">The transaction type the outbox enrolls in.</typeparam>
 public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
 {
+    private const int CONCURRENT_ROUNDS = 200;
+
     // Separate test processes can share a store, so each scenario counts its own topics.
     protected RoutingKey Orders { get; } = new($"orders-{Uuid.New():N}");
     protected RoutingKey Payments { get; } = new($"payments-{Uuid.New():N}");
@@ -308,6 +310,33 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         Assert.Equal("maxCountPerTopic", exception.ParamName);
     }
 
+    [Fact]
+    public async Task When_counting_by_topic_beside_posting_path_calls_should_answer_every_requested_topic()
+    {
+        // Arrange
+        var request = new Dictionary<RoutingKey, TimeSpan>
+        {
+            [Orders] = TimeSpan.FromMinutes(5),
+            [Payments] = TimeSpan.FromMinutes(5),
+            [Refunds] = TimeSpan.FromMinutes(5)
+        };
+        BeforeCount();
+
+        // Act
+        var postingPath = new[]
+        {
+            Task.Run(() => AddAndMarkDispatchedAsync(Orders)),
+            Task.Run(() => AddAndMarkDispatchedAsync(Payments)),
+            Task.Run(() => CountOutstandingRepeatedlyAsync())
+        };
+        var results = await Task.Run(() => CountByTopicRepeatedlyAsync(request));
+        await Task.WhenAll(postingPath);
+
+        // Assert
+        Assert.All(results, counts =>
+            Assert.Equal(new HashSet<RoutingKey> { Orders, Payments, Refunds }, counts.Keys.ToHashSet()));
+    }
+
     private async Task AddTopicStoreAsync()
     {
         var tenMinutes = TimeSpan.FromMinutes(10);
@@ -333,6 +362,36 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
 
         foreach (var message in dispatched)
             await OutboxAsync.MarkDispatchedAsync(message.Id, new RequestContext());
+    }
+
+    private async Task AddAndMarkDispatchedAsync(RoutingKey topic)
+    {
+        for (var i = 0; i < CONCURRENT_ROUNDS; i++)
+        {
+            var message = CreateMessage(topic);
+            await OutboxAsync.AddAsync(message, new RequestContext());
+            if (i % 2 == 0)
+                await OutboxAsync.MarkDispatchedAsync(message.Id, new RequestContext());
+        }
+    }
+
+    private async Task CountOutstandingRepeatedlyAsync()
+    {
+        for (var i = 0; i < CONCURRENT_ROUNDS; i++)
+            await OutboxAsync.GetOutstandingMessageCountAsync(TimeSpan.FromMinutes(5), new RequestContext());
+    }
+
+    private async Task<List<IReadOnlyDictionary<RoutingKey, int>>> CountByTopicRepeatedlyAsync(
+        IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic)
+    {
+        var results = new List<IReadOnlyDictionary<RoutingKey, int>>();
+        for (var i = 0; i < CONCURRENT_ROUNDS; i++)
+        {
+            BeforeCount();
+            results.Add(await TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(
+                dispatchedSinceByTopic, new RequestContext(), 100));
+        }
+        return results;
     }
 
     private async Task<IReadOnlyDictionary<RoutingKey, int>> WaitForCountsByTopicAsync(
