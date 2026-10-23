@@ -201,7 +201,7 @@
     - reject a topic for which `RoutingKey.IsNullOrEmpty` is true, in `src/Paramore.Brighter/InMemoryOutbox.cs`;
     - review only, with no test: a null topic cannot be a `Dictionary` key (ADR 0086 :379). Note that in the PR description.
 
-- [ ] **TEST + IMPLEMENT: T2.9 An age outside (0, 365 days] throws `ArgumentException`**
+- [x] **TEST + IMPLEMENT: T2.9 An age outside (0, 365 days] throws `ArgumentException`**
   - **USE COMMAND**: `/test-first per-topic ages of zero, minus one second and 365 days plus one tick throw ArgumentException, and 365 days is accepted`
   - Test location: "tests/Paramore.Brighter.Base.Test/Outbox/"
   - Test file: `TopicCountingOutboxBaseTests.cs` with the cases `When_counting_by_topic_with_an_age_out_of_range_should_throw_argument` (theory: 0, -1 s, 365 d + 1 tick) and `When_counting_by_topic_with_an_age_of_365_days_should_count`, run through `tests/Paramore.Brighter.InMemory.Tests/Outbox/InMemoryTopicCountingOutboxTests.cs`
