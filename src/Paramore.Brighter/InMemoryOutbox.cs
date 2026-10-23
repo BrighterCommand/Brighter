@@ -662,6 +662,8 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            if (dispatchedSinceByTopic is null) throw new ArgumentNullException(nameof(dispatchedSinceByTopic));
+
             var tcs = new TaskCompletionSource<IReadOnlyDictionary<RoutingKey, int>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             tcs.SetResult(GetOutstandingMessageCountsByTopic(dispatchedSinceByTopic, requestContext, maxCountPerTopic));

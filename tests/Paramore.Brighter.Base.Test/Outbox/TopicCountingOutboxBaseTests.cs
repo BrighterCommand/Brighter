@@ -220,6 +220,20 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         Assert.Empty(counts);
     }
 
+    [Fact]
+    public async Task When_counting_by_topic_with_a_null_map_should_throw_argument_null()
+    {
+        // Arrange
+        BeforeCount();
+
+        // Act
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            TopicCountingOutbox.GetOutstandingMessageCountsByTopicAsync(null, new RequestContext(), 100));
+
+        // Assert
+        Assert.Equal("dispatchedSinceByTopic", exception.ParamName);
+    }
+
     private async Task AddTopicStoreAsync()
     {
         var tenMinutes = TimeSpan.FromMinutes(10);
