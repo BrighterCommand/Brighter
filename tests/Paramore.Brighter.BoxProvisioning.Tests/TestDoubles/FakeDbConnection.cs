@@ -30,14 +30,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 
-/// <summary>
-/// Minimal <see cref="DbConnection"/> stub used as the <c>TConnection</c> type-argument
-/// when exercising <c>SqlBoxMigrationRunner</c> without a real database. The
-/// runner base treats the connection as an opaque token threaded through hooks, so all
-/// data-access members throw <see cref="NotSupportedException"/>; lifecycle members
-/// (<see cref="Close"/>, <see cref="Open"/>) update an in-memory state field so
-/// <c>using</c>/<c>await using</c> dispose paths complete cleanly.
-/// </summary>
+// Data-access members throw NotSupportedException; Open and Close track state so disposal completes.
 internal class FakeDbConnection : DbConnection
 {
     private ConnectionState _state = ConnectionState.Closed;

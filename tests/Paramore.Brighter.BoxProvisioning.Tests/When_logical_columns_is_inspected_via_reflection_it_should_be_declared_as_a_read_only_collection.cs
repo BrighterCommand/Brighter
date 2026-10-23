@@ -26,16 +26,12 @@ using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
+/// <summary>
+/// <see cref="IAmABoxMigration.LogicalColumns"/> is declared read-only, so callers cannot mutate
+/// the column set through the public API.
+/// </summary>
 public class LogicalColumnsPublicApiTests
 {
-    // The XML doc on IAmABoxMigration.LogicalColumns (and the implementation contract across all
-    // backends) says callers must treat the column set as read-only and never mutate it after
-    // construction. Exposing it as ISet<string> permits caller mutation through the public
-    // surface (Add/Remove/Clear) and contradicts the documented invariant. The fix is to declare
-    // it as IReadOnlyCollection<string>: callers can still enumerate it, the runner's
-    // IsSupersetOf/SetEquals/etc. accept IEnumerable<T> arguments, and mutation is no longer
-    // possible through the public API. Source-breaking on netstandard2.0 (no DIM workaround).
-
     [Fact]
     public void When_iamaboxmigration_logical_columns_is_inspected_it_should_be_declared_as_a_read_only_collection()
     {

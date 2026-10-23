@@ -26,13 +26,8 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning.Drift;
 
-/// <summary>
-/// Backend-specific housekeeping columns for the SQLite inbox. The PRIMARY KEY is
-/// <c>CommandId</c>, which is itself a logical column per ADR §1, so no extra housekeeping
-/// columns exist beyond the V_latest logical column set.
-/// </summary>
+// No housekeeping columns: the primary key, CommandId, is itself a logical column (ADR 0057 §1).
 internal static class SqliteInboxHousekeeping
 {
-    /// <summary>Empty: SQLite inbox has no housekeeping columns outside the logical set.</summary>
     public static readonly ISet<string> V1 = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 }

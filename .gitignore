@@ -360,6 +360,11 @@ PROMPT-*.md
 # right now, not what the project decided. See .claude/commands/spec/gear.md.
 specs/**/.current-gear
 
+# Spec review findings (/spec:review) — untracked working state, not a spec artifact.
+# They record one reviewer pass over a draft; the resolved decisions live in requirements.md,
+# the ADRs and tasks.md. Files committed before this rule remain tracked.
+specs/**/review-*.md
+
 # Local-only docker compose overrides (e.g. port remaps for host conflicts)
 docker-compose-*.local.yaml
 .show-me-ledger.json

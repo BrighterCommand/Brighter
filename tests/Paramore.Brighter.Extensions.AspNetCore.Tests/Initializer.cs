@@ -26,6 +26,7 @@ using System.Data.Common;
 using System.Runtime.CompilerServices;
 using System.Transactions;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Logging;
@@ -40,7 +41,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 /// <see cref="RequestHandlerAsync{TRequest}"/>, <see cref="WrapPipeline{TRequest}"/>,
 /// <see cref="UseInboxHandler{T}"/>,
 /// <see cref="OutboxProducerMediator{TMessage,TTransaction}"/>) plus <see cref="TransformPipelineBuilder"/>,
-/// <see cref="TransformLifetimeScope"/>, <see cref="Dispatcher"/> and <see cref="MessagePump"/>, to bind to it.
+/// <see cref="TransformLifetimeScope"/>, <see cref="InMemoryOutboxCircuitBreaker"/>, <see cref="Dispatcher"/> and <see cref="MessagePump"/>, to bind to it.
 /// </summary>
 /// <remarks>
 /// Every <c>PlaceOrderWebApplicationFactory</c> a test constructs builds its own <c>CommandProcessor</c>
@@ -85,6 +86,7 @@ internal static class Initializer
 
         RuntimeHelpers.RunClassConstructor(typeof(TransformPipelineBuilder).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(TransformLifetimeScope).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(InMemoryOutboxCircuitBreaker).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<PlaceOrder>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<SharedMarkerSentCommand>).TypeHandle);

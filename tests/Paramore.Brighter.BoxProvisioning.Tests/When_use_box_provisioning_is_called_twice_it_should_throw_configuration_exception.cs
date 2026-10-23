@@ -34,15 +34,9 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// <see cref="BrighterBuilderBoxProvisioningExtensions.UseBoxProvisioning"/> is single-call
-/// by contract. The hosted-service registration is guarded by
-/// <c>TryAddEnumerable</c>, but per-backend <c>Add{Backend}{Box}</c> registrations are not —
-/// each invocation appends another <c>AddSingleton&lt;IAmABoxProvisioner&gt;</c>, so a
-/// second <c>UseBoxProvisioning</c> call would double-register every provisioner and the
-/// hosted service would run each migration twice. The reviewer's "guard the second call or
-/// document the single-call contract loudly" prompt — we pick the louder guard: throw
-/// <see cref="ConfigurationException"/> on the second call with a message that names the
-/// supported pattern (all provisioners inside one delegate).
+/// <see cref="BrighterBuilderBoxProvisioningExtensions.UseBoxProvisioning"/> is single-call: a
+/// second call throws <see cref="ConfigurationException"/> rather than register every
+/// provisioner twice, but a first call that failed can be retried.
 /// </summary>
 public class UseBoxProvisioningIdempotencyTests
 {
@@ -76,12 +70,7 @@ public class UseBoxProvisioningIdempotencyTests
     }
 
     /// <summary>
-    /// Companion to the double-call guard: when <c>configure(options)</c> throws on the FIRST
-    /// invocation, the marker MUST NOT be registered — otherwise the operator's natural
-    /// retry hits the "already invoked" guard with a misleading message. The marker
-    /// registration must therefore land AFTER <c>configure(options)</c> returns
-    /// successfully, so a throwing configure leaves the service collection in the same
-    /// state as the never-invoked case.
+    /// A <c>configure</c> delegate that throws must not leave the call marked as made.
     /// </summary>
     [Fact]
     public void When_first_call_configure_throws_then_retry_with_succeeding_configure_it_should_not_throw()
@@ -90,30 +79,19 @@ public class UseBoxProvisioningIdempotencyTests
         var services = new ServiceCollection();
         var builder = new StubBrighterBuilder(services);
 
-        //First call — configure throws. The "already invoked" guard must not be tripped by
-        //this attempt because the configure delegate failed before any registrations ran.
         var firstThrown = Record.Exception(() => builder.UseBoxProvisioning(_ => throw new InvalidOperationException("configure-side failure")));
         Assert.IsType<InvalidOperationException>(firstThrown);
 
-        //Act — retry with a successful configure delegate.
+        //Act
         var retryThrown = Record.Exception(() => builder.UseBoxProvisioning(_ => { }));
 
-        //Assert — retry succeeds. RED with marker-registered-before-configure: retry
-        //would see the leaked marker and throw the ConfigurationException "already invoked"
-        //message even though the first invocation never completed.
+        //Assert
         Assert.Null(retryThrown);
     }
 
     /// <summary>
-    /// Sibling to the configure-throws case: when a per-backend registration callback
-    /// (the <c>Add{Backend}{Box}</c> body queued into <see cref="BoxProvisioningOptions.Add"/>)
-    /// throws DURING the foreach that applies them — e.g. an NRE inside an extension method or
-    /// a misconfigured option — the marker MUST NOT be registered either, for the same reason.
-    /// The marker registration must therefore land AFTER the registrations foreach completes,
-    /// not between <c>configure(options)</c> and the foreach (which is where it lived before
-    /// this fix). Pre-fix: marker registered before the foreach; a throwing registration left
-    /// the marker in the collection and the operator's natural retry hit the "already invoked"
-    /// guard with a misleading message.
+    /// A registration queued through <see cref="BoxProvisioningOptions.Add"/> that throws must
+    /// not leave the call marked as made.
     /// </summary>
     [Fact]
     public void When_first_call_registration_throws_then_retry_with_succeeding_configure_it_should_not_throw()
@@ -122,27 +100,17 @@ public class UseBoxProvisioningIdempotencyTests
         var services = new ServiceCollection();
         var builder = new StubBrighterBuilder(services);
 
-        //First call — configure succeeds but a queued registration callback throws while the
-        //foreach is applying them. Represents an NRE-throwing AddXOutbox extension.
         var firstThrown = Record.Exception(() => builder.UseBoxProvisioning(o =>
             o.Add(_ => throw new InvalidOperationException("registration-side failure"))));
         Assert.IsType<InvalidOperationException>(firstThrown);
 
-        //Act — retry with a successful configure delegate (no throwing registrations).
+        //Act
         var retryThrown = Record.Exception(() => builder.UseBoxProvisioning(_ => { }));
 
-        //Assert — retry succeeds. RED with marker-registered-between-configure-and-foreach:
-        //retry would see the leaked marker and throw the ConfigurationException "already
-        //invoked" message even though the first invocation never completed its registrations.
+        //Assert
         Assert.Null(retryThrown);
     }
 
-    /// <summary>
-    /// Inline stub for <see cref="IBrighterBuilder"/>; mirrors the per-backend test stubs
-    /// (e.g. <c>tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/StubBrighterBuilder.cs</c>)
-    /// but lives inside the core BoxProvisioning test project so the framework-level
-    /// idempotency contract is testable without a per-backend test home.
-    /// </summary>
     private sealed class StubBrighterBuilder : IBrighterBuilder
     {
         public IServiceCollection Services { get; }

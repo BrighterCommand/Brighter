@@ -31,6 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
+/// <summary>
+/// An outbox already at the latest builder shape, with a V1 history row written before migration chains
+/// existed, reaches V_latest through the normal path: its V1 row is kept, V2..V_latest are stamped, and every
+/// UpScript is skipped by its IdempotencyCheckSql because the columns already exist (ADR 0057 §3, §5).
+/// </summary>
 public class Spec0023EraHistoryTransitionTests : IAsyncLifetime
 {
     private const string Spec0023EraDescription = "spec 0023 fresh install";
@@ -41,11 +46,7 @@ public class Spec0023EraHistoryTransitionTests : IAsyncLifetime
     [Fact]
     public async Task When_sqlite_table_has_spec_0023_era_history_at_v1_it_should_transition_cleanly_to_v_latest()
     {
-        //Arrange — V7-shaped outbox via the live builder DDL + spec-0023-era history at V1.
-        //This models a prod install that was provisioned under spec 0023 (which only ever
-        //stamped V_latest=1 against the live builder shape) — the V1 row is honest "I made
-        //this table" history but its description text is whatever spec 0023 chose ("spec 0023
-        //fresh install"), not the V_k descriptions spec 0027 introduces.
+        //Arrange
         await ExecuteDdl(SqliteOutboxBuilder.GetDDL(_tableName, hasBinaryMessagePayload: false));
         await EnsureHistoryTable();
         await SeedSpec0023EraHistoryRowAtV1();
@@ -63,15 +64,9 @@ public class Spec0023EraHistoryTransitionTests : IAsyncLifetime
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — table shape unchanged. The runner's normal path walks V2..V7; per ADR §6,
-        //ApplyOrSkipAsync evaluates IdempotencyCheckSql (pragma_table_info probe) for each
-        //V_k — returns >0 because the V_latest builder shape already has the column — so
-        //UpScript is skipped, history row inserted only.
+        //Assert
         Assert.Equal(columnsBefore, await GetTableColumns());
 
-        //Assert — V1 row preserved with its original spec-0023-era description (the runner's
-        //normal-path `migration.Version <= maxVersion` filter sees V1 <= maxVersion=1 and skips
-        //it entirely); V2..V7 inserted by the normal path with their per-migration descriptions.
         var rowsByVersion = await GetHistoryRowsByVersion();
         Assert.Equal(ExpectedMigrationVersions.OutboxLatest, rowsByVersion.Count);
         Assert.Equal(Spec0023EraDescription, rowsByVersion[1]);

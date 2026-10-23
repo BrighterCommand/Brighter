@@ -452,6 +452,7 @@ After the sub-agent returns:
    - If counts are wrong, fix them before writing
 
 2. **Write the findings file** to `specs/{current-spec}/review-{phase}.md` using the validated output. For the `code` phase the file is `specs/{current-spec}/review-code.md`.
+   The file is **untracked working state** (gitignored by `specs/**/review-*.md`): it records one review pass, not a decision, so do not stage or commit it. Stage a spec's files by name, never `git add specs/{current-spec}/`.
 
 3. **Present a summary to the user** in the conversation:
    - Verdict (PASS / NEEDS WORK)

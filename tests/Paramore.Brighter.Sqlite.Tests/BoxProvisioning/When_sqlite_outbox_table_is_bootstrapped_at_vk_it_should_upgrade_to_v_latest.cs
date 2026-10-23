@@ -31,6 +31,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
+/// <summary>
+/// Bootstrapping an outbox seeded at V_k with no history stamps a synthetic V_k row, applies
+/// V_{k+1}..V_latest, and keeps the rows already in the table.
+/// </summary>
 public class OutboxVkToLatestUpgradeTests : IAsyncLifetime
 {
     private const string MarkerMessageId = "marker-row-must-survive";
@@ -53,8 +57,7 @@ public class OutboxVkToLatestUpgradeTests : IAsyncLifetime
     [InlineData(7)]
     public async Task When_sqlite_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v_latest(int k)
     {
-        //Arrange — seed an outbox at V_k (no history row) and a marker row to prove
-        //preservation across the bootstrap path.
+        //Arrange
         SqliteOutboxLegacySeeder.SeedAtV(k, _connectionString, _tableName);
         await SeedMarkerRow();
 
@@ -70,14 +73,13 @@ public class OutboxVkToLatestUpgradeTests : IAsyncLifetime
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — the table now has the full V_latest column set (V_{k+1}..V_latest ALTERs applied).
+        //Assert
         var actualColumns = await GetTableColumns();
         foreach (var expected in s_vLatestExpectedColumns)
         {
             Assert.Contains(expected, actualColumns);
         }
 
-        //Assert — history rows: one synthetic at V_k + one applied per V_{k+1}..V_latest.
         var rowsByVersion = await GetHistoryRowsByVersion();
         Assert.Equal(ExpectedMigrationVersions.OutboxLatest - k + 1, rowsByVersion.Count);
 
@@ -93,7 +95,6 @@ public class OutboxVkToLatestUpgradeTests : IAsyncLifetime
                 $"(description was: '{appliedDescription}')");
         }
 
-        //Assert — the seeded marker row survived (no DROP/recreate happened).
         Assert.Equal(1, await GetMarkerRowCount());
     }
 
