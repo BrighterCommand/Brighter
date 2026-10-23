@@ -76,20 +76,23 @@ public class PostgreSqlOutboxBuilderDriftTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void When_postgres_outbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_dispatched(
+    public void When_postgres_outbox_v1_upscript_is_inspected_it_should_carry_the_pre_dispatched_historical_baseline(
         bool binaryMessagePayload)
     {
+        //Arrange
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Host=ignored;Database=ignored;Username=ignored;Password=ignored",
             outBoxTableName: tableName,
             binaryMessagePayload: binaryMessagePayload);
 
+        //Act
         var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
+        //Assert
         Assert.Equal(1, v1.Version.Value);
-        Assert.Contains("Dispatched", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Dispatched", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("HeaderBag", v1.UpScript, StringComparison.OrdinalIgnoreCase);
     }
 
