@@ -116,7 +116,7 @@
     - the errors are `ArgumentNullException`, `ArgumentException` and `ArgumentOutOfRangeException`, and the 365-day bound is stated in prose.
   - Verification: nothing implements or calls it; the solution builds.
 
-- [ ] **TEST + IMPLEMENT: T2.2 The per-topic count returns each requested topic's stale count, capped at the ceiling (AC-34)**
+- [x] **TEST + IMPLEMENT: T2.2 The per-topic count returns each requested topic's stale count, capped at the ceiling (AC-34)**
   - **USE COMMAND**: `/test-first InMemoryOutbox counts stale messages per requested topic at each topic's age, capped at the ceiling per topic`
   - Test location: "tests/Paramore.Brighter.Base.Test/Outbox/" (base) and "tests/Paramore.Brighter.InMemory.Tests/Outbox/" (derived)
   - Test file: `TopicCountingOutboxBaseTests.cs` with the case `When_counting_by_topic_should_return_each_topic_stale_count_capped_at_the_ceiling`, run through `InMemoryTopicCountingOutboxTests.cs`
