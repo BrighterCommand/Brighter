@@ -178,6 +178,33 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         Assert.Equal(new Dictionary<string, object> { ["Topic"] = Orders.Value }, args);
     }
 
+    [Fact]
+    public async Task When_counting_by_topic_should_count_a_message_toward_its_header_topic()
+    {
+        // Arrange
+        var ordersV2 = new RoutingKey($"{Orders.Value}.v2");
+        var message = CreateMessage(ordersV2);
+        message.Header.Bag[Message.ProducerTopicHeaderName] = Orders.Value;
+        await AddMessageWithAgeAsync(message, TimeSpan.FromMinutes(10));
+        var request = new Dictionary<RoutingKey, TimeSpan>
+        {
+            [Orders] = TimeSpan.FromMinutes(5),
+            [ordersV2] = TimeSpan.FromMinutes(5)
+        };
+
+        // Act
+        var counts = await WaitForCountsByTopicAsync(request, 100,
+            result => result.TryGetValue(ordersV2, out var v2) && v2 == 1);
+
+        // Assert
+        IReadOnlyDictionary<RoutingKey, int> expected = new Dictionary<RoutingKey, int>
+        {
+            [Orders] = 0,
+            [ordersV2] = 1
+        };
+        Assert.Equal(expected, counts);
+    }
+
     private async Task AddTopicStoreAsync()
     {
         var tenMinutes = TimeSpan.FromMinutes(10);
