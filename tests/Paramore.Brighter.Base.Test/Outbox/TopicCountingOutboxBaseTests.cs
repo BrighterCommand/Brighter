@@ -205,6 +205,21 @@ public abstract class TopicCountingOutboxBaseTests<TTransaction> : IDisposable
         Assert.Equal(expected, counts);
     }
 
+    [Fact]
+    public async Task When_counting_by_topic_with_no_topics_should_return_an_empty_result()
+    {
+        // Arrange
+        await AddTopicStoreAsync();
+        var request = new Dictionary<RoutingKey, TimeSpan>();
+
+        // Act
+        var counts = await WaitForCountsByTopicAsync(request, 100, result => result.Count == 0);
+
+        // Assert
+        Assert.NotNull(counts);
+        Assert.Empty(counts);
+    }
+
     private async Task AddTopicStoreAsync()
     {
         var tenMinutes = TimeSpan.FromMinutes(10);
