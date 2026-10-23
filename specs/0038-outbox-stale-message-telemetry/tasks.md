@@ -169,7 +169,7 @@
   - Implementation should (only if the test is RED on arrival):
     - key each entry by `Message.Header.Topic` in `src/Paramore.Brighter/InMemoryOutbox.cs`.
 
-- [ ] **CHARACTERISE: T2.6 An empty request returns an empty result**
+- [x] **CHARACTERISE: T2.6 An empty request returns an empty result**
   - **USE COMMAND**: `/test-first an empty topic map returns an empty per-topic result`
   - Test location: "tests/Paramore.Brighter.Base.Test/Outbox/"
   - Test file: `TopicCountingOutboxBaseTests.cs` with the case `When_counting_by_topic_with_no_topics_should_return_an_empty_result`, run through `tests/Paramore.Brighter.InMemory.Tests/Outbox/InMemoryTopicCountingOutboxTests.cs`
