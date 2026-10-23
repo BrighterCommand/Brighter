@@ -190,7 +190,7 @@
   - Implementation should:
     - guard the map at entry in `src/Paramore.Brighter/InMemoryOutbox.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.8 An empty topic throws `ArgumentException`**
+- [x] **TEST + IMPLEMENT: T2.8 An empty topic throws `ArgumentException`**
   - **USE COMMAND**: `/test-first a request that holds RoutingKey.Empty throws ArgumentException`
   - Test location: "tests/Paramore.Brighter.Base.Test/Outbox/"
   - Test file: `TopicCountingOutboxBaseTests.cs` with the case `When_counting_by_topic_with_an_empty_topic_should_throw_argument`, run through `tests/Paramore.Brighter.InMemory.Tests/Outbox/InMemoryTopicCountingOutboxTests.cs`
