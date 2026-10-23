@@ -133,7 +133,7 @@
     - count in one pass over the entries, by header topic, with the overall count's boundary `WriteTime <= now - age` (`:634`), capping each topic at the ceiling;
     - return a completed task, as the overall count does (`:646-655`).
 
-- [ ] **CHARACTERISE: T2.3 The per-topic result holds exactly the requested topics**
+- [x] **CHARACTERISE: T2.3 The per-topic result holds exactly the requested topics**
   - **USE COMMAND**: `/test-first the per-topic result has an entry for every requested topic, 0 when it has none, and no entry for an unrequested topic`
   - Test location: "tests/Paramore.Brighter.Base.Test/Outbox/"
   - Test file: `TopicCountingOutboxBaseTests.cs` with the case `When_counting_by_topic_should_answer_exactly_the_requested_topics`, run through `tests/Paramore.Brighter.InMemory.Tests/Outbox/InMemoryTopicCountingOutboxTests.cs`
