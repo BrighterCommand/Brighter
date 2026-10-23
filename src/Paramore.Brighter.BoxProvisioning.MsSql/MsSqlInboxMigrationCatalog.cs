@@ -32,19 +32,16 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// Defines the migration history for MSSQL inbox tables.
 /// </summary>
 /// <remarks>
-/// V1's <c>UpScript</c> is the literal historical baseline DDL — the first MSSQL inbox
-/// builder shape (commit <c>b7f96957b</c>, March 2019). The fresh-install fast path
+/// V1's <c>UpScript</c> is the literal historical baseline DDL — the MSSQL inbox builder
+/// shape before <c>ContextKey</c>, with the <c>Id</c> identity key added in commit
+/// <c>f49d8c560</c> (June 2017). The fresh-install fast path
 /// (ADR 0057 §3) takes its DDL from <see cref="FreshInstallDdl"/> instead, so V1.UpScript
 /// carries the historical shape. V2 adds <c>ContextKey</c> as a conditional <c>ALTER TABLE ADD</c>
 /// guarded by <c>IF COL_LENGTH(...) IS NULL</c> per ADR 0057 §5.
 /// <para>
-/// Born-past-V1 asymmetry: the MSSQL inbox first shipped <em>with</em> <c>ContextKey</c> —
-/// there is no pre-ContextKey MSSQL inbox in the wild. V1.UpScript therefore creates a
-/// table whose physical column set is the union of V1.LogicalColumns + V2's additions
-/// (plus the <c>Id</c> housekeeping column). On chain replay V2's idempotency guard sees
-/// the existing column and skips the ALTER. V1.LogicalColumns remains the "logical
-/// pre-V2" set (no ContextKey) so the bootstrap-detection contract (ADR 0057 §4) can
-/// still distinguish a hypothetical pre-V2 table.
+/// The MSSQL inbox shipped without <c>ContextKey</c> (first in commit <c>3cf37bbe9</c>, June
+/// 2015, before the <c>Id</c> column) until commit <c>787c31c52</c> added it, so a legacy table
+/// may be at V1, and V2 adds the column to it.
 /// </para>
 /// <para>
 /// V3 adds <c>CausationId</c> via the same idempotency-guarded
@@ -64,8 +61,8 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v3AddedColumns = ["CausationId"];
 
-    // From commit b7f96957b (March 2019); born with ContextKey, see the class remarks. {0} is
-    // the validated table name, bracket-quoted so reserved words (User, Order) parse.
+    // The inbox DDL before ContextKey (as at 787c31c52^). {0} is the validated table name,
+    // bracket-quoted so reserved words (User, Order) parse.
     private const string V1HistoricalDdl =
         """
         CREATE TABLE [{0}]
@@ -75,7 +72,6 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
                 [CommandType] [NVARCHAR](256) NULL ,
                 [CommandBody] [NTEXT] NULL ,
                 [Timestamp] [DATETIME] NULL ,
-                [ContextKey] [NVARCHAR](256) NULL,
                 PRIMARY KEY ( [Id] )
             );
         """;
