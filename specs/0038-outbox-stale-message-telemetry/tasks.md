@@ -180,7 +180,7 @@
   - Implementation should (only if the test is RED on arrival):
     - return an empty dictionary without reading the store, in `src/Paramore.Brighter/InMemoryOutbox.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.7 A null topic map throws `ArgumentNullException`**
+- [x] **TEST + IMPLEMENT: T2.7 A null topic map throws `ArgumentNullException`**
   - **USE COMMAND**: `/test-first a null topic map throws ArgumentNullException`
   - Test location: "tests/Paramore.Brighter.Base.Test/Outbox/"
   - Test file: `TopicCountingOutboxBaseTests.cs` with the case `When_counting_by_topic_with_a_null_map_should_throw_argument_null`, run through `tests/Paramore.Brighter.InMemory.Tests/Outbox/InMemoryTopicCountingOutboxTests.cs`
