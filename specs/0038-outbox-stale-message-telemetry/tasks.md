@@ -146,7 +146,7 @@
   - Implementation should (only if the test is RED on arrival):
     - build the result from the requested map's keys only, in `src/Paramore.Brighter/InMemoryOutbox.cs`.
 
-- [ ] **CHARACTERISE: T2.4 `args` does not narrow the requested topics and is not changed**
+- [x] **CHARACTERISE: T2.4 `args` does not narrow the requested topics and is not changed**
   - **USE COMMAND**: `/test-first args with a Topic entry does not narrow the per-topic count and holds the same entries after the call`
   - Test location: "tests/Paramore.Brighter.Base.Test/Outbox/"
   - Test file: `TopicCountingOutboxBaseTests.cs` with the case `When_counting_by_topic_with_a_topic_in_args_should_not_narrow_the_topics`, run through `tests/Paramore.Brighter.InMemory.Tests/Outbox/InMemoryTopicCountingOutboxTests.cs`
