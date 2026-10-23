@@ -78,27 +78,23 @@ public class PostgreSqlOutboxBuilderDriftTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void When_postgres_outbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_dispatched(
+    public void When_postgres_outbox_v1_upscript_is_inspected_it_should_carry_the_pre_dispatched_historical_baseline(
         bool binaryMessagePayload)
     {
-        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
-        //3c30343fa, July 2019). The Postgres outbox is one of the five "born past V1"
-        //backends: it shipped with Dispatched from the first commit, so V1.UpScript already
-        //contains it and V2's idempotency-guarded ALTER (ADD COLUMN IF NOT EXISTS) skips on
-        //chain replay. This tripwire prevents a future "helpful" rewrite from dropping
-        //Dispatched out of V1 (which would then re-apply the V2 ALTER and corrupt chain
-        //replay against legacy tables). See spec 0027 README archaeology and ADR 0057 §3.
+        //Arrange
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Host=ignored;Database=ignored;Username=ignored;Password=ignored",
             outBoxTableName: tableName,
             binaryMessagePayload: binaryMessagePayload);
 
+        //Act
         var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
+        //Assert
         Assert.Equal(1, v1.Version.Value);
-        Assert.Contains("Dispatched", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Dispatched", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("HeaderBag", v1.UpScript, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -179,8 +175,8 @@ public class PostgreSqlInboxBuilderDriftTests
     public void When_postgres_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey_and_composite_pk()
     {
         //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
-        //1cdc04b60, November 2023). The Postgres inbox is one of the five "born past V1"
-        //backends and is the most extreme case: it shipped with ContextKey AND a composite
+        //79100f509, February 2021). The Postgres inbox is the only "born past V1" box:
+        //it shipped with ContextKey AND a composite
         //primary key on (CommandId, ContextKey) from the first commit. There is no pre-ContextKey
         //Postgres inbox V1→V2 ContextKey catch-up (ADR "Alternatives → E" — the speculative
         //composite-PK rebuild migration was rejected because no pre-ContextKey Postgres inbox ever
