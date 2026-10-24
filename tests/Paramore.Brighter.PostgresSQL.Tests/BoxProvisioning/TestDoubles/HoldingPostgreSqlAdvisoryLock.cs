@@ -31,13 +31,7 @@ using Paramore.Brighter.BoxProvisioning.PostgreSql;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
 
-/// <summary>
-/// Test decorator over <see cref="IPostgreSqlAdvisoryLock"/>: delegates Acquire to the
-/// underlying implementation, then signals <see cref="AcquireSeen"/> and parks until the
-/// caller-supplied <c>releaseGate</c> task completes. While parked, the underlying real
-/// Postgres advisory lock is genuinely held — any concurrent acquire of the same lock key
-/// on a separate session will block (or time out).
-/// </summary>
+// While parked in AcquireAsync the real advisory lock is held, so a concurrent acquire of the same key blocks.
 internal sealed class HoldingPostgreSqlAdvisoryLock(
     IPostgreSqlAdvisoryLock inner,
     Task releaseGate) : IPostgreSqlAdvisoryLock
