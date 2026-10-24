@@ -65,7 +65,7 @@ public sealed class OutboxStaleMessageReadings
     }
 
     /// <summary>
-    /// Marks measurement as started, with every total at zero.
+    /// Marks measurement as started, with every total at zero and no latest value for either count.
     /// </summary>
     /// <param name="outboxType">The type name of the measured outbox, such as <c>MsSqlOutbox</c>.</param>
     /// <param name="measuresTopics">Whether the per-topic count runs as well as the overall count.</param>
@@ -74,6 +74,8 @@ public sealed class OutboxStaleMessageReadings
         lock (_lock)
         {
             _totals = new long[2, 4];
+            ClearLatest(StaleMessageCount.Overall);
+            ClearLatest(StaleMessageCount.PerTopic);
             _outboxType = outboxType;
             _measuresTopics = measuresTopics;
             _isStarted = true;
