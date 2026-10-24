@@ -314,7 +314,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should:
     - add `Fail(StaleMessageCount)`, which clears that count's latest values and increments its total, in `src/Paramore.Brighter/Observability/OutboxStaleMessageReadings.cs`.
 
-- [ ] **TEST + IMPLEMENT: T3.7 Skipped due times add to the skipped total**
+- [x] **TEST + IMPLEMENT: T3.7 Skipped due times add to the skipped total**
   - **USE COMMAND**: `/test-first Skip of the overall count by three adds three to the overall skipped total`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_overall_count_skips_three_due_times_should_count_three_skips.cs`
