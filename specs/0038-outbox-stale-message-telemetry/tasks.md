@@ -240,7 +240,7 @@
 
 Tests construct the meter directly over an `IMeterFactory` from `new ServiceCollection().AddMetrics()`, as `tests/Paramore.Brighter.Core.Tests/Tasks/When_confirmations_are_waiting_should_report_the_queue_depth.cs:21` constructs `PublishConfirmationMeter`. A `MeterListener` records the measurements.
 
-- [ ] **TEST + IMPLEMENT: T3.1 Started readings with topics report eight zero counter series and no gauge**
+- [x] **TEST + IMPLEMENT: T3.1 Started readings with topics report eight zero counter series and no gauge**
   - **USE COMMAND**: `/test-first a meter over readings started with topics reports eight zero measurement-counter series and no gauge value`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_readings_are_started_with_topics_should_report_eight_zero_counter_series.cs`
