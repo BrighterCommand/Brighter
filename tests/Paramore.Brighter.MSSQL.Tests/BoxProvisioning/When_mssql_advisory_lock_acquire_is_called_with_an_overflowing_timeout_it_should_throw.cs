@@ -31,18 +31,12 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// <see cref="MsSqlAdvisoryLock"/> rejects a lock timeout that does not fit <c>sp_getapplock</c>'s
+/// <c>INT</c> milliseconds argument, and accepts <c>int.MaxValue</c> milliseconds (ADR 0057 §5b).
+/// </summary>
 public class MsSqlAdvisoryLockTimeoutValidationTests
 {
-    // sp_getapplock takes @LockTimeout as a SQL Server INT (milliseconds), so any TimeSpan
-    // exceeding ~24.85 days silently overflows on cast and may produce -1 — which sp_getapplock
-    // interprets as "wait indefinitely". A negative TimeSpan has no meaningful interpretation
-    // for an exclusive application lock and would also overflow into one of sp_getapplock's
-    // reserved sentinel values. Per ADR 0057 §5b the validation lives inside the abstraction's
-    // acquire path so any caller of MsSqlAdvisoryLock — including but not limited to
-    // MsSqlBoxMigrationRunner — is protected. The boundary value (int.MaxValue ms ≈ 24.85 days)
-    // is the largest value that fits sp_getapplock's INT @LockTimeout argument without
-    // overflow and must be accepted by the validation guard.
-
     private readonly string _connectionString = Configuration.DefaultConnectingString;
 
     [Fact]
@@ -86,10 +80,7 @@ public class MsSqlAdvisoryLockTimeoutValidationTests
     [Fact]
     public async Task When_lock_timeout_is_at_int_max_milliseconds_acquire_should_succeed()
     {
-        //Arrange — the inclusive upper bound (~24.85 days) is the largest value that fits
-        //sp_getapplock's INT @LockTimeout argument without overflow; it must NOT be rejected
-        //by the validation guard. Acquisition itself succeeds because no other session holds
-        //the lock — sp_getapplock returns 0 (granted synchronously).
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
         var boundaryTimeout = TimeSpan.FromMilliseconds(int.MaxValue);
         var lockResource = $"BrighterMigration_acquire_boundary_{Guid.NewGuid():N}";
@@ -105,11 +96,10 @@ public class MsSqlAdvisoryLockTimeoutValidationTests
             advisoryLock.AcquireAsync(
                 connection, transaction, lockResource, boundaryTimeout, default));
 
-        //Assert — boundary must not be rejected by the validation guard.
+        //Assert
         Assert.IsNotType<ArgumentOutOfRangeException>(ex);
         Assert.Null(ex);
 
-        //Cleanup — release the transaction-scoped lock by rolling back.
         await transaction.RollbackAsync();
     }
 }

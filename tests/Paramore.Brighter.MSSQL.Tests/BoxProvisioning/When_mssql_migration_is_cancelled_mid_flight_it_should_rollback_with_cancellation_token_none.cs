@@ -32,6 +32,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// When the caller cancels mid-migration, the runner rolls back with <see cref="CancellationToken.None"/>,
+/// not the signalled token, so the rollback completes and releases the <c>sp_getapplock</c> lock for
+/// the next migration (ADR 0058 §B.3).
+/// </summary>
 public class MsSqlMigrationCancellationRollbackTests : IAsyncLifetime
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
@@ -40,11 +45,7 @@ public class MsSqlMigrationCancellationRollbackTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_migration_is_cancelled_mid_flight_it_should_rollback_with_cancellation_token_none()
     {
-        //Arrange — fresh database; the cancelling runner's RunFreshPathAsync override blocks
-        // on Task.Delay so the caller's cancellation hits AFTER BeginAsync has opened the
-        // SqlTransaction and acquired the sp_getapplock advisory lock, AND BEFORE the base
-        // calls CommitAsync. The UoW is wrapped by a spy that captures the token passed to
-        // RollbackAsync from the runner's catch path.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
@@ -56,34 +57,22 @@ public class MsSqlMigrationCancellationRollbackTests : IAsyncLifetime
         using var cts = new CancellationTokenSource();
         cts.CancelAfter(TimeSpan.FromMilliseconds(250));
 
-        //Act — caller's CancellationToken is signalled while the runner is mid-flight inside
-        // the (substituted) fresh-path hook.
+        //Act
         var thrown = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancellingRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token));
 
-        //Assert — the original OperationCanceledException propagates to the caller (per ADR §B.3).
+        //Assert
         Assert.NotNull(thrown);
 
-        //Assert — RollbackAsync IS invoked after the mid-flight cancellation.
         var spy = cancellingRunner.LastUnitOfWork;
         Assert.NotNull(spy);
         Assert.True(spy!.RollbackInvoked,
             "RollbackAsync should have been invoked after the mid-flight cancellation per ADR §B.3.");
 
-        //Assert — the CancellationToken passed to RollbackAsync is CancellationToken.None, NOT
-        // the caller's signalled token. Per ADR §B.3, passing the signalled token here would
-        // cause RollbackAsync itself to throw OCE and abandon the unwind, leaving the
-        // sp_getapplock attached to a zombied transaction.
         Assert.False(spy.RollbackToken.IsCancellationRequested,
             "RollbackAsync should receive CancellationToken.None to ensure lock release completes.");
         Assert.Equal(CancellationToken.None, spy.RollbackToken);
 
-        //Assert — the MSSQL transaction-scoped advisory lock IS released. Verified by a fresh
-        // runner whose BeginAsync acquires the same per-table lock resource without waiting
-        // (lock timeout is 5s) and completes the migration normally. If the rollback had been
-        // short-circuited by a signalled CT the sp_getapplock would still be held by the
-        // zombied transaction and the second BeginAsync would block until the 5s timeout
-        // elapsed and throw MigrationLockDeadlockException.
         var freshRunner = new MsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
@@ -151,10 +140,7 @@ file sealed class CancellingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunner
         return LastUnitOfWork;
     }
 
-    // Substitute fresh-path "work" with a delay long enough to be interrupted mid-flight by
-    // the test's CancellationTokenSource.CancelAfter. The throw from Task.Delay is a
-    // TaskCanceledException (subtype of OperationCanceledException) and is caught by the
-    // base runner's catch path — which is the contract under test.
+    // Outlasts the test's CancelAfter, so the cancellation lands inside the runner's try-block.
     protected override Task RunFreshPathAsync(
         SqlConnection connection, SqlTransaction? transaction, string? schemaName, string tableName,
         string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)

@@ -31,6 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// When the table appears between detection and the lock, the runner's re-check under the lock
+/// sends it down the bootstrap path rather than the fresh-install <c>CREATE TABLE</c>, and the
+/// table's rows survive (ADR 0057 §3).
+/// </summary>
 public class MsSqlRunnerFreshPathRecheckTests : IAsyncLifetime
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
@@ -47,19 +52,14 @@ public class MsSqlRunnerFreshPathRecheckTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating()
     {
-        //Arrange — simulate the TOCTOU race: another instance created the V_latest-shape outbox
-        //table after detection ran but before this runner acquires the migration lock. We seed
-        //the table directly + a marker row to prove preservation, then call MigrateAsync with a
-        //stale BoxTableState that says "TableExists=false", as if detection was racing.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
         Configuration.CreateTable(_connectionString, SqlOutboxBuilder.GetDDL(_tableName));
         SeedMarkerRow();
 
         var staleState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        //Act — the runner must NOT throw a duplicate-CREATE-TABLE exception. The TOCTOU re-check
-        //under the lock has to see that the table exists now and route to the bootstrap path
-        //instead of executing V1's CREATE TABLE on the seeded table.
+        //Act
         var act = async () => await _runner.MigrateAsync(
             _tableName,
             schemaName: "dbo",
@@ -68,10 +68,7 @@ public class MsSqlRunnerFreshPathRecheckTests : IAsyncLifetime
 
         var ex = await Record.ExceptionAsync(act);
 
-        //Assert — no exception, ≥1 history row was inserted (proves bootstrap branch ran), and
-        //the seeded marker row survived (no DROP/recreate happened). Specific Version values and
-        //synthetic-row description text are deliberately not asserted here — Tasks 1.5 and 1.6
-        //own those concerns. This test catches only the "fresh path didn't TOCTOU re-check" bug.
+        //Assert
         Assert.Null(ex);
         Assert.True(GetHistoryRowCount() >= 1, "Bootstrap branch should have inserted at least one history row");
         Assert.Equal(1, GetMarkerRowCount());

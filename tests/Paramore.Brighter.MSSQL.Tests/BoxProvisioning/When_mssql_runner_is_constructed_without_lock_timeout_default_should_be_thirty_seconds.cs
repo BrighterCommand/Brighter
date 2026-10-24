@@ -33,6 +33,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// A runner built without a lock timeout waits 30 seconds, not <see cref="TimeSpan.Zero"/>, which
+/// <c>sp_getapplock</c> reads as "do not wait" (ADR 0058, Guards and contracts). The test uses the
+/// detection-helper constructor, the only one where the timeout is optional.
+/// </summary>
 public class MsSqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
@@ -41,14 +46,7 @@ public class MsSqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds()
     {
-        //Arrange — the runner is constructed via the detection-helper ctor with `lockTimeout`
-        // OMITTED, exercising the optional-parameter default path. A fake IMsSqlAdvisoryLock
-        // captures the timeout value flowed through MigrateAsync → BeginAsync → AcquireAsync
-        // and then immediately throws to short-circuit the migration (we only care about the
-        // captured timeout, not a successful round-trip). Per the cross-backend harmonisation
-        // contract (PR #4039 review item #1), the default MUST be 30 seconds so that direct
-        // ctor callers do not silently get TimeSpan.Zero — which is sp_getapplock's "non-blocking,
-        // immediate timeout" sentinel and an operational footgun.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
@@ -56,9 +54,6 @@ public class MsSqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
         var shortCircuit = new MigrationLockDeadlockException("short-circuit to read captured timeout");
         var fakeLock = new FakeMsSqlAdvisoryLock(throwOnAcquire: shortCircuit);
 
-        // Detection-helper ctor is the ONLY one that exposes `lockTimeout` as optional. The
-        // backward-compat ctor (MsSqlBoxMigrationRunner.cs:76) takes it as required, so it
-        // cannot exercise the default path.
         var runner = new MsSqlBoxMigrationRunner(new MsSqlBoxDetectionHelper(), new MsSqlOutboxMigrationCatalog(), config, advisoryLock: fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
@@ -66,9 +61,7 @@ public class MsSqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
         await Assert.ThrowsAsync<MigrationLockDeadlockException>(() => runner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
-        //Assert — the omitted `lockTimeout` resolves to the 30-second default rather than
-        // TimeSpan.Zero. The default is now consistent with SqliteBoxMigrationRunner's existing
-        // default (the reference value the four relational runners are being harmonised against).
+        //Assert
         Assert.Equal(TimeSpan.FromSeconds(30), fakeLock.AcquiredTimeout);
     }
 
