@@ -137,6 +137,19 @@ public sealed class OutboxStaleMessageReadings
     }
 
     /// <summary>
+    /// Records that measurement stopped: clears the latest overall value and the latest per-topic values. Every outcome
+    /// total is left as it was.
+    /// </summary>
+    public void Stop()
+    {
+        lock (_lock)
+        {
+            ClearLatest(StaleMessageCount.Overall);
+            ClearLatest(StaleMessageCount.PerTopic);
+        }
+    }
+
+    /// <summary>
     /// Gets the latest overall value, if there is one.
     /// </summary>
     /// <param name="staleCount">The latest overall value, or zero when there is none.</param>
