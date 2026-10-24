@@ -349,7 +349,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should:
     - guard each writer, per the readings contract at ADR 0085 :480-520, in `src/Paramore.Brighter/Observability/OutboxStaleMessageReadings.cs`.
 
-- [ ] **TEST + IMPLEMENT: T3.10 An abandoned count clears that count's value and counts one abandonment**
+- [x] **TEST + IMPLEMENT: T3.10 An abandoned count clears that count's value and counts one abandonment**
   - **USE COMMAND**: `/test-first Abandon of the overall count clears the overall gauge and adds one to its abandoned total`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_overall_count_is_abandoned_should_clear_the_overall_gauge.cs`
