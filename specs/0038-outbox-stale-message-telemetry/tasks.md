@@ -325,7 +325,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should:
     - add `Skip(StaleMessageCount, int)`, which clears the count's latest value and adds to its total, in `src/Paramore.Brighter/Observability/OutboxStaleMessageReadings.cs`.
 
-- [ ] **TEST + IMPLEMENT: T3.8 Stopping clears both gauges and keeps the totals**
+- [x] **TEST + IMPLEMENT: T3.8 Stopping clears both gauges and keeps the totals**
   - **USE COMMAND**: `/test-first Stop after both completes clears both gauges and leaves every outcome total unchanged`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_readings_are_stopped_should_clear_both_gauges_and_keep_the_totals.cs`
