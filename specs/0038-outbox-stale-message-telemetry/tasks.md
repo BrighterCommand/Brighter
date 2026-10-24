@@ -288,7 +288,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should (only if the test is RED on arrival):
     - return from the constructor before creating instruments when `readings` is null, in `src/Paramore.Brighter/Observability/OutboxStaleMessageMeter.cs`.
 
-- [ ] **TEST + IMPLEMENT: T3.5 Completed counts appear on their gauges, one series per topic**
+- [x] **TEST + IMPLEMENT: T3.5 Completed counts appear on their gauges, one series per topic**
   - **USE COMMAND**: `/test-first CompleteOverall and CompletePerTopic report on the overall gauge and on one topic-gauge series per topic`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_both_counts_complete_should_report_each_gauge.cs`
