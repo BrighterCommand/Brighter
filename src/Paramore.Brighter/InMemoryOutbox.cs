@@ -80,9 +80,11 @@ namespace Paramore.Brighter
     /// </para>
     /// </summary>
 #pragma warning disable CS0618
-    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>, IAmACausationTrackingOutbox
+    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>, IAmACausationTrackingOutbox, IAmATopicCountingOutbox
 #pragma warning restore CS0618
     {
+        private const int MAX_TOPIC_AGE_DAYS = 365;
+
         private readonly TimeProvider _timeProvider;
         private readonly InstrumentationOptions _instrumentationOptions;
 
@@ -652,6 +654,79 @@ namespace Paramore.Brighter
             tcs.SetResult(GetOutstandingMessageCount(dispatchedSince, requestContext, maxCount, args));
 
             return tcs.Task;
+        }
+
+        /// <inheritdoc/>
+        public Task<IReadOnlyDictionary<RoutingKey, int>> GetOutstandingMessageCountsByTopicAsync(
+            IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic,
+            RequestContext? requestContext,
+            int maxCountPerTopic,
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (dispatchedSinceByTopic is null) throw new ArgumentNullException(nameof(dispatchedSinceByTopic));
+            if (maxCountPerTopic < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxCountPerTopic), maxCountPerTopic, "The ceiling per topic must be at least 1.");
+            CheckRequestedTopics(dispatchedSinceByTopic);
+
+            var tcs = new TaskCompletionSource<IReadOnlyDictionary<RoutingKey, int>>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            tcs.SetResult(GetOutstandingMessageCountsByTopic(dispatchedSinceByTopic, requestContext, maxCountPerTopic));
+
+            return tcs.Task;
+        }
+
+        private static void CheckRequestedTopics(IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic)
+        {
+            foreach (var request in dispatchedSinceByTopic)
+            {
+                if (RoutingKey.IsNullOrEmpty(request.Key))
+                    throw new ArgumentException("A requested topic is null or empty.", nameof(dispatchedSinceByTopic));
+                if (request.Value <= TimeSpan.Zero || request.Value > TimeSpan.FromDays(MAX_TOPIC_AGE_DAYS))
+                    throw new ArgumentException(
+                        $"The age requested for topic {request.Key} must be greater than zero and no greater than {MAX_TOPIC_AGE_DAYS} days.",
+                        nameof(dispatchedSinceByTopic));
+            }
+        }
+
+        private Dictionary<RoutingKey, int> GetOutstandingMessageCountsByTopic(
+            IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic,
+            RequestContext? requestContext,
+            int maxCountPerTopic)
+        {
+            ClearExpiredMessages();
+
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.OutStandingMessageCount,
+                    InMemoryAttributes.DbTable),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                var counts = dispatchedSinceByTopic.Keys.ToDictionary(topic => topic, _ => 0);
+                foreach (var topic in StaleMessageTopics(dispatchedSinceByTopic, _timeProvider.GetUtcNow()))
+                {
+                    if (counts[topic] < maxCountPerTopic)
+                        counts[topic]++;
+                }
+
+                return counts;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        private IEnumerable<RoutingKey> StaleMessageTopics(IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic, DateTimeOffset now)
+        {
+            return Requests
+                .Where(entry =>
+                    entry.Value.TimeFlushed == DateTimeOffset.MinValue
+                    && dispatchedSinceByTopic.TryGetValue(entry.Value.Message.Header.Topic, out var dispatchedSince)
+                    && entry.Value.WriteTime <= now - dispatchedSince)
+                .Select(entry => entry.Value.Message.Header.Topic);
         }
 
         protected override void RemoveExpiredMessages(DateTimeOffset now)
