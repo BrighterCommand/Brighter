@@ -39,6 +39,9 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// </summary>
 public class MsSqlMigrationCancellationRollbackTests : IAsyncLifetime
 {
+    private static readonly TimeSpan s_cancelAfter = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan s_freshRunnerLockTimeout = TimeSpan.FromSeconds(5);
+
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
@@ -55,7 +58,7 @@ public class MsSqlMigrationCancellationRollbackTests : IAsyncLifetime
         var staleHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         using var cts = new CancellationTokenSource();
-        cts.CancelAfter(TimeSpan.FromMilliseconds(250));
+        cts.CancelAfter(s_cancelAfter);
 
         //Act
         var thrown = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancellingRunner.MigrateAsync(
@@ -73,7 +76,7 @@ public class MsSqlMigrationCancellationRollbackTests : IAsyncLifetime
             "RollbackAsync should receive CancellationToken.None to ensure lock release completes.");
         Assert.Equal(CancellationToken.None, spy.RollbackToken);
 
-        var freshRunner = new MsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
+        var freshRunner = new MsSqlBoxMigrationRunner(catalog, config, s_freshRunnerLockTimeout);
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
@@ -122,6 +125,8 @@ IF OBJECT_ID(N'[__BrighterMigrationHistory]', N'U') IS NOT NULL
 
 file sealed class CancellingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunner
 {
+    private static readonly TimeSpan s_longerThanTheTestWaitsToCancel = TimeSpan.FromSeconds(10);
+
     public RollbackTokenCapturingUnitOfWork? LastUnitOfWork { get; private set; }
 
     public CancellingMsSqlBoxMigrationRunner(
@@ -140,11 +145,11 @@ file sealed class CancellingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunner
         return LastUnitOfWork;
     }
 
-    // Outlasts the test's CancelAfter, so the cancellation lands inside the runner's try-block.
+    // The cancellation lands inside the runner's try-block.
     protected override Task RunFreshPathAsync(
         SqlConnection connection, SqlTransaction? transaction, string? schemaName, string tableName,
         string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
-        => Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+        => Task.Delay(s_longerThanTheTestWaitsToCancel, cancellationToken);
 }
 
 file sealed class RollbackTokenCapturingUnitOfWork : IAmAProvisioningUnitOfWork<SqlTransaction>

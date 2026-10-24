@@ -68,11 +68,11 @@ public class MsSqlProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyn
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None);
 
-        using var cts = new CancellationTokenSource();
-        cts.Cancel();
+        using var preCancelled = new CancellationTokenSource();
+        preCancelled.Cancel();
 
         // Act
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(cts.Token));
+        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(preCancelled.Token));
 
         Assert.Null(thrown);
 

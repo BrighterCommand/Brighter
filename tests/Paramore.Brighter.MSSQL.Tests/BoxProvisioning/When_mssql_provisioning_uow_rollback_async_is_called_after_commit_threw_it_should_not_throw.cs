@@ -62,8 +62,7 @@ public class MsSqlProvisioningUnitOfWorkRollbackAfterCommitThrewTests : IAsyncLi
             lockResource: "test_lock_resource",
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None);
-        var transaction = uow.Transaction!;
-        transaction.Commit();   // Force the post-failed-commit finalised state
+        CompleteAsIfCommitHadFailed(uow.Transaction!);
 
         // Act
         var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
@@ -72,4 +71,6 @@ public class MsSqlProvisioningUnitOfWorkRollbackAfterCommitThrewTests : IAsyncLi
         Assert.Null(thrown);
         Assert.Contains(capturingLogger.Entries, e => e.Level == LogLevel.Warning);
     }
+
+    private static void CompleteAsIfCommitHadFailed(SqlTransaction transaction) => transaction.Commit();
 }
