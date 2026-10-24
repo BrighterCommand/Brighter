@@ -302,7 +302,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
     - add `CompleteOverall(int)`, `CompletePerTopic(IReadOnlyDictionary<RoutingKey,int>)`, `TryGetLatestOverall` and `TryGetLatestPerTopic` to `src/Paramore.Brighter/Observability/OutboxStaleMessageReadings.cs`;
     - read them from the gauge callbacks.
 
-- [ ] **TEST + IMPLEMENT: T3.6 A failed per-topic count clears only the topic gauge**
+- [x] **TEST + IMPLEMENT: T3.6 A failed per-topic count clears only the topic gauge**
   - **USE COMMAND**: `/test-first Fail of the per-topic count after both completes clears the topic gauge, keeps the overall value and counts one per_topic failure`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_per_topic_count_fails_should_clear_only_the_topic_gauge.cs`
