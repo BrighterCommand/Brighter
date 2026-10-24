@@ -85,6 +85,9 @@ public sealed class OutboxStaleMessageMeter
 
     private IEnumerable<Measurement<long>> ObserveMeasurements()
     {
+        if (!_readings.IsStarted)
+            yield break;
+
         var outboxType = _readings.OutboxType;
         var measuresTopics = _readings.MeasuresTopics;
         foreach (var count in s_counts)
