@@ -364,7 +364,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
 
 *Depends on Phase 3.*
 
-- [ ] **STRUCTURAL: T4.1 Extract the deferred `Configure` block into a named private method**
+- [x] **STRUCTURAL: T4.1 Extract the deferred `Configure` block into a named private method**
   - **USE COMMAND**: `/tidy-first extract the deferred Configure block of AddBrighterInstrumentation into a named private method`
   - In `src/Paramore.Brighter.Extensions.Diagnostics/BrighterMetricsBuilderExtensions.cs`, move the body of the deferred `Configure` at `:49-50` into a private method named for its intent, for example `CreateMetersNothingDependsOn(IServiceProvider)`.
   - Remove the in-body comment at `:48`. The method's name now carries that intent (CONTRIBUTING.md, "Comments in Code").
