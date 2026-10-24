@@ -121,6 +121,22 @@ public sealed class OutboxStaleMessageReadings
     }
 
     /// <summary>
+    /// Records that <paramref name="dueTimes"/> due times of <paramref name="count"/> were skipped: clears that count's
+    /// latest value or values, and adds the number to its <see cref="StaleMeasurementOutcome.Skipped"/> total. The other
+    /// count is left as it was.
+    /// </summary>
+    /// <param name="count">The stale-message count whose due times were skipped.</param>
+    /// <param name="dueTimes">How many due times were skipped.</param>
+    public void Skip(StaleMessageCount count, int dueTimes)
+    {
+        lock (_lock)
+        {
+            ClearLatest(count);
+            _totals[(int)count, (int)StaleMeasurementOutcome.Skipped] += dueTimes;
+        }
+    }
+
+    /// <summary>
     /// Gets the latest overall value, if there is one.
     /// </summary>
     /// <param name="staleCount">The latest overall value, or zero when there is none.</param>
