@@ -256,7 +256,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
     - add the sealed `OutboxStaleMessageMeter(IMeterFactory meterFactory, OutboxStaleMessageReadings? readings = null)` in `src/Paramore.Brighter/Observability/`, modelled on `PublishConfirmationMeter.cs:37-52`, with the meter on `BrighterSemanticConventions.MeterName`;
     - create the two `ObservableGauge<long>` instruments (`{message}`) and the `ObservableCounter<long>` (`{measurement}`) with the T1.1 names.
 
-- [ ] **TEST + IMPLEMENT: T3.2 Started readings without topics report the four overall counter series only**
+- [x] **TEST + IMPLEMENT: T3.2 Started readings without topics report the four overall counter series only**
   - **USE COMMAND**: `/test-first readings started without topics report only the four overall measurement-counter series`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_readings_are_started_without_topics_should_report_only_the_overall_counter_series.cs`
