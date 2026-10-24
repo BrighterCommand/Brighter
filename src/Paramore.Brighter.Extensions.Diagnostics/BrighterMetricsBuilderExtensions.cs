@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Diagnostics.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -50,14 +51,15 @@ public static class BrighterMetricsBuilderExtensions
             builder.AddMeter(BrighterSemanticConventions.MeterName);
         });
 
-        // Nothing depends on the queue-depth or sweeper meters, so create them when the meter provider is built
         if (builder is IDeferredMeterProviderBuilder deferred)
-            deferred.Configure((serviceProvider, _) =>
-            {
-                serviceProvider.GetRequiredService<PublishConfirmationMeter>();
-                serviceProvider.GetRequiredService<IAmABrighterSweeperMeter>();
-            });
+            deferred.Configure((serviceProvider, _) => CreateMetersNothingDependsOn(serviceProvider));
         
         return builder;
+    }
+
+    private static void CreateMetersNothingDependsOn(IServiceProvider serviceProvider)
+    {
+        serviceProvider.GetRequiredService<PublishConfirmationMeter>();
+        serviceProvider.GetRequiredService<IAmABrighterSweeperMeter>();
     }
 }
