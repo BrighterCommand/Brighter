@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Paramore.Brighter.Observability;
 
@@ -101,7 +102,7 @@ public sealed class OutboxStaleMessageReadings
     {
         lock (_lock)
         {
-            _latestPerTopic = new Dictionary<RoutingKey, int>(staleCounts);
+            _latestPerTopic = staleCounts.ToDictionary(entry => entry.Key, entry => entry.Value);
             _totals[(int)StaleMessageCount.PerTopic, (int)StaleMeasurementOutcome.Completed]++;
         }
     }
