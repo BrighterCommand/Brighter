@@ -47,6 +47,7 @@ public static class BrighterMetricsBuilderExtensions
                 () => serviceProvider.GetService<IAmAnOutboxCircuitBreaker>()));
             services.TryAddSingleton<PublishConfirmationMeter>();
             services.TryAddSingleton<IAmABrighterOutboxMeter, OutboxMeter>();
+            services.TryAddSingleton<OutboxStaleMessageMeter>();
             
             builder.AddMeter(BrighterSemanticConventions.MeterName);
         });
@@ -61,5 +62,6 @@ public static class BrighterMetricsBuilderExtensions
     {
         serviceProvider.GetRequiredService<PublishConfirmationMeter>();
         serviceProvider.GetRequiredService<IAmABrighterSweeperMeter>();
+        serviceProvider.GetRequiredService<OutboxStaleMessageMeter>();
     }
 }
