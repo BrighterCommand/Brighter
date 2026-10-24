@@ -383,7 +383,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
     - resolve the meter in the method extracted in T4.1;
     - add `TestDoubles/StaleMessageMetricsFixture.cs`, the listener fixture for every later listener-based test.
 
-- [ ] **CHARACTERISE: T4.3 Without readings registered, no stale instrument exists**
+- [x] **CHARACTERISE: T4.3 Without readings registered, no stale instrument exists**
   - **USE COMMAND**: `/test-first AddBrighterInstrumentation without registered readings publishes no stale-message instrument`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_brighter_instrumentation_is_added_without_readings_should_create_no_stale_instruments.cs`
