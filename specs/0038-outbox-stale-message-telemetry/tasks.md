@@ -336,7 +336,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should:
     - add `Stop()` to `src/Paramore.Brighter/Observability/OutboxStaleMessageReadings.cs`.
 
-- [ ] **TEST + IMPLEMENT: T3.9 The readings reject invalid writes**
+- [x] **TEST + IMPLEMENT: T3.9 The readings reject invalid writes**
   - **USE COMMAND**: `/test-first the readings reject a negative value, a skip below one and a per-topic write when topics are not measured`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_readings_receive_an_invalid_write_should_throw.cs`
