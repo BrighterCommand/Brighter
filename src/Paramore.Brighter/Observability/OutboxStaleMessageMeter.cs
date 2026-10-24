@@ -64,13 +64,13 @@ public sealed class OutboxStaleMessageMeter
 
         meter.CreateObservableGauge(
             name: BrighterSemanticConventions.OutboxStaleMessages,
-            observeValues: ObserveNothing,
+            observeValues: ObserveOverall,
             unit: "{message}",
             description: "Latest number of outstanding outbox messages older than the stale-message age.");
 
         meter.CreateObservableGauge(
             name: BrighterSemanticConventions.OutboxStaleTopicMessages,
-            observeValues: ObserveNothing,
+            observeValues: ObserveTopics,
             unit: "{message}",
             description: "Latest number of outstanding outbox messages older than the stale-message age, by topic.");
 
@@ -81,7 +81,30 @@ public sealed class OutboxStaleMessageMeter
             description: "Number of stale-message measurement due times since measurement started, by count and outcome.");
     }
 
-    private static IEnumerable<Measurement<long>> ObserveNothing() => [];
+    private IEnumerable<Measurement<long>> ObserveOverall()
+    {
+        if (!_readings.TryGetLatestOverall(out var staleCount))
+            yield break;
+
+        yield return new Measurement<long>(
+            staleCount,
+            new KeyValuePair<string, object?>(BrighterSemanticConventions.OutboxImplementation, _readings.OutboxType));
+    }
+
+    private IEnumerable<Measurement<long>> ObserveTopics()
+    {
+        if (!_readings.TryGetLatestPerTopic(out var staleCounts))
+            yield break;
+
+        var outboxType = _readings.OutboxType;
+        foreach (var entry in staleCounts)
+        {
+            yield return new Measurement<long>(
+                entry.Value,
+                new KeyValuePair<string, object?>(BrighterSemanticConventions.OutboxImplementation, outboxType),
+                new KeyValuePair<string, object?>(BrighterSemanticConventions.MessagingDestination, entry.Key.Value));
+        }
+    }
 
     private IEnumerable<Measurement<long>> ObserveMeasurements()
     {

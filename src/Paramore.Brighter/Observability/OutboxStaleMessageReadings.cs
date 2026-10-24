@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+using System.Collections.Generic;
+
 namespace Paramore.Brighter.Observability;
 
 /// <summary>
@@ -39,6 +41,8 @@ public sealed class OutboxStaleMessageReadings
     private bool _isStarted;
     private string? _outboxType;
     private bool _measuresTopics;
+    private int? _latestOverall;
+    private IReadOnlyDictionary<RoutingKey, int>? _latestPerTopic;
 
     /// <summary>Whether measurement has started.</summary>
     public bool IsStarted
@@ -71,6 +75,62 @@ public sealed class OutboxStaleMessageReadings
             _outboxType = outboxType;
             _measuresTopics = measuresTopics;
             _isStarted = true;
+        }
+    }
+
+    /// <summary>
+    /// Records a completed overall count as the latest overall value, and adds one to the overall
+    /// <see cref="StaleMeasurementOutcome.Completed"/> total.
+    /// </summary>
+    /// <param name="staleCount">How many outstanding messages are older than the stale-message age.</param>
+    public void CompleteOverall(int staleCount)
+    {
+        lock (_lock)
+        {
+            _latestOverall = staleCount;
+            _totals[(int)StaleMessageCount.Overall, (int)StaleMeasurementOutcome.Completed]++;
+        }
+    }
+
+    /// <summary>
+    /// Replaces the latest per-topic values with a copy of <paramref name="staleCounts"/>, and adds one to the per-topic
+    /// <see cref="StaleMeasurementOutcome.Completed"/> total.
+    /// </summary>
+    /// <param name="staleCounts">For each measured topic, how many of its outstanding messages are stale.</param>
+    public void CompletePerTopic(IReadOnlyDictionary<RoutingKey, int> staleCounts)
+    {
+        lock (_lock)
+        {
+            _latestPerTopic = new Dictionary<RoutingKey, int>(staleCounts);
+            _totals[(int)StaleMessageCount.PerTopic, (int)StaleMeasurementOutcome.Completed]++;
+        }
+    }
+
+    /// <summary>
+    /// Gets the latest overall value, if there is one.
+    /// </summary>
+    /// <param name="staleCount">The latest overall value, or zero when there is none.</param>
+    /// <returns><c>true</c> when there is a latest overall value; otherwise <c>false</c>.</returns>
+    public bool TryGetLatestOverall(out int staleCount)
+    {
+        lock (_lock)
+        {
+            staleCount = _latestOverall.GetValueOrDefault();
+            return _latestOverall.HasValue;
+        }
+    }
+
+    /// <summary>
+    /// Gets the latest per-topic values, if there are any.
+    /// </summary>
+    /// <param name="staleCounts">The latest value for each measured topic, or an empty map when there are none.</param>
+    /// <returns><c>true</c> when there are latest per-topic values; otherwise <c>false</c>.</returns>
+    public bool TryGetLatestPerTopic(out IReadOnlyDictionary<RoutingKey, int> staleCounts)
+    {
+        lock (_lock)
+        {
+            staleCounts = _latestPerTopic ?? new Dictionary<RoutingKey, int>();
+            return _latestPerTopic is not null;
         }
     }
 
