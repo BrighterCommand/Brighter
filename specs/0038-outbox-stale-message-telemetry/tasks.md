@@ -277,7 +277,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should:
     - return no measurements from each callback while `IsStarted` is false, in `src/Paramore.Brighter/Observability/OutboxStaleMessageMeter.cs`.
 
-- [ ] **CHARACTERISE: T3.4 A meter without readings creates no instrument**
+- [x] **CHARACTERISE: T3.4 A meter without readings creates no instrument**
   - **USE COMMAND**: `/test-first a stale-message meter constructed without readings creates no instrument`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_meter_has_no_readings_should_create_no_instruments.cs`
