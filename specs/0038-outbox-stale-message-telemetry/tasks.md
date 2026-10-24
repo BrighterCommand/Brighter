@@ -267,7 +267,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should:
     - yield the `per_topic` series only when `MeasuresTopics` is true, in `src/Paramore.Brighter/Observability/OutboxStaleMessageMeter.cs`.
 
-- [ ] **TEST + IMPLEMENT: T3.3 Readings that are not started report no series**
+- [x] **TEST + IMPLEMENT: T3.3 Readings that are not started report no series**
   - **USE COMMAND**: `/test-first a meter over readings that were never started reports no series on any stale instrument`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_readings_are_not_started_should_report_no_series.cs`
