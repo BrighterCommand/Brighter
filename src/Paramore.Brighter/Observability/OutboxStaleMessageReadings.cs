@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -84,8 +85,12 @@ public sealed class OutboxStaleMessageReadings
     /// <see cref="StaleMeasurementOutcome.Completed"/> total.
     /// </summary>
     /// <param name="staleCount">How many outstanding messages are older than the stale-message age.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="staleCount"/> is negative.</exception>
     public void CompleteOverall(int staleCount)
     {
+        if (staleCount < 0)
+            throw new ArgumentOutOfRangeException(nameof(staleCount), staleCount, "A stale count cannot be negative.");
+
         lock (_lock)
         {
             _latestOverall = staleCount;
@@ -98,10 +103,13 @@ public sealed class OutboxStaleMessageReadings
     /// <see cref="StaleMeasurementOutcome.Completed"/> total.
     /// </summary>
     /// <param name="staleCounts">For each measured topic, how many of its outstanding messages are stale.</param>
+    /// <exception cref="InvalidOperationException">Topics are not measured, which is also the case before measurement starts.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A value in <paramref name="staleCounts"/> is negative.</exception>
     public void CompletePerTopic(IReadOnlyDictionary<RoutingKey, int> staleCounts)
     {
         lock (_lock)
         {
+            CheckCanCompletePerTopic(staleCounts);
             _latestPerTopic = staleCounts.ToDictionary(entry => entry.Key, entry => entry.Value);
             _totals[(int)StaleMessageCount.PerTopic, (int)StaleMeasurementOutcome.Completed]++;
         }
@@ -128,8 +136,12 @@ public sealed class OutboxStaleMessageReadings
     /// </summary>
     /// <param name="count">The stale-message count whose due times were skipped.</param>
     /// <param name="dueTimes">How many due times were skipped.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="dueTimes"/> is less than 1.</exception>
     public void Skip(StaleMessageCount count, int dueTimes)
     {
+        if (dueTimes < 1)
+            throw new ArgumentOutOfRangeException(nameof(dueTimes), dueTimes, "At least one due time must be skipped.");
+
         lock (_lock)
         {
             ClearLatest(count);
@@ -191,6 +203,14 @@ public sealed class OutboxStaleMessageReadings
         {
             return _totals[(int)count, (int)outcome];
         }
+    }
+
+    private void CheckCanCompletePerTopic(IReadOnlyDictionary<RoutingKey, int> staleCounts)
+    {
+        if (!_measuresTopics)
+            throw new InvalidOperationException("The per-topic count cannot complete when topics are not measured.");
+        if (staleCounts.Any(entry => entry.Value < 0))
+            throw new ArgumentOutOfRangeException(nameof(staleCounts), "A stale count cannot be negative.");
     }
 
     private void ClearLatest(StaleMessageCount count)
