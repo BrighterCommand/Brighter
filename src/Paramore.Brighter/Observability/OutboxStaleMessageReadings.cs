@@ -107,6 +107,20 @@ public sealed class OutboxStaleMessageReadings
     }
 
     /// <summary>
+    /// Records that <paramref name="count"/> failed: clears that count's latest value or values, and adds one to its
+    /// <see cref="StaleMeasurementOutcome.Failed"/> total. The other count is left as it was.
+    /// </summary>
+    /// <param name="count">The stale-message count that failed.</param>
+    public void Fail(StaleMessageCount count)
+    {
+        lock (_lock)
+        {
+            ClearLatest(count);
+            _totals[(int)count, (int)StaleMeasurementOutcome.Failed]++;
+        }
+    }
+
+    /// <summary>
     /// Gets the latest overall value, if there is one.
     /// </summary>
     /// <param name="staleCount">The latest overall value, or zero when there is none.</param>
@@ -147,5 +161,13 @@ public sealed class OutboxStaleMessageReadings
         {
             return _totals[(int)count, (int)outcome];
         }
+    }
+
+    private void ClearLatest(StaleMessageCount count)
+    {
+        if (count == StaleMessageCount.Overall)
+            _latestOverall = null;
+        else
+            _latestPerTopic = null;
     }
 }
