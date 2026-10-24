@@ -29,6 +29,10 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// The Postgres inbox catalog lists V1, which already carries contextkey and the composite primary key, and V2, which adds
+/// causationid with ADD COLUMN IF NOT EXISTS. V1.UpScript is the historical DDL; FreshInstallDdl is the live builder's.
+/// </summary>
 public class PostgreSqlInboxMigrationsTests
 {
     private static readonly string[] s_v1Columns =
@@ -40,10 +44,7 @@ public class PostgreSqlInboxMigrationsTests
     [Fact]
     public void When_postgres_inbox_migrations_are_listed_it_should_return_v1_and_v2_with_causationid_added_in_v2()
     {
-        //Arrange — Postgres inbox was born with ContextKey + composite PK in PR #1401 (Feb 2021),
-        //so its V1 baseline already includes contextkey (no pre-ContextKey Postgres inbox ever
-        //shipped — ADR "Alternatives → E"). Spec 0027 (#2541) adds a V2 that introduces
-        //causationid via ADD COLUMN IF NOT EXISTS — so the catalog now lists V1 + V2.
+        //Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Host=ignored;Database=ignored;Username=ignored;Password=ignored",
@@ -55,37 +56,27 @@ public class PostgreSqlInboxMigrationsTests
         //Act
         var migrations = new PostgreSqlInboxMigrationCatalog().All(config);
 
-        //Assert — exactly two migrations numbered 1..2 in order.
+        //Assert
         Assert.Equal(2, migrations.Count);
         Assert.Equal(1, migrations[0].Version.Value);
         Assert.Equal(2, migrations[1].Version.Value);
 
-        //Assert — V1 has no SourceReference (baseline); V2 carries the issue pointer (#2541).
         Assert.Null(migrations[0].SourceReference);
         Assert.Equal("#2541", migrations[1].SourceReference);
 
-        //Assert — V1 LogicalColumns are lowercase (ADR §1) and contextkey is part of V1.
         Assert.True(
             expectedV1.SetEquals(migrations[0].LogicalColumns),
             $"V1 LogicalColumns mismatch — expected: [{string.Join(", ", expectedV1)}], " +
             $"got: [{string.Join(", ", migrations[0].LogicalColumns)}]");
 
-        //Assert — V2 LogicalColumns are V1 + causationid (lowercase per ADR §1).
         Assert.True(
             expectedV2.SetEquals(migrations[1].LogicalColumns),
             $"V2 LogicalColumns mismatch — expected: [{string.Join(", ", expectedV2)}], " +
             $"got: [{string.Join(", ", migrations[1].LogicalColumns)}]");
 
-        //Assert — V2 UpScript is an idempotent ADD COLUMN IF NOT EXISTS for causationid.
         Assert.Contains("ADD COLUMN IF NOT EXISTS", migrations[1].UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("causationid", migrations[1].UpScript, StringComparison.OrdinalIgnoreCase);
 
-        //Assert — V1 UpScript is the literal historical Postgres inbox DDL (Spec 0027 R1),
-        //not the live builder DDL. The fresh-install fast path takes its DDL from
-        //FreshInstallDdl now; V1.UpScript carries the honest first-shipped baseline. The
-        //composite PRIMARY KEY (CommandId, ContextKey) that PR #2560 (Nov 2023) shipped is
-        //asserted structurally — the historical literal is enclosed in the catalog and
-        //should not be duplicated here.
         Assert.Contains("CommandId", migrations[0].UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ContextKey", migrations[0].UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(
@@ -93,9 +84,6 @@ public class PostgreSqlInboxMigrationsTests
             migrations[0].UpScript,
             StringComparison.OrdinalIgnoreCase);
 
-        //Assert — FreshInstallDdl now sources the live builder DDL (Spec 0027 R1 part 1
-        //added this hook). This is the post-Part-1 contract: V1.UpScript is historical;
-        //FreshInstallDdl is current.
         var expectedFreshInstallDdl =
             PostgreSqlInboxBuilder.GetDDL(tableName, config.BinaryMessagePayload);
         Assert.Equal(

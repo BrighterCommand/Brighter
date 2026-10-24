@@ -30,10 +30,11 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-// REQUIRES SEQUENTIAL EXECUTION (see PROMPT.md / branch convention) — temporarily drops the
-// shared "public"."__BrighterMigrationHistory" table to demonstrate the schema-qualification
-// bug. DisposeAsync drops the colliding artefacts; the runner naturally recreates the public
-// history table so the rest of the BoxProvisioning suite is left in a consistent state.
+/// <summary>
+/// With another schema first on the runner's search_path, holding a wrong-shaped <c>__BrighterMigrationHistory</c>, the
+/// runner still creates and writes the history table in <c>public</c>, because it schema-qualifies its history SQL.
+/// The test drops the shared public history table, so it must not run in parallel with other BoxProvisioning tests.
+/// </summary>
 public class PostgreSqlHistoryTableNonPublicSchemaTests : IAsyncLifetime
 {
     private const string CollidingSchema = "stage_for_history_clash_test";
@@ -44,10 +45,6 @@ public class PostgreSqlHistoryTableNonPublicSchemaTests : IAsyncLifetime
 
     public PostgreSqlHistoryTableNonPublicSchemaTests()
     {
-        // Force the runner's connection to put the colliding schema first on search_path.
-        // This is the trigger condition for the bug: an unqualified CREATE TABLE / INSERT /
-        // SELECT against "__BrighterMigrationHistory" resolves to whichever schema appears
-        // first on search_path that has (or can hold) the relation.
         _runnerConnectionString = _setupConnectionString.TrimEnd(';') + $";Search Path={CollidingSchema},public";
         var config = new RelationalDatabaseConfiguration(_runnerConnectionString, outBoxTableName: _tableName);
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
@@ -62,11 +59,7 @@ public class PostgreSqlHistoryTableNonPublicSchemaTests : IAsyncLifetime
     [Fact]
     public async Task When_history_table_exists_in_a_non_public_schema_runner_should_still_create_it_in_public()
     {
-        //Arrange — pre-create stage_for_history_clash_test."__BrighterMigrationHistory" with a
-        //deliberately wrong shape. With CollidingSchema first on the runner connection's
-        //search_path the unqualified CREATE TABLE IF NOT EXISTS resolves to that schema, sees
-        //the existing relation, and skips the create — leaving subsequent unqualified
-        //INSERT/SELECT statements to land in the wrong schema (or fail outright).
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         await DropPublicHistoryTable();
         await DropCollidingArtefacts();
@@ -76,9 +69,7 @@ public class PostgreSqlHistoryTableNonPublicSchemaTests : IAsyncLifetime
         var act = async () => await _provisioner.ProvisionAsync();
         var ex = await Record.ExceptionAsync(act);
 
-        //Assert — runner must succeed, "public"."__BrighterMigrationHistory" must exist with
-        //the correct shape and one V_latest fresh-install row, and the colliding stage table
-        //must be untouched.
+        //Assert
         Assert.Null(ex);
         Assert.True(await PublicHistoryTableExists(), @"""public"".""__BrighterMigrationHistory"" must be created");
         Assert.Equal(1L, await GetPublicHistoryRowCountForBox());

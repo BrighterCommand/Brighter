@@ -40,7 +40,7 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
     [Fact]
     public async Task When_existing_outbox_body_is_text_and_provisioner_is_configured_for_binary_it_should_throw_configuration_exception()
     {
-        //Arrange — text-mode outbox already exists; configure provisioner for binary.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         await CreateTable(PostgreSqlOutboxBuilder.GetDDL(_outboxTableName, binaryMessagePayload: false));
 
@@ -63,7 +63,7 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
     [Fact]
     public async Task When_existing_outbox_body_is_bytea_and_provisioner_is_configured_for_text_it_should_throw_configuration_exception()
     {
-        //Arrange — binary (bytea) outbox already exists; configure provisioner for text.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         await CreateTable(PostgreSqlOutboxBuilder.GetDDL(_outboxTableName, binaryMessagePayload: true));
 
@@ -86,7 +86,7 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
     [Fact]
     public async Task When_existing_inbox_commandbody_is_text_and_provisioner_is_configured_for_binary_it_should_throw_configuration_exception()
     {
-        //Arrange — text-mode inbox already exists; configure provisioner for binary.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         await CreateTable(PostgreSqlInboxBuilder.GetDDL(_inboxTableName, binaryMessagePayload: false));
 
@@ -109,7 +109,7 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
     [Fact]
     public async Task When_existing_inbox_commandbody_is_bytea_and_provisioner_is_configured_for_text_it_should_throw_configuration_exception()
     {
-        //Arrange — binary (bytea) inbox already exists; configure provisioner for text.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         await CreateTable(PostgreSqlInboxBuilder.GetDDL(_inboxTableName, binaryMessagePayload: true));
 

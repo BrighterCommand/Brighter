@@ -30,50 +30,50 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// The detection helper treats a null schema name as <c>public</c>: each of its queries gives the same answer for null as for
+/// <c>"public"</c>.
+/// </summary>
 public class PostgreSqlDetectionHelperNullSchemaTests : IAsyncLifetime
 {
+    private const int SeededVersion = 3;
+
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly List<string> _tablesToCleanup = [];
 
     [Fact]
     public async Task When_postgres_detection_helper_receives_null_schema_name_it_should_substitute_public()
     {
-        // Arrange — a box-shaped table in the public schema and a history row recorded against
-        // SchemaName='public'. The helper's null-substitution rule (per ADR 0057 §A.1) must make
-        // a call with schemaName: null behave identically to a call with schemaName: "public".
+        // Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         var tableName = TrackTable($"nullschema_{Guid.NewGuid():N}");
         await ExecuteDdl(
             $"CREATE TABLE \"{tableName}\" (id BIGSERIAL PRIMARY KEY, headerbag TEXT NULL);");
 
         await EnsureHistoryTable();
-        await SeedHistoryRow(tableName, schemaName: "public", migrationVersion: 3);
+        await SeedHistoryRow(tableName, schemaName: "public", migrationVersion: SeededVersion);
 
         var helper = new PostgreSqlBoxDetectionHelper();
 
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        // Act + Assert — DoesTableExistAsync: null and "public" must agree.
+        // Act + Assert
         var existsWithPublic = await helper.DoesTableExistAsync(connection, tableName, "public");
         var existsWithNull = await helper.DoesTableExistAsync(connection, tableName, schemaName: null);
         Assert.True(existsWithPublic);
         Assert.True(existsWithNull);
 
-        // Act + Assert — DoesHistoryExistAsync: null must locate the row recorded against 'public'.
-        // historySchema: null keeps the history table in the backend default ('public') — today's behaviour.
         var historyWithPublic = await helper.DoesHistoryExistAsync(connection, tableName, "public", historySchema: null);
         var historyWithNull = await helper.DoesHistoryExistAsync(connection, tableName, schemaName: null, historySchema: null);
         Assert.True(historyWithPublic);
         Assert.True(historyWithNull);
 
-        // Act + Assert — GetMaxVersionAsync: null must read the same version recorded under 'public'.
         var maxWithPublic = await helper.GetMaxVersionAsync(connection, tableName, "public", historySchema: null);
         var maxWithNull = await helper.GetMaxVersionAsync(connection, tableName, schemaName: null, historySchema: null);
-        Assert.Equal(3, maxWithPublic);
-        Assert.Equal(3, maxWithNull);
+        Assert.Equal(SeededVersion, maxWithPublic);
+        Assert.Equal(SeededVersion, maxWithNull);
 
-        // Act + Assert — GetTableColumnsAsync: null must return the same column set as 'public'.
         var colsWithPublic = await helper.GetTableColumnsAsync(connection, tableName, "public");
         var colsWithNull = await helper.GetTableColumnsAsync(connection, tableName, schemaName: null);
         Assert.Contains("headerbag", colsWithPublic);
