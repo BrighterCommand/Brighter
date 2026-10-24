@@ -370,7 +370,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Remove the in-body comment at `:48`. The method's name now carries that intent (CONTRIBUTING.md, "Comments in Code").
   - Verification: `PublishConfirmationMeter` is still created when the provider is built; existing `Observability/` and `Tasks/` tests stay green.
 
-- [ ] **TEST + IMPLEMENT: T4.2 With started readings registered, the stale instruments report on the shared container**
+- [x] **TEST + IMPLEMENT: T4.2 With started readings registered, the stale instruments report on the shared container**
   - **USE COMMAND**: `/test-first AddBrighterInstrumentation creates the stale-message meter when the meter provider is built, and its instruments report from registered started readings`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_brighter_instrumentation_is_added_with_started_readings_should_report_the_stale_instruments.cs`
