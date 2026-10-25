@@ -432,7 +432,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should:
     - check 1 ≤ C ≤ `MaxCountCeiling` in the options validation.
 
-- [ ] **TEST + IMPLEMENT: T5.4 An invalid I throws `ConfigurationException` (AC-2)**
+- [x] **TEST + IMPLEMENT: T5.4 An invalid I throws `ConfigurationException` (AC-2)**
   - **USE COMMAND**: `/test-first a measurement interval of zero or fifty days throws ConfigurationException naming the setting and value`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_measurement_interval_is_invalid_should_throw_a_configuration_exception.cs`
