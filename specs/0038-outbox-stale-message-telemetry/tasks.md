@@ -465,7 +465,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should (only if the test is RED on arrival):
     - make every upper bound inclusive and every lower bound exclusive, as FR-2 states.
 
-- [ ] **CHARACTERISE: T5.7 The options and the readings are registered once, and the first call wins**
+- [x] **CHARACTERISE: T5.7 The options and the readings are registered once, and the first call wins**
   - **USE COMMAND**: `/test-first a second UseOutboxStaleMessageMonitor call with valid settings leaves the first call's options and readings registered`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_monitor_is_added_twice_should_keep_the_first_settings.cs`
