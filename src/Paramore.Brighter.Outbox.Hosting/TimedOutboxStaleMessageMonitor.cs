@@ -71,7 +71,7 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// <exception cref="ConfigurationException">The container has no outbox or no producers' configuration, because <c>AddProducers</c> was not called.</exception>
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        var scope = _serviceScopeFactory.CreateScope();
+        using var scope = _serviceScopeFactory.CreateScope();
         var outbox = scope.ServiceProvider.GetService<IAmAnOutbox>();
         var producersConfiguration = scope.ServiceProvider.GetService<IAmProducersConfiguration>();
         var transactionProvider = scope.ServiceProvider.GetService<IAmABoxTransactionProvider>();
