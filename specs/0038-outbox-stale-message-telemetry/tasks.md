@@ -410,7 +410,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
     - add `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitorOptions.cs`;
     - give the default C its own value of 100. It equals `DefaultOutstandingCountCeiling` (`src/Paramore.Brighter/OutboxProducerMediator.cs:80`), but that constant is private and the two may diverge.
 
-- [ ] **TEST + IMPLEMENT: T5.2 An invalid A throws `ConfigurationException` and registers nothing (AC-2)**
+- [x] **TEST + IMPLEMENT: T5.2 An invalid A throws `ConfigurationException` and registers nothing (AC-2)**
   - **USE COMMAND**: `/test-first UseOutboxStaleMessageMonitor with an age of zero, minus one second or TimeSpan.MaxValue throws ConfigurationException naming the setting and value`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_stale_age_is_invalid_should_throw_a_configuration_exception.cs`
