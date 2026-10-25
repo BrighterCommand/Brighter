@@ -98,8 +98,13 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         var publication = publications.FirstOrDefault(HasInvalidStaleMessageAge);
         if (publication is not null)
             throw new ConfigurationException(
-                $"The {nameof(Publication.StaleMessageAge)} of the publication for topic {publication.Topic} must be greater than zero and at most {TimedOutboxStaleMessageMonitorOptions.MaxStaleMessageAge}, but was {publication.StaleMessageAge}");
+                $"The {nameof(Publication.StaleMessageAge)} of {DescribePublication(publication)} must be greater than zero and at most {TimedOutboxStaleMessageMonitorOptions.MaxStaleMessageAge}, but was {publication.StaleMessageAge}");
     }
+
+    private static string DescribePublication(Publication publication) =>
+        RoutingKey.IsNullOrEmpty(publication.Topic)
+            ? "a publication with an empty topic"
+            : $"the publication for topic {publication.Topic}";
 
     private static bool HasInvalidStaleMessageAge(Publication publication) =>
         publication.StaleMessageAge is { } staleMessageAge
