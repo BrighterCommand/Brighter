@@ -604,7 +604,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should (only if the test is RED on arrival):
     - give the capability check precedence in `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs`.
 
-- [ ] **TEST + IMPLEMENT: T6.11 Start records the outbox type and whether topics are measured**
+- [x] **TEST + IMPLEMENT: T6.11 Start records the outbox type and whether topics are measured**
   - **USE COMMAND**: `/test-first StartAsync starts the readings with the outbox type name and whether topics are measured`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_monitor_starts_should_start_the_readings.cs`
