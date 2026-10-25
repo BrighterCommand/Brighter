@@ -632,7 +632,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
     - check the instance against `IAmAnOutboxAsync<Message, TTransaction>` built with `MakeGenericType`, as `AddProducers` does (`ServiceCollectionExtensions.cs:365-372` (ADR: `:368-375`) and `:510-515` (ADR: `:513-518`));
     - check the instance rather than resolve the closed interface, because the deferred overload registers only `IAmAnOutbox` (`:498` (ADR: `:501`)).
 
-- [ ] **TEST + IMPLEMENT: T7.2 An outbox with neither count interface fails start**
+- [x] **TEST + IMPLEMENT: T7.2 An outbox with neither count interface fails start**
   - **USE COMMAND**: `/test-first an outbox that implements neither outbox count interface fails StartAsync naming that`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_outbox_implements_neither_interface_should_fail_to_start.cs`
