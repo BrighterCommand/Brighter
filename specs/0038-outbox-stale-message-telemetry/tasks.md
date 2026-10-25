@@ -536,7 +536,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
     - open the start scope in a `using` block in `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs`, so it is disposed before `StartAsync` returns, as `AddEventBus` disposes its scope at `ServiceCollectionExtensions.cs:713-720` (ADR: `:716-723`) and as ADR 0085 step 6 requires (:851);
     - keep only the resolved values, never the scope or the provider.
 
-- [ ] **TEST + IMPLEMENT: T6.5 An invalid `StaleMessageAge` on a topic fails start, naming the topic and value (AC-32)**
+- [x] **TEST + IMPLEMENT: T6.5 An invalid `StaleMessageAge` on a topic fails start, naming the topic and value (AC-32)**
   - **USE COMMAND**: `/test-first an invalid StaleMessageAge on the orders publication fails StartAsync with a ConfigurationException naming orders and the value`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_publication_has_an_invalid_stale_age_should_fail_to_start.cs`
