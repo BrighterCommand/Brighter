@@ -422,7 +422,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
     - add `UseOutboxStaleMessageMonitor(this IBrighterBuilder, TimeSpan staleMessageAge, Action<TimedOutboxStaleMessageMonitorOptions>? configure = null)` beside `UseOutboxArchiver` in `src/Paramore.Brighter.Outbox.Hosting/HostedServiceCollectionExtensions.cs`;
     - validate after `configure` runs and before any registration.
 
-- [ ] **TEST + IMPLEMENT: T5.3 An invalid C throws `ConfigurationException` (AC-2)**
+- [x] **TEST + IMPLEMENT: T5.3 An invalid C throws `ConfigurationException` (AC-2)**
   - **USE COMMAND**: `/test-first a count ceiling of zero or int.MaxValue throws ConfigurationException naming the setting and value`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_count_ceiling_is_invalid_should_throw_a_configuration_exception.cs`
