@@ -560,7 +560,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should:
     - validate a publication's age before skipping it for an empty topic, in `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs`.
 
-- [ ] **CHARACTERISE: T6.7 Valid publication ages, smaller or greater than A, are accepted (AC-32)**
+- [x] **CHARACTERISE: T6.7 Valid publication ages, smaller or greater than A, are accepted (AC-32)**
   - **USE COMMAND**: `/test-first StaleMessageAge of one millisecond, of the maximum, or of ten minutes with A of five minutes starts without an exception`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_publication_has_a_valid_stale_age_should_start.cs`
