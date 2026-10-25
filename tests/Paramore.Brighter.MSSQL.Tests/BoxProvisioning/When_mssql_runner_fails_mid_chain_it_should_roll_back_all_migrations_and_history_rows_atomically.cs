@@ -33,6 +33,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// A migration failing mid-chain rolls back every migration and history row in the batch, leaving the
+/// table and its rows as they were; a retry with the real chain then completes (ADR 0057 §5a).
+/// </summary>
 public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
 {
     private const int SeedVersion = 3;
@@ -46,7 +50,7 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_runner_fails_mid_chain_it_should_roll_back_all_migrations_and_history_rows_atomically()
     {
-        //Arrange — seed an outbox at V3 (no history) plus a marker row to prove preservation.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
         MsSqlOutboxLegacySeeder.SeedAtV(SeedVersion, _connectionString, _tableName);
         SeedMarkerRow();
@@ -61,23 +65,20 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
         var brokenRunner = new MsSqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30));
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
-        //Act + Assert (1) — broken V6 in chain: runner throws and rolls back everything.
+        //Act + Assert
         await Assert.ThrowsAsync<SqlException>(() => brokenRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint));
 
-        //Assert — no history rows for this box (synthetic V3 + V4/V5 applied rows all rolled back).
         Assert.Empty(GetHistoryRowsByVersion());
 
-        //Assert — table still at V3 shape (V4 PartitionKey ALTER rolled back; V5+ never reached).
         var columnsAfterFailure = GetTableColumns();
         Assert.Contains("ContentType", columnsAfterFailure); // V3 column present
         Assert.DoesNotContain("PartitionKey", columnsAfterFailure); // V4 column rolled back
         Assert.DoesNotContain("Source", columnsAfterFailure); // V5 column never applied
 
-        //Assert — seeded marker row preserved (no DROP/recreate happened).
         Assert.Equal(1, GetMarkerRowCount());
 
-        //Act + Assert (2) — retry with the real migration list: bootstrap path completes V4..V7.
+        //Act + Assert
         var realRunner = new MsSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
         var provisioner = new MsSqlOutboxProvisioner(
             new MsSqlBoxDetectionHelper(),
@@ -87,7 +88,6 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
             realRunner);
         await provisioner.ProvisionAsync();
 
-        //Assert — exactly one synthetic V3 + one applied per V4..V7 (no duplicates).
         var rowsByVersion = GetHistoryRowsByVersion();
         Assert.Equal(ExpectedMigrationVersions.OutboxLatest - SeedVersion + 1, rowsByVersion.Count);
 
@@ -103,7 +103,6 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
                 $"(description was: '{appliedDescription}')");
         }
 
-        //Assert — table now at V7 shape with marker row still present.
         var columnsAfterRetry = GetTableColumns();
         Assert.Contains("DataRef", columnsAfterRetry); // V7 column
         Assert.Contains("PartitionKey", columnsAfterRetry); // V4 column applied on retry

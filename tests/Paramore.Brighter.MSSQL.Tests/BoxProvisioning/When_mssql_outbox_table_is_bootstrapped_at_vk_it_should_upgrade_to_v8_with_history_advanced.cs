@@ -31,6 +31,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// Bootstrapping an outbox seeded at V_k with no history stamps a synthetic V_k row, applies
+/// V_{k+1}..V8, and keeps the table's existing rows.
+/// </summary>
 public class MsSqlOutboxVkToV8UpgradeTests : IAsyncLifetime
 {
     private static readonly string[] s_v8ExpectedColumns =
@@ -51,7 +55,7 @@ public class MsSqlOutboxVkToV8UpgradeTests : IAsyncLifetime
     [InlineData(7)]
     public async Task When_mssql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v8_with_history_advanced(int k)
     {
-        //Arrange — seed an outbox at V_k (no history row) and a marker row to prove preservation.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
         MsSqlOutboxLegacySeeder.SeedAtV(k, _connectionString, _tableName);
         SeedMarkerRow();
@@ -68,14 +72,13 @@ public class MsSqlOutboxVkToV8UpgradeTests : IAsyncLifetime
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — the table now has the full V8 column set (V_{k+1}..V8 ALTERs applied)
+        //Assert
         var actualColumns = GetTableColumns();
         foreach (var expected in s_v8ExpectedColumns)
         {
             Assert.Contains(expected, actualColumns);
         }
 
-        //Assert — history rows: one synthetic at V_k + one applied per V_{k+1}..V8
         var rowsByVersion = GetHistoryRowsByVersion();
         Assert.Equal(8 - k + 1, rowsByVersion.Count);
 
@@ -91,7 +94,6 @@ public class MsSqlOutboxVkToV8UpgradeTests : IAsyncLifetime
                 $"(description was: '{appliedDescription}')");
         }
 
-        //Assert — the seeded marker row survived (no DROP/recreate happened)
         Assert.Equal(1, GetMarkerRowCount());
     }
 
