@@ -525,7 +525,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
     - in `StartAsync`, open a scope and resolve `IAmAnOutbox`, `IAmProducersConfiguration` and `IAmABoxTransactionProvider` with `GetService`. `AddEventBus` resolves the transaction provider in a scope, at `src/Paramore.Brighter.Extensions.DependencyInjection/ServiceCollectionExtensions.cs:713-720` (ADR: `:716-723`). Leave the scope open here; disposing it is T6.4;
     - throw when the outbox or the producers' configuration is missing.
 
-- [ ] **TEST + IMPLEMENT: T6.4 The start scope is disposed before `StartAsync` returns**
+- [x] **TEST + IMPLEMENT: T6.4 The start scope is disposed before `StartAsync` returns**
   - **USE COMMAND**: `/test-first the scope the monitor opens at start is disposed before StartAsync returns`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_monitor_starts_should_dispose_its_scope_before_returning.cs`
