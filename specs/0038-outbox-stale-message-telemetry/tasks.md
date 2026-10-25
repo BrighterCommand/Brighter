@@ -398,7 +398,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
 
 *Depends on Phase 3.*
 
-- [ ] **TEST + IMPLEMENT: T5.1 Given only A, C, I and T take their defaults (AC-3 first clause)**
+- [x] **TEST + IMPLEMENT: T5.1 Given only A, C, I and T take their defaults (AC-3 first clause)**
   - **USE COMMAND**: `/test-first options built from only the stale age default to a ceiling of 100, an interval of one minute and a timeout of ten seconds`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_only_the_stale_age_is_given_should_use_the_default_settings.cs`
