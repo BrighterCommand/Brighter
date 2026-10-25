@@ -31,14 +31,7 @@ using Paramore.Brighter.BoxProvisioning.MsSql;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
 
-/// <summary>
-/// Test double for <see cref="IMsSqlAdvisoryLock"/>: <see cref="AcquireAsync"/> records the
-/// lock resource it was called with and either throws the configured exception (driving the
-/// runner's distinguishable-exception-propagation path per ADR 0057 §5b) or returns success
-/// when no exception is configured. The MSSQL abstraction is acquire-only because
-/// <c>sp_getapplock</c> is invoked with <c>@LockOwner='Transaction'</c>, so the lock is
-/// auto-released on the surrounding transaction's commit or rollback.
-/// </summary>
+// Records its arguments before throwing, so a test can read them even when the acquire fails.
 internal sealed class FakeMsSqlAdvisoryLock(Exception? throwOnAcquire) : IMsSqlAdvisoryLock
 {
     public string? AcquiredResource { get; private set; }
