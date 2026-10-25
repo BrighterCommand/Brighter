@@ -35,23 +35,12 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// When pg_advisory_unlock throws during RollbackAsync, the unit of work logs a Warning carrying the exception and does not
+/// throw, so the runner's original migration error is not masked (ADR 0058 §B.3).
+/// </summary>
 public class PostgreSqlProvisioningUnitOfWorkRollbackReleaseThrowsTests : IAsyncLifetime
 {
-    // Per ADR 0058 §B.3: RollbackAsync MUST NOT throw — disposal-style semantics. The runner's
-    // catch path is `catch { await uow.RollbackAsync(CancellationToken.None); throw; }`, so any
-    // exception that escapes RollbackAsync masks the original migration error.
-    //
-    // PostgreSqlProvisioningUnitOfWork.RollbackAsync already guards the _transaction.RollbackAsync
-    // call with `try/catch (InvalidOperationException)` because Npgsql throws that when a tx is
-    // finalised. But pg_advisory_unlock executes SQL on the same connection — if the connection
-    // is dead or the driver throws (NpgsqlException, ObjectDisposedException, etc.) the
-    // unguarded ReleaseAsync call propagates straight through RollbackAsync, breaking the
-    // contract and masking the original migration failure in the runner's catch.
-    //
-    // This test pins that the release-side throw is swallowed and logged the same way the
-    // transaction-side InvalidOperationException already is: best-effort, no rethrow, Warning
-    // entry preserving the lock-resource context.
-
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
 
     public async Task InitializeAsync() => await _connection.OpenAsync();
@@ -61,10 +50,7 @@ public class PostgreSqlProvisioningUnitOfWorkRollbackReleaseThrowsTests : IAsync
     [Fact]
     public async Task When_postgres_provisioning_uow_rollback_release_throws_it_should_log_without_throwing()
     {
-        // Arrange — release throws (simulates a dead connection / driver fault during
-        // pg_advisory_unlock). NpgsqlException ctors are internal in modern Npgsql, so an
-        // InvalidOperationException ("Connection is broken") is a representative driver-side
-        // throw — the production guard catches Exception, not a specific subtype.
+        // Arrange
         var releaseFault = new InvalidOperationException("Connection is broken");
         var advisoryLock = new FakePostgreSqlAdvisoryLock(
             releaseResult: true,
@@ -78,19 +64,14 @@ public class PostgreSqlProvisioningUnitOfWorkRollbackReleaseThrowsTests : IAsync
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None);
 
-        // Act — RollbackAsync MUST NOT throw even though ReleaseAsync does. This is the
-        // disposal-style contract the runner's catch path depends on.
+        // Act
         var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
 
-        // Assert — RollbackAsync swallowed the release-side throw.
+        // Assert
         Assert.Null(thrown);
 
-        // Assert — ReleaseAsync was attempted (the lock-key was recorded before the throw),
-        // so the unwind genuinely tried to release rather than skipping it.
         Assert.Equal("test_lock_resource", advisoryLock.ReleasedKey);
 
-        // Assert — a Warning was logged naming the lock resource and carrying the original
-        // exception so operators can correlate against the broken connection.
         var warnings = capturingLogger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
         Assert.Single(warnings);
         Assert.Contains("test_lock_resource", warnings[0].Message, StringComparison.Ordinal);

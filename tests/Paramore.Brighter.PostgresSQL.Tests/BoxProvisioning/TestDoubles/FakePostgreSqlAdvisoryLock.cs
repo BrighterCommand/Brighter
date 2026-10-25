@@ -31,25 +31,7 @@ using Paramore.Brighter.BoxProvisioning.PostgreSql;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
 
-/// <summary>
-/// Test double for <see cref="IPostgreSqlAdvisoryLock"/>: <see cref="AcquireAsync"/> is a
-/// no-op success that records the lock key it was called with (or throws the configured
-/// exception); <see cref="ReleaseAsync"/> returns the parameterised <see cref="bool"/> so
-/// tests can drive the runner's diagnostic path for non-true unlock results.
-/// </summary>
-/// <remarks>
-/// The optional <c>senseTransactionStateAtAcquire</c> flag makes <see cref="AcquireAsync"/>
-/// additionally probe whether a transaction was already active on the connection at the time
-/// it was invoked, by attempting <see cref="NpgsqlConnection.BeginTransactionAsync(CancellationToken)"/>
-/// inside a try/catch. Npgsql throws <see cref="InvalidOperationException"/> ("A transaction
-/// is already in progress; nested/concurrent transactions aren't supported.") when a tx is
-/// already active — used by the UoW BeginAsync ordering test (ADR 0058 §B.1) to verify that
-/// AcquireAsync runs BEFORE the UoW's BeginTransactionAsync.
-/// The optional <c>throwOnAcquire</c> exception drives the runner's distinguishable-exception-
-/// propagation path per ADR 0058 §B.3 (lock-acquisition failure surfaces unwrapped to the
-/// caller; the UoW's <c>await using</c> scope then exercises the partial-init DisposeAsync
-/// contract). Mirrors <c>FakeMsSqlAdvisoryLock(throwOnAcquire)</c>.
-/// </remarks>
+// senseTransactionStateAtAcquire probes by beginning a transaction: Npgsql throws InvalidOperationException when one is already active.
 internal sealed class FakePostgreSqlAdvisoryLock(
     bool releaseResult,
     bool senseTransactionStateAtAcquire = false,
@@ -60,21 +42,8 @@ internal sealed class FakePostgreSqlAdvisoryLock(
     public string? ReleasedKey { get; private set; }
     public TimeSpan? AcquiredTimeout { get; private set; }
 
-    /// <summary>
-    /// Cancellation token captured at the moment <see cref="ReleaseAsync"/> was invoked.
-    /// Used by the partial-init cleanup-release test (ADR 0058 §B.3 atomic-Begin) to pin
-    /// that the UoW passes <see cref="CancellationToken.None"/> to <see cref="ReleaseAsync"/>
-    /// in its <c>BeginTransactionAsync</c>-failed catch path — otherwise a caller-cancelled
-    /// token would short-circuit the unlock and leak the session-scoped lock.
-    /// </summary>
     public CancellationToken? ReleasedCancellationToken { get; private set; }
 
-    /// <summary>
-    /// Captured at the moment <see cref="AcquireAsync"/> was first invoked, if
-    /// <c>senseTransactionStateAtAcquire</c> was true. <c>null</c> until first invocation;
-    /// <c>false</c> if no transaction was active on the connection at the time of the call;
-    /// <c>true</c> if a transaction was already active (Npgsql refused to begin a probe tx).
-    /// </summary>
     public bool? TransactionWasActiveAtAcquireTime { get; private set; }
 
     public async Task AcquireAsync(

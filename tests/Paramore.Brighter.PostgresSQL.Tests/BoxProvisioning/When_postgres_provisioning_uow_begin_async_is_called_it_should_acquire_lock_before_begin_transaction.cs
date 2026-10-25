@@ -34,21 +34,12 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// BeginAsync acquires the session-scoped pg_advisory_lock before it begins the transaction (ADR 0058 §B.1). The fake lock
+/// probes the connection when AcquireAsync is called, and finds no transaction active.
+/// </summary>
 public class PostgreSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
 {
-    // Per ADR 0058 §B.1: Postgres uses pg_advisory_lock, which is session-scoped — the lock
-    // outlives any transaction on the same connection and is released either by an explicit
-    // pg_advisory_unlock or when the connection closes. BeginAsync MUST therefore acquire the
-    // advisory lock BEFORE beginning the transaction (the reverse of the MSSQL ordering, which
-    // uses sp_getapplock with @LockOwner='Transaction' and so requires BeginTransaction first).
-    //
-    // Postgres differs from MSSQL: IPostgreSqlAdvisoryLock.AcquireAsync only takes the connection
-    // (no transaction handle is threaded through), so the MSSQL "captured-tx Same-instance" trick
-    // is not available. Instead the spy probes the connection's transaction state at the moment
-    // AcquireAsync is invoked — it attempts NpgsqlConnection.BeginTransactionAsync and watches
-    // for the InvalidOperationException Npgsql throws when a transaction is already active.
-    // Probe succeeds → no tx yet → AcquireAsync ran before BeginTransactionAsync.
-
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock =
         new(releaseResult: true, senseTransactionStateAtAcquire: true);
@@ -70,11 +61,8 @@ public class PostgreSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None);
 
-        // Assert: at the moment AcquireAsync was called, no transaction was yet active on the
-        // connection — proves AcquireAsync ran before BeginTransactionAsync. (Stays null if
-        // AcquireAsync was never called, in which case Assert.False(null) also fails.)
+        // Assert
         Assert.False(_advisoryLock.TransactionWasActiveAtAcquireTime);
-        // Assert: BeginTransactionAsync was also called — the UoW now exposes a non-null tx.
         Assert.NotNull(uow.Transaction);
     }
 }
