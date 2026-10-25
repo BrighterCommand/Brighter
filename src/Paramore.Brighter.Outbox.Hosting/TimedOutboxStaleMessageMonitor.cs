@@ -68,7 +68,20 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// </summary>
     /// <param name="cancellationToken">Not used.</param>
     /// <returns>A completed task.</returns>
-    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    /// <exception cref="ConfigurationException">The container has no outbox or no producers' configuration, because <c>AddProducers</c> was not called.</exception>
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        var scope = _serviceScopeFactory.CreateScope();
+        var outbox = scope.ServiceProvider.GetService<IAmAnOutbox>();
+        var producersConfiguration = scope.ServiceProvider.GetService<IAmProducersConfiguration>();
+        var transactionProvider = scope.ServiceProvider.GetService<IAmABoxTransactionProvider>();
+
+        if (outbox is null || producersConfiguration is null)
+            throw new ConfigurationException(
+                $"The outbox stale-message monitor needs an {nameof(IAmAnOutbox)} and an {nameof(IAmProducersConfiguration)}; register them with AddProducers");
+
+        return Task.CompletedTask;
+    }
 
     /// <summary>
     /// Stops the monitor.
