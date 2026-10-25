@@ -88,11 +88,15 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <param name="staleMessageAge">How old a message that has not been dispatched must be to count as stale.</param>
         /// <param name="configure">Configuration actions for the other settings of the monitor <see cref="TimedOutboxStaleMessageMonitorOptions"/></param>
         /// <returns>The Brighter Builder</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="brighterBuilder"/> is null.</exception>
         /// <exception cref="ConfigurationException">A setting is outside the range the monitor accepts.</exception>
         public static IBrighterBuilder UseOutboxStaleMessageMonitor(this IBrighterBuilder brighterBuilder,
             TimeSpan staleMessageAge,
             Action<TimedOutboxStaleMessageMonitorOptions>? configure = null)
         {
+            if (brighterBuilder is null)
+                throw new ArgumentNullException(nameof(brighterBuilder));
+
             var options = new TimedOutboxStaleMessageMonitorOptions(staleMessageAge);
             configure?.Invoke(options);
             options.Validate();
