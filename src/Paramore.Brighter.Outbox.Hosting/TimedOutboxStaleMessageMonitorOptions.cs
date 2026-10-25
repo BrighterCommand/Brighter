@@ -78,4 +78,11 @@ public sealed class TimedOutboxStaleMessageMonitorOptions
     /// <see cref="MeasurementInterval"/>. Defaults to ten seconds.
     /// </summary>
     public TimeSpan MeasurementTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
+    internal void Validate()
+    {
+        if (StaleMessageAge <= TimeSpan.Zero || StaleMessageAge > MaxStaleMessageAge)
+            throw new ConfigurationException(
+                $"{nameof(StaleMessageAge)} must be greater than zero and at most {MaxStaleMessageAge}, but was {StaleMessageAge}");
+    }
 }
