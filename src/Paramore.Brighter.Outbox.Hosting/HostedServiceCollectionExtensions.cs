@@ -103,6 +103,7 @@ namespace Paramore.Brighter.Outbox.Hosting
 
             brighterBuilder.Services.TryAddSingleton(options);
             brighterBuilder.Services.TryAddSingleton<OutboxStaleMessageReadings>();
+            brighterBuilder.Services.AddHostedService<TimedOutboxStaleMessageMonitor>();
             return brighterBuilder;
         }
     }
