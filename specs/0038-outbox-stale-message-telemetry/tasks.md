@@ -491,7 +491,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
 
 *Depends on Phases 1, 2 and 5.*
 
-- [ ] **TEST + IMPLEMENT: T6.1 Two calls register one hosted monitor**
+- [x] **TEST + IMPLEMENT: T6.1 Two calls register one hosted monitor**
   - **USE COMMAND**: `/test-first after two UseOutboxStaleMessageMonitor calls the container holds one hosted-service registration for the monitor`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_monitor_is_added_twice_should_register_one_hosted_service.cs`
