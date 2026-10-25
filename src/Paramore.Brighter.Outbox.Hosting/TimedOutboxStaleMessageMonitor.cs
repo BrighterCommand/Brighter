@@ -48,12 +48,15 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// <param name="readings">The readings the monitor writes each measurement to.</param>
     /// <param name="options">The settings of the monitor.</param>
     /// <param name="timeProvider">The clock of the monitor; <see cref="TimeProvider.System"/> when null.</param>
+    /// <exception cref="ConfigurationException">A setting in <paramref name="options"/> is outside the range the monitor accepts.</exception>
     public TimedOutboxStaleMessageMonitor(
         IServiceScopeFactory serviceScopeFactory,
         OutboxStaleMessageReadings readings,
         TimedOutboxStaleMessageMonitorOptions options,
         TimeProvider? timeProvider = null)
     {
+        options.Validate();
+
         _serviceScopeFactory = serviceScopeFactory;
         _readings = readings;
         _options = options;
