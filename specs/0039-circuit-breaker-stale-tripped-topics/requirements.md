@@ -1,0 +1,280 @@
+# Requirements
+
+> **Note**: This document captures user requirements and needs. Technical design decisions and implementation details should be documented in an Architecture Decision Record (ADR) in `docs/adr/`.
+
+**Linked Issue**: #4628
+
+## Problem Statement
+
+As an operator running Brighter's outbox sweeper on more than one instance against a durable outbox and a distributed lock, I would like a topic that has been circuit-broken to cool down for a fixed time, whichever instance runs the sweeps, and never stay circuit-broken indefinitely. That way a topic that keeps failing does not block other topics, and messages for a topic whose broker has recovered are not held in the outbox for no current reason.
+
+As an operator running a single instance (in-memory outbox, or no distributed lock), I would like a circuit-broken topic to end after a bounded time, so that a trip cannot go stale while the sweeper is not sweeping.
+
+How it works today (verified in the code):
+
+- `InMemoryOutboxCircuitBreaker` (ADR 0028) keeps a per-process `ConcurrentDictionary<RoutingKey, int>`. `TripTopic` sets a topic's count to `CooldownCount` (default 10). `CoolDown()` decrements every tripped topic and evicts it once the count drops below 0. A topic tripped with `CooldownCount = N` is therefore left out of N sweeps and comes back on the (N+1)th cooldown.
+- `CoolDown()` is called only from `OutboxProducerMediator.BackgroundDispatchUsingAsync`, which is reached only through `ClearOutstandingFromOutboxAsync`. Brighter's only caller of that method is `OutboxSweeper.SweepAsync`, which `TimedOutboxSweeper.SweepAsync` runs only after `ObtainLockAsync` has returned a lock. So the cooldown advances only on a sweep that obtained the lock.
+- `TimedOutboxSweeper` obtains and releases the lock on every sweep, and each instance has its own timer. In a multi-instance deployment the instance that obtains the lock can change from tick to tick, and the deployment as a whole can run more than one sweep per `TimerInterval` (the sweeps are serialised by the lock, but not spaced by it). An instance that stops obtaining the lock keeps its trips indefinitely. When it next obtains the lock it leaves those topics out of its sweeps, possibly long after the broker has recovered.
+- The breaker lives in each process, even with a durable outbox and a distributed lock, so no other instance can see or clear these trips.
+- Spec 0038 (#4573) hides this on instances that are not sweeping: the `tripped_topics` gauge and the investigate check report trips only while `OutboxSweeperSnapshot.IsActive` is true. Hiding the trips does not expire them.
+
+## Proposed Solution
+
+1. **Distributed circuit breaker (opt in).** A new outbox circuit breaker keeps tripped topics in a durable store that every sweeper instance in a deployment can read and write. A topic tripped on any instance is left out of the next sweep on every instance. A trip lasts a fixed cooldown duration measured in elapsed time, from the most recent trip. Neither the number of sweeps, nor which instance holds the lock, nor how many instances there are changes when a trip ends. A re-trip on any instance restarts the cooldown for all instances. The ADR chooses the store (for example the outbox's database or the lock store) and how it is reached.
+2. **Non-blocking writes.** The distributed breaker also implements a new, separate async interface. Code paths that are already async await the store through it, and synchronous broker callbacks never wait on the store. `IAmAnOutboxCircuitBreaker` itself does not change.
+3. **Every in-memory trip is bounded in time.** `InMemoryOutboxCircuitBreaker` also ends a trip once a configurable maximum trip duration has passed since the topic was last tripped, whether or not any sweep has run. So it can no longer go stale on an instance that stops obtaining the lock.
+4. **The in-memory breaker stays.** Deployments without a durable store (in-memory outbox, single instance) keep `InMemoryOutboxCircuitBreaker`, with the time limit added.
+5. **A store failure never stops sweeping or publishing.** If the shared store cannot be reached, each instance falls back to its own view of the trips, still bounded in time, and reports the problem on the investigate health check.
+6. **Health signals match the fix.** With the distributed breaker, every running sweeper instance reports the deployment's tripped topics as last read from the shared store. Spec 0038 hid trips on instances that were not sweeping because they might be stale. Distributed trips are not stale, so they are no longer hidden there.
+
+## Requirements
+
+### Definitions
+
+- **Instance**: one process (service provider) that hosts Brighter's outbox producer mediator, and may host one `TimedOutboxSweeper`.
+- **Deployment**: the set of instances that share one outbox and one distributed lock (`IDistributedLock` resource `"OutboxSweeper"`).
+- **Sweeper instance**: an instance on which `UseOutboxSweeper` registered a `TimedOutboxSweeper`.
+- **Running sweeper**: a sweeper instance whose sweeper has started and has not been asked to stop (spec 0038 FR-1.2).
+- **Active sweeper**: as defined in spec 0038 (`OutboxSweeperSnapshot.IsActive`). While a sweep is in progress, the sweeper is active if it holds the lock for that sweep. While no sweep is in progress, it is active if its most recent ended sweep obtained the lock. A stopped sweeper is never active.
+- **Trip**: recording that a topic (`RoutingKey`) is circuit-broken, via `IAmAnOutboxCircuitBreaker.TripTopic` (or its async counterpart, FR-3.6). Today this happens after a single failed publish to that topic (after the outbox producer resilience pipeline) on the async dispatch, bulk dispatch and publication-confirmation paths.
+- **Re-trip**: a trip of a topic that is already tripped.
+- **Tripped topic**: a topic listed by the breaker's `TrippedTopics`. A sweep leaves messages for tripped topics out of `OutstandingMessagesAsync`.
+- **Cooldown cycle**: one call to `IAmAnOutboxCircuitBreaker.CoolDown()`. In Brighter this happens once per sweep that obtained the lock, at the start of `ClearOutstandingFromOutboxAsync`. Only `InMemoryOutboxCircuitBreaker` counts cooldown cycles. The distributed breaker ignores them (FR-4).
+- **Cooldown count**: `OutboxCircuitBreakerOptions.CooldownCount` (default 10). An in-memory trip with cooldown count N ends on the (N+1)th cooldown cycle after the most recent trip or re-trip. This is today's behaviour, and this spec keeps it.
+- **Maximum trip duration (D)**: a new configurable duration for `InMemoryOutboxCircuitBreaker`. An in-memory trip ends once D has passed since the most recent trip or re-trip of that topic.
+- **Cooldown duration (C)**: a new configurable duration for the distributed circuit breaker. A distributed trip ends once C has passed since the most recent trip or re-trip of that topic.
+- **Trip end (reset)**: a topic stops being a tripped topic. An in-memory trip ends at whichever comes first: its cooldown count runs out, or D passes. A distributed trip ends when C passes.
+- **Per-instance breaker**: a breaker whose trips are held by one instance only (`InMemoryOutboxCircuitBreaker`).
+- **Distributed circuit breaker**: the new breaker whose trips are held in a shared trip store and seen by every instance in the deployment.
+- **Shared trip store**: the durable store the distributed circuit breaker uses. The ADR chooses it.
+- **Store failure**: a shared trip store operation that throws, or does not complete within the store timeout (NFR-3).
+- **View**: the set of trips (with their trip times) that a distributed circuit breaker instance holds in memory and reports through `TrippedTopics`. It is refreshed from the store (FR-4A) and updated at once by the instance's own trips. Until the first successful read it holds no store trips, and it always includes this instance's own trips.
+- **Fallback view**: the view while the most recent store operation on this instance has failed. It holds the trips last read successfully plus the trips recorded locally since, each still subject to trip end.
+
+### Functional Requirements
+
+**FR-1 — A per-instance trip ends after the maximum trip duration.** `InMemoryOutboxCircuitBreaker` ends a trip at whichever comes first: the cooldown count runs out (unchanged), or D has passed since the most recent trip or re-trip, measured with the breaker's `TimeProvider`.
+- Example: `CooldownCount = 10`, D = 5 min. Topic `orders` is tripped at t = 0, and the instance's sweeper then stops obtaining the lock (every sweep is `lock_unavailable`, so no cooldown cycle runs). At t = 4 min 59 s `TrippedTopics` lists `orders`. At t = 5 min it does not. When the instance obtains the lock at t = 10 min, that sweep passes no tripped topics to `OutstandingMessagesAsync` and includes `orders` messages.
+- Example: `CooldownCount = 2`, D = 5 min, TimerInterval 5 s, every sweep obtains the lock. `orders` is tripped at t = 0. Cooldown cycles at t = 5 s and 10 s keep it tripped, and the cycle at t = 15 s ends it. D plays no part, so behaviour matches today.
+- **FR-1.1 — Re-trip restarts both limits.** A re-trip resets the cooldown count to `CooldownCount` (unchanged) and restarts the D clock. Example: D = 5 min. `orders` tripped at t = 0 and re-tripped at t = 4 min is still tripped at t = 8 min 59 s and ends at t = 9 min. Example: `CooldownCount = 2`. `orders` is tripped, 2 cooldown cycles run, `orders` is re-tripped, and 2 more cycles run: it is still tripped, and the 3rd ends it.
+- **FR-1.2 — No sweep or lock is needed.** A trip ends by D even when no cooldown cycle runs, no sweep runs, or the sweeper is stopped or was never registered. Any read of `TrippedTopics` at or after the end time leaves the topic out.
+- **FR-1.3 — Boundary.** A topic is tripped while the time since its most recent trip is less than D. At exactly D it is no longer tripped.
+- **FR-1.4 — A reset is announced once, by the call that observes it.** A trip ended by D produces exactly one Reset (an Information log, a Reset span and one `paramore.brighter.circuit_breaker.trips` increment with the Reset operation, as ADR 0058 (`0058-outbox-circuit-breaker-trip-logging.md`) defines for a cooldown reset). The Reset is produced by the first call to `CoolDown`, `TripTopic` or `TrippedTopics` on that in-memory breaker at or after the end time, and that call is the one the telemetry is attributed to, including a read made by the tripped-topics gauge or the health check. If D had already passed when that call ran, the cause is the maximum trip duration, even if the cooldown count would also have run out in that call. If that first call is `TripTopic` for the same topic, the Reset is produced before the Trip, and the new trip is a Trip, not a ReTrip. The log says whether the trip ended by cooldown or by maximum trip duration. A trip ended by cooldown still produces exactly one Reset, as it does today.
+
+**FR-2 — Duration configuration.** `OutboxCircuitBreakerOptions` gains a maximum trip duration (D, used by `InMemoryOutboxCircuitBreaker`) and a cooldown duration (C, used by the distributed circuit breaker). The ADR names them.
+- **FR-2.1 — Validation.** D and C must each be greater than zero and at most 24 hours. `TimeSpan.Zero`, a negative value, `Timeout.InfiniteTimeSpan`, `TimeSpan.MaxValue` and any value over 24 hours are rejected with `ArgumentOutOfRangeException` when the breaker is constructed (each breaker validates only the duration it uses), so no breaker can exist whose trips never end, and expiry arithmetic cannot overflow. Options are read once, at construction, and later changes to the options object have no effect on an existing breaker. Example: D = 0 throws, D = 25 hours throws, D = 1 ms and D = 24 hours are accepted.
+- **FR-2.2 — Default D.** The default D is more than `CooldownCount` default × `TimerInterval` default (10 × 5 s = 50 s), by a wide margin, so that sweeps which start late do not make D end a trip before the cooldown count would have. Proposed: 5 min (OQ-2). A deployment that uses all defaults, obtains the lock on every sweep and has sweeps that start on schedule therefore sees no change in when in-memory trips end.
+- **FR-2.3 — Cooldown count unchanged.** `CooldownCount` keeps its name, its default of 10 and its meaning for `InMemoryOutboxCircuitBreaker`. The distributed breaker does not use it.
+- **FR-2.4 — Default C.** The default C is 50 s, which is today's single-instance cooldown at the default `CooldownCount` and `TimerInterval`.
+
+**FR-3 — Distributed circuit breaker: trips are shared across instances.** Brighter provides an opt-in distributed circuit breaker implementing `IAmAnOutboxCircuitBreaker`. It records trips in a shared trip store, so every instance in the deployment sees the same tripped topics.
+- **FR-3.1 — Visible to every instance.** A trip recorded on any instance, whether by a sweep or by the async request path (PostAsync / ClearOutboxAsync), is left out of the next sweep on any instance that starts after the trip's store write completed successfully. Example: instances A and B share a store and a lock. A's sweep at tick 0 fails to publish to `orders`, which trips it. B obtains the lock at tick 1, and its call to `OutstandingMessagesAsync` excludes `orders` while still returning messages for `invoices`.
+- **FR-3.2 — A re-trip anywhere restarts the cooldown everywhere.** A re-trip on any instance restarts that topic's C clock for the whole deployment. Example: C = 50 s, A trips `orders` at t = 0 and B re-trips it at t = 30 s. It is still tripped at t = 79.9 s on every instance and ends at t = 80 s.
+- **FR-3.3 — Concurrent trips.** When two instances trip the same untripped topic at the same moment, the topic is listed once. While every store operation succeeds, the first trip to be recorded in the store produces a Trip and the other a ReTrip (classified, and announced, when the store write completes, not when the view is updated; if the write fails, the instance announces from its own view, FR-5.7), and the C clock runs from the later of the two trip times.
+- **FR-3.4 — Survives restarts.** Trips outlive the restart of any instance or of all of them, still subject to trip end. Example: C = 50 s. `orders` tripped at t = 0, every instance restarts at t = 10 s, and the first sweep after the restart excludes `orders`. If the restart is at t = 60 s, the first sweep includes `orders`.
+- **FR-3.5 — Request-path trips now affect sweeps and cost a store write (stated change).** The request path here means the async paths (PostAsync / ClearOutboxAsync); the sync `Dispatch()` path never trips (ADR 0058). With the per-instance breaker, a request-path trip on an instance affects only that instance's sweeps and costs no I/O. With the distributed breaker, it affects every instance's sweeps, and every failed publish costs one store write (so a topic that fails continuously on many request instances causes one write per failed publish across the deployment). On the async request path the send waits for that write, for at most the store timeout (NFR-3). The request path itself does not consult tripped topics, before or after this change.
+- **FR-3.6 — Non-blocking trips.** The distributed breaker also implements a new async interface, separate from `IAmAnOutboxCircuitBreaker` (the ADR names it, OQ-7). When the registered breaker implements it, the producer mediator uses it on its async paths: trips are awaited, and the tripped topics are read asynchronously for a sweep. On a synchronous publication-confirmation callback, which runs on a broker client thread, a trip updates the view at once and the store write runs without blocking that thread (a failure of that write is handled as FR-5.2). The synchronous `TripTopic` and `TrippedTopics` members of the distributed breaker never wait on the store: `TripTopic` updates the view and queues the write, and `TrippedTopics` returns the view. Example: a store double that blocks for ever, a confirmation callback that trips `orders` returns within 1 s, and `TrippedTopics` lists `orders` immediately.
+
+**FR-4 — The distributed cooldown is elapsed time.** A distributed trip ends C after the most recent trip or re-trip, however many sweeps have run, whichever instance obtained the lock, and however many instances there are. Cooldown cycles (`CoolDown()` calls) do not advance or end a distributed trip.
+- Example: C = 50 s. A request-path trip of `orders` is recorded at t = 0, before any sweep. Three instances sweep with ticks offset by 1.7 s, with first ticks at t = 0.1 s, 1.8 s and 3.5 s, so 12 lock-obtaining sweeps start in [0, 20 s). `orders` is excluded from all 12, and included from the first sweep that starts at or after t = 50 s.
+- **FR-4.1 — An instance that stops obtaining the lock.** An instance that obtains no lock for any length of time neither holds back nor keeps any distributed trip. Example: A tripped `orders` at t = 0 and then got `lock_unavailable` until t = 100 s while B swept. When A next obtains the lock, its sweep includes `orders`, as B's sweep at that time would.
+- **FR-4.2 — Bounded with no sweeper running.** A distributed trip ends at C even if no sweeper is running. Example: every sweeper is stopped at t = 0 with `orders` tripped. A sweeper started at t = C + 1 s includes `orders` in its first sweep.
+- **FR-4.3 — Boundary.** A distributed topic is tripped while the time since its most recent trip is less than C. At exactly C it is no longer tripped.
+- **FR-4.4 — Reset once per trip while the store works.** A distributed trip that ends produces exactly one Reset across the deployment, produced by the first instance to observe the end (on a refresh, a sweep read or a trip), provided every store operation involved succeeds. Reads of `TrippedTopics` by the gauge or the health check on the distributed breaker never produce a Trip, ReTrip or Reset, because they never touch the store (NFR-4). When store failures are involved, FR-5.7 applies instead.
+
+**FR-4A — Every running sweeper keeps its view fresh.** Every running sweeper refreshes the distributed breaker's view from the store once per `TimerInterval`, whatever the outcome of its lock attempt (including `lock_unavailable`, because that outcome never reaches the mediator) and however long its sweeps take, so a sweep that overruns `TimerInterval` does not delay the refresh. A sweep that obtained the lock also reads the store for its tripped topics before it selects messages. Example: instance B had `lock_unavailable` on 20 consecutive ticks, and A's trip of `orders` from t = 0 appears in B's `TrippedTopics` by t = `TimerInterval` + the store timeout.
+
+**FR-5 — A store failure never stops sweeping or publishing.**
+- **FR-5.1 — Read failure during a sweep.** If the shared trip store cannot be read when a sweep needs the tripped topics, the sweep goes on using the fallback view and is not failed because of the breaker. It ends `completed` if nothing else failed. A Warning log names the failure. Example: the store throws on read, the fallback view holds `orders` (tripped 20 s ago, C = 50 s), and the sweep excludes `orders`, publishes `invoices` messages and ends `completed`.
+- **FR-5.2 — Write failure on a trip.** If a trip cannot be written, the trip call does not throw to its caller. Dispatch of the remaining messages in the batch goes on, and the failed send's outcome is unchanged (the message stays outstanding). The trip stays in this instance's view (now the fallback view), applies to this instance's sweeps, and ends by FR-4. Example: a batch of 3 messages for `orders`, `invoices`, `invoices`. The `orders` send fails and the store write throws, yet both `invoices` messages are still sent and marked dispatched.
+- **FR-5.3 — Refresh failure.** If a refresh (FR-4A) fails, the instance keeps its fallback view, which still loses each trip at C, and logs a Warning. Nothing is failed because of it.
+- **FR-5.4 — Timeout.** A store operation that has not completed within the store timeout (NFR-3) counts as a store failure. Neither the sweep nor the async publish waits longer than the timeout for that operation.
+- **FR-5.5 — Recovery.** After the next successful store read, the view is replaced by the store's trips plus this instance's local trips that have not ended. A successful write only ends the fallback and the FR-8.4 condition. Trips it recorded only locally during the failure keep applying to its own sweeps until they end. Whether they are written to the store on recovery is OQ-5.
+- **FR-5.6 — A trip never lasts indefinitely, even in fallback.** No trip, in the store or in a fallback view, lasts longer than C after its most recent trip or re-trip, give or take the clock skew bound in NFR-6.
+- **FR-5.7 — Telemetry under failure.** The exactly-once guarantees of FR-3.3 and FR-4.4 hold only while every involved store operation succeeds. During a store failure, and on recovery, an instance announces the Trip, ReTrip and Reset of the trips in its own view, so a trip that more than one instance holds locally can produce more than one Reset. There is at most one Reset per instance per trip held in its view, plus one for the store's entry.
+- **FR-5.8 — Start during an outage.** An instance that starts while the store cannot be read has a view with no store trips. Its sweeps leave out only the topics this instance has tripped itself, a Warning is logged, and the store-unavailable condition (FR-8.4) is reported. Once a read succeeds, the instance uses the store's trips (FR-3.4).
+
+**FR-6 — A tripped topic does not hold back other topics.** With either breaker, tripping a topic excludes only messages whose topic equals that topic.
+- Example: the outbox holds 200 outstanding `orders` messages and 100 `invoices` messages, BatchSize is 100, and `orders` is tripped. The sweep's call to `OutstandingMessagesAsync` returns up to 100 `invoices` messages and no `orders` messages.
+- **FR-6.1 — A store failure stays per topic.** Under FR-5 fallback, topics not in the fallback view are swept normally.
+- **FR-6.2 — Many tripped topics.** With 50 topics tripped and messages for a 51st outstanding, the sweep returns the 51st topic's messages.
+
+**FR-7 — Registration and default behaviour.**
+- **FR-7.1 — The breaker stays opt in.** Brighter does not register an `IAmAnOutboxCircuitBreaker` by default (`ServiceCollectionExtensions.OutboxCircuitBreaker` resolves it with `GetService`). This does not change: with no breaker registered there is no circuit breaking, as today. The distributed circuit breaker is used only when the user registers it. Whether Brighter should pick it automatically when a durable outbox and a distributed lock are configured is OQ-3.
+- **FR-7.2 — Existing registrations.** A user who registers `InMemoryOutboxCircuitBreaker` and changes nothing else keeps a per-instance breaker. The behaviour changes are FR-1 (the D limit with its default) and the Reset log naming its cause (FR-1.4).
+- **FR-7.3 — Singleton.** As in spec 0038 FR-6A.4, the breaker must be registered as a singleton shared with the mediator. The docs say so for the distributed breaker too.
+- **FR-7.4 — Store implementations.** Brighter provides at least one production shared trip store backend and one in-memory store for tests. The ADR decides which backends ship and where they live (OQ-1).
+
+**FR-8 — Health signals (changes to the spec 0038 contract, stated explicitly).**
+- **FR-8.1 — Gauge with the distributed breaker.** When the breaker in use is a distributed circuit breaker, `paramore.brighter.outbox_sweeper.tripped_topics` reports the count of topics in the instance's view on every running sweeper, whether or not it is active. This replaces spec 0038 FR-3A and FR-6A.5 for that breaker, and removes the one-interval lock-handover gap and the lock-acquisition gap (spec 0038 FR-6A.6) for it. A stopped sweeper still reports 0 (spec 0038 FR-1.2). A running sweeper that has not yet completed a successful read reports only its own local trips (0 if it has tripped none). Example: instances A (active) and B (`lock_unavailable`) with `orders` and `invoices` tripped both report 2.
+- **FR-8.2 — Investigate check with the distributed breaker.** In the same case, the `tripped_topics` condition of `OutboxSweeperInvestigateHealthCheck` is reported on every running sweeper, whether or not it is active. The name, description format (naming up to 10 topics), `Data` keys (`count`, `topics`) and remedy kind (investigate) stay as in spec 0038.
+- **FR-8.3 — Per-instance and third-party breakers unchanged.** For `InMemoryOutboxCircuitBreaker`, and for any `IAmAnOutboxCircuitBreaker` that does not declare that it shares trips, the gauge and check behave exactly as in spec 0038 (reported only while active, with the accepted gaps). The time limit in FR-1 bounds how long such hidden trips can last.
+- **FR-8.4 — New condition: store unavailable.** While the most recent shared trip store operation on this instance failed (including a refresh, FR-4A), the investigate check on a running sweeper reports Degraded with a new condition (the ADR names it, proposed `tripped_topics_store_unavailable`). Its remedy kind is investigate, its description says the trips could not be read from or written to the shared store and the instance is using its own view, and its `Data` holds the key `exception_type`, whose value is the exception's type name, or the text `timeout` for a store timeout (FR-5.4). It clears after the next successful store operation. Other conditions are still evaluated. Spec 0038's `tripped_topics_unreadable` keeps its meaning (reading `TrippedTopics` threw).
+- **FR-8.5 — Gauge and check under fallback.** During a store failure, the gauge and the `tripped_topics` condition report the fallback view, so they agree with what the instance's sweeps leave out.
+- **FR-8.6 — Trip and reset telemetry.** The Trip, ReTrip and Reset logs, spans and `paramore.brighter.circuit_breaker.trips` counter (ADR 0058, `0058-outbox-circuit-breaker-trip-logging.md`) are produced by the instance whose call caused or first observed the change, following FR-1.4, FR-3.3, FR-4.4 and FR-5.7. The counter's attribute set does not change.
+- **FR-8.7 — Aggregation guidance.** The docs say that with the distributed breaker every instance reports the same deployment-wide count, so the alert should use `max` across instances, not `sum`.
+
+**FR-9 — Decision record and documentation.**
+- **FR-9.1 — ADR.** A new ADR amends ADR 0028. It records the distributed breaker, the shared trip store, the elapsed-time cooldown, the async interface, the maximum trip duration and fallback, and states which parts of ADR 0028 it replaces (the in-memory-only decision, and the cooldown advancing only on the lock holder's sweep). It also amends ADR 0085 (sweeper state and gauges, which decided the `IsActive` gating of the tripped-topics gauge) and ADR 0086 (sweeper remedy health checks) for FR-8, and ADR 0088 if the new condition's `Data` goes beyond the shared convention.
+- **FR-9.2 — Release notes.** The release notes name the new breaker, async interface and options, the D default and its effect on existing `InMemoryOutboxCircuitBreaker` users (FR-7.2), the request-path change, latency and write amplification (FR-3.5), and the health-signal changes (FR-8).
+- **FR-9.3 — Docs.** The changes needed in BrighterCommand/Docs (the circuit-breaker page, Telemetry page and health-check page) are listed in the PR. Writing them is tracked separately.
+
+### Non-functional Requirements
+
+**NFR-1 — Backward compatibility.** `IAmAnOutboxCircuitBreaker` is not changed, so third-party implementations, such as the test doubles `ListedTopicsCircuitBreaker` and `ThrowingOutboxCircuitBreaker`, keep compiling and working. The new capabilities (the async trip and read members of FR-3.6, refreshing the view for FR-4A, declaring that trips are shared for FR-8.1, reporting store health for FR-8.4) are added as new types or interfaces. Public API changes are source compatible as spec 0038 NFR-6 defines it. Binary compatibility is not required. Existing `InMemoryOutboxCircuitBreaker` constructor calls compile unchanged. Apart from FR-1 and the Reset log wording (FR-1.4), the in-memory breaker's behaviour does not change.
+
+**NFR-2 — Bounded cost.** With the distributed breaker, the number of shared trip store round trips in one sweep, and in one refresh, is a fixed number that does not depend on the number of outstanding messages or tripped topics (the ADR states it). Each sweeper does one refresh per `TimerInterval` (FR-4A), and each trip or re-trip costs one write (FR-3.5).
+
+**NFR-3 — Bounded waits.** Every shared trip store operation has a store timeout (configurable and positive; the default is OQ-6). A store that hangs delays a sweep, or an awaited send on the async request path, by at most the store timeout per operation, and NFR-2 bounds how many operations a sweep makes. A synchronous callback thread never waits on the store (FR-3.6).
+
+**NFR-4 — Health signals never wait on the store.** As in spec 0038 NFR-1, observing the gauge or running the investigate check never waits on a shared trip store operation. While a test double blocks the store indefinitely, `RecordObservableInstruments()` and `CheckHealthAsync` each return within 1 s. While the store works, the view they report is at most `TimerInterval` plus the store timeout old on a running sweeper. During a store failure the view can be older, and FR-8.4 reports the failure.
+
+**NFR-5 — Atomic transitions.** A trip or re-trip that races the removal of an ended trip leaves the topic tripped for a full cooldown. A fresh trip is never lost. For the in-memory breaker this extends the existing guarantee (`When_cooldown_runs_concurrently_should_be_atomic`) to the time limit. For the distributed breaker it holds across instances. Concurrent readers see either the state before or after a transition, never a mix of the two.
+
+**NFR-6 — Clock tolerance.** Time limits are measured with an injected `TimeProvider`, so tests can use `FakeTimeProvider` for the exact boundaries in FR-1.3 and FR-4.3. With the distributed breaker, a trip ends no later than C plus a maximum clock skew that the ADR states as a number of seconds, together with the clock source (store time or instance time, OQ-4). The same clock measures every trip in a view, whether read from the store or recorded locally.
+
+**NFR-7 — No forced dependency.** A user who does not register the distributed circuit breaker needs no new package and gets no new transitive dependency. Store backends live in packages the user already references for that backend (outbox or locking package) or in new opt-in packages (the ADR decides).
+
+**NFR-8 — Thread safety.** `TripTopic`, `CoolDown` and `TrippedTopics`, and their async counterparts, may be called concurrently from the sweeper thread, request threads and publication-confirmation callbacks, which run on broker threads. They must be safe to call that way.
+
+**NFR-9 — Breaker failures stay contained.** No exception from the breaker or its store escapes into a sweep's outcome, a Post / ClearOutbox call, or a publication-confirmation callback (FR-5).
+
+### Constraints and Assumptions
+
+- **Constraint**: `TimedOutboxSweeper` obtains and releases the distributed lock on every sweep. There is no long-lived holder, and this work does not change the lock protocol or the sweeper's scheduling.
+- **Constraint**: `CoolDown()` is called once per call to `ClearOutstandingFromOutboxAsync`, before the mediator's background-clear semaphore is checked. Brighter calls it only from a sweep that obtained the lock. A user who calls `ClearOutstandingFromOutboxAsync` directly also runs a cooldown cycle (unchanged).
+- **Constraint**: Trips come from `DispatchAsync` (both the sweep and the explicit path), `BulkDispatchAsync`, and the sync and async publication-confirmation callbacks. The sync `Dispatch()` non-confirmation path does not trip (ADR 0058). The explicit path never consults tripped topics.
+- **Constraint**: Brighter does not register `IAmAnOutboxCircuitBreaker` itself. `ControlBusSenderFactory` and `ControlBusReceiverBuilder` each construct a private `InMemoryOutboxCircuitBreaker`. Those get the FR-1 time limit because they use the same class, but they do not become distributed.
+- **Constraint**: The work is red-first (TDD), per the Brighter test-first workflow. Tests of a production store backend run against a real database, not a mock.
+- **Assumption**: The lock serialises sweeps but does not space them. With N instances whose timers are offset, the deployment can run up to N sweeps per `TimerInterval`. This is why the distributed cooldown is elapsed time (FR-4) and not a count of cooldown cycles.
+- **Assumption**: The available lock and outbox backends do not match one to one. Outboxes exist for MsSql, MySql, PostgreSql, Sqlite, DynamoDB (and V4), MongoDb, Firestore and Spanner. Locks exist for MsSql, MySql, PostgreSql, DynamoDB (and V4), MongoDb, Firestore and Azure Blob. Sqlite and Spanner have no lock provider, and Azure Blob has no outbox. This shapes the store choice (OQ-1).
+- **Assumption**: Trip semantics stay as they are: a single failed publish trips, and a successful publish does not end a trip.
+- **Assumption**: At most one `TimedOutboxSweeper` per service provider (spec 0038 FR-4A).
+
+### Out of Scope
+
+- Changing the outbox producer resilience (retry) pipeline, or when a topic trips (failure thresholds, time windows, success-based reset, half-open probing).
+- Per-topic cooldown or maximum-duration settings.
+- Non-outbox circuit breakers: the `CommandProcessor.CIRCUITBREAKER` Polly policy and handler-level circuit breaking.
+- Making the control-bus breakers distributed.
+- The sync `Dispatch()` path not tripping (ADR 0058).
+- Making the explicit Post / ClearOutbox path skip tripped topics.
+- An API or tool to clear a trip by hand.
+- Moving existing in-memory trips into the shared store when switching breakers.
+- Counting cooldown cycles in the distributed breaker.
+- The lock-acquisition and lock-handover gaps in the tripped-topic signals for the per-instance and third-party breakers (spec 0038 FR-6A.6 stays for them).
+- Writing the BrighterCommand/Docs pages (FR-9.3 only lists them).
+- Per-topic lag or outstanding-message metrics (#4554, outbox metrics).
+
+## Acceptance Criteria
+
+**AC-1 — A per-instance trip ends at D with no sweep (FR-1, FR-1.2, FR-1.3, NFR-6).** Given `InMemoryOutboxCircuitBreaker` with `CooldownCount = 10`, D = 5 min and a `FakeTimeProvider`, when `orders` is tripped at t = 0 and no `CoolDown` is called, then `TrippedTopics` contains `orders` at t = 4 min 59.999 s, and is empty at exactly t = 5 min and at t = 10 min.
+
+**AC-2 — Cooldown count still governs when it is shorter (FR-1, FR-2.3).** Given `CooldownCount = 2` and D = 5 min, when `orders` is tripped and `CoolDown` is called 2 times, then `orders` is still listed. After a 3rd call it is not, and the clock has not moved.
+
+**AC-3 — Re-trip restarts both limits (FR-1.1).** Given D = 5 min, when `orders` is tripped at t = 0 and re-tripped at t = 4 min, then it is listed at t = 8 min 59 s and not listed at t = 9 min. Given `CooldownCount = 2`, when `orders` is tripped, 2 cooldown cycles run, it is re-tripped, and 2 more cycles run, then it is still listed, and the 3rd cycle ends it.
+
+**AC-4 — A stale-trip instance sweeps the topic once it obtains the lock (FR-1, FR-1.2).** Given a `TimedOutboxSweeper` with a shared-singleton `InMemoryOutboxCircuitBreaker` (D = 5 min) and a lock double that returns no lock, when `orders` is tripped at t = 0, the clock moves to t = 6 min, and the lock double then grants the lock, then that sweep calls `OutstandingMessagesAsync` with no tripped topics.
+
+**AC-5 — One Reset per time-ended trip, by the observing call, naming the cause (FR-1.4, FR-8.6).** Given a tracer and log capture, when `orders` is tripped and the clock passes D, and then `TrippedTopics` is read 3 times and `CoolDown` is called once, then exactly one Reset span and one Information reset log are produced, by the first read, and the log says the trip ended by maximum trip duration. A trip ended by cooldown produces one Reset whose log says cooldown. Given `orders` has passed D and is not yet observed, when `TripTopic(orders)` is the next call, then a Reset is produced and then a Trip (not a ReTrip).
+
+**AC-6 — Duration validation (FR-2.1).** Given `OutboxCircuitBreakerOptions` with D (or C) = `TimeSpan.Zero`, −1 s, `Timeout.InfiniteTimeSpan`, `TimeSpan.MaxValue` or 24 hours + 1 ms, when a breaker (in-memory for D, distributed for C) is constructed, then `ArgumentOutOfRangeException` is thrown. With 1 ms and with exactly 24 hours, construction succeeds. Given a constructed breaker whose options object is then changed, the breaker still uses the values it was built with.
+
+**AC-7 — Default D leaves default single-instance behaviour unchanged (FR-2.2, FR-7.2).** Given default options, a `FakeTimeProvider`, a sweeper at the default `TimerInterval` (5 s) whose sweeps take no time and start on schedule and obtain the lock every time, when `orders` is tripped at t = 0, then it is excluded from exactly 10 sweeps and included in the 11th, and D does not end it earlier.
+
+**AC-8 — A trip on one instance is seen by another (FR-3.1).** Given two distributed breakers A and B over one in-memory shared trip store, when A trips `orders`, then B's `TrippedTopics` contains `orders` once B's view has been refreshed, and a sweep through B's mediator passes `orders` as tripped while returning `invoices` messages.
+
+**AC-9 — Request-path trip affects another instance's sweep (FR-3.5).** Given instance A with no sweeper and instance B with a sweeper, both on one shared store, when a PostAsync on A fails to publish to `orders`, then the PostAsync waits for the store write, and B's next sweep excludes `orders`.
+
+**AC-10 — Re-trip anywhere restarts the cooldown (FR-3.2).** Given C = 50 s, when A trips `orders` at t = 0 and B re-trips it at t = 30 s, then it is listed on both instances at t = 79.9 s and on neither at t = 80 s.
+
+**AC-11 — Concurrent trips (FR-3.3, NFR-5).** Given A and B on one store, when both trip `orders` at the same moment (from parallel tasks, repeated 1,000 times), then on every repetition `orders` is listed once, the deployment-wide telemetry has exactly one Trip and one ReTrip, and the topic ends C after the later trip time.
+
+**AC-12 — Trips survive restart and still end by C (FR-3.4, FR-4.2).** Given C = 50 s and a durable store, when `orders` is tripped at t = 0 and every breaker is discarded and recreated at t = 10 s, then the new breaker lists `orders`, and a sweep through the new mediator excludes it. Recreated at t = 60 s, the breaker does not list it and the sweep includes it.
+
+**AC-13 — Cooldown is elapsed time, independent of which instance sweeps (FR-2.4, FR-4, FR-4.1, FR-4.3, FR-4.4).** Given default options (so C = 50 s) and instances A and B with a lock double that alternates between them, when a request-path trip of `orders` is recorded on A at t = 0 before any sweep, then every sweep that starts before t = 50 s excludes it, whichever instance runs it, and the first sweep at or after t = 50 s includes it. Exactly one Reset is produced.
+
+**AC-14 — Sweep count and instance count do not change the cooldown (FR-4).** Given C = 50 s and 3 instances with `TimerInterval` 5 s and ticks offset by 1.7 s, when a request-path trip of `orders` is recorded at t = 0 before any sweep and the first ticks are at t = 0.1 s, 1.8 s and 3.5 s, then 12 lock-obtaining sweeps start in [0, 20 s) and all exclude `orders`, and the first sweep at or after t = 50 s includes it.
+
+**AC-15 — An instance that had `lock_unavailable` sweeps (FR-4.1).** Given A tripped `orders` at t = 0 and B swept while A had `lock_unavailable` until t = 100 s, when A next obtains the lock, then A's sweep includes `orders` and A's `TrippedTopics` does not list it.
+
+**AC-16 — Every running sweeper refreshes its view (FR-4A, FR-8.1).** Given instance B whose every tick is `lock_unavailable` and A's trip of `orders` at t = 0, when `TimerInterval` plus the store timeout has passed, then B's `TrippedTopics` lists `orders`. Given a running sweeper that has not yet completed a successful read, its gauge reports 0.
+
+**AC-17 — Read failure falls back and the sweep completes (FR-5.1, FR-6.1, NFR-9).** Given a distributed breaker whose fallback view holds `orders` (tripped 20 s ago, C = 50 s) and a store double that throws on read, when a sweep runs, then it excludes `orders`, dispatches `invoices`, ends `completed`, and logs a Warning.
+
+**AC-18 — Write failure does not abort the batch (FR-5.2, NFR-9).** Given a store double that throws on write and a batch of `orders`, `invoices`, `invoices` where the `orders` send fails, when the batch is dispatched, then both `invoices` messages are sent and marked dispatched, no exception escapes, and this instance's next sweep excludes `orders`.
+
+**AC-19 — Timeout counts as a failure (FR-5.4, NFR-3).** Given a store timeout of 2 s and a store double that never completes, when a sweep runs, then the breaker's store operations add no more than 2 s per operation to the sweep, and the sweep uses the fallback view.
+
+**AC-20 — No trip outlives C in fallback, refresh failure keeps the view (FR-5.3, FR-5.6).** Given C = 50 s and a store that fails on every operation from t = 0, when `orders` is tripped locally at t = 0 and refreshes fail every `TimerInterval`, then `orders` is listed until t = 49.9 s and not listed at t = 50 s, and each failed refresh logs a Warning without failing a sweep.
+
+**AC-21 — Recovery (FR-5.5, FR-8.4).** Given a store that failed and then recovers, when the next store operation succeeds, then the instance lists the store's trips plus its own local trips that have not ended, and the store-unavailable condition is no longer reported.
+
+**AC-22 — Telemetry under failure is bounded (FR-5.7).** Given instances A and B both holding `orders` in their fallback views and the store failing, when C passes, then each instance produces at most one Reset for `orders`, and the deployment produces at most one Reset per instance plus one for the store's entry.
+
+**AC-23 — Start during an outage (FR-5.8).** Given a store double that throws on every read and a breaker that has never read successfully, when a sweep runs, then no topic is left out, a Warning is logged, and the investigate check reports the store-unavailable condition. When the store then answers with `orders` tripped, the next sweep excludes it.
+
+**AC-24 — Per-topic isolation (FR-6, FR-6.2).** Given 200 outstanding `orders` messages, 100 `invoices` messages, BatchSize 100 and `orders` tripped (once with each breaker type), when a sweep runs, then 100 `invoices` messages and no `orders` messages are dispatched. Given 50 tripped topics and a 51st with outstanding messages, the 51st is dispatched.
+
+**AC-25 — Opt-in registration unchanged (FR-7.1, FR-7.2).** Given no `IAmAnOutboxCircuitBreaker` registered, when a publish fails, then no topic is excluded from later sweeps. Given `InMemoryOutboxCircuitBreaker` registered, `TrippedTopics` reports only that instance's trips.
+
+**AC-26 — Gauge and check report distributed trips on an inactive instance, including during lock acquisition (FR-8.1, FR-8.2).** Given instances A (active) and B (last sweep `lock_unavailable`) on one store with `orders` and `invoices` tripped, when B's gauge is observed and B's investigate check runs, then the gauge records 2 and the check is Degraded with `tripped_topics` naming `invoices, orders`. Given B is part-way through obtaining the lock, the gauge still records 2. After B is stopped, B's gauge records 0 and its check does not report the condition.
+
+**AC-27 — Per-instance gating unchanged (FR-8.3).** Given `InMemoryOutboxCircuitBreaker` with `orders` tripped and a sweeper that is not active, when the gauge is observed and the check runs, then the gauge records 0 and the check is Healthy, as in spec 0038.
+
+**AC-28 — Store-unavailable condition (FR-8.4).** Given a running sweeper whose distributed breaker's last store operation threw `InvalidOperationException`, when the investigate check runs, then it is Degraded with the new condition, remedy kind investigate, and `Data` holding `exception_type` = `InvalidOperationException`. Given the last operation timed out, `Data` holds `exception_type` = `timeout`. Other conditions (for example consecutive failed sweeps) are reported alongside it.
+
+**AC-29 — Health signals follow the fallback view and never block (FR-8.5, NFR-4).** Given a store double that blocks indefinitely and a fallback view holding `orders`, when the gauge is observed and the check runs, then each returns within 1 s, and they report 1 and `orders` respectively.
+
+**AC-30 — Synchronous callbacks never wait on the store (FR-3.6, NFR-3).** Given a store double that blocks indefinitely, when a synchronous publication-confirmation callback trips `orders`, then the callback returns within 1 s, `TrippedTopics` lists `orders` at once, and the write is attempted off the callback thread. Given the mediator and a breaker that implements the async interface, an async-path failure is tripped through the async members and awaited.
+
+**AC-31 — Third-party breakers keep working (NFR-1).** Given the existing `ListedTopicsCircuitBreaker` and `ThrowingOutboxCircuitBreaker` test doubles, unchanged, and existing `new InMemoryOutboxCircuitBreaker(...)` calls, when the solution builds and the existing Sweeping, Metrics and CircuitBreaker tests run, then they compile and pass unchanged.
+
+**AC-32 — Clock skew bound (FR-5.6, NFR-6).** Given two instances whose `FakeTimeProvider`s differ by 2 s and the skew bound stated in the ADR, when `orders` is tripped on one with C = 50 s, then it ends on every instance no later than C plus the stated bound after the trip.
+
+**AC-33 — Store backends (FR-7.4).** Given the in-memory store, the distributed breaker's tests in this list run against it. Given each production backend that ships, a test against a real database (not a mock) trips a topic from one breaker, reads it from a second, lets it end by C, and shows it survives a breaker restart.
+
+**AC-34 — ADR and release notes (FR-9.1, FR-9.2).** Given the change is ready to merge, an ADR amending ADR 0028, ADR 0085 and ADR 0086 is Accepted, and the release notes cover the items in FR-9.2.
+
+**AC-35 — Docs list and guidance (FR-7.3, FR-8.7, FR-9.3).** Given the PR description, it lists the pages to change in BrighterCommand/Docs, and the list includes the singleton registration requirement (FR-7.3) and the `max` not `sum` aggregation guidance (FR-8.7).
+
+**AC-36 — Bounded store cost (NFR-2).** Given a counting store double, when a sweep runs with 10 and then with 10,000 outstanding messages and 1 and then 50 tripped topics, then the number of store round trips in the sweep is the same fixed number each time, a refresh costs the same fixed number, and each trip or re-trip costs one write.
+
+**AC-37 — Thread safety and atomic transitions (NFR-5, NFR-8).** Given `InMemoryOutboxCircuitBreaker` with `CooldownCount = 2` and a `FakeTimeProvider`, when `TripTopic`, `CoolDown` and `TrippedTopics` run concurrently from many tasks (repeated 1,000 times) and a trip races the call that would end the topic, then no exception is thrown, the topic is left tripped with a full cooldown and a full D clock, and no reader sees a half-updated state. The same test runs against the distributed breaker with the async members.
+
+**AC-38 — No forced dependency (NFR-7).** Given a project that references `Paramore.Brighter` and `InMemoryOutboxCircuitBreaker` only, when it is restored and built, then no new package appears in its dependency graph compared with the previous release.
+
+## Additional Context
+
+- Found while specifying the sweeper health check (#4573, spec 0038, merged). Spec 0038 listed this issue as out of scope and as following work. Its FR-3A, FR-6A.5, FR-6A.6 and NFR-6 bullet 2 ("the circuit breaker's trip and cooldown behaviour do not change") are deliberately changed here by FR-1 and FR-8.
+- Maintainer direction on #4628: sharing the state is preferred, because it "allows tripped topics to work as intended, cool down a topic across sweeper runs when it keeps failing to post, and thus avoid it blocking other topics." The cooldown for the shared state is elapsed time (FR-4), and the interface stays source compatible with an additive async interface (FR-3.6, NFR-1).
+- Related: ADR 0028 (circuit breaking of topics), ADR 0058 (`0058-outbox-circuit-breaker-trip-logging.md`, trip observability; a different ADR with the same number is `0058-box-provisioning-rdd-role-interfaces.md`), ADR 0085 (sweeper state and gauges), ADR 0086 (sweeper remedy health checks), ADR 0088 (shared remedy-check data and condition).
+
+**Verified against the code:**
+- `src/Paramore.Brighter/CircuitBreaker/InMemoryOutboxCircuitBreaker.cs`: per-process dictionary, `TripTopic` sets `CooldownCount`, `CoolDown` decrements and evicts below 0 with a conditional remove, Trip/ReTrip/Reset spans and logs.
+- `OutboxCircuitBreakerOptions.cs`: only `CooldownCount = 10`.
+- `IAmAnOutboxCircuitBreaker.cs`: synchronous `CoolDown`, `TripTopic`, `TrippedTopics`.
+- `OutboxProducerMediator.cs`: `CoolDown()` only at line 749 in `BackgroundDispatchUsingAsync`. `TripTopic` at lines 946 and 1040 (confirmation callbacks), 1240 (bulk) and 1313 (`DispatchAsync`, not wrapped in a try/catch). `Dispatch()` (sync) does not trip.
+- `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxSweeper.cs`: obtains the lock at the start of each sweep and releases it in a `finally` (lines 253, 280-282); `lock_unavailable` returns before the mediator is used; `NextDue` re-anchors when a sweep overruns.
+- `ServiceCollectionExtensions.cs` (lines 1011–1013): the breaker is resolved with `GetService`, so it is opt in.
+- `ControlBusSenderFactory.cs` and `ControlBusReceiverBuilder.cs`: each creates its own `InMemoryOutboxCircuitBreaker`.
+- `SweeperMeter.ObserveTrippedTopics` and `OutboxSweeperInvestigateHealthCheck.TrippedTopicsConditionOrNone`: both gated on `IsActive`.
+- `OutboxSweeperState.SweepStarted`: sets `_holdsLock = false`, which causes the lock-acquisition gap.
+- Tests: `tests/Paramore.Brighter.Core.Tests/CircuitBreaker/When_Cooldown_On_TrippedTopic.cs` and `Sweeping/When_a_topic_trips_on_the_shared_breaker_should_report_it_until_cooldown_evicts_it.cs` (N+1 cycles).
+- `src/Directory.Build.props`: netstandard2.0 target.
+- `TimedOutboxSweeperOptions`: `TimerInterval = 5`, `BatchSize = 100`.
+
+**Open questions for the ADR:**
+- **OQ-1 — Shared trip store.** Use the outbox's database, the lock store, or a separate store? Which backends ship first, given that outbox and lock backends don't match (Sqlite and Spanner have no lock; Azure Blob has no outbox)? Does a new table or collection follow box provisioning (`0058-box-provisioning-rdd-role-interfaces.md`)?
+- **OQ-2 — Default maximum trip duration (D).** Proposed 5 min, and it must leave a wide margin over 50 s (FR-2.2). C's default of 50 s (FR-2.4) is decided.
+- **OQ-3 — Default selection.** Should Brighter register the distributed breaker automatically when a durable outbox and a distributed lock are configured? The code gives no basis: today the breaker is always user-registered, so this draft keeps it opt in.
+- **OQ-4 — Clock source and skew bound.** Store time or instance time, and the maximum skew in seconds (NFR-6).
+- **OQ-5 — Local trips after recovery.** Should trips recorded only locally during a store failure be written to the store when it recovers?
+- **OQ-6 — Store timeout default** (NFR-3), and whether it relates to `TimerInterval`.
+- **OQ-7 — Interfaces.** The name and members of the async interface (FR-3.6), and how a breaker declares that it shares trips (FR-8.1): a role interface, a new type, or something else.
+- **OQ-8 — Inactive instances with the per-instance breaker.** Now that per-instance trips expire, should they also be reported on inactive instances (making FR-8.3 match FR-8.1)? Or should the spec 0038 gating stay? This draft keeps the gating.
+- **OQ-9 — How an ended distributed trip is detected and announced.** For example, a conditional delete by whichever instance first observes the end, so that FR-4.4's "exactly one Reset" holds.
+- **OQ-10 — Names.** The new options (D and C), the new breaker type and the store-unavailable condition name.
+- **OQ-11 — Amend or supersede.** Should the new ADR amend ADR 0028 or supersede it, given that ADR 0028 is still "Proposed" and describes a failure threshold the code doesn't implement?
+- **OQ-12 — Refresh mechanism (FR-4A).** FR-4A requires the refresh not to wait on a long sweep, and the sweeper's scheduling must not change. Does the sweeper loop call the refresh on a tick that does not run a sweep, or does the breaker run its own timer?
+- **OQ-13 — Scope split.** The time bound (FR-1, FR-2) fixes the stale-trip symptom on its own and touches only core. The distributed breaker is much larger. Should they ship as two phases or two specs? This draft keeps one spec.
