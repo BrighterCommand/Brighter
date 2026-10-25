@@ -28,7 +28,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Paramore.Brighter.Outbox.Hosting;
 
@@ -38,6 +41,8 @@ namespace Paramore.Brighter.Outbox.Hosting;
 /// </summary>
 public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposable
 {
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxStaleMessageMonitor>();
+
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly OutboxStaleMessageReadings _readings;
     private readonly TimedOutboxStaleMessageMonitorOptions _options;
@@ -71,6 +76,7 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// <param name="cancellationToken">Not used.</param>
     /// <remarks>
     /// Starts the <see cref="OutboxStaleMessageReadings"/> with the outbox's type name, and with topics when the outbox is an <see cref="IAmATopicCountingOutbox"/>.
+    /// When it is not, logs one Information entry saying that only the overall count is measured.
     /// </remarks>
     /// <returns>A completed task.</returns>
     /// <exception cref="ConfigurationException">The container has no outbox or no producers' configuration, because <c>AddProducers</c> was not called; or the
@@ -89,7 +95,12 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         var publications = ReadPublications(producersConfiguration);
         ValidateStaleMessageAges(publications);
 
-        _readings.Start(outbox.GetType().Name, outbox is IAmATopicCountingOutbox);
+        var outboxType = outbox.GetType().Name;
+        var countsByTopic = outbox is IAmATopicCountingOutbox;
+        if (!countsByTopic)
+            Log.OverallCountOnlyWithNoCapability(s_logger, outboxType);
+
+        _readings.Start(outboxType, countsByTopic);
         return Task.CompletedTask;
     }
 
@@ -126,5 +137,11 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// </summary>
     public void Dispose()
     {
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Information, "Outbox stale-message monitor measures only the overall count for {OutboxType}: no capability to count by topic")]
+        public static partial void OverallCountOnlyWithNoCapability(ILogger logger, string outboxType);
     }
 }
