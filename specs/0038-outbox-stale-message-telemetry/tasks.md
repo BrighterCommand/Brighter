@@ -593,7 +593,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
     - skip publications whose topic is `RoutingKey.IsNullOrEmpty`;
     - build the distinct non-empty topics into a read-only map of A_t (the per-topic call that uses the map lands in T8.7).
 
-- [ ] **CHARACTERISE: T6.10 When both reasons apply, one entry gives "no capability" (AC-29)**
+- [x] **CHARACTERISE: T6.10 When both reasons apply, one entry gives "no capability" (AC-29)**
   - **USE COMMAND**: `/test-first an outbox without the capability and an empty registry logs exactly one entry giving no capability`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_both_reasons_apply_should_log_no_capability_once.cs`
