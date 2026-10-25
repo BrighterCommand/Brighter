@@ -80,12 +80,12 @@ public class MsSqlOutboxVkToV8UpgradeTests : IAsyncLifetime
         }
 
         var rowsByVersion = GetHistoryRowsByVersion();
-        Assert.Equal(8 - k + 1, rowsByVersion.Count);
+        Assert.Equal(ExpectedMigrationVersions.OutboxLatest - k + 1, rowsByVersion.Count);
 
         var syntheticDescription = Assert.Contains(k, rowsByVersion);
         Assert.StartsWith($"bootstrap: detected at V{k}", syntheticDescription);
 
-        for (var v = k + 1; v <= 8; v++)
+        for (var v = k + 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
             var appliedDescription = Assert.Contains(v, rowsByVersion);
             Assert.False(

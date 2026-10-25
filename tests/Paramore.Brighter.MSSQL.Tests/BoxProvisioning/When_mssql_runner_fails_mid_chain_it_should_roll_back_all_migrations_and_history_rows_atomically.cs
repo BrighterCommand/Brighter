@@ -43,6 +43,10 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
     private const int BrokenVersion = 6;
     private const string BrokenUpScript = "RAISERROR('forced failure for spec 0027 task 1.8a', 16, 1);";
     private const string MarkerMessageId = "marker-row-must-survive";
+    private const string V3Column = "ContentType";
+    private const string V4Column = "PartitionKey";
+    private const string V5Column = "Source";
+    private const string V7Column = "DataRef";
 
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -72,9 +76,9 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
         Assert.Empty(GetHistoryRowsByVersion());
 
         var columnsAfterFailure = GetTableColumns();
-        Assert.Contains("ContentType", columnsAfterFailure); // V3 column present
-        Assert.DoesNotContain("PartitionKey", columnsAfterFailure); // V4 column rolled back
-        Assert.DoesNotContain("Source", columnsAfterFailure); // V5 column never applied
+        Assert.Contains(V3Column, columnsAfterFailure);
+        Assert.DoesNotContain(V4Column, columnsAfterFailure);
+        Assert.DoesNotContain(V5Column, columnsAfterFailure);
 
         Assert.Equal(1, GetMarkerRowCount());
 
@@ -104,8 +108,8 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
         }
 
         var columnsAfterRetry = GetTableColumns();
-        Assert.Contains("DataRef", columnsAfterRetry); // V7 column
-        Assert.Contains("PartitionKey", columnsAfterRetry); // V4 column applied on retry
+        Assert.Contains(V7Column, columnsAfterRetry);
+        Assert.Contains(V4Column, columnsAfterRetry);
         Assert.Equal(1, GetMarkerRowCount());
     }
 

@@ -38,6 +38,8 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// </summary>
 public class MsSqlRunnerNonMonotonicMigrationsTests : IAsyncLifetime
 {
+    private static readonly int[] s_v1V2V3ThenBackToV2 = [0, 1, 2, 1];
+
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
@@ -51,8 +53,7 @@ public class MsSqlRunnerNonMonotonicMigrationsTests : IAsyncLifetime
 
     [Fact]
     public Task When_versions_are_not_strictly_ascending_it_should_throw() =>
-        // [V1, V2, V3, V2] — valid prefix isolates the V3→V2 descent as the sole violation.
-        AssertMigrationListRejected(BuildList(0, 1, 2, 1), expectedMarker: "V3 followed by V2");
+        AssertMigrationListRejected(BuildList(s_v1V2V3ThenBackToV2), expectedMarker: "V3 followed by V2");
 
     private IReadOnlyList<IAmABoxMigration> BuildList(params int[] indices)
     {
