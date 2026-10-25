@@ -81,8 +81,8 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// Otherwise logs one Information entry saying that only the overall count is measured, and why. When the outbox cannot count by topic, that is the reason given.
     /// </remarks>
     /// <returns>A completed task.</returns>
-    /// <exception cref="ConfigurationException">The container has no outbox or no producers' configuration, because <c>AddProducers</c> was not called; or the
-    /// <see cref="Publication.StaleMessageAge"/> of a publication is not greater than zero and at most <see cref="TimedOutboxStaleMessageMonitorOptions.MaxStaleMessageAge"/>.</exception>
+    /// <exception cref="ConfigurationException">The container has no <see cref="IAmAnOutbox"/> or no <see cref="IAmProducersConfiguration"/>, which <c>AddProducers</c> registers; or the
+    /// <see cref="Publication.StaleMessageAge"/> of a publication is zero or less, or greater than <see cref="TimedOutboxStaleMessageMonitorOptions.MaxStaleMessageAge"/>.</exception>
     public Task StartAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceScopeFactory.CreateScope();
@@ -90,9 +90,10 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         var producersConfiguration = scope.ServiceProvider.GetService<IAmProducersConfiguration>();
         var transactionProvider = scope.ServiceProvider.GetService<IAmABoxTransactionProvider>();
 
-        if (outbox is null || producersConfiguration is null)
-            throw new ConfigurationException(
-                $"The outbox stale-message monitor needs an {nameof(IAmAnOutbox)} and an {nameof(IAmProducersConfiguration)}; register them with AddProducers");
+        if (outbox is null)
+            throw new ConfigurationException($"The outbox stale-message monitor found no {nameof(IAmAnOutbox)} in the container; AddProducers registers it");
+        if (producersConfiguration is null)
+            throw new ConfigurationException($"The outbox stale-message monitor found no {nameof(IAmProducersConfiguration)} in the container; AddProducers registers it");
 
         var publications = ReadPublications(producersConfiguration);
         ValidateStaleMessageAges(publications);

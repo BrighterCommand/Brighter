@@ -40,9 +40,9 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 public class StaleMessageMonitorMissingProducersTests
 {
     [Theory]
-    [InlineData(nameof(IAmProducersConfiguration))]
-    [InlineData(nameof(IAmAnOutbox))]
-    public async Task When_the_monitor_starts_without_producers_should_throw_a_configuration_exception(string missingRegistration)
+    [InlineData(nameof(IAmProducersConfiguration), nameof(IAmAnOutbox))]
+    [InlineData(nameof(IAmAnOutbox), nameof(IAmProducersConfiguration))]
+    public async Task When_the_monitor_starts_without_producers_should_throw_a_configuration_exception(string missingRegistration, string registeredService)
     {
         //Arrange
         var interval = TimeSpan.FromMinutes(1);
@@ -70,6 +70,8 @@ public class StaleMessageMonitorMissingProducersTests
         timeProvider.Advance(interval);
 
         //Assert
+        Assert.Contains(missingRegistration, exception.Message);
+        Assert.DoesNotContain(registeredService, exception.Message);
         Assert.Contains("AddProducers", exception.Message);
         Assert.False(readings.IsStarted);
         Assert.Empty(outbox.CountCalls);
