@@ -33,6 +33,10 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// A migration that fails mid-chain rolls back the whole chain, DDL and history rows, in one transaction (ADR 0057 §5a), so a
+/// retry with the real chain bootstraps from the seeded version and existing rows survive.
+/// </summary>
 public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
 {
     private const int SeedVersion = 3;
@@ -40,6 +44,10 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
     private const string BrokenUpScript =
         "DO $$ BEGIN RAISE EXCEPTION 'forced failure for spec 0027 task 2.7a'; END $$;";
     private const string MarkerMessageId = "marker-row-must-survive";
+    private const string ColumnAddedInV3 = "contenttype";
+    private const string ColumnAddedInV4 = "partitionkey";
+    private const string ColumnAddedInV5 = "source";
+    private const string ColumnAddedInV7 = "dataref";
 
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -47,7 +55,7 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
     [Fact]
     public async Task When_postgres_runner_fails_mid_chain_it_should_roll_back_all_migrations_and_history_rows_atomically()
     {
-        //Arrange — seed an outbox at V3 (no history) plus a marker row to prove preservation.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         PostgreSqlOutboxLegacySeeder.SeedAtV(SeedVersion, _connectionString, _tableName);
         await SeedMarkerRow();
@@ -62,23 +70,20 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
         var brokenRunner = new PostgreSqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30));
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
-        //Act + Assert (1) — broken V6 in chain: runner throws and rolls back everything.
+        //Act + Assert
         await Assert.ThrowsAsync<PostgresException>(() => brokenRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint));
 
-        //Assert — no history rows for this box (synthetic V3 + V4/V5 applied rows all rolled back).
         Assert.Empty(await GetHistoryRowsByVersion());
 
-        //Assert — table still at V3 shape (V4 partitionkey ALTER rolled back; V5+ never reached).
         var columnsAfterFailure = await GetTableColumns();
-        Assert.Contains("contenttype", columnsAfterFailure); // V3 column present
-        Assert.DoesNotContain("partitionkey", columnsAfterFailure); // V4 column rolled back
-        Assert.DoesNotContain("source", columnsAfterFailure); // V5 column never applied
+        Assert.Contains(ColumnAddedInV3, columnsAfterFailure);
+        Assert.DoesNotContain(ColumnAddedInV4, columnsAfterFailure);
+        Assert.DoesNotContain(ColumnAddedInV5, columnsAfterFailure);
 
-        //Assert — seeded marker row preserved (no DROP/recreate happened).
         Assert.Equal(1, await GetMarkerRowCount());
 
-        //Act + Assert (2) — retry with the real migration list: bootstrap path completes V4..V7.
+        //Act
         var realRunner = new PostgreSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
         var provisioner = new PostgreSqlOutboxProvisioner(
             new PostgreSqlBoxDetectionHelper(),
@@ -88,7 +93,7 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
             realRunner);
         await provisioner.ProvisionAsync();
 
-        //Assert — exactly one synthetic V3 + one applied per V4..V7 (no duplicates).
+        //Assert
         var rowsByVersion = await GetHistoryRowsByVersion();
         Assert.Equal(ExpectedMigrationVersions.OutboxLatest - SeedVersion + 1, rowsByVersion.Count);
 
@@ -104,10 +109,9 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
                 $"(description was: '{appliedDescription}')");
         }
 
-        //Assert — table now at V7 shape with marker row still present.
         var columnsAfterRetry = await GetTableColumns();
-        Assert.Contains("dataref", columnsAfterRetry); // V7 column
-        Assert.Contains("partitionkey", columnsAfterRetry); // V4 column applied on retry
+        Assert.Contains(ColumnAddedInV7, columnsAfterRetry);
+        Assert.Contains(ColumnAddedInV4, columnsAfterRetry);
         Assert.Equal(1, await GetMarkerRowCount());
     }
 
@@ -160,9 +164,8 @@ ORDER BY ""MigrationVersion""";
                 rows[reader.GetInt32(0)] = reader.GetString(1);
             }
         }
-        catch (PostgresException ex) when (ex.SqlState == "42P01")
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
         {
-            // undefined_table — history table does not exist (rolled back before EnsureHistoryTableAsync committed).
         }
         return rows;
     }

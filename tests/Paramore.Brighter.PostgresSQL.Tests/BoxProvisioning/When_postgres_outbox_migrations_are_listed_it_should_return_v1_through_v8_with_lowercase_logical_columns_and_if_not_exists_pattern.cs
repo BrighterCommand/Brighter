@@ -29,11 +29,13 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// Postgres folds unquoted identifiers to lowercase, so LogicalColumns are lowercase and compared with
+/// <see cref="StringComparer.Ordinal"/> (ADR 0057 §2). V2–V8 use ADD COLUMN IF NOT EXISTS (ADR 0057 §5), and V8 also
+/// creates the causationid replay index.
+/// </summary>
 public class PostgreSqlOutboxMigrationsTests
 {
-    //Postgres folds unquoted identifiers to lowercase at runtime; ADR §1 mandates lowercase
-    //LogicalColumns so that detection-by-information_schema (which returns lowercase) works
-    //without case mismatch. Comparer is StringComparer.Ordinal to enforce that contract.
     private static readonly string[] s_v1Columns =
         ["messageid", "topic", "messagetype", "timestamp", "headerbag", "body"];
 
@@ -51,8 +53,7 @@ public class PostgreSqlOutboxMigrationsTests
     [Fact]
     public void When_postgres_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_lowercase_logical_columns_and_if_not_exists_pattern()
     {
-        //Arrange — derive each version's expected (lowercase) LogicalColumns by accumulating
-        //per-version additions from the archaeology (spec README outbox table).
+        //Arrange
         var config = new RelationalDatabaseConfiguration(
             "Host=ignored;Database=ignored;Username=ignored;Password=ignored",
             outBoxTableName: "outbox_test");
@@ -61,14 +62,13 @@ public class PostgreSqlOutboxMigrationsTests
         //Act
         var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
 
-        //Assert — exactly eight migrations numbered 1..8 in order.
+        //Assert
         Assert.Equal(8, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
             Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
-        //Assert — LogicalColumns at each version match the cumulative archaeology, all lowercase.
         for (var v = 1; v <= 8; v++)
         {
             var migration = migrations[v - 1];
@@ -80,8 +80,6 @@ public class PostgreSqlOutboxMigrationsTests
                 $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.Ordinal))}]");
         }
 
-        //Assert — V2..V8 UpScripts use the Postgres-native idempotent ADD COLUMN IF NOT EXISTS
-        //pattern (ADR §5). Case-insensitive contains check tolerates whitespace and casing.
         for (var v = 2; v <= 8; v++)
         {
             var script = migrations[v - 1].UpScript;
@@ -91,7 +89,6 @@ public class PostgreSqlOutboxMigrationsTests
                 StringComparison.OrdinalIgnoreCase);
         }
 
-        //Assert — V1 has no single source commit; V2..V8 each carry archaeology pointers.
         Assert.Null(migrations[0].SourceReference);
         for (var v = 2; v <= 8; v++)
         {
@@ -100,14 +97,8 @@ public class PostgreSqlOutboxMigrationsTests
                 $"V{v} must have a non-empty SourceReference (archaeology pointer)");
         }
 
-        //Assert — V4 PartitionKey was added to Postgres in commit cff67fd5e / PR #3464
-        //(distinct from the MSSQL V4 commit 1cdc04b60 / #2560 because Postgres lagged the
-        //payload widening / binary-variant work). This pins archaeology accuracy.
         Assert.Equal("cff67fd5e / #3464", migrations[3].SourceReference);
 
-        //Assert — V8 (Spec 0027, #2541) adds the causationid column AND its replay index. Its UpScript
-        //carries Postgres's native CREATE INDEX IF NOT EXISTS on the lowercase-folded idx_<table>_causationid
-        //— the AC9 "index asserted separately" check.
         var v8Script = migrations[7].UpScript;
         Assert.Contains("causationid", v8Script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CREATE INDEX IF NOT EXISTS", v8Script, StringComparison.OrdinalIgnoreCase);
