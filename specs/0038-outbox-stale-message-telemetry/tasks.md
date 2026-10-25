@@ -549,7 +549,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
     - read `IAmProducersConfiguration.ProducerRegistry` (`src/Paramore.Brighter/ProducersConfiguration.cs:109`), its `Producers` (`IAmAProducerRegistry.cs:43`) and each `Publication` (`IAmAMessageProducer.cs:36`) once;
     - validate every `StaleMessageAge` before building anything.
 
-- [ ] **TEST + IMPLEMENT: T6.6 An invalid `StaleMessageAge` on an empty topic fails start, naming the value (AC-32)**
+- [x] **TEST + IMPLEMENT: T6.6 An invalid `StaleMessageAge` on an empty topic fails start, naming the value (AC-32)**
   - **USE COMMAND**: `/test-first a StaleMessageAge of zero on a publication with an empty topic fails StartAsync naming the value`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_publication_with_an_empty_topic_has_an_invalid_stale_age_should_fail_to_start.cs`
