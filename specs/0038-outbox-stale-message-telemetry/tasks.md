@@ -442,7 +442,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should:
     - check 0 < I ≤ `MaxMeasurementInterval` in the options validation.
 
-- [ ] **TEST + IMPLEMENT: T5.5 An invalid T throws `ConfigurationException` (AC-2)**
+- [x] **TEST + IMPLEMENT: T5.5 An invalid T throws `ConfigurationException` (AC-2)**
   - **USE COMMAND**: `/test-first a measurement timeout of zero, equal to the interval or above it throws ConfigurationException naming the setting and value`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_measurement_timeout_is_invalid_should_throw_a_configuration_exception.cs`
