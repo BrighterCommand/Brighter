@@ -84,5 +84,9 @@ public sealed class TimedOutboxStaleMessageMonitorOptions
         if (StaleMessageAge <= TimeSpan.Zero || StaleMessageAge > MaxStaleMessageAge)
             throw new ConfigurationException(
                 $"{nameof(StaleMessageAge)} must be greater than zero and at most {MaxStaleMessageAge}, but was {StaleMessageAge}");
+
+        if (CountCeiling < 1 || CountCeiling > MaxCountCeiling)
+            throw new ConfigurationException(
+                $"{nameof(CountCeiling)} must be at least 1 and at most {MaxCountCeiling}, but was {CountCeiling}");
     }
 }
