@@ -32,42 +32,37 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// MigrateAsync rejects a migration list that is not contiguous and strictly ascending with a ConfigurationException naming
+/// the offending pair, before any DDL runs (ADR 0057 §3).
+/// </summary>
 public class PostgreSqlRunnerNonMonotonicMigrationsTests : IAsyncLifetime
 {
-    // The runner validates that the supplied migrations list is contiguous and strictly
-    // ascending (each V_{i+1} == V_i + 1) at MigrateAsync entry — before path branching, so
-    // the rule applies uniformly across fresh / bootstrap / normal paths. Duplicates corrupt
-    // the history-table PK; gaps silently skip ALTERs that V_latest depends on; out-of-order
-    // lists double-apply DDL or stamp history rows in the wrong sequence. Rejecting these
-    // up-front turns silent corruption into an actionable ConfigurationException naming the
-    // offending pair.
-
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
     public Task When_versions_contain_a_duplicate_it_should_throw() =>
-        AssertMigrationListRejected(BuildList(0, 0), expectedMarker: "V1 followed by V1");
+        AssertMigrationListRejected(BuildList(1, 1), expectedMarker: "V1 followed by V1");
 
     [Fact]
     public Task When_versions_have_a_gap_it_should_throw() =>
-        AssertMigrationListRejected(BuildList(0, 2), expectedMarker: "V1 followed by V3");
+        AssertMigrationListRejected(BuildList(1, 3), expectedMarker: "V1 followed by V3");
 
     [Fact]
     public Task When_versions_are_not_strictly_ascending_it_should_throw() =>
-        // [V1, V2, V3, V2] — valid prefix isolates the V3→V2 descent as the sole violation.
-        AssertMigrationListRejected(BuildList(0, 1, 2, 1), expectedMarker: "V3 followed by V2");
+        AssertMigrationListRejected(BuildList(1, 2, 3, 2), expectedMarker: "V3 followed by V2");
 
-    private IReadOnlyList<IAmABoxMigration> BuildList(params int[] indices)
+    private IReadOnlyList<IAmABoxMigration> BuildList(params int[] versions)
     {
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         var realMigrations = new PostgreSqlOutboxMigrationCatalog().All(config);
-        return indices.Select(i => realMigrations[i]).ToList();
+        return versions.Select(version => realMigrations[version - 1]).ToList();
     }
 
     private async Task AssertMigrationListRejected(IReadOnlyList<IAmABoxMigration> malformed, string expectedMarker)
     {
-        //Arrange — ensure the database exists; do NOT create the box table (so fresh path is selected).
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
@@ -75,13 +70,12 @@ public class PostgreSqlRunnerNonMonotonicMigrationsTests : IAsyncLifetime
         var runner = new PostgreSqlBoxMigrationRunner(malformedCatalog, config, TimeSpan.FromSeconds(30));
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        //Act + Assert — runner refuses to begin migration when the version sequence is malformed.
+        //Act + Assert
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => runner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
         Assert.Contains(expectedMarker, ex.Message, StringComparison.Ordinal);
 
-        //Assert — guard fired before any DDL: the box table was not created.
         Assert.Equal(0, await GetTableCount());
     }
 
