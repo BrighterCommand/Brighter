@@ -92,5 +92,9 @@ public sealed class TimedOutboxStaleMessageMonitorOptions
         if (MeasurementInterval <= TimeSpan.Zero || MeasurementInterval > MaxMeasurementInterval)
             throw new ConfigurationException(
                 $"{nameof(MeasurementInterval)} must be greater than zero and at most {MaxMeasurementInterval}, but was {MeasurementInterval}");
+
+        if (MeasurementTimeout <= TimeSpan.Zero || MeasurementTimeout >= MeasurementInterval)
+            throw new ConfigurationException(
+                $"{nameof(MeasurementTimeout)} must be greater than zero and less than {nameof(MeasurementInterval)} ({MeasurementInterval}), but was {MeasurementTimeout}");
     }
 }
