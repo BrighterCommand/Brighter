@@ -88,5 +88,9 @@ public sealed class TimedOutboxStaleMessageMonitorOptions
         if (CountCeiling < 1 || CountCeiling > MaxCountCeiling)
             throw new ConfigurationException(
                 $"{nameof(CountCeiling)} must be at least 1 and at most {MaxCountCeiling}, but was {CountCeiling}");
+
+        if (MeasurementInterval <= TimeSpan.Zero || MeasurementInterval > MaxMeasurementInterval)
+            throw new ConfigurationException(
+                $"{nameof(MeasurementInterval)} must be greater than zero and at most {MaxMeasurementInterval}, but was {MeasurementInterval}");
     }
 }
