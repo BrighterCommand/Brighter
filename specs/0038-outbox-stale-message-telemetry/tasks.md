@@ -571,7 +571,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should (only if the test is RED on arrival):
     - share the age bound with the options' `MaxStaleMessageAge`.
 
-- [ ] **TEST + IMPLEMENT: T6.8 An outbox without the capability logs one Information entry at start (AC-29)**
+- [x] **TEST + IMPLEMENT: T6.8 An outbox without the capability logs one Information entry at start (AC-29)**
   - **USE COMMAND**: `/test-first an outbox without the per-topic capability logs one Information entry at start naming the outbox type and no count per topic`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_the_outbox_has_no_topic_count_should_log_it_once_at_start.cs`
