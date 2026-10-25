@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -75,8 +76,9 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// </summary>
     /// <param name="cancellationToken">Not used.</param>
     /// <remarks>
-    /// Starts the <see cref="OutboxStaleMessageReadings"/> with the outbox's type name, and with topics when the outbox is an <see cref="IAmATopicCountingOutbox"/>.
-    /// When it is not, logs one Information entry saying that only the overall count is measured.
+    /// Starts the <see cref="OutboxStaleMessageReadings"/> with the outbox's type name, and with topics when the outbox is an <see cref="IAmATopicCountingOutbox"/>
+    /// and at least one publication has a topic that is not empty.
+    /// Otherwise logs one Information entry saying that only the overall count is measured, and why. When the outbox cannot count by topic, that is the reason given.
     /// </remarks>
     /// <returns>A completed task.</returns>
     /// <exception cref="ConfigurationException">The container has no outbox or no producers' configuration, because <c>AddProducers</c> was not called; or the
@@ -94,14 +96,30 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
 
         var publications = ReadPublications(producersConfiguration);
         ValidateStaleMessageAges(publications);
+        var topicAges = BuildTopicAges(publications);
 
         var outboxType = outbox.GetType().Name;
         var countsByTopic = outbox is IAmATopicCountingOutbox;
+        LogWhenTopicsAreNotMeasured(outboxType, countsByTopic, topicAges.Count);
+
+        _readings.Start(outboxType, countsByTopic && topicAges.Count > 0);
+        return Task.CompletedTask;
+    }
+
+    private IReadOnlyDictionary<RoutingKey, TimeSpan> BuildTopicAges(IEnumerable<Publication> publications) =>
+        new ReadOnlyDictionary<RoutingKey, TimeSpan>(publications
+            .Where(publication => !RoutingKey.IsNullOrEmpty(publication.Topic))
+            .GroupBy(publication => publication.Topic!)
+            .ToDictionary(
+                topic => topic.Key,
+                topic => topic.Min(publication => publication.StaleMessageAge ?? _options.StaleMessageAge)));
+
+    private static void LogWhenTopicsAreNotMeasured(string outboxType, bool countsByTopic, int topicCount)
+    {
         if (!countsByTopic)
             Log.OverallCountOnlyWithNoCapability(s_logger, outboxType);
-
-        _readings.Start(outboxType, countsByTopic);
-        return Task.CompletedTask;
+        else if (topicCount == 0)
+            Log.OverallCountOnlyWithNoMeasuredTopic(s_logger, outboxType);
     }
 
     private static IReadOnlyList<Publication> ReadPublications(IAmProducersConfiguration producersConfiguration) =>
@@ -143,5 +161,8 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     {
         [LoggerMessage(LogLevel.Information, "Outbox stale-message monitor measures only the overall count for {OutboxType}: no capability to count by topic")]
         public static partial void OverallCountOnlyWithNoCapability(ILogger logger, string outboxType);
+
+        [LoggerMessage(LogLevel.Information, "Outbox stale-message monitor measures only the overall count for {OutboxType}: no measured topic")]
+        public static partial void OverallCountOnlyWithNoMeasuredTopic(ILogger logger, string outboxType);
     }
 }
