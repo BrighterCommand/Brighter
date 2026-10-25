@@ -275,7 +275,7 @@ You are a skeptical reviewer. Assume the task list has problems — your job is 
 
 **Test-First Framing:**
 - Does every behavioral task (not tidy/structural) follow the pattern: write test → get approval → implement → refactor?
-- Does each TEST task specify a `/test-first` command?
+- Does each TEST task specify a `/tdd:test-first` command?
 - Are there implementation tasks without corresponding test tasks?
 - Does each test target a single behavior? (Not "test the whole feature".)
 

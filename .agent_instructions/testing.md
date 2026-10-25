@@ -12,7 +12,7 @@
 
 ## TDD Style
 
-**MANDATORY Tool**: ALWAYS use the `/test-first <behavior>` command (see [.claude/commands/tdd/test-first.md](../.claude/commands/tdd/test-first.md)) when writing new tests.
+**MANDATORY Tool**: ALWAYS use the `/tdd:test-first <behavior>` command (see [.claude/commands/tdd/test-first.md](../.claude/commands/tdd/test-first.md)) when writing new tests.
 
 - **DO NOT write test files manually** (using Write tool) and proceed to implementation
 - **DO NOT run tests without approval**
@@ -34,7 +34,7 @@ implementation.
   - Green: Make the test pass, commit any sins necessary to move fast
   - Refactor: Improve the design of the code.
 - **Approval Workflow** (⛔ ARMED BY DEFAULT):
-  - When working on a feature, ALWAYS use `/test-first <behavior>` - do not write tests manually
+  - When working on a feature, ALWAYS use `/tdd:test-first <behavior>` - do not write tests manually
   - The skill will write the test and ASK FOR APPROVAL before proceeding
   - The user will review the test in their IDE
   - DO NOT run tests or start implementation without explicit user approval
@@ -87,7 +87,7 @@ value on a run of near-identical tasks whose shape has already been reviewed rep
   optionally to one section of `tasks.md`, carrying the reason for the shift. Shift it with
   `/spec:gear`, in either direction, at any time.
 - `/spec:implement` honours it; `/spec:ralph-implement` is always `review-after`. A **standalone
-  `/test-first` and `/bugfix:test` are always gated** — they do not read the gear file.
+  `/tdd:test-first` and `/bugfix:test` are always gated** — they do not read the gear file.
 - Absent, unparseable, unknown value, or a task outside the gear's scope all resolve to
   `review-before`. Fail safe, never fail open.
 
