@@ -619,7 +619,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
 
 *Depends on Phase 6.*
 
-- [ ] **TEST + IMPLEMENT: T7.1 A sync-only outbox fails start (Q-3)**
+- [x] **TEST + IMPLEMENT: T7.1 A sync-only outbox fails start (Q-3)**
   - **USE COMMAND**: `/test-first a sync-only outbox fails StartAsync with a ConfigurationException saying it is sync-only and no count is called`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_outbox_is_sync_only_should_fail_to_start.cs`
