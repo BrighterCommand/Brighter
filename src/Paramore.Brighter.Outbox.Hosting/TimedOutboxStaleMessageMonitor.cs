@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,7 +70,8 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// </summary>
     /// <param name="cancellationToken">Not used.</param>
     /// <returns>A completed task.</returns>
-    /// <exception cref="ConfigurationException">The container has no outbox or no producers' configuration, because <c>AddProducers</c> was not called.</exception>
+    /// <exception cref="ConfigurationException">The container has no outbox or no producers' configuration, because <c>AddProducers</c> was not called; or the
+    /// <see cref="Publication.StaleMessageAge"/> of a publication is not greater than zero and at most <see cref="TimedOutboxStaleMessageMonitorOptions.MaxStaleMessageAge"/>.</exception>
     public Task StartAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceScopeFactory.CreateScope();
@@ -80,8 +83,27 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
             throw new ConfigurationException(
                 $"The outbox stale-message monitor needs an {nameof(IAmAnOutbox)} and an {nameof(IAmProducersConfiguration)}; register them with AddProducers");
 
+        var publications = ReadPublications(producersConfiguration);
+        ValidateStaleMessageAges(publications);
+
         return Task.CompletedTask;
     }
+
+    private static IReadOnlyList<Publication> ReadPublications(IAmProducersConfiguration producersConfiguration) =>
+        producersConfiguration.ProducerRegistry?.Producers.Select(producer => producer.Publication).ToList()
+        ?? new List<Publication>();
+
+    private static void ValidateStaleMessageAges(IEnumerable<Publication> publications)
+    {
+        var publication = publications.FirstOrDefault(HasInvalidStaleMessageAge);
+        if (publication is not null)
+            throw new ConfigurationException(
+                $"The {nameof(Publication.StaleMessageAge)} of the publication for topic {publication.Topic} must be greater than zero and at most {TimedOutboxStaleMessageMonitorOptions.MaxStaleMessageAge}, but was {publication.StaleMessageAge}");
+    }
+
+    private static bool HasInvalidStaleMessageAge(Publication publication) =>
+        publication.StaleMessageAge is { } staleMessageAge
+        && (staleMessageAge <= TimeSpan.Zero || staleMessageAge > TimedOutboxStaleMessageMonitorOptions.MaxStaleMessageAge);
 
     /// <summary>
     /// Stops the monitor.
