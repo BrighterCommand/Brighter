@@ -502,7 +502,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
     - add `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs`: `IHostedService` and `IDisposable`, with constructor `(IServiceScopeFactory, OutboxStaleMessageReadings, TimedOutboxStaleMessageMonitorOptions, TimeProvider? timeProvider = null)`;
     - register it with `AddHostedService`, as `HostedServiceCollectionExtensions.cs:68` does. `AddHostedService` uses `TryAddEnumerable`, so a second call adds nothing.
 
-- [ ] **TEST + IMPLEMENT: T6.2 The monitor validates its options again when it is constructed**
+- [x] **TEST + IMPLEMENT: T6.2 The monitor validates its options again when it is constructed**
   - **USE COMMAND**: `/test-first constructing the monitor with options made invalid after registration throws ConfigurationException`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_monitor_is_constructed_with_invalid_options_should_throw_a_configuration_exception.cs`
