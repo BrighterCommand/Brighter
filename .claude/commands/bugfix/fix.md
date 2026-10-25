@@ -14,7 +14,7 @@ Confirm gate (the active bug above must appear in this list): !`ls -1 bugfixes/*
 **Workflow**: Issue → Triage → Confirm (✋ gate) → Test-first (✋ gate) → **Fix** → Verify
 
 Make the red regression test pass with the **minimum** change required by the confirmed cause —
-nothing more. This is the GREEN phase from `/test-first`, scoped by the confirmed diagnosis.
+nothing more. This is the GREEN phase from `/tdd:test-first`, scoped by the confirmed diagnosis.
 
 > **Recommended model: `sonnet`.** This is implementation work in the main agent (writes source,
 > runs `dotnet`). See `.claude/commands/bugfix/README.md` → "Sub-agents & model policy".
@@ -33,7 +33,7 @@ Read the suspect code (Confirmed Root Cause + Suspected Location).
 
 - **If the fix is a clean, localized change**: proceed to Step 3 (a single `fix:` commit).
 - **If the code needs structural cleanup *before* the fix is safe** (e.g. a large method must be
-  broken up, duplicated logic consolidated): do the cleanup via **`/tidy-first`** so the
+  broken up, duplicated logic consolidated): do the cleanup via **`/refactor:tidy-first`** so the
   structural change lands in its own `refactor:` commit first, *then* the behavioural `fix:`
   commit. Never mix structural and behavioural changes in one commit
   (`.agent_instructions/code_style.md`).

@@ -12,8 +12,8 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 
 | Skill | Purpose | Usage |
 |-------|---------|-------|
-| `/test-first` | TDD with an approval gate, armed by default | `/test-first <behavior description>` |
-| `/tidy-first` | Separate refactoring from features | `/tidy-first <change description>` |
+| `/tdd:test-first` | TDD with an approval gate, armed by default | `/tdd:test-first <behavior description>` |
+| `/refactor:tidy-first` | Separate refactoring from features | `/refactor:tidy-first <change description>` |
 | `/refactor:smells` | Find code smells in completed work, schedule refactorings | `/refactor:smells [base-ref \| base..head \| path...]` |
 | `/refactor:tidy-comments` | Bring comments into line with the comment rules; surface refactorings a comment side-stepped | `/refactor:tidy-comments [base-ref \| base..head \| path...]` |
 | `/adr` | Create Architecture Decision Record | `/adr <title>` |
@@ -25,7 +25,7 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 |-------|---------|-------|
 | `/bugfix:triage` | Restate symptom, locate code, form hypothesis | `/bugfix:triage [issue-number \| description]` |
 | `/bugfix:confirm` | ✋ Prove the root cause before any fix | `/bugfix:confirm` |
-| `/bugfix:test` | Failing regression test (via `/test-first`) | `/bugfix:test` |
+| `/bugfix:test` | Failing regression test (via `/tdd:test-first`) | `/bugfix:test` |
 | `/bugfix:fix` | Minimal fix scoped to the confirmed cause | `/bugfix:fix` |
 | `/bugfix:verify` | Run suite; capture root cause + `Fixes #N` | `/bugfix:verify` |
 | `/bugfix:status` | Show all bugs and their phase | `/bugfix:status` |
@@ -61,16 +61,16 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
    • Example: /bugfix:triage 4054
 
 🧪 TEST-DRIVEN DEVELOPMENT
-   /test-first <behavior>
+   /tdd:test-first <behavior>
    • Write test → Approve → Implement → Refactor
    • Approval gate armed by default; shift it with /spec:gear
-   • Example: /test-first when message fails it should retry
+   • Example: /tdd:test-first when message fails it should retry
 
 🏗️  REFACTORING
-   /tidy-first <change>
+   /refactor:tidy-first <change>
    • Separate structural changes from behavioral changes
    • Creates two commits: refactor + feat/fix/perf
-   • Example: /tidy-first optimize message processing
+   • Example: /refactor:tidy-first optimize message processing
 
    /refactor:smells [base-ref | base..head | path...]
    • Opt-in, after a unit of work is green: find Fowler's code smells
@@ -123,26 +123,26 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
                 ┌─────────┴─────────┐              ┌─────────┴─────────┐
                NO                  YES            YES                  NO
                 │                   │              │                    │
-         /bugfix:triage       /test-first    Code needs           Just refactoring
-         (Confirm gate)                       cleanup?            → /tidy-first
+         /bugfix:triage       /tdd:test-first    Code needs           Just refactoring
+         (Confirm gate)                       cleanup?            → /refactor:tidy-first
                                                   │
                                         ┌─────────┴─────────┐
                                       YES                  NO
                                         │                   │
-                                  /tidy-first         /test-first
+                                  /refactor:tidy-first         /tdd:test-first
 ```
 
 ## Enforcement of Brighter Practices
 
 Each skill enforces specific practices from `.agent_instructions/`:
 
-### `/test-first` → testing.md
+### `/tdd:test-first` → testing.md
 
 **Enforces**:
 - Red-Green-Refactor TDD cycle
 - **Approval before implementation, armed by default** — disarmed only by a deliberate, scoped,
   recorded `/spec:gear review-after` shift, and even then only for `/spec:implement` and
-  `/spec:ralph-implement` (a standalone `/test-first` and `/bugfix:test` are always gated)
+  `/spec:ralph-implement` (a standalone `/tdd:test-first` and `/bugfix:test` are always gated)
 - **RED first in both gears** — the test is observed failing for the right reason before any
   production code
 - BDD-style test naming (`When_X_should_Y`)
@@ -163,7 +163,7 @@ Each skill enforces specific practices from `.agent_instructions/`:
 
 **Reference**: [documentation.md](documentation.md) lines 49-62
 
-### `/tidy-first` → code_style.md
+### `/refactor:tidy-first` → code_style.md
 
 **Enforces**:
 - Separation of structural from behavioral changes
@@ -185,7 +185,7 @@ Each skill enforces specific practices from `.agent_instructions/`:
 # 2. ✋ Confirm — prove the root cause BEFORE any fix (may widen the scope)
 /bugfix:confirm
 
-# 3. ✋ Test-first — failing regression test (delegates to /test-first)
+# 3. ✋ Test-first — failing regression test (delegates to /tdd:test-first)
 /bugfix:test
 
 # 4. Fix — minimal change to green, scoped to the confirmed cause
@@ -199,10 +199,10 @@ Each skill enforces specific practices from `.agent_instructions/`:
 
 ```bash
 # 1. Write test first
-/test-first when message timeout occurs it should retry with backoff
+/tdd:test-first when message timeout occurs it should retry with backoff
 
 # 2. Repeat for each behavior
-/test-first when max retries reached it should send to dead letter queue
+/tdd:test-first when max retries reached it should send to dead letter queue
 
 # 3. Document decision if significant
 /adr retry strategy for message processing
@@ -212,7 +212,7 @@ Each skill enforces specific practices from `.agent_instructions/`:
 
 ```bash
 # 1. Clean up and add feature in one workflow
-/tidy-first add retry logic with exponential backoff
+/refactor:tidy-first add retry logic with exponential backoff
 
 # Output: Two commits
 #   - refactor: simplify error handling structure
@@ -237,7 +237,7 @@ Each skill enforces specific practices from `.agent_instructions/`:
 /spec:tasks
 /spec:approve tasks
 
-# 5. Implement (uses /test-first approach)
+# 5. Implement (uses /tdd:test-first approach)
 /spec:implement
 
 # 6. Check progress
@@ -248,7 +248,7 @@ Each skill enforces specific practices from `.agent_instructions/`:
 
 ```bash
 # Refactor without adding features
-/tidy-first simplify nested conditionals in KafkaConsumer
+/refactor:tidy-first simplify nested conditionals in KafkaConsumer
 
 # Output: Single commit
 #   - refactor: simplify nested conditionals in KafkaConsumer
@@ -313,7 +313,7 @@ git log --oneline
 
 ## Comparison: Manual vs Skill-Guided
 
-### TDD Without `/test-first`
+### TDD Without `/tdd:test-first`
 
 ```
 ❌ Manual Process:
@@ -328,11 +328,11 @@ git log --oneline
 Risk: Easy to skip approval or go straight to implementation
 ```
 
-### TDD With `/test-first`
+### TDD With `/tdd:test-first`
 
 ```
 ✅ Skill-Guided:
-1. Type: /test-first <behavior>
+1. Type: /tdd:test-first <behavior>
 2. Claude writes test following all conventions
 3. Approval gate, armed by default (can't proceed without it)
 4. Claude implements minimum code
@@ -372,7 +372,7 @@ Risk: Numbering conflicts, inconsistent format, missing sections
 Benefit: Consistent ADRs, no numbering errors, proper tracking
 ```
 
-### Refactoring Without `/tidy-first`
+### Refactoring Without `/refactor:tidy-first`
 
 ```
 ❌ Manual Process:
@@ -385,11 +385,11 @@ Benefit: Consistent ADRs, no numbering errors, proper tracking
 Risk: Mixed commits hard to review, unclear git history
 ```
 
-### Refactoring With `/tidy-first`
+### Refactoring With `/refactor:tidy-first`
 
 ```
 ✅ Skill-Guided:
-1. Type: /tidy-first <change>
+1. Type: /refactor:tidy-first <change>
 2. Claude categorizes: structural vs behavioral
 3. Get your approval of categorization
 4. Structural commit (tests validate no behavior change)
@@ -403,10 +403,10 @@ Benefit: Easy review, clear history, safer refactoring
 
 ### Getting Started
 
-1. **Start simple**: Try `/test-first` for your next small feature
+1. **Start simple**: Try `/tdd:test-first` for your next small feature
 2. **Read the output**: Skills explain what they're doing and why
 3. **Trust the process**: The approval gates are there for good reasons
-4. **Combine skills**: Use `/adr` then `/test-first` for feature development
+4. **Combine skills**: Use `/adr` then `/tdd:test-first` for feature development
 
 ### Best Practices
 
@@ -431,7 +431,7 @@ and nothing else: RED-first, the full suite, the two-commit shape and every conv
 The other gates (`/bugfix:confirm`, `/spec:approve`) are not shiftable.
 
 **Q: Do skills work with existing code?**
-A: Yes! `/tidy-first` is specifically for working with existing code.
+A: Yes! `/refactor:tidy-first` is specifically for working with existing code.
 
 ## Next Steps
 
