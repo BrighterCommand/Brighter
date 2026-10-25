@@ -452,7 +452,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should:
     - check 0 < T < I in the options validation.
 
-- [ ] **CHARACTERISE: T5.6 Boundary settings are accepted (AC-3 second and third clauses, at registration)**
+- [x] **CHARACTERISE: T5.6 Boundary settings are accepted (AC-3 second and third clauses, at registration)**
   - **USE COMMAND**: `/test-first the smallest valid settings and the maximum age, ceiling and interval are accepted at registration`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_settings_are_at_their_bounds_should_register_the_monitor.cs`
