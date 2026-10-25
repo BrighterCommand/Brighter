@@ -477,7 +477,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should (only if the test is RED on arrival):
     - register both with `TryAddSingleton`, as `UseOutboxArchiver` registers its options (`src/Paramore.Brighter.Outbox.Hosting/HostedServiceCollectionExtensions.cs:59`).
 
-- [ ] **TEST + IMPLEMENT: T5.8 A null builder throws `ArgumentNullException`**
+- [x] **TEST + IMPLEMENT: T5.8 A null builder throws `ArgumentNullException`**
   - **USE COMMAND**: `/test-first UseOutboxStaleMessageMonitor on a null builder throws ArgumentNullException`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_builder_is_null_should_throw_argument_null.cs`
