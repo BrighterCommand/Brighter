@@ -65,13 +65,13 @@ prompt MUST include:
 
 #### CRITICAL: TDD Task Format (include verbatim in the sub-agent prompt)
 
-**MANDATORY**: When creating TEST tasks, you MUST format them to enforce `/test-first` skill usage.
+**MANDATORY**: When creating TEST tasks, you MUST format them to enforce `/tdd:test-first` skill usage.
 
 ##### Task Template
 
 ```markdown
 - [ ] **TEST + IMPLEMENT: [Behavior description]**
-  - **USE COMMAND**: `/test-first [behavior description for command]`
+  - **USE COMMAND**: `/tdd:test-first [behavior description for command]`
   - Test location: "[test directory path]"
   - Test file: `[When_condition_should_behavior.cs]`
   - Test should verify:
@@ -87,7 +87,7 @@ prompt MUST include:
 
 ```markdown
 - [ ] **TEST + IMPLEMENT: Rejection with no channels configured acknowledges message**
-  - **USE COMMAND**: `/test-first when rejecting message with no channels configured should acknowledge and log`
+  - **USE COMMAND**: `/tdd:test-first when rejecting message with no channels configured should acknowledge and log`
   - Test location: "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor"
   - Test file: `When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log.cs`
   - Test should verify:
@@ -105,7 +105,7 @@ prompt MUST include:
 
 ##### Why This Format?
 
-1. **Visible command**: The `/test-first` command is prominently displayed
+1. **Visible command**: The `/tdd:test-first` command is prominently displayed
 2. **Stop sign**: The ⛔ emoji and "STOP HERE" makes the approval gate unmissable
 3. **Single task**: Combines TEST + IMPLEMENT so workflow is clear
 4. **Complete context**: All details needed for test and implementation
@@ -189,7 +189,7 @@ After the sub-agent returns:
      inconsistency or hallucinated coverage claim. The exhaustive adversarial coverage review
      is `/spec:review tasks` (Step 4), which the user is prompted to run before approval; that
      is where any remaining gaps are caught.
-   - Each behavioral task uses the `TEST + IMPLEMENT` template with `/test-first` and the
+   - Each behavioral task uses the `TEST + IMPLEMENT` template with `/tdd:test-first` and the
      `⛔ APPROVAL GATE` line — none are split into separate TEST/IMPLEMENT tasks, and none omit
      the gate line.
    - No task is an implementation detail rather than a behavior.

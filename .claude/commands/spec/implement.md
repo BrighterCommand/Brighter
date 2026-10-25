@@ -251,7 +251,7 @@ for the routine case, not a gag order.
      [`/refactor:smells`](../refactor/smells.md))? Fix a smell here only if it is a small, in-cycle
      tidy of the code this task added. Anything larger is left for the user to schedule: once a task or
      a section of `tasks.md` is complete and green, they may opt to run `/refactor:smells`, which
-     schedules refactorings as `/tidy-first` runs or `STRUCTURAL` tasks. Do not run it on their behalf.
+     schedules refactorings as `/refactor:tidy-first` runs or `STRUCTURAL` tasks. Do not run it on their behalf.
    - Does it follow Responsibility Driven Design?
    - Does it avoid primitive obsession?
    - Are methods small and focused?

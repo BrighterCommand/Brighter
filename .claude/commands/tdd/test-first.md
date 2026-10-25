@@ -26,7 +26,7 @@ Which review mode applies is called the **gear** (see
 
 **This command runs `review-before` unless the invoking command states otherwise in its prompt.**
 
-- Invoked directly by the user (`/test-first <behavior>`) → **`review-before`**, always. Do **not**
+- Invoked directly by the user (`/tdd:test-first <behavior>`) → **`review-before`**, always. Do **not**
   read `specs/*/.current-gear` yourself. A standalone run must never inherit a mode it did not ask
   for from whichever spec happens to be current.
 - Invoked by `/bugfix:test` → **`review-before`**, always. Bugfixes are outside this mechanism.
@@ -226,7 +226,7 @@ After completing all phases:
 ## Example Session
 
 ```
-User: /test-first when an invalid message is received it should be sent to the dead letter queue
+User: /tdd:test-first when an invalid message is received it should be sent to the dead letter queue
 
 🔴 RED: Writing test When_message_is_invalid_should_send_to_dead_letter_queue
 
@@ -271,4 +271,4 @@ Should I commit these changes?
 - The gate is armed by default; `/spec:gear` is the only supported way to disarm it, and it does so
   for one spec (optionally one section of its task list) at a time — see ADR 0071
 - Following this workflow provides scope control and better design
-- You may run `/test-first` multiple times to build up functionality incrementally
+- You may run `/tdd:test-first` multiple times to build up functionality incrementally
