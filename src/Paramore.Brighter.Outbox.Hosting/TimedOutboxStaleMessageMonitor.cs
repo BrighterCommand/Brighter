@@ -81,7 +81,8 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// Otherwise logs one Information entry saying that only the overall count is measured, and why. When the outbox cannot count by topic, that is the reason given.
     /// </remarks>
     /// <returns>A completed task.</returns>
-    /// <exception cref="ConfigurationException">The container has no <see cref="IAmAnOutbox"/> or no <see cref="IAmProducersConfiguration"/>, which <c>AddProducers</c> registers; or the
+    /// <exception cref="ConfigurationException">The container has no <see cref="IAmAnOutbox"/> or no <see cref="IAmProducersConfiguration"/>, which <c>AddProducers</c> registers; or the outbox is sync-only, so it does not implement
+    /// <see cref="IAmAnOutboxAsync{T, TTransaction}"/> for the transaction type of the <see cref="IAmABoxTransactionProvider"/>; or the
     /// <see cref="Publication.StaleMessageAge"/> of a publication is zero or less, or greater than <see cref="TimedOutboxStaleMessageMonitorOptions.MaxStaleMessageAge"/>.</exception>
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -94,6 +95,7 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
             throw new ConfigurationException($"The outbox stale-message monitor found no {nameof(IAmAnOutbox)} in the container; AddProducers registers it");
         if (producersConfiguration is null)
             throw new ConfigurationException($"The outbox stale-message monitor found no {nameof(IAmProducersConfiguration)} in the container; AddProducers registers it");
+        ValidateOutboxCountsAsynchronously(outbox, transactionProvider);
 
         var publications = ReadPublications(producersConfiguration);
         ValidateStaleMessageAges(publications);
@@ -121,6 +123,15 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
             Log.OverallCountOnlyWithNoCapability(s_logger, outboxType);
         else if (topicCount == 0)
             Log.OverallCountOnlyWithNoMeasuredTopic(s_logger, outboxType);
+    }
+
+    private static void ValidateOutboxCountsAsynchronously(IAmAnOutbox outbox, IAmABoxTransactionProvider? transactionProvider)
+    {
+        var transactionType = CommandProcessor.GetTransactionTypeFromTransactionProvider(transactionProvider);
+        var asyncOutboxType = typeof(IAmAnOutboxAsync<,>).MakeGenericType(typeof(Message), transactionType);
+        if (!asyncOutboxType.IsInstanceOfType(outbox))
+            throw new ConfigurationException(
+                $"The outbox stale-message monitor needs an outbox that counts asynchronously, but {outbox.GetType().Name} is sync-only");
     }
 
     private static IReadOnlyList<Publication> ReadPublications(IAmProducersConfiguration producersConfiguration) =>
