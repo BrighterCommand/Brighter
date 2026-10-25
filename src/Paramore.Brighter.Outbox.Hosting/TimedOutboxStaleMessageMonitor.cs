@@ -69,6 +69,9 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// Starts the monitor.
     /// </summary>
     /// <param name="cancellationToken">Not used.</param>
+    /// <remarks>
+    /// Starts the <see cref="OutboxStaleMessageReadings"/> with the outbox's type name, and with topics when the outbox is an <see cref="IAmATopicCountingOutbox"/>.
+    /// </remarks>
     /// <returns>A completed task.</returns>
     /// <exception cref="ConfigurationException">The container has no outbox or no producers' configuration, because <c>AddProducers</c> was not called; or the
     /// <see cref="Publication.StaleMessageAge"/> of a publication is not greater than zero and at most <see cref="TimedOutboxStaleMessageMonitorOptions.MaxStaleMessageAge"/>.</exception>
@@ -86,6 +89,7 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         var publications = ReadPublications(producersConfiguration);
         ValidateStaleMessageAges(publications);
 
+        _readings.Start(outbox.GetType().Name, outbox is IAmATopicCountingOutbox);
         return Task.CompletedTask;
     }
 
