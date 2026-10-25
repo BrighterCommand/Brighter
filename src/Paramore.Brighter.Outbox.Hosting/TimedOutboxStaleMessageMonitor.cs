@@ -81,7 +81,7 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// Otherwise logs one Information entry saying that only the overall count is measured, and why. When the outbox cannot count by topic, that is the reason given.
     /// </remarks>
     /// <returns>A completed task.</returns>
-    /// <exception cref="ConfigurationException">The container has no <see cref="IAmAnOutbox"/> or no <see cref="IAmProducersConfiguration"/>, which <c>AddProducers</c> registers; or the outbox is sync-only, so it does not implement
+    /// <exception cref="ConfigurationException">The container has no <see cref="IAmAnOutbox"/> or no <see cref="IAmProducersConfiguration"/>, which <c>AddProducers</c> registers; or the outbox is sync-only or implements neither outbox interface, so it does not implement
     /// <see cref="IAmAnOutboxAsync{T, TTransaction}"/> for the transaction type of the <see cref="IAmABoxTransactionProvider"/>; or the
     /// <see cref="Publication.StaleMessageAge"/> of a publication is zero or less, or greater than <see cref="TimedOutboxStaleMessageMonitorOptions.MaxStaleMessageAge"/>.</exception>
     public Task StartAsync(CancellationToken cancellationToken)
@@ -131,8 +131,13 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         var asyncOutboxType = typeof(IAmAnOutboxAsync<,>).MakeGenericType(typeof(Message), transactionType);
         if (!asyncOutboxType.IsInstanceOfType(outbox))
             throw new ConfigurationException(
-                $"The outbox stale-message monitor needs an outbox that counts asynchronously, but {outbox.GetType().Name} is sync-only");
+                $"The outbox stale-message monitor needs an outbox that counts asynchronously, but {outbox.GetType().Name} {DescribeMissingAsyncCount(outbox, transactionType)}");
     }
+
+    private static string DescribeMissingAsyncCount(IAmAnOutbox outbox, Type transactionType) =>
+        typeof(IAmAnOutboxSync<,>).MakeGenericType(typeof(Message), transactionType).IsInstanceOfType(outbox)
+            ? "is sync-only"
+            : $"implements neither {nameof(IAmAnOutboxSync<Message, object>)} nor {nameof(IAmAnOutboxAsync<Message, object>)}";
 
     private static IReadOnlyList<Publication> ReadPublications(IAmProducersConfiguration producersConfiguration) =>
         producersConfiguration.ProducerRegistry?.Producers.Select(producer => producer.Publication).ToList()
