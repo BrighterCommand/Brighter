@@ -582,7 +582,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
     - check `outbox is IAmATopicCountingOutbox`;
     - log through a `[LoggerMessage]` method on the `ApplicationLogging` logger, as the sweeper does.
 
-- [ ] **TEST + IMPLEMENT: T6.9 No measured topic logs the "no measured topic" reason (AC-29)**
+- [x] **TEST + IMPLEMENT: T6.9 No measured topic logs the "no measured topic" reason (AC-29)**
   - **USE COMMAND**: `/test-first with the capability and no registry, an empty registry or only an empty-topic publication, start logs no measured topic`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_no_topic_is_measured_should_log_it_once_at_start.cs`
