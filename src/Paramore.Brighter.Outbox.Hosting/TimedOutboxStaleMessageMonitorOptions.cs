@@ -42,8 +42,8 @@ public sealed class TimedOutboxStaleMessageMonitorOptions
     public const int MaxCountCeiling = 1000;
 
     /// <summary>
-    /// The largest measurement interval the monitor accepts: 4,294,967,294 milliseconds, the longest period a timer
-    /// accepts.
+    /// The largest measurement interval the monitor accepts: 4,294,967,294 milliseconds, the longest period a .NET
+    /// timer accepts.
     /// </summary>
     public static readonly TimeSpan MaxMeasurementInterval = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
 

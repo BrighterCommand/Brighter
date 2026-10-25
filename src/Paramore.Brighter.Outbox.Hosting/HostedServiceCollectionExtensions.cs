@@ -77,8 +77,8 @@ namespace Paramore.Brighter.Outbox.Hosting
         }
 
         /// <summary>
-        /// Use the outbox stale-message monitor, which counts the messages that have waited in the outbox longer than
-        /// the stale age.
+        /// Use the outbox stale-message monitor, which counts the messages in the outbox that have not been dispatched
+        /// and are older than the stale age.
         /// </summary>
         /// <remarks>
         /// The settings are validated before anything is registered. When the monitor is added more than once, the
