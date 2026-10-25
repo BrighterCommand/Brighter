@@ -512,7 +512,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should:
     - call the same validation from the constructor in `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs`.
 
-- [ ] **TEST + IMPLEMENT: T6.3 Starting without `AddProducers` fails with a message that names it**
+- [x] **TEST + IMPLEMENT: T6.3 Starting without `AddProducers` fails with a message that names it**
   - **USE COMMAND**: `/test-first StartAsync without AddProducers, with either the outbox or the producers' configuration missing, throws ConfigurationException naming AddProducers and makes no count call`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_monitor_starts_without_producers_should_throw_a_configuration_exception.cs`
