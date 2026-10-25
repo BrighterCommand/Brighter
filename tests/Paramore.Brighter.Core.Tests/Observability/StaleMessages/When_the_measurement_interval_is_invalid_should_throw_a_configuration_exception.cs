@@ -60,7 +60,7 @@ public class StaleMessageMonitorInvalidMeasurementIntervalTests
                 options => options.MeasurementInterval = measurementInterval));
 
         //Assert
-        Assert.Contains(nameof(TimedOutboxStaleMessageMonitorOptions.MeasurementInterval), exception.Message);
+        Assert.StartsWith($"{nameof(TimedOutboxStaleMessageMonitorOptions.MeasurementInterval)} must", exception.Message);
         Assert.Contains(measurementInterval.ToString(), exception.Message);
         Assert.Equal(registrationsBefore, services);
     }
