@@ -903,7 +903,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - build each tag list from the readings' outbox type and, for the topic gauge, the topic only, in `src/Paramore.Brighter/Observability/OutboxStaleMessageMeter.cs`.
 
-- [ ] **TEST + IMPLEMENT: T8.21 A count above C is reported as C (AC-33 last clause; ADR 0085 risk :964)**
+- [x] **TEST + IMPLEMENT: T8.21 A count above C is reported as C (AC-33 last clause; ADR 0085 risk :964)**
   - **USE COMMAND**: `/test-first an overall count of 150 and a per-topic count of 150 for orders are recorded as 100 with C of 100`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_an_outbox_returns_more_than_the_ceiling_should_record_the_ceiling.cs`
