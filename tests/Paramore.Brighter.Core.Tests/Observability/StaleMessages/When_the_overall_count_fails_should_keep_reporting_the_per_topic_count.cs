@@ -113,10 +113,13 @@ public class FailedOverallCountTests
 
             var measured = Array.IndexOf(dueTimes, now) + 1;
             if (measured > 0)
-                SpinWait.SpinUntil(
+            {
+                Assert.True(SpinWait.SpinUntil(
                     () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Failed) >= measured
                         && readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed) >= measured,
-                    TimeSpan.FromSeconds(5));
+                    TimeSpan.FromSeconds(5)));
+                WaitUntilTheMonitorWaits(measured + 1);
+            }
 
             var observed = metrics.Observe();
             collected.AddRange(observed);

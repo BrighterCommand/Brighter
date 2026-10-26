@@ -30,7 +30,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
@@ -45,7 +44,7 @@ public class FirstDueTimeOverallCountTests
     public async Task When_the_first_due_time_passes_should_report_the_overall_count()
     {
         //Arrange
-        var clock = new FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        var clock = new TimerCountingTimeProvider(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
         using var metrics = new StaleMessageMetricsFixture(services =>
         {
             services.AddSingleton<TimeProvider>(clock);
@@ -65,6 +64,7 @@ public class FirstDueTimeOverallCountTests
 
         //Act
         await monitor.StartAsync(default);
+        Assert.True(SpinWait.SpinUntil(() => clock.TimersCreated >= 1, TimeSpan.FromSeconds(5)));
         clock.Advance(TimeSpan.FromSeconds(30));
         var beforeFirstDueTime = metrics.Observe();
         clock.Advance(TimeSpan.FromSeconds(30));

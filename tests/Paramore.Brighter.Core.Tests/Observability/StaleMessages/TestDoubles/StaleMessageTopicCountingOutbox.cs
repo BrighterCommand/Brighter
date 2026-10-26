@@ -107,14 +107,17 @@ public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmAT
         Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
     {
-        _topicCountCalls.Enqueue(new StaleTopicCountCall(dispatchedSinceByTopic, requestContext, maxCountPerTopic, args, cancellationToken, _clock?.GetUtcNow()));
+        var call = new StaleTopicCountCall(dispatchedSinceByTopic, requestContext, maxCountPerTopic, args, cancellationToken, _clock?.GetUtcNow());
         if (_blockNextTopicCall)
         {
             _blockNextTopicCall = false;
             var answer = new TaskCompletionSource<IReadOnlyDictionary<RoutingKey, int>>();
             _blockedTopicCalls.Enqueue(answer);
+            _topicCountCalls.Enqueue(call);
             return answer.Task;
         }
+
+        _topicCountCalls.Enqueue(call);
         if (_blockNextTopicThread)
         {
             _blockNextTopicThread = false;

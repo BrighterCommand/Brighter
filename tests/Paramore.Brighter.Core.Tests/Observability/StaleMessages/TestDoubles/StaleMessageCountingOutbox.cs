@@ -45,6 +45,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
 {
     private static readonly TimeSpan s_threadBlockCeiling = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan s_blockedCallWait = TimeSpan.FromSeconds(5);
 
     private readonly ConcurrentQueue<StaleCountCall> _countCalls = new();
     private readonly TimeProvider? _clock;
@@ -117,12 +118,10 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
 
     /// <summary>Ends the oldest call blocked until released with the given result, then completes <see cref="CallEnded"/>.</summary>
     /// <param name="count">The number of outstanding messages the released call returns.</param>
-    /// <exception cref="InvalidOperationException">No call is blocked until released.</exception>
+    /// <exception cref="InvalidOperationException">No call is blocked until released within 5 s of wall-clock time.</exception>
     public void Release(int count)
     {
-        if (!_blocked.TryDequeue(out var answer))
-            throw new InvalidOperationException("No call of the async count is blocked until released.");
-
+        var answer = OldestBlockedCall();
         Task.Run(() =>
         {
             answer.SetResult(count);
@@ -191,6 +190,16 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         var answer = new TaskCompletionSource<int>();
         _blocked.Enqueue(answer);
         return answer.Task;
+    }
+
+    // A call is recorded before its task is blocked, so a release made as soon as the call is seen waits for the block.
+    private TaskCompletionSource<int> OldestBlockedCall()
+    {
+        TaskCompletionSource<int>? answer = null;
+        if (!SpinWait.SpinUntil(() => _blocked.TryDequeue(out answer), s_blockedCallWait))
+            throw new InvalidOperationException("No call of the async count is blocked until released.");
+
+        return answer!;
     }
 
     public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1,

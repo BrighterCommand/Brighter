@@ -30,7 +30,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
@@ -41,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 public class TopicsReadAtStartTests
 {
-    private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+    private readonly TimerCountingTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
     [Fact]
     public async Task When_a_publication_changes_after_start_should_keep_the_topics_read_at_start()
@@ -73,13 +72,16 @@ public class TopicsReadAtStartTests
 
         //Act
         await monitor.StartAsync(default);
+        WaitUntilTheMonitorWaits(1);
         _clock.Advance(TimeSpan.FromMinutes(1));
         WaitForPerTopicCompletions(readings, 1);
+        WaitUntilTheMonitorWaits(2);
         _clock.Advance(TimeSpan.FromSeconds(30));
         orders.Publication.Topic = new RoutingKey("payments");
         orders.Publication.StaleMessageAge = TimeSpan.FromMinutes(4);
         _clock.Advance(TimeSpan.FromSeconds(30));
         WaitForPerTopicCompletions(readings, 2);
+        WaitUntilTheMonitorWaits(3);
         _clock.Advance(TimeSpan.FromMinutes(1));
         WaitForPerTopicCompletions(readings, 3);
 
@@ -95,4 +97,7 @@ public class TopicsReadAtStartTests
         Assert.True(SpinWait.SpinUntil(
             () => readings.GetTotal(StaleMessageCount.PerTopic, StaleMeasurementOutcome.Completed) >= completions,
             TimeSpan.FromSeconds(5)));
+
+    private void WaitUntilTheMonitorWaits(int timers) =>
+        Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= timers, TimeSpan.FromSeconds(5)));
 }

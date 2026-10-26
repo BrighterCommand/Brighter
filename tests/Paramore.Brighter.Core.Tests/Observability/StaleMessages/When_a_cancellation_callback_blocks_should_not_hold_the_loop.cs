@@ -88,12 +88,12 @@ public class BlockingCancellationCallbackTests
         try
         {
             deadlineReturned = AdvanceReturns(TimeSpan.FromSeconds(10));
-            callbackBlocked = outbox.CallbackBlocked.Wait(TimeSpan.FromSeconds(5));
-            SpinWait.SpinUntil(
+            callbackBlocked = SpinWait.SpinUntil(() => outbox.CallbackBlocked.IsCompleted, TimeSpan.FromSeconds(5));
+            Assert.True(SpinWait.SpinUntil(
                 () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Abandoned) >= 1,
-                TimeSpan.FromSeconds(5));
+                TimeSpan.FromSeconds(5)));
             atTheDeadline = metrics.Observe();
-            SpinWait.SpinUntil(() => _clock.TimersCreated >= 2, TimeSpan.FromSeconds(5));
+            Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= 2, TimeSpan.FromSeconds(5)));
 
             nextDueTimeReturned = AdvanceReturns(TimeSpan.FromSeconds(50));
             nextDueTimeHandled = SpinWait.SpinUntil(

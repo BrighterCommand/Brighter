@@ -100,7 +100,7 @@ public class AbandonedCountFaultsLaterTests
         try
         {
             outbox.Release(0);
-            Assert.True(outbox.CallEnded.Wait(TimeSpan.FromSeconds(5)));
+            Assert.True(SpinWait.SpinUntil(() => outbox.CallEnded.IsCompleted, TimeSpan.FromSeconds(5)));
             _clock.Advance(TimeSpan.FromSeconds(30));
             Assert.True(SpinWait.SpinUntil(
                 () => outbox.CountCalls.Count == 2

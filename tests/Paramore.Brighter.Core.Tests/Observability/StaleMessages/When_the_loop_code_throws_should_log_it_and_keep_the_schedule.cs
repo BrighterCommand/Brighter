@@ -105,13 +105,19 @@ public class LoopCodeFailureTests
             }
 
             if (now == failedAt)
-                SpinWait.SpinUntil(
+            {
+                Assert.True(SpinWait.SpinUntil(
                     () => _logs.Entries.Any(entry => entry.LogLevel == LogLevel.Error),
-                    TimeSpan.FromSeconds(5));
+                    TimeSpan.FromSeconds(5)));
+                WaitUntilTheMonitorWaits(2);
+            }
             if (now == measuredAt)
-                SpinWait.SpinUntil(
+            {
+                Assert.True(SpinWait.SpinUntil(
                     () => readings.GetTotal(StaleMessageCount.Overall, StaleMeasurementOutcome.Completed) >= 2,
-                    TimeSpan.FromSeconds(5));
+                    TimeSpan.FromSeconds(5)));
+                WaitUntilTheMonitorWaits(3);
+            }
 
             var observed = metrics.Observe();
             if (now == failedAt.AddSeconds(20))
