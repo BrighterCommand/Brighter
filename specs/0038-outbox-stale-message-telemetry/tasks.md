@@ -826,7 +826,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - make no outbox call other than the two counts.
 
-- [ ] **CHARACTERISE: T8.15 Both gauges report the worked example (AC-27)**
+- [x] **CHARACTERISE: T8.15 Both gauges report the worked example (AC-27)**
   - **USE COMMAND**: `/test-first with orders at two minutes and payments at A the 12:06 measurements record V of 2 and V_t of 2 for orders and 1 for payments, the 12:01 ones record zeros, and neither gauge has a value at 12:00:30`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_topics_hold_stale_messages_at_their_own_ages_should_report_both_gauges.cs`
