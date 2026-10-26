@@ -44,7 +44,7 @@ public sealed class StaleMessageMetricsFixture : IDisposable
 {
     private readonly ServiceProvider _services;
     private readonly MeterListener _listener = new();
-    private readonly ConcurrentDictionary<string, byte> _published = new();
+    private readonly ConcurrentDictionary<string, Instrument> _published = new();
     private readonly ConcurrentQueue<StaleMeasurement> _measurements = new();
 
     /// <summary>Builds the container, creates its meters and starts listening to them.</summary>
@@ -64,7 +64,7 @@ public sealed class StaleMessageMetricsFixture : IDisposable
         {
             if (!ReferenceEquals(instrument.Meter.Scope, meterFactory) || instrument.Meter.Name != BrighterSemanticConventions.MeterName)
                 return;
-            _published[instrument.Name] = 0;
+            _published[instrument.Name] = instrument;
             listener.EnableMeasurementEvents(instrument);
         };
         _listener.SetMeasurementEventCallback<long>((instrument, value, tags, _) => Record(instrument.Name, value, tags));
@@ -73,6 +73,12 @@ public sealed class StaleMessageMetricsFixture : IDisposable
 
     /// <summary>The names of the Brighter instruments the container's meter factory created.</summary>
     public IReadOnlyCollection<string> PublishedInstruments => _published.Keys.ToArray();
+
+    /// <summary>The Brighter instruments the container's meter factory created, by name.</summary>
+    public IReadOnlyDictionary<string, Instrument> Instruments => _published;
+
+    /// <summary>The container the fixture built.</summary>
+    public IServiceProvider Services => _services;
 
     /// <summary>Collects the instruments now and returns every measurement they reported.</summary>
     public IReadOnlyList<StaleMeasurement> Observe()

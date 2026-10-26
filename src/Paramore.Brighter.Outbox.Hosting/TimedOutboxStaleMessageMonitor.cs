@@ -25,6 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,11 +44,14 @@ namespace Paramore.Brighter.Outbox.Hosting;
 public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposable
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxStaleMessageMonitor>();
+    private static readonly MethodInfo s_countOverall =
+        typeof(TimedOutboxStaleMessageMonitor).GetMethod(nameof(CountOverall), BindingFlags.NonPublic | BindingFlags.Static)!;
 
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly OutboxStaleMessageReadings _readings;
     private readonly TimedOutboxStaleMessageMonitorOptions _options;
     private readonly TimeProvider _timeProvider;
+    private readonly CancellationTokenSource _stopping = new();
 
     /// <summary>
     /// Creates a monitor that is not yet running.
@@ -79,6 +83,8 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// Starts the <see cref="OutboxStaleMessageReadings"/> with the outbox's type name, and with topics when the outbox is an <see cref="IAmATopicCountingOutbox"/>
     /// and at least one publication has a topic that is not empty.
     /// Otherwise logs one Information entry saying that only the overall count is measured, and why. When the outbox cannot count by topic, that is the reason given.
+    /// Then starts measuring in the background, without waiting: the first count runs one
+    /// <see cref="TimedOutboxStaleMessageMonitorOptions.MeasurementInterval"/> after start, and the next ones on that interval.
     /// </remarks>
     /// <returns>A completed task.</returns>
     /// <exception cref="ConfigurationException">The container has no <see cref="IAmAnOutbox"/> or no <see cref="IAmProducersConfiguration"/>, which <c>AddProducers</c> registers; or the outbox is sync-only or implements neither outbox interface, so it does not implement
@@ -95,7 +101,7 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
             throw new ConfigurationException($"The outbox stale-message monitor found no {nameof(IAmAnOutbox)} in the container; AddProducers registers it");
         if (producersConfiguration is null)
             throw new ConfigurationException($"The outbox stale-message monitor found no {nameof(IAmProducersConfiguration)} in the container; AddProducers registers it");
-        ValidateOutboxCountsAsynchronously(outbox, transactionProvider);
+        var transactionType = ValidateOutboxCountsAsynchronously(outbox, transactionProvider);
 
         var publications = ReadPublications(producersConfiguration);
         ValidateStaleMessageAges(publications);
@@ -106,7 +112,94 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         LogWhenTopicsAreNotMeasured(outboxType, countsByTopic, topicAges.Count);
 
         _readings.Start(outboxType, countsByTopic && topicAges.Count > 0);
+        StartMeasuring(outboxType, BuildOverallCount(outbox, transactionType));
         return Task.CompletedTask;
+    }
+
+    private Func<CancellationToken, Task<int>> BuildOverallCount(IAmAnOutbox outbox, Type transactionType) =>
+        (Func<CancellationToken, Task<int>>)s_countOverall
+            .MakeGenericMethod(transactionType)
+            .Invoke(null, new object[] { outbox, _options.StaleMessageAge, _options.CountCeiling })!;
+
+    private static Func<CancellationToken, Task<int>> CountOverall<TTransaction>(IAmAnOutbox outbox, TimeSpan staleMessageAge, int countCeiling)
+    {
+        var asyncOutbox = (IAmAnOutboxAsync<Message, TTransaction>)outbox;
+        return cancellationToken => asyncOutbox.GetOutstandingMessageCountAsync(
+            staleMessageAge, null, countCeiling, new Dictionary<string, object>(), cancellationToken);
+    }
+
+    private void StartMeasuring(string outboxType, Func<CancellationToken, Task<int>> countOverall)
+    {
+        var origin = _timeProvider.GetTimestamp();
+        using (ExecutionContext.SuppressFlow())
+            _ = Task.Run(() => MeasureUntilStoppedAsync(outboxType, origin, countOverall));
+    }
+
+    private async Task MeasureUntilStoppedAsync(string outboxType, long origin, Func<CancellationToken, Task<int>> countOverall)
+    {
+        var stopped = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var registration = _stopping.Token.Register(() => stopped.TrySetResult(true));
+
+        var measured = 0L;
+        while (await WaitUntilAsync(DueTime(measured + 1), origin, stopped.Task))
+        {
+            var latest = Elapsed(origin).Ticks / _options.MeasurementInterval.Ticks;
+            SkipMissedDueTimes(outboxType, latest - measured - 1);
+            measured = latest;
+            await MeasureOverallAsync(outboxType, countOverall);
+        }
+    }
+
+    private TimeSpan DueTime(long gridPoint) => TimeSpan.FromTicks(_options.MeasurementInterval.Ticks * gridPoint);
+
+    private TimeSpan Elapsed(long origin) => _timeProvider.GetElapsedTime(origin);
+
+    private void SkipMissedDueTimes(string outboxType, long missed)
+    {
+        if (missed <= 0)
+            return;
+
+        var dueTimes = (int)Math.Min(missed, int.MaxValue);
+        _readings.Skip(StaleMessageCount.Overall, dueTimes);
+        Log.DueTimesSkipped(s_logger, outboxType, StaleMessageCount.Overall, dueTimes);
+    }
+
+    // Checks the clock again after the timer exists, so a due time that passes while the timer is being created is not missed.
+    private async Task<bool> WaitUntilAsync(TimeSpan due, long origin, Task stopped)
+    {
+        while (!stopped.IsCompleted)
+        {
+            var wait = due - Elapsed(origin);
+            if (wait <= TimeSpan.Zero)
+                return true;
+
+            var timerFired = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var timer = _timeProvider.CreateTimer(_ => timerFired.TrySetResult(true), null, wait, Timeout.InfiniteTimeSpan);
+            if (due - Elapsed(origin) <= TimeSpan.Zero)
+                return true;
+
+            await WhenAnyThenYieldAsync(timerFired.Task, stopped);
+        }
+
+        return false;
+    }
+
+    private static async Task WhenAnyThenYieldAsync(Task first, Task second)
+    {
+#if NETSTANDARD2_0
+        await Task.WhenAny(first, second);
+        await Task.Yield();
+#else
+        await Task.WhenAny(first, second).ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+#endif
+    }
+
+    private async Task MeasureOverallAsync(string outboxType, Func<CancellationToken, Task<int>> countOverall)
+    {
+        using var cancellation = new CancellationTokenSource();
+        var count = await Task.Run(() => countOverall(cancellation.Token));
+        _readings.CompleteOverall(count);
+        Log.OverallCountCompleted(s_logger, outboxType, count);
     }
 
     private IReadOnlyDictionary<RoutingKey, TimeSpan> BuildTopicAges(IEnumerable<Publication> publications) =>
@@ -125,13 +218,14 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
             Log.OverallCountOnlyWithNoMeasuredTopic(s_logger, outboxType);
     }
 
-    private static void ValidateOutboxCountsAsynchronously(IAmAnOutbox outbox, IAmABoxTransactionProvider? transactionProvider)
+    private static Type ValidateOutboxCountsAsynchronously(IAmAnOutbox outbox, IAmABoxTransactionProvider? transactionProvider)
     {
         var transactionType = CommandProcessor.GetTransactionTypeFromTransactionProvider(transactionProvider);
         var asyncOutboxType = typeof(IAmAnOutboxAsync<,>).MakeGenericType(typeof(Message), transactionType);
         if (!asyncOutboxType.IsInstanceOfType(outbox))
             throw new ConfigurationException(
                 $"The outbox stale-message monitor needs an outbox that counts asynchronously, but {outbox.GetType().Name} {DescribeMissingAsyncCount(outbox, transactionType)}");
+        return transactionType;
     }
 
     private static string DescribeMissingAsyncCount(IAmAnOutbox outbox, Type transactionType) =>
@@ -172,10 +266,17 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// </summary>
     public void Dispose()
     {
+        _stopping.Cancel();
     }
 
     private static partial class Log
     {
+        [LoggerMessage(LogLevel.Debug, "Outbox stale-message monitor counted {StaleCount} stale messages overall for {OutboxType}")]
+        public static partial void OverallCountCompleted(ILogger logger, string outboxType, int staleCount);
+
+        [LoggerMessage(LogLevel.Warning, "Outbox stale-message monitor skipped {DueTimes} due times of the {Count} count for {OutboxType}")]
+        public static partial void DueTimesSkipped(ILogger logger, string outboxType, StaleMessageCount count, int dueTimes);
+
         [LoggerMessage(LogLevel.Information, "Outbox stale-message monitor measures only the overall count for {OutboxType}: no capability to count by topic")]
         public static partial void OverallCountOnlyWithNoCapability(ILogger logger, string outboxType);
 
