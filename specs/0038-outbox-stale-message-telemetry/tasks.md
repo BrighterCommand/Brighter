@@ -682,7 +682,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - keep each due time's call independent of earlier values. The gauge shows only the latest completed reading.
 
-- [ ] **CHARACTERISE: T8.3 The overall count stops at the ceiling (AC-5)**
+- [x] **CHARACTERISE: T8.3 The overall count stops at the ceiling (AC-5)**
   - **USE COMMAND**: `/test-first with a ceiling of three the overall value is 0, 2, 3 and 3 for 0, 2, 3 and 50 stale messages`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_stale_messages_exceed_the_ceiling_should_record_the_ceiling.cs`
