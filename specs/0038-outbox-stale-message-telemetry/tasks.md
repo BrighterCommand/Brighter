@@ -667,7 +667,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
     - start the overall count with its own `Task.Run`: A, C, `requestContext` null, a fresh `CancellationTokenSource` per call, and `args` an empty dictionary for now (T8.5 adds the bag);
     - record `CompleteOverall` and log at Debug through `[LoggerMessage]`.
 
-- [ ] **CHARACTERISE: T8.2 The overall count follows the store's stale messages (AC-4)**
+- [x] **CHARACTERISE: T8.2 The overall count follows the store's stale messages (AC-4)**
   - **USE COMMAND**: `/test-first the overall gauge records 1, then 0 after m1 is dispatched, then 1 when m3 becomes stale`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_stale_messages_change_should_record_the_overall_count.cs`
