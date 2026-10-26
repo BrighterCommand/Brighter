@@ -776,7 +776,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - none is expected beyond T8.9, so stop and ask. A RED here points at the T2.2 implementation.
 
-- [ ] **CHARACTERISE: T8.11 A publication changed after start does not change the measured topics (AC-39)**
+- [x] **CHARACTERISE: T8.11 A publication changed after start does not change the measured topics (AC-39)**
   - **USE COMMAND**: `/test-first setting the orders publication's topic to payments and its age to four minutes at 12:01:30 leaves the 12:02 and 12:03 per-topic calls on orders at two minutes`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_publication_changes_after_start_should_keep_the_topics_read_at_start.cs`
