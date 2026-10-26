@@ -39,11 +39,15 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 /// </summary>
 public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmATopicCountingOutbox
 {
+    private static readonly TimeSpan s_threadBlockCeiling = TimeSpan.FromSeconds(30);
+
     private readonly ConcurrentQueue<StaleTopicCountCall> _topicCountCalls = new();
     private readonly TimeProvider? _clock;
     private readonly TaskCompletionSource<bool> _topicCallEnded = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly ConcurrentQueue<TaskCompletionSource<IReadOnlyDictionary<RoutingKey, int>>> _blockedTopicCalls = new();
+    private readonly ManualResetEventSlim _topicThreadReleased = new(false);
     private volatile bool _blockNextTopicCall;
+    private volatile bool _blockNextTopicThread;
 
     /// <summary>Creates the double.</summary>
     /// <param name="clock">When given, each recorded call carries the time on this clock when it was made.</param>
@@ -60,6 +64,16 @@ public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmAT
 
     /// <summary>Makes the next call of the per-topic count ignore its token and block until <see cref="ReleaseTopicCount"/>.</summary>
     public void BlockTopicCountUntilReleased() => _blockNextTopicCall = true;
+
+    /// <summary>
+    /// Makes the next call of the per-topic count ignore its token and block the calling thread, before it returns a
+    /// task, until <see cref="ReleaseTopicThread"/> or 30 s of wall-clock time, so a thread that is never released is
+    /// not held past the test.
+    /// </summary>
+    public void BlockTopicThreadUntilReleased() => _blockNextTopicThread = true;
+
+    /// <summary>Lets the thread blocked by <see cref="BlockTopicThreadUntilReleased"/> return its task.</summary>
+    public void ReleaseTopicThread() => _topicThreadReleased.Set();
 
     /// <summary>Ends the oldest per-topic call blocked until released with the given counts, then completes <see cref="TopicCallEnded"/>.</summary>
     /// <param name="counts">The number of outstanding messages the released call returns for each topic.</param>
@@ -90,6 +104,11 @@ public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmAT
             var answer = new TaskCompletionSource<IReadOnlyDictionary<RoutingKey, int>>();
             _blockedTopicCalls.Enqueue(answer);
             return answer.Task;
+        }
+        if (_blockNextTopicThread)
+        {
+            _blockNextTopicThread = false;
+            _topicThreadReleased.Wait(s_threadBlockCeiling);
         }
 
         return Task.FromResult<IReadOnlyDictionary<RoutingKey, int>>(
