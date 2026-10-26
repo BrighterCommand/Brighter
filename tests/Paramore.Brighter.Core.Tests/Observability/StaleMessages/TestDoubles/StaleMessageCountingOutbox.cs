@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 /// <summary>
 /// An outbox that implements both outbox interfaces and not <see cref="IAmATopicCountingOutbox"/>, and records each
 /// call of its counts. It does not derive from <see cref="InMemoryOutbox"/>, which offers the per-topic count.
-/// It completes a cancelled call's task, on a pool thread, through a <see cref="TaskCompletionSource{TResult}"/> created
+/// It completes a released or cancelled call's task, on a pool thread, through a <see cref="TaskCompletionSource{TResult}"/> created
 /// without <see cref="TaskCreationOptions.RunContinuationsAsynchronously"/>, unlike the other gating doubles of this
 /// project. With no <see cref="SynchronizationContext"/> current, the rest of the count's task then runs inline, so it
 /// has ended before <see cref="CallEnded"/> completes.
@@ -48,6 +48,7 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     private readonly TimeProvider? _clock;
     private readonly TaskCompletionSource<bool> _ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly ConcurrentQueue<Func<CancellationToken, Task<int>>> _answers = new();
+    private readonly ConcurrentQueue<TaskCompletionSource<int>> _blocked = new();
     private volatile int _result;
 
     /// <summary>Creates the double.</summary>
@@ -60,11 +61,29 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     /// <summary>Each call of the overall count, sync or async, in the order the calls were made.</summary>
     public IReadOnlyCollection<StaleCountCall> CountCalls => _countCalls;
 
-    /// <summary>Completes once a call blocked until its token is cancelled has ended with <see cref="OperationCanceledException"/>.</summary>
+    /// <summary>Completes once a call blocked until its token is cancelled, or until released, has ended.</summary>
     public Task CallEnded => _ended.Task;
 
     /// <summary>Makes the next call of the async count that has no other answer queued block until its token is cancelled.</summary>
     public void BlockUntilCancelled() => _answers.Enqueue(WaitUntilCancelled);
+
+    /// <summary>Makes the next call of the async count that has no other answer queued ignore its token and block until <see cref="Release"/>.</summary>
+    public void BlockUntilReleased() => _answers.Enqueue(WaitUntilReleased);
+
+    /// <summary>Ends the oldest call blocked until released with the given result, then completes <see cref="CallEnded"/>.</summary>
+    /// <param name="count">The number of outstanding messages the released call returns.</param>
+    /// <exception cref="InvalidOperationException">No call is blocked until released.</exception>
+    public void Release(int count)
+    {
+        if (!_blocked.TryDequeue(out var answer))
+            throw new InvalidOperationException("No call of the async count is blocked until released.");
+
+        Task.Run(() =>
+        {
+            answer.SetResult(count);
+            _ended.TrySetResult(true);
+        });
+    }
 
     /// <summary>Sets the result of each call of the async count that has no answer queued.</summary>
     /// <param name="count">The number of outstanding messages the call returns.</param>
@@ -100,6 +119,13 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
             answer.TrySetCanceled(cancellationToken);
             _ended.TrySetResult(true);
         }));
+        return answer.Task;
+    }
+
+    private Task<int> WaitUntilReleased(CancellationToken cancellationToken)
+    {
+        var answer = new TaskCompletionSource<int>();
+        _blocked.Enqueue(answer);
         return answer.Task;
     }
 
