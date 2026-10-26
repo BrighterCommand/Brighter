@@ -220,7 +220,7 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     private async Task MeasureOverallAsync(string outboxType, Func<CancellationToken, Task<int>> countOverall)
     {
         using var cancellation = new CancellationTokenSource();
-        var count = await Task.Run(() => countOverall(cancellation.Token));
+        var count = Math.Min(await Task.Run(() => countOverall(cancellation.Token)), _options.CountCeiling);
         _readings.CompleteOverall(count);
         Log.OverallCountCompleted(s_logger, outboxType, count);
     }
@@ -228,10 +228,13 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     private async Task MeasurePerTopicAsync(string outboxType, Func<CancellationToken, Task<IReadOnlyDictionary<RoutingKey, int>>> countPerTopic)
     {
         using var cancellation = new CancellationTokenSource();
-        var counts = await Task.Run(() => countPerTopic(cancellation.Token));
+        var counts = CapAtTheCeiling(await Task.Run(() => countPerTopic(cancellation.Token)));
         _readings.CompletePerTopic(counts);
         Log.PerTopicCountCompleted(s_logger, outboxType, string.Join(", ", counts.Select(count => $"{count.Key}={count.Value}")));
     }
+
+    private IReadOnlyDictionary<RoutingKey, int> CapAtTheCeiling(IReadOnlyDictionary<RoutingKey, int> counts) =>
+        counts.ToDictionary(count => count.Key, count => Math.Min(count.Value, _options.CountCeiling));
 
     private IReadOnlyDictionary<RoutingKey, TimeSpan> BuildTopicAges(IEnumerable<Publication> publications) =>
         new ReadOnlyDictionary<RoutingKey, TimeSpan>(publications
