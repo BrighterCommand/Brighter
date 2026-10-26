@@ -960,7 +960,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
 
 *Depends on Phase 8.*
 
-- [ ] **TEST + IMPLEMENT: T9.1 A count that does not answer is abandoned at T, and logged as an abandonment (AC-10 first clause)**
+- [x] **TEST + IMPLEMENT: T9.1 A count that does not answer is abandoned at T, and logged as an abandonment (AC-10 first clause)**
   - **USE COMMAND**: `/test-first a count that honours cancellation and never answers ends with OperationCanceledException at T, records no value and is logged as abandoned, not failed`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_a_count_does_not_answer_within_the_timeout_should_abandon_it.cs`
