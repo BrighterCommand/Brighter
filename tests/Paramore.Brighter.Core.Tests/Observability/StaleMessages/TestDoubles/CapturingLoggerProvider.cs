@@ -49,6 +49,7 @@ public sealed class CapturingLoggerProvider : ILoggerProvider
     private readonly ConcurrentDictionary<string, byte> _capturedCategories = new();
     private readonly object _holdLock = new();
     private Func<CapturedLogEntry, bool>? _hold;
+    private (Func<CapturedLogEntry, bool> Match, Exception Exception)? _throw;
     private ManualResetEventSlim _released = new(true);
     private TaskCompletionSource<bool> _entryHeld = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -61,10 +62,12 @@ public sealed class CapturingLoggerProvider : ILoggerProvider
     /// <summary>Completes once the thread that logs the entry given to <see cref="HoldEntry"/> is held.</summary>
     public Task EntryHeld => _entryHeld.Task;
 
-    /// <summary>Clears the entries, releases any held entry and captures the monitor's category alone.</summary>
+    /// <summary>Clears the entries, releases any held entry, drops any throw still to come and captures the monitor's category alone.</summary>
     public void Reset()
     {
         ReleaseHeldEntry();
+        lock (_holdLock)
+            _throw = null;
         ClearEntries();
         _capturedCategories.Clear();
         _capturedCategories[s_monitorCategory] = 0;
@@ -93,6 +96,18 @@ public sealed class CapturingLoggerProvider : ILoggerProvider
         }
     }
 
+    /// <summary>
+    /// Makes the logger throw <paramref name="exception"/>, once, instead of recording the next captured entry matching
+    /// <paramref name="match"/>.
+    /// </summary>
+    /// <param name="match">Selects the entry to throw on.</param>
+    /// <param name="exception">The exception the logger throws.</param>
+    public void ThrowOnce(Func<CapturedLogEntry, bool> match, Exception exception)
+    {
+        lock (_holdLock)
+            _throw = (match, exception);
+    }
+
     /// <summary>Lets the held thread, and any entry still to be held, go on.</summary>
     public void ReleaseHeldEntry()
     {
@@ -115,8 +130,24 @@ public sealed class CapturingLoggerProvider : ILoggerProvider
 
     internal void Record(CapturedLogEntry entry)
     {
+        ThrowIfAsked(entry);
         _entries.Enqueue(entry);
         WaitIfHeld(entry);
+    }
+
+    private void ThrowIfAsked(CapturedLogEntry entry)
+    {
+        Exception exception;
+        lock (_holdLock)
+        {
+            if (_throw is not { } toThrow || !toThrow.Match(entry))
+                return;
+
+            _throw = null;
+            exception = toThrow.Exception;
+        }
+
+        throw exception;
     }
 
     private void WaitIfHeld(CapturedLogEntry entry)

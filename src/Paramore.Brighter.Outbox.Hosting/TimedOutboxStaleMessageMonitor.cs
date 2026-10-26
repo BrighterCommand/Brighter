@@ -186,14 +186,21 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         var measured = 0L;
         while (await WaitUntilAsync(DueTime(measured + 1), origin, stopped.Task, alarm.RingAfter))
         {
-            abandoned.DisposeEnded();
-            var latest = Elapsed(origin).Ticks / _options.MeasurementInterval.Ticks;
-            var dueTimes = latest - measured;
-            measured = latest;
-            var measuresOverall = SkipDueTimes(outboxType, overall, DueTime(latest), origin, dueTimes);
-            var measuresPerTopic = perTopic is not null && SkipDueTimes(outboxType, perTopic, DueTime(latest), origin, dueTimes);
-            if (measuresOverall || measuresPerTopic)
-                await MeasureAsync(outboxType, alarm, abandoned, stopped.Task, measuresOverall ? overall : null, measuresPerTopic ? perTopic : null);
+            try
+            {
+                abandoned.DisposeEnded();
+                var latest = Elapsed(origin).Ticks / _options.MeasurementInterval.Ticks;
+                var dueTimes = latest - measured;
+                measured = latest;
+                var measuresOverall = SkipDueTimes(outboxType, overall, DueTime(latest), origin, dueTimes);
+                var measuresPerTopic = perTopic is not null && SkipDueTimes(outboxType, perTopic, DueTime(latest), origin, dueTimes);
+                if (measuresOverall || measuresPerTopic)
+                    await MeasureAsync(outboxType, alarm, abandoned, stopped.Task, measuresOverall ? overall : null, measuresPerTopic ? perTopic : null);
+            }
+            catch (Exception exception)
+            {
+                Log.DueTimeFailed(s_logger, exception, outboxType);
+            }
         }
 
         abandoned.DisposeEnded();
@@ -562,6 +569,9 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
 
         [LoggerMessage(LogLevel.Warning, "Outbox stale-message monitor failed the {Count} count for {OutboxType}")]
         public static partial void CountFailed(ILogger logger, Exception exception, string outboxType, StaleMessageCount count);
+
+        [LoggerMessage(LogLevel.Error, "Outbox stale-message monitor failed to handle a due time for {OutboxType}")]
+        public static partial void DueTimeFailed(ILogger logger, Exception exception, string outboxType);
 
         [LoggerMessage(LogLevel.Information, "Outbox stale-message monitor measures only the overall count for {OutboxType}: no capability to count by topic")]
         public static partial void OverallCountOnlyWithNoCapability(ILogger logger, string outboxType);
