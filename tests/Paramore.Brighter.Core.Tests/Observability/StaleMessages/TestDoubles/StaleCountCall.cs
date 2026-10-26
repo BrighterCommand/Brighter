@@ -30,11 +30,12 @@ using System.Threading;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 
-/// <summary>One call of a count on <see cref="StaleMessageCountingOutbox"/>, with the arguments and token it was made with.</summary>
+/// <summary>One call of a count on <see cref="StaleMessageCountingOutbox"/>, with the arguments and token it was made with, and the time it was made when the double has a clock.</summary>
 public sealed record StaleCountCall(
     TimeSpan DispatchedSince,
     RequestContext? RequestContext,
     int MaxCount,
     Dictionary<string, object>? Args,
     CancellationToken CancellationToken,
-    bool Synchronous);
+    bool Synchronous,
+    DateTimeOffset? CalledAt = null);

@@ -41,6 +41,14 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
 {
     private readonly ConcurrentQueue<StaleCountCall> _countCalls = new();
+    private readonly TimeProvider? _clock;
+
+    /// <summary>Creates the double.</summary>
+    /// <param name="clock">When given, each recorded call carries the time on this clock when it was made.</param>
+    public StaleMessageCountingOutbox(TimeProvider? clock = null)
+    {
+        _clock = clock;
+    }
 
     /// <summary>Each call of the overall count, sync or async, in the order the calls were made.</summary>
     public IReadOnlyCollection<StaleCountCall> CountCalls => _countCalls;
@@ -55,7 +63,7 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext,
         int maxCount = 100, Dictionary<string, object>? args = null)
     {
-        _countCalls.Enqueue(new StaleCountCall(dispatchedSince, requestContext, maxCount, args, CancellationToken.None, Synchronous: true));
+        _countCalls.Enqueue(new StaleCountCall(dispatchedSince, requestContext, maxCount, args, CancellationToken.None, Synchronous: true, _clock?.GetUtcNow()));
         return 0;
     }
 
@@ -63,7 +71,7 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         int maxCount = 100, Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
     {
-        _countCalls.Enqueue(new StaleCountCall(dispatchedSince, requestContext, maxCount, args, cancellationToken, Synchronous: false));
+        _countCalls.Enqueue(new StaleCountCall(dispatchedSince, requestContext, maxCount, args, cancellationToken, Synchronous: false, _clock?.GetUtcNow()));
         return Task.FromResult(0);
     }
 
