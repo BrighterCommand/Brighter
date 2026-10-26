@@ -191,13 +191,13 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         Func<CancellationToken, Task<IReadOnlyDictionary<RoutingKey, int>>>? countPerTopic)
     {
         var started = _timeProvider.GetTimestamp();
-        var overall = new CountCall<int>(countOverall);
-        var perTopic = countPerTopic is null ? null : new CountCall<IReadOnlyDictionary<RoutingKey, int>>(countPerTopic);
+        var overall = new CountCall<int>(countOverall, _timeProvider);
+        var perTopic = countPerTopic is null ? null : new CountCall<IReadOnlyDictionary<RoutingKey, int>>(countPerTopic, _timeProvider);
         var decided = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var deadline = WaitUntilAsync(_options.MeasurementTimeout, started, Task.WhenAny(decided.Task, stopped), alarm.RingAgainAfter);
         await Task.WhenAll(
-            DecideAsync(outboxType, StaleMessageCount.Overall, overall, deadline, abandoned, CompleteOverall),
-            perTopic is null ? Task.CompletedTask : DecideAsync(outboxType, StaleMessageCount.PerTopic, perTopic, deadline, abandoned, CompletePerTopic));
+            DecideAsync(outboxType, StaleMessageCount.Overall, overall, started, deadline, abandoned, CompleteOverall),
+            perTopic is null ? Task.CompletedTask : DecideAsync(outboxType, StaleMessageCount.PerTopic, perTopic, started, deadline, abandoned, CompletePerTopic));
         decided.TrySetResult(true);
         await deadline;
     }
@@ -206,12 +206,13 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         string outboxType,
         StaleMessageCount count,
         CountCall<TCount> call,
+        long started,
         Task<bool> deadline,
         AbandonedCalls abandoned,
         Action<string, TCount> complete)
     {
         await WhenAnyThenYieldAsync(call.Answer, deadline);
-        if (!call.Answer.IsCompleted && await deadline)
+        if (!call.EndedBefore(started, _options.MeasurementTimeout) && await deadline)
         {
             Abandon(outboxType, count, call.Answer, call.Cancellation, abandoned);
             return;
@@ -376,12 +377,34 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
 
     private sealed class CountCall<TCount>
     {
-        public CountCall(Func<CancellationToken, Task<TCount>> count) =>
-            Answer = Task.Run(() => count(Cancellation.Token));
+        private readonly TimeProvider _timeProvider;
+        private long _ended;
+
+        public CountCall(Func<CancellationToken, Task<TCount>> count, TimeProvider timeProvider)
+        {
+            _timeProvider = timeProvider;
+            Answer = Task.Run(() => CallAsync(count));
+        }
 
         public CancellationTokenSource Cancellation { get; } = new();
 
         public Task<TCount> Answer { get; }
+
+        public bool EndedBefore(long started, TimeSpan timeout) =>
+            Answer.IsCompleted && _timeProvider.GetElapsedTime(started, _ended) < timeout;
+
+        // Awaits the outbox's task with no forced yield, so the end is recorded as soon as the outbox's task completes.
+        private async Task<TCount> CallAsync(Func<CancellationToken, Task<TCount>> count)
+        {
+            try
+            {
+                return await count(Cancellation.Token);
+            }
+            finally
+            {
+                _ended = _timeProvider.GetTimestamp();
+            }
+        }
     }
 
     // Holds the token source of each abandoned call until the loop sees that the call has ended, so only the loop disposes it.
