@@ -925,7 +925,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should:
     - project the result onto the requested topics before `CompletePerTopic` (row 6a).
 
-- [ ] **CHARACTERISE: T8.23 The app starts at the boundary settings, and a maximum-settings measurement completes (AC-3 second and third clauses)**
+- [x] **CHARACTERISE: T8.23 The app starts at the boundary settings, and a maximum-settings measurement completes (AC-3 second and third clauses)**
   - **USE COMMAND**: `/test-first the host starts with A of 1 ms, C of 1, I of 1 minute and T of 59 seconds, and with A and C at their maximums a measurement against InMemoryOutbox completes`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_settings_are_at_their_bounds_should_start_and_measure.cs`
