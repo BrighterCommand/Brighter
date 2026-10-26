@@ -999,7 +999,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - mark the call decided at abandonment, and attach only an exception-observing continuation.
 
-- [ ] **TEST + IMPLEMENT: T9.4 A count that ends just after the deadline is abandoned, never completed (ADR 0085 risk :965)**
+- [x] **TEST + IMPLEMENT: T9.4 A count that ends just after the deadline is abandoned, never completed (ADR 0085 risk :965)**
   - **USE COMMAND**: `/test-first a count released just after fake time reaches the deadline is recorded as abandoned and never as completed`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_count_ends_at_the_deadline_should_record_it_as_abandoned.cs`
