@@ -876,7 +876,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - none is expected beyond T2.5, so stop and ask.
 
-- [ ] **CHARACTERISE: T8.19 A tripped topic is still counted (AC-40)**
+- [x] **CHARACTERISE: T8.19 A tripped topic is still counted (AC-40)**
   - **USE COMMAND**: `/test-first with orders tripped on a registered outbox circuit breaker both topics are still counted and requested`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_topic_is_tripped_should_still_count_it.cs`
