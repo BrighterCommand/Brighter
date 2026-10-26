@@ -728,7 +728,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - fall back to a new empty dictionary, as `src/Paramore.Brighter/OutboxProducerMediator.cs:200` does.
 
-- [ ] **TEST + IMPLEMENT: T8.7 The per-topic call passes every measured topic with its age, C, the bag and a token (AC-14, per topic)**
+- [x] **TEST + IMPLEMENT: T8.7 The per-topic call passes every measured topic with its age, C, the bag and a token (AC-14, per topic)**
   - **USE COMMAND**: `/test-first with publications on orders at two minutes and payments with no age the per-topic count is called once per due time with exactly those topics and ages, C, the bag, a null request context and a cancellable token`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_topics_are_measured_should_pass_them_to_the_per_topic_count.cs`
