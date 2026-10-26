@@ -717,7 +717,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should:
     - read the bag at start the way the mediator's registration does (`ServiceCollectionExtensions.cs:565` (ADR: `:568`) and `:847` (ADR: `:850`)), so both pass the same dictionary even when `IAmProducersConfiguration` is not a `ProducersConfiguration`.
 
-- [ ] **CHARACTERISE: T8.6 With no bag, the overall call passes an empty dictionary (AC-14, no bag)**
+- [x] **CHARACTERISE: T8.6 With no bag, the overall call passes an empty dictionary (AC-14, no bag)**
   - **USE COMMAND**: `/test-first with no OutBoxBag configured the overall call passes an empty dictionary as args`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_producers_have_no_bag_should_pass_an_empty_dictionary.cs`
