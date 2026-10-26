@@ -1023,7 +1023,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - write each log entry as soon as its outcome is recorded, and decide each call only by its recorded end.
 
-- [ ] **TEST + IMPLEMENT: T9.6 At most one call of a count is in flight; due times during it are skipped and logged (AC-9)**
+- [x] **TEST + IMPLEMENT: T9.6 At most one call of a count is in flight; due times during it are skipped and logged (AC-9)**
   - **USE COMMAND**: `/test-first a count that ignores cancellation until 12:03:30 is cancelled at 12:01:10, the 12:02 and 12:03 due times are skipped and logged, and the 12:04 call starts`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_a_count_is_still_running_at_the_next_due_time_should_skip_it.cs`
