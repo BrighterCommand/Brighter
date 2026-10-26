@@ -693,7 +693,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - pass C as `maxCount` on every overall call.
 
-- [ ] **CHARACTERISE: T8.4 One overall call per due time, however often metrics are collected (AC-8, overall)**
+- [x] **CHARACTERISE: T8.4 One overall call per due time, however often metrics are collected (AC-8, overall)**
   - **USE COMMAND**: `/test-first advancing in one-second steps to 12:03:30 makes exactly three overall calls at 12:01, 12:02 and 12:03 whether the listener collects every ten seconds or every second`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_time_advances_three_intervals_should_make_one_overall_call_per_due_time.cs`
