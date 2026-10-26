@@ -1128,7 +1128,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - keep the in-progress task, end timestamp and token source per count.
 
-- [ ] **CHARACTERISE: T9.14 A failing overall count leaves the per-topic count unaffected (AC-33)**
+- [x] **CHARACTERISE: T9.14 A failing overall count leaves the per-topic count unaffected (AC-33)**
   - **USE COMMAND**: `/test-first an overall count that always throws leaves the per-topic gauge reporting 2 and 0, and each failure entry names the overall count`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_the_overall_count_fails_should_keep_reporting_the_per_topic_count.cs`
