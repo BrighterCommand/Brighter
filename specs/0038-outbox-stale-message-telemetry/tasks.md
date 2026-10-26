@@ -1175,7 +1175,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - treat every exception of a call ended before the deadline as row 6b, because the loop has not cancelled that token (ADR 0085 :277).
 
-- [ ] **TEST + IMPLEMENT: T9.18 An exception in the loop's own code is logged at Error and the grid continues (ADR 0085 risk :956)**
+- [x] **TEST + IMPLEMENT: T9.18 An exception in the loop's own code is logged at Error and the grid continues (ADR 0085 risk :956)**
   - **USE COMMAND**: `/test-first a logger that throws once is logged at Error and the next due time is still measured`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_the_loop_code_throws_should_log_it_and_keep_the_schedule.cs`
