@@ -752,7 +752,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - decide the per-topic due time on its own grid state, independent of the overall result.
 
-- [ ] **CHARACTERISE: T8.9 A topic uses the smallest age of its publications (AC-28, counting outbox)**
+- [x] **CHARACTERISE: T8.9 A topic uses the smallest age of its publications (AC-28, counting outbox)**
   - **USE COMMAND**: `/test-first three publications on orders at two minutes, four minutes and none, plus an empty-topic publication, give one per-topic topic orders at two minutes`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_publications_share_a_topic_should_measure_it_at_their_smallest_age.cs`
