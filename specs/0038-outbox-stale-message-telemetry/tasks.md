@@ -937,7 +937,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - pass A unchanged to the outbox. The 365-day bound keeps `now - A` in range.
 
-- [ ] **CHARACTERISE: T8.24 The loop does not carry the starter's ambient state into a count**
+- [x] **CHARACTERISE: T8.24 The loop does not carry the starter's ambient state into a count**
   - **USE COMMAND**: `/test-first an AsyncLocal value set before StartAsync is not visible inside the count call`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_monitor_is_started_from_a_flow_with_ambient_state_should_not_carry_it_into_counts.cs`
