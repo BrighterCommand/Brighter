@@ -1038,7 +1038,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
     - for each count at each wake, skip every due time while its previous call still runs, and every due time at or before that call's recorded end (row 4): `Skip(count, n)` with one Warning;
     - let only the loop cancel or dispose a count's source, and dispose it only after the task has ended.
 
-- [ ] **CHARACTERISE: T9.7 A count that blocks its thread holds neither `Advance` nor the deadline (AC-11 first half)**
+- [x] **CHARACTERISE: T9.7 A count that blocks its thread holds neither `Advance` nor the deadline (AC-11 first half)**
   - **USE COMMAND**: `/test-first an overall count that blocks the calling thread before returning a task lets every Advance return, is cancelled at 12:01:10, records no value and makes no call at 12:02`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_count_blocks_its_thread_should_still_abandon_it_at_the_timeout.cs`
