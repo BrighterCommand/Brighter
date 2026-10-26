@@ -1153,7 +1153,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should:
     - treat a null result, a missing requested topic or a negative requested value as invalid (row 6b), with a Warning naming the count.
 
-- [ ] **TEST + IMPLEMENT: T9.16 A negative overall count fails the measurement**
+- [x] **TEST + IMPLEMENT: T9.16 A negative overall count fails the measurement**
   - **USE COMMAND**: `/test-first an overall count that returns minus one is recorded as failed with no value`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_overall_count_is_negative_should_fail_the_measurement.cs`
