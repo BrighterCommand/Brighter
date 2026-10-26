@@ -48,6 +48,7 @@ public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmAT
     private readonly ManualResetEventSlim _topicThreadReleased = new(false);
     private volatile bool _blockNextTopicCall;
     private volatile bool _blockNextTopicThread;
+    private volatile IReadOnlyDictionary<RoutingKey, int>? _topicResult;
 
     /// <summary>Creates the double.</summary>
     /// <param name="clock">When given, each recorded call carries the time on this clock when it was made.</param>
@@ -74,6 +75,10 @@ public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmAT
 
     /// <summary>Lets the thread blocked by <see cref="BlockTopicThreadUntilReleased"/> return its task.</summary>
     public void ReleaseTopicThread() => _topicThreadReleased.Set();
+
+    /// <summary>Makes every per-topic call that is not blocked return these counts, instead of 0 for each topic asked for.</summary>
+    /// <param name="counts">The number of outstanding messages each call returns for each topic.</param>
+    public void ReturnsByTopic(IReadOnlyDictionary<RoutingKey, int> counts) => _topicResult = counts;
 
     /// <summary>Ends the oldest per-topic call blocked until released with the given counts, then completes <see cref="TopicCallEnded"/>.</summary>
     /// <param name="counts">The number of outstanding messages the released call returns for each topic.</param>
@@ -111,7 +116,7 @@ public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmAT
             _topicThreadReleased.Wait(s_threadBlockCeiling);
         }
 
-        return Task.FromResult<IReadOnlyDictionary<RoutingKey, int>>(
-            dispatchedSinceByTopic.Keys.ToDictionary(topic => topic, _ => 0));
+        return Task.FromResult(_topicResult
+            ?? dispatchedSinceByTopic.Keys.ToDictionary(topic => topic, _ => 0));
     }
 }
