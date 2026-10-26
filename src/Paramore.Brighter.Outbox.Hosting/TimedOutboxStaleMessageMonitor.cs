@@ -189,8 +189,13 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
             return;
 
         var dueTimes = (int)Math.Min(missed, int.MaxValue);
-        _readings.Skip(StaleMessageCount.Overall, dueTimes);
-        Log.DueTimesSkipped(s_logger, outboxType, StaleMessageCount.Overall, dueTimes);
+        Skip(outboxType, StaleMessageCount.Overall, dueTimes);
+    }
+
+    private void Skip(string outboxType, StaleMessageCount count, int dueTimes)
+    {
+        _readings.Skip(count, dueTimes);
+        Log.DueTimesSkipped(s_logger, outboxType, count, dueTimes);
     }
 
     // Checks the clock again after the timer exists, so a due time that passes while the timer is being created is not missed.
