@@ -864,7 +864,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - pass C itself as `maxCountPerTopic`.
 
-- [ ] **CHARACTERISE: T8.18 A message counts toward its header topic (AC-38)**
+- [x] **CHARACTERISE: T8.18 A message counts toward its header topic (AC-38)**
   - **USE COMMAND**: `/test-first a message with header topic orders.v2 and ProducerTopic orders is not counted for orders, and is counted for orders.v2 once it has a publication`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_message_header_topic_differs_from_its_publication_should_count_it_toward_the_header_topic.cs`
