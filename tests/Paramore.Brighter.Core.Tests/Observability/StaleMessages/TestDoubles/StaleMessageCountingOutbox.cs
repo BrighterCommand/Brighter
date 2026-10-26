@@ -80,6 +80,10 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     /// </summary>
     public void BlockThreadUntilReleased() => _answers.Enqueue(BlockThread);
 
+    /// <summary>Makes the next call of the async count that has no other answer queued fail with <paramref name="exception"/>.</summary>
+    /// <param name="exception">The exception the call's task faults with.</param>
+    public void Throws(Exception exception) => _answers.Enqueue(_ => Task.FromException<int>(exception));
+
     /// <summary>Lets the thread blocked by <see cref="BlockThreadUntilReleased"/> return its task.</summary>
     public void ReleaseThread() => _threadReleased.Set();
 

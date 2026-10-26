@@ -226,7 +226,12 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         }
 
         using (call.Cancellation)
-            complete(outboxType, await call.Answer);
+        {
+            if (call.Answer.IsFaulted)
+                Fail(outboxType, count, call.Answer.Exception!.InnerException!);
+            else
+                complete(outboxType, await call.Answer);
+        }
     }
 
     private TimeSpan DueTime(long gridPoint) => TimeSpan.FromTicks(_options.MeasurementInterval.Ticks * gridPoint);
@@ -290,6 +295,12 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         var capped = CapAtTheCeiling(counts);
         _readings.CompletePerTopic(capped);
         Log.PerTopicCountCompleted(s_logger, outboxType, string.Join(", ", capped.Select(count => $"{count.Key}={count.Value}")));
+    }
+
+    private void Fail(string outboxType, StaleMessageCount count, Exception exception)
+    {
+        _readings.Fail(count);
+        Log.CountFailed(s_logger, exception, outboxType, count);
     }
 
     private void Abandon(
@@ -524,6 +535,9 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
 
         [LoggerMessage(LogLevel.Warning, "Outbox stale-message monitor abandoned the {Count} count for {OutboxType} after {Timeout}")]
         public static partial void CountAbandoned(ILogger logger, string outboxType, StaleMessageCount count, TimeSpan timeout);
+
+        [LoggerMessage(LogLevel.Warning, "Outbox stale-message monitor failed the {Count} count for {OutboxType}")]
+        public static partial void CountFailed(ILogger logger, Exception exception, string outboxType, StaleMessageCount count);
 
         [LoggerMessage(LogLevel.Information, "Outbox stale-message monitor measures only the overall count for {OutboxType}: no capability to count by topic")]
         public static partial void OverallCountOnlyWithNoCapability(ILogger logger, string outboxType);

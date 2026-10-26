@@ -53,7 +53,7 @@ public sealed class CapturingLogger : ILogger
     {
         if (!IsEnabled(logLevel))
             return;
-        _provider.Record(new CapturedLogEntry(_category, logLevel, formatter(state, exception)));
+        _provider.Record(new CapturedLogEntry(_category, logLevel, formatter(state, exception), exception));
     }
 
     /// <inheritdoc />

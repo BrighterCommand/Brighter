@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using System;
 using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
@@ -32,4 +33,5 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 /// <param name="Category">The category of the logger that wrote the entry.</param>
 /// <param name="LogLevel">The level of the entry.</param>
 /// <param name="Message">The formatted message of the entry.</param>
-public record CapturedLogEntry(string Category, LogLevel LogLevel, string Message);
+/// <param name="Exception">The exception logged with the entry, if any.</param>
+public record CapturedLogEntry(string Category, LogLevel LogLevel, string Message, Exception? Exception = null);
