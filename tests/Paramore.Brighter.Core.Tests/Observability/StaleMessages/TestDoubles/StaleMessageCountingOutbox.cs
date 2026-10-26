@@ -37,11 +37,17 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 /// <summary>
 /// An outbox that implements both outbox interfaces and not <see cref="IAmATopicCountingOutbox"/>, and records each
 /// call of its counts. It does not derive from <see cref="InMemoryOutbox"/>, which offers the per-topic count.
+/// It completes a cancelled call's task, on a pool thread, through a <see cref="TaskCompletionSource{TResult}"/> created
+/// without <see cref="TaskCreationOptions.RunContinuationsAsynchronously"/>, unlike the other gating doubles of this
+/// project. With no <see cref="SynchronizationContext"/> current, the rest of the count's task then runs inline, so it
+/// has ended before <see cref="CallEnded"/> completes.
 /// </summary>
 public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
 {
     private readonly ConcurrentQueue<StaleCountCall> _countCalls = new();
     private readonly TimeProvider? _clock;
+    private readonly TaskCompletionSource<bool> _ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private volatile bool _blocksUntilCancelled;
 
     /// <summary>Creates the double.</summary>
     /// <param name="clock">When given, each recorded call carries the time on this clock when it was made.</param>
@@ -52,6 +58,12 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
 
     /// <summary>Each call of the overall count, sync or async, in the order the calls were made.</summary>
     public IReadOnlyCollection<StaleCountCall> CountCalls => _countCalls;
+
+    /// <summary>Completes once a call blocked until its token is cancelled has ended with <see cref="OperationCanceledException"/>.</summary>
+    public Task CallEnded => _ended.Task;
+
+    /// <summary>Makes each later call of the async count block until its token is cancelled.</summary>
+    public void BlockUntilCancelled() => _blocksUntilCancelled = true;
 
     public bool ContinueOnCapturedContext { get; set; }
 
@@ -72,7 +84,18 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         CancellationToken cancellationToken = default)
     {
         _countCalls.Enqueue(new StaleCountCall(dispatchedSince, requestContext, maxCount, args, cancellationToken, Synchronous: false, _clock?.GetUtcNow()));
-        return Task.FromResult(0);
+        return _blocksUntilCancelled ? WaitUntilCancelled(cancellationToken) : Task.FromResult(0);
+    }
+
+    private Task<int> WaitUntilCancelled(CancellationToken cancellationToken)
+    {
+        var answer = new TaskCompletionSource<int>();
+        cancellationToken.Register(() => Task.Run(() =>
+        {
+            answer.TrySetCanceled(cancellationToken);
+            _ended.TrySetResult(true);
+        }));
+        return answer.Task;
     }
 
     public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1,

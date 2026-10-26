@@ -166,17 +166,59 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     {
         var stopped = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var registration = _stopping.Token.Register(() => stopped.TrySetResult(true));
+        using var alarm = new Alarm(_timeProvider);
+        var abandoned = new AbandonedCalls();
 
         var measured = 0L;
-        while (await WaitUntilAsync(DueTime(measured + 1), origin, stopped.Task))
+        while (await WaitUntilAsync(DueTime(measured + 1), origin, stopped.Task, alarm.RingAfter))
         {
+            abandoned.DisposeEnded();
             var latest = Elapsed(origin).Ticks / _options.MeasurementInterval.Ticks;
             SkipMissedDueTimes(outboxType, latest - measured - 1, countPerTopic is not null);
             measured = latest;
-            var overall = MeasureOverallAsync(outboxType, countOverall);
-            var perTopic = countPerTopic is null ? Task.CompletedTask : MeasurePerTopicAsync(outboxType, countPerTopic);
-            await Task.WhenAll(overall, perTopic);
+            await MeasureAsync(outboxType, alarm, abandoned, stopped.Task, countOverall, countPerTopic);
         }
+
+        abandoned.DisposeEnded();
+    }
+
+    private async Task MeasureAsync(
+        string outboxType,
+        Alarm alarm,
+        AbandonedCalls abandoned,
+        Task stopped,
+        Func<CancellationToken, Task<int>> countOverall,
+        Func<CancellationToken, Task<IReadOnlyDictionary<RoutingKey, int>>>? countPerTopic)
+    {
+        var started = _timeProvider.GetTimestamp();
+        var overall = new CountCall<int>(countOverall);
+        var perTopic = countPerTopic is null ? null : new CountCall<IReadOnlyDictionary<RoutingKey, int>>(countPerTopic);
+        var decided = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var deadline = WaitUntilAsync(_options.MeasurementTimeout, started, Task.WhenAny(decided.Task, stopped), alarm.RingAgainAfter);
+        await Task.WhenAll(
+            DecideAsync(outboxType, StaleMessageCount.Overall, overall, deadline, abandoned, CompleteOverall),
+            perTopic is null ? Task.CompletedTask : DecideAsync(outboxType, StaleMessageCount.PerTopic, perTopic, deadline, abandoned, CompletePerTopic));
+        decided.TrySetResult(true);
+        await deadline;
+    }
+
+    private async Task DecideAsync<TCount>(
+        string outboxType,
+        StaleMessageCount count,
+        CountCall<TCount> call,
+        Task<bool> deadline,
+        AbandonedCalls abandoned,
+        Action<string, TCount> complete)
+    {
+        await WhenAnyThenYieldAsync(call.Answer, deadline);
+        if (!call.Answer.IsCompleted && await deadline)
+        {
+            Abandon(outboxType, count, call.Answer, call.Cancellation, abandoned);
+            return;
+        }
+
+        using (call.Cancellation)
+            complete(outboxType, await call.Answer);
     }
 
     private TimeSpan DueTime(long gridPoint) => TimeSpan.FromTicks(_options.MeasurementInterval.Ticks * gridPoint);
@@ -200,8 +242,8 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         Log.DueTimesSkipped(s_logger, outboxType, count, dueTimes);
     }
 
-    // Checks the clock again after the timer exists, so a due time that passes while the timer is being created is not missed.
-    private async Task<bool> WaitUntilAsync(TimeSpan due, long origin, Task stopped)
+    // Checks the clock again after the timer is armed, so a due time that passes while the timer is being created is not missed.
+    private async Task<bool> WaitUntilAsync(TimeSpan due, long origin, Task stopped, Func<TimeSpan, Task> ringAfter)
     {
         while (!stopped.IsCompleted)
         {
@@ -209,12 +251,11 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
             if (wait <= TimeSpan.Zero)
                 return true;
 
-            var timerFired = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-            using var timer = _timeProvider.CreateTimer(_ => timerFired.TrySetResult(true), null, wait, Timeout.InfiniteTimeSpan);
+            var rang = ringAfter(wait);
             if (due - Elapsed(origin) <= TimeSpan.Zero)
                 return true;
 
-            await WhenAnyThenYieldAsync(timerFired.Task, stopped);
+            await WhenAnyThenYieldAsync(rang, stopped);
         }
 
         return false;
@@ -230,20 +271,37 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
 #endif
     }
 
-    private async Task MeasureOverallAsync(string outboxType, Func<CancellationToken, Task<int>> countOverall)
+    private void CompleteOverall(string outboxType, int count)
     {
-        using var cancellation = new CancellationTokenSource();
-        var count = Math.Min(await Task.Run(() => countOverall(cancellation.Token)), _options.CountCeiling);
-        _readings.CompleteOverall(count);
-        Log.OverallCountCompleted(s_logger, outboxType, count);
+        var capped = Math.Min(count, _options.CountCeiling);
+        _readings.CompleteOverall(capped);
+        Log.OverallCountCompleted(s_logger, outboxType, capped);
     }
 
-    private async Task MeasurePerTopicAsync(string outboxType, Func<CancellationToken, Task<IReadOnlyDictionary<RoutingKey, int>>> countPerTopic)
+    private void CompletePerTopic(string outboxType, IReadOnlyDictionary<RoutingKey, int> counts)
     {
-        using var cancellation = new CancellationTokenSource();
-        var counts = CapAtTheCeiling(await Task.Run(() => countPerTopic(cancellation.Token)));
-        _readings.CompletePerTopic(counts);
-        Log.PerTopicCountCompleted(s_logger, outboxType, string.Join(", ", counts.Select(count => $"{count.Key}={count.Value}")));
+        var capped = CapAtTheCeiling(counts);
+        _readings.CompletePerTopic(capped);
+        Log.PerTopicCountCompleted(s_logger, outboxType, string.Join(", ", capped.Select(count => $"{count.Key}={count.Value}")));
+    }
+
+    private void Abandon(
+        string outboxType, StaleMessageCount count, Task call, CancellationTokenSource cancellation, AbandonedCalls abandoned)
+    {
+        _readings.Abandon(count);
+        Log.CountAbandoned(s_logger, outboxType, count, _options.MeasurementTimeout);
+        abandoned.Add(call, cancellation);
+        var cancelled = CancelOffTheLoopThread(cancellation);
+        _ = Task.WhenAll(call, cancelled).ContinueWith(ended => _ = ended.Exception, TaskScheduler.Default);
+    }
+
+    private static Task CancelOffTheLoopThread(CancellationTokenSource cancellation)
+    {
+#if NETSTANDARD2_0
+        return Task.Run(cancellation.Cancel);
+#else
+        return cancellation.CancelAsync();
+#endif
     }
 
     private IReadOnlyDictionary<RoutingKey, int> CapAtTheCeiling(IReadOnlyDictionary<RoutingKey, int> counts) =>
@@ -316,6 +374,90 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         _stopping.Cancel();
     }
 
+    private sealed class CountCall<TCount>
+    {
+        public CountCall(Func<CancellationToken, Task<TCount>> count) =>
+            Answer = Task.Run(() => count(Cancellation.Token));
+
+        public CancellationTokenSource Cancellation { get; } = new();
+
+        public Task<TCount> Answer { get; }
+    }
+
+    // Holds the token source of each abandoned call until the loop sees that the call has ended, so only the loop disposes it.
+    private sealed class AbandonedCalls
+    {
+        private readonly object _lock = new();
+        private readonly List<(Task Call, CancellationTokenSource Cancellation)> _calls = new();
+
+        public void Add(Task call, CancellationTokenSource cancellation)
+        {
+            lock (_lock)
+                _calls.Add((call, cancellation));
+        }
+
+        public void DisposeEnded()
+        {
+            lock (_lock)
+                _calls.RemoveAll(DisposeWhenEnded);
+        }
+
+        private static bool DisposeWhenEnded((Task Call, CancellationTokenSource Cancellation) abandoned)
+        {
+            if (!abandoned.Call.IsCompleted)
+                return false;
+
+            abandoned.Cancellation.Dispose();
+            return true;
+        }
+    }
+
+    // Keeps the timer of the latest due time, so the deadline of that due time's measurement re-arms it instead of creating another.
+    private sealed class Alarm : IDisposable
+    {
+        private readonly TimeProvider _timeProvider;
+        private ITimer? _timer;
+        private Bell _bell = new();
+
+        public Alarm(TimeProvider timeProvider) => _timeProvider = timeProvider;
+
+        public Task RingAfter(TimeSpan wait)
+        {
+            _timer?.Dispose();
+            var bell = new Bell();
+            _bell = bell;
+            var rang = bell.Arm();
+            _timer = _timeProvider.CreateTimer(_ => bell.Ring(), null, wait, Timeout.InfiniteTimeSpan);
+            return rang;
+        }
+
+        public Task RingAgainAfter(TimeSpan wait)
+        {
+            if (_timer is null)
+                return RingAfter(wait);
+
+            var rang = _bell.Arm();
+            _timer.Change(wait, Timeout.InfiniteTimeSpan);
+            return rang;
+        }
+
+        public void Dispose() => _timer?.Dispose();
+    }
+
+    private sealed class Bell
+    {
+        private TaskCompletionSource<bool> _rang = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task Arm()
+        {
+            var rang = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Volatile.Write(ref _rang, rang);
+            return rang.Task;
+        }
+
+        public void Ring() => Volatile.Read(ref _rang).TrySetResult(true);
+    }
+
     private static partial class Log
     {
         [LoggerMessage(LogLevel.Debug, "Outbox stale-message monitor counted {StaleCount} stale messages overall for {OutboxType}")]
@@ -326,6 +468,9 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
 
         [LoggerMessage(LogLevel.Warning, "Outbox stale-message monitor skipped {DueTimes} due times of the {Count} count for {OutboxType}")]
         public static partial void DueTimesSkipped(ILogger logger, string outboxType, StaleMessageCount count, int dueTimes);
+
+        [LoggerMessage(LogLevel.Warning, "Outbox stale-message monitor abandoned the {Count} count for {OutboxType} after {Timeout}")]
+        public static partial void CountAbandoned(ILogger logger, string outboxType, StaleMessageCount count, TimeSpan timeout);
 
         [LoggerMessage(LogLevel.Information, "Outbox stale-message monitor measures only the overall count for {OutboxType}: no capability to count by topic")]
         public static partial void OverallCountOnlyWithNoCapability(ILogger logger, string outboxType);
