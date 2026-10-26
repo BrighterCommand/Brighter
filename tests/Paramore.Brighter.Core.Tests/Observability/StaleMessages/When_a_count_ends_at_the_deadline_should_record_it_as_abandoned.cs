@@ -46,8 +46,9 @@ public class CountEndingAtTheDeadlineTests
     public async Task When_a_count_ends_at_the_deadline_should_record_it_as_abandoned()
     {
         //Arrange
-        var outbox = new StaleMessageCountingOutbox();
+        var outbox = new StaleMessageCountingOutbox(_clock);
         outbox.BlockUntilReleased();
+        outbox.ReleaseAt(TimeSpan.FromSeconds(70), 7);
         using var metrics = new StaleMessageMetricsFixture(services =>
         {
             services.AddSingleton<TimeProvider>(_clock);
@@ -69,13 +70,12 @@ public class CountEndingAtTheDeadlineTests
         using var monitor = metrics.Services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = metrics.Services.GetRequiredService<OutboxStaleMessageReadings>();
         await monitor.StartAsync(default);
-        WaitUntilTheMonitorWaits(1);
+        WaitUntilTheMonitorWaits(2);
         _clock.Advance(TimeSpan.FromMinutes(1));
         Assert.True(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5)));
 
         //Act
         _clock.Advance(TimeSpan.FromSeconds(10));
-        outbox.Release(7);
 
         //Assert
         Assert.True(SpinWait.SpinUntil(() => outbox.CallEnded.IsCompleted, TimeSpan.FromSeconds(5)));

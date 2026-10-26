@@ -37,7 +37,8 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 /// <summary>
 /// An outbox that implements both outbox interfaces and not <see cref="IAmATopicCountingOutbox"/>, and records each
 /// call of its counts. It does not derive from <see cref="InMemoryOutbox"/>, which offers the per-topic count.
-/// It completes a released or cancelled call's task, on a pool thread, through a <see cref="TaskCompletionSource{TResult}"/> created
+/// It completes a released or cancelled call's task, on a pool thread or, for <see cref="ReleaseAt"/>, on the thread
+/// that moves the clock, through a <see cref="TaskCompletionSource{TResult}"/> created
 /// without <see cref="TaskCreationOptions.RunContinuationsAsynchronously"/>, unlike the other gating doubles of this
 /// project. With no <see cref="SynchronizationContext"/> current, the rest of the count's task then runs inline, so it
 /// has ended before <see cref="CallEnded"/> completes.
@@ -56,6 +57,7 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     private readonly ManualResetEventSlim _callbackReleased = new(false);
     private readonly TaskCompletionSource<bool> _callbackBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private volatile int _result;
+    private ITimer? _releaseTimer;
 
     /// <summary>Creates the double.</summary>
     /// <param name="clock">When given, each recorded call carries the time on this clock when it was made.</param>
@@ -129,6 +131,23 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         });
     }
 
+    /// <summary>
+    /// Ends the oldest call blocked until released with the given result, inside the callback of a timer created now
+    /// on the clock given to the double and with no <see cref="SynchronizationContext"/> current, then completes
+    /// <see cref="CallEnded"/>. The count's task has ended before the callback returns, and a timer created before the
+    /// monitor's fires before the monitor's timers that are due at the same time. The double keeps the timer, so it is
+    /// not collected before it fires.
+    /// </summary>
+    /// <param name="dueTime">How long after now, on the clock, the call ends.</param>
+    /// <param name="count">The number of outstanding messages the released call returns.</param>
+    public void ReleaseAt(TimeSpan dueTime, int count) =>
+        _releaseTimer = _clock!.CreateTimer(_ => WithNoSynchronizationContext(() =>
+        {
+            var answer = OldestBlockedCall();
+            answer.SetResult(count);
+            _ended.TrySetResult(true);
+        }), null, dueTime, System.Threading.Timeout.InfiniteTimeSpan);
+
     /// <summary>Sets the result of each call of the async count that has no answer queued.</summary>
     /// <param name="count">The number of outstanding messages the call returns.</param>
     public void Returns(int count) => _result = count;
@@ -190,6 +209,22 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         var answer = new TaskCompletionSource<int>();
         _blocked.Enqueue(answer);
         return answer.Task;
+    }
+
+    // The clock runs a timer's callback on the thread that moves it, whose test-framework context would defer the
+    // rest of the count's task.
+    private static void WithNoSynchronizationContext(Action action)
+    {
+        var context = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(null);
+        try
+        {
+            action();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(context);
+        }
     }
 
     // A call is recorded before its task is blocked, so a release made as soon as the call is seen waits for the block.
