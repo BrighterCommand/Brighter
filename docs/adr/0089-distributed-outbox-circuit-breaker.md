@@ -1,7 +1,7 @@
 ---
 id: 0089-distributed-outbox-circuit-breaker
 title: "Distributed outbox circuit breaker with elapsed-time cooldown"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-10-25
@@ -19,7 +19,7 @@ Date: 2026-10-25
 
 ## Status
 
-Proposed
+Accepted
 
 This ADR amends ADR 0028 (`0028-support-circuit-breaking-of-topics.md`), ADR 0085 (`0085-track-outbox-sweeper-state-and-publish-gauges.md`) and ADR 0086 (`0086-sweeper-remedy-health-checks.md`). It also amends ADR 0058 (`0058-outbox-circuit-breaker-trip-logging.md`): the Reset log names its cause, and the distributed breaker has its own announcer rules and span tag. *Scope* lists exactly which parts change.
 
