@@ -1163,7 +1163,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should:
     - check the overall result before capping (row 6b, ADR 0085 :272).
 
-- [ ] **CHARACTERISE: T9.17 The outbox's own cancellation before the deadline is a failure (ADR 0085 risk :963)**
+- [x] **CHARACTERISE: T9.17 The outbox's own cancellation before the deadline is a failure (ADR 0085 risk :963)**
   - **USE COMMAND**: `/test-first a count that throws OperationCanceledException of its own before the deadline is recorded as failed and logged with the exception`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_the_outbox_cancels_its_own_count_should_record_a_failure.cs`
