@@ -948,12 +948,13 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - restore the flow right after `Task.Run`, as `TimedOutboxSweeper.cs:103-105` does.
 
-- [ ] **PROJECT: T8.25 Review the grid computation against the coalescing rules (AC-8 coalescing clause, rows 2 and 3)**
+- [x] **PROJECT: T8.25 Review the grid computation against the coalescing rules (AC-8 coalescing clause, rows 2 and 3)**
   - Review the wake handling in `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs` against ADR 0085 *Why one loop that computes the grid?* and rows 2 and 3 (:254-255). Check that:
     - the next grid point is computed from the start timestamp in whole ticks, not from a periodic timer's catch-up;
     - N missed due times give one measurement and `Skip(count, N - 1)` with one Warning;
     - an early wake waits again.
   - Output: a "Reviewed:" sub-bullet under this task, with the file and lines checked.
+  - Reviewed: `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs` :156 (start timestamp), :171-179 (the loop), :182-184 (grid point and elapsed time in whole ticks), :186-201 (skip) and :204-221 (wait). The loop waits for `DueTime(measured + 1)` with a one-shot timer and computes the latest grid point from the start timestamp, so no periodic timer catches up. When M > 1 due times passed, it records `Skip(count, M - 1)` with one Warning for each count it measures, then measures once. Row 3 covered only the overall count; it now covers the per-topic count too, and When_time_advances_three_intervals_at_once_should_skip_two_due_times_for_each_count drives it by advancing three intervals in one step once the monitor waits, so a fake clock can make row 3. An early wake computes the wait again and keeps waiting (:206-218).
 
 ## Phase 9: Timeout, single flight and failure, for each count (ADR 0085 step 9)
 
