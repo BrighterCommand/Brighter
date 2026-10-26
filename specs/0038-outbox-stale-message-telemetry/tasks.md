@@ -853,7 +853,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - measure topics only from the publications.
 
-- [ ] **CHARACTERISE: T8.17 The ceiling applies to each topic, not across topics (AC-31)**
+- [x] **CHARACTERISE: T8.17 The ceiling applies to each topic, not across topics (AC-31)**
   - **USE COMMAND**: `/test-first with C of three, 50 orders, 2 payments and no refunds the topic values are 3, 2 and 0 and the overall value is 3`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_topic_exceeds_the_ceiling_should_cap_each_topic_on_its_own.cs`
