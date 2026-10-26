@@ -295,6 +295,12 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
 
     private void CompleteOverall(string outboxType, int count)
     {
+        if (count < 0)
+        {
+            Fail(outboxType, StaleMessageCount.Overall, new InvalidOperationException($"The outbox returned a negative count, {count}."));
+            return;
+        }
+
         var capped = Math.Min(count, _options.CountCeiling);
         _readings.CompleteOverall(capped);
         Log.OverallCountCompleted(s_logger, outboxType, capped);
