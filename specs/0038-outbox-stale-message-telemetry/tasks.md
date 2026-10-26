@@ -1141,7 +1141,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - decide and log each count on its own.
 
-- [ ] **TEST + IMPLEMENT: T9.15 An invalid per-topic result fails that measurement only (AC-33)**
+- [x] **TEST + IMPLEMENT: T9.15 An invalid per-topic result fails that measurement only (AC-33)**
   - **USE COMMAND**: `/test-first a per-topic result that is null, lacks payments or holds minus one for payments fails, records no topic value, and the overall value is still recorded`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_per_topic_result_is_invalid_should_fail_the_per_topic_measurement.cs`
