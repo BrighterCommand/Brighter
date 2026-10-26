@@ -799,7 +799,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - fall back to the options' A.
 
-- [ ] **CHARACTERISE: T8.13 Without the capability or any measured topic, only the overall count runs (AC-29, loop)**
+- [x] **CHARACTERISE: T8.13 Without the capability or any measured topic, only the overall count runs (AC-29, loop)**
   - **USE COMMAND**: `/test-first without the capability or with no measured topic the overall gauge reports each due time, the per-topic gauge and its signal have no series, the capability is never called and nothing more is logged`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_the_per_topic_count_is_left_out_should_run_only_the_overall_count.cs`
