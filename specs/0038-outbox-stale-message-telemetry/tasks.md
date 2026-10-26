@@ -1010,7 +1010,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
     - make each count's task record its end timestamp from the `TimeProvider` as its last step, and let a continuation on the task only observe its exception (ADR 0085 :245, :875). Record the end in a `finally`, so that it holds whether the call returns or throws, and await the outbox's task directly, with no forced yield before the `finally`, so that the double's end signal follows the recorded end;
     - decide by that timestamp: before the deadline, rows 6a and 6b; at or after it, row 6c.
 
-- [ ] **CHARACTERISE: T9.5 A count that ends before the deadline completes even when the loop reads it late (ADR 0085 risk :965)**
+- [x] **CHARACTERISE: T9.5 A count that ends before the deadline completes even when the loop reads it late (ADR 0085 risk :965)**
   - **USE COMMAND**: `/test-first a count that returns before the deadline is recorded as completed even when a blocking logger holds the loop past the deadline`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_the_loop_reads_an_ended_count_after_the_deadline_should_decide_by_its_recorded_end.cs`
