@@ -52,6 +52,8 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     private readonly ConcurrentQueue<Func<CancellationToken, Task<int>>> _answers = new();
     private readonly ConcurrentQueue<TaskCompletionSource<int>> _blocked = new();
     private readonly ManualResetEventSlim _threadReleased = new(false);
+    private readonly ManualResetEventSlim _callbackReleased = new(false);
+    private readonly TaskCompletionSource<bool> _callbackBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private volatile int _result;
 
     /// <summary>Creates the double.</summary>
@@ -66,6 +68,9 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
 
     /// <summary>Completes once a call blocked until its token is cancelled, or until released, has ended.</summary>
     public Task CallEnded => _ended.Task;
+
+    /// <summary>Completes once the cancellation callback registered by <see cref="BlockCancellationCallbackUntilReleased"/> is blocked.</summary>
+    public Task CallbackBlocked => _callbackBlocked.Task;
 
     /// <summary>Makes the next call of the async count that has no other answer queued block until its token is cancelled.</summary>
     public void BlockUntilCancelled() => _answers.Enqueue(WaitUntilCancelled);
@@ -97,8 +102,18 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
             throw exception;
         });
 
+    /// <summary>
+    /// Makes the next call of the async count that has no other answer queued register a cancellation callback that
+    /// blocks the thread cancelling its token until <see cref="ReleaseCallback"/> or 30 s of wall-clock time, and then
+    /// ends the call as cancelled. The call runs until then.
+    /// </summary>
+    public void BlockCancellationCallbackUntilReleased() => _answers.Enqueue(BlockCallback);
+
     /// <summary>Lets the thread blocked by <see cref="BlockThreadUntilReleased"/> return its task.</summary>
     public void ReleaseThread() => _threadReleased.Set();
+
+    /// <summary>Lets the callback blocked by <see cref="BlockCancellationCallbackUntilReleased"/> go on.</summary>
+    public void ReleaseCallback() => _callbackReleased.Set();
 
     /// <summary>Ends the oldest call blocked until released with the given result, then completes <see cref="CallEnded"/>.</summary>
     /// <param name="count">The number of outstanding messages the released call returns.</param>
@@ -149,6 +164,19 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
             answer.TrySetCanceled(cancellationToken);
             _ended.TrySetResult(true);
         }));
+        return answer.Task;
+    }
+
+    private Task<int> BlockCallback(CancellationToken cancellationToken)
+    {
+        var answer = new TaskCompletionSource<int>();
+        cancellationToken.Register(() =>
+        {
+            _callbackBlocked.TrySetResult(true);
+            _callbackReleased.Wait(s_threadBlockCeiling);
+            answer.TrySetCanceled(cancellationToken);
+            _ended.TrySetResult(true);
+        });
         return answer.Task;
     }
 
