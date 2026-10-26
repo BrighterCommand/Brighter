@@ -741,7 +741,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
     - record `CompletePerTopic` and log at Debug naming the count;
     - pass the read-only topic map built at start, with A for a publication without an age.
 
-- [ ] **CHARACTERISE: T8.8 One per-topic call per due time (AC-8, per topic)**
+- [x] **CHARACTERISE: T8.8 One per-topic call per due time (AC-8, per topic)**
   - **USE COMMAND**: `/test-first with publications on orders and payments exactly three per-topic calls are made at 12:01, 12:02 and 12:03`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_time_advances_three_intervals_should_make_one_per_topic_call_per_due_time.cs`
