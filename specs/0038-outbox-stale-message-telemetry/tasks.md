@@ -1076,7 +1076,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - decide each call as soon as its own task ends.
 
-- [ ] **TEST + IMPLEMENT: T9.10 A count that throws is logged with the exception, and the next due time records (AC-12)**
+- [x] **TEST + IMPLEMENT: T9.10 A count that throws is logged with the exception, and the next due time records (AC-12)**
   - **USE COMMAND**: `/test-first a count that throws connection refused at 12:01 is logged with the exception and outbox type and the 12:02 call records 2`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_a_count_throws_should_log_it_and_measure_the_next_due_time.cs`
