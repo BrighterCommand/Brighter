@@ -1198,7 +1198,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - keep cancellation off the loop thread, as T9.1 does.
 
-- [ ] **CHARACTERISE: T9.20 An abandoned call that faults later raises no unobserved task exception (ADR 0085 risk :966)**
+- [x] **CHARACTERISE: T9.20 An abandoned call that faults later raises no unobserved task exception (ADR 0085 risk :966)**
   - **USE COMMAND**: `/test-first an abandoned count that faults after the deadline raises no UnobservedTaskException`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`, which is non-parallel, as GC-driven tests need and as `MessageSerialisation/FinalizerTestCollection.cs:35` is)
   - Test file: `When_an_abandoned_count_faults_later_should_observe_the_exception.cs`
