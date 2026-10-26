@@ -975,7 +975,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
     - at the deadline, record `Abandon(count)` and the Warning, then cancel off the loop thread: `CancelAsync` on net8.0+, `Cancel` queued to the pool on netstandard2.0. Observe that work's exception;
     - ignore a later result or exception (ADR risk :959).
 
-- [ ] **CHARACTERISE: T9.2 The next due time after an abandonment records its value (AC-10 second clause)**
+- [x] **CHARACTERISE: T9.2 The next due time after an abandonment records its value (AC-10 second clause)**
   - **USE COMMAND**: `/test-first after the 12:01 call is abandoned the 12:02 call that returns 4 records V of 4`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_count_returns_after_an_abandoned_one_should_record_its_value.cs`
