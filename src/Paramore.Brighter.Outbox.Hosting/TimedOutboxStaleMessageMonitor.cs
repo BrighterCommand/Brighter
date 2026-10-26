@@ -237,10 +237,18 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
 
         using (call.Cancellation)
         {
-            if (call.Answer.IsFaulted)
-                Fail(outboxType, count, call.Answer.Exception!.InnerException!);
-            else
-                complete(outboxType, await call.Answer);
+            TCount answer;
+            try
+            {
+                answer = await call.Answer;
+            }
+            catch (Exception exception)
+            {
+                Fail(outboxType, count, exception);
+                return;
+            }
+
+            complete(outboxType, answer);
         }
     }
 

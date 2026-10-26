@@ -84,6 +84,19 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     /// <param name="exception">The exception the call's task faults with.</param>
     public void Throws(Exception exception) => _answers.Enqueue(_ => Task.FromException<int>(exception));
 
+    /// <summary>
+    /// Makes the next call of the async count that has no other answer queued ignore its token, block until
+    /// <see cref="Release"/> and then throw <paramref name="exception"/>, as an outbox's own async code does, so an
+    /// <see cref="OperationCanceledException"/> leaves the call's task cancelled rather than faulted.
+    /// </summary>
+    /// <param name="exception">The exception the call throws once released.</param>
+    public void ThrowsWhenReleased(Exception exception) =>
+        _answers.Enqueue(async cancellationToken =>
+        {
+            await WaitUntilReleased(cancellationToken);
+            throw exception;
+        });
+
     /// <summary>Lets the thread blocked by <see cref="BlockThreadUntilReleased"/> return its task.</summary>
     public void ReleaseThread() => _threadReleased.Set();
 
