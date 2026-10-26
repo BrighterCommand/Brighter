@@ -1088,7 +1088,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should:
     - record `Fail(count)` and a Warning with the exception for a task that faulted before the deadline (row 6b).
 
-- [ ] **CHARACTERISE: T9.11 Repeated failures are distinguishable from zero in metrics alone (AC-7, throw variant)**
+- [x] **CHARACTERISE: T9.11 Repeated failures are distinguishable from zero in metrics alone (AC-7, throw variant)**
   - **USE COMMAND**: `/test-first a run that fails after one zero differs from a run that always returns zero at every collection from 12:02:10 to 12:03:30`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_counts_keep_failing_should_differ_from_counts_of_zero.cs`
