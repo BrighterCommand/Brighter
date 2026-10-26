@@ -889,7 +889,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - never read the circuit breaker.
 
-- [ ] **CHARACTERISE: T8.20 The gauges carry fixed, low-cardinality attributes (AC-19)**
+- [x] **CHARACTERISE: T8.20 The gauges carry fixed, low-cardinality attributes (AC-19)**
   - **USE COMMAND**: `/test-first after ten measurements of each count the overall gauge has one series without a topic, the topic gauge has three series, and no attribute carries a message id, correlation id or topic on the signal`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_measurements_complete_should_tag_the_gauges_with_fixed_attributes.cs`
