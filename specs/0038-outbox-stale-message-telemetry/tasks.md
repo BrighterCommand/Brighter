@@ -1063,7 +1063,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - queue both `Task.Run` calls before any wait.
 
-- [ ] **CHARACTERISE: T9.9 A per-topic count that blocks its thread does not delay the overall count (AC-37; ADR 0085 risk :951)**
+- [x] **CHARACTERISE: T9.9 A per-topic count that blocks its thread does not delay the overall count (AC-37; ADR 0085 risk :951)**
   - **USE COMMAND**: `/test-first a per-topic count that blocks its thread leaves the overall count to record 1 before 12:01:10, and the per-topic call is abandoned`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_per_topic_count_blocks_its_thread_should_still_record_the_overall_count.cs`
