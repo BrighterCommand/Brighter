@@ -1186,7 +1186,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should:
     - wrap each wake's handling in a catch that logs at Error and continues on the grid.
 
-- [ ] **CHARACTERISE: T9.19 A blocking cancellation callback does not hold the loop (ADR 0085 risk :958)**
+- [x] **CHARACTERISE: T9.19 A blocking cancellation callback does not hold the loop (ADR 0085 risk :958)**
   - **USE COMMAND**: `/test-first a count whose cancellation callback blocks is recorded as abandoned and the next due time is handled while the callback still blocks`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_cancellation_callback_blocks_should_not_hold_the_loop.cs`
