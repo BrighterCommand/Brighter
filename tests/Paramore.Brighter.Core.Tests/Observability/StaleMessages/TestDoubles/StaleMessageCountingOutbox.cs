@@ -44,11 +44,14 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 /// </summary>
 public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
 {
+    private static readonly TimeSpan s_threadBlockCeiling = TimeSpan.FromSeconds(30);
+
     private readonly ConcurrentQueue<StaleCountCall> _countCalls = new();
     private readonly TimeProvider? _clock;
     private readonly TaskCompletionSource<bool> _ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly ConcurrentQueue<Func<CancellationToken, Task<int>>> _answers = new();
     private readonly ConcurrentQueue<TaskCompletionSource<int>> _blocked = new();
+    private readonly ManualResetEventSlim _threadReleased = new(false);
     private volatile int _result;
 
     /// <summary>Creates the double.</summary>
@@ -69,6 +72,16 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
 
     /// <summary>Makes the next call of the async count that has no other answer queued ignore its token and block until <see cref="Release"/>.</summary>
     public void BlockUntilReleased() => _answers.Enqueue(WaitUntilReleased);
+
+    /// <summary>
+    /// Makes the next call of the async count that has no other answer queued ignore its token and block the calling
+    /// thread, before it returns a task, until <see cref="ReleaseThread"/> or 30 s of wall-clock time, so a thread
+    /// that is never released is not held past the test.
+    /// </summary>
+    public void BlockThreadUntilReleased() => _answers.Enqueue(BlockThread);
+
+    /// <summary>Lets the thread blocked by <see cref="BlockThreadUntilReleased"/> return its task.</summary>
+    public void ReleaseThread() => _threadReleased.Set();
 
     /// <summary>Ends the oldest call blocked until released with the given result, then completes <see cref="CallEnded"/>.</summary>
     /// <param name="count">The number of outstanding messages the released call returns.</param>
@@ -120,6 +133,12 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
             _ended.TrySetResult(true);
         }));
         return answer.Task;
+    }
+
+    private Task<int> BlockThread(CancellationToken cancellationToken)
+    {
+        _threadReleased.Wait(s_threadBlockCeiling);
+        return Task.FromResult(_result);
     }
 
     private Task<int> WaitUntilReleased(CancellationToken cancellationToken)
