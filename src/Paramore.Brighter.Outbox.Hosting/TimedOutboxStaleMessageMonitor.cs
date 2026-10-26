@@ -145,8 +145,18 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
             topicAges);
 
     private static IReadOnlyDictionary<RoutingKey, int> KeepTheRequestedTopics(
-        IReadOnlyDictionary<RoutingKey, int> counts, IReadOnlyDictionary<RoutingKey, TimeSpan> topicAges) =>
-        counts.Where(count => topicAges.ContainsKey(count.Key)).ToDictionary(count => count.Key, count => count.Value);
+        IReadOnlyDictionary<RoutingKey, int>? counts, IReadOnlyDictionary<RoutingKey, TimeSpan> topicAges)
+    {
+        if (counts is null)
+            throw new InvalidOperationException("The outbox returned no counts by topic.");
+        foreach (var topic in topicAges.Keys)
+        {
+            if (!counts.TryGetValue(topic, out var count) || count < 0)
+                throw new InvalidOperationException($"The outbox returned no valid count for the topic {topic}.");
+        }
+
+        return counts.Where(count => topicAges.ContainsKey(count.Key)).ToDictionary(count => count.Key, count => count.Value);
+    }
 
     private void StartMeasuring(
         string outboxType,
