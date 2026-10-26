@@ -1210,7 +1210,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - attach `ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted)` to each count task.
 
-- [ ] **PROJECT: T9.21 Review the row 4 split, token-source disposal and queued-cancel exceptions (ADR 0085 risk :957)**
+- [x] **PROJECT: T9.21 Review the row 4 split, token-source disposal and queued-cancel exceptions (ADR 0085 risk :957)**
   - In `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs`, check that:
     - the "at or before the previous call's end" skip of row 4, which needs a late loop and so has no fake-clock test, matches ADR 0085 :249 and :256 and FR-8;
     - each count's task records its end in a `finally` on every exit path and awaits the outbox's task with no forced yield before that `finally`, and no continuation records the end;
@@ -1218,6 +1218,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
     - a queued `Cancel` that runs after disposal throws `ObjectDisposedException`, and the loop observes it;
     - the loop's netstandard2.0 branches (`Task.Yield` after each `Task.WhenAny`, queued `Cancel`) match their net8.0+ counterparts (ADR 0085 :863, :874).
   - Output: a "Reviewed:" sub-bullet under this task, with the file and lines checked.
+  - Reviewed: `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs` :186-198 and :266-274 (the split), :434 and :444-458 (the call and its end), :245-259, :337-345 and :483-508 (cancel and dispose), :347-354 (queued `Cancel`), and :177-178 and :301-309 (stop task and yield). At each wake, a count whose previous call has not ended, or ended at or after the latest due time, skips every due time that passed. Otherwise it skips all but the latest and measures that one, so no call of a count starts while its previous one runs (FR-8). The due times skipped match rows 3 and 4 together. When one wake has both kinds, though, the code records one `Skip(count, n + M − 1)` with one Warning, where ADR 0085 :255-256 read as two Warnings, one carrying n and one carrying M − 1. The readings total is the same. Each call records its end in a `finally` around a plain `await` of the outbox's task, and nothing else writes the end. The continuation at :344 only reads the exception. Only the loop's measurement code cancels a source (:343) or disposes one. A decided call's source is disposed at the end of the `using` that awaits its task (:245-259), and an abandoned call's source at a later wake or at the stop once its task has completed (:191, :206, :500-506). On netstandard2.0 the cancel is `Task.Run(cancellation.Cancel)`, so a cancel that runs after that disposal throws `ObjectDisposedException`, and `Task.WhenAll(call, cancelled).ContinueWith` observes it. The netstandard2.0 branches yield with `Task.Yield` after `Task.WhenAny` and queue `Cancel`, where net8.0 and later use `ForceYielding` and `CancelAsync`, as ADR 0085 :733, :863 and :874 ask. The netstandard2.0 build succeeds, but the tests run only on net9.0 and net10.0, so no test runs those branches.
 
 ## Phase 10: Stopping (ADR 0085 step 10)
 
