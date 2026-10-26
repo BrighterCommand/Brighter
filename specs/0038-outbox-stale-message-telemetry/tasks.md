@@ -840,7 +840,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - keep the two counts' results separate in the readings.
 
-- [ ] **CHARACTERISE: T8.16 A topic with no publication is in the overall count only (AC-30)**
+- [x] **CHARACTERISE: T8.16 A topic with no publication is in the overall count only (AC-30)**
   - **USE COMMAND**: `/test-first a stale audit message with no audit publication counts in the overall gauge only and has no topic series`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_topic_has_no_publication_should_count_it_in_the_overall_gauge_only.cs`
