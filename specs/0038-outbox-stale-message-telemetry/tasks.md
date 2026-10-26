@@ -987,7 +987,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - clear a count's in-progress task once it has ended, and dispose its source at that wake.
 
-- [ ] **CHARACTERISE: T9.3 A result that arrives after T is never recorded (AC-10 third clause)**
+- [x] **CHARACTERISE: T9.3 A result that arrives after T is never recorded (AC-10 third clause)**
   - **USE COMMAND**: `/test-first a count that ignores cancellation and returns 7 at 12:01:30 never records 7`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_count_returns_after_the_timeout_should_never_record_it.cs`
