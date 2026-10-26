@@ -168,15 +168,22 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         using var registration = _stopping.Token.Register(() => stopped.TrySetResult(true));
         using var alarm = new Alarm(_timeProvider);
         var abandoned = new AbandonedCalls();
+        var overall = new MeasuredCount<int>(StaleMessageCount.Overall, countOverall, _timeProvider);
+        var perTopic = countPerTopic is null
+            ? null
+            : new MeasuredCount<IReadOnlyDictionary<RoutingKey, int>>(StaleMessageCount.PerTopic, countPerTopic, _timeProvider);
 
         var measured = 0L;
         while (await WaitUntilAsync(DueTime(measured + 1), origin, stopped.Task, alarm.RingAfter))
         {
             abandoned.DisposeEnded();
             var latest = Elapsed(origin).Ticks / _options.MeasurementInterval.Ticks;
-            SkipMissedDueTimes(outboxType, latest - measured - 1, countPerTopic is not null);
+            var dueTimes = latest - measured;
             measured = latest;
-            await MeasureAsync(outboxType, alarm, abandoned, stopped.Task, countOverall, countPerTopic);
+            var measuresOverall = SkipDueTimes(outboxType, overall, DueTime(latest), origin, dueTimes);
+            var measuresPerTopic = perTopic is not null && SkipDueTimes(outboxType, perTopic, DueTime(latest), origin, dueTimes);
+            if (measuresOverall || measuresPerTopic)
+                await MeasureAsync(outboxType, alarm, abandoned, stopped.Task, measuresOverall ? overall : null, measuresPerTopic ? perTopic : null);
         }
 
         abandoned.DisposeEnded();
@@ -187,17 +194,17 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         Alarm alarm,
         AbandonedCalls abandoned,
         Task stopped,
-        Func<CancellationToken, Task<int>> countOverall,
-        Func<CancellationToken, Task<IReadOnlyDictionary<RoutingKey, int>>>? countPerTopic)
+        MeasuredCount<int>? overall,
+        MeasuredCount<IReadOnlyDictionary<RoutingKey, int>>? perTopic)
     {
         var started = _timeProvider.GetTimestamp();
-        var overall = new CountCall<int>(countOverall, _timeProvider);
-        var perTopic = countPerTopic is null ? null : new CountCall<IReadOnlyDictionary<RoutingKey, int>>(countPerTopic, _timeProvider);
+        var overallCall = overall?.Start();
+        var perTopicCall = perTopic?.Start();
         var decided = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var deadline = WaitUntilAsync(_options.MeasurementTimeout, started, Task.WhenAny(decided.Task, stopped), alarm.RingAgainAfter);
         await Task.WhenAll(
-            DecideAsync(outboxType, StaleMessageCount.Overall, overall, started, deadline, abandoned, CompleteOverall),
-            perTopic is null ? Task.CompletedTask : DecideAsync(outboxType, StaleMessageCount.PerTopic, perTopic, started, deadline, abandoned, CompletePerTopic));
+            overallCall is null ? Task.CompletedTask : DecideAsync(outboxType, StaleMessageCount.Overall, overallCall, started, deadline, abandoned, CompleteOverall),
+            perTopicCall is null ? Task.CompletedTask : DecideAsync(outboxType, StaleMessageCount.PerTopic, perTopicCall, started, deadline, abandoned, CompletePerTopic));
         decided.TrySetResult(true);
         await deadline;
     }
@@ -226,15 +233,14 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
 
     private TimeSpan Elapsed(long origin) => _timeProvider.GetElapsedTime(origin);
 
-    private void SkipMissedDueTimes(string outboxType, long missed, bool measuresTopics)
+    // Skips every due time of the count when its previous call is still in progress at the latest one; otherwise skips all but the latest.
+    private bool SkipDueTimes<TCount>(string outboxType, MeasuredCount<TCount> count, TimeSpan latestDueTime, long origin, long dueTimes)
     {
-        if (missed <= 0)
-            return;
-
-        var dueTimes = (int)Math.Min(missed, int.MaxValue);
-        Skip(outboxType, StaleMessageCount.Overall, dueTimes);
-        if (measuresTopics)
-            Skip(outboxType, StaleMessageCount.PerTopic, dueTimes);
+        var inProgress = count.InProgressAt(latestDueTime, origin);
+        var skipped = inProgress ? dueTimes : dueTimes - 1;
+        if (skipped > 0)
+            Skip(outboxType, count.Count, (int)Math.Min(skipped, int.MaxValue));
+        return !inProgress;
     }
 
     private void Skip(string outboxType, StaleMessageCount count, int dueTimes)
@@ -393,6 +399,9 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         public bool EndedBefore(long started, TimeSpan timeout) =>
             Answer.IsCompleted && _timeProvider.GetElapsedTime(started, _ended) < timeout;
 
+        public bool InProgressAt(TimeSpan dueTime, long origin) =>
+            !Answer.IsCompleted || _timeProvider.GetElapsedTime(origin, _ended) >= dueTime;
+
         // Awaits the outbox's task with no forced yield, so the end is recorded as soon as the outbox's task completes.
         private async Task<TCount> CallAsync(Func<CancellationToken, Task<TCount>> count)
         {
@@ -405,6 +414,27 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
                 _ended = _timeProvider.GetTimestamp();
             }
         }
+    }
+
+    // Remembers the previous call of one count, so a due time at or before that call's end is skipped instead of starting another.
+    private sealed class MeasuredCount<TCount>
+    {
+        private readonly Func<CancellationToken, Task<TCount>> _count;
+        private readonly TimeProvider _timeProvider;
+        private CountCall<TCount>? _previous;
+
+        public MeasuredCount(StaleMessageCount count, Func<CancellationToken, Task<TCount>> countAsync, TimeProvider timeProvider)
+        {
+            Count = count;
+            _count = countAsync;
+            _timeProvider = timeProvider;
+        }
+
+        public StaleMessageCount Count { get; }
+
+        public bool InProgressAt(TimeSpan dueTime, long origin) => _previous is not null && _previous.InProgressAt(dueTime, origin);
+
+        public CountCall<TCount> Start() => _previous = new CountCall<TCount>(_count, _timeProvider);
     }
 
     // Holds the token source of each abandoned call until the loop sees that the call has ended, so only the loop disposes it.
