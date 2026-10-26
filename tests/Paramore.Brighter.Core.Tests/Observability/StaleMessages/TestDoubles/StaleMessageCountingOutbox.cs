@@ -47,7 +47,8 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     private readonly ConcurrentQueue<StaleCountCall> _countCalls = new();
     private readonly TimeProvider? _clock;
     private readonly TaskCompletionSource<bool> _ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private volatile bool _blocksUntilCancelled;
+    private readonly ConcurrentQueue<Func<CancellationToken, Task<int>>> _answers = new();
+    private volatile int _result;
 
     /// <summary>Creates the double.</summary>
     /// <param name="clock">When given, each recorded call carries the time on this clock when it was made.</param>
@@ -62,8 +63,12 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     /// <summary>Completes once a call blocked until its token is cancelled has ended with <see cref="OperationCanceledException"/>.</summary>
     public Task CallEnded => _ended.Task;
 
-    /// <summary>Makes each later call of the async count block until its token is cancelled.</summary>
-    public void BlockUntilCancelled() => _blocksUntilCancelled = true;
+    /// <summary>Makes the next call of the async count that has no other answer queued block until its token is cancelled.</summary>
+    public void BlockUntilCancelled() => _answers.Enqueue(WaitUntilCancelled);
+
+    /// <summary>Sets the result of each call of the async count that has no answer queued.</summary>
+    /// <param name="count">The number of outstanding messages the call returns.</param>
+    public void Returns(int count) => _result = count;
 
     public bool ContinueOnCapturedContext { get; set; }
 
@@ -84,7 +89,7 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         CancellationToken cancellationToken = default)
     {
         _countCalls.Enqueue(new StaleCountCall(dispatchedSince, requestContext, maxCount, args, cancellationToken, Synchronous: false, _clock?.GetUtcNow()));
-        return _blocksUntilCancelled ? WaitUntilCancelled(cancellationToken) : Task.FromResult(0);
+        return _answers.TryDequeue(out var answer) ? answer(cancellationToken) : Task.FromResult(_result);
     }
 
     private Task<int> WaitUntilCancelled(CancellationToken cancellationToken)
