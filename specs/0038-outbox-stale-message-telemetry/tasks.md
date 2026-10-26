@@ -649,7 +649,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
 
 Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Phase 8 builds the happy path. Deadlines, failures and single flight are Phase 9, and stopping is Phase 10.
 
-- [ ] **TEST + IMPLEMENT: T8.1 The first value appears after the first due time, on the Brighter meter (AC-6)**
+- [x] **TEST + IMPLEMENT: T8.1 The first value appears after the first due time, on the Brighter meter (AC-6)**
   - **USE COMMAND**: `/test-first with no ActivityListener the overall gauge has no value at 12:00:30 and reports the 12:01:00 count at 12:01:30`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_first_due_time_passes_should_report_the_overall_count.cs`
