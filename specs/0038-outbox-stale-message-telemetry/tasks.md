@@ -1113,7 +1113,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - none is expected beyond T9.1, so stop and ask.
 
-- [ ] **CHARACTERISE: T9.13 A blocked per-topic count leaves the overall count unaffected (AC-33 first clause; ADR 0086 risk :414)**
+- [x] **CHARACTERISE: T9.13 A blocked per-topic count leaves the overall count unaffected (AC-33 first clause; ADR 0086 risk :414)**
   - **USE COMMAND**: `/test-first a per-topic call blocked from 12:01 to 12:03:30 is abandoned and skipped while the overall gauge records 1 at each due time`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_per_topic_count_is_blocked_should_keep_measuring_the_overall_count.cs`
