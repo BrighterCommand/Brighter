@@ -764,7 +764,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - take, per topic, the minimum of each publication's A_p or A (Q-14).
 
-- [ ] **CHARACTERISE: T8.10 A topic's smallest age applies against the store (AC-28, `InMemoryOutbox`)**
+- [x] **CHARACTERISE: T8.10 A topic's smallest age applies against the store (AC-28, `InMemoryOutbox`)**
   - **USE COMMAND**: `/test-first an undispatched orders message added at 12:03:30 gives V_t of 1 for orders and V of 0 at 12:06:00`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_topic_age_is_smaller_than_the_stale_age_should_count_the_topic_sooner.cs`
