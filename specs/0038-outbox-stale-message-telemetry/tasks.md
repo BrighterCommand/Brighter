@@ -813,7 +813,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - gate the per-topic `Task.Run` on `MeasuresTopics`, decided once at start.
 
-- [ ] **CHARACTERISE: T8.14 Each due time makes one bounded call per count and nothing else (AC-23)**
+- [x] **CHARACTERISE: T8.14 Each due time makes one bounded call per count and nothing else (AC-23)**
   - **USE COMMAND**: `/test-first with C of 25 five due times make five overall calls with maxCount 25 and five per-topic calls with both topics at 25 each, and no other outbox call`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_five_due_times_complete_should_make_one_bounded_call_per_count_each.cs`
