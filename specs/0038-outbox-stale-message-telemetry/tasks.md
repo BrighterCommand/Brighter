@@ -1101,7 +1101,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - none is expected beyond T9.10 and Phase 3, so stop and ask.
 
-- [ ] **CHARACTERISE: T9.12 Repeated abandonments are distinguishable from zero in metrics alone (AC-7, abandon variant)**
+- [x] **CHARACTERISE: T9.12 Repeated abandonments are distinguishable from zero in metrics alone (AC-7, abandon variant)**
   - **USE COMMAND**: `/test-first a run whose count blocks and honours cancellation from 12:02 differs from an all-zero run at collections 12:02:15, 12:02:25 and on`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_counts_keep_being_abandoned_should_differ_from_counts_of_zero.cs`
