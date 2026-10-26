@@ -914,7 +914,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should:
     - record `CompleteOverall(min(count, C))` and cap each requested topic at C (row 6a).
 
-- [ ] **TEST + IMPLEMENT: T8.22 Unrequested topics in a per-topic result are dropped (AC-33)**
+- [x] **TEST + IMPLEMENT: T8.22 Unrequested topics in a per-topic result are dropped (AC-33)**
   - **USE COMMAND**: `/test-first a per-topic result with an extra audit entry completes, reports orders and payments, and has no audit series`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_per_topic_result_has_an_unrequested_topic_should_drop_it.cs`
