@@ -706,7 +706,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - start each count only from the loop at its due time, never from a gauge callback.
 
-- [ ] **TEST + IMPLEMENT: T8.5 The overall call passes the producers' bag as `args` (AC-14, bag)**
+- [x] **TEST + IMPLEMENT: T8.5 The overall call passes the producers' bag as `args` (AC-14, bag)**
   - **USE COMMAND**: `/test-first with an OutBoxBag of Topic orders each of three overall calls passes A, C, the bag entries, a null request context and a cancellable token, and the sync count is never called`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_producers_have_a_bag_should_pass_it_to_the_overall_count.cs`
