@@ -34,12 +34,16 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 
 /// <summary>
 /// A <see cref="StaleMessageCountingOutbox"/> that can also count its stale messages per topic, and records each call
-/// of its per-topic count.
+/// of its per-topic count. It completes a released per-topic call's task as <see cref="StaleMessageCountingOutbox"/> completes
+/// a released overall call's task, so the per-topic count's task has ended before <see cref="TopicCallEnded"/> completes.
 /// </summary>
 public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmATopicCountingOutbox
 {
     private readonly ConcurrentQueue<StaleTopicCountCall> _topicCountCalls = new();
     private readonly TimeProvider? _clock;
+    private readonly TaskCompletionSource<bool> _topicCallEnded = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly ConcurrentQueue<TaskCompletionSource<IReadOnlyDictionary<RoutingKey, int>>> _blockedTopicCalls = new();
+    private volatile bool _blockNextTopicCall;
 
     /// <summary>Creates the double.</summary>
     /// <param name="clock">When given, each recorded call carries the time on this clock when it was made.</param>
@@ -51,6 +55,27 @@ public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmAT
     /// <summary>Each call of the per-topic count, in the order the calls were made.</summary>
     public IReadOnlyCollection<StaleTopicCountCall> TopicCountCalls => _topicCountCalls;
 
+    /// <summary>Completes once a per-topic call blocked until released has ended.</summary>
+    public Task TopicCallEnded => _topicCallEnded.Task;
+
+    /// <summary>Makes the next call of the per-topic count ignore its token and block until <see cref="ReleaseTopicCount"/>.</summary>
+    public void BlockTopicCountUntilReleased() => _blockNextTopicCall = true;
+
+    /// <summary>Ends the oldest per-topic call blocked until released with the given counts, then completes <see cref="TopicCallEnded"/>.</summary>
+    /// <param name="counts">The number of outstanding messages the released call returns for each topic.</param>
+    /// <exception cref="InvalidOperationException">No per-topic call is blocked until released.</exception>
+    public void ReleaseTopicCount(IReadOnlyDictionary<RoutingKey, int> counts)
+    {
+        if (!_blockedTopicCalls.TryDequeue(out var answer))
+            throw new InvalidOperationException("No call of the per-topic count is blocked until released.");
+
+        Task.Run(() =>
+        {
+            answer.SetResult(counts);
+            _topicCallEnded.TrySetResult(true);
+        });
+    }
+
     public Task<IReadOnlyDictionary<RoutingKey, int>> GetOutstandingMessageCountsByTopicAsync(
         IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic,
         RequestContext? requestContext,
@@ -59,6 +84,14 @@ public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmAT
         CancellationToken cancellationToken = default)
     {
         _topicCountCalls.Enqueue(new StaleTopicCountCall(dispatchedSinceByTopic, requestContext, maxCountPerTopic, args, cancellationToken, _clock?.GetUtcNow()));
+        if (_blockNextTopicCall)
+        {
+            _blockNextTopicCall = false;
+            var answer = new TaskCompletionSource<IReadOnlyDictionary<RoutingKey, int>>();
+            _blockedTopicCalls.Enqueue(answer);
+            return answer.Task;
+        }
+
         return Task.FromResult<IReadOnlyDictionary<RoutingKey, int>>(
             dispatchedSinceByTopic.Keys.ToDictionary(topic => topic, _ => 0));
     }
