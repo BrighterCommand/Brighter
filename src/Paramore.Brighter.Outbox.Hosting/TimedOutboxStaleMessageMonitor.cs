@@ -139,8 +139,14 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
 
     private Func<CancellationToken, Task<IReadOnlyDictionary<RoutingKey, int>>> BuildPerTopicCount(
         IAmATopicCountingOutbox outbox, IReadOnlyDictionary<RoutingKey, TimeSpan> topicAges, Dictionary<string, object> outBoxBag) =>
-        cancellationToken => outbox.GetOutstandingMessageCountsByTopicAsync(
-            topicAges, null, _options.CountCeiling, outBoxBag, cancellationToken);
+        async cancellationToken => KeepTheRequestedTopics(
+            await outbox.GetOutstandingMessageCountsByTopicAsync(
+                topicAges, null, _options.CountCeiling, outBoxBag, cancellationToken),
+            topicAges);
+
+    private static IReadOnlyDictionary<RoutingKey, int> KeepTheRequestedTopics(
+        IReadOnlyDictionary<RoutingKey, int> counts, IReadOnlyDictionary<RoutingKey, TimeSpan> topicAges) =>
+        counts.Where(count => topicAges.ContainsKey(count.Key)).ToDictionary(count => count.Key, count => count.Value);
 
     private void StartMeasuring(
         string outboxType,
