@@ -112,20 +112,24 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         LogWhenTopicsAreNotMeasured(outboxType, countsByTopic, topicAges.Count);
 
         _readings.Start(outboxType, countsByTopic && topicAges.Count > 0);
-        StartMeasuring(outboxType, BuildOverallCount(outbox, transactionType));
+        StartMeasuring(outboxType, BuildOverallCount(outbox, transactionType, ReadOutBoxBag(producersConfiguration)));
         return Task.CompletedTask;
     }
 
-    private Func<CancellationToken, Task<int>> BuildOverallCount(IAmAnOutbox outbox, Type transactionType) =>
+    private static Dictionary<string, object> ReadOutBoxBag(IAmProducersConfiguration producersConfiguration) =>
+        (producersConfiguration as ProducersConfiguration)?.OutBoxBag ?? new Dictionary<string, object>();
+
+    private Func<CancellationToken, Task<int>> BuildOverallCount(IAmAnOutbox outbox, Type transactionType, Dictionary<string, object> outBoxBag) =>
         (Func<CancellationToken, Task<int>>)s_countOverall
             .MakeGenericMethod(transactionType)
-            .Invoke(null, new object[] { outbox, _options.StaleMessageAge, _options.CountCeiling })!;
+            .Invoke(null, new object[] { outbox, _options.StaleMessageAge, _options.CountCeiling, outBoxBag })!;
 
-    private static Func<CancellationToken, Task<int>> CountOverall<TTransaction>(IAmAnOutbox outbox, TimeSpan staleMessageAge, int countCeiling)
+    private static Func<CancellationToken, Task<int>> CountOverall<TTransaction>(
+        IAmAnOutbox outbox, TimeSpan staleMessageAge, int countCeiling, Dictionary<string, object> outBoxBag)
     {
         var asyncOutbox = (IAmAnOutboxAsync<Message, TTransaction>)outbox;
         return cancellationToken => asyncOutbox.GetOutstandingMessageCountAsync(
-            staleMessageAge, null, countCeiling, new Dictionary<string, object>(), cancellationToken);
+            staleMessageAge, null, countCeiling, outBoxBag, cancellationToken);
     }
 
     private void StartMeasuring(string outboxType, Func<CancellationToken, Task<int>> countOverall)
