@@ -788,7 +788,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - hold a read-only copy built once in `StartAsync`.
 
-- [ ] **CHARACTERISE: T8.12 A publication without an age is measured at A (AC-32, null clause)**
+- [x] **CHARACTERISE: T8.12 A publication without an age is measured at A (AC-32, null clause)**
   - **USE COMMAND**: `/test-first a null StaleMessageAge on orders makes the per-topic call carry orders at five minutes`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_publication_has_no_stale_age_should_measure_its_topic_at_the_stale_age.cs`
