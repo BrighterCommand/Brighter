@@ -171,7 +171,7 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         while (await WaitUntilAsync(DueTime(measured + 1), origin, stopped.Task))
         {
             var latest = Elapsed(origin).Ticks / _options.MeasurementInterval.Ticks;
-            SkipMissedDueTimes(outboxType, latest - measured - 1);
+            SkipMissedDueTimes(outboxType, latest - measured - 1, countPerTopic is not null);
             measured = latest;
             var overall = MeasureOverallAsync(outboxType, countOverall);
             var perTopic = countPerTopic is null ? Task.CompletedTask : MeasurePerTopicAsync(outboxType, countPerTopic);
@@ -183,13 +183,15 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
 
     private TimeSpan Elapsed(long origin) => _timeProvider.GetElapsedTime(origin);
 
-    private void SkipMissedDueTimes(string outboxType, long missed)
+    private void SkipMissedDueTimes(string outboxType, long missed, bool measuresTopics)
     {
         if (missed <= 0)
             return;
 
         var dueTimes = (int)Math.Min(missed, int.MaxValue);
         Skip(outboxType, StaleMessageCount.Overall, dueTimes);
+        if (measuresTopics)
+            Skip(outboxType, StaleMessageCount.PerTopic, dueTimes);
     }
 
     private void Skip(string outboxType, StaleMessageCount count, int dueTimes)
