@@ -58,7 +58,7 @@ The requirements' *Definitions* section defines **instance**, **deployment**, **
 - **FR-3.9, FR-5.2**: a failed write logs a Warning and leaves the trip unshared. Nothing throws to the caller.
 - **FR-4, FR-4.1, FR-4.2, FR-4.3**: every instance judges a distributed trip by its own clock against the stored stamp. Cooldown cycles do nothing to a distributed trip.
 - **FR-4.4**: one read operation marks ended entries as ended with a conditional update that returns the marked rows. Only the instance whose update marked a row announces its Reset. A write over an unmarked row whose trip length has run out announces it too (row 4 of *How a write is announced*).
-- **FR-4A, NFR-4 (freshness)**: `TimedOutboxSweeper` starts a refresh on every tick before its lock attempt, and from a timer while a sweep overruns. A refresh is never awaited and never overlaps another.
+- **FR-4A, NFR-4 (freshness)**: `TimedOutboxSweeper` starts a refresh on every tick before its lock attempt, and from a timer while a sweep overruns. A refresh is never awaited, and the breaker waits on at most one refresh at a time.
 - **FR-5, FR-5.1, FR-5.3 to FR-5.8**: a store failure or timeout leaves the breaker on its fallback view. The view is bounded by the trip length, and the fallback state follows the read-failed and unshared rules exactly.
 - **FR-6, FR-6.1, FR-6.2**: unchanged per-topic exclusion through `OutstandingMessagesAsync`.
 - **FR-7.1, FR-7.3**: Brighter still registers no breaker. The user registers the distributed breaker as a singleton.
@@ -77,6 +77,8 @@ The requirements' *Definitions* section defines **instance**, **deployment**, **
 - **A new breaker reads before it lists (AC-12).** A recreated breaker lists a stored trip after its first read or refresh, because `TrippedTopics` never touches the store.
 - **Ending a trip marks a row and never deletes it (FR-4.4).** Wherever a requirement says an ended entry is removed, finds it gone or is not yet removed, it means marks the entry ended and finds it already ended. The view and `TrippedTopics` never list an ended row.
 - **`CooldownCount` stays live (FR-2.1, AC-6).** "Options are read once at construction" applies to D, C, the leeway and the store timeout. The in-memory breaker keeps reading `CooldownCount` at each trip, as it does today (NFR-1).
+- **"In flight" means a write the breaker is waiting on (FR-3.7, NFR-2, AC-30).** A write abandoned after four times `StoreTimeout` no longer counts, so two writes of one topic can run at once in the database after a guard release.
+- **Store timeout of at least one second (NFR-3).** NFR-3 asks for a positive store timeout. The drivers' command timeouts are whole seconds, so the floor is one second.
 - **Trip length (NFR-6).** Where an FR or AC says C for a distributed trip, the trip length is C plus `ClockSkewLeeway`. The two are equal at the default leeway of zero.
 
 **Amends**
@@ -194,7 +196,7 @@ sequenceDiagram
 
 Six invariants follow from the diagram.
 
-- **A trip is visible to its own instance at once, and to others after its write completes (FR-3.1).** The write runs before the sweep returns, so it completes before `TimedOutboxSweeper` releases the lock.
+- **A trip is visible to its own instance at once, and to others after its write completes (FR-3.1).** The write runs before the sweep returns, so it completes, or times out, before `TimedOutboxSweeper` releases the lock.
 - **One write per distinct topic per dispatch call (FR-3.7, NFR-2).** The batch keeps the latest stamp per topic and writes once, in one store operation.
 - **The stored stamp only moves forward (FR-3.8).** The store keeps the later of stored and written, and the writer's view takes the stored stamp.
 - **Elapsed time ends a trip, judged locally (FR-4).** Every instance compares its own clock with the stamp. Sweep counts and lock ownership play no part.
@@ -215,11 +217,11 @@ The writer decides from the store's answer: whether the row is left ended after 
 | 6 | The row is left ended: it was ended and the written stamp is not later than its stamp, equal stamps included | None. The row stays ended | Nothing. The topic leaves the view, because its stamp has ended (FR-3.8) |
 | 7 | Rows 3 to 5 for a topic whose Trip or ReTrip row 2 already announced and that this write now shares | As above | No second Trip or ReTrip. A Reset from row 4 is still announced, because it ends the store's entry |
 
-Before it applies a row 3, 4 or 5 outcome, the writer checks the stored stamp in the answer. If that stamp's trip length has already run out by the writer's clock, the writer drops the topic from its view and announces nothing. The next reader marks the row ended and announces its Reset, so no Trip is left without a Reset.
+Before it applies a row 4 or 5 outcome, the writer checks the stored stamp in the answer. If that stamp's trip length has already run out by the writer's clock, the writer drops the topic from its view and announces nothing. The next reader marks the row ended and announces its Reset. A row 3 outcome announces its Trip as usual and drops the topic when its stamp has ended, so the reader's Reset closes that Trip.
 
 #### How a read ends trips
 
-One read operation does two things in one round trip, or one transaction on MySQL. It marks as ended every unmarked row whose stamp is at or before the reader's clock minus the trip length, and returns exactly the rows it marked. Then it returns the remaining unmarked rows. The reader announces one Reset for each row it marked. A second instance's update finds no live row to mark, so it announces nothing. The store never deletes rows, so the application's database user needs no `DELETE` permission. A separate purge script, run under a different account, removes ended rows (see the trip table). An instance whose read merely finds a row already ended announces nothing (FR-4.4).
+One read operation does two things in one round trip, or one transaction on MySQL. It marks as ended every unmarked row whose stamp is at or before the reader's clock minus the trip length, and returns exactly the rows it marked. Then it returns the remaining unmarked rows. The reader announces one Reset for each row it marked. A second instance's update finds no unmarked row to mark, so it announces nothing. The store never deletes rows, so the application's database user needs no `DELETE` permission. A separate purge script, run under a different account, removes ended rows (see the trip table). An instance whose read merely finds a row already ended announces nothing (FR-4.4).
 
 A re-trip that races the update is never lost (NFR-5). If the upsert commits first, the row is live and the update does not match it. If the update commits first, the upsert revives the ended row and announces a Trip when its stamp is later than the ended stamp, and otherwise leaves the row ended and announces nothing.
 
@@ -230,9 +232,9 @@ A re-trip that races the update is never lost (NFR-5). If the upsert commits fir
 | Tick | Each time the sweeper's loop wakes for a sweep, before `ObtainLockAsync` | Requests a refresh |
 | Overrun timer | Armed from the sweeper's `TimeProvider` at sweep start, due one `TimerInterval` later, repeating each `TimerInterval`. Disarmed when the sweep ends | Requests a refresh while a sweep overruns |
 | Request guard | A request less than half a `TimerInterval` after the previous request | Ignored, so a refresh runs at most about once per `TimerInterval` |
-| In-flight guard | A refresh is already running | Ignored. Refreshes never overlap or queue |
+| In-flight guard | A refresh is already running | Ignored. The breaker waits on at most one refresh, and a request is never queued |
 
-A refresh runs on the thread pool through `Task.Run`, so a store that does synchronous work cannot block the sweeper's thread. No sweep awaits a refresh. The refresh catches every exception, logs a Warning, and clears its in-flight flag in a `finally` once its store task has completed, so no exception reaches the sweeper, the timer or the unobserved-task handler. On stop, the sweeper disposes the overrun timer and requests no more refreshes. A refresh already in flight ends when its store task completes, which the command-timeout rule bounds, or when the guard is released after four times the store timeout, with a Warning. Its only effect is on the view.
+A refresh runs on the thread pool through `Task.Run`, so a store that does synchronous work cannot block the sweeper's thread. No sweep awaits a refresh. The refresh catches every exception, logs a Warning, and clears its in-flight flag in a `finally` once its store task has completed, so no exception reaches the sweeper, the timer or the unobserved-task handler. On stop, the sweeper disposes the overrun timer and requests no more refreshes. A refresh stops counting as in flight when its store task completes, which the command-timeout rule bounds, or when the guard is released after four times the store timeout, with a Warning. The released call keeps running until the database ends it. Its only effect is on the view.
 
 The refresh guard covers the read only, so a running sweeper's view shows a completed write within `TimerInterval` plus the store timeout, whatever its lock outcome and however long its sweeps take, while the store works and `StoreTimeout` is less than `TimerInterval` (FR-4A, AC-16).
 
@@ -251,7 +253,7 @@ The first matching row decides what a sweeper reports.
 | 7 | Shared breaker, no read has completed yet, an unshared trip exists | count of local trips | from local trips | reported |
 | 8 | Shared breaker, no read has completed yet, no unshared trip | count of local trips only (0 if none) | from local trips | not reported until a read fails |
 
-Rows 4, 5 and 7 are the fallback state, and `StoreStatus.IsUsingFallback` is true exactly then: the most recent read failed, or an unshared trip exists. The read-failure part follows the newest read outcome by sequence number, success or failure: an outcome older than the newest one applied changes no fallback state and sets no `LastFailure`. A sweep read that is skipped because the previous one is still running starts no read, so it changes no state and logs no Warning. Only a successful read ends the read-failure part. Only a successful write, or the trip's end, ends an unshared trip. So the state does not flip on an operation of the other kind (FR-5.5, AC-21).
+Rows 4, 5 and 7 are the fallback state, and `StoreStatus.IsUsingFallback` is true exactly then: the most recent read failed, or an unshared trip exists. The read-failure part follows the newest read outcome by sequence number, success or failure: an outcome older than the newest one applied changes no fallback state and sets no `LastFailure`. Apart from such a stale read, `LastFailure` holds the type of the most recently completed failed store operation of any kind (a read, a batch write, a callback write or a recovery write). It persists until `IsUsingFallback` becomes false, so ladder row 5 always has an `exception_type`. A read that the caller's token cancelled changes no state. A sweep read that is skipped because the previous one is still running starts no read, so it changes no state and logs no Warning. Only a successful read ends the read-failure part. Only a successful write, or the trip's end, ends an unshared trip. So the state does not flip on an operation of the other kind (FR-5.5, AC-21).
 
 The view after a successful read follows these rules.
 
@@ -259,7 +261,7 @@ The view after a successful read follows these rules.
 - **Stale reads.** Each read takes a sequence number when it starts. A read older than one already applied has its `Live` rows discarded, so a slow refresh cannot undo a newer sweep read.
 - **Ended rows are always announced.** A stale read still keeps its `Ended` rows. The read marked them and is their only announcer. The breaker announces each Reset and removes the topic from the view when the view's stamp is no later than the ended stamp.
 - **Recently written trips.** A trip that this instance wrote stays in the merge until a read that started after the write completed has been applied. A read that started before the write cannot drop it.
-- **Recovery write.** After a successful read, any unshared trip that has not ended is submitted as a batch write of its own, outside the refresh guard (OQ-5).
+- **Recovery write.** After a successful read, any unshared trip that has not ended is submitted as a batch write of its own, outside the refresh guard (OQ-5). The write always runs in the background. `ReadTrippedTopicsAsync` never awaits it, so a sweep's worst case stays one read plus one batched write.
 
 ### Where the pieces live
 
@@ -312,7 +314,7 @@ flowchart LR
     AddExt --> Catalogs
 ```
 
-Every dependency points into core, or from a BoxProvisioning backend package into the Outbox package that it already references (`Paramore.Brighter.BoxProvisioning.MsSql.csproj` references `Paramore.Brighter.Outbox.MsSql`). The meter and the check find the breaker through the existing `GetService<IAmAnOutboxCircuitBreaker>` lookups and test its type. The sweeper receives it through a new optional constructor parameter, which Microsoft's container fills with the registered breaker, or with `null` when none is registered. No new container registration is added.
+Every dependency points into core, or from a BoxProvisioning backend package into the Outbox package that it already references (`Paramore.Brighter.BoxProvisioning.MsSql.csproj` references `Paramore.Brighter.Outbox.MsSql`). The meter and the check find the breaker through the existing `GetService<IAmAnOutboxCircuitBreaker>` lookups and test its type. The sweeper receives it through a new optional constructor parameter, which Microsoft's container fills with the registered breaker, or with `null` when none is registered. The distributed breaker needs no container registration beyond the user's own, described under *Constructing and registering the pieces*.
 
 ### Key Components
 
@@ -342,7 +344,7 @@ Every dependency points into core, or from a BoxProvisioning backend package int
 | `MaximumTripDuration` (D) | `TimeSpan` | 5 minutes | in-memory | greater than zero, at most 24 hours |
 | `CooldownDuration` (C) | `TimeSpan` | 50 seconds | distributed | greater than zero, at most 24 hours |
 | `ClockSkewLeeway` | `TimeSpan` | zero | distributed | zero or more, at most 24 hours. The distributed breaker judges a trip ended once C plus the leeway has passed since its stamp |
-| `StoreTimeout` | `TimeSpan` | 2 seconds | distributed | greater than zero, at most 60 seconds |
+| `StoreTimeout` | `TimeSpan` | 2 seconds | distributed | at least 1 second, at most 60 seconds |
 
 Each breaker validates only what it uses and throws `ArgumentOutOfRangeException`. The range rejects `TimeSpan.Zero`, negative values, `Timeout.InfiniteTimeSpan` and `TimeSpan.MaxValue`. Each breaker copies the values at construction, so later changes to the options object have no effect (FR-2.1). `CooldownCount` is unchanged: the in-memory breaker keeps reading it from the options object at each trip, as it does today.
 
@@ -383,7 +385,7 @@ public interface IAmATripBatch
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| `BeginTripBatch` | none | A new, empty batch for one dispatch call | Never throws |
+| `BeginTripBatch` | none | A new, empty batch for one dispatch call | Never throws, for Brighter's breaker. The mediator contains a third-party breaker that throws (step 10) |
 | `ReadTrippedTopicsAsync` | caller's token | The topics to exclude: one store read merged into the view, or the fallback view if the read fails or times out | Throws `OperationCanceledException` only when the caller's token is cancelled. A store failure never throws |
 | `IAmATripBatch.TripTopic` | a topic | The view lists the topic at once with a fresh stamp. The batch keeps the latest stamp per topic | Never throws. Never waits on the store |
 | `IAmATripBatch.WriteAsync` | none | One store write for the distinct topics, then announcements per *How a write is announced* | Never throws. Takes no token and is bounded only by `StoreTimeout`. On failure the topics become unshared. A second call does nothing |
@@ -445,12 +447,14 @@ public partial class DistributedOutboxCircuitBreaker(
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
 | constructor | as above | A breaker whose view holds no store trips | `ArgumentNullException` for `store`. `ArgumentOutOfRangeException` for C, `ClockSkewLeeway` or `StoreTimeout` out of range |
-| `TripTopic` (sync) | a topic | Announces any unshared trip whose trip length has run out. Updates the view at once. Records a pending write for the topic and starts it off the calling thread if no write of that topic is in flight | Never throws. Never waits on the store |
+| `TripTopic` (sync) | a topic | Announces any unshared trip whose trip length has run out. Updates the view at once. Records a pending write for the topic and starts it off the calling thread if no write of that topic is in flight. When an in-flight write completes, or its guard is released, its continuation starts the topic's pending write | Never throws. Never waits on the store |
 | `TrippedTopics` | none | View topics whose time since the stamp is less than the trip length | Never throws. Never touches the store. Never announces |
 | `CoolDown` | none | Announces the Reset of every unshared trip whose trip length has run out | Never throws. Never touches the store |
 | batch `TripTopic`, `ReadTrippedTopicsAsync` and `StartRefresh` | | As in the two role tables above. Each first announces any unshared trip whose trip length has run out (FR-5.7), as `CoolDown` and sync `TripTopic` do | |
 
-A private lock guards the view and the fallback state. The lock is held only to copy or change fields, never across I/O, so readers see a state from before or after a transition (NFR-5, NFR-8). Pending writes are bounded by the number of topics: at most one pending stamp and one in-flight write per topic (FR-3.7, AC-30). The breaker's spans use `CircuitBreakerSpanInfo` with a `CooldownCount` of 0, which is the value a Reset carries today. `CircuitBreakerSpanInfo` gains an optional `TimeSpan? CooldownDuration { get; init; }` property, not a positional parameter, so `Deconstruct` and every existing construction stay source compatible. `BrighterSemanticConventions` gains `circuit_breaker.cooldown_duration` (seconds), which `BrighterTracer.CreateCircuitBreakerSpan` sets only when the property is present. The distributed breaker sets it to C, so `CooldownCount` never carries a new meaning. Its own `Log` class names C in its messages. The counter's attributes are unchanged.
+`DistributedOutboxCircuitBreaker` owns no disposable resources and is not `IDisposable`. Whoever builds the store owns its lifetime. Work in flight at host shutdown is abandoned, logs a Warning when the store is disposed under it, and drops its pending stamps, which is the same cost as a process that dies (FR-3.7).
+
+A private lock guards the view and the fallback state. The lock is held only to copy or change fields, never across I/O, so readers see a state from before or after a transition (NFR-5, NFR-8). Pending writes are bounded by the number of topics: at most one pending stamp and one write per topic that the breaker is waiting on (FR-3.7, AC-30). When that write completes, or its guard is released, its continuation starts the pending write for the topic if there is one. The breaker's spans use `CircuitBreakerSpanInfo` with a `CooldownCount` of 0, which is the value a Reset carries today. `CircuitBreakerSpanInfo` gains an optional `TimeSpan? CooldownDuration { get; init; }` property, not a positional parameter, so `Deconstruct` and every existing construction stay source compatible. `BrighterSemanticConventions` gains `circuit_breaker.cooldown_duration` (seconds), which `BrighterTracer.CreateCircuitBreakerSpan` sets only when the property is present. The distributed breaker sets it to C, so `CooldownCount` never carries a new meaning. Its own `Log` class names C in its messages. The counter's attributes are unchanged.
 
 #### The trip table and the SQL stores
 
@@ -478,13 +482,34 @@ SQL Server and PostgreSQL evaluate every right-hand side of `SET` against the ol
 
 #### Health signals
 
-`SweeperMeter.ObserveTrippedTopics` and `OutboxSweeperInvestigateHealthCheck` follow the ladder in *Store failure and the health signals*. For a breaker that does not share trips, they read it only while active, exactly as today. For a shared breaker, they read the view and `StoreStatus` on every running sweeper. A running sweeper is one whose record exists and whose snapshot is not stopped. The new condition is:
+`SweeperMeter.ObserveTrippedTopics` and `OutboxSweeperInvestigateHealthCheck` follow the ladder in *Store failure and the health signals*. For a breaker that does not share trips, they read it only while active, exactly as today. For a shared breaker, they read the view and `StoreStatus` on every running sweeper. A running sweeper is one whose record exists and whose snapshot is not stopped. This also holds before `StartAsync`, because `OutboxSweeperState` has no started flag. The requirements' "has started" is read that way, and the effect is harmless: the view of a sweeper that has not started holds no store trips. The new condition is:
 
 | Check | Condition name | Applies when | Remedy kind | Values in `Data` |
 | --- | --- | --- | --- | --- |
 | investigate | `tripped_topics_store_unavailable` | the sweeper is running, the breaker shares trips, and `StoreStatus.IsUsingFallback` | investigate | `exception_type`: the exception's short type name (`Type.Name`), or `timeout` |
 
 The description reads: "The tripped topics could not be read from or written to the shared store ({exception_type}); this instance is using its own view." The check evaluates its conditions in the order `consecutive_failed_sweeps`, `tripped_topics` or `tripped_topics_unreadable`, then `tripped_topics_store_unavailable`, and reports every condition that applies. `tripped_topics_unreadable` keeps its meaning.
+
+#### Constructing and registering the pieces
+
+Brighter adds no `AddDistributedOutboxCircuitBreaker` extension. Today the breaker is always the user's own registration, and the store, the options and the table name are the user's choices.
+
+| Type | Constructor | Notes |
+| --- | --- | --- |
+| `MsSqlTrippedTopicStore`, `PostgreSqlTrippedTopicStore`, `MySqlTrippedTopicStore` | `(IAmARelationalDbConnectionProvider connectionProvider, string tableName = "BrighterTrippedTopics", string? schemaName = null, TimeSpan? commandTimeout = null)` | `commandTimeout` defaults to 2 seconds, the default `StoreTimeout`. The store rounds it up to whole seconds, minimum one |
+| `{Backend}TrippedTopicsMigrationCatalog` | `(string tableName, string? schemaName = null)` | Built by `Add{Backend}TrippedTopics`, once per registration. It is not a shared singleton, because the trip table's name is not in `IAmARelationalDatabaseConfiguration` |
+| `Add{Backend}TrippedTopics` | `(this BoxProvisioningOptions options, IAmARelationalDatabaseConfiguration configuration, string tableName = "BrighterTrippedTopics", string? schemaName = null)` | Registers the provisioner and a catalog for that table name |
+
+The user passes the same table name to the store and to the provisioning extension. The docs state this, and both default to the same name. A registration looks like this.
+
+```csharp
+services.AddSingleton<IAmAnOutboxCircuitBreaker>(sp => new DistributedOutboxCircuitBreaker(
+    new MsSqlTrippedTopicStore(connectionProvider, commandTimeout: options.StoreTimeout),
+    options,
+    sp.GetService<IAmABrighterTracer>()));
+```
+
+The sweeper, the meter and the check find the same instance through `IAmAnOutboxCircuitBreaker`, and the mediator finds the async role by testing its type. The user sets the store's `commandTimeout` to `options.StoreTimeout`.
 
 #### Where each type is touched
 
@@ -528,7 +553,7 @@ The requirements leave fourteen open questions to this ADR. The table answers ea
 | OQ-3 default selection | Opt-in. Brighter registers no breaker |
 | OQ-4 skew bound | The user sets `ClockSkewLeeway`, default zero. A distributed trip lasts at least C on every instance when the leeway is at least the clock skew |
 | OQ-5 local trips after recovery | Written by the next refresh after a successful read, if they have not ended. A request-only instance has no refresh, so it retries its unshared trips with the next successful trip write |
-| OQ-6 store timeout | 2 seconds, independent of `TimerInterval`, valid range greater than zero and at most 60 seconds |
+| OQ-6 store timeout | 2 seconds, independent of `TimerInterval`, valid range at least 1 second and at most 60 seconds |
 | OQ-7 interfaces | `IAmAnOutboxCircuitBreakerAsync` with `IAmATripBatch`, and `IAmASharedOutboxCircuitBreaker` |
 | OQ-8 per-instance trips on inactive instances | Keep the spec 0038 gating |
 | OQ-9 ended trips | Conditional update that marks rows ended and returns them (rows are never deleted), and an atomic later-of upsert returning the prior stamp |
@@ -536,7 +561,7 @@ The requirements leave fourteen open questions to this ADR. The table answers ea
 | OQ-11 amend or supersede | Amend ADR 0028 |
 | OQ-12 refresh | The sweeper's tick, before the lock attempt, plus an overrun timer. The breaker has no timer of its own |
 | OQ-13 split | One spec in two phases, the first mergeable alone |
-| OQ-14 small points | No second announcement when sharing. The end-of-call write ignores the caller's token. Refreshes never overlap |
+| OQ-14 small points | No second announcement when sharing. The end-of-call write ignores the caller's token. The breaker waits on at most one refresh at a time |
 
 #### Why the outbox database rather than the lock store or a separate store
 
@@ -566,7 +591,7 @@ The default is zero, so a deployment that does nothing gets the exact boundaries
 
 #### Why 2 seconds for the store timeout, and why it is not tied to `TimerInterval`
 
-A trip-table operation on a healthy outbox database takes milliseconds, so 2 seconds marks a store as failed long before a sweep feels it. The worst case for one sweep is one read plus one batched write, 4 seconds in total. That is less than the default 5-second `TimerInterval`. The breaker lives in core and is built before, and apart from, any `TimedOutboxSweeperOptions`, and request-only instances have no sweeper. So the timeout is the breaker's own option, and the docs advise keeping it at or under half of `TimerInterval`. The 60-second ceiling rejects values that would let a hung database stall a sweep, and a refresh, for minutes.
+A trip-table operation on a healthy outbox database takes milliseconds, so 2 seconds marks a store as failed long before a sweep feels it. The worst case for one sweep is one read plus one batched write, 4 seconds in total. That is less than the default 5-second `TimerInterval`. The breaker lives in core and is built before, and apart from, any `TimedOutboxSweeperOptions`, and request-only instances have no sweeper. So the timeout is the breaker's own option, and the docs advise keeping it at or under half of `TimerInterval`. A `TimerInterval` of one second cannot meet that advice or the freshness bound with the one-second floor, so such a deployment gets a slower view after a store failure and nothing worse. The one-second floor matches the whole-second command timeout of the drivers. The 60-second ceiling rejects values that would let a hung database stall a sweep, and a refresh, for minutes.
 
 #### Why the sweeper's tick drives refresh, plus an overrun timer
 
@@ -605,7 +630,7 @@ The distributed breaker needs a table, adds a database write to the async reques
 - **Recovery writes.** A trip that is shared helps the other instances avoid a failed batch. Writing it on the next refresh after a successful read costs one batched write. The stale-write rule still applies. A request-only instance runs no refresh, so its unshared trips are included in the batch of the next trip write that succeeds on that instance, and are written with it. If the instance trips nothing further, they end after the trip length and are never shared (FR-3.9).
 - **No second announcement.** An instance that announced a trip from its fallback view does not announce it again when a later write shares it. Otherwise one failure episode would count two trips on the counter.
 - **Cancellation.** The end-of-call write ignores the caller's token and is bounded by `StoreTimeout`. If the write fails or times out, the held trips stay in the view as unshared trips, and nothing is lost.
-- **No overlapping calls.** The breaker holds a refresh as in flight until its store task completes, not only until the timeout. A request while one is in flight is dropped, not queued. The same rule holds for the sweep's read and for each topic's callback write. Every store sets a command timeout no longer than `StoreTimeout`, so an abandoned call ends in the database within about one `StoreTimeout`. A hung store therefore holds at most one refresh, one sweep read and one write per tripped topic, plus one recovery write, plus the batch writes that dispatch calls started within the last `StoreTimeout`. The recovery write has its own in-flight guard, so a refresh starts one only when none is running. A guard is also released after four times `StoreTimeout`, with a Warning, so a store task that never completes cannot disable refresh for good. A sweep read that finds the previous one still running uses the current view and changes no state (see *Store failure and the health signals*).
+- **No overlapping calls.** The breaker holds a refresh as in flight until its store task completes, not only until the timeout. A request while one is in flight is dropped, not queued. The same rule holds for the sweep's read and for each topic's callback write. Every store takes a command timeout in its constructor, which the user sets to the same value as `StoreTimeout`. The store rounds it up to whole seconds with a minimum of one second, because the database drivers accept only whole seconds and treat zero as no limit. An abandoned call therefore ends in the database within about one `StoreTimeout`. A hung store therefore holds at most one refresh, one sweep read and one write per tripped topic, plus one recovery write, plus the batch writes that dispatch calls started within the last `StoreTimeout`. The recovery write has its own in-flight guard, so a refresh starts one only when none is running. A guard is also released after four times `StoreTimeout`, with a Warning, so a store task that never completes cannot disable refresh for good. A call abandoned that way no longer counts against the bound, and the read sequence numbers keep its late result harmless. The same wording holds for the sweep read and for each topic's write guard. A sweep read that finds the previous one still running uses the current view and changes no state (see *Store failure and the health signals*).
 
 ### Implementation Approach
 
@@ -625,12 +650,12 @@ Phase 1 ends here. It changes no interface, no package graph and no health signa
 
 6. **Structural: thread a trip sink through dispatch.** In `src/Paramore.Brighter/OutboxProducerMediator.cs`, give `DispatchAsync` (`:1257`) and `BulkDispatchAsync` (`:1152`) a trailing `IAmATripBatch? trips` parameter. Pass `null` from every caller (`:486`, `:776`, `:780`). Make the helper at `:1542-1546` call `trips?.TripTopic` when a batch is present, and otherwise the breaker's `TripTopic`. Add the empty role interfaces needed to compile. No behaviour changes.
 7. **Behavioural: options and store contract.** Add `CooldownDuration`, `ClockSkewLeeway` and `StoreTimeout`. Add `IAmATrippedTopicStore`, its value types and `InMemoryTrippedTopicStore`. Store contract tests cover the later-of rule, a stamp with sub-microsecond ticks that is truncated when taken and read back equal, equal and earlier stamps over an ended row, the prior stamp, removal returned to one caller under 1,000 parallel repetitions, and duplicate-topic rejection. Write this contract suite so that the SQL stores can reuse it in step 15.
-8. **Behavioural: the breaker's view and writes.** Add `DistributedOutboxCircuitBreaker`, `IAmAnOutboxCircuitBreakerAsync` and `IAmATripBatch`, in TDD slices: sync trip and view (AC-30), batch coalescing and announcement (AC-36, AC-40, AC-42), concurrent trips (AC-11), re-trip across instances (AC-10), elapsed-time end (AC-13, AC-14, AC-15), restart (AC-12) and validation (AC-6 for C, the leeway and the store timeout).
+8. **Behavioural: the breaker's view and writes.** Add `DistributedOutboxCircuitBreaker`, `IAmAnOutboxCircuitBreakerAsync` and `IAmATripBatch`, in TDD slices: sync trip and view (AC-30), batch coalescing and announcement (AC-36, AC-40, AC-42), concurrent trips (AC-11), re-trip across instances (AC-10), elapsed-time end (AC-13, AC-14, AC-15), restart (AC-12) and validation (AC-6 for C, the leeway and the store timeout). The AC-6 slice includes a store timeout of 999 ms (rejected) and 1 s (accepted). The AC-30 slice includes a burst of callbacks during an in-flight write, which must end with the pending stamp written.
 9. **Behavioural: failure and fallback.** Add timeout enforcement, the fallback state, unshared trips, the recovery write and `StoreStatus`. Tests use blocking, throwing and ordered-apply store doubles: AC-17 to AC-23, AC-29, AC-37 (distributed half), AC-43 and AC-44.
-10. **Behavioural: the mediator uses the async role.** In `BackgroundDispatchUsingAsync` (`:740-790`), keep `CoolDown()` at `:749`. Replace the `TrippedTopics` argument at `:763` with `await ReadTrippedTopicsAsync` when the breaker implements the async role. Create a batch around the dispatch and call `WriteAsync` first in the `finally` at `:791`. In `ClearOutboxAsync` (`:447-498`), create one batch around the whole loop and write it in the outer `finally`. The confirmation callbacks at `:946` and `:1040` keep the sync `TripTopic`. Tests cover AC-8, AC-9, AC-24 (distributed), AC-39 and AC-41.
+10. **Behavioural: the mediator uses the async role.** In `BackgroundDispatchUsingAsync` (`:740-790`), keep `CoolDown()` at `:749`. Replace the `TrippedTopics` argument at `:763` with `await ReadTrippedTopicsAsync` when the breaker implements the async role. Create a batch around the dispatch and call `WriteAsync` first in the `finally` at `:791`. The mediator wraps `BeginTripBatch` and `WriteAsync` in a try/catch that logs a Warning (if `BeginTripBatch` throws, the call trips through the sync `TripTopic`), and releases the semaphore in a nested `finally`, so a third-party async role that throws neither replaces the dispatch exception nor skips the release (NFR-9). In `ClearOutboxAsync` (`:447-498`), create one batch around the whole loop and write it in the outer `finally`. The confirmation callbacks at `:946` and `:1040` keep the sync `TripTopic`. Tests cover AC-8, AC-9, AC-24 (distributed), AC-39 and AC-41.
 11. **Behavioural: the sweeper starts refreshes.** In `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxSweeper.cs`, add a trailing `IAmAnOutboxCircuitBreaker? circuitBreaker = null` parameter to the constructor (`:75-95`). In `SweepUntilStopped` (`:164-187`), request a refresh before `Sweep()` at `:178`, and create the overrun timer once with an infinite due time. Arm it at the start of `Sweep()` (`:224`) and disarm it in a `finally`. Dispose it in the loop's `finally` (`:183`). Guard every request as `Record` does (`:286-290`). Tests cover AC-16, including the held sweep, and that an in-memory breaker creates no timer.
 12. **Behavioural: health signals.** Change `SweeperMeter.ObserveTrippedTopics` (`src/Paramore.Brighter/Observability/SweeperMeter.cs:123-130`) and `OutboxSweeperInvestigateHealthCheck.TrippedTopicsConditionOrNone` (`src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs:104-117`) to the ladder. Add the `TrippedTopicsStoreUnavailable` constant beside `:49-55`. Tests cover AC-26 to AC-29, and all existing `Sweeping/` and `Observability/Metrics/` tests stay green (AC-27, AC-31).
-13. **Behavioural: SQL stores.** Add `MsSqlTrippedTopicStore` in `src/Paramore.Brighter.Outbox.MsSql/`, `PostgreSqlTrippedTopicStore` in `src/Paramore.Brighter.Outbox.PostgreSql/` and `MySqlTrippedTopicStore` in `src/Paramore.Brighter.Outbox.MySql/`, each with `GetDDL`, over the package's existing connection provider.
+13. **Behavioural: SQL stores.** Add `MsSqlTrippedTopicStore` in `src/Paramore.Brighter.Outbox.MsSql/`, `PostgreSqlTrippedTopicStore` in `src/Paramore.Brighter.Outbox.PostgreSql/` and `MySqlTrippedTopicStore` in `src/Paramore.Brighter.Outbox.MySql/`, each with `GetDDL` and the constructor in *Constructing and registering the pieces*, over the package's existing connection provider.
 14. **Behavioural: provisioning.** Append `TrippedTopics` to `src/Paramore.Brighter.BoxProvisioning/BoxType.cs:29-41` and order it in `BoxProvisioningHostedService.cs:111-118`. Add `TrippedTopicsProvisioner`. In each relational backend package, add the catalog that calls the store's `GetDDL` (as `MsSqlOutboxMigrationCatalog.cs:97` calls `SqlOutboxBuilder.GetDDL`), the `Add{Backend}TrippedTopics` extension beside `AddMsSqlOutbox` (`MsSqlBoxProvisioningExtensions.cs:17`), and the case in `DiscriminatorFor` (for example `MsSqlBoxDetectionHelper.cs:199-204`), named `TripTime` for MsSql and MySql and `trip_time` for PostgreSql (`PostgreSqlBoxDetectionHelper.cs:245-247` uses lower-case names).
 15. **Behavioural: real-database tests.** Run the step 7 contract suite against each store, plus AC-33, in `tests/Paramore.Brighter.MSSQL.Tests`, `tests/Paramore.Brighter.PostgresSQL.Tests` and `tests/Paramore.Brighter.MySQL.Tests`. Add provisioning tests for fresh install, re-run and hand-created tables.
 16. **Docs.** Add an amendment note to the Status sections of ADRs 0028, 0058, 0085 and 0086 that points here. Complete the FR-9.2 release notes. List the BrighterCommand/Docs changes in the pull request (FR-9.3, AC-35): the circuit-breaker page with registration as a singleton and the clock assumption, the Telemetry page with `max` rather than `sum`, and the health-check page with the new condition.
@@ -658,6 +683,7 @@ Core behaviour is proved in `tests/Paramore.Brighter.Core.Tests` with `FakeTimeP
 - The read operation updates rows, so the application's database user needs `UPDATE` on the trip table, and a "read" is not read-only. Ended rows stay until an operator runs the purge script, which needs a separate `DELETE` permission.
 - A Reset is announced when an instance marks the ended row, which can be up to `TimerInterval` plus the store timeout after the trip ends. If no instance reads, no Reset is announced until one does.
 - Telemetry differs between breakers. The in-memory breaker announces every failed message. The distributed breaker announces once per coalesced write.
+- The command timeout is a separate constructor value that the user must keep equal to `StoreTimeout`. A mismatch lengthens how long an abandoned call runs in the database.
 - A store that breaks the command-timeout rule can still leave abandoned calls running against the outbox's connection pool until the database ends them.
 - Correctness of C depends on instance clocks agreeing within the stated bound, which Brighter cannot enforce.
 - `BoxType` gains a third value. Code outside Brighter that switches on `BoxType` without a default arm will not handle it.
@@ -670,7 +696,7 @@ Core behaviour is proved in `tests/Paramore.Brighter.Core.Tests` with `FakeTimeP
 
 | Risk | Mitigation |
 | --- | --- |
-| A store that ignores cancellation holds a sweep beyond `StoreTimeout`, or piles up abandoned calls against the outbox's connection pool | The breaker stops waiting through `WaitAsync` on its `TimeProvider`, observes the abandoned task, holds its in-flight guards until that task completes or four times `StoreTimeout` has passed, and requires every store to set a command timeout no longer than `StoreTimeout` |
+| A store that ignores cancellation holds a sweep beyond `StoreTimeout`, or piles up abandoned calls against the outbox's connection pool | The breaker stops waiting through `WaitAsync` on its `TimeProvider`, observes the abandoned task, holds its in-flight guards until that task completes or four times `StoreTimeout` has passed, and every store takes a command timeout, rounded up to whole seconds, that the user sets to the value of `StoreTimeout` |
 | Two instances' batches deadlock on overlapping topics, or a read deadlocks with a write | Every store writes topics in ordinal order inside one transaction. A store retries once on a deadlock error (SQL Server 1205, PostgreSQL SQLSTATE 40P01, MySQL ER_LOCK_DEADLOCK). A second failure is a store failure, and the instance falls back |
 | Two first trips both insert and both announce a Trip | MsSql takes a key-range lock (`SERIALIZABLE`). PostgreSql and MySql use a native upsert on the primary key. AC-11 runs against each real database |
 | A slow refresh overwrites a newer sweep read in the view, or drops a trip this instance has just written | Reads carry a sequence number. An older result keeps only its `Ended` rows. A written trip stays in the merge until a later read has been applied |
