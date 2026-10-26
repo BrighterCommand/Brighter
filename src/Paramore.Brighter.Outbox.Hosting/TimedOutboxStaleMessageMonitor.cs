@@ -111,8 +111,13 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         var countsByTopic = outbox is IAmATopicCountingOutbox;
         LogWhenTopicsAreNotMeasured(outboxType, countsByTopic, topicAges.Count);
 
-        _readings.Start(outboxType, countsByTopic && topicAges.Count > 0);
-        StartMeasuring(outboxType, BuildOverallCount(outbox, transactionType, ReadOutBoxBag(producersConfiguration)));
+        var measuresTopics = countsByTopic && topicAges.Count > 0;
+        _readings.Start(outboxType, measuresTopics);
+        var outBoxBag = ReadOutBoxBag(producersConfiguration);
+        StartMeasuring(
+            outboxType,
+            BuildOverallCount(outbox, transactionType, outBoxBag),
+            measuresTopics ? BuildPerTopicCount((IAmATopicCountingOutbox)outbox, topicAges, outBoxBag) : null);
         return Task.CompletedTask;
     }
 
@@ -132,14 +137,26 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
             staleMessageAge, null, countCeiling, outBoxBag, cancellationToken);
     }
 
-    private void StartMeasuring(string outboxType, Func<CancellationToken, Task<int>> countOverall)
+    private Func<CancellationToken, Task<IReadOnlyDictionary<RoutingKey, int>>> BuildPerTopicCount(
+        IAmATopicCountingOutbox outbox, IReadOnlyDictionary<RoutingKey, TimeSpan> topicAges, Dictionary<string, object> outBoxBag) =>
+        cancellationToken => outbox.GetOutstandingMessageCountsByTopicAsync(
+            topicAges, null, _options.CountCeiling, outBoxBag, cancellationToken);
+
+    private void StartMeasuring(
+        string outboxType,
+        Func<CancellationToken, Task<int>> countOverall,
+        Func<CancellationToken, Task<IReadOnlyDictionary<RoutingKey, int>>>? countPerTopic)
     {
         var origin = _timeProvider.GetTimestamp();
         using (ExecutionContext.SuppressFlow())
-            _ = Task.Run(() => MeasureUntilStoppedAsync(outboxType, origin, countOverall));
+            _ = Task.Run(() => MeasureUntilStoppedAsync(outboxType, origin, countOverall, countPerTopic));
     }
 
-    private async Task MeasureUntilStoppedAsync(string outboxType, long origin, Func<CancellationToken, Task<int>> countOverall)
+    private async Task MeasureUntilStoppedAsync(
+        string outboxType,
+        long origin,
+        Func<CancellationToken, Task<int>> countOverall,
+        Func<CancellationToken, Task<IReadOnlyDictionary<RoutingKey, int>>>? countPerTopic)
     {
         var stopped = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var registration = _stopping.Token.Register(() => stopped.TrySetResult(true));
@@ -150,7 +167,9 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
             var latest = Elapsed(origin).Ticks / _options.MeasurementInterval.Ticks;
             SkipMissedDueTimes(outboxType, latest - measured - 1);
             measured = latest;
-            await MeasureOverallAsync(outboxType, countOverall);
+            var overall = MeasureOverallAsync(outboxType, countOverall);
+            var perTopic = countPerTopic is null ? Task.CompletedTask : MeasurePerTopicAsync(outboxType, countPerTopic);
+            await Task.WhenAll(overall, perTopic);
         }
     }
 
@@ -204,6 +223,14 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         var count = await Task.Run(() => countOverall(cancellation.Token));
         _readings.CompleteOverall(count);
         Log.OverallCountCompleted(s_logger, outboxType, count);
+    }
+
+    private async Task MeasurePerTopicAsync(string outboxType, Func<CancellationToken, Task<IReadOnlyDictionary<RoutingKey, int>>> countPerTopic)
+    {
+        using var cancellation = new CancellationTokenSource();
+        var counts = await Task.Run(() => countPerTopic(cancellation.Token));
+        _readings.CompletePerTopic(counts);
+        Log.PerTopicCountCompleted(s_logger, outboxType, string.Join(", ", counts.Select(count => $"{count.Key}={count.Value}")));
     }
 
     private IReadOnlyDictionary<RoutingKey, TimeSpan> BuildTopicAges(IEnumerable<Publication> publications) =>
@@ -277,6 +304,9 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     {
         [LoggerMessage(LogLevel.Debug, "Outbox stale-message monitor counted {StaleCount} stale messages overall for {OutboxType}")]
         public static partial void OverallCountCompleted(ILogger logger, string outboxType, int staleCount);
+
+        [LoggerMessage(LogLevel.Debug, "Outbox stale-message monitor counted stale messages per topic for {OutboxType}: {StaleCounts}")]
+        public static partial void PerTopicCountCompleted(ILogger logger, string outboxType, string staleCounts);
 
         [LoggerMessage(LogLevel.Warning, "Outbox stale-message monitor skipped {DueTimes} due times of the {Count} count for {OutboxType}")]
         public static partial void DueTimesSkipped(ILogger logger, string outboxType, StaleMessageCount count, int dueTimes);

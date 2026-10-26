@@ -21,10 +21,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 #nullable enable
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -33,16 +33,33 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 
 /// <summary>
-/// A <see cref="StaleMessageCountingOutbox"/> that can also count its stale messages per topic.
+/// A <see cref="StaleMessageCountingOutbox"/> that can also count its stale messages per topic, and records each call
+/// of its per-topic count.
 /// </summary>
 public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmATopicCountingOutbox
 {
+    private readonly ConcurrentQueue<StaleTopicCountCall> _topicCountCalls = new();
+    private readonly TimeProvider? _clock;
+
+    /// <summary>Creates the double.</summary>
+    /// <param name="clock">When given, each recorded call carries the time on this clock when it was made.</param>
+    public StaleMessageTopicCountingOutbox(TimeProvider? clock = null) : base(clock)
+    {
+        _clock = clock;
+    }
+
+    /// <summary>Each call of the per-topic count, in the order the calls were made.</summary>
+    public IReadOnlyCollection<StaleTopicCountCall> TopicCountCalls => _topicCountCalls;
+
     public Task<IReadOnlyDictionary<RoutingKey, int>> GetOutstandingMessageCountsByTopicAsync(
         IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic,
         RequestContext? requestContext,
         int maxCountPerTopic,
         Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyDictionary<RoutingKey, int>>(
+    {
+        _topicCountCalls.Enqueue(new StaleTopicCountCall(dispatchedSinceByTopic, requestContext, maxCountPerTopic, args, cancellationToken, _clock?.GetUtcNow()));
+        return Task.FromResult<IReadOnlyDictionary<RoutingKey, int>>(
             dispatchedSinceByTopic.Keys.ToDictionary(topic => topic, _ => 0));
+    }
 }
