@@ -27,6 +27,8 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -40,19 +42,28 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 /// It completes a released or cancelled call's task, on a pool thread or, for <see cref="ReleaseAt"/>, on the thread
 /// that moves the clock, through a <see cref="TaskCompletionSource{TResult}"/> created
 /// without <see cref="TaskCreationOptions.RunContinuationsAsynchronously"/>, unlike the other gating doubles of this
-/// project. With no <see cref="SynchronizationContext"/> current, the rest of the count's task then runs inline, so it
-/// has ended before <see cref="CallEnded"/> completes.
+/// project. It completes the task only once every task it has returned is awaited or complete, and with no
+/// <see cref="SynchronizationContext"/> current, so the rest of the count's task runs inline and has ended before
+/// <see cref="CallEnded"/> completes.
 /// </summary>
 public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
 {
     private static readonly TimeSpan s_threadBlockCeiling = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan s_blockedCallWait = TimeSpan.FromSeconds(5);
 
+    // A task keeps the continuation of the code that awaits it in this field, which has no public counterpart.
+    private static readonly FieldInfo s_continuation =
+        typeof(Task).GetField("m_continuationObject", BindingFlags.NonPublic | BindingFlags.Instance)
+        ?? throw new InvalidOperationException("Task no longer keeps its continuation in m_continuationObject.");
+
     private readonly ConcurrentQueue<StaleCountCall> _countCalls = new();
+    private readonly ConcurrentQueue<Task> _returned = new();
     private readonly TimeProvider? _clock;
     private readonly TaskCompletionSource<bool> _ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly ConcurrentQueue<Func<CancellationToken, Task<int>>> _answers = new();
     private readonly ConcurrentQueue<TaskCompletionSource<int>> _blocked = new();
+    // An answer leaves its call to be released or cancelled only once the call's task is recorded as returned.
+    private readonly ConcurrentQueue<Action> _exposures = new();
     private readonly ManualResetEventSlim _threadReleased = new(false);
     private readonly ManualResetEventSlim _callbackReleased = new(false);
     private readonly TaskCompletionSource<bool> _callbackBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -120,10 +131,13 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
 
     /// <summary>Ends the oldest call blocked until released with the given result, then completes <see cref="CallEnded"/>.</summary>
     /// <param name="count">The number of outstanding messages the released call returns.</param>
-    /// <exception cref="InvalidOperationException">No call is blocked until released within 5 s of wall-clock time.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// No call is blocked until released, or a returned task is not awaited, within 5 s of wall-clock time.
+    /// </exception>
     public void Release(int count)
     {
         var answer = OldestBlockedCall();
+        WaitUntilEveryCallIsAwaited();
         Task.Run(() =>
         {
             answer.SetResult(count);
@@ -144,6 +158,7 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         _releaseTimer = _clock!.CreateTimer(_ => WithNoSynchronizationContext(() =>
         {
             var answer = OldestBlockedCall();
+            WaitUntilEveryCallIsAwaited();
             answer.SetResult(count);
             _ended.TrySetResult(true);
         }), null, dueTime, System.Threading.Timeout.InfiniteTimeSpan);
@@ -171,30 +186,36 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         CancellationToken cancellationToken = default)
     {
         _countCalls.Enqueue(new StaleCountCall(dispatchedSince, requestContext, maxCount, args, cancellationToken, Synchronous: false, _clock?.GetUtcNow()));
-        return _answers.TryDequeue(out var answer) ? answer(cancellationToken) : Task.FromResult(_result);
+        var call = _answers.TryDequeue(out var answer) ? answer(cancellationToken) : Task.FromResult(_result);
+        RecordReturned(call);
+        while (_exposures.TryDequeue(out var expose))
+            expose();
+        return call;
     }
 
     private Task<int> WaitUntilCancelled(CancellationToken cancellationToken)
     {
         var answer = new TaskCompletionSource<int>();
-        cancellationToken.Register(() => Task.Run(() =>
+        _exposures.Enqueue(() => cancellationToken.Register(() => Task.Run(() =>
         {
+            WaitUntilEveryCallIsAwaited();
             answer.TrySetCanceled(cancellationToken);
             _ended.TrySetResult(true);
-        }));
+        })));
         return answer.Task;
     }
 
     private Task<int> BlockCallback(CancellationToken cancellationToken)
     {
         var answer = new TaskCompletionSource<int>();
-        cancellationToken.Register(() =>
+        _exposures.Enqueue(() => cancellationToken.Register(() =>
         {
             _callbackBlocked.TrySetResult(true);
             _callbackReleased.Wait(s_threadBlockCeiling);
+            WaitUntilEveryCallIsAwaited();
             answer.TrySetCanceled(cancellationToken);
             _ended.TrySetResult(true);
-        });
+        }));
         return answer.Task;
     }
 
@@ -207,7 +228,7 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     private Task<int> WaitUntilReleased(CancellationToken cancellationToken)
     {
         var answer = new TaskCompletionSource<int>();
-        _blocked.Enqueue(answer);
+        _exposures.Enqueue(() => _blocked.Enqueue(answer));
         return answer.Task;
     }
 
@@ -235,6 +256,24 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
             throw new InvalidOperationException("No call of the async count is blocked until released.");
 
         return answer!;
+    }
+
+    /// <summary>Records a task a count returns, so <see cref="WaitUntilEveryCallIsAwaited"/> waits until it is awaited.</summary>
+    /// <param name="call">The task the count returns.</param>
+    protected void RecordReturned(Task call) => _returned.Enqueue(call);
+
+    /// <summary>Waits until every task recorded as returned is awaited or complete.</summary>
+    /// <remarks>
+    /// The count's code awaits a task some time after the call returns it. A task completed before then leaves the rest
+    /// of the count to that code's thread, which can run it after the test has moved the clock.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">A returned task is not awaited within 5 s of wall-clock time.</exception>
+    protected void WaitUntilEveryCallIsAwaited()
+    {
+        if (!SpinWait.SpinUntil(
+                () => _returned.All(call => call.IsCompleted || s_continuation.GetValue(call) is not null),
+                s_blockedCallWait))
+            throw new InvalidOperationException("A task returned by a count is not awaited.");
     }
 
     public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1,

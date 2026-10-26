@@ -87,12 +87,15 @@ public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmAT
 
     /// <summary>Ends the oldest per-topic call blocked until released with the given counts, then completes <see cref="TopicCallEnded"/>.</summary>
     /// <param name="counts">The number of outstanding messages the released call returns for each topic.</param>
-    /// <exception cref="InvalidOperationException">No per-topic call is blocked until released.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// No per-topic call is blocked until released, or a returned task is not awaited within 5 s of wall-clock time.
+    /// </exception>
     public void ReleaseTopicCount(IReadOnlyDictionary<RoutingKey, int> counts)
     {
         if (!_blockedTopicCalls.TryDequeue(out var answer))
             throw new InvalidOperationException("No call of the per-topic count is blocked until released.");
 
+        WaitUntilEveryCallIsAwaited();
         Task.Run(() =>
         {
             answer.SetResult(counts);
@@ -112,6 +115,7 @@ public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmAT
         {
             _blockNextTopicCall = false;
             var answer = new TaskCompletionSource<IReadOnlyDictionary<RoutingKey, int>>();
+            RecordReturned(answer.Task);
             _blockedTopicCalls.Enqueue(answer);
             _topicCountCalls.Enqueue(call);
             return answer.Task;
