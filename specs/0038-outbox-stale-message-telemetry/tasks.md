@@ -1331,7 +1331,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - cancel the stop token in `Dispose` if `StopAsync` has not.
 
-- [ ] **CHARACTERISE: T10.10 The host's stop token ends the stop wait (ADR 0085 risk :954)**
+- [x] **CHARACTERISE: T10.10 The host's stop token ends the stop wait (ADR 0085 risk :954)**
   - **USE COMMAND**: `/test-first StopAsync with a cancelled host token returns without waiting for T while a count ignores cancellation`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_host_token_is_cancelled_during_stop_should_end_the_wait.cs`
