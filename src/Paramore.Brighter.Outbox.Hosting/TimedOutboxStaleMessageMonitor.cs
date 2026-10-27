@@ -429,7 +429,8 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// </summary>
     /// <param name="cancellationToken">The host's stop token. Cancelling it ends the wait.</param>
     /// <remarks>
-    /// Signals the loop to stop, then waits for the first of three events: the loop ends, the
+    /// Returns at once if the monitor never started, for example because <see cref="StartAsync"/> threw.
+    /// Otherwise signals the loop to stop, then waits for the first of three events: the loop ends, the
     /// <see cref="TimedOutboxStaleMessageMonitorOptions.MeasurementTimeout"/> passes after the stop request, or
     /// <paramref name="cancellationToken"/> is cancelled. The loop cancels the token of every count in progress and
     /// waits for those counts to end, at most until the same timeout.
@@ -437,11 +438,14 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// <returns>A task that ends at the first of those events, and never faults because of the loop.</returns>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        if (_loop is null)
+            return;
+
         RequestStop();
         var ended = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var timer = _timeProvider.CreateTimer(_ => ended.TrySetResult(true), null, TimeLeftToStop(), Timeout.InfiniteTimeSpan);
         using var registration = cancellationToken.Register(() => ended.TrySetResult(true));
-        await Task.WhenAny(_loop!, ended.Task);
+        await Task.WhenAny(_loop, ended.Task);
     }
 
     /// <summary>
