@@ -1380,7 +1380,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - Implementation should (only if the test is RED on arrival): none is expected, so stop and ask.
 
-- [ ] **CHARACTERISE: T11.3 Posting is not delayed by counts that block their threads (AC-20, thread block)**
+- [x] **CHARACTERISE: T11.3 Posting is not delayed by counts that block their threads (AC-20, thread block)**
   - **USE COMMAND**: `/test-first with both counts blocking their threads 100 Post and 100 PostAsync calls return and the posting-path calls match the feature-disabled run`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_both_counts_block_their_threads_should_not_delay_posting.cs`
