@@ -1318,7 +1318,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should:
     - return at once when the loop task is null, and never rethrow a faulted loop task.
 
-- [ ] **CHARACTERISE: T10.9 `Dispose` only signals the stop**
+- [x] **CHARACTERISE: T10.9 `Dispose` only signals the stop**
   - **USE COMMAND**: `/test-first Dispose without StopAsync signals the stop, returns without waiting and disposes nothing a count still uses`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_monitor_is_disposed_should_signal_the_stop_without_waiting.cs`
