@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 /// </summary>
 public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
 {
-    private static readonly TimeSpan s_threadBlockCeiling = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan s_threadBlockCeiling = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan s_blockedCallWait = TimeSpan.FromSeconds(5);
 
     // A task keeps the continuation of the code that awaits it in this field, which has no public counterpart.
@@ -119,7 +119,7 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
 
     /// <summary>
     /// Makes the next call of the async count that has no other answer queued ignore its token and block the calling
-    /// thread, before it returns a task, until <see cref="ReleaseThread"/> or 30 s of wall-clock time, so a thread
+    /// thread, before it returns a task, until <see cref="ReleaseThread"/> or 60 s of wall-clock time, so a thread
     /// that is never released is not held past the test.
     /// </summary>
     public void BlockThreadUntilReleased() => _answers.Enqueue(BlockThread);
@@ -143,14 +143,14 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
 
     /// <summary>
     /// Makes the next call of the async count that has no other answer queued register a cancellation callback that
-    /// blocks the thread cancelling its token until <see cref="ReleaseCallback"/> or 30 s of wall-clock time, and then
+    /// blocks the thread cancelling its token until <see cref="ReleaseCallback"/> or 60 s of wall-clock time, and then
     /// ends the call as cancelled. The call runs until then.
     /// </summary>
     public void BlockCancellationCallbackUntilReleased() => _answers.Enqueue(BlockCallback);
 
     /// <summary>
     /// Makes each call of the sync count with <paramref name="maxCount"/>, once recorded, block the calling thread until
-    /// <see cref="ReleaseSyncCount"/> or 30 s of wall-clock time, so a thread that is never released is not held past the test.
+    /// <see cref="ReleaseSyncCount"/> or 60 s of wall-clock time, so a thread that is never released is not held past the test.
     /// </summary>
     /// <param name="maxCount">The maximum count of the calls to block.</param>
     public void BlockSyncCountUntilReleased(int maxCount)

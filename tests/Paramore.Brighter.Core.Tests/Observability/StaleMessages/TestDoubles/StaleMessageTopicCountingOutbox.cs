@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 /// </summary>
 public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmATopicCountingOutbox
 {
-    private static readonly TimeSpan s_threadBlockCeiling = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan s_threadBlockCeiling = TimeSpan.FromSeconds(60);
 
     private readonly ConcurrentQueue<StaleTopicCountCall> _topicCountCalls = new();
     private readonly TimeProvider? _clock;
@@ -69,7 +69,7 @@ public class StaleMessageTopicCountingOutbox : StaleMessageCountingOutbox, IAmAT
 
     /// <summary>
     /// Makes the next call of the per-topic count ignore its token and block the calling thread, before it returns a
-    /// task, until <see cref="ReleaseTopicThread"/> or 30 s of wall-clock time, so a thread that is never released is
+    /// task, until <see cref="ReleaseTopicThread"/> or 60 s of wall-clock time, so a thread that is never released is
     /// not held past the test.
     /// </summary>
     public void BlockTopicThreadUntilReleased() => _blockNextTopicThread = true;
