@@ -52,6 +52,8 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     private readonly TimedOutboxStaleMessageMonitorOptions _options;
     private readonly TimeProvider _timeProvider;
     private readonly CancellationTokenSource _stopping = new();
+    private Task? _loop;
+    private long _stopRequested;
 
     /// <summary>
     /// Creates a monitor that is not yet running.
@@ -165,7 +167,7 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     {
         var origin = _timeProvider.GetTimestamp();
         using (ExecutionContext.SuppressFlow())
-            _ = Task.Run(() => MeasureUntilStoppedAsync(outboxType, origin, countOverall, countPerTopic));
+            _loop = Task.Run(() => MeasureUntilStoppedAsync(outboxType, origin, countOverall, countPerTopic));
     }
 
     private async Task MeasureUntilStoppedAsync(
@@ -203,6 +205,10 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
             }
         }
 
+        Log.Stopped(s_logger, outboxType);
+        _readings.Stop();
+        abandoned.CancelInProgress();
+        await WaitUntilAsync(_options.MeasurementTimeout, Volatile.Read(ref _stopRequested), abandoned.WhenAllEnded(), alarm.RingAfter);
         abandoned.DisposeEnded();
     }
 
@@ -214,14 +220,17 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         MeasuredCount<int>? overall,
         MeasuredCount<IReadOnlyDictionary<RoutingKey, int>>? perTopic)
     {
+        if (stopped.IsCompleted)
+            return;
+
         var started = _timeProvider.GetTimestamp();
         var overallCall = overall?.Start();
         var perTopicCall = perTopic?.Start();
         var decided = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var deadline = WaitUntilAsync(_options.MeasurementTimeout, started, Task.WhenAny(decided.Task, stopped), alarm.RingAgainAfter);
         await Task.WhenAll(
-            overallCall is null ? Task.CompletedTask : DecideAsync(outboxType, StaleMessageCount.Overall, overallCall, started, deadline, abandoned, CompleteOverall),
-            perTopicCall is null ? Task.CompletedTask : DecideAsync(outboxType, StaleMessageCount.PerTopic, perTopicCall, started, deadline, abandoned, CompletePerTopic));
+            overallCall is null ? Task.CompletedTask : DecideAsync(outboxType, StaleMessageCount.Overall, overallCall, started, deadline, stopped, abandoned, CompleteOverall),
+            perTopicCall is null ? Task.CompletedTask : DecideAsync(outboxType, StaleMessageCount.PerTopic, perTopicCall, started, deadline, stopped, abandoned, CompletePerTopic));
         decided.TrySetResult(true);
         await deadline;
     }
@@ -232,10 +241,17 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         CountCall<TCount> call,
         long started,
         Task<bool> deadline,
+        Task stopped,
         AbandonedCalls abandoned,
         Action<string, TCount> complete)
     {
         await WhenAnyThenYieldAsync(call.Answer, deadline);
+        if (stopped.IsCompleted)
+        {
+            abandoned.Add(call.Answer, call.Cancellation);
+            return;
+        }
+
         if (!call.EndedBefore(started, _options.MeasurementTimeout) && await deadline)
         {
             Abandon(outboxType, count, call.Answer, call.Cancellation, abandoned);
@@ -411,16 +427,42 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
     /// <summary>
     /// Stops the monitor.
     /// </summary>
-    /// <param name="cancellationToken">The host's stop token.</param>
-    /// <returns>A completed task.</returns>
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    /// <param name="cancellationToken">The host's stop token. Cancelling it ends the wait.</param>
+    /// <remarks>
+    /// Signals the loop to stop, then waits for the first of three events: the loop ends, the
+    /// <see cref="TimedOutboxStaleMessageMonitorOptions.MeasurementTimeout"/> passes after the stop request, or
+    /// <paramref name="cancellationToken"/> is cancelled. The loop cancels the token of every count in progress and
+    /// waits for those counts to end, at most until the same timeout.
+    /// </remarks>
+    /// <returns>A task that ends at the first of those events, and never faults because of the loop.</returns>
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        RequestStop();
+        var ended = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var timer = _timeProvider.CreateTimer(_ => ended.TrySetResult(true), null, TimeLeftToStop(), Timeout.InfiniteTimeSpan);
+        using var registration = cancellationToken.Register(() => ended.TrySetResult(true));
+        await Task.WhenAny(_loop!, ended.Task);
+    }
 
     /// <summary>
     /// Signals the monitor to stop and returns without waiting.
     /// </summary>
     public void Dispose()
     {
-        _stopping.Cancel();
+        RequestStop();
+    }
+
+    // Records when the stop was requested before cancelling the stop token, so StopAsync and the loop bound their waits from the same moment.
+    private void RequestStop()
+    {
+        if (Interlocked.CompareExchange(ref _stopRequested, _timeProvider.GetTimestamp(), 0) == 0)
+            _stopping.Cancel();
+    }
+
+    private TimeSpan TimeLeftToStop()
+    {
+        var left = _options.MeasurementTimeout - Elapsed(Volatile.Read(ref _stopRequested));
+        return left > TimeSpan.Zero ? left : TimeSpan.Zero;
     }
 
     private sealed class CountCall<TCount>
@@ -479,7 +521,7 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         public CountCall<TCount> Start() => _previous = new CountCall<TCount>(_count, _timeProvider);
     }
 
-    // Holds the token source of each abandoned call until the loop sees that the call has ended, so only the loop disposes it.
+    // Holds the token source of each call the loop abandoned, or left undecided at the stop, until the loop sees that the call has ended, so only the loop disposes it.
     private sealed class AbandonedCalls
     {
         private readonly object _lock = new();
@@ -489,6 +531,24 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
         {
             lock (_lock)
                 _calls.Add((call, cancellation));
+        }
+
+        public void CancelInProgress()
+        {
+            lock (_lock)
+            {
+                foreach (var (call, cancellation) in _calls.Where(abandoned => !abandoned.Call.IsCompleted))
+                {
+                    var cancelled = CancelOffTheLoopThread(cancellation);
+                    _ = Task.WhenAll(call, cancelled).ContinueWith(ended => _ = ended.Exception, TaskScheduler.Default);
+                }
+            }
+        }
+
+        public Task WhenAllEnded()
+        {
+            lock (_lock)
+                return Task.WhenAll(_calls.Select(abandoned => abandoned.Call)).ContinueWith(ended => _ = ended.Exception, TaskScheduler.Default);
         }
 
         public void DisposeEnded()
@@ -578,5 +638,8 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
 
         [LoggerMessage(LogLevel.Information, "Outbox stale-message monitor measures only the overall count for {OutboxType}: no measured topic")]
         public static partial void OverallCountOnlyWithNoMeasuredTopic(ILogger logger, string outboxType);
+
+        [LoggerMessage(LogLevel.Information, "Outbox stale-message monitor stopped for {OutboxType}")]
+        public static partial void Stopped(ILogger logger, string outboxType);
     }
 }
