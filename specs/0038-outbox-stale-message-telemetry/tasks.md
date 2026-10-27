@@ -1403,7 +1403,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - Implementation should (only if the test is RED on arrival): none is expected, so stop and ask.
 
-- [ ] **CHARACTERISE: T11.5 The outstanding-message check is unchanged (AC-21)**
+- [x] **CHARACTERISE: T11.5 The outstanding-message check is unchanged (AC-21)**
   - **USE COMMAND**: `/test-first with MaxOutStandingMessages of 5 the check's count arguments and the first OutboxLimitReachedException post are the same with the feature enabled and disabled`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_the_feature_is_enabled_should_leave_the_outstanding_check_unchanged.cs`
