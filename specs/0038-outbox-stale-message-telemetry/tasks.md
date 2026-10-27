@@ -1251,7 +1251,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - end the loop as soon as every cancelled call has ended.
 
-- [ ] **CHARACTERISE: T10.3 A stop cancels both counts' tokens (AC-15 third clause)**
+- [x] **CHARACTERISE: T10.3 A stop cancels both counts' tokens (AC-15 third clause)**
   - **USE COMMAND**: `/test-first with both counts blocked and ignoring cancellation a stop at 12:01:05 cancels both tokens, returns by 12:01:15 and starts no later call of either count`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_stopping_with_both_counts_in_progress_should_cancel_both.cs`
