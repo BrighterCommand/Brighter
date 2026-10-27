@@ -1297,7 +1297,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - bound the loop's stop wait by T from the stop request.
 
-- [ ] **CHARACTERISE: T10.7 A stop while a cancellation callback blocks returns within T (ADR 0085 risk :958)**
+- [x] **CHARACTERISE: T10.7 A stop while a cancellation callback blocks returns within T (ADR 0085 risk :958)**
   - **USE COMMAND**: `/test-first a stop requested while a count's cancellation callback blocks still returns within T`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_stopping_while_a_cancellation_callback_blocks_should_return_within_the_timeout.cs`
