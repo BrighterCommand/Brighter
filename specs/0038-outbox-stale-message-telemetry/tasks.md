@@ -1286,7 +1286,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - keep the T bound in `StopAsync` independent of the loop.
 
-- [ ] **CHARACTERISE: T10.6 A stop while waiting for a due time, with an abandoned call still running, returns within T**
+- [x] **CHARACTERISE: T10.6 A stop while waiting for a due time, with an abandoned call still running, returns within T**
   - **USE COMMAND**: `/test-first a stop while the loop waits for the next due time with an abandoned call still running returns within T`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_stopping_between_due_times_with_an_abandoned_call_should_return_within_the_timeout.cs`
