@@ -67,7 +67,9 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     private readonly ManualResetEventSlim _threadReleased = new(false);
     private readonly ManualResetEventSlim _callbackReleased = new(false);
     private readonly TaskCompletionSource<bool> _callbackBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<IEnumerable<Message>> _outstandingMessagesReleased = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private volatile int _result;
+    private int _outstandingMessagesCalls;
     private ITimer? _releaseTimer;
 
     /// <summary>Creates the double.</summary>
@@ -79,6 +81,9 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
 
     /// <summary>Each call of the overall count, sync or async, in the order the calls were made.</summary>
     public IReadOnlyCollection<StaleCountCall> CountCalls => _countCalls;
+
+    /// <summary>The number of calls of <see cref="OutstandingMessagesAsync"/> so far.</summary>
+    public int OutstandingMessagesCalls => Volatile.Read(ref _outstandingMessagesCalls);
 
     /// <summary>Completes once a call blocked until its token is cancelled, or until released, has ended.</summary>
     public Task CallEnded => _ended.Task;
@@ -162,6 +167,9 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
             answer.SetResult(count);
             _ended.TrySetResult(true);
         }), null, dueTime, System.Threading.Timeout.InfiniteTimeSpan);
+
+    /// <summary>Ends every call of <see cref="OutstandingMessagesAsync"/>, made or to come, with no messages.</summary>
+    public void ReleaseOutstandingMessages() => _outstandingMessagesReleased.TrySetResult([]);
 
     /// <summary>Sets the result of each call of the async count that has no answer queued.</summary>
     /// <param name="count">The number of outstanding messages the call returns.</param>
@@ -345,9 +353,16 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         Dictionary<string, object>? args = null)
         => throw new NotImplementedException();
 
+    /// <summary>
+    /// Records the call and ignores its token: every call, made or to come, blocks until
+    /// <see cref="ReleaseOutstandingMessages"/>, and then returns no messages.
+    /// </summary>
     public Task<IEnumerable<Message>> OutstandingMessagesAsync(TimeSpan dispatchedSince,
         RequestContext requestContext, int pageSize = 100, int pageNumber = 1,
         IEnumerable<RoutingKey>? trippedTopics = null, Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
-        => throw new NotImplementedException();
+    {
+        Interlocked.Increment(ref _outstandingMessagesCalls);
+        return _outstandingMessagesReleased.Task;
+    }
 }
