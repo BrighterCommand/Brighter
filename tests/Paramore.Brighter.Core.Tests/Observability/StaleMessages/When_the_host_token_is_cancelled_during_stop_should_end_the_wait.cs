@@ -42,8 +42,10 @@ public class HostTokenCancelledDuringStopTests
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private readonly TimerCountingTimeProvider _clock = new(s_start);
 
-    [Fact]
-    public async Task When_the_host_token_is_cancelled_during_stop_should_end_the_wait()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_the_host_token_is_cancelled_during_stop_should_end_the_wait(bool cancelledBeforeTheStop)
     {
         //Arrange
         var outbox = new StaleMessageCountingOutbox(_clock);
@@ -73,15 +75,20 @@ public class HostTokenCancelledDuringStopTests
         Assert.True(SpinWait.SpinUntil(() => outbox.CountCalls.Count == 1, TimeSpan.FromSeconds(5)));
 
         using var host = new CancellationTokenSource();
-        host.Cancel();
+        if (cancelledBeforeTheStop)
+            host.Cancel();
 
         Task stopping;
+        bool waitingWhenCancelled;
         bool stopped;
 
         //Act
         try
         {
             stopping = monitor.StopAsync(host.Token);
+            waitingWhenCancelled = !stopping.IsCompleted;
+            if (!cancelledBeforeTheStop)
+                host.Cancel();
             stopped = SpinWait.SpinUntil(() => stopping.IsCompleted, TimeSpan.FromSeconds(5));
         }
         finally
@@ -90,6 +97,7 @@ public class HostTokenCancelledDuringStopTests
         }
 
         //Assert
+        Assert.True(cancelledBeforeTheStop || waitingWhenCancelled);
         Assert.True(stopped);
         Assert.True(stopping.IsCompletedSuccessfully);
         Assert.Equal(s_start.AddMinutes(1), _clock.GetUtcNow());
