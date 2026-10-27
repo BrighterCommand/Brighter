@@ -1308,7 +1308,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - leave the stop token's only registration completing the stop task.
 
-- [ ] **TEST + IMPLEMENT: T10.8 `StopAsync` before start, or after a failed start, returns at once and never throws (ADR 0085 risk :956)**
+- [x] **TEST + IMPLEMENT: T10.8 `StopAsync` before start, or after a failed start, returns at once and never throws (ADR 0085 risk :956)**
   - **USE COMMAND**: `/test-first StopAsync before StartAsync or after StartAsync threw returns at once without an exception`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_stopping_a_monitor_that_never_started_should_return_at_once.cs`
