@@ -28,10 +28,13 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
 using System.Linq;
+using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Metrics;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Outbox.Hosting;
 
 namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 
@@ -88,9 +91,14 @@ public sealed class StaleMessageMetricsFixture : IDisposable
         return _measurements.ToList();
     }
 
-    /// <summary>Stops the listener and disposes the container.</summary>
+    /// <summary>
+    /// Waits for each stale-message monitor in the container to stop, so its late "stopped" log cannot reach the next
+    /// test's log capture, then stops the listener and disposes the container.
+    /// </summary>
     public void Dispose()
     {
+        foreach (var monitor in _services.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>())
+            monitor.StopAsync(CancellationToken.None).Wait(TimeSpan.FromSeconds(5));
         _listener.Dispose();
         _services.Dispose();
     }
