@@ -1240,7 +1240,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
     - check the stop token immediately before the first `Task.Run` (row 5);
     - never link a count's source to the stop token.
 
-- [ ] **CHARACTERISE: T10.2 A stop returns as soon as cancelled counts end (AC-15 second clause)**
+- [x] **CHARACTERISE: T10.2 A stop returns as soon as cancelled counts end (AC-15 second clause)**
   - **USE COMMAND**: `/test-first a stop with a count that honours cancellation returns without fake time advancing`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_stopping_with_a_count_that_honours_cancellation_should_return_at_once.cs`
