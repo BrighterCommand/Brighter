@@ -44,7 +44,8 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 /// without <see cref="TaskCreationOptions.RunContinuationsAsynchronously"/>, unlike the other gating doubles of this
 /// project. It completes the task only once every task it has returned is awaited or complete, and with no
 /// <see cref="SynchronizationContext"/> current, so the rest of the count's task runs inline and has ended before
-/// <see cref="CallEnded"/> completes.
+/// <see cref="CallEnded"/> completes. It keeps each message added one at a time, returns it when asked by id, and
+/// records the ids added and marked as dispatched, so a test can post through it.
 /// </summary>
 public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
 {
@@ -57,6 +58,9 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         ?? throw new InvalidOperationException("Task no longer keeps its continuation in m_continuationObject.");
 
     private readonly ConcurrentQueue<StaleCountCall> _countCalls = new();
+    private readonly ConcurrentDictionary<Id, Message> _messages = new();
+    private readonly ConcurrentQueue<Id> _adds = new();
+    private readonly ConcurrentQueue<Id> _marks = new();
     private readonly ConcurrentQueue<Task> _returned = new();
     private readonly TimeProvider? _clock;
     private readonly TaskCompletionSource<bool> _ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -81,6 +85,12 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
 
     /// <summary>Each call of the overall count, sync or async, in the order the calls were made.</summary>
     public IReadOnlyCollection<StaleCountCall> CountCalls => _countCalls;
+
+    /// <summary>The id of each message added one at a time, sync or async, in the order the messages were added.</summary>
+    public IReadOnlyCollection<Id> Adds => _adds;
+
+    /// <summary>The id of each message marked as dispatched one at a time, sync or async, in the order of the marks.</summary>
+    public IReadOnlyCollection<Id> Marks => _marks;
 
     /// <summary>The number of calls of <see cref="OutstandingMessagesAsync"/> so far.</summary>
     public int OutstandingMessagesCalls => Volatile.Read(ref _outstandingMessagesCalls);
@@ -284,18 +294,26 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
             throw new InvalidOperationException("A task returned by a count is not awaited.");
     }
 
+    /// <summary>Keeps the message, so a get by its id returns it, and records its id in <see cref="Adds"/>.</summary>
     public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1,
         IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null)
-        => throw new NotImplementedException();
+    {
+        _messages[message.Id] = message;
+        _adds.Enqueue(message.Id);
+    }
 
     public void Add(IEnumerable<Message> messages, RequestContext? requestContext, int outBoxTimeout = -1,
         IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null)
         => throw new NotImplementedException();
 
+    /// <summary>Keeps the message and records its id, as the sync add does.</summary>
     public Task AddAsync(Message message, RequestContext requestContext, int outBoxTimeout = -1,
         IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null,
         CancellationToken cancellationToken = default)
-        => throw new NotImplementedException();
+    {
+        Add(message, requestContext, outBoxTimeout, transactionProvider);
+        return Task.CompletedTask;
+    }
 
     public Task AddAsync(IEnumerable<Message> messages, RequestContext? requestContext, int outBoxTimeout = -1,
         IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null,
@@ -322,26 +340,33 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         Dictionary<string, object>? args = null)
         => throw new NotImplementedException();
 
+    /// <summary>Returns the messages added with the given ids.</summary>
     public IEnumerable<Message> Get(IEnumerable<Id> messageIds, RequestContext requestContext,
         int outBoxTimeout = -1, Dictionary<string, object>? args = null)
-        => throw new NotImplementedException();
+        => messageIds.Select(id => _messages[id]).ToArray();
 
     public Task<Message> GetAsync(Id messageId, RequestContext requestContext, int outBoxTimeout = -1,
         Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         => throw new NotImplementedException();
 
+    /// <summary>Returns the messages added with the given ids, as the sync get does.</summary>
     public Task<IEnumerable<Message>> GetAsync(IEnumerable<Id> messageIds, RequestContext requestContext,
         int outBoxTimeout = -1, Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
-        => throw new NotImplementedException();
+        => Task.FromResult(Get(messageIds, requestContext, outBoxTimeout, args));
 
+    /// <summary>Records the id in <see cref="Marks"/>.</summary>
     public void MarkDispatched(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null,
         Dictionary<string, object>? args = null)
-        => throw new NotImplementedException();
+        => _marks.Enqueue(id);
 
+    /// <summary>Records the id in <see cref="Marks"/>, as the sync mark does.</summary>
     public Task MarkDispatchedAsync(Id id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null,
         Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException();
+    {
+        MarkDispatched(id, requestContext, dispatchedAt, args);
+        return Task.CompletedTask;
+    }
 
     public Task MarkDispatchedAsync(IEnumerable<Id> ids, RequestContext requestContext,
         DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null,
