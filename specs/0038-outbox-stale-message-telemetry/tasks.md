@@ -16,7 +16,7 @@
   - `STRUCTURAL`: use `/tidy-first`. No behaviour changes, and existing tests stay green.
   - `PROJECT`: work that is not a behaviour of the code: a GitHub issue, a suite run, a code review or a recording. Each produces the output the task names, in the place the task names. It does not use `/test-first`.
   - `DOC`: documentation. It does not use `/test-first`.
-  - Counts: 148 tasks. 51 `TEST + IMPLEMENT`, 62 `CHARACTERISE`, 7 `GENERATE`, 4 `STRUCTURAL`, 17 `PROJECT`, 7 `DOC`. `/spec:show-me` counts the `CHARACTERISE` and `GENERATE` tasks as untagged, because its tag pattern knows only the other four (`.claude/commands/spec/show_me_facts.cs:1443`). The tasks template (`.claude/commands/spec/tasks.md:133-143`) lists four tags. `CHARACTERISE` and `GENERATE` are the labels that `.agent_instructions/testing.md:67` and ADR 0071-tdd-review-gear :236-255 define for these shapes, so this file uses them.
+  - Counts: 150 tasks. 53 `TEST + IMPLEMENT`, 62 `CHARACTERISE`, 7 `GENERATE`, 4 `STRUCTURAL`, 17 `PROJECT`, 7 `DOC`. `/spec:show-me` counts the `CHARACTERISE` and `GENERATE` tasks as untagged, because its tag pattern knows only the other four (`.claude/commands/spec/show_me_facts.cs:1443`). The tasks template (`.claude/commands/spec/tasks.md:133-143`) lists four tags. `CHARACTERISE` and `GENERATE` are the labels that `.agent_instructions/testing.md:67` and ADR 0071-tdd-review-gear :236-255 define for these shapes, so this file uses them.
 - **Publishing.** Any text that goes to GitHub (an issue, a pull request in another repository, or this pull request's description) is produced first in the task's output. Posting it is a separate manual step after that text is reviewed, and the task then records the number or link. Nothing in this list posts to GitHub by itself.
 - **Order.** ADR 0085 steps 1 and 2 (Phase 1). Then ADR 0086 steps 1 and 2 (Phase 2), because step 6 of ADR 0085 needs the capability interface and step 8 needs `InMemoryOutbox` to implement it. Then ADR 0085 steps 3 to 14 (Phases 3 to 14). ADR 0086 step 3, the follow-up issues, is in Phase 14 with the documentation. Phase 15 is the final verification.
 - **Line numbers.** Lines are cited at HEAD 942cb8f56. The ADRs cite commit 1ce331eb2. Where a line has moved, the task gives the HEAD line and then the ADR's line in parentheses, as in `:713-720` (ADR: `:716-723`).
@@ -1347,6 +1347,28 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Output: a "Reviewed:" sub-bullet under this task, with the file and lines checked.
   - Reviewed: `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs` :180 and :460-464 (stop task and stop request), :189 and :299-315 (the wait for a due time), :223-230 (the check and the start of the calls), :248-253 (row 6d), :477-481 (a call's `Task.Run`), :540-550 (cancel at the stop), and :317-325 and :363-370 (the `#if` blocks). The row 5 check is `if (stopped.IsCompleted) return;` at :223. Between it and the first `Task.Run`, the loop only reads the start timestamp (:226) and builds the calls (:227-228, `Task.Run` at :480). The check reads the stop task, not the token. The token's only registration completes that task inside `Cancel` (:180, :463), so the two differ only while that callback runs, which is inside the window of ADR 0085 :295. When the stop lands after :223, the calls start, and the deadline wait at :230 waits on `Task.WhenAny(decided.Task, stopped)`, so it ends one asynchronous hop after the stop with no clock advance. Each `DecideAsync` then checks `stopped.IsCompleted` first (:249), records no outcome and hands the call to `AbandonedCalls` (:251). The loop's next wait at :189 returns false at once, and :208-212 log the stop, clear the readings and cancel the calls still in progress off the loop's thread, which is row 6d. A fake clock cannot place a stop between :223 and :228, so only reading checks this window. The `#if` blocks match ADR 0085 :714, :732-733, :863 and :874: on netstandard2.0, `Task.Yield` after `Task.WhenAny` (:320-321) and `Task.Run(cancellation.Cancel)` (:366); on net8.0 and later, `ConfigureAwaitOptions.ForceYielding` (:323) and `CancelAsync` (:368). They are the only `#if` blocks in the file. The tests run only on net9.0 and net10.0, so no test runs the netstandard2.0 branches.
 
+- [ ] **TEST + IMPLEMENT: T10.12 A call whose recorded end is at or after the deadline is abandoned without waiting for the deadline's timer (row 6c)**
+  - **USE COMMAND**: `/test-first a count that ends at or after the deadline before the deadline's timer is handled is abandoned, and a stop afterwards does not complete it`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
+  - Test file: `When_a_count_ends_at_the_deadline_before_its_timer_is_handled_should_abandon_it.cs`
+  - Test should verify:
+    - with a clock double whose timestamps can be moved ahead without moving `GetUtcNow` or firing a timer (derived from `TimerCountingTimeProvider`; `FakeTimeProvider.GetTimestamp` can be overridden), the 12:01 overall call blocks until released; the test moves the timestamps ahead by T and releases the call, so its recorded end is T after its start while the deadline's timer has not fired. This stands in for a deadline timer that has fired but whose continuation has not run yet;
+    - the overall count's Abandoned total reaches 1 within the wait of determinism rule 1, with no clock advance;
+    - after `StopAsync`, the Completed and Failed totals of the overall count are still 0.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - in `DecideAsync` (`src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs:255` at HEAD cf510d832), abandon a call that did not end before the deadline without awaiting the deadline task. Once the stop check at :249 has passed, the deadline task can be false only because a stop came after that check, and the code then records Completed, or Failed if the count threw, for a call that ended at or after the deadline.
+
+- [ ] **TEST + IMPLEMENT: T10.13 A stop whose log entry throws still clears the readings and cancels the calls (ADR 0085 :281)**
+  - **USE COMMAND**: `/test-first when logging the stop throws, the loop logs the exception at Error, still clears the readings and still cancels the calls in progress`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
+  - Test file: `When_logging_the_stop_throws_should_still_clear_the_readings_and_cancel_the_calls.cs`
+  - Test should verify:
+    - with `CapturingLoggerProvider.ThrowOnce` on the Information entry of the stop and the 12:01 overall call blocked until cancelled, `StopAsync`, called at 12:01:05, returns, the call's token is cancelled (determinism rule 2), an export after the stop carries no gauge value, and one Error entry carries the logger's exception.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - run the stop's steps (:208-212 at HEAD cf510d832) even when an earlier one throws, and log the exception at Error, as ADR 0085 :281 says the loop does for its own code. Today the stop's steps are outside the loop's `try`, so an exception from `Log.Stopped` faults the loop, which skips `_readings.Stop()` and the cancel, and nothing observes the fault.
+
 ## Phase 11: Isolation from the sweeper and the posting path (ADR 0085 step 11)
 
 *Depends on Phase 10.*
@@ -1865,12 +1887,12 @@ No production change is expected in this phase. The named mutation is how RED is
 | FR-6 | T3.1, T3.2, T3.6 to T3.8, T3.10, T8.13, T9.6, T9.10 to T9.14 |
 | FR-7 | T8.1, T8.4, T8.8, T8.25 |
 | FR-8 | T9.6, T9.13, T9.21 |
-| FR-9 | T9.1 to T9.9, T9.13, T9.19 |
+| FR-9 | T9.1 to T9.9, T9.13, T9.19, T10.12 |
 | FR-10 | T9.10 to T9.18 |
 | FR-11 | T8.2 (no sweeper), T11.1 |
 | FR-12 | T2.4, T8.5 to T8.7, T8.14 |
 | FR-12.1 | T3.2, T6.8 to T6.10, T8.13 |
-| FR-13 | T10.1 to T10.10 |
+| FR-13 | T10.1 to T10.10, T10.13 |
 | FR-14 | T2.2 to T2.11 (column (d), `InMemoryOutbox`), T13.1 to T13.14 |
 | FR-14.1 | T13.15, T13.17, T14.1 to T14.4, T14.9, T15.5 |
 | FR-15 | T3.5, T8.16, T8.18, T8.20 |
@@ -1976,7 +1998,7 @@ No production change is expected in this phase. The named mutation is how RED is
 | 8 AC-3 last clause | T8.23 |
 | 8 (heading) AC-4, AC-5, AC-6, AC-8, AC-19 | T8.2, T8.3, T8.1, T8.4, T8.8, T8.20 |
 | 9 one start timestamp, deadline = start + T | T9.1 |
-| 9 WhenAny with 6d first, then 6a to 6c; abandon at deadline | T9.1, T10.1 |
+| 9 WhenAny with 6d first, then 6a to 6c; abandon at deadline | T9.1, T10.1, T10.12 |
 | 9 test: released just after the deadline is abandoned | T9.4 |
 | 9 test: blocking logger, completed before the deadline | T9.5 |
 | 9 invalid per-topic result | T9.15 (and T9.16 for the overall count) |
@@ -1987,7 +2009,7 @@ No production change is expected in this phase. The named mutation is how RED is
 | 9 [LoggerMessage] entries naming the count, written at once | T9.1, T9.5, T9.10, T9.14 |
 | 9 catch loop exceptions at Error; throwing-logger test | T9.18 |
 | 9 blocking cancellation callback test | T9.19 |
-| 10 StopAsync, Dispose, stop handling, TimeProvider and host token | T10.1, T10.8, T10.9, T10.10 |
+| 10 StopAsync, Dispose, stop handling, TimeProvider and host token | T10.1, T10.8, T10.9, T10.10, T10.13 |
 | 10 row 5 check | T10.1, T10.11 |
 | 10 both in progress: cancel both, no outcome, no failure log, clear gauges | T10.3, T10.4 |
 | 10 stop while waiting with an abandoned call | T10.6 |
