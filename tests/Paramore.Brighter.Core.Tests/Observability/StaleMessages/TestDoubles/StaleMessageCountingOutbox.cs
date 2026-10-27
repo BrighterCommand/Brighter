@@ -77,6 +77,7 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     private volatile bool _blockSyncCount;
     private int _blockedSyncMaxCount;
     private int _outstandingMessagesCalls;
+    private int _syncCountReturns;
     private ITimer? _releaseTimer;
 
     /// <summary>Creates the double.</summary>
@@ -97,6 +98,12 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
 
     /// <summary>The number of calls of <see cref="OutstandingMessagesAsync"/> so far.</summary>
     public int OutstandingMessagesCalls => Volatile.Read(ref _outstandingMessagesCalls);
+
+    /// <summary>
+    /// The number of calls of the sync count that have returned so far. Each returns the number of messages added one
+    /// at a time so far, and is counted just before it returns.
+    /// </summary>
+    public int SyncCountReturns => Volatile.Read(ref _syncCountReturns);
 
     /// <summary>Completes once a call blocked until its token is cancelled, or until released, has ended.</summary>
     public Task CallEnded => _ended.Task;
@@ -215,7 +222,9 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         _countCalls.Enqueue(new StaleCountCall(dispatchedSince, requestContext, maxCount, args, CancellationToken.None, Synchronous: true, _clock?.GetUtcNow()));
         if (_blockSyncCount && maxCount == _blockedSyncMaxCount)
             _syncCountReleased.Wait(s_threadBlockCeiling);
-        return 0;
+        var count = _adds.Count;
+        Interlocked.Increment(ref _syncCountReturns);
+        return count;
     }
 
     public Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext,

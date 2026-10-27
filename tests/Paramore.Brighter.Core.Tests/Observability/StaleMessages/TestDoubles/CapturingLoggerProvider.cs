@@ -73,6 +73,10 @@ public sealed class CapturingLoggerProvider : ILoggerProvider
         _capturedCategories[s_monitorCategory] = 0;
     }
 
+    /// <summary>Captures the entries of <paramref name="category"/> as well, until the next <see cref="Reset"/>.</summary>
+    /// <param name="category">The category of the loggers whose entries to capture.</param>
+    public void Capture(string category) => _capturedCategories[category] = 0;
+
     /// <summary>Clears the entries and keeps the captured categories.</summary>
     public void ClearEntries()
     {
