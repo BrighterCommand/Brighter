@@ -1352,9 +1352,9 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_count_ends_at_the_deadline_before_its_timer_is_handled_should_abandon_it.cs`
   - Test should verify:
-    - with a clock double whose timestamps can be moved ahead without moving `GetUtcNow` or firing a timer (derived from `TimerCountingTimeProvider`; `FakeTimeProvider.GetTimestamp` can be overridden), the 12:01 overall call blocks until released; the test moves the timestamps ahead by T and releases the call, so its recorded end is T after its start while the deadline's timer has not fired. This stands in for a deadline timer that has fired but whose continuation has not run yet;
+    - with `TimestampShiftingTimeProvider`, a new double in `StaleMessages/TestDoubles/` derived from the `TimerCountingTimeProvider` in that folder (not the one in `Sweeping/TestDoubles/`) and overriding `FakeTimeProvider.GetTimestamp`, the 12:01 overall call blocks until released; the test moves the timestamps ahead by T and releases the call, so its recorded end is T after its start while the deadline's timer has not fired. The move changes only what `GetTimestamp` returns: `GetUtcNow` stays at 12:01 and no timer fires. This stands in for a deadline timer that has fired but whose continuation has not run yet;
     - the overall count's Abandoned total reaches 1 within the wait of determinism rule 1, with no clock advance;
-    - after `StopAsync`, the Completed and Failed totals of the overall count are still 0.
+    - after `StopAsync`, called once the Abandoned total has reached 1, the Completed and Failed totals of the overall count are still 0.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - in `DecideAsync` (`src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs:255` at HEAD cf510d832), abandon a call that did not end before the deadline without awaiting the deadline task. Once the stop check at :249 has passed, the deadline task can be false only because a stop came after that check, and the code then records Completed, or Failed if the count threw, for a call that ended at or after the deadline.
@@ -1364,14 +1364,19 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_logging_the_stop_throws_should_still_clear_the_readings_and_cancel_the_calls.cs`
   - Test should verify:
-    - with `CapturingLoggerProvider.ThrowOnce` on the Information entry of the stop and the 12:01 overall call blocked until cancelled, `StopAsync`, called at 12:01:05, returns, the call's token is cancelled (determinism rule 2), an export after the stop carries no gauge value, and one Error entry carries the logger's exception.
+    - after a completed 12:01 due time, an export before the stop carries a value for the overall gauge;
+    - with `CapturingLoggerProvider.ThrowOnce` on the Information entry of the stop and the 12:02 overall call blocked until cancelled, `StopAsync`, called at 12:02:05, returns, the call's token is cancelled (determinism rule 2), an export after the stop carries no gauge value, and one Error entry, with the `StopFailed` message, carries the logger's exception.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - run the stop's steps (:208-212 at HEAD cf510d832) even when an earlier one throws, and log the exception at Error, as ADR 0085 :281 says the loop does for its own code. Today the stop's steps are outside the loop's `try`, so an exception from `Log.Stopped` faults the loop, which skips `_readings.Stop()` and the cancel, and nothing observes the fault.
+    - log it with a new `StopFailed` entry at Error, "Outbox stale-message monitor failed to handle the stop for {OutboxType}", not with `DueTimeFailed`, whose message is about a due time.
+    - send a throw from `_readings.Stop()` or `abandoned.CancelInProgress()` down the same path. The test throws only from `Log.Stopped`, because no test double can make the other two throw: `OutboxStaleMessageReadings` is sealed (`src/Paramore.Brighter/Observability/OutboxStaleMessageReadings.cs:39` at HEAD cf510d832), and `CancelInProgress` cancels each call off the loop's thread (`TimedOutboxStaleMessageMonitor.cs:546` at HEAD cf510d832).
 
 ## Phase 11: Isolation from the sweeper and the posting path (ADR 0085 step 11)
 
 *Depends on Phase 10.*
+
+T10.12 and T10.13 were added to Phase 10 after this phase was done. Each of them runs the full suite, which includes this phase's tests, and Phase 12 waits for both.
 
 No production change is expected in this phase. The named mutation is how RED is observed.
 
