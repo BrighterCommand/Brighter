@@ -1263,7 +1263,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - cancel every in-progress source at the stop.
 
-- [ ] **CHARACTERISE: T10.4 A stop records no outcome for in-progress calls and clears both gauges**
+- [x] **CHARACTERISE: T10.4 A stop records no outcome for in-progress calls and clears both gauges**
   - **USE COMMAND**: `/test-first a stop while both counts are in progress records no outcome, logs no failure, clears both gauges and keeps the totals`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_stopping_during_both_counts_should_record_no_outcome_and_clear_the_gauges.cs`
