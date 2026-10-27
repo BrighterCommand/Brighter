@@ -1224,7 +1224,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
 
 *Depends on Phase 9.*
 
-- [ ] **TEST + IMPLEMENT: T10.1 A stop cancels the in-progress token at once and returns within T (AC-15 first clause)**
+- [x] **TEST + IMPLEMENT: T10.1 A stop cancels the in-progress token at once and returns within T (AC-15 first clause)**
   - **USE COMMAND**: `/test-first a stop at 12:01:05 with a count that ignores cancellation cancels its token at 12:01:05, returns by 12:01:15, starts no later call and logs no failure`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_stopping_with_a_count_in_progress_should_cancel_it_and_return_within_the_timeout.cs`
