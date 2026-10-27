@@ -25,8 +25,10 @@ THE SOFTWARE. */
 
 
 using System.Collections.Concurrent;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -41,16 +43,27 @@ namespace Paramore.Brighter.CircuitBreaker;
 /// <param name="options"></param>
 /// <param name="tracer">Optional tracer used to export a span for each trip/re-trip/reset transition</param>
 /// <param name="instrumentationOptions">How verbose should the exported spans be</param>
+/// <param name="timeProvider">The clock used to timestamp trips; defaults to <see cref="TimeProvider.System"/></param>
 public partial class InMemoryOutboxCircuitBreaker(
     OutboxCircuitBreakerOptions? options = null,
     IAmABrighterTracer? tracer = null,
-    InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IAmAnOutboxCircuitBreaker
+    InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+    TimeProvider? timeProvider = null) : IAmAnOutboxCircuitBreaker
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryOutboxCircuitBreaker>();
 
     private readonly OutboxCircuitBreakerOptions _outboxCircuitBreakerOptions = options ?? new OutboxCircuitBreakerOptions();
 
-    private readonly ConcurrentDictionary<RoutingKey, int> _trippedTopics = new();
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
+    private readonly ConcurrentDictionary<RoutingKey, TripEntry> _trippedTopics = new();
+
+    private sealed record TripEntry(int Count, long Timestamp)
+    {
+        public bool Equals(TripEntry? other) => ReferenceEquals(this, other);
+
+        public override int GetHashCode() => RuntimeHelpers.GetHashCode(this);
+    }
 
     /// <summary>
     /// A collection of tripped topics.
@@ -67,26 +80,31 @@ public partial class InMemoryOutboxCircuitBreaker(
     {
         foreach (var trippedTopicsKey in _trippedTopics.Keys)
         {
-            // Atomic decrement: AddOrUpdate's compare-and-swap retries against any concurrent TripTopic
-            // reset, so a freshly tripped topic is never clobbered by a stale read-modify-write. The
-            // returned post-decrement value drives the eviction decision — re-reading the indexer here
-            // (as the previous code did) would throw KeyNotFoundException if another CoolDown had already
-            // removed the key.
-            var cooled = _trippedTopics.AddOrUpdate(trippedTopicsKey, -1, (_, count) => count - 1);
-
-            TryEvictAndAnnounceReset(trippedTopicsKey, cooled);
+            if (TryDecrement(trippedTopicsKey, out var cooled))
+                TryEvictAndAnnounceReset(trippedTopicsKey, cooled);
         }
     }
 
-    private void TryEvictAndAnnounceReset(RoutingKey topic, int cooledValue)
+    private bool TryDecrement(RoutingKey topic, out TripEntry cooled)
     {
-        if (cooledValue >= 0)
+        while (_trippedTopics.TryGetValue(topic, out var observed))
+        {
+            cooled = observed with { Count = observed.Count - 1 };
+            if (_trippedTopics.TryUpdate(topic, cooled, observed))
+                return true;
+        }
+
+        cooled = null!;
+        return false;
+    }
+
+    private void TryEvictAndAnnounceReset(RoutingKey topic, TripEntry cooled)
+    {
+        if (cooled.Count >= 0)
             return;
 
-        // Conditional remove: only evict while the value is still the cooled value we computed. An
-        // interleaved TripTopic re-trip changes it, and the remove then leaves the fresh trip in place.
-        var removed = ((ICollection<KeyValuePair<RoutingKey, int>>)_trippedTopics)
-            .Remove(new KeyValuePair<RoutingKey, int>(topic, cooledValue));
+        var removed = ((ICollection<KeyValuePair<RoutingKey, TripEntry>>)_trippedTopics)
+            .Remove(new KeyValuePair<RoutingKey, TripEntry>(topic, cooled));
 
         if (!removed)
             return;
@@ -106,12 +124,14 @@ public partial class InMemoryOutboxCircuitBreaker(
         var cooldownCount = _outboxCircuitBreakerOptions.CooldownCount;
         var isReTrip = false;
 
+        var entry = new TripEntry(cooldownCount, _timeProvider.GetTimestamp());
+
         _trippedTopics.AddOrUpdate(topic,
-            addValueFactory: _ => cooldownCount,
+            addValueFactory: _ => entry,
             updateValueFactory: (_, _) =>
             {
                 isReTrip = true;
-                return cooldownCount;
+                return entry;
             });
 
         var operation = isReTrip ? CircuitBreakerSpanOperation.ReTrip : CircuitBreakerSpanOperation.Trip;
