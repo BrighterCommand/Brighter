@@ -1353,7 +1353,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
 
 No production change is expected in this phase. The named mutation is how RED is observed.
 
-- [ ] **CHARACTERISE: T11.1 Measurement runs on schedule beside a hung sweep and takes no sweeper lock (AC-13)**
+- [x] **CHARACTERISE: T11.1 Measurement runs on schedule beside a hung sweep and takes no sweeper lock (AC-13)**
   - **USE COMMAND**: `/test-first with UseOutboxSweeper and a sweep blocked forever five measurements start on their due times and the lock double records the same calls as with the feature disabled`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_a_sweep_hangs_should_measure_on_schedule.cs`
