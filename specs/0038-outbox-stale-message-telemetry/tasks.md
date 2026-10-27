@@ -1390,7 +1390,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - Implementation should (only if the test is RED on arrival): none is expected, so stop and ask.
 
-- [ ] **CHARACTERISE: T11.4 A blocked outstanding-message check does not delay a measurement (AC-20, check blocked)**
+- [x] **CHARACTERISE: T11.4 A blocked outstanding-message check does not delay a measurement (AC-20, check blocked)**
   - **USE COMMAND**: `/test-first with MaxOutStandingMessages of 10 and the check's sync count blocked the next stale measurement of each count starts at its due time`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_outstanding_check_is_blocked_should_measure_on_schedule.cs`
