@@ -74,8 +74,8 @@ public class MySqlOutboxBuilderDriftTests
     public void When_mysql_outbox_v1_upscript_is_inspected_it_should_carry_pre_dispatched_historical_baseline(
         bool hasBinaryMessagePayload)
     {
-        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
-        //695522367, March 2019 — pre-Dispatched). The Dispatched column was introduced in V2
+        //V1.UpScript is the literal historical DDL (Spec 0027 R1, commit
+        //3c30343fa^, the shape before Dispatched). The Dispatched column was introduced in V2
         //(3c30343fa, July 2019). This tripwire prevents a future "helpful" refactor from
         //quietly rewriting V1.UpScript back to live-builder shape: chain replay against a
         //legacy installation that bootstrapped at V1 must see the same starting DDL it always
@@ -164,24 +164,21 @@ public class MySqlInboxBuilderDriftTests
     }
 
     [Fact]
-    public void When_mysql_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey()
+    public void When_mysql_inbox_v1_upscript_is_inspected_it_should_carry_the_pre_contextkey_historical_baseline()
     {
-        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
-        //b7f96957b, March 2019). The MySQL inbox is one of the five "born past V1" backends:
-        //it shipped with ContextKey from the first commit, so V1.UpScript already contains it
-        //and V2's information_schema-prepared-statement guard skips the ALTER on chain replay.
-        //This tripwire prevents a future "helpful" rewrite from dropping ContextKey out of V1.
-        //See spec 0027 README archaeology and ADR 0057 §3.
+        //Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
             inboxTableName: tableName);
 
+        //Act
         var migrations = new MySqlInboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
+        //Assert
         Assert.Equal(1, v1.Version.Value);
-        Assert.Contains("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
     }
 

@@ -25,20 +25,7 @@ using Npgsql;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.Legacy;
 
-/// <summary>
-/// Seeds a PostgreSQL inbox table at the V1 logical version using hand-rolled DDL per
-/// ADR 0057 §1 archaeology. Used by concurrent-bootstrap and AC-6 tests so the runner
-/// exercises a real legacy schema rather than a migration UpScript round-trip.
-/// </summary>
-/// <remarks>
-/// Postgres inbox is V1-only by design — the table was born with <c>ContextKey</c> and a
-/// composite primary key in PR #1401 (Feb 2021), and no pre-ContextKey shape ever shipped
-/// (ADR 0057 "Alternatives → E"). The hand-rolled V1 shape therefore matches the live
-/// <c>PostgreSqlInboxBuilder</c> DDL (text payload variant) — which means the V1 seeded
-/// shape and the live builder shape are byte-equivalent. Column names use lowercase per
-/// ADR §1 to align with Postgres unquoted-identifier folding and with
-/// <c>information_schema.columns</c>.
-/// </remarks>
+// Hand-rolled V1 DDL (ADR 0057 §1). The Postgres inbox shipped with ContextKey and a composite key (79100f509), so V1 matches the live builder.
 internal static class PostgreSqlInboxLegacySeeder
 {
     private const string V1Ddl = """
@@ -53,11 +40,6 @@ internal static class PostgreSqlInboxLegacySeeder
         );
         """;
 
-    /// <summary>
-    /// Creates an inbox table with the V1 column set (matching the live builder shape).
-    /// The history table is NOT seeded — the test under verification expects the runner
-    /// to stamp it.
-    /// </summary>
     public static void SeedAtV1(string connectionString, string tableName)
     {
         using var connection = new NpgsqlConnection(connectionString);

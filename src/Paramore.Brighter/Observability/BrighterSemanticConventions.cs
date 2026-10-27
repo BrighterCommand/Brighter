@@ -31,11 +31,7 @@ public static class BrighterSemanticConventions
 {
     public const string ArchiveAge = "paramore.brighter.archive_age_in_milliseconds";
     public const string ArchiveMessages = "paramore.brighter.archive_messages";
-    // BoxProvisioning migration span / event conventions. The span wraps a full
-    // <c>IAmABoxMigrationRunner.MigrateAsync</c> call; <c>BoxMigrationPath</c> records
-    // which of fresh/bootstrap/normal was taken after the under-lock re-detection; the
-    // event names are emitted as child <see cref="System.Diagnostics.ActivityEvent"/>s
-    // on the migration span so an operator can trace the path without correlating logs.
+    // Box migration span: the path tag and child events record which of fresh/bootstrap/normal was taken.
     public const string BoxMigration = "paramore.brighter.box_migration";
     public const string BoxMigrationPath = "paramore.brighter.box_migration.path";
     public const string BoxMigrationFromVersion = "paramore.brighter.box_migration.from_version";
@@ -108,8 +104,16 @@ public static class BrighterSemanticConventions
     public const string OutboxSharedTransaction = "paramore.brighter.outbox.shared_transaction";
     public const string OutboxSweeperOutcome = "paramore.brighter.outbox_sweeper.outcome";
     public const string OutboxSweeperSweepDuration = "paramore.brighter.outbox_sweeper.sweep.duration";
+    /// <summary>
+    /// Gauge: how long the sweep now in progress has been running, or 0 when none is.
+    /// </summary>
+    public const string OutboxSweeperSweepRunningTime = "paramore.brighter.outbox_sweeper.sweep.running_time";
     public const string OutboxSweeperSweeps = "paramore.brighter.outbox_sweeper.sweeps";
     public const string OutboxSweeperTickLag = "paramore.brighter.outbox_sweeper.tick.lag";
+    /// <summary>
+    /// Gauge: the number of topics whose outbox circuit breaker is tripped while a sweep is active.
+    /// </summary>
+    public const string OutboxSweeperTrippedTopics = "paramore.brighter.outbox_sweeper.tripped_topics";
     public const string PublishConfirmationQueueDepth = "paramore.brighter.publish_confirmation.queue.depth";
     public const string OutboxType = "paramore.brighter.outbox.type";
     public const string ReplyTo = "paramore.brighter.replyto";

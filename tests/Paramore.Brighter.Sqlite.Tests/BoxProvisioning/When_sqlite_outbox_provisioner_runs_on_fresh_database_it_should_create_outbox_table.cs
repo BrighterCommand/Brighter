@@ -39,14 +39,12 @@ public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
 
-        // Verify table exists
         using var tableCheck = connection.CreateCommand();
         tableCheck.CommandText = "SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name=@TableName";
         tableCheck.Parameters.AddWithValue("@TableName", _tableName);
         var tableCount = Convert.ToInt64(await tableCheck.ExecuteScalarAsync());
         Assert.Equal(1, tableCount);
 
-        // Verify migration history
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM [__BrighterMigrationHistory]

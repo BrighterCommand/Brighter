@@ -7,7 +7,6 @@ using Greetings.Ports.Commands;
 using Greetings.Ports.Events;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
@@ -85,7 +84,7 @@ builder.Logging.SetMinimumLevel(LogLevel.Information).AddConsole();
 
 builder.Services.AddRouting();
 builder.Services.AddHealthChecks()
-    .AddCheck<BrighterServiceActivatorHealthCheck>("Brighter", HealthStatus.Unhealthy);
+    .AddBrighterConsumerHealthChecks();
 
 var app = builder.Build();
 

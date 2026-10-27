@@ -9,8 +9,7 @@ public class DdlColumnExtractorTests
     [Fact]
     public void When_mssql_ddl_with_constraint_is_parsed_should_return_six_logical_columns()
     {
-        //Arrange — six bracketed columns plus a CONSTRAINT line that must be filtered out.
-        //Schema-qualified table name ([dbo].[outbox_test]) must not contribute a spurious column.
+        //Arrange
         const string ddl = @"
 CREATE TABLE [dbo].[outbox_test] (
     [MessageId] NVARCHAR(255) NOT NULL,
@@ -39,9 +38,7 @@ CREATE TABLE [dbo].[outbox_test] (
     [Fact]
     public void When_postgres_ddl_with_unquoted_identifiers_is_parsed_should_return_six_logical_columns()
     {
-        //Arrange — Postgres convention is unquoted PascalCase identifiers; the engine folds them
-        //to lowercase but the DDL source text preserves the original case. The extractor reads
-        //the leading identifier on each column-declaration line regardless of quoting.
+        //Arrange
         const string ddl = @"
 CREATE TABLE outbox_test (
     MessageId character varying(255) UNIQUE NOT NULL,
@@ -70,8 +67,7 @@ CREATE TABLE outbox_test (
     [Fact]
     public void When_mysql_ddl_with_table_level_primary_key_is_parsed_should_ignore_pk_line()
     {
-        //Arrange — MySQL backticked identifiers; the trailing PRIMARY KEY (`col`) is a
-        //table-level constraint that must not contribute a column name.
+        //Arrange
         const string ddl = @"
 CREATE TABLE `outbox_test` (
     `MessageId` VARCHAR(255) NOT NULL,
@@ -100,9 +96,7 @@ CREATE TABLE `outbox_test` (
     [Fact]
     public void When_sqlite_ddl_with_collate_nocase_is_parsed_should_strip_collate_clause()
     {
-        //Arrange — SQLite frequently emits `COLLATE NOCASE` after the type specifier; the
-        //extractor must read only the leading identifier and discard the trailing modifiers
-        //(no truncation, no "MessageId COLLATE NOCASE" combinations).
+        //Arrange
         const string ddl = @"
 CREATE TABLE [outbox_test] (
     [MessageId] TEXT NOT NULL COLLATE NOCASE,

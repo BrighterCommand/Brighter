@@ -83,11 +83,11 @@ would widen the gear at the exact moment it stopped being understood.
 |--------|-----------|
 | `/spec:implement` | Resolves the gear per task and runs gated or ungated accordingly. |
 | `/spec:ralph-implement` | Always `review-after`; re-reads the gear before **each** task, so a downshift stops the loop. |
-| `/test-first` standalone | **Always gated.** It does not read this file. |
+| `/tdd:test-first` standalone | **Always gated.** It does not read this file. |
 | `/bugfix:test` | **Always gated.** Bugfixes have their own Confirm gate; they are outside this mechanism. |
 
-A standalone `/test-first` must not inherit a mode it did not ask for from whichever spec happens to
-be current. The spec commands resolve the gear and pass the result *into* the `/test-first` workflow
+A standalone `/tdd:test-first` must not inherit a mode it did not ask for from whichever spec happens to
+be current. The spec commands resolve the gear and pass the result *into* the `/tdd:test-first` workflow
 explicitly — the caller opts in; the shared skill stays safe by default.
 
 ## Your Task

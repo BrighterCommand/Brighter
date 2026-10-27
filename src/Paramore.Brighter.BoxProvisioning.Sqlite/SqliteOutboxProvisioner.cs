@@ -30,7 +30,7 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// by the <see cref="SqlBoxProvisioner{TConnection,TTransaction}"/> base; this class supplies
 /// only the abstract hooks for the SQLite connection factory and the outbox payload column name,
 /// plus a permanent override of <c>EffectiveSchemaName</c> returning <c>null</c> (SQLite has no
-/// schema concept per ADR 0057 §6).
+/// schema concept).
 /// </summary>
 public class SqliteOutboxProvisioner : SqlBoxProvisioner<SqliteConnection, SqliteTransaction>
 {
@@ -52,7 +52,7 @@ public class SqliteOutboxProvisioner : SqlBoxProvisioner<SqliteConnection, Sqlit
     protected override string PayloadColumnName => "Body";
 
     /// <summary>
-    /// SQLite has no schema concept (per ADR 0057 §6), so the detection helper and payload
+    /// SQLite has no schema concept, so the detection helper and payload
     /// validator receive <c>null</c>.
     /// </summary>
     protected override string? EffectiveSchemaName => null;

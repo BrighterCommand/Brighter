@@ -17,5 +17,6 @@ public partial class TestBrighterExtension
         public string QueueStoreTable => throw new NotImplementedException();
 
         public string? SchemaName => null;
+        public TimeSpan? OutstandingCountTimeout => null;
     }
 }

@@ -38,17 +38,9 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// The runner starts its migration activity *before* opening a connection, creating
-/// the unit-of-work, or calling <c>BeginAsync</c> — and the existing pre-W2 code did
-/// those three calls outside the instrumentation try/catch. A connection-refused, a
-/// UoW factory throw, or a lock-timeout from <c>BeginAsync</c> (per ADR 0058 §B.3)
-/// therefore escaped with <see cref="ActivityStatusCode.Unset"/> and no recorded
-/// exception event. Operators tracing a "migration never ran" story saw an OK-ish
-/// span and had to fall back to scattered logs.
-/// <para/>
-/// These tests pin the contract that bootstrap failures land on the migration span:
-/// status = Error AND the thrown exception is attached as an event. One [Fact] per
-/// bootstrap call site so the regression points are individually addressable.
+/// The runner starts its migration activity before opening the connection, creating the unit of work
+/// and calling <c>BeginAsync</c> (ADR 0058 §B.3). A failure in any of the three must set the span status
+/// to Error and record the exception, rather than leave an Unset span. One test per call site.
 /// </summary>
 [Collection("BoxProvisioningObservability")]
 public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposable
@@ -75,12 +67,11 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
     [Fact]
     public async Task When_open_connection_async_throws_it_should_record_error_status_and_exception_on_activity()
     {
-        //Arrange — OpenConnectionAsync is the first bootstrap call after StartMigrationActivity.
-        //A connection-refused or DNS failure must not produce an Unset/OK span.
+        //Arrange
         var thrown = new InvalidOperationException("connection refused (test)");
         var runner = new ThrowingBootstrapRunner(_tracer, openConnectionThrow: thrown);
 
-        //Act — runner.MigrateAsync should rethrow the bootstrap exception …
+        //Act
         var caught = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             runner.MigrateAsync(
                 tableName: "Orders",
@@ -91,7 +82,7 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
 
         _tracerProvider.ForceFlush();
 
-        //Assert — exactly one span exported, status = Error, exception recorded as an event.
+        //Assert
         var span = Assert.Single(_exportedActivities);
         Assert.Equal(ActivityStatusCode.Error, span.Status);
         Assert.Contains(span.Events, e => e.Name == "exception");
@@ -100,8 +91,7 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
     [Fact]
     public async Task When_create_unit_of_work_async_throws_it_should_record_error_status_and_exception_on_activity()
     {
-        //Arrange — CreateUnitOfWorkAsync runs after OpenConnectionAsync. A factory failure
-        //(eg. provider mismatch, transient pool exhaustion) must surface on the span.
+        //Arrange
         var thrown = new InvalidOperationException("UoW factory failed (test)");
         var runner = new ThrowingBootstrapRunner(_tracer, createUnitOfWorkThrow: thrown);
 
@@ -125,8 +115,7 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
     [Fact]
     public async Task When_begin_async_throws_it_should_record_error_status_and_exception_on_activity()
     {
-        //Arrange — BeginAsync is documented in ADR 0058 §B.3 as the lock-acquisition step:
-        //a lock-timeout MUST be observable on the span, not just in logs.
+        //Arrange
         var thrown = new TimeoutException("advisory lock timeout (test)");
         var runner = new ThrowingBootstrapRunner(_tracer, beginAsyncThrow: thrown);
 

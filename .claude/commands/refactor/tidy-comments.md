@@ -109,7 +109,7 @@ and wrote it down instead of fixing it:
 
 Name the refactoring from Fowler's catalogue, as `/refactor:smells` does. If the refactoring would
 change behaviour (a new guard that throws, a changed type a caller depends on) or change a `public` or
-`protected` signature, say so: it belongs in `/test-first` or needs a decision, not a tidy.
+`protected` signature, say so: it belongs in `/tdd:test-first` or needs a decision, not a tidy.
 
 ## Phase 3: Present the Plan
 
@@ -160,8 +160,8 @@ Report each side-stepped refactoring in the `/refactor:smells` format — locati
 comment and the code it excuses), the Fowler refactoring, kind (`structural`, `behaviour change`, or
 `public API change`) and size. Then offer, with `AskUserQuestion`:
 
-1. **Run with `/tidy-first`** — for structural ones. Give the exact command. Do not run it yourself.
-2. **Run with `/test-first`** — for behaviour changes.
+1. **Run with `/refactor:tidy-first`** — for structural ones. Give the exact command. Do not run it yourself.
+2. **Run with `/tdd:test-first`** — for behaviour changes.
 3. **Add to the spec's `tasks.md`** — when a spec is active. Follow `/refactor:smells` Phase 4 for
    the task format; show the text before editing; do not commit.
 4. **File a GitHub issue** — show the text before creating it.
@@ -203,5 +203,5 @@ Update it at the end of each run. Show the user the section before writing it, t
 
 - [documentation.md § Comments in Code](../../../.agent_instructions/documentation.md#comments-in-code) — the rules
 - [`/refactor:smells`](smells.md) — the broader smell review; its **Comments** smell is this command's subject
-- [`/tidy-first`](tidy-first.md) — carries out the side-stepped refactorings this command schedules
-- [`/test-first`](../tdd/test-first.md) — for any that need a behaviour change
+- [`/refactor:tidy-first`](tidy-first.md) — carries out the side-stepped refactorings this command schedules
+- [`/tdd:test-first`](../tdd/test-first.md) — for any that need a behaviour change

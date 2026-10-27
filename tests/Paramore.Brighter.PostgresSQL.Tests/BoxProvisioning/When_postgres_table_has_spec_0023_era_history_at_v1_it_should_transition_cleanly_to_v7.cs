@@ -31,6 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// An outbox already at the latest shape, whose history stops at a V1 row written by an earlier release, is brought up by the
+/// normal path: the ADD COLUMN IF NOT EXISTS steps are no-ops, the V1 row keeps its description, and each later version gets
+/// an applied row.
+/// </summary>
 public class PostgreSqlSpec0023EraHistoryTransitionTests : IAsyncLifetime
 {
     private const string Spec0023EraDescription = "spec 0023 fresh install";
@@ -41,7 +46,7 @@ public class PostgreSqlSpec0023EraHistoryTransitionTests : IAsyncLifetime
     [Fact]
     public async Task When_postgres_table_has_spec_0023_era_history_at_v1_it_should_transition_cleanly_to_v7()
     {
-        //Arrange — V7-shaped outbox via the live builder DDL + spec-0023-era history at V1.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         await ExecuteDdl(PostgreSqlOutboxBuilder.GetDDL(_tableName, binaryMessagePayload: false));
         await EnsureHistoryTable();
@@ -60,10 +65,9 @@ public class PostgreSqlSpec0023EraHistoryTransitionTests : IAsyncLifetime
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — table shape unchanged (idempotent ADD COLUMN IF NOT EXISTS were no-ops).
+        //Assert
         Assert.Equal(columnsBefore, await GetTableColumns());
 
-        //Assert — V1 row preserved with original spec-0023-era description; V2..V7 inserted normally.
         var rowsByVersion = await GetHistoryRowsByVersion();
         Assert.Equal(ExpectedMigrationVersions.OutboxLatest, rowsByVersion.Count);
         Assert.Equal(Spec0023EraDescription, rowsByVersion[1]);

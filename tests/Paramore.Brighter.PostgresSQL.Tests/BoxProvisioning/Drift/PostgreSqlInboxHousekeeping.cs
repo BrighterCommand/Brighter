@@ -26,13 +26,8 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.Drift;
 
-/// <summary>
-/// Backend-specific housekeeping columns for the PostgreSQL inbox. The composite primary key
-/// uses <c>(CommandId, ContextKey)</c> — both are part of V1 logical columns per ADR §1, so
-/// no extra housekeeping columns exist beyond the V1 logical column set.
-/// </summary>
+// No housekeeping columns: the composite key (CommandId, ContextKey) is made of V1 logical columns (ADR 0057 §1).
 internal static class PostgreSqlInboxHousekeeping
 {
-    /// <summary>Empty: PostgreSQL inbox has no housekeeping columns outside V1's logical set.</summary>
     public static readonly ISet<string> V1 = new HashSet<string>(StringComparer.Ordinal);
 }

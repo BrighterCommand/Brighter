@@ -70,27 +70,23 @@ public class MsSqlInboxBuilderDriftTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void When_mssql_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey(
+    public void When_mssql_inbox_v1_upscript_is_inspected_it_should_carry_the_pre_contextkey_historical_baseline(
         bool hasBinaryMessagePayload)
     {
-        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
-        //b7f96957b, March 2019). The MSSQL inbox is one of the five "born past V1" backends:
-        //it shipped with ContextKey from the first commit, so V1.UpScript already contains it
-        //and V2's idempotency-guarded ALTER (IF COL_LENGTH ... IS NULL) skips on chain replay.
-        //This tripwire prevents a future "helpful" rewrite from dropping ContextKey out of V1
-        //(which would then re-apply the V2 ALTER and corrupt chain replay against legacy
-        //tables). See spec 0027 README archaeology and ADR 0057 §3.
+        //Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;",
             inboxTableName: tableName,
             binaryMessagePayload: hasBinaryMessagePayload);
 
+        //Act
         var migrations = new MsSqlInboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
+        //Assert
         Assert.Equal(1, v1.Version.Value);
-        Assert.Contains("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
     }
 

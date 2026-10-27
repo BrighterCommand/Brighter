@@ -25,12 +25,9 @@ using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
-// Each observability test class builds its own TracerProvider that subscribes to
-// BrighterSemanticConventions.SourceName. Under xUnit's default class-parallel
-// scheduling both providers can be alive concurrently, so activities emitted by
-// one class' code leak into the other class' in-memory exporter list — and the
-// per-test Assert.Single(_exportedActivities) check then sometimes counts 2.
-// Serialising both classes through this collection removes the overlap without
-// having to filter exported activities by source-name + tag in every assertion.
+/// <summary>
+/// Serialises the observability test classes: each builds a <c>TracerProvider</c> on the same
+/// source, so run in parallel they would export each other's activities.
+/// </summary>
 [CollectionDefinition("BoxProvisioningObservability", DisableParallelization = true)]
 public class BoxProvisioningObservabilityCollection;

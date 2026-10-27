@@ -31,10 +31,9 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-// Inbox companion to When_postgresql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_*.
-// Per PR #4039 reviewer item M4-1 (F1b): PostgreSqlInboxBuilder.GetDDL is now schema-aware
-// via an optional schemaName parameter, and PostgreSqlInboxMigrationCatalog.FreshInstallDdl
-// threads configuration.SchemaName through to it.
+/// <summary>
+/// With a non-default SchemaName, a fresh install creates the inbox in that schema, and a second run is idempotent.
+/// </summary>
 public class PostgreSqlInboxNonDefaultSchemaTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
@@ -66,7 +65,7 @@ public class PostgreSqlInboxNonDefaultSchemaTests : IAsyncLifetime
         await DropAnyExistingTableAsync(_tableName, _nonDefaultSchema);
         await DropAnyExistingTableAsync(_tableName, "public");
 
-        //Act — first fresh-install run
+        //Act
         var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
 
         //Assert
@@ -77,7 +76,7 @@ public class PostgreSqlInboxNonDefaultSchemaTests : IAsyncLifetime
         Assert.False(await TableExistsInSchemaAsync(_tableName, "public"));
         Assert.Equal(1, await GetHistoryRowCountAsync(_nonDefaultSchema, _tableName));
 
-        //Act — idempotent second run
+        //Act
         var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
 
         //Assert

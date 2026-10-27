@@ -33,19 +33,15 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// Defines the migration history for PostgreSQL outbox tables.
 /// </summary>
 /// <remarks>
-/// V1's <c>UpScript</c> is the literal historical baseline DDL — the first PostgreSQL
-/// outbox builder shape (commit <c>3c30343fa</c>, July 2019). The fresh-install fast path
+/// V1's <c>UpScript</c> is the literal historical baseline DDL — the PostgreSQL outbox
+/// builder shape before <c>Dispatched</c> (first shipped in commit <c>b1f880367</c>, August 2017). The fresh-install fast path
 /// (ADR 0057 §3) takes its DDL from <see cref="FreshInstallDdl"/> instead, so V1.UpScript
 /// carries the historical shape. V2..V7 are conditional <c>ALTER TABLE ... ADD COLUMN IF NOT
 /// EXISTS</c> statements per ADR 0057 §5 — Postgres's native idempotency clause keeps each
 /// migration safe to re-execute on chain replay.
 /// <para>
-/// Born-past-V1 asymmetry: the PostgreSQL outbox first shipped <em>with</em>
-/// <c>Dispatched</c> — no pre-Dispatched PostgreSQL outbox ever existed in the wild.
-/// V1.UpScript therefore creates <c>dispatched</c> alongside the rest; V2's
-/// <c>ADD COLUMN IF NOT EXISTS dispatched</c> is a no-op on chain replay. V1.LogicalColumns
-/// remains the "logical pre-V2" set (no <c>dispatched</c>) so the bootstrap-detection
-/// contract (ADR 0057 §4) preserves the cross-backend logical V1 shape.
+/// The PostgreSQL outbox shipped without <c>Dispatched</c> until commit <c>3c30343fa</c> added
+/// it, so a legacy table may be at V1, and V2 adds the column to it.
 /// </para>
 /// <para>
 /// <see cref="IAmABoxMigration.LogicalColumns"/> are lowercase per ADR 0057 §1 so that
@@ -74,7 +70,7 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     private static readonly string[] s_v7AddedColumns = ["dataref", "specversion"];
     private static readonly string[] s_v8AddedColumns = ["causationid"];
 
-    // From commit 3c30343fa (July 2019); born with Dispatched, see the class remarks.
+    // The outbox DDL before Dispatched (as at 3c30343fa^).
     // {0} is the table name folded to lowercase then quoted: that names the same table the
     // original unquoted DDL created, and lets reserved words (Order, User) parse.
     private const string V1HistoricalDdl =
@@ -86,7 +82,6 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
                 Topic VARCHAR(255) NULL,
                 MessageType VARCHAR(32) NULL,
                 Timestamp timestamptz NULL,
-                Dispatched timestamptz NULL,
                 HeaderBag TEXT NULL,
                 Body TEXT NULL
             );

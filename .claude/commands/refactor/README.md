@@ -4,7 +4,7 @@ This directory contains Claude Code commands for safe, disciplined refactoring f
 
 ## Commands
 
-### `/tidy-first <description of desired change>`
+### `/refactor:tidy-first <description of desired change>`
 
 Implements Kent Beck's "Tidy First" methodology by separating structural changes from behavioral changes into distinct commits.
 
@@ -12,7 +12,7 @@ Implements Kent Beck's "Tidy First" methodology by separating structural changes
 
 **Usage:**
 ```bash
-/tidy-first optimize the message processing in KafkaConsumer
+/refactor:tidy-first optimize the message processing in KafkaConsumer
 ```
 
 ### `/refactor:smells [base-ref | base..head | path...]`
@@ -24,9 +24,9 @@ Speculative Generality and Message Chains — calibrated against Brighter's desi
 
 **Purpose**: Turn "this could be tidier" into scheduled, named refactorings. Each finding gives the
 smell, its location and evidence, and the refactoring from Fowler's catalogue that removes it, and is
-marked `structural` (a `/tidy-first` job) or `public API change` (needs a decision first).
+marked `structural` (a `/refactor:tidy-first` job) or `public API change` (needs a decision first).
 
-**It reports and schedules; it does not refactor.** Findings become a `/tidy-first` run, or
+**It reports and schedules; it does not refactor.** Findings become a `/refactor:tidy-first` run, or
 `STRUCTURAL` tasks appended to the active spec's `tasks.md`, as you choose.
 
 **Usage:**
@@ -84,7 +84,7 @@ From [.agent_instructions/code_style.md](../../../.agent_instructions/code_style
 
 ## Workflow
 
-The `/tidy-first` command guides you through 9 phases:
+The `/refactor:tidy-first` command guides you through 9 phases:
 
 ### 1. **Analysis**
 Reads code and categorizes changes into structural vs behavioral
@@ -141,7 +141,7 @@ Shows both commits and suggests next steps
 ## Example: Optimizing Message Processing
 
 ```bash
-$ /tidy-first optimize the message processing in KafkaConsumer
+$ /refactor:tidy-first optimize the message processing in KafkaConsumer
 
 Analyzing KafkaConsumer.cs...
 
@@ -193,7 +193,7 @@ Done! Two commits created:
 
 **Not a Good Fit:**
 - Pure refactoring with no functionality changes (just do it and commit as `refactor:`)
-- Pure feature addition (use `/test-first` instead for TDD)
+- Pure feature addition (use `/tdd:test-first` instead for TDD)
 - Trivial changes that don't need structural cleanup
 
 ## Best Practices
@@ -231,7 +231,7 @@ Done! Two commits created:
 - Add caching
 
 **Consider:**
-- Using `/test-first` for significant new features
+- Using `/tdd:test-first` for significant new features
 - Writing tests before behavioral changes (TDD)
 - Breaking large behavioral changes into smaller commits
 
@@ -265,7 +265,7 @@ if (message.Size < GetMaxSizeForTopic(message.Topic))
 
 ## Integration with Other Workflows
 
-**With TDD (`/test-first`):**
+**With TDD (`/tdd:test-first`):**
 - Use tidy-first when refactoring existing code before adding features
 - Use test-first when adding pure new functionality
 - Can combine: tidy-first to clean up, then test-first to add features
@@ -318,7 +318,7 @@ dotnet test
 dotnet test
 
 # May need to write new tests for new functionality
-# Consider using /test-first for test-driven approach
+# Consider using /tdd:test-first for test-driven approach
 ```
 
 ## Related Documentation
@@ -330,7 +330,7 @@ dotnet test
 ## Related Commands
 
 - **`/refactor:smells`** - Find code smells in a completed unit of work and schedule refactorings
-- **`/test-first`** - TDD workflow for pure feature additions
+- **`/tdd:test-first`** - TDD workflow for pure feature additions
 - **`/spec:implement`** - Specification-driven implementation (uses TDD)
 - **`/commit`** - Standard commit (doesn't enforce separation)
 - **`/adr`** - Document significant refactoring decisions

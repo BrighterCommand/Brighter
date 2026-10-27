@@ -29,6 +29,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
+/// <summary>
+/// SQLite has no <c>ADD COLUMN IF NOT EXISTS</c>, so V2 and V3 put the column probe in IdempotencyCheckSql
+/// and keep UpScript a plain ALTER (ADR 0057 §5).
+/// </summary>
 public class SqliteInboxMigrationsTests
 {
     private const string TableName = "inbox_test";
@@ -43,11 +47,7 @@ public class SqliteInboxMigrationsTests
     [Fact]
     public void When_sqlite_inbox_migrations_are_listed_it_should_return_v1_through_v3_with_idempotency_check_sql_for_contextkey_and_causationid()
     {
-        //Arrange — derive each version's expected LogicalColumns by accumulating the
-        //per-version additions from the archaeology (spec README inbox table). SQLite inbox
-        //matches MSSQL/MySQL: V1 baseline → V2 adds ContextKey (787c31c52, Oct 2018). Per
-        //ADR §6, V2 hoists the existence guard out of UpScript into IdempotencyCheckSql
-        //because SQLite's grammar lacks ALTER TABLE ADD COLUMN IF NOT EXISTS.
+        //Arrange
         var config = new RelationalDatabaseConfiguration(
             "Data Source=:memory:",
             inboxTableName: TableName);
@@ -56,14 +56,13 @@ public class SqliteInboxMigrationsTests
         //Act
         var migrations = new SqliteInboxMigrationCatalog().All(config);
 
-        //Assert — exactly three migrations numbered 1..3 in order.
+        //Assert
         Assert.Equal(3, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
             Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
-        //Assert — LogicalColumns at each version matches the cumulative archaeology.
         for (var v = 1; v <= 3; v++)
         {
             var migration = migrations[v - 1];
@@ -75,13 +74,8 @@ public class SqliteInboxMigrationsTests
                 $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
         }
 
-        //Assert — V1 IdempotencyCheckSql is null (V1 is the full CREATE TABLE; its own
-        //CREATE TABLE IF NOT EXISTS provides idempotency).
         Assert.Null(migrations[0].IdempotencyCheckSql);
 
-        //Assert — V2 IdempotencyCheckSql probes pragma_table_info for ContextKey per
-        //ADR §6. Runner (Task 4.4) evaluates this scalar before UpScript and skips the
-        //ALTER (still stamping history) when the column is already present.
         var v2Check = migrations[1].IdempotencyCheckSql;
         Assert.False(
             string.IsNullOrWhiteSpace(v2Check),
@@ -90,9 +84,6 @@ public class SqliteInboxMigrationsTests
         Assert.Contains($"pragma_table_info('{TableName}')", v2Check, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("name='ContextKey'", v2Check, StringComparison.OrdinalIgnoreCase);
 
-        //Assert — V2 UpScript is a plain ALTER TABLE ADD COLUMN with no embedded existence
-        //guard (unlike MSSQL's IF COL_LENGTH, Postgres's IF NOT EXISTS, or MySQL's
-        //information_schema + prepared-statement pattern).
         var v2Script = migrations[1].UpScript;
         Assert.Contains($"ALTER TABLE [{TableName}]", v2Script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ADD COLUMN", v2Script, StringComparison.OrdinalIgnoreCase);
@@ -103,7 +94,6 @@ public class SqliteInboxMigrationsTests
         Assert.DoesNotContain("information_schema", v2Script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("COL_LENGTH", v2Script, StringComparison.OrdinalIgnoreCase);
 
-        //Assert — V3 IdempotencyCheckSql probes pragma_table_info for CausationId, mirroring V2.
         var v3Check = migrations[2].IdempotencyCheckSql;
         Assert.False(
             string.IsNullOrWhiteSpace(v3Check),
@@ -112,7 +102,6 @@ public class SqliteInboxMigrationsTests
         Assert.Contains($"pragma_table_info('{TableName}')", v3Check, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("name='CausationId'", v3Check, StringComparison.OrdinalIgnoreCase);
 
-        //Assert — V3 UpScript is a plain ALTER TABLE ADD COLUMN for CausationId, mirroring V2.
         var v3Script = migrations[2].UpScript;
         Assert.Contains($"ALTER TABLE [{TableName}]", v3Script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ADD COLUMN", v3Script, StringComparison.OrdinalIgnoreCase);
@@ -123,9 +112,6 @@ public class SqliteInboxMigrationsTests
         Assert.DoesNotContain("information_schema", v3Script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("COL_LENGTH", v3Script, StringComparison.OrdinalIgnoreCase);
 
-        //Assert — V1 has no single source commit so SourceReference is null;
-        //V2 carries the archaeology pointer for the ContextKey addition (787c31c52, Oct 2018,
-        //same commit as MSSQL/MySQL inbox V2); V3 carries the issue pointer for CausationId (#2541).
         Assert.Null(migrations[0].SourceReference);
         Assert.Equal("787c31c52", migrations[1].SourceReference);
         Assert.Equal("#2541", migrations[2].SourceReference);
