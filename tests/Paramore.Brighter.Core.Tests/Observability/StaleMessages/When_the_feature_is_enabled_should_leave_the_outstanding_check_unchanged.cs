@@ -45,11 +45,11 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages;
 
 /// <summary>
 /// Posts until the outstanding-message check reports more messages than the limit, with the feature and without it.
-/// The test has no signal for the line where the mediator's check clears its in-flight flag, after the count's log
-/// entry, and the double counts a return just before the mediator stores the count. So a pool thread held in either
-/// window can make the next post skip its check, and the wait for that post time out, or read the old count, and
-/// throw <see cref="OutboxLimitReachedException"/> on a later post in one run than in the other. Each window can only
-/// make the test fail.
+/// The test cannot see the mediator store the count, which it does after the double counts the return, or clear its
+/// in-flight flag, which it does after the count's log entry. A thread held before the store can make the next post
+/// read the old count, so <see cref="OutboxLimitReachedException"/> comes on a later post in one run than in the other.
+/// A thread held before either step can make the next post skip its check, so the wait for that post times out. Each
+/// window can only make the test fail.
 /// </summary>
 [Collection(StaleMessageLoggingCollection.Name)]
 public class OutstandingCheckUnchangedTests

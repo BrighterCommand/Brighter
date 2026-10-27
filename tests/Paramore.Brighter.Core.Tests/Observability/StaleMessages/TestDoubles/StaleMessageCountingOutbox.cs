@@ -44,8 +44,8 @@ namespace Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 /// without <see cref="TaskCreationOptions.RunContinuationsAsynchronously"/>, unlike the other gating doubles of this
 /// project. It completes the task only once every task it has returned is awaited or complete, and with no
 /// <see cref="SynchronizationContext"/> current, so the rest of the count's task runs inline and has ended before
-/// <see cref="CallEnded"/> completes. It keeps each message added one at a time, returns it when asked by id, and
-/// records the ids added and marked as dispatched, so a test can post through it.
+/// <see cref="CallEnded"/> completes. It keeps each message added one at a time, returns it from a get by a list
+/// of ids, and records the ids added and marked as dispatched, so a test can post through it.
 /// </summary>
 public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
 {
@@ -152,7 +152,7 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     /// Makes each call of the sync count with <paramref name="maxCount"/>, once recorded, block the calling thread until
     /// <see cref="ReleaseSyncCount"/> or 60 s of wall-clock time, so a thread that is never released is not held past the test.
     /// </summary>
-    /// <param name="maxCount">The maximum count of the calls to block.</param>
+    /// <param name="maxCount">The maxCount argument of the calls to block.</param>
     public void BlockSyncCountUntilReleased(int maxCount)
     {
         _blockedSyncMaxCount = maxCount;
@@ -322,7 +322,9 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
             throw new InvalidOperationException("A task returned by a count is not awaited.");
     }
 
-    /// <summary>Keeps the message, so a get by its id returns it, and records its id in <see cref="Adds"/>.</summary>
+    /// <summary>
+    /// Keeps the message, so a get by a list of ids returns it, and records its id in <see cref="Adds"/>.
+    /// </summary>
     public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1,
         IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null)
     {
@@ -407,8 +409,8 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         => throw new NotImplementedException();
 
     /// <summary>
-    /// Records the call and ignores its token: every call, made or to come, blocks until
-    /// <see cref="ReleaseOutstandingMessages"/>, and then returns no messages.
+    /// Counts the call and ignores its token: every call, made or to come, returns a task that completes, with no
+    /// messages, only at <see cref="ReleaseOutstandingMessages"/>.
     /// </summary>
     public Task<IEnumerable<Message>> OutstandingMessagesAsync(TimeSpan dispatchedSince,
         RequestContext requestContext, int pageSize = 100, int pageNumber = 1,

@@ -42,12 +42,14 @@ public sealed class RecordingDistributedLock(IDistributedLock inner) : IDistribu
     /// <summary>Each call of the lock, in the order the calls were made.</summary>
     public IReadOnlyCollection<(string Operation, string Resource)> Calls => _calls;
 
+    /// <summary>Records the call, then passes it to the other lock.</summary>
     public Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken)
     {
         _calls.Enqueue((nameof(ObtainLockAsync), resource));
         return inner.ObtainLockAsync(resource, cancellationToken);
     }
 
+    /// <summary>Records the call, then passes it to the other lock.</summary>
     public Task ReleaseLockAsync(string resource, string lockId, CancellationToken cancellationToken)
     {
         _calls.Enqueue((nameof(ReleaseLockAsync), resource));
