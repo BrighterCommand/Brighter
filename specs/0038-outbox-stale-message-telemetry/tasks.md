@@ -1275,7 +1275,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should (only if the test is RED on arrival):
     - call `readings.Stop()` and nothing else on the readings at the stop.
 
-- [ ] **CHARACTERISE: T10.5 A stop returns while a count still blocks its thread (AC-11 second half)**
+- [x] **CHARACTERISE: T10.5 A stop returns while a count still blocks its thread (AC-11 second half)**
   - **USE COMMAND**: `/test-first a stop at 12:02:30 with an overall count blocking its thread returns within ten seconds of fake time while the call is still blocked`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_stopping_with_a_count_blocking_its_thread_should_return_within_the_timeout.cs`
