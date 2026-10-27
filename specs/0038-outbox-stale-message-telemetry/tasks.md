@@ -2089,7 +2089,7 @@ These are the items that `specs/0038-outbox-stale-message-telemetry/review-desig
 | :953 | publication changed after start | T8.11, T14.8 |
 | :954 | sequential host stop, T delays later services | T10.10, T14.8 |
 | :955 | stop arrives at a due time | T10.1, T10.11 |
-| :956 | loop's own code throws; StopAsync never throws | T9.18, T10.8 |
+| :956 | loop's own code throws; StopAsync never throws | T9.18, T10.8, T10.13 |
 | :957 | source disposed while a cancel is queued | T9.21 |
 | :958 | cancellation callback blocks | T9.19, T10.7 |
 | :959 | OCE after the loop cancelled | T9.1, T9.3, T10.1 |
@@ -2098,7 +2098,7 @@ These are the items that `specs/0038-outbox-stale-message-telemetry/review-desig
 | :962 | very small I | T8.14, T9.6, T14.8 |
 | :963 | T longer than the outbox's own timeout | T9.17, T14.8 |
 | :964 | outbox returns more than C | T8.21 |
-| :965 | result at the deadline | T9.4, T9.5 |
+| :965 | result at the deadline | T9.4, T9.5, T10.12 |
 | :966 | unobserved task exception | T9.20 |
 | :967 | later ADR moves the instruments | T15.3 |
 | :968 | gap mark outlives its issue | T13.15, T13.17, T14.9 |
@@ -2123,3 +2123,5 @@ Each adds a test the ADR does not name, for behaviour the ADR already requires. 
 - T9.16 (negative overall count) and T9.17 (the outbox's own OCE): rows 6b and :277, with no test named.
 - T9.20 (unobserved exception): risk row :966, with no test named.
 - T10.8 to T10.10 (StopAsync before start, Dispose, host token): the *Stopping* section, with no test named.
+- T10.12 (a call that ends at or after the deadline before the deadline's timer is handled): row 6c, with no test named.
+- T10.13 (logging the stop throws): :281 and the *Stopping* section, with no test named.
