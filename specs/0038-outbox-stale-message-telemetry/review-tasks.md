@@ -16,51 +16,53 @@ No findings at or above threshold 60. Consider addressing lower-scored items.
 > above 60); its findings were then fixed, and T11.2 and T11.3 were reworked so that their mutation fails the test
 > without hanging it. Pass 11 PASS (7 findings, 0 at or above 60). Pass 12, after T10.12 and T10.13 were added,
 > NEEDS WORK (4 findings, 1 at or above 60: the gauge check of T10.13 passed without the fix). Pass 13, after the
-> findings of pass 12 were fixed, PASS (3 findings, 0 at or above 60), recorded below.
+> findings of pass 12 were fixed, PASS (3 findings, 0 at or above 60). Pass 14, after findings 1 and 2 of pass 13
+> were fixed and finding 3 was left as it was, PASS (2 findings, 0 at or above 60), recorded below.
 
 ## Findings
 
-### 1. T10.12 does not say what the test waits for before it moves the timestamps, so a rare interleaving makes the test pass before the fix (Score: 55)
+### 1. T10.13's `ThrowOnce` on "the Information entry of the stop" fires at start if it follows T9.18's pattern (Score: 35)
 
-The test arranges for the call to end at the deadline while the deadline wait is still pending. That only works if the loop thread has already reached the await at `TimedOutboxStaleMessageMonitor.cs:311` before the test moves `GetTimestamp` ahead by T.
+This is finding 3 of pass 13, scored again on its merits. It still applies, and it scores a little higher (35, up from 25), because the nearest example in the suite leads the implementer into it.
 
-The order of events is:
-- `MeasureAsync` starts the call at :227, and the call's `Task.Run` is at :480.
-- Only after that does the loop thread compute the deadline's wait, at :230 and :303-308.
-- The only signal the test has is that the counting double recorded the call. The double records it on the pool thread, inside that `Task.Run`.
+T9.18, the test that T10.13 itself cites, arms `ThrowOnce` before it builds the outbox and starts the monitor, and it matches on the level alone: `_logs.ThrowOnce(entry => entry.LogLevel == LogLevel.Debug, loggerFailed)`. A T10.13 written the same way, with `LogLevel.Information`, matches an Information entry that start logs first. Start logs one in two cases:
+- with the base `StaleMessageCountingOutbox`, which has no topic-counting capability, it logs `OverallCountOnlyWithNoCapability`;
+- with no measured topic, it logs `OverallCountOnlyWithNoMeasuredTopic`.
 
-If the shift lands before the check at :303 or :308, `WaitUntilAsync` returns true at once, so the deadline task completes as true. `DecideAsync` then wakes and finds `EndedBefore` false, whether or not the call has been released. `await deadline` at :255 is true, so the existing code abandons the call: the Abandoned total reaches 1, and Completed and Failed stay 0. The test is GREEN without the fix.
+The setup T10.13 describes measures only the overall count, so one of these two entries is logged at start. The log call runs synchronously during start, at :114, before `_readings.Start` at :117. So the logger's throw comes out of start, the test never reaches the stop, and `ThrowOnce` has already dropped the throw.
 
-The window is small, because the loop thread runs synchronously from :227 to :308. Rule :27 ("If its test is green on arrival, stop and ask") also catches it when RED is first observed. But the committed test is a weaker regression guard than it looks, and the task gives the implementer no way to close the window. `TimersCreated` cannot be used here: the deadline uses `Alarm.RingAgainAfter`, which calls `_timer.Change` on the existing timer and creates none, so the count does not move.
+The failure is loud and immediate, so it costs a debugging round rather than a wrong test. That is why the score stays low.
 
-**Evidence**: tasks.md:1355, "the 12:01 overall call blocks until released; the test moves the timestamps ahead by T and releases the call". That line names no wait before the move. `TimedOutboxStaleMessageMonitor.cs:226-230` and `:303-311`. tasks.md:24-26: determinism rules 1-3 cover waits after `Advance` and before advancing past a call's end, but not a wait before a timestamp shift.
+**Evidence**:
+- tasks.md:1369 ("with `CapturingLoggerProvider.ThrowOnce` on the Information entry of the stop").
+- `When_the_loop_code_throws_should_log_it_and_keep_the_schedule.cs:62`: armed before the outbox is built, matched on level only.
+- `TimedOutboxStaleMessageMonitor.cs:113-117`: `LogWhenTopicsAreNotMeasured` at :114 runs before `_readings.Start`.
+- `TimedOutboxStaleMessageMonitor.cs:383-389` and `:640-647`: three Information messages, `OverallCountOnlyWithNoCapability`, `OverallCountOnlyWithNoMeasuredTopic` and `Stopped`.
+- `CapturingLoggerProvider.cs:135-155`: the throw comes out of `Record`, and `_throw = null` at :150 makes it one-shot.
 
-**Recommendation**: Add one sentence giving the test a signal that the deadline wait is armed before it moves the timestamps. For example, `TimestampShiftingTimeProvider` could wrap the timers it creates and count `Change` calls, and the test would wait until the deadline's `Change` is seen, bounded as in rule 1. If that is not wanted, state the window and say that a green on arrival is to be rerun before stopping to ask.
-
----
-
-### 2. T10.13 says the Error entry "carries the logger's exception", but the entry will carry an `AggregateException` wrapping it (Score: 35)
-
-The capturing provider sits behind MEL's aggregate logger. When one provider's logger throws, the aggregate rethrows an `AggregateException`. T9.18 handles this with `Assert.Same(loggerFailed, error.Exception?.GetBaseException())`. T10.13's wording leads to an `Assert.Same(loggerFailed, error.Exception)`, which fails after a correct fix and sends the implementer looking for a defect that is not there.
-
-**Evidence**: tasks.md:1368, "one Error entry, with the `StopFailed` message, carries the logger's exception". `When_the_loop_code_throws_should_log_it_and_keep_the_schedule.cs:132`, `Assert.Same(loggerFailed, error.Exception?.GetBaseException())`.
-
-**Recommendation**: Say "whose base exception is the logger's exception", or point at T9.18's assertion.
+**Recommendation**: In :1369, say that the match selects the `Stopped` message (for example, Information and `entry.Message.Contains("stopped for")`), or that `ThrowOnce` is armed after the 12:01 due time completes.
 
 ---
 
-### 3. T10.13's `ThrowOnce` match on "the Information entry of the stop" can also catch an Information entry from the start (Score: 25)
+### 2. T10.12's signal rests on two things the task does not state about the wrapper (Score: 20)
 
-The monitor has three Information messages:
-- `OverallCountOnlyWithNoCapability` (:640-641)
-- `OverallCountOnlyWithNoMeasuredTopic` (:643-644)
-- `Stopped` (:646-647)
+:1356 says `TimestampShiftingTimeProvider` "wraps the timers it creates and signals at the first `GetTimestamp` after a `Change`". The design is sound:
+- the only `Change` in the monitor is at :599, in `Alarm.RingAgainAfter`, which only the deadline wait uses (:230);
+- the next clock read on the loop thread is the re-check at :308;
+- the counting doubles record calls with `GetUtcNow`, not `GetTimestamp` (`StaleMessageCountingOutbox.cs:222` and `:234`), so no pool-thread read fires the signal early;
+- `_ended = _timeProvider.GetTimestamp();` at :502 runs only after the release, which is after the move.
 
-T10.13 measures only the overall call and does not say whether the setup has a measured topic. If the setup has none and the match is on level alone, the throw fires on a start entry, during start. The stop then logs normally and the test is RED for the wrong reason. `ThrowOnce` drops the throw after it fires (`CapturingLoggerProvider.cs:150`).
+The task leaves two details unstated:
+- **Overriding `CreateTimer` again.** The wrapper's `CreateTimer` overrides `TimerCountingTimeProvider.CreateTimer` a second time. It must call `base.CreateTimer` so that `TimersCreated` keeps counting. The existing row 6c test uses that count for its `WaitUntilTheMonitorWaits` step.
+- **When the `Change` is recorded.** The wrapper must record the `Change` when it forwards the call to the inner timer, so that a `GetTimestamp` read inside the timer's own code cannot be counted as the signal. `FakeTimeProvider`'s timer reads its internal `_now` and not the virtual `GetTimestamp`, but the task does not say so.
 
-**Evidence**: tasks.md:1368; `TimedOutboxStaleMessageMonitor.cs:640-647`; `CapturingLoggerProvider.cs:109-113`, `:142-155`.
+**Evidence**:
+- tasks.md:1355-1356.
+- `TimedOutboxStaleMessageMonitor.cs:299-311`, `:589` and `:599`.
+- `StaleMessages/TestDoubles/TimerCountingTimeProvider.cs`: not sealed; overrides only `CreateTimer` and returns the base timer unwrapped.
+- `StaleMessageCountingOutbox.cs:118` and `:176`: `BlockUntilReleased` and `Release(int)` exist, so the blocking :1355 needs is already available.
 
-**Recommendation**: Say that the match selects the `Stopped` message, for example by its text, or that `ThrowOnce` is set after the 12:01 due time completes.
+**Recommendation**: Optional. Add half a sentence to :1356: the wrapper's `CreateTimer` calls `base.CreateTimer`, and its `Change` marks the timer before it delegates, so the signal comes from the monitor's read at :308.
 
 ---
 
@@ -70,17 +72,16 @@ T10.13 measures only the overall call and does not say whether the setup has a m
 |-------------|-------|
 | 90-100 (Critical) | 0 |
 | 70-89 (High) | 0 |
-| 50-69 (Medium) | 1 |
+| 50-69 (Medium) | 0 |
 | 0-49 (Low) | 2 |
 
-**Total findings**: 3
+**Total findings**: 2
 **Findings at or above threshold (60)**: 0
 
-## Pass 12 findings
+## Pass 13 findings
 
-1. **T10.13's gauge assertion passes without the fix (Score 65): resolved at tasks.md:1367-1368.** The 12:01 due time now completes first, and an export before the stop must carry the overall gauge value (:1367). The stop is now at 12:02:05, while the 12:02 call is blocked (:1368). Without the fix, `Log.Stopped` throws at :208 and the code skips `_readings.Stop()` (:209), so the export after the stop still carries the value and the gauge check fails along with the token and Error checks. After the fix, all three pass.
-2. **Phase 11's dependency line no longer true (Score 50): resolved at tasks.md:1379.** The line says T10.12 and T10.13 were added after Phase 11, that each of them runs the full suite including Phase 11's tests, and that Phase 12 waits for both.
-3. **T10.12's double unnamed and its location unstated (Score 45): resolved at tasks.md:1355 and :1357.** :1355 names `TimestampShiftingTimeProvider` in `StaleMessages/TestDoubles/`, derived from that folder's `TimerCountingTimeProvider` (not the one in `Sweeping/TestDoubles/`), which is not sealed; it overrides only `GetTimestamp`, `GetUtcNow` stays at 12:01 and no timer fires. :1357 places `StopAsync` after the Abandoned total reaches 1.
-4. **T10.13's Error message unnamed, and later-step throws unaddressed (Score 40): resolved at tasks.md:1368, :1372 and :1373.** The test names `StopFailed` (:1368). :1372 adds `StopFailed` at Error with its text, instead of reusing `DueTimeFailed`. :1373 sends throws from `_readings.Stop()` and `CancelInProgress()` down the same path, untested on purpose, and gives the reason: `OutboxStaleMessageReadings` is sealed at `OutboxStaleMessageReadings.cs:39`, and the cancel runs off the loop's thread at `TimedOutboxStaleMessageMonitor.cs:546`.
+1. **T10.12 named no wait before it moves the timestamps (Score 55): resolved at tasks.md:1356.** Before the move, the test waits, bounded as in determinism rule 1, until the deadline wait has armed its timer and read the clock again. `TimestampShiftingTimeProvider` wraps the timers it creates and signals at the first `GetTimestamp` after a `Change`. The only `Change` in the monitor is in `Alarm.RingAgainAfter` (:599), which only the deadline wait uses (:230). With no per-topic count and the overall call blocked, the next clock read is the check at :308.
+2. **T10.13 said the Error entry "carries the logger's exception" (Score 35): resolved at tasks.md:1369.** The `StopFailed` entry now carries an exception whose base exception is the logger's exception, as T9.18 asserts at `When_the_loop_code_throws_should_log_it_and_keep_the_schedule.cs:132`.
+3. **T10.13's `ThrowOnce` match on "the Information entry of the stop" (Score 25): left as it was.** Scored again as finding 1 above.
 
-Also checked, with no finding: the lines T10.12 and T10.13 cite at cf510d832 (:208-212, :249, :255, :546); the task counts at tasks.md:19 (150 tasks, all tag-first); and that after the fix, T10.12's stop returns with Completed and Failed at 0, since the fix lets `MeasureAsync` end through `decided` at :234 and the wait at :211 ends because the abandoned call has ended.
+Also checked, with no finding: the monitor is unchanged since cf510d832, so the lines T10.12 and T10.13 cite still hold; T10.12 is RED before the fix (the deadline does not complete before the stop, Abandoned stays 0 and the stop records Completed) and GREEN after it; T10.13's three checks (the token, the gauge export after the stop and the `StopFailed` entry) all fail without the fix and pass after it; the reasons T10.13 gives for not testing throws from `_readings.Stop()` and the cancel still hold; the implementation text matches ADR 0085-outbox-stale-message-telemetry (row 6c, :251-262, :268, :281 and :283-308); the ordering note at tasks.md:1380; and the task counts at tasks.md:19 (150 tasks, all tag-first, 53 TEST + IMPLEMENT, 62 CHARACTERISE, 7 GENERATE, 4 STRUCTURAL, 17 PROJECT, 7 DOC).
