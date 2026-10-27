@@ -105,7 +105,7 @@ public class NegativeOverallCountTests
                 afterTheDueTime = observed;
         }
 
-        var stopping = await Record.ExceptionAsync(() => monitor.StopAsync(default));
+        var stopping = await Record.ExceptionAsync(() => monitor.StopAsync(default).WaitAsync(TimeSpan.FromSeconds(5)));
 
         //Assert
         Assert.Null(heldAt);
