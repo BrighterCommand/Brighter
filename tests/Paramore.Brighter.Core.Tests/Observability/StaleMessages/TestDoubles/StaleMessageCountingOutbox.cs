@@ -70,9 +70,12 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     private readonly ConcurrentQueue<Action> _exposures = new();
     private readonly ManualResetEventSlim _threadReleased = new(false);
     private readonly ManualResetEventSlim _callbackReleased = new(false);
+    private readonly ManualResetEventSlim _syncCountReleased = new(false);
     private readonly TaskCompletionSource<bool> _callbackBlocked = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource<IEnumerable<Message>> _outstandingMessagesReleased = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private volatile int _result;
+    private volatile bool _blockSyncCount;
+    private int _blockedSyncMaxCount;
     private int _outstandingMessagesCalls;
     private ITimer? _releaseTimer;
 
@@ -138,6 +141,20 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
     /// </summary>
     public void BlockCancellationCallbackUntilReleased() => _answers.Enqueue(BlockCallback);
 
+    /// <summary>
+    /// Makes each call of the sync count with <paramref name="maxCount"/>, once recorded, block the calling thread until
+    /// <see cref="ReleaseSyncCount"/> or 30 s of wall-clock time, so a thread that is never released is not held past the test.
+    /// </summary>
+    /// <param name="maxCount">The maximum count of the calls to block.</param>
+    public void BlockSyncCountUntilReleased(int maxCount)
+    {
+        _blockedSyncMaxCount = maxCount;
+        _blockSyncCount = true;
+    }
+
+    /// <summary>Lets the calls blocked by <see cref="BlockSyncCountUntilReleased"/> return.</summary>
+    public void ReleaseSyncCount() => _syncCountReleased.Set();
+
     /// <summary>Lets the thread blocked by <see cref="BlockThreadUntilReleased"/> return its task.</summary>
     public void ReleaseThread() => _threadReleased.Set();
 
@@ -196,6 +213,8 @@ public class StaleMessageCountingOutbox : IAmAnOutboxSync<Message, CommittableTr
         int maxCount = 100, Dictionary<string, object>? args = null)
     {
         _countCalls.Enqueue(new StaleCountCall(dispatchedSince, requestContext, maxCount, args, CancellationToken.None, Synchronous: true, _clock?.GetUtcNow()));
+        if (_blockSyncCount && maxCount == _blockedSyncMaxCount)
+            _syncCountReleased.Wait(s_threadBlockCeiling);
         return 0;
     }
 
