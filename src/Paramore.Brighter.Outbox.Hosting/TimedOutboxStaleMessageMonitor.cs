@@ -252,7 +252,7 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
             return;
         }
 
-        if (!call.EndedBefore(started, _options.MeasurementTimeout) && await deadline)
+        if (!call.EndedBefore(started, _options.MeasurementTimeout))
         {
             Abandon(outboxType, count, call.Answer, call.Cancellation, abandoned);
             return;
