@@ -143,13 +143,14 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
 
     public Task<OutstandingCountCancellationSetup<TransactWriteItemsRequest>> PrepareCancellationAsync(TimeSpan holdFor)
     {
-        var outbox = CreateOutstandingCountOutbox(timeout: 0);
+        var tableName = DynamoDbOutboxTable.CreateTableAsync(Const.DynamoDbClient).GetAwaiter().GetResult();
+        var outbox = new DynamoDbOutbox(Const.DynamoDbClient, new DynamoDbConfiguration(tableName, timeout: 0));
 
         return Task.FromResult(new OutstandingCountCancellationSetup<TransactWriteItemsRequest>(
             outbox,
             storeHeld: false,
             clientCancellationException: typeof(OperationCanceledException),
-            release: () => ValueTask.CompletedTask));
+            release: async () => await DynamoDbOutboxTable.DeleteTableAsync(Const.DynamoDbClient, tableName)));
     }
 
     private DynamoDbOutbox CreateOutstandingCountOutbox(int timeout)

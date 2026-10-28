@@ -46,6 +46,7 @@ public abstract class OutstandingCountCancellationOutboxBaseTests<TTransaction>
             if (setup.StoreHeld)
             {
                 await Task.Delay(s_cancelAfter);
+                Assert.False(count.IsCompleted, "The count ended before the cancellation");
                 cancellation.Cancel();
             }
 
