@@ -156,7 +156,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T1.4
   - References: `src/Paramore.Brighter/CircuitBreaker/InMemoryOutboxCircuitBreaker.cs:127-137`. `tests/Paramore.Brighter.Core.Tests/CircuitBreaker/When_a_tripped_topic_cools_down_should_log_information_and_export_a_reset_span.cs`. `docs/adr/0058-outbox-circuit-breaker-trip-logging.md`.
 
-- [ ] **TEST + IMPLEMENT: T1.8 - A TripTopic that first observes an ended trip announces the Reset before the Trip**
+- [x] **TEST + IMPLEMENT: T1.8 - A TripTopic that first observes an ended trip announces the Reset before the Trip**
   - **USE COMMAND**: `/tdd:test-first when trip topic is the first call after a trip has ended should announce the reset before the trip`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker"
   - Test file: `When_trip_topic_is_the_first_call_after_a_trip_ended_should_announce_reset_before_trip.cs`
