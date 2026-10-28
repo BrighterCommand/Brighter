@@ -72,9 +72,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             InstrumentationOptions instrumentation = InstrumentationOptions.All
         )
         {
+            Publication = publication ?? new Publication { MakeChannels = OnMissingChannel.Create };
+            if (Publication is MsSqlPublication fanOut)
+                fanOut.GetSubscriberChannels();
             _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectonProvider);
             _instrumentation = instrumentation;
-            Publication = publication ?? new Publication { MakeChannels = OnMissingChannel.Create };
         }
 
         /// <summary>
@@ -118,6 +120,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public void SendWithDelay(Message message, TimeSpan? delay = null)
         { 
             delay ??= TimeSpan.Zero;
+            var subscriberChannels = (Publication as MsSqlPublication)?.GetSubscriberChannels(message.Header.Topic);
             if (delay != TimeSpan.Zero)
             {
                 if (Scheduler is IAmAMessageSchedulerSync sync)
@@ -141,7 +144,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             Log.SendMessage(s_logger, topic.Value, message.Id.Value);
 
-            _sqlQ.Send(message, topic);
+            if (subscriberChannels == null)
+                _sqlQ.Send(message, topic);
+            else
+                _sqlQ.SendToChannels(message, subscriberChannels);
         }
 
         /// <summary>
@@ -154,7 +160,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <returns>A task that represents the asynchronous send operation.</returns>
         public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             delay ??= TimeSpan.Zero;
+            var subscriberChannels = (Publication as MsSqlPublication)?.GetSubscriberChannels(message.Header.Topic);
             if (delay != TimeSpan.Zero)
             {
                 if (Scheduler is IAmAMessageSchedulerAsync async)
@@ -178,7 +186,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             Log.SendMessageAsync(s_logger, topic.Value, message.Id.Value);
 
-            await _sqlQ.SendAsync(message, topic.Value, TimeSpan.Zero, cancellationToken);
+            if (subscriberChannels == null)
+                await _sqlQ.SendAsync(message, topic.Value, TimeSpan.Zero, cancellationToken);
+            else
+                await _sqlQ.SendToChannelsAsync(message, subscriberChannels, cancellationToken);
         }
 
         /// <summary>

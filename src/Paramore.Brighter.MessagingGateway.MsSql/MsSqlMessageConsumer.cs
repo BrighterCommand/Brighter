@@ -94,13 +94,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public void Purge()
         {
             Log.PurgingQueue(s_logger);
-            _sqlMessageQueue.Purge();
+            _sqlMessageQueue.PurgeTopic(_topic);
         }
 
         public async Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             Log.PurgingQueue(s_logger);
-            await Task.Run( () => _sqlMessageQueue.Purge(), cancellationToken);
+            await _sqlMessageQueue.PurgeTopicAsync(_topic, cancellationToken);
         }
 
         /// <summary>
@@ -269,8 +269,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <summary>
         /// Requeues the specified message.
         /// </summary>
+        /// <remarks>
+        /// Retries return to this consumer's physical queue and preserve the logical topic.
+        /// Delayed subscriber retries require an <see cref="IAmAMessageRequeueSchedulerSync"/>.
+        /// </remarks>
         /// <param name="message"></param>
-        /// <param name="delay">When greater than zero, uses a producer with scheduler for delayed requeue</param>
+        /// <param name="delay">When greater than zero, schedules delivery to the receiving queue.</param>
         /// <returns>True when message is requeued</returns>
         public bool Requeue(Message message, TimeSpan? delay = null)
         {
@@ -286,24 +290,37 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             if (delay > TimeSpan.Zero)
             {
+                if (_topic != topic.Value)
+                {
+                    if (_scheduler is not IAmAMessageRequeueSchedulerSync scheduler)
+                        throw new ConfigurationException("Delayed MS SQL subscriber retries require an IAmAMessageRequeueSchedulerSync scheduler targeting the receiving queue.");
+                    scheduler.Requeue(message, new ChannelName(_topic), delay.Value);
+                    return true;
+                }
                 EnsureRequeueProducer();
                 _requeueProducer!.SendWithDelay(message, delay);
                 return true;
             }
 
-            _sqlMessageQueue.Send(message, topic);
+            _sqlMessageQueue.Send(message, new RoutingKey(_topic));
             return true;
         }
 
         /// <summary>
         /// Requeues the specified message.
         /// </summary>
+        /// <remarks>
+        /// Retries return to this consumer's physical queue and preserve the logical topic.
+        /// Delayed subscriber retries require an <see cref="IAmAMessageRequeueSchedulerAsync"/>.
+        /// Cancellation requested before the call prevents scheduling and message metadata changes.
+        /// </remarks>
         /// <param name="message"></param>
-        /// <param name="delay">When greater than zero, uses a producer with scheduler for delayed requeue</param>
+        /// <param name="delay">When greater than zero, schedules delivery to the receiving queue.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> for the operation</param>
         /// <returns>True when message is requeued</returns>
         public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             delay ??= TimeSpan.Zero;
 
             var topic = message.Header.Topic;
@@ -316,12 +333,19 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             if (delay > TimeSpan.Zero)
             {
+                if (_topic != topic.Value)
+                {
+                    if (_scheduler is not IAmAMessageRequeueSchedulerAsync scheduler)
+                        throw new ConfigurationException("Delayed MS SQL subscriber retries require an IAmAMessageRequeueSchedulerAsync scheduler targeting the receiving queue.");
+                    await scheduler.RequeueAsync(message, new ChannelName(_topic), delay.Value, cancellationToken);
+                    return true;
+                }
                 EnsureRequeueProducer();
                 await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
                 return true;
             }
 
-            await _sqlMessageQueue.SendAsync(message, topic.Value, null, cancellationToken: cancellationToken);
+            await _sqlMessageQueue.SendAsync(message, _topic, null, cancellationToken: cancellationToken);
             return true;
         }
 

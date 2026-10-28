@@ -26,6 +26,16 @@ using System;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
+    /// <summary>
+    /// Configures a competing consumer of an MS SQL queue.
+    /// </summary>
+    /// <remarks>
+    /// For a plain <see cref="Publication"/> the channel name must match the producer's topic. With
+    /// <see cref="MsSqlPublication"/> it must name one of the configured subscriber queues. Receivers using the same queue table
+    /// and channel compete for messages: each queued message is removed by one receiver.
+    /// Different subscription names do not create separate copies of messages.
+    /// Use <see cref="MsSqlPublication"/> to opt in to explicit subscriber fan-out.
+    /// </remarks>
     public class MsSqlSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
     {
         /// <inheritdoc />
@@ -46,8 +56,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
-        /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
-        /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
+        /// <param name="subscriptionName">The name identifying this subscription in the dispatcher; it does not create an independent queue.</param>
+        /// <param name="channelName">The physical queue to read: a subscriber channel from <see cref="MsSqlPublication"/>, or the topic for a plain <see cref="Publication"/>.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="requestType">Type of the data.</param>
         /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <paramref name="requestType"/> if null</param>
@@ -93,13 +103,21 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         }
     }
 
+    /// <summary>
+    /// Configures a competing MS SQL consumer for requests of type <typeparamref name="T"/>.
+    /// </summary>
+    /// <typeparam name="T">The request type handled by the subscription.</typeparam>
+    /// <remarks>
+    /// Receivers sharing a queue table and channel compete for messages, even when their
+    /// subscription names differ. For fan-out, choose a channel configured on <see cref="MsSqlPublication"/>.
+    /// </remarks>
     public class MsSqlSubscription<T> : MsSqlSubscription where T : IRequest
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
-        /// <param name="subscriptionName">The name. Defaults to the data type's full name.</param>
-        /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
+        /// <param name="subscriptionName">The dispatcher subscription name. Defaults to the data type's full name; it does not create an independent queue.</param>
+        /// <param name="channelName">The physical queue to read. Defaults to the data type's full name. For fan-out, use a subscriber channel configured on <see cref="MsSqlPublication"/>.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="getRequestType">The <see cref="Func{Message, Type}"/> that determines how we map a message to a type. Defaults to returning the <typeparamref name="T"/> if null</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>

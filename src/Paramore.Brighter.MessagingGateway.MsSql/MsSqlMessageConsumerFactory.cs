@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <returns>IAmAMessageConsumerSync</returns>
          public IAmAMessageConsumerSync Create(Subscription subscription)
         {
-            if (subscription.ChannelName is null) throw new ConfigurationException(nameof(subscription.ChannelName));
+            ValidateSubscription(subscription, false);
 
             var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
             var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
@@ -59,13 +59,25 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
         public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
         {
-            if (subscription.ChannelName is null) throw new ConfigurationException(nameof(subscription.ChannelName));
+            ValidateSubscription(subscription, true);
 
             var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
             var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
 
             Log.MsSqlMessageConsumerFactoryCreateAsync(s_logger, subscription.ChannelName);
             return new MsSqlMessageConsumer(_msSqlConfiguration, subscription.ChannelName!, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey);
+        }
+
+        internal void ValidateSubscription(Subscription subscription, bool async)
+        {
+            if (subscription.ChannelName is null)
+                throw new ConfigurationException(nameof(subscription.ChannelName));
+            if (subscription.RequeueDelay <= TimeSpan.Zero || subscription.ChannelName.Value == subscription.RoutingKey.Value)
+                return;
+
+            if (async ? _scheduler is not IAmAMessageRequeueSchedulerAsync : _scheduler is not IAmAMessageRequeueSchedulerSync)
+                throw new ConfigurationException("Delayed MS SQL subscriber retries require a queue-targeted scheduler implementing " +
+                    (async ? nameof(IAmAMessageRequeueSchedulerAsync) : nameof(IAmAMessageRequeueSchedulerSync)) + ".");
         }
 
         private static partial class Log

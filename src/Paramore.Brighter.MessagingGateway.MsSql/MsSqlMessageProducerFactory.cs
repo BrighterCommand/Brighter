@@ -105,6 +105,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             if (publication.Topic is null)
                 throw new ConfigurationException("MS SQL Message Producer Factory: Topic is missing from the publication");
+            if (publication is MsSqlPublication fanOut)
+                fanOut.GetSubscriberChannels();
         }
 
         private void AddProducer(
