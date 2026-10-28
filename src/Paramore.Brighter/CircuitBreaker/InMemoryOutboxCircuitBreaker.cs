@@ -50,6 +50,9 @@ public partial class InMemoryOutboxCircuitBreaker(
     InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
     TimeProvider? timeProvider = null) : IAmAnOutboxCircuitBreaker
 {
+    private const string COOLDOWN_CAUSE = "cooldown";
+    private const string MAXIMUM_TRIP_DURATION_CAUSE = "maximum trip duration";
+
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryOutboxCircuitBreaker>();
 
     private readonly OutboxCircuitBreakerOptions _outboxCircuitBreakerOptions = ValidatedOrDefault(options);
@@ -90,7 +93,7 @@ public partial class InMemoryOutboxCircuitBreaker(
         foreach (var trip in _trippedTopics.ToArray())
         {
             if (HasExpired(trip.Value))
-                RemoveEntry(trip.Key, trip.Value);
+                RemoveAndAnnounceReset(trip.Key, trip.Value, MAXIMUM_TRIP_DURATION_CAUSE);
             else
                 live.Add(trip.Key);
         }
@@ -137,13 +140,18 @@ public partial class InMemoryOutboxCircuitBreaker(
         if (cooled.Count >= 0)
             return;
 
-        if (!RemoveEntry(topic, cooled))
+        RemoveAndAnnounceReset(topic, cooled, COOLDOWN_CAUSE);
+    }
+
+    private void RemoveAndAnnounceReset(RoutingKey topic, TripEntry entry, string resetCause)
+    {
+        if (!RemoveEntry(topic, entry))
             return;
 
         var span = tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(CircuitBreakerSpanOperation.Reset, topic, 0), instrumentationOptions);
         tracer?.EndSpan(span);
 
-        Log.Reset(s_logger, topic.Value);
+        Log.Reset(s_logger, topic.Value, resetCause);
     }
 
     /// <summary>
@@ -183,8 +191,8 @@ public partial class InMemoryOutboxCircuitBreaker(
         [LoggerMessage(LogLevel.Debug, "Circuit breaker re-tripped for topic {Topic}; cooldown extended to {CooldownCount} cycle(s)")]
         public static partial void ReTripped(ILogger logger, string topic, int cooldownCount);
 
-        [LoggerMessage(LogLevel.Information, "Circuit breaker reset for topic {Topic}; publish suppression lifted")]
-        public static partial void Reset(ILogger logger, string topic);
+        [LoggerMessage(LogLevel.Information, "Circuit breaker reset for topic {Topic} ({ResetCause}); publish suppression lifted")]
+        public static partial void Reset(ILogger logger, string topic, string resetCause);
     }
 }
 
