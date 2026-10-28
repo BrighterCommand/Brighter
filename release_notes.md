@@ -9,17 +9,17 @@ Messages that stay undispatched in the outbox were invisible until someone queri
 
 #### The monitor and its instruments
 
-`UseOutboxStaleMessageMonitor` on `IBrighterBuilder` registers the monitor. Its settings are `StaleMessageAge` (required, at most 365 days), `CountCeiling` (default 100, at most 1000), `MeasurementInterval` (default 1 minute) and `MeasurementTimeout` (default 10 seconds, below the interval). `AddBrighterInstrumentation` registers three instruments on the Brighter meter:
+`UseOutboxStaleMessageMonitor` on `IBrighterBuilder` registers the monitor. Its settings are `StaleMessageAge` (required, at most 365 days), `CountCeiling` (default 100, at most 1000), `MeasurementInterval` (default 1 minute) and `MeasurementTimeout` (default 10 seconds, below the interval). When the monitor is in use, `AddBrighterInstrumentation` registers three instruments on the Brighter meter. Every series carries `paramore.brighter.outbox.implementation`, the outbox's type name.
 
 | Instrument | Type | Unit | Reports |
 |---|---|---|---|
 | `paramore.brighter.outbox.stale.messages` | Observable gauge | `{message}` | Undispatched messages older than the age, up to the ceiling |
-| `paramore.brighter.outbox.stale.topic.messages` | Observable gauge | `{message}` | The same count for one topic, tagged `messaging.destination` |
+| `paramore.brighter.outbox.stale.topic.messages` | Observable gauge | `{message}` | The same count for one topic, tagged `messaging.destination.name` |
 | `paramore.brighter.outbox.stale.measurements` | Observable counter | `{measurement}` | Measurements by count (`overall` or `per_topic`) and outcome (`completed`, `failed`, `abandoned`, `skipped`) |
 
 A value equal to the ceiling means the ceiling or more. A `completed` total that stops rising means there is no recent reading.
 
-#### Per topic ages and the optional capability
+#### Per-topic ages and the optional capability
 
 `Publication.StaleMessageAge` sets the age for one topic, and a topic with several publications uses the smallest. `IAmATopicCountingOutbox` is the optional capability that counts several topics in one call. `InMemoryOutbox` implements it. Other outboxes report the overall count only until they add it, and the monitor logs that once at start.
 
