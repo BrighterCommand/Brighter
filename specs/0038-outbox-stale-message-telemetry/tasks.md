@@ -1360,7 +1360,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Implementation should:
     - in `DecideAsync` (`src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs:255` at HEAD cf510d832), abandon a call that did not end before the deadline without awaiting the deadline task. Once the stop check at :249 has passed, the deadline task can be false only because a stop came after that check, and the code then records Completed, or Failed if the count threw, for a call that ended at or after the deadline.
 
-- [ ] **TEST + IMPLEMENT: T10.13 A stop whose log entry throws still clears the readings and cancels the calls (ADR 0085 :281)**
+- [x] **TEST + IMPLEMENT: T10.13 A stop whose log entry throws still clears the readings and cancels the calls (ADR 0085 :281)**
   - **USE COMMAND**: `/test-first when logging the stop throws, the loop logs the exception at Error, still clears the readings and still cancels the calls in progress`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`)
   - Test file: `When_logging_the_stop_throws_should_still_clear_the_readings_and_cancel_the_calls.cs`
