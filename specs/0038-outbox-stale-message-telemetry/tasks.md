@@ -1454,7 +1454,7 @@ No production change is expected in this phase. The named mutation is how RED is
 
 No production change is expected in this phase. The named mutation is how RED is observed.
 
-- [ ] **CHARACTERISE: T12.1 Without the step, nothing is measured (AC-1 first clause)**
+- [x] **CHARACTERISE: T12.1 Without the step, nothing is measured (AC-1 first clause)**
   - **USE COMMAND**: `/test-first with AddProducers, a publication age and AddBrighterInstrumentation but no stale step ten minutes pass with no count call and no gauge value`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_stale_step_is_not_added_should_measure_nothing.cs`
