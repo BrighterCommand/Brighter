@@ -123,7 +123,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T1.4
   - References: `tests/Paramore.Brighter.Core.Tests/CircuitBreaker/When_Cooldown_On_TrippedTopic.cs`. ADR 0089 Phase 1 table, row 2.
 
-- [ ] **CHARACTERISE: T1.6 - A re-trip restarts both the D clock and the cooldown count**
+- [x] **CHARACTERISE: T1.6 - A re-trip restarts both the D clock and the cooldown count**
   - **USE COMMAND**: `/tdd:test-first when a tripped topic is re-tripped should restart both the maximum trip duration and the cooldown count`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker"
   - Test file: `When_a_tripped_topic_is_re_tripped_should_restart_both_limits.cs`
