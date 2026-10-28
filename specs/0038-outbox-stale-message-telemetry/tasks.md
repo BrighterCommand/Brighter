@@ -1739,7 +1739,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - Output: the FR-14 table shows each mark beside its issue; all audits green.
   - Commit the marks and the regenerated files as `test:`, then the FR-14 table as `docs:`, then the tick.
 
-- [ ] **DOC: T13.18 Describe the fourth outbox suite in the generator documentation**
+- [x] **DOC: T13.18 Describe the fourth outbox suite in the generator documentation**
   - Update `.agent_instructions/generated_tests.md` (the template tree near `:18-21`, the outbox template table near `:95-107`, and the provider pattern near `:326-343`) and `tools/Paramore.Brighter.Test.Generator/README.md`. Cover:
     - the OutstandingCount suite and its provider interface;
     - the two settings;
