@@ -58,7 +58,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 1b - Maximum trip duration option
 
-- [ ] **TEST + IMPLEMENT: T1.2 - The in-memory breaker rejects an out-of-range maximum trip duration and defaults to 5 minutes**
+- [x] **TEST + IMPLEMENT: T1.2 - The in-memory breaker rejects an out-of-range maximum trip duration and defaults to 5 minutes**
   - **USE COMMAND**: `/tdd:test-first when the maximum trip duration is out of range should reject the in-memory breaker at construction`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker"
   - Test file: `When_the_maximum_trip_duration_is_out_of_range_should_reject_the_breaker.cs`
