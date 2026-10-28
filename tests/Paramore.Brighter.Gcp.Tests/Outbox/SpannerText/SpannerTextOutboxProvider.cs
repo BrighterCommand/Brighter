@@ -1,9 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Google.Api.Gax;
 using Google.Cloud.Spanner.Data;
+using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Gcp.Tests.Outbox.SpannerText.Async;
+using Paramore.Brighter.Gcp.Tests.Outbox.SpannerText.OutstandingCount;
 using Paramore.Brighter.Gcp.Tests.Outbox.SpannerText.Sync;
 using Paramore.Brighter.Gcp.Tests.Spanner;
 using Paramore.Brighter.Outbox.Spanner;
@@ -11,7 +14,7 @@ using Paramore.Brighter.Spanner;
 
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerText;
 
-public class SpannerTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
+public class SpannerTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync, IAmAnOutstandingCountOutboxProvider
 {
     private readonly RelationalDatabaseConfiguration _configuration = new(
         new SpannerConnectionStringBuilder(Const.ConnectionString)
@@ -84,5 +87,19 @@ public class SpannerTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPro
     {
         var outbox = new SpannerOutbox(_configuration);
         return await outbox.GetAsync(new RequestContext());
+    }
+
+    public void DeleteStore() => DeleteStore(Array.Empty<Message>());
+
+    IAmAnOutboxAsync<Message, DbTransaction> IAmAnOutstandingCountOutboxProvider.CreateOutbox() => CreateOutboxAsync();
+
+    public async Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareCancellationAsync(TimeSpan holdFor)
+    {
+        await CreateStoreAsync();
+        return new OutstandingCountCancellationSetup<DbTransaction>(
+            CreateOutboxAsync(),
+            storeHeld: false,
+            clientCancellationException: typeof(OperationCanceledException),
+            release: () => new ValueTask(DeleteStoreAsync(Array.Empty<Message>())));
     }
 }
