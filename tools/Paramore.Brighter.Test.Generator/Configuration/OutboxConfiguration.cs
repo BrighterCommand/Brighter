@@ -84,6 +84,14 @@ public class OutboxConfiguration
     public int OutstandingCountReadConsistencyTimeoutInMilliseconds { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the store fans the overall count out over parallel
+    /// scans, so a ceiling below the scan concurrency can return more than the ceiling. When true,
+    /// the ceiling tests also render two facts that write the count observed for a ceiling of one
+    /// and of two to the test output and assert nothing.
+    /// </summary>
+    public bool OutstandingCountBelowScanConcurrency { get; set; }
+
+    /// <summary>
     /// Returns a copy of this configuration carrying <paramref name="prefix"/>.
     /// </summary>
     /// <param name="prefix">The prefix the copy should carry.</param>

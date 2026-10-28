@@ -5,7 +5,8 @@
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Outbox;
-using Xunit;
+using Xunit;{% if OutstandingCountBelowScanConcurrency %}
+using Xunit.Abstractions;{% endif %}
 
 namespace {{ Namespace }}.Outbox{{ Prefix }}.OutstandingCount;
 
@@ -14,7 +15,13 @@ namespace {{ Namespace }}.Outbox{{ Prefix }}.OutstandingCount;
 public class WhenCountingOutstandingMessagesWithACeilingShouldStopAtTheCeiling : OutstandingCountOutboxBaseTests<{{ Transaction }}>
 {
     private readonly IAmAnOutstandingCountOutboxProvider _outboxProvider = new {{ OutboxProvider }}();
-    private IAmAnOutboxAsync<Message, {{ Transaction }}>? _outbox;
+    private IAmAnOutboxAsync<Message, {{ Transaction }}>? _outbox;{% if OutstandingCountBelowScanConcurrency %}
+    private readonly ITestOutputHelper _output;
+
+    public WhenCountingOutstandingMessagesWithACeilingShouldStopAtTheCeiling(ITestOutputHelper output)
+    {
+        _output = output;
+    }{% endif %}
 
     protected override IAmAnOutboxAsync<Message, {{ Transaction }}> Outbox => _outbox!;{% if OutstandingCountReadConsistencyTimeoutInMilliseconds > 0 %}
 
@@ -46,5 +53,17 @@ public class WhenCountingOutstandingMessagesWithACeilingShouldStopAtTheCeiling :
     public async Task When_counting_outstanding_messages_with_a_ceiling_of_five_should_return_five()
     {
         await AssertCeilingOfFiveAsync();
+    }{% if OutstandingCountBelowScanConcurrency %}
+
+    [Fact]
+    public async Task When_counting_outstanding_messages_with_a_ceiling_of_one_should_report_the_count()
+    {
+        _output.WriteLine(await ObserveCountAsync(1));
     }
+
+    [Fact]
+    public async Task When_counting_outstanding_messages_with_a_ceiling_of_two_should_report_the_count()
+    {
+        _output.WriteLine(await ObserveCountAsync(2));
+    }{% endif %}
 }
