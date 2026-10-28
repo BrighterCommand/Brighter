@@ -1545,7 +1545,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - do not regenerate any outbox project in this task;
     - expect the generated-tree audit in `Paramore.Brighter.Test.Generator.Tests` to report Missing entries until T13.13. They are not a regression to fix.
 
-- [ ] **TEST + IMPLEMENT: T13.4 The read-consistency setting renders a retry window for the suite**
+- [x] **TEST + IMPLEMENT: T13.4 The read-consistency setting renders a retry window for the suite**
   - **USE COMMAND**: `/test-first OutstandingCountReadConsistencyTimeoutInMilliseconds renders the suite's ReadConsistencyTimeout, zero by default`
   - Test location: "tests/Paramore.Brighter.Test.Generator.Tests/OutboxGenerator/"
   - Test file: `When_an_outbox_sets_an_outstanding_count_read_consistency_timeout_should_render_it.cs`
