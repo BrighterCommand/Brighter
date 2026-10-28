@@ -1773,7 +1773,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - As T14.1.
   - Output: the issue text, then, once the issue is posted, its number in the Firestore FR-14 (d) cell.
 
-- [ ] **DOC: T14.5 XML documentation for every new public type and member (AC-26)**
+- [x] **DOC: T14.5 XML documentation for every new public type and member (AC-26)**
   - Audit these against `.agent_instructions/documentation.md`: `OutboxStaleMessageReadings`, `StaleMessageCount`, `StaleMeasurementOutcome`, `OutboxStaleMessageMeter`, `TimedOutboxStaleMessageMonitor`, `TimedOutboxStaleMessageMonitorOptions`, `UseOutboxStaleMessageMonitor`, `IAmATopicCountingOutbox`, `Publication.StaleMessageAge` and the six constants.
   - The enums' and readings' remarks say they are public for Brighter's own use.
   - Output: the build has no new CS1591 warning for these types.
