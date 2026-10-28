@@ -115,6 +115,8 @@ public partial class InMemoryOutboxCircuitBreaker(
     /// </summary>
     public void CoolDown()
     {
+        EndExpiredTripsAndListLive();
+
         foreach (var trippedTopicsKey in _trippedTopics.Keys)
         {
             if (TryDecrement(trippedTopicsKey, out var cooled))
