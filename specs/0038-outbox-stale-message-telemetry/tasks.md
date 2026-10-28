@@ -1714,7 +1714,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - Also draft the two issues that ADR 0085 :102 names for limits this PR only documents: the read volume of the DynamoDB and DynamoDB V4 counts (NFR-4 (b)), and the row loading of the relational and MongoDb overall counts (NFR-4 (c), Q-5). T14.9 links each known limitation to its issue.
   - Output: the issue texts, then, once each issue is posted, its number in its FR-14 cell (the Notes cell for the two NFR-4 issues).
 
-- [ ] **TEST + IMPLEMENT: T13.16 The Skip audits scan only the messaging-gateway folders**
+- [x] **TEST + IMPLEMENT: T13.16 The Skip audits scan only the messaging-gateway folders**
   - **USE COMMAND**: `/test-first a deferred Skip in a generated outbox suite is outside the artifacts the gateway Skip audits scan`
   - Test location: "tests/Paramore.Brighter.Test.Generator.Tests/ConformanceAudit/"
   - Test file: `When_an_outbox_suite_carries_a_deferred_skip_should_leave_it_out_of_the_gateway_audits.cs`
