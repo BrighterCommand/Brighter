@@ -1570,7 +1570,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - add the property to `OutboxConfiguration.cs`, and add a Liquid `if` block inside the ceiling template's one test class;
     - expect the generated-tree audit in `Paramore.Brighter.Test.Generator.Tests` to report Missing entries until T13.13. They are not a regression to fix.
 
-- [ ] **TEST + IMPLEMENT: T13.6 A gap mark renders that column's facts with a Deferred Skip**
+- [x] **TEST + IMPLEMENT: T13.6 A gap mark renders that column's facts with a Deferred Skip**
   - **USE COMMAND**: `/test-first each outstanding-count gap mark renders its column's facts with Skip Deferred and the issue number, and no mark renders no Skip`
   - Test location: "tests/Paramore.Brighter.Test.Generator.Tests/OutboxGenerator/"
   - Test file: `When_an_outstanding_count_gap_is_marked_should_render_a_deferred_skip.cs`
