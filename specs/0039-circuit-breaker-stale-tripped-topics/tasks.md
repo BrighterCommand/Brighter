@@ -108,7 +108,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T1.4
   - References: `src/Paramore.Brighter/CircuitBreaker/InMemoryOutboxCircuitBreaker.cs`. ADR 0089 *Deliberate readings*: "`CooldownCount` stays live".
 
-- [ ] **CHARACTERISE: T1.5 - The cooldown count still ends a trip first when it is shorter than D**
+- [x] **CHARACTERISE: T1.5 - The cooldown count still ends a trip first when it is shorter than D**
   - **USE COMMAND**: `/tdd:test-first when the cooldown count runs out before the maximum trip duration should end the trip on the third cooldown`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker"
   - Test file: `When_the_cooldown_count_runs_out_before_the_maximum_trip_duration_should_end_the_trip.cs`
