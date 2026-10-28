@@ -9,7 +9,7 @@ Messages that stay undispatched in the outbox were invisible until someone queri
 
 #### The monitor and its instruments
 
-`UseOutboxStaleMessageMonitor` on `IBrighterBuilder` registers the monitor. Its settings are `StaleMessageAge` (required, at most 365 days), `CountCeiling` (default 100, at most 1000), `MeasurementInterval` (default 1 minute) and `MeasurementTimeout` (default 10 seconds, below the interval). When the monitor is in use, `AddBrighterInstrumentation` registers three instruments on the Brighter meter. Every series carries `paramore.brighter.outbox.implementation`, the outbox's type name.
+`UseOutboxStaleMessageMonitor` on `IBrighterBuilder` registers the monitor, and needs the outbox and producer configuration that `AddProducers` registers. Its settings are `StaleMessageAge` (required, at most 365 days), `CountCeiling` (default 100, at most 1000), `MeasurementInterval` (default 1 minute) and `MeasurementTimeout` (default 10 seconds, below the interval). When the monitor is in use, `AddBrighterInstrumentation` registers three instruments on the Brighter meter. Every series carries `paramore.brighter.outbox.implementation`, the outbox's type name. The counter's count is in `paramore.brighter.outbox.stale.count` and its outcome in `paramore.brighter.outbox.stale.outcome`.
 
 | Instrument | Type | Unit | Reports |
 |---|---|---|---|
@@ -22,6 +22,8 @@ A value equal to the ceiling means the ceiling or more. A `completed` total that
 #### Per-topic ages and the optional capability
 
 `Publication.StaleMessageAge` sets the age for one topic, and a topic with several publications uses the smallest. `IAmATopicCountingOutbox` is the optional capability that counts several topics in one call. `InMemoryOutbox` implements it. Other outboxes report the overall count only until they add it, and the monitor logs that once at start.
+
+New public types and members, all additive: `TimedOutboxStaleMessageMonitor` and `TimedOutboxStaleMessageMonitorOptions` in `Paramore.Brighter.Outbox.Hosting`; `OutboxStaleMessageMeter`, `OutboxStaleMessageReadings`, `StaleMessageCount` and `StaleMeasurementOutcome` in `Paramore.Brighter.Observability`; `IAmATopicCountingOutbox`; and `Publication.StaleMessageAge`.
 
 The telemetry page of the documentation covers the settings, the alerts and the known limitations of each outbox.
 
