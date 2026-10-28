@@ -1584,7 +1584,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - add the three marks to `OutboxConfiguration.cs`, empty by default, and render the skip in the three templates;
     - expect the generated-tree audit in `Paramore.Brighter.Test.Generator.Tests` to report Missing entries until T13.13. They are not a regression to fix.
 
-- [ ] **GENERATE: T13.7 Sqlite runs the suite against its store**
+- [x] **GENERATE: T13.7 Sqlite runs the suite against its store**
   - Generated tests. Do not use `/test-first`, and never write or edit a generated file by hand.
   - Test location: "tests/Paramore.Brighter.Sqlite.Tests/Outbox/Binary/Generated/OutstandingCount/" and "tests/Paramore.Brighter.Sqlite.Tests/Outbox/Text/Generated/OutstandingCount/"
   - Test file: the files the generator renders from the templates of T13.3, never written by hand
