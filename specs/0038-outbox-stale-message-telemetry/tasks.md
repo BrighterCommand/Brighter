@@ -1659,7 +1659,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - do not run the generated-tree audit in this task. It reports Missing entries until T13.13, which runs it.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before committing the generated files** *(fires in the `review-before` gear, which is the default)*
 
-- [ ] **GENERATE: T13.12 DynamoDB and DynamoDB V4 run the suite in lockstep**
+- [x] **GENERATE: T13.12 DynamoDB and DynamoDB V4 run the suite in lockstep**
   - Generated tests. Do not use `/test-first`, and never write or edit a generated file by hand.
   - Deviation from the `GENERATE` shape: the Meets facts must pass, but a Gap fact may fail, and its failure is the result to record, not a defect to fix. It stays red until T13.17 sets its gap mark. Run this task with `/spec:implement`; `/spec:ralph-implement` returns `FAILED` on it by design. The gate question names the red Gap facts.
   - Test location: "tests/Paramore.Brighter.DynamoDB.Tests/Outbox/Generated/OutstandingCount/" and "tests/Paramore.Brighter.DynamoDB.V4.Tests/Outbox/Generated/OutstandingCount/"
