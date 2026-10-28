@@ -85,9 +85,9 @@ public partial class InMemoryOutboxCircuitBreaker(
     /// <summary>
     /// A collection of tripped topics.
     /// </summary>
-    public IEnumerable<RoutingKey> TrippedTopics => ListTrippedTopicsRemovingExpired();
+    public IEnumerable<RoutingKey> TrippedTopics => EndExpiredTripsAndListLive();
 
-    private RoutingKey[] ListTrippedTopicsRemovingExpired()
+    private RoutingKey[] EndExpiredTripsAndListLive()
     {
         var live = new List<RoutingKey>();
         foreach (var trip in _trippedTopics.ToArray())
@@ -160,6 +160,8 @@ public partial class InMemoryOutboxCircuitBreaker(
     /// <param name="topic">Name of the entity to circuit break</param>
     public void TripTopic(RoutingKey topic)
     {
+        EndExpiredTripsAndListLive();
+
         var cooldownCount = _outboxCircuitBreakerOptions.CooldownCount;
         var isReTrip = false;
 
