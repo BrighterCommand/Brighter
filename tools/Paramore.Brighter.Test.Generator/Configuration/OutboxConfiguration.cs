@@ -92,6 +92,24 @@ public class OutboxConfiguration
     public bool OutstandingCountBelowScanConcurrency { get; set; }
 
     /// <summary>
+    /// Gets or sets the issue number that tracks the store's gap in the age column of the overall
+    /// count. When set, the age fact renders with a deferred skip naming the issue.
+    /// </summary>
+    public int? OutstandingCountAgeGap { get; set; }
+
+    /// <summary>
+    /// Gets or sets the issue number that tracks the store's gap in the ceiling column of the overall
+    /// count. When set, the ceiling facts render with a deferred skip naming the issue.
+    /// </summary>
+    public int? OutstandingCountCeilingGap { get; set; }
+
+    /// <summary>
+    /// Gets or sets the issue number that tracks the store's gap in the cancellation column of the
+    /// overall count. When set, the cancellation fact renders with a deferred skip naming the issue.
+    /// </summary>
+    public int? OutstandingCountCancellationGap { get; set; }
+
+    /// <summary>
     /// Returns a copy of this configuration carrying <paramref name="prefix"/>.
     /// </summary>
     /// <param name="prefix">The prefix the copy should carry.</param>

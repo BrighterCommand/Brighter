@@ -18,7 +18,7 @@ public class WhenAnOutstandingCountIsCancelledShouldEndTheCall : OutstandingCoun
     protected override Task<OutstandingCountCancellationSetup<{{ Transaction }}>> PrepareStoreAsync(TimeSpan holdFor) =>
         _outboxProvider.PrepareCancellationAsync(holdFor);
 
-    [Fact]
+    [Fact{% if OutstandingCountCancellationGap %}(Skip = "Deferred: #{{ OutstandingCountCancellationGap }} the cancellation column of the overall count is not yet conformant for this store"){% endif %}]
     public async Task When_an_outstanding_count_is_cancelled_should_end_the_call()
     {
         await AssertCancellationEndsTheCountAsync();
