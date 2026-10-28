@@ -44,28 +44,34 @@ public class MsSqlInboxProvisionerFreshDatabaseTests : IAsyncLifetime
         await _provisioner.ProvisionAsync();
 
         //Assert
+        Assert.Equal(1, GetInboxTableCountInDbo());
+        Assert.Equal(1, GetHistoryRowCountAtInboxLatest());
+    }
+
+    private int GetInboxTableCountInDbo()
+    {
         using var connection = new SqlConnection(_connectionString);
         connection.Open();
-
-        // Verify inbox table exists
         using var tableCheck = connection.CreateCommand();
         tableCheck.CommandText = @"
 SELECT COUNT(1) FROM sys.tables t
 INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
 WHERE t.name = @TableName AND s.name = 'dbo'";
         tableCheck.Parameters.AddWithValue("@TableName", _tableName);
-        var tableCount = (int)tableCheck.ExecuteScalar()!;
-        Assert.Equal(1, tableCount);
+        return (int)tableCheck.ExecuteScalar()!;
+    }
 
-        // Verify migration history contains the latest inbox version
+    private int GetHistoryRowCountAtInboxLatest()
+    {
+        using var connection = new SqlConnection(_connectionString);
+        connection.Open();
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM [__BrighterMigrationHistory]
 WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = 'dbo' AND [MigrationVersion] = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.InboxLatest);
-        var historyCount = (int)historyCheck.ExecuteScalar()!;
-        Assert.Equal(1, historyCount);
+        return (int)historyCheck.ExecuteScalar()!;
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
