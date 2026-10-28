@@ -1526,7 +1526,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - Implementation should (only if the test is RED on arrival): none is expected, so stop and ask.
 
-- [ ] **TEST + IMPLEMENT: T13.3 The generator renders a fourth outbox suite for every outbox, with no `SkipTest` filter**
+- [x] **TEST + IMPLEMENT: T13.3 The generator renders a fourth outbox suite for every outbox, with no `SkipTest` filter**
   - **USE COMMAND**: `/test-first OutboxGenerator renders the OutstandingCount suite and its provider interface for every configured outbox whatever the template names`
   - Test location: "tests/Paramore.Brighter.Test.Generator.Tests/OutboxGenerator/"
   - Test file: `When_generating_outbox_suites_should_render_the_outstanding_count_suite_for_every_outbox.cs`
