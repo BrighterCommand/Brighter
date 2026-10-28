@@ -1,15 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
+using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MSSQL.Tests.Outbox.Binary.Async;
+using Paramore.Brighter.MSSQL.Tests.Outbox.Binary.OutstandingCount;
 using Paramore.Brighter.MSSQL.Tests.Outbox.Binary.Sync;
 using Paramore.Brighter.Outbox.MsSql;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Binary;
 
-public class MSSQLBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
+public class MSSQLBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync, IAmAnOutstandingCountOutboxProvider
 {
     private readonly RelationalDatabaseConfiguration _configuration = new(
         Configuration.DefaultConnectingString,
@@ -84,4 +87,11 @@ public class MSSQLBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPro
         var outbox = new MsSqlOutbox(_configuration);
         return await outbox.GetAsync(new RequestContext());
     }
+
+    IAmAnOutboxAsync<Message, DbTransaction> IAmAnOutstandingCountOutboxProvider.CreateOutbox() => new MsSqlOutbox(_configuration);
+
+    void IAmAnOutstandingCountOutboxProvider.DeleteStore() => DeleteStore(Array.Empty<Message>());
+
+    public Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareCancellationAsync(TimeSpan holdFor) =>
+        HeldMsSqlOutstandingCountStore.PrepareAsync(binaryMessagePayload: true);
 }
