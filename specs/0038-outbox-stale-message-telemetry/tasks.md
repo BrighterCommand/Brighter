@@ -1601,7 +1601,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - do not run the generated-tree audit in this task. It reports Missing entries until T13.13, which runs it.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before committing the generated files** *(fires in the `review-before` gear, which is the default)*
 
-- [ ] **GENERATE: T13.8 MsSql runs the suite against its store**
+- [x] **GENERATE: T13.8 MsSql runs the suite against its store**
   - Generated tests. Do not use `/test-first`, and never write or edit a generated file by hand.
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/Outbox/Binary/Generated/OutstandingCount/" and "tests/Paramore.Brighter.MSSQL.Tests/Outbox/Text/Generated/OutstandingCount/"
   - Test file: the files the generator renders from the templates of T13.3, never written by hand
