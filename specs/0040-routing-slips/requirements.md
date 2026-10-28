@@ -50,7 +50,7 @@ Each term is defined once here and used with this meaning throughout.
 
 - **Flow**: a named route to an approved `tasks.md`, for example `feature`.
 - **Flow definition**: the single canonical, repository-level statement of one flow's slip, for example `.claude/flows/feature.flow`. The location and file format are for the ADR to decide.
-- **Slip** (routing slip): the content of a flow definition, or of a spec's copy of one. It is the flow's name, an ordered list of steps, and a hand-off.
+- **Slip** (routing slip): the content of a flow definition, or of a spec's copy of one. It is the flow's name, an ordered list of steps, a hand-off, and any detours (FR-30).
 - **Spec slip**: the copy of a slip held in a spec directory as `.flow`.
 - **Step**: one entry on a slip. It has a **step name** (unique on the slip), an **artefact kind**, a **producing command** that creates its artefact(s), its **artefact(s)**, its **approval marker**, and its **marker-writing command**.
 - **Artefact**: a file a step produces and an approval covers, for example `requirements.md`, `tasks.md`, or the ADRs listed in `.adr-list`. A step's artefact(s) are **present** when the files the slip names for it exist in the spec directory. For an ADR step this means `.adr-list` exists and is non-empty.
@@ -74,8 +74,11 @@ Each term is defined once here and used with this meaning throughout.
 - **Ignored marker**: a file in a spec directory whose name starts with `.` and ends with `-approved` and that is neither an approval marker on that spec's own slip nor an intent marker, for example `.code-approved` in `specs/0028-box-provisioning-rdd-role-interfaces/`. Such markers belong to the construction phase that follows `tasks.md`, not to the route. The resolver neither reports them nor lets them affect any routing decision.
 - **Route-following command**: one of `/spec:requirements`, `/spec:design`, `/spec:tasks`, `/spec:approve`, `/spec:review`, `/spec:implement`, `/spec:ralph-implement` and `/adr:adr`. These are the commands that stop on an invalid or tampered slip (FR-7). `/spec:status` and `/spec:switch` report the route instead; the route-change command repairs it; `/spec:new` and starter commands create it. `/spec:gear`, `/spec:show-me` and `/spec:write_release_notes` are not route-following: they do not stop on an invalid or tampered slip and are otherwise as stated in FR-23 and the Constraints.
 - **Out-of-order approval**: a step is approved while an earlier step on the same slip is not.
+- **Detour**: an optional command the next-step guidance may suggest beside the required next step, attached on the slip to a step or to the hand-off, together with its **return point**: the step on the slip, or the hand-off, to go back to once the detour is done. A detour never satisfies or blocks a precondition, is not a step, and writes no routing state. Example: in the `light` fixture, a detour to `/refactor:smells` attached to the hand-off, whose return point is the hand-off, `/spec:implement`.
 - **Route resolver**: the deterministic, read-only procedure of FR-6. Whether it is one script or several is for the ADR to decide.
-- **Behaves as today**: for a given spec directory state, a command reaches the same decision as the current command text cited in the Problem Statement table. That means the same precondition passes or fails, the same files are required or read, and the same next command(s) are named. Byte-identical prose is not required. The one deliberate departure is FR-20: a missing, empty or stale `specs/.current-spec` now stops every command that acts on the current spec, including `/spec:requirements`.
+- **Behaves as today**: for a given spec directory state, a command reaches the same decision as the current command text cited in the Problem Statement table. That means the same precondition passes or fails, the same files are required or read, and the same next command(s) are named. Byte-identical prose is not required. There are two deliberate departures:
+  - FR-20: a missing, empty or stale `specs/.current-spec` now stops every route-following command except `/adr:adr`, including `/spec:requirements`. `/adr:adr` instead treats a missing, empty or stale `.current-spec` alike as no current spec, which for empty or stale is also a change: today it tries to link the ADR to that spec (`adr.md:40-49`);
+  - FR-11: the next step a command names is the resolver's, so closing guidance can differ from today's text. For example, `/spec:design`'s closing guidance names `/spec:review design` before `/spec:approve design`, where `design.md:424` names only the approval.
 
 ### Functional Requirements
 
@@ -89,7 +92,8 @@ Each term is defined once here and used with this meaning throughout.
 A slip states, in a form that a person and the commands can both read:
 - the flow name;
 - the ordered list of steps, and for each step its step name, artefact kind, producing command, artefact(s), approval marker and marker-writing command;
-- the hand-off command.
+- the hand-off command;
+- any detours, each with the step or hand-off it is attached to and its return point (FR-30).
 Example, the `light` slip: flow `light`; step `design` of kind `design`, produced by `/spec:design`, artefacts the ADRs in `docs/adr/` listed in `.adr-list`, marker `.design-approved`, written by `/spec:approve design`; step `tasks` of kind `tasks`, produced by `/spec:tasks`, artefact `tasks.md`, marker `.tasks-approved`, written by `/spec:approve tasks`; hand-off `/spec:implement`.
 
 **FR-3 — A slip is valid only if it meets every well-formedness rule.**
@@ -106,6 +110,7 @@ Example, the `light` slip: flow `light`; step `design` of kind `design`, produce
 - Every step's artefact kind has an entry in the approval table (FR-29). A slip with a step whose kind has no entry is invalid. Example: a slip with a step of kind `spike` and no `spike` entry is reported invalid, naming the step and the missing entry.
 - The last step's artefact kind is `tasks`, its artefact is `tasks.md`, and its marker is `.tasks-approved`. Everything after `tasks.md` is the same for every flow and already depends on that marker (`approve.md:91-93`, `ralph-implement.md:445`, `tasks.md:121-124`).
 - The hand-off is `/spec:implement`.
+- A slip may attach detours to any step or to the hand-off (FR-30). Every detour names a command that resolves under `.claude/commands/` and a return point that is a step on the slip or the hand-off.
 - The flow name matches the definition's filename stem (applies to flow definitions only).
 When a slip breaks a rule, the resolver reports the slip as invalid and names the rule and the offending step (FR-6). Every route-following command stops with that report (FR-7). Example: a slip whose `design` step names `/spec:designx` is reported invalid because step `design` names a command that does not exist, `/spec:designx`.
 
@@ -139,13 +144,14 @@ Given a spec directory, the resolver reports:
 - each step's artefact kind, and whether the slip has a step of each known kind (`requirements`, `design`, `tasks`), so that commands can apply FR-10;
 - which steps, if any, are produced or approved by a gate (FR-27);
 - for each step, its approval sub-flow from the approval table, so that every approver runs the same commands (FR-29);
+- the detours attached to the step it names as next, or to the hand-off, each with its return point (FR-30);
 - the most recent route change, if there has been one (FR-17).
 The resolver also answers, given a flow name and no spec directory, whether that flow's definition exists and is valid, so that `/spec:new`, the route-change command and starter commands can check a definition before creating anything.
 The same inputs (NFR-1) always give the same report. The resolver only reads, and is never consulted for a write. A resolver test (FR-24) can tell it to use a flow-definition directory other than the shipped one, together with that directory's approval table. The fixture flow-definition directory holds `light`, `bugfix`, a copy of `feature` (so that `feature`'s markers are intent markers there), and its own approval table.
 
 **FR-7 — Commands take routing decisions from the resolver.**
-- Every route-following command, `/spec:status`, `/spec:switch`, `/spec:new` and the route-change command gets every precondition outcome, next step, step-membership check and artefact-kind check from the resolver. None derives them from a list of markers or step names written into its own text.
-- When the resolver reports an invalid or tampered slip, every route-following command stops before doing any work and shows the resolver's reason. The exceptions are `/spec:status` and `/spec:switch`, which report it (FR-15), and the route-change command (FR-17).
+- Every route-following command, `/spec:status`, `/spec:switch`, `/spec:new` and the route-change command gets every route decision from the resolver: marker and step-order preconditions, the next step and its detours, step-membership checks and artefact-kind checks. None derives them from a list of markers or step names written into its own text. Preconditions that are not about the route stay with the command that has them; for example, `/spec:implement`'s ADR-status check (FR-9).
+- When the resolver reports an invalid or tampered slip, every route-following command stops before doing any work and shows the resolver's reason and the recovery: for a tampered slip, those of FR-16; for an invalid slip, re-copying the flow with the route-change command and a reason (FR-17), or fixing the flow definition or the approval table first if the fault is there. The exceptions are `/spec:status` and `/spec:switch`, which report it (FR-15), and the route-change command (FR-17).
 - Check: after this change, no file under `.claude/commands/spec/` other than `README.md`, and not `.claude/commands/adr/adr.md`, contains the literal text `.requirements-approved` or `.design-approved`. Those markers appear only in flow definitions, in documentation, and in fixtures.
 
 **FR-8 — A step's precondition is that the previous step on the slip is approved.**
@@ -159,17 +165,17 @@ The same inputs (NFR-1) always give the same report. The resolver only reads, an
 
 **FR-9 — Implementation starts once every step on the slip is approved.**
 - `/spec:implement` and `/spec:ralph-implement` start only when every step on the spec's slip is approved. Stray markers neither help nor hinder.
-- `/spec:implement` also keeps its check that every ADR is `Accepted` (`implement.md:115`), but only when the slip has a `design`-kind step. `/spec:ralph-implement` gains no check it does not have today (`ralph-implement.md:152-155`).
+- `/spec:implement` also keeps its check that every ADR is `Accepted` (`implement.md:115`). It first asks the resolver whether the slip has a `design`-kind step, and runs the check only if it has; the check itself stays in `/spec:implement` and reads `docs/adr/`, which the resolver does not (NFR-1). `/spec:ralph-implement` gains no check it does not have today (`ralph-implement.md:152-155`).
 - Example (feature): the same as today, all three markers. Example (light): `.design-approved` and `.tasks-approved`, with no `.requirements-approved` needed.
 - On failure the command stops and names every unapproved step in slip order.
 
 **FR-10 — A command reads another step's artefact only when the slip has that step.**
 Every command that reads, requires, passes on or grades another step's artefact does so by known artefact kind. If the spec's slip has a step of that kind, it behaves as today. If not, it does not require the artefact and does not report its absence as a defect. No `/spec:*` command reads, requires or grades the artefacts of a flow-specific kind; a flow that wants `/spec:implement`'s sub-agents to see such an artefact (as `bugfix` would want for `bugfix.md`) cites it from `tasks.md`. This covers:
-- `/spec:design` inputs (`design.md:97`, `design.md:108`) and the ADR's Parent Requirement and FR-id scope lines (`design.md:164-166`). With no `requirements`-kind step, the ADR cites the linked issue (`.issue-number`) or the spec's `README.md` as its parent instead.
+- `/spec:design` inputs (`design.md:97`, `design.md:108`) and the ADR's Parent Requirement and FR-id scope lines (`design.md:164-166`). With no `requirements`-kind step, the ADR cites the linked issue as its parent if `.issue-number` exists, and otherwise the spec's `README.md`.
 - `/spec:tasks` inputs and the FR-coverage cross-reference (`tasks.md:26-31`, `tasks.md:46`, `tasks.md:172-173`). With no `requirements`-kind step, coverage is checked against the ADR decisions only.
 - `/spec:review design`, `tasks` and `code` cross-references and FR criteria (`review.md:57`, `review.md:68`, `review.md:78`, `review.md:182-185`, `review.md:294`, `review.md:316`). These criteria are left out when the kind is absent, and the review states that the spec's route has no requirements step.
 - The `/spec:ralph-implement` sub-agent context (`ralph-implement.md:222`) and `/spec:implement`'s ADR reads (`implement.md:69-70`). ADR reads apply only when the slip has a `design`-kind step.
-- `/adr:adr` (`adr.md:50`).
+- `/adr:adr` (`adr.md:50`). With a missing, empty or stale `specs/.current-spec` it writes an ADR linked to no spec, as it does today when the file is missing (`adr.md:40-49`), and FR-20's stop does not apply to it (see *Behaves as today*). With a current spec whose slip has no `design`-kind step, it stops, says the spec's route has no design step, names the resolver's next step, and does not touch `.adr-list`.
 - `/spec:show-me` (FR-23).
 - A slip with neither a `requirements`-kind nor a `design`-kind step is valid, and these commands then need only `tasks.md`.
 
@@ -179,8 +185,9 @@ The resolver computes the next step as follows:
 - If that step's artefact(s) are not present, the next step is its producing command.
 - If they are present, the next step is `/spec:review {kind}` for the known kinds (`requirements`, `design`, `tasks`), which are the reviewable ones, followed by its marker-writing command. For a flow-specific kind it is the marker-writing command alone. Example (bugfix, `bugfix.md` present, nothing approved): the next step is `/bugfix:confirm`.
 - A gate needs no special rule here. Example (bugfix, `.confirm-approved` present, no `tasks.md`, as after an interrupted gate run): the first unapproved step is `tasks`, its artefact is absent, so the next step is its producing command, `/bugfix:confirm`.
-- If every step is approved, the next step is the hand-off.
-Every command that prints a next step prints the resolver's next step: `/spec:status`, `/spec:switch`, `/spec:approve`, every producing command's closing guidance (`requirements.md:203-208`, `design.md:413-424`, `tasks.md:201-206`), `/spec:review`'s closing reminder (`review.md:462`) and `/adr:adr` (`adr.md:345`). Advice that does not depend on the route stays as it is. Examples are "run `/spec:design` again for another focus area" (`approve.md:62-63`) and the gear and driver explanation (`approve.md:66-79`).
+- If every step is approved, the next step is the hand-off, `/spec:implement`, and the resolver also names `/spec:ralph-implement` as the unattended driver of the same task list, on every slip, as `approve.md:86-87` does today.
+The resolver also reports the detours attached to that step, or to the hand-off, each with its return point (FR-30).
+Every command that prints a next step prints the resolver's next step, and then any detours, each marked optional and naming its return point: `/spec:status`, `/spec:switch`, `/spec:approve`, every producing command's closing guidance (`requirements.md:203-208`, `design.md:413-424`, `tasks.md:201-206`), `/spec:review`'s closing reminder (`review.md:462`) and `/adr:adr` (`adr.md:345`). Advice that does not depend on the route stays as it is. Examples are "run `/spec:design` again for another focus area" (`approve.md:62-63`) and the gear and driver explanation (`approve.md:66-79`). The two-driver advice at the hand-off (`approve.md:86-87`) is no longer static text: it comes from the resolver, so `/spec:status` and `/spec:switch` print it too.
 Example (light, design approved, no `tasks.md`): `/spec:approve design` names `/spec:tasks`. Example (feature, requirements approved, no `.adr-list`): `/spec:status` names `/spec:design`, as today.
 
 **FR-12 — `/spec:approve` approves steps on the slip.**
@@ -219,12 +226,13 @@ A spec slip is **tampered** when any of these holds:
 - (a) its content differs from the content in the most recent creation record. Line-ending differences of the kind git's `* text=auto` normalisation produces (`.gitattributes:2`) do not count; every other difference does.
 - (b) a creation record exists but `.flow` does not;
 - (c) `.flow` exists but no creation record does. An example is a slip copied in by hand.
-A legacy spec, which has neither, is not tampered. When the resolver reports a slip as tampered, route-following commands stop (FR-7). The message names the spec, says its slip does not match what was recorded when the route was set, and gives both recoveries: restore `.flow` from version control, or run the route-change command with a reason. Changing a flow definition after a spec started never makes that spec tampered.
+A legacy spec, which has neither, is not tampered. When the resolver reports a slip as tampered, route-following commands stop (FR-7). The message names the spec, says its slip does not match what was recorded when the route was set, and gives the recoveries: restore `.flow` from version control (cases (a) and (b)), or run the route-change command with a reason (every case, and the only one for case (c)). Changing a flow definition after a spec started never makes that spec tampered.
 
 **FR-17 — Changing a spec's route needs the explicit route-change command and a reason.**
 - One command changes a spec's route. Its name is for the ADR; `/spec:gear` is the analogue.
 - It takes the target flow and a reason. It does not run without a reason. If none is given, it asks, as `/spec:gear` does (`gear.md:124-128`).
-- It stops if the target flow has no definition, if that definition is invalid (FR-3), or if the spec is already on the target flow with a slip that is not tampered.
+- It stops if the target flow has no definition, if that definition is invalid (FR-3), or if the spec is already on the target flow with a slip that is valid and not tampered.
+- If the spec is already on the target flow but its slip is invalid or tampered, it re-copies that flow's current definition into `.flow`, with a reason, and records the change like any other. This is the recovery for an invalid copy (FR-22) and one of the recoveries for a tampered one (FR-16).
 - On success it copies the target flow's slip into `.flow` and updates the creation record. It also records the date, the previous flow, the new flow and the reason in a tracked file in the spec directory. Earlier route changes are kept.
 - After a route change the spec resolves exactly like any other spec on the new flow with the same markers. Markers for steps not on the new slip become stray markers (FR-21). The command deletes no marker and no artefact.
 - It works on a legacy spec, which gains a `.flow` and a creation record, and on a tampered spec.
@@ -232,7 +240,7 @@ A legacy spec, which has neither, is not tampered. When the resolver reports a s
 - Example: changing `specs/0041-foo/` from `feature` to a flow without `requirements` while `.requirements-approved` exists leaves that file in place. Status then reports it as a stray marker.
 
 **FR-18 — `/spec:new` always starts a `feature` spec. There is no generic flow switch.**
-- `/spec:new {name}` creates the spec directory, `specs/.current-spec` and `README.md` as today (`new.md:15-22`). It also copies the `feature` slip into `.flow` and writes a creation record.
+- `/spec:new {name}` creates the spec directory, `specs/.current-spec` and `README.md` as today (`new.md:15-22`), naming the directory by the **spec numbering rule**: a four-digit number one above the highest number in use under `specs/`, then `-` and the name. Numbers are not unique (`specs/` already holds several directories numbered `0002`, `0023`, `0027` and `0037`); only the whole directory name is, so a command that would create a directory whose full name already exists stops and creates nothing. `new.md:14`'s "format: 001, 002, etc." is corrected to four digits, matching practice. It also copies the `feature` slip into `.flow` and writes a creation record.
 - `/spec:requirements` no longer creates a spec directory. With no usable `specs/.current-spec` it stops as FR-20 states, instead of creating one as `requirements.md:30-33` does today. `/spec:new` is the only starter for `feature`.
 - No command takes a `--flow` option, or anything like one, to pick a flow at creation. Other flows start through their own starter command (FR-19).
 - If the `feature` definition is missing or invalid, `/spec:new` stops before creating anything and names the fault.
@@ -240,7 +248,7 @@ A legacy spec, which has neither, is not tampered. When the resolver reports a s
 **FR-19 — A well-formed starter command meets a fixed contract.**
 A starter command for flow `{name}` (for example spec 0039's `/modules:suggest`) is well formed when it:
 - stops before creating anything if `{name}`'s definition is missing or invalid (FR-3);
-- creates the spec directory with the same numbering and `specs/.current-spec` update as `/spec:new`;
+- creates the spec directory by the spec numbering rule (FR-18), stopping if the whole name already exists, and updates `specs/.current-spec`;
 - copies `{name}`'s slip into `.flow` and writes a creation record, so that the resolver reports flow `{name}`, valid and not tampered;
 - uses marker-writing commands that write the slip's markers with a provenance line (FR-13) for any step it or its sibling commands approve;
 - produces artefacts whose kinds and filenames match the slip. For example, a step that writes `requirements.md` declares it, so that `/spec:tasks` applies FR-10;
@@ -251,7 +259,7 @@ A starter command for flow `{name}` (for example spec 0039's `/modules:suggest`)
 A starter command adds no edits to `/spec:*` command files. `.claude/commands/spec/README.md` carries this contract as a checklist, one yes/no item per clause, each naming how it is checked (a fixture test or a statement in the command's text) (FR-26).
 
 **FR-20 — A missing or stale `specs/.current-spec` is reported, not guessed.**
-The resolver tells apart a `specs/.current-spec` that is missing, one that is empty, and one that is stale (names a directory that does not exist under `specs/`). Every route-following command, including `/spec:requirements`, that finds one of these states stops, names the state, and names the recovery: `/spec:switch` to choose an existing spec, or `/spec:new` to start one. It never falls back to some other spec and never creates one. `/spec:status` still lists every spec and reports the state of `.current-spec`. `/spec:gear`, `/spec:show-me` and `/spec:write_release_notes` keep today's handling of these states (`gear.md:105`, `show-me.md:51-56`, `write_release_notes.md:51`). This is a deliberate change from today for `/spec:requirements` (see *Behaves as today*); a stale `.current-spec` left by a switched branch is common, and creating a spec in that state hides the problem.
+The resolver tells apart a `specs/.current-spec` that is **missing** (no file), **empty** (the file holds nothing, or only whitespace), and **stale** (after trimming whitespace, its value does not name an existing directory under `specs/`), as `show-me.md:53` already classifies them. Every route-following command except `/adr:adr` (FR-10), including `/spec:requirements`, that finds one of these states stops, names the state, and names the recovery: `/spec:switch` to choose an existing spec, or `/spec:new` to start one. It never falls back to some other spec and never creates one. `/spec:status` still lists every spec and reports the state of `.current-spec`. `/spec:gear`, `/spec:show-me` and `/spec:write_release_notes` keep today's handling of these states (`gear.md:105`, `show-me.md:51-56`, `write_release_notes.md:51`). This is a deliberate change from today for `/spec:requirements` (see *Behaves as today*); a stale `.current-spec` left by a switched branch is common, and creating a spec in that state hides the problem.
 
 **FR-21 — Stray markers and out-of-order approvals are reported, and their effect is fixed.**
 - A stray marker never satisfies a precondition and never blocks one. Status reports it by name (FR-15). An ignored marker is not reported at all. Example: `specs/0028-box-provisioning-rdd-role-interfaces/.code-approved` is ignored, so status for 0028 is as today.
@@ -259,10 +267,10 @@ The resolver tells apart a `specs/.current-spec` that is missing, one that is em
 - Example (feature): `.design-approved` exists and `.requirements-approved` does not. The next step is `/spec:review requirements` then `/spec:approve requirements` (if `requirements.md` is present). `/spec:tasks`'s precondition holds, as it does today. `/spec:implement` is refused.
 
 **FR-22 — The spec's copy of the slip is authoritative.**
-A spec with a `.flow` follows its copy, even if the flow definition has since changed or been deleted. If the copy's flow name has no definition in the flow-definition directory, the resolver reports this for information and goes on following the copy. If the copy is invalid under FR-3, for example because it names a command that has been removed since, the spec is invalid and FR-7's stop applies.
+A spec with a `.flow` follows its copy, even if the flow definition has since changed or been deleted. If the copy's flow name has no definition in the flow-definition directory, the resolver reports this for information and goes on following the copy. If the copy is invalid under FR-3, for example because it names a command that has been removed since, the spec is invalid and FR-7's stop applies, naming the route-change command's re-copy (FR-17) as the recovery.
 
 **FR-23 — `/spec:show-me` reports a route without a requirements step explicitly.**
-- `show_me_facts.cs` records in the ledger whether the spec's slip has a `requirements`-kind step, as it resolves the route. The ADR decides whether it calls the resolver or shares its logic.
+- `show_me_facts.cs` records in the ledger whether the spec's slip has a `requirements`-kind step, as it resolves the route. The ADR decides whether it calls the resolver or shares its logic. Like the resolver (FR-6), it can be pointed at a fixture flow-definition directory and its approval table, so that it can run on the `light` and `bugfix` fixtures.
 - When the slip has no `requirements`-kind step:
   - `## Did it ship what it said?` writes a line saying that the spec's route (naming the flow) has no requirements step, so there is nothing to reconcile, in place of row 8's "No requirements.md found…" line (`show-me.md:559-560`);
   - `## Inputs used` row 1 reads `not available: not on this spec's route` (`show-me.md:689-691`);
@@ -278,7 +286,7 @@ A spec with a `.flow` follows its copy, even if the flow definition has since ch
   - a `feature` spec with a `.flow` and creation record;
   - the `light` cases of FR-25;
   - the `bugfix` cases of FR-28, and a slip with a flow-specific kind other than `diagnosis`;
-  - each error path: unknown flow name in `.flow` (FR-22), a step naming a nonexistent command, zero steps, duplicate step names, a last step that is not `tasks`, a stray marker, an ignored marker (`.code-approved`), a step that produces and approves itself with no gate, a step placed after the hand-off, a kind with no approval-table entry, a table with two entries for one kind, an out-of-order approval, each gate state of FR-27, each tamper case (a), (b) and (c), a CRLF-only difference (not tampered), and a spec directory whose name contains a space (as `specs/0021-Expose Unacceptable Message Window/` does).
+  - each error path: unknown flow name in `.flow` (FR-22), a step naming a nonexistent command, zero steps, duplicate step names, a last step that is not `tasks`, a stray marker, an ignored marker (`.code-approved`), a step that produces and approves itself with no gate, a step placed after the hand-off, a kind with no approval-table entry, a table with two entries for one kind, a detour with an unknown command or return point, a `.current-spec` holding only whitespace, an out-of-order approval, each gate state of FR-27, each tamper case (a), (b) and (c), a CRLF-only difference (not tampered), and a spec directory whose name contains a space (as `specs/0021-Expose Unacceptable Message Window/` does).
 - The script also checks that the resolver, run against every existing directory under `specs/` that has no `.flow`, reports flow `feature`, valid, not tampered, no stray markers, and the next step FR-11 computes on the `feature` slip. For the existing specs whose state is unusual, the expected next steps are:
   - `specs/0036-universal-transport-conformance-tests/` (all three markers, no `tasks.md`): the hand-off, `/spec:implement`, because every step is approved;
   - `specs/0031-test_naming_conventions/` (all three markers, no `.adr-list`): the hand-off, `/spec:implement`;
@@ -293,7 +301,8 @@ A spec with a `.flow` follows its copy, even if the flow definition has since ch
 - tasks: `/spec:tasks`'s precondition holds, and the slip reports no `requirements`-kind step;
 - review: auto-detect with `.adr-list` present and unapproved selects `design`, and the slip reports no `requirements`-kind step for the design cross-reference;
 - implement/ralph: preconditions hold with `.design-approved` and `.tasks-approved` only, and fail naming `tasks` when `.tasks-approved` is absent;
-- show-me: `show_me_facts.cs` on a finished `light` fixture records the no-requirements-step state of FR-23.
+- show-me: `show_me_facts.cs` on a finished `light` fixture records the no-requirements-step state of FR-23;
+- detours: with every step approved, the `/refactor:smells` detour is reported with the hand-off as its return point (FR-30).
 Adding `light` takes the fixture definition and fixtures only. No file under `.claude/commands/` changes.
 
 **FR-26 — The workflow documentation describes flows.**
@@ -355,17 +364,25 @@ The fixture does not migrate the `/bugfix:*` workflow. These differences from to
   | Kind | Approval sub-flow |
   | --- | --- |
   | `requirements` | empty |
-  | `design` | accept each ADR being approved (all of `.adr-list`, or the one named, as in `/spec:approve design 0043`); retire any ADR it supersedes; regenerate `docs/adr/index.md` |
+  | `design` | accept each ADR being approved (all of `.adr-list`, or the one named, as in `/spec:approve design 0043`); retire any ADR it supersedes; regenerate `docs/adr/index.md`; report which ADRs were approved, superseded or deprecated, and remind the user to commit the regenerated index |
   | `tasks` | empty |
 
   `tasks` is empty because "the content of an approved `tasks.md` is frozen" is a rule the commands that read `tasks.md` enforce (`approve.md:91-93`), not an action taken at approval.
-- The `design` sub-flow is the behaviour of `approve.md:34-58` (ADR status flips, supersession, index regeneration) moved into commands of its own, owned by the ADR command family. The presence check (`approve.md:32`), the marker write (`approve.md:59`) and the report to the user (`approve.md:60-61`) stay with the approver. The commands are, for example extending `.claude/commands/adr/write_adr_metadata.md` and adding commands for supersession and index regeneration. The move is a structural refactoring: a `feature` spec's design approval has the same outcome as today (AC-24).
+- The `design` sub-flow is the behaviour of `approve.md:34-58` (ADR status flips, supersession, index regeneration) moved into commands of its own, owned by the ADR command family. The report of which ADRs were approved, superseded or deprecated, and the reminder to commit the regenerated `docs/adr/index.md` (`approve.md:60-61`), move into the sub-flow too, so every approver of a `design` step produces them. The presence check (`approve.md:32`) and the marker write (`approve.md:59`) stay with the approver. The commands are, for example extending `.claude/commands/adr/write_adr_metadata.md` and adding commands for supersession and index regeneration. The move is a structural refactoring: a `feature` spec's design approval has the same outcome as today (AC-24).
 - Every approver runs the sub-flow: `/spec:approve`, a gate (FR-27), and any flow's own marker-writing command. No approver performs kind-specific approval behaviour that is not in the table.
 - Each sub-flow command receives the spec directory, the step, and the artefact(s) being approved. Which arguments each command takes is for the ADR.
-- Every sub-flow command is idempotent: running it again on the same input changes nothing further. Example: accepting an ADR that is already `Accepted` leaves it unchanged, and regenerating the index rebuilds the same file.
+- A sub-flow asks every question any of its commands needs, such as which ADR an approved ADR supersedes (`approve.md:50-51`), before its first command writes anything. A re-run after a failure asks again.
+- Every sub-flow command is idempotent: running it again on the same input and answers changes nothing further. Idempotence is promised only for the same answers. If a re-run after a partial failure is given different answers, writes made on the earlier answers may remain; this is an accepted limitation (see Constraints). Example: accepting an ADR that is already `Accepted` leaves it unchanged, and regenerating the index rebuilds the same file.
 - The step's marker is written only after the whole sub-flow completes. If a sub-flow command fails, the approver stops, names the failed command, and writes no marker. Re-running the approval re-runs the whole sub-flow from its first command; there is no per-command progress record.
 - The table is data, not command text, so a flow that adds a flow-specific kind adds an entry and edits no `/spec:*` command file (FR-25, FR-28). Its entry may be empty, but it must exist (FR-3).
 - Example: the fixture flow-definition directory's approval table holds an empty `diagnosis` entry for `bugfix`; the shipped table is not edited. A fixture slip with a step of kind `spike` and no `spike` entry is invalid.
+
+**FR-30 — Next-step guidance can suggest optional detours, and always names where to return.**
+- A slip may attach any number of detours to a step or to the hand-off. Each detour names its command and its return point (see *Detour*). The order of detours on the slip is the order they are printed.
+- The resolver reports the detours for the step it names as next (FR-11), or for the hand-off when every step is approved. Commands print them after the required next step, marked optional, each with its return point.
+- A detour never changes the required next step. After a detour the required next step is the same as before it, and the resolver names it again.
+- The shipped `feature` slip declares no detours, so `feature` guidance is unchanged apart from FR-11's departure. The fixture `light` slip declares one, attached to the hand-off: `/refactor:smells`, returning to the hand-off.
+- Example (light fixture, every step approved): the next step is `/spec:implement`, with `/spec:ralph-implement` as the unattended driver, and the optional detour `/refactor:smells`, after which the next step is `/spec:implement` again.
 
 ### Non-functional Requirements
 
@@ -386,6 +403,7 @@ The fixture does not migrate the `/bugfix:*` workflow. These differences from to
 - Slash commands are markdown instructions an agent executes, so a command's routing can be tested only through the resolver it consults. FR-7's text check and FR-24's fixture tests together stand in for running each command.
 - Tamper detection catches accidental or casual hand edits. It is not a security boundary. Anyone who can edit both `.flow` and its creation record can get past it, as anyone can edit `.current-gear`. Deleting both `.flow` and the creation record makes a spec look like a legacy `feature` spec, and this is accepted.
 - A legacy spec follows the `feature` definition current at resolution time. So any later change to the `feature` definition must keep FR-24's all-existing-specs check passing.
+- An approval sub-flow re-run after a partial failure with different answers to its questions can leave writes from the earlier run in place (FR-29). The approver names the failed command, so the user can see what was written; no rollback is provided.
 - The sha in a provenance line identifies the commit the approver was on. It does not prove that the approved artefact had been committed.
 - Marker-writing commands keep today's preconditions (FR-8). That is how out-of-order approvals can arise, and FR-21 fixes their effect.
 - Today `/spec:ralph-implement` does not check ADR status (`ralph-implement.md:152-155`), although `README.md:612` says it does. This spec keeps the command's behaviour (FR-9) and corrects the README (FR-26).
@@ -441,7 +459,7 @@ The fixture does not migrate the `/bugfix:*` workflow. These differences from to
 
 **AC-16 (FR-10, FR-25)** Given a `light` spec with approved ADRs and no `requirements.md`, when `/spec:tasks` is run, then it does not stop for a missing `requirements.md`, and its coverage cross-reference covers ADR decisions with no FR section.
 
-**AC-17 (FR-10)** Given a `light` spec with no `requirements.md`, when `/spec:design` drafts an ADR, then the ADR's Parent Requirement cites the linked issue or spec `README.md`, and no FR ids are claimed.
+**AC-17 (FR-10)** Given a `light` spec with no `requirements.md`, when `/spec:design` drafts an ADR, then the ADR's Parent Requirement cites its parent by FR-10's precedence (the linked issue if `.issue-number` exists, else the spec's `README.md`), and no FR ids are claimed.
 
 **AC-18 (FR-10, FR-14, FR-25)** Given a `light` spec with an unapproved `.adr-list`, when `/spec:review` is run with no phase, then it reviews `design`, does not require `requirements.md`, leaves out the *Connection to Requirements* criteria, and states the route has no requirements step.
 
@@ -481,7 +499,7 @@ The fixture does not migrate the `/bugfix:*` workflow. These differences from to
 
 **AC-36 (FR-17)** Given a `feature` spec with `.requirements-approved`, when the route-change command, pointed at the fixture flow-definition directory, changes the route to `light` with reason `R`, then `.flow` holds the new slip, the slip is not tampered, a tracked record holds the date, both flow names and `R`, `.requirements-approved` still exists and is reported stray, and status shows the change and `R`.
 
-**AC-37 (FR-17)** Given an unknown target flow, or a spec already on the target flow and not tampered, when the route-change command is run, then it stops and changes no file.
+**AC-37 (FR-17)** Given an unknown target flow, or a spec already on the target flow with a slip that is valid and not tampered, when the route-change command is run, then it stops and changes no file.
 
 **AC-38 (FR-18)** Given `/spec:new foo`, when it completes, then `specs/NNNN-foo/` holds `README.md`, a `.flow` equal to the `feature` slip, and a creation record, and the resolver reports `feature` from `.flow`, valid, not tampered.
 
@@ -491,11 +509,11 @@ The fixture does not migrate the `/bugfix:*` workflow. These differences from to
 
 **AC-41 (FR-19, FR-26, FR-27)** Given the updated `README.md`, when its starter-command checklist is read, then it has one yes/no item for each FR-19 clause, including the FR-27 run contract, and each item names whether it is checked by a resolver fixture test or by a statement in the relevant flow command's text.
 
-**AC-42 (FR-20)** Given `specs/.current-spec` missing, empty, or naming `0099-gone`, when `/spec:design` runs, then it stops, naming the state (missing, empty, or stale together with the directory `0099-gone`) and the recoveries `/spec:switch` and `/spec:new`. `/spec:status` still lists all specs. The same holds for `/spec:requirements`.
+**AC-42 (FR-20)** Given `specs/.current-spec` missing, empty, or naming `0099-gone`, when `/spec:design` runs, then it stops, naming the state (missing, empty, or stale together with the directory `0099-gone`) and the recoveries `/spec:switch` and `/spec:new`. `/spec:status` still lists all specs. The same holds for `/spec:requirements`. A `.current-spec` holding only whitespace is reported as empty; one holding `0040-routing-slips` with a trailing newline resolves to that spec.
 
 **AC-43 (FR-21)** Given a `feature` fixture with `.design-approved`, `requirements.md` and no `.requirements-approved`, when resolved, then the next step is `/spec:review requirements` then `/spec:approve requirements`, `/spec:tasks`'s precondition holds, `/spec:implement`'s fails, and an out-of-order approval is reported.
 
-**AC-44 (FR-22)** Given a spec whose `.flow` names flow `retired`, which has no definition, when resolved, then the copy is followed and a missing-definition notice is reported.
+**AC-44 (FR-22, FR-15)** Given a spec whose `.flow` names flow `retired`, which has no definition, when resolved, then the copy is followed and a missing-definition notice is reported, and `/spec:status` names it for that spec.
 
 **AC-45 (FR-23, FR-25)** Given a finished `light` fixture with no `requirements.md`, when `show_me_facts.cs` runs, then the ledger records that the route has no requirements step and `declared_total` is not `0`. `/spec:show-me`'s reconciliation line names the route rather than "No requirements.md found", and *Inputs used* row 1 reads `not available: not on this spec's route`.
 
@@ -509,63 +527,80 @@ The fixture does not migrate the `/bugfix:*` workflow. These differences from to
 
 **AC-50 (NFR-2)** Given the merged change, when the dependencies are checked, then no new package, runtime or parsing library has been added, and each routing file opens as plain text.
 
-**AC-52 (NFR-4)** Given a built resolver, when `/spec:status` resolves all specs under `specs/`, then resolution finishes in under 10 seconds.
+**AC-51 (NFR-4)** Given a built resolver, when `/spec:status` resolves all specs under `specs/`, then resolution finishes in under 10 seconds.
 
-**AC-53 (NFR-5)** Given a spec started by `/spec:new`, when `git status` runs, then `.flow`, the creation record and any route-change record show as untracked-but-not-ignored (stageable) files.
+**AC-52 (NFR-5)** Given a spec started by `/spec:new`, when `git status` runs, then `.flow`, the creation record and any route-change record show as untracked-but-not-ignored (stageable) files.
 
-**AC-54 (FR-3)** Given fixture slips that each break one kind rule (a step with no kind; two steps of kind `requirements`; a `tasks`-kind step whose artefact is not `tasks.md`; one command named as marker-writer of step 1 and producer of step 3), when the resolver runs on each, then each is reported invalid, naming the rule and the step.
+**AC-53 (FR-3)** Given fixture slips that each break one kind rule (a step with no kind; two steps of kind `requirements`; a `tasks`-kind step whose artefact is not `tasks.md`; one command named as marker-writer of step 1 and producer of step 3), when the resolver runs on each, then each is reported invalid, naming the rule and the step.
 
-**AC-55 (FR-3, FR-10, FR-11, FR-29)** Given a fixture slip with a step of flow-specific kind `evaluation` followed by a `tasks` step, a fixture approval table with an empty `evaluation` entry, and the `evaluation` artefact present and unapproved, when resolved, then the slip is valid, the step's kind is reported as `evaluation`, the next step is its marker-writing command with no `/spec:review`, and no known-kind step is reported for `requirements` or `design`.
+**AC-54 (FR-3, FR-10, FR-11, FR-29)** Given a fixture slip with a step of flow-specific kind `evaluation` followed by a `tasks` step, a fixture approval table with an empty `evaluation` entry, and the `evaluation` artefact present and unapproved, when resolved, then the slip is valid, the step's kind is reported as `evaluation`, the next step is its marker-writing command with no `/spec:review`, and no known-kind step is reported for `requirements` or `design`.
 
-**AC-56 (FR-27, FR-28)** Given the `bugfix` fixture, when resolved, then `/bugfix:confirm` is reported as a gate that approves `diagnosis` and produces and approves `tasks`.
+**AC-55 (FR-27, FR-28)** Given the `bugfix` fixture, when resolved, then `/bugfix:confirm` is reported as a gate that approves `diagnosis` and produces and approves `tasks`.
 
-**AC-57 (FR-27, FR-28)** Given the `bugfix` fixture with `bugfix.md` present and no marker, when the precondition to produce step `tasks` is queried before and after `.confirm-approved` is added, then it fails naming `diagnosis` before, and holds after.
+**AC-56 (FR-27, FR-28)** Given the `bugfix` fixture with `bugfix.md` present and no marker, when the precondition to produce step `tasks` is queried before and after `.confirm-approved` is added, then it fails naming `diagnosis` before, and holds after.
 
-**AC-58 (FR-27, FR-11)** Given the `bugfix` fixture with `.confirm-approved` present and no `tasks.md`, when resolved, then the next step is `/bugfix:confirm`.
+**AC-57 (FR-27, FR-11)** Given the `bugfix` fixture with `.confirm-approved` present and no `tasks.md`, when resolved, then the next step is `/bugfix:confirm`.
 
-**AC-59 (FR-27, FR-12)** Given the `bugfix` fixture with `tasks.md` present, when `/spec:approve tasks`'s membership is queried, then it is reported as having a different marker-writing command, naming `/bugfix:confirm`.
+**AC-58 (FR-27, FR-12)** Given the `bugfix` fixture with `tasks.md` present, when `/spec:approve tasks`'s membership is queried, then it is reported as having a different marker-writing command, naming `/bugfix:confirm`.
 
-**AC-60 (FR-28, FR-11, FR-14)** Given the `bugfix` fixture with `bugfix.md` present and nothing approved, when resolved, then the next step is `/bugfix:confirm` with no `/spec:review`, and `/spec:review` with no phase names step `diagnosis` and `/bugfix:confirm` rather than reviewing a phase.
+**AC-59 (FR-28, FR-11, FR-14)** Given the `bugfix` fixture with `bugfix.md` present and nothing approved, when resolved, then the next step is `/bugfix:confirm` with no `/spec:review`, and `/spec:review` with no phase names step `diagnosis` and `/bugfix:confirm` rather than reviewing a phase.
 
-**AC-61 (FR-28, FR-9, FR-10)** Given the `bugfix` fixture with `.confirm-approved` and `.tasks-approved`, when the `/spec:implement` and `/spec:ralph-implement` preconditions are queried, then both hold and no `requirements` or `design` step is reported. With `.confirm-approved` removed, both fail naming `diagnosis`.
+**AC-60 (FR-28, FR-9, FR-10)** Given the `bugfix` fixture with `.confirm-approved` and `.tasks-approved`, when the `/spec:implement` and `/spec:ralph-implement` preconditions are queried, then both hold and no `requirements` or `design` step is reported. With `.confirm-approved` removed, both fail naming `diagnosis`.
 
-**AC-62 (FR-28, FR-8)** Given the `bugfix` fixture, when the slip is asked which step has kind `requirements`, `design` and `tasks`, then none is reported for `requirements` or `design` (so `/spec:requirements` and `/spec:design` are not on the route), and for `tasks` step `tasks` is reported with producer `/bugfix:confirm` (so `/spec:tasks` stops naming `/bugfix:confirm`).
+**AC-61 (FR-28, FR-8)** Given the `bugfix` fixture, when the slip is asked which step has kind `requirements`, `design` and `tasks`, then none is reported for `requirements` or `design` (so `/spec:requirements` and `/spec:design` are not on the route), and for `tasks` step `tasks` is reported with producer `/bugfix:confirm` (so `/spec:tasks` stops naming `/bugfix:confirm`).
 
-**AC-63 (FR-28, FR-23)** Given a finished `bugfix` fixture, when `show_me_facts.cs` runs, then the ledger records that the route has no requirements step.
+**AC-62 (FR-28, FR-23)** Given a finished `bugfix` fixture, when `show_me_facts.cs` runs, then the ledger records that the route has no requirements step.
 
-**AC-64 (FR-28, FR-7)** Given the `bugfix` fixture definition and fixtures added, when the diff is taken over `.claude/commands/`, then it is empty for that addition, and no file under `.claude/commands/bugfix/` or `bugfixes/` has changed.
+**AC-63 (FR-28, FR-7)** Given the `bugfix` fixture definition and fixtures added, when the diff is taken over `.claude/commands/`, then it is empty for that addition, and no file under `.claude/commands/bugfix/` or `bugfixes/` has changed.
 
-**AC-66 (FR-9)** Given a `feature` fixture with only `.requirements-approved`, when the `/spec:implement` precondition is queried, then it fails, naming `design` then `tasks` in that order.
+**AC-64 (FR-26, FR-28)** Given the updated `README.md`, when read, then it records FR-28's four migration differences (location, gating, commands, gate output) as decisions for a later migration.
 
-**AC-67 (FR-12)** Given a `light` spec, when `/spec:approve` is run with no argument or with `foo`, then it lists `design` and `tasks` as the approvable steps and writes no file.
 
-**AC-68 (FR-14)** Given a `light` spec, when `/spec:review` completes, then its closing Spec Status block lists steps `design` and `tasks`, with no Requirements line.
+**AC-65 (FR-9)** Given a `feature` fixture with only `.requirements-approved`, when the `/spec:implement` precondition is queried, then it fails, naming `design` then `tasks` in that order.
 
-**AC-69 (FR-17)** Given a target flow whose definition is invalid under FR-3, when the route-change command is run, then it stops and changes no file. Given a legacy spec, or a tampered spec, when it is run with a valid target and a reason, then afterwards the spec has a `.flow` and creation record and is reported valid and not tampered.
+**AC-66 (FR-12)** Given a `light` spec, when `/spec:approve` is run with no argument or with `foo`, then it lists `design` and `tasks` as the approvable steps and writes no file.
 
-**AC-70 (FR-18)** Given the `feature` definition removed from, or made invalid in, the flow-definition directory, when `/spec:new foo` is run, then it stops, names the fault, and creates no directory.
+**AC-67 (FR-14)** Given a `light` spec, when `/spec:review` completes, then its closing Spec Status block lists steps `design` and `tasks`, with no Requirements line.
 
-**AC-71 (FR-22, FR-7)** Given a spec whose `.flow` was valid at creation but names a command definition that has since been deleted, when resolved, then the slip is reported invalid naming that command, and `/spec:tasks` stops showing that reason.
+**AC-68 (FR-17)** Given a target flow whose definition is invalid under FR-3, when the route-change command is run, then it stops and changes no file. Given a legacy spec, or a tampered spec, when it is run with a valid target and a reason, then afterwards the spec has a `.flow` and creation record and is reported valid and not tampered.
 
-**AC-72 (FR-21)** Given `specs/0028-box-provisioning-rdd-role-interfaces/`, when resolved, then no stray marker is reported and `.code-approved` affects no precondition or next step.
+**AC-69 (FR-18)** Given the `feature` definition removed from, or made invalid in, the flow-definition directory, when `/spec:new foo` is run, then it stops, names the fault, and creates no directory.
 
-**AC-73 (FR-3)** Given a fixture slip whose first step names one command as both its producing and its marker-writing command, with no gate, when resolved, then it is reported invalid.
+**AC-70 (FR-22, FR-7)** Given a spec whose `.flow` was valid at creation but names a command definition that has since been deleted, when resolved, then the slip is reported invalid naming that command, and `/spec:tasks` stops showing that reason.
 
-**AC-74 (FR-27, FR-28, FR-11)** Given the `bugfix` fixture with `.confirm-approved` and `tasks.md` but no `.tasks-approved`, when resolved, then the next step is `/spec:review tasks` followed by `/bugfix:confirm`, and the resolver reports that step `tasks`'s artefact is present and its gate has already approved `diagnosis`.
+**AC-71 (FR-21)** Given `specs/0028-box-provisioning-rdd-role-interfaces/`, when resolved, then no stray marker is reported and `.code-approved` affects no precondition or next step.
 
-**AC-75 (FR-3, FR-29)** Given a fixture slip with a step of kind `spike` and a fixture approval table with no `spike` entry, when resolved, then the slip is reported invalid, naming the step and the missing entry. Given the same table with an empty `spike` entry, the slip is valid.
+**AC-72 (FR-3)** Given a fixture slip whose first step names one command as both its producing and its marker-writing command, with no gate, when resolved, then it is reported invalid.
 
-**AC-76 (FR-29, FR-6)** Given the shipped approval table, when the resolver reports a `feature` spec's steps, then `requirements` and `tasks` have empty sub-flows and `design` has steps that accept the ADRs, then retire superseded ones, then regenerate the index, in that order.
+**AC-73 (FR-27, FR-28, FR-11)** Given the `bugfix` fixture with `.confirm-approved` and `tasks.md` but no `.tasks-approved`, when resolved, then the next step is `/spec:review tasks` followed by `/bugfix:confirm`, and the resolver reports that step `tasks`'s artefact is present and its gate has already approved `diagnosis`.
 
-**AC-77 (FR-29, FR-12)** Given a `feature` spec whose `design` sub-flow fails at its second command, when `/spec:approve design` runs, then it stops naming that command and `.design-approved` is not written. When the failure is removed and it is run again, then the sub-flow runs from its first command, the ADRs end `Accepted` with frontmatter and body status agreeing and no duplicated entries, and `.design-approved` is written with one provenance line.
+**AC-74 (FR-3, FR-29)** Given a fixture slip with a step of kind `spike` and a fixture approval table with no `spike` entry, when resolved, then the slip is reported invalid, naming the step and the missing entry. Given the same table with an empty `spike` entry, the slip is valid.
 
-**AC-78 (FR-29)** Given a `feature` spec with two `Proposed` ADRs in `.adr-list`, one superseding an `Accepted` ADR, when `/spec:approve design` runs after the extraction, then both ADRs are `Accepted`, the superseded ADR is `Superseded` with its back-link, and `docs/adr/index.md` matches a fresh regeneration — the same outcome as `approve.md:34-58` today.
+**AC-75 (FR-29, FR-6)** Given the shipped approval table, when the resolver reports a `feature` spec's steps, then `requirements` and `tasks` have empty sub-flows and `design` has steps that accept the ADRs, then retire superseded ones, then regenerate the index, then report the result and remind the user to commit the index, in that order.
 
-**AC-79 (FR-29, FR-28)** Given the `bugfix` fixture, when resolved, then step `diagnosis` reports an empty approval sub-flow and the slip is valid.
+**AC-76 (FR-29, FR-12)** Given a `feature` spec whose `design` sub-flow fails at its second command, when `/spec:approve design` runs, then it stops naming that command and `.design-approved` is not written. When the failure is removed and it is run again, then the sub-flow runs from its first command, the ADRs end `Accepted` with frontmatter and body status agreeing and no duplicated entries, and `.design-approved` is written with one provenance line.
 
-**AC-80 (FR-29, FR-7)** Given the merged change, when `.claude/commands/spec/approve.md` is read, then it contains no ADR status, supersession or index-regeneration instructions; those appear only in the `design` sub-flow's commands.
+**AC-77 (FR-29)** Given a `feature` spec with two `Proposed` ADRs in `.adr-list`, one superseding an `Accepted` ADR, when `/spec:approve design` runs after the extraction, then both ADRs are `Accepted`, the superseded ADR is `Superseded` with its back-link, and `docs/adr/index.md` matches a fresh regeneration — the same outcome as `approve.md:34-58` today.
 
-**AC-65 (FR-26, FR-28)** Given the updated `README.md`, when read, then it records FR-28's four migration differences (location, gating, commands, gate output) as decisions for a later migration.
+**AC-78 (FR-29, FR-28)** Given the `bugfix` fixture, when resolved, then step `diagnosis` reports an empty approval sub-flow and the slip is valid.
+
+**AC-79 (FR-29, FR-7)** Given the merged change, when `.claude/commands/spec/approve.md` is read, then it contains no ADR status, supersession, index-regeneration or ADR-reporting instructions; those appear only in the `design` sub-flow's commands.
+
+**AC-80 (FR-17, FR-22, FR-7)** Given a `feature` spec whose `.flow` is invalid because it names a since-deleted command, when the route-change command is run with target `feature` and reason `R` after the `feature` definition is corrected, then `.flow` equals the corrected definition, the spec is valid and not tampered, `R` is recorded, and before the change `/spec:tasks`'s stop message named this recovery.
+
+**AC-81 (FR-17)** Given a `feature` spec, when its route is changed to `light` with reason `R1` and then back to `feature` with reason `R2` (fixture flow-definition directory), then the route-change record holds both changes in order, with both reasons, and status shows the most recent.
+
+**AC-82 (FR-10, FR-20)** Given no `specs/.current-spec`, when `/adr:adr Use X` is run, then it writes an ADR linked to no spec, as today. Given a current spec on the `bugfix` fixture flow, when `/adr:adr` is run, then it stops, saying the route has no design step, and `.adr-list` is unchanged.
+
+**AC-83 (FR-9)** Given the `bugfix` fixture with every step approved and a `Proposed` ADR in `docs/adr/`, when `/spec:implement` runs, then it does not perform the ADR-status check, because the slip has no `design`-kind step. Given a `feature` spec in the same state, it refuses, as AC-14 states.
+
+**AC-84 (FR-30, FR-11)** Given the `light` fixture with every step approved, when the next step is resolved, then it is the hand-off `/spec:implement`, with `/spec:ralph-implement` named as the unattended driver and one optional detour `/refactor:smells` whose return point is the hand-off. Given a `feature` spec in the same state, no detour is reported.
+
+**AC-85 (FR-3, FR-30)** Given a fixture slip with a detour naming a command that does not exist, or a return point that is neither a step on the slip nor the hand-off, when resolved, then the slip is reported invalid, naming the detour.
+
+**AC-86 (FR-10)** Given a `light` spec with both `.issue-number` and `README.md`, when `/spec:design` drafts an ADR, then its Parent Requirement cites the issue.
+
+**AC-87 (FR-19)** Given an existing directory `specs/0041-foo/` and highest number `0041`, when a starter creates spec `foo`, then it creates `specs/0042-foo/`. Given the directory a starter would create already exists (for example `specs/0042-foo/` arriving from another branch before the starter writes), then it stops and creates nothing.
 
 ## Additional Context
 
