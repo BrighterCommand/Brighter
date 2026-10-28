@@ -59,6 +59,7 @@ public class DefeatedOptInMeetsUnreadableOverrideTests
         // a constructed instance (the shape DefeatedOptIn's error factory cannot safely force-unwrap)
         var capturingProvider = new CapturingLoggerProvider();
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddLogging(logging => logging.AddProvider(capturingProvider));
         services.AddSingleton<IBrighterOptions>(new BrighterOptions());
         services.AddSingleton(_ => new ScopeAffinityOverride(ScopeAffinity.JoinAmbient));
@@ -84,6 +85,7 @@ public class DefeatedOptInMeetsUnreadableOverrideTests
         // one of them being raised as an exception
         var capturingProvider = new CapturingLoggerProvider();
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddLogging(logging => logging.AddProvider(capturingProvider));
         services.AddSingleton<IBrighterOptions>(new BrighterOptions());
         services.AddSingleton(_ => new ScopeAffinityOverride(ScopeAffinity.JoinAmbient));
