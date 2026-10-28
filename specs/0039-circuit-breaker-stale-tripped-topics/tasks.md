@@ -42,7 +42,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 1a - Structural preparation of the in-memory breaker
 
-- [ ] **STRUCTURAL: T1.1 - Make in-memory trip entries immutable and inject a clock, with no behaviour change**
+- [x] **STRUCTURAL: T1.1 - Make in-memory trip entries immutable and inject a clock, with no behaviour change**
   - **USE COMMAND**: `/refactor:tidy-first make InMemoryOutboxCircuitBreaker entries immutable records with reference equality holding count and timestamp, add a trailing optional TimeProvider, replace AddOrUpdate decrement with TryUpdate retry, compare entries by reference on conditional remove`
   - Change:
     - `InMemoryOutboxCircuitBreaker.cs:44-53`: add a trailing `TimeProvider? timeProvider = null` parameter, defaulting to `TimeProvider.System`.
