@@ -1778,7 +1778,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - The enums' and readings' remarks say they are public for Brighter's own use.
   - Output: the build has no new CS1591 warning for these types.
 
-- [ ] **DOC: T14.6 Release notes entry**
+- [x] **DOC: T14.6 Release notes entry**
   - **USE COMMAND**: `/spec:write_release_notes`
   - Add the feature to `release_notes.md`: the step, the three instruments, `Publication.StaleMessageAge`, `IAmATopicCountingOutbox` on `InMemoryOutbox`, and a pointer to the telemetry page.
 
