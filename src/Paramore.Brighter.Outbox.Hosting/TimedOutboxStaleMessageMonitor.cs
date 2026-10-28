@@ -205,11 +205,23 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
             }
         }
 
-        Log.Stopped(s_logger, outboxType);
-        _readings.Stop();
-        abandoned.CancelInProgress();
+        StopStep(outboxType, () => Log.Stopped(s_logger, outboxType));
+        StopStep(outboxType, _readings.Stop);
+        StopStep(outboxType, abandoned.CancelInProgress);
         await WaitUntilAsync(_options.MeasurementTimeout, Volatile.Read(ref _stopRequested), abandoned.WhenAllEnded(), alarm.RingAfter);
         abandoned.DisposeEnded();
+    }
+
+    private static void StopStep(string outboxType, Action step)
+    {
+        try
+        {
+            step();
+        }
+        catch (Exception exception)
+        {
+            Log.StopFailed(s_logger, exception, outboxType);
+        }
     }
 
     private async Task MeasureAsync(
@@ -636,6 +648,9 @@ public partial class TimedOutboxStaleMessageMonitor : IHostedService, IDisposabl
 
         [LoggerMessage(LogLevel.Error, "Outbox stale-message monitor failed to handle a due time for {OutboxType}")]
         public static partial void DueTimeFailed(ILogger logger, Exception exception, string outboxType);
+
+        [LoggerMessage(LogLevel.Error, "Outbox stale-message monitor failed to handle the stop for {OutboxType}")]
+        public static partial void StopFailed(ILogger logger, Exception exception, string outboxType);
 
         [LoggerMessage(LogLevel.Information, "Outbox stale-message monitor measures only the overall count for {OutboxType}: no capability to count by topic")]
         public static partial void OverallCountOnlyWithNoCapability(ILogger logger, string outboxType);
