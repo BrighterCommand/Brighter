@@ -138,7 +138,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T1.4
   - References: `src/Paramore.Brighter/CircuitBreaker/InMemoryOutboxCircuitBreaker.cs:104-120`.
 
-- [ ] **TEST + IMPLEMENT: T1.7 - A time-ended trip announces one Reset, from the first observing call, naming its cause**
+- [x] **TEST + IMPLEMENT: T1.7 - A time-ended trip announces one Reset, from the first observing call, naming its cause**
   - **USE COMMAND**: `/tdd:test-first when a trip ends by maximum trip duration should announce exactly one reset from the first observing call naming the cause`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker"
   - Test file: `When_a_trip_ends_by_maximum_trip_duration_should_announce_one_reset_naming_the_cause.cs`
