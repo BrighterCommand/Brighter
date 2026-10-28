@@ -170,7 +170,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T1.7
   - References: `src/Paramore.Brighter/CircuitBreaker/InMemoryOutboxCircuitBreaker.cs:104`.
 
-- [ ] **TEST + IMPLEMENT: T1.9 - When both limits have passed, the maximum trip duration is named as the cause**
+- [x] **TEST + IMPLEMENT: T1.9 - When both limits have passed, the maximum trip duration is named as the cause**
   - **USE COMMAND**: `/tdd:test-first when the first call after the maximum trip duration would also run the cooldown count out should name the maximum trip duration`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker"
   - Test file: `When_both_limits_pass_in_one_cooldown_should_name_the_maximum_trip_duration.cs`
