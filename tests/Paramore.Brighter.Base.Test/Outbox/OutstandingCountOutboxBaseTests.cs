@@ -79,7 +79,7 @@ public abstract class OutstandingCountOutboxBaseTests<TTransaction> : IDisposabl
     }
 
     /// <summary>
-    /// Counts AC-16's nine messages with an age of five minutes and a ceiling of 100, and asserts five.
+    /// Counts the nine messages with an age of five minutes and a ceiling of 100, and asserts five.
     /// </summary>
     protected async Task AssertAgeAsync()
     {
@@ -92,7 +92,7 @@ public abstract class OutstandingCountOutboxBaseTests<TTransaction> : IDisposabl
     }
 
     /// <summary>
-    /// Counts AC-16's nine messages with an age of five minutes and a ceiling of three, and asserts three.
+    /// Counts the nine messages with an age of five minutes and a ceiling of three, and asserts three.
     /// </summary>
     protected async Task AssertCeilingOfThreeAsync()
     {
@@ -105,7 +105,7 @@ public abstract class OutstandingCountOutboxBaseTests<TTransaction> : IDisposabl
     }
 
     /// <summary>
-    /// Counts AC-16's nine messages with an age of five minutes and a ceiling of five, and asserts five.
+    /// Counts the nine messages with an age of five minutes and a ceiling of five, and asserts five.
     /// </summary>
     protected async Task AssertCeilingOfFiveAsync()
     {
@@ -118,7 +118,7 @@ public abstract class OutstandingCountOutboxBaseTests<TTransaction> : IDisposabl
     }
 
     /// <summary>
-    /// Counts AC-16's nine messages once, with an age of five minutes, and returns the result, or the exception,
+    /// Counts the nine messages once, with an age of five minutes, and returns the result, or the exception,
     /// as text. It asserts nothing.
     /// </summary>
     /// <param name="maxCount">The ceiling for the count.</param>

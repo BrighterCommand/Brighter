@@ -143,7 +143,7 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
     {
         var model = outboxConfiguration.WithPrefix(modelPrefix).WithDefaultsFrom(configuration);
 
-        foreach (var variant in new[] { "Sync", "Async", "Causation", "OutstandingCount" })
+        foreach (var variant in new[] { "Sync", "Async", "Causation" })
         {
             yield return new GenerationSuite(
                 Path.Combine("Outbox", folderName, "Generated", variant),
@@ -152,6 +152,13 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
                 filename => SkipTest(model, filename)
             );
         }
+
+        yield return new GenerationSuite(
+            Path.Combine("Outbox", folderName, "Generated", "OutstandingCount"),
+            Path.Combine("Outbox", "OutstandingCount"),
+            model,
+            _ => false
+        );
     }
 
     /// <summary>

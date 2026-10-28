@@ -40,7 +40,6 @@ public abstract class OutstandingCountCancellationOutboxBaseTests<TTransaction>
             if (!setup.StoreHeld)
                 cancellation.Cancel();
 
-            // Run keeps a count that runs synchronously from blocking this thread.
             count = Task.Run(() => setup.Outbox.GetOutstandingMessageCountAsync(
                 TimeSpan.FromMinutes(5), new RequestContext(), 100, null, cancellation.Token));
 

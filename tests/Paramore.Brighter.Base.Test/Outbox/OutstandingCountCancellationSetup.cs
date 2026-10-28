@@ -51,7 +51,6 @@ public sealed class OutstandingCountCancellationSetup<TTransaction> : IAsyncDisp
         }
         catch (Exception)
         {
-            // Releasing is best effort: a failure here must not hide the case's own result.
         }
     }
 }

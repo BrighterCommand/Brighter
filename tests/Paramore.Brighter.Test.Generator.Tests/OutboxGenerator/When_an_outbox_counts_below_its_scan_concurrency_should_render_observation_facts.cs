@@ -1,7 +1,7 @@
 ﻿#region Licence
 
 /* The MIT License (MIT)
-Copyright © 2026 Irakli Gabisonia
+Copyright © 2026 Guilherme Appel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
