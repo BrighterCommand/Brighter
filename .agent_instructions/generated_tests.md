@@ -18,7 +18,8 @@ tools/Paramore.Brighter.Test.Generator/
 │   ├── Outbox/
 │   │   ├── Sync/       ← 14 Liquid templates for sync outbox tests (13 tests + 1 interface)
 │   │   ├── Async/      ← 14 Liquid templates for async outbox tests (13 tests + 1 interface)
-│   │   └── Causation/  ← Liquid template for causation-tracking outbox tests (subclass of CausationTrackingOutboxBaseTests)
+│   │   ├── Causation/  ← Liquid template for causation-tracking outbox tests (subclass of CausationTrackingOutboxBaseTests)
+│   │   └── OutstandingCount/  ← 3 tests + 1 interface for the overall outstanding count
 │   ├── MessagingGateway/
 │   │   ├── Reactor/    ← 21 Liquid templates for sync messaging gateway tests (20 tests + 1 interface)
 │   │   ├── Proactor/   ← 21 Liquid templates for async messaging gateway tests (20 tests + 1 interface)
@@ -43,7 +44,8 @@ tests/Paramore.Brighter.*.Tests/
 │   └── [Prefix]/Generated/      ← Output directory (do not hand-edit)
 │       ├── Sync/*.cs
 │       ├── Async/*.cs
-│       └── Causation/*.cs
+│       ├── Causation/*.cs
+│       └── OutstandingCount/*.cs
 └── MessagingGateway/
     ├── [Prefix]/Generated/      ← Output directory (do not hand-edit)
     │   ├── Reactor/*.cs
@@ -114,6 +116,25 @@ Generated into the test project root. These provide common helpers used by both 
 | `When_Storing_A_Message_With_A_Relative_DataSchema_It_Should_Be_Read_Back` | Relative `DataSchema` URI survives round-trip |
 
 Templates containing `Transaction` in the filename are skipped when `SupportsTransactions` is `false`.
+
+**OutstandingCount** (4 templates): the overall `GetOutstandingMessageCountAsync`, which counts outstanding messages older than an age up to a ceiling. It has its own provider interface, `IAmAnOutstandingCountOutboxProvider`, and no sync twin:
+
+| Template | Description |
+|---|---|
+| `IAmAnOutstandingCountOutboxProvider` | Provider interface: create and delete the store, create the outbox, and `PrepareCancellationAsync` |
+| `When_counting_outstanding_messages_older_than_the_age_should_count_only_stale_ones` | Age column: only messages older than the requested age are counted |
+| `When_counting_outstanding_messages_with_a_ceiling_should_stop_at_the_ceiling` | Ceiling column: the count stops at `maxCount` |
+| `When_an_outstanding_count_is_cancelled_should_end_the_call` | Cancellation column: a cancelled token ends the call |
+
+The suite is not filtered by `SupportsTransactions`: no template name contains "Transaction", so `SkipTest` never leaves one out. Its settings are on the outbox entry in `test-configuration.json`:
+
+| Setting | Effect |
+|---|---|
+| `OutstandingCountReadConsistencyTimeoutInMilliseconds` | Polling timeout for a store whose count lags its writes. Independent of `ReadConsistencyTimeoutInMilliseconds`. Defaults to zero |
+| `OutstandingCountBelowScanConcurrency` | For a store that fans the count out over parallel scans. The ceiling test then also renders two facts that write the count observed for a ceiling of one and of two to the test output and assert nothing |
+| `OutstandingCountAgeGap`, `OutstandingCountCeilingGap`, `OutstandingCountCancellationGap` | An issue number for a store that does not yet meet that column. The affected facts render as `[Fact(Skip = "Deferred: #<n> ...")]` |
+
+A gap mark names a tracked issue and is removed when the store meets the column. The Skip audits scan the gateway folders only, so these marks stay out of the gateway audits.
 
 #### Outbox Template Variables
 
@@ -343,6 +364,8 @@ Key provider responsibilities:
 - **`CreateOutbox()` / `CreateOutboxAsync()`** — create an outbox instance for the provider
 - **`CreateTransactionProvider()`** — create a transaction provider for transaction tests
 - **`GetAllMessages()` / `GetAllMessagesAsync()`** — retrieve all stored messages for assertions
+
+The overall count suite has its own interface, `IAmAnOutstandingCountOutboxProvider`, implemented by a provider class of its own. It creates and deletes the store, creates the outbox, and `PrepareCancellationAsync(holdFor)` returns an outbox over a store no other test writes to, held for `holdFor` when the store can be held.
 
 ### Gateway Conformance Configuration
 
