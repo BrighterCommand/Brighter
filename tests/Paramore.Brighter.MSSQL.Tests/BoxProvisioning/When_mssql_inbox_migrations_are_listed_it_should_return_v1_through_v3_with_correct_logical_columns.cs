@@ -29,6 +29,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// The MSSQL inbox catalog lists V1 to V3 in order, each with the cumulative columns of the versions
+/// before it; V2 and V3 carry a <c>SourceReference</c> and V1 does not.
+/// </summary>
 public class MsSqlInboxMigrationsTests
 {
     private static readonly string[] s_v1Columns =
@@ -41,8 +45,7 @@ public class MsSqlInboxMigrationsTests
     [Fact]
     public void When_mssql_inbox_migrations_are_listed_it_should_return_v1_through_v3_with_correct_logical_columns()
     {
-        //Arrange — derive each version's expected LogicalColumns by accumulating the
-        //per-version additions from the archaeology (spec README inbox table).
+        //Arrange
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;",
             inboxTableName: "inbox_test");
@@ -51,14 +54,13 @@ public class MsSqlInboxMigrationsTests
         //Act
         var migrations = new MsSqlInboxMigrationCatalog().All(config);
 
-        //Assert — exactly three migrations numbered 1..3 in order
+        //Assert
         Assert.Equal(3, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
             Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
-        //Assert — LogicalColumns at each version matches the cumulative archaeology
         for (var v = 1; v <= 3; v++)
         {
             var migration = migrations[v - 1];
@@ -70,9 +72,6 @@ public class MsSqlInboxMigrationsTests
                 $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
         }
 
-        //Assert — V1 has no single source commit so SourceReference is null;
-        //V2 carries the archaeology pointer for the ContextKey addition (787c31c52, Oct 2018);
-        //V3 carries the issue pointer for the CausationId addition (#2541).
         Assert.Null(migrations[0].SourceReference);
         Assert.False(
             string.IsNullOrWhiteSpace(migrations[1].SourceReference),
