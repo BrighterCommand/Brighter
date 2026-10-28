@@ -1465,7 +1465,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - Implementation should (only if the test is RED on arrival): none is expected, so stop and ask.
 
-- [ ] **CHARACTERISE: T12.2 With the step, both counts are measured and reported (AC-1 second clause)**
+- [x] **CHARACTERISE: T12.2 With the step, both counts are measured and reported (AC-1 second clause)**
   - **USE COMMAND**: `/test-first adding the stale step to the same setup records at least one call and one value of each count`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/"
   - Test file: `When_the_stale_step_is_added_should_measure_and_report_both_counts.cs`
