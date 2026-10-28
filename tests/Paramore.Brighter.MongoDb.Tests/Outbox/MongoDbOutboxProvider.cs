@@ -97,9 +97,22 @@ public class MongoDbOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvide
         return await outbox.GetAsync();
     }
 
-    public void DeleteStore() => DeleteStore(Array.Empty<Message>());
+    public void DeleteOutstandingCountStore()
+    {
+        try
+        {
+            DeleteStore(Array.Empty<Message>());
+        }
+        catch (Exception)
+        {
+        }
+    }
 
-    IAmAnOutboxAsync<Message, IClientSessionHandle> IAmAnOutstandingCountOutboxProvider.CreateOutbox() => CreateOutboxAsync();
+    public IAmAnOutboxAsync<Message, IClientSessionHandle> CreateOutstandingCountStore()
+    {
+        CreateStore();
+        return CreateOutboxAsync();
+    }
 
     public Task<OutstandingCountCancellationSetup<IClientSessionHandle>> PrepareCancellationAsync(TimeSpan holdFor)
     {

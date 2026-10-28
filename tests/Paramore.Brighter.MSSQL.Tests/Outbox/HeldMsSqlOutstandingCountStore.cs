@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using System;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -34,12 +35,12 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox;
 
 /// <summary>
 /// Builds the outbox and the held store for the cancellation case of the overall outstanding count: a table of
-/// its own, held with an exclusive table lock by a second connection until the setup is disposed. A plain read
+/// its own, held with an exclusive table lock by a second connection until the setup is disposed or the hold time has passed. A plain read
 /// blocks on that lock.
 /// </summary>
 public static class HeldMsSqlOutstandingCountStore
 {
-    public static async Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareAsync(bool binaryMessagePayload)
+    public static async Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareAsync(bool binaryMessagePayload, TimeSpan holdFor)
     {
         var configuration = new RelationalDatabaseConfiguration(Configuration.DefaultConnectingString,
             databaseName: "brightertests",
@@ -77,7 +78,8 @@ public static class HeldMsSqlOutstandingCountStore
                     await cleanup.OpenAsync();
                     await ExecuteAsync(cleanup, $"DROP TABLE {configuration.OutBoxTableName}");
                 }
-            });
+            },
+            holdFor);
     }
 
     private static async Task ExecuteAsync(SqlConnection connection, string sql, SqlTransaction? transaction = null)

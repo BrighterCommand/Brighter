@@ -121,7 +121,7 @@ Templates containing `Transaction` in the filename are skipped when `SupportsTra
 
 | Template | Description |
 |---|---|
-| `IAmAnOutstandingCountOutboxProvider` | Provider interface: create and delete the store, create the outbox, and `PrepareCancellationAsync` |
+| `IAmAnOutstandingCountOutboxProvider` | Provider interface: `CreateOutstandingCountStore` (creates the store and returns an outbox over it), `DeleteOutstandingCountStore` (never throws) and `PrepareCancellationAsync` |
 | `When_counting_outstanding_messages_older_than_the_age_should_count_only_stale_ones` | Age column: only messages older than the requested age are counted |
 | `When_counting_outstanding_messages_with_a_ceiling_should_stop_at_the_ceiling` | Ceiling column: the count stops at `maxCount` |
 | `When_an_outstanding_count_is_cancelled_should_end_the_call` | Cancellation column: a cancelled token ends the call |
@@ -365,7 +365,7 @@ Key provider responsibilities:
 - **`CreateTransactionProvider()`** — create a transaction provider for transaction tests
 - **`GetAllMessages()` / `GetAllMessagesAsync()`** — retrieve all stored messages for assertions
 
-The overall count suite has its own interface, `IAmAnOutstandingCountOutboxProvider`, implemented by the outbox provider class that already serves the other suites. It creates and deletes the store, creates the outbox, and `PrepareCancellationAsync(holdFor)` returns an outbox over a store no other test writes to, held for `holdFor` when the store can be held.
+The overall count suite has its own interface, `IAmAnOutstandingCountOutboxProvider`, implemented by the outbox provider class that already serves the other suites. It has `CreateOutstandingCountStore()`, which creates the store and returns the outbox, `DeleteOutstandingCountStore()`, which never throws, and `PrepareCancellationAsync(holdFor)`, which returns an outbox over a store no other test writes to, held for `holdFor` when the store can be held.
 
 ### Gateway Conformance Configuration
 

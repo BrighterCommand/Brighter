@@ -82,10 +82,23 @@ public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
         await command.ExecuteNonQueryAsync();
     }
 
-    public void DeleteStore() => DeleteStore(Array.Empty<Message>());
+    public void DeleteOutstandingCountStore()
+    {
+        try
+        {
+            DeleteStore(Array.Empty<Message>());
+        }
+        catch (Exception)
+        {
+        }
+    }
 
-    IAmAnOutboxAsync<Message, DbTransaction> IAmAnOutstandingCountOutboxProvider.CreateOutbox() => new PostgreSqlOutbox(_configuration);
+    public IAmAnOutboxAsync<Message, DbTransaction> CreateOutstandingCountStore()
+    {
+        CreateStore();
+        return new PostgreSqlOutbox(_configuration);
+    }
 
     public Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareCancellationAsync(TimeSpan holdFor) =>
-        HeldPostgresOutstandingCountStore.PrepareAsync(binaryMessagePayload: false);
+        HeldPostgresOutstandingCountStore.PrepareAsync(binaryMessagePayload: false, holdFor);
 }

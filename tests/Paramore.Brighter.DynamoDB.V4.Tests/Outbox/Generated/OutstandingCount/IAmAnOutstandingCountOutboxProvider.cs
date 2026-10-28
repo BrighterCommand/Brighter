@@ -14,20 +14,15 @@ namespace Paramore.Brighter.DynamoDB.V4.Tests.Outbox.OutstandingCount;
 public interface IAmAnOutstandingCountOutboxProvider
 {
     /// <summary>
-    /// Creates the outbox data store.
+    /// Creates the outbox data store and an outbox over it.
     /// </summary>
-    void CreateStore();
+    /// <returns>A new <see cref="IAmAnOutboxAsync{TMessage, TTransaction}"/> instance over the store.</returns>
+    IAmAnOutboxAsync<Message, Amazon.DynamoDBv2.Model.TransactWriteItemsRequest> CreateOutstandingCountStore();
 
     /// <summary>
-    /// Deletes the outbox data store.
+    /// Deletes the outbox data store. It never throws.
     /// </summary>
-    void DeleteStore();
-
-    /// <summary>
-    /// Creates a new outbox instance over the store.
-    /// </summary>
-    /// <returns>A new <see cref="IAmAnOutboxAsync{TMessage, TTransaction}"/> instance.</returns>
-    IAmAnOutboxAsync<Message, Amazon.DynamoDBv2.Model.TransactWriteItemsRequest> CreateOutbox();
+    void DeleteOutstandingCountStore();
 
     /// <summary>
     /// Prepares an outbox over a store of its own that no other test writes to, held for

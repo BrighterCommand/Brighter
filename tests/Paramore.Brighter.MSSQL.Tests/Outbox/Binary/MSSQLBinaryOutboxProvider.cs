@@ -88,10 +88,23 @@ public class MSSQLBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPro
         return await outbox.GetAsync(new RequestContext());
     }
 
-    IAmAnOutboxAsync<Message, DbTransaction> IAmAnOutstandingCountOutboxProvider.CreateOutbox() => new MsSqlOutbox(_configuration);
+    public IAmAnOutboxAsync<Message, DbTransaction> CreateOutstandingCountStore()
+    {
+        CreateStore();
+        return new MsSqlOutbox(_configuration);
+    }
 
-    void IAmAnOutstandingCountOutboxProvider.DeleteStore() => DeleteStore(Array.Empty<Message>());
+    public void DeleteOutstandingCountStore()
+    {
+        try
+        {
+            DeleteStore(Array.Empty<Message>());
+        }
+        catch (Exception)
+        {
+        }
+    }
 
     public Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareCancellationAsync(TimeSpan holdFor) =>
-        HeldMsSqlOutstandingCountStore.PrepareAsync(binaryMessagePayload: true);
+        HeldMsSqlOutstandingCountStore.PrepareAsync(binaryMessagePayload: true, holdFor);
 }

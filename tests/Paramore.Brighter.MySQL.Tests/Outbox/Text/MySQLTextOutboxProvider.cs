@@ -83,10 +83,23 @@ public class MySQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
         return await outbox.GetAsync(new RequestContext());
     }
 
-    public void DeleteStore() => DeleteStore(Array.Empty<Message>());
+    public void DeleteOutstandingCountStore()
+    {
+        try
+        {
+            DeleteStore(Array.Empty<Message>());
+        }
+        catch (Exception)
+        {
+        }
+    }
 
-    IAmAnOutboxAsync<Message, DbTransaction> IAmAnOutstandingCountOutboxProvider.CreateOutbox() => new MySqlOutbox(_configuration);
+    public IAmAnOutboxAsync<Message, DbTransaction> CreateOutstandingCountStore()
+    {
+        CreateStore();
+        return new MySqlOutbox(_configuration);
+    }
 
     public Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareCancellationAsync(TimeSpan holdFor) =>
-        HeldMySqlOutstandingCountStore.PrepareAsync(binaryMessagePayload: false);
+        HeldMySqlOutstandingCountStore.PrepareAsync(binaryMessagePayload: false, holdFor);
 }

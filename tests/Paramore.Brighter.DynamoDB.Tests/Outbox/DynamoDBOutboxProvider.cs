@@ -126,17 +126,23 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
         return receivedMessages;
     }
 
-    public void DeleteStore()
+    public void DeleteOutstandingCountStore()
     {
         foreach (var tableName in _outstandingCountTables)
         {
-            DynamoDbOutboxTable.DeleteTableAsync(Const.DynamoDbClient, tableName).GetAwaiter().GetResult();
+            try
+            {
+                DynamoDbOutboxTable.DeleteTableAsync(Const.DynamoDbClient, tableName).GetAwaiter().GetResult();
+            }
+            catch (Exception)
+            {
+            }
         }
 
         _outstandingCountTables.Clear();
     }
 
-    IAmAnOutboxAsync<Message, TransactWriteItemsRequest> IAmAnOutstandingCountOutboxProvider.CreateOutbox()
+    public IAmAnOutboxAsync<Message, TransactWriteItemsRequest> CreateOutstandingCountStore()
     {
         return CreateOutstandingCountOutbox(Const.OUTBOX_TIMEOUT_IN_MILLISECONDS);
     }

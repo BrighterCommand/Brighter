@@ -14,20 +14,15 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Text.OutstandingCount;
 public interface IAmAnOutstandingCountOutboxProvider
 {
     /// <summary>
-    /// Creates the outbox data store.
+    /// Creates the outbox data store and an outbox over it.
     /// </summary>
-    void CreateStore();
+    /// <returns>A new <see cref="IAmAnOutboxAsync{TMessage, TTransaction}"/> instance over the store.</returns>
+    IAmAnOutboxAsync<Message, System.Data.Common.DbTransaction> CreateOutstandingCountStore();
 
     /// <summary>
-    /// Deletes the outbox data store.
+    /// Deletes the outbox data store. It never throws.
     /// </summary>
-    void DeleteStore();
-
-    /// <summary>
-    /// Creates a new outbox instance over the store.
-    /// </summary>
-    /// <returns>A new <see cref="IAmAnOutboxAsync{TMessage, TTransaction}"/> instance.</returns>
-    IAmAnOutboxAsync<Message, System.Data.Common.DbTransaction> CreateOutbox();
+    void DeleteOutstandingCountStore();
 
     /// <summary>
     /// Prepares an outbox over a store of its own that no other test writes to, held for

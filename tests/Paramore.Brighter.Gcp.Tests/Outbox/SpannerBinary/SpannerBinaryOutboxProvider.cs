@@ -89,9 +89,22 @@ public class SpannerBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxP
         return await outbox.GetAsync(new RequestContext());
     }
 
-    public void DeleteStore() => DeleteStore(Array.Empty<Message>());
+    public void DeleteOutstandingCountStore()
+    {
+        try
+        {
+            DeleteStore(Array.Empty<Message>());
+        }
+        catch (Exception)
+        {
+        }
+    }
 
-    IAmAnOutboxAsync<Message, DbTransaction> IAmAnOutstandingCountOutboxProvider.CreateOutbox() => CreateOutboxAsync();
+    public IAmAnOutboxAsync<Message, DbTransaction> CreateOutstandingCountStore()
+    {
+        CreateStore();
+        return CreateOutboxAsync();
+    }
 
     public async Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareCancellationAsync(TimeSpan holdFor)
     {

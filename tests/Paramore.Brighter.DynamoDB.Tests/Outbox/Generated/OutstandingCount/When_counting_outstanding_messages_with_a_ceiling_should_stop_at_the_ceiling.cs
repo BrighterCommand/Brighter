@@ -31,11 +31,10 @@ public class WhenCountingOutstandingMessagesWithACeilingShouldStopAtTheCeiling :
 
     protected override void CreateStore()
     {
-        _outboxProvider.CreateStore();
-        _outbox = _outboxProvider.CreateOutbox();
+        _outbox = _outboxProvider.CreateOutstandingCountStore();
     }
 
-    protected override void DeleteStore() => _outboxProvider.DeleteStore();
+    protected override void DeleteStore() => _outboxProvider.DeleteOutstandingCountStore();
 
     protected override async Task AddMessageWithAgeAsync(Message message, TimeSpan age)
     {

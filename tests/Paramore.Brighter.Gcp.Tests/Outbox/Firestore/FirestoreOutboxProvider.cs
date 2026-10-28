@@ -96,18 +96,24 @@ public class FirestoreOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
         return await outbox.GetAsync(pageSize: 1_000);
     }
 
-    public void DeleteStore()
+    public void DeleteOutstandingCountStore()
     {
-        var config = Configuration.CreateOutbox(_outstandingCountCollection);
-        var firestore = new FirestoreConnectionProvider(config).GetFirestoreClient();
-
-        foreach (var message in new FirestoreOutbox(config).Get(pageSize: 1_000))
+        try
         {
-            firestore.DeleteDocument(new DeleteDocumentRequest { Name = config.GetDocumentName(_outstandingCountCollection, message.Id) });
+            var config = Configuration.CreateOutbox(_outstandingCountCollection);
+            var firestore = new FirestoreConnectionProvider(config).GetFirestoreClient();
+
+            foreach (var message in new FirestoreOutbox(config).Get(pageSize: 1_000))
+            {
+                firestore.DeleteDocument(new DeleteDocumentRequest { Name = config.GetDocumentName(_outstandingCountCollection, message.Id) });
+            }
+        }
+        catch (Exception)
+        {
         }
     }
 
-    IAmAnOutboxAsync<Message, FirestoreTransaction> IAmAnOutstandingCountOutboxProvider.CreateOutbox()
+    public IAmAnOutboxAsync<Message, FirestoreTransaction> CreateOutstandingCountStore()
     {
         return new FirestoreOutbox(Configuration.CreateOutbox(_outstandingCountCollection));
     }
@@ -121,7 +127,7 @@ public class FirestoreOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
             clientCancellationException: typeof(OperationCanceledException),
             release: () =>
             {
-                DeleteStore();
+                DeleteOutstandingCountStore();
                 return ValueTask.CompletedTask;
             }));
     }

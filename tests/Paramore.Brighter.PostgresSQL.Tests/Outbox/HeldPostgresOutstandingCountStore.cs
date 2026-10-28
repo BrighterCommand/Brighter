@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using System;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Npgsql;
@@ -33,12 +34,12 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox;
 
 /// <summary>
 /// Builds the outbox and the held store for the cancellation case of the overall outstanding count: a table of
-/// its own, held with an access exclusive lock by a second connection until the setup is disposed. A plain read
+/// its own, held with an access exclusive lock by a second connection until the setup is disposed or the hold time has passed. A plain read
 /// blocks on that lock.
 /// </summary>
 public static class HeldPostgresOutstandingCountStore
 {
-    public static async Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareAsync(bool binaryMessagePayload)
+    public static async Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareAsync(bool binaryMessagePayload, TimeSpan holdFor)
     {
         var configuration = new RelationalDatabaseConfiguration(Const.ConnectionString,
             databaseName: "brightertests",
@@ -74,7 +75,8 @@ public static class HeldPostgresOutstandingCountStore
                     await cleanup.OpenAsync();
                     await ExecuteAsync(cleanup, $"DROP TABLE {configuration.OutBoxTableName}");
                 }
-            });
+            },
+            holdFor);
     }
 
     private static async Task ExecuteAsync(NpgsqlConnection connection, string sql, NpgsqlTransaction? transaction = null)

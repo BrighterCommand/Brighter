@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 /// </summary>
 public static class HeldSqliteOutstandingCountStore
 {
-    public static async Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareAsync(bool binaryMessagePayload)
+    public static async Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareAsync(bool binaryMessagePayload, TimeSpan holdFor)
     {
         var dbPath = Path.Combine(Path.GetTempPath(), $"brighter_sqlite_held_count_{Guid.NewGuid():N}.db");
         var connectionString = $"Data Source={dbPath};Pooling=False";
@@ -82,7 +82,8 @@ public static class HeldSqliteOutstandingCountStore
                     {
                     }
                 }
-            });
+            },
+            holdFor);
     }
 
     private static async Task ExecuteAsync(SqliteConnection connection, string sql)
