@@ -1501,7 +1501,7 @@ No production change is expected in this phase. The named mutation is how RED is
 
 *Depends on no earlier phase, because it tests the overall count the outboxes already have.*
 
-- [ ] **CHARACTERISE: T13.1 `InMemoryOutbox` counts only stale messages (AC-16 age case)**
+- [x] **CHARACTERISE: T13.1 `InMemoryOutbox` counts only stale messages (AC-16 age case)**
   - **USE COMMAND**: `/test-first InMemoryOutbox counts five of AC-16's nine messages with an age of five minutes`
   - Test location: "tests/Paramore.Brighter.InMemory.Tests/Outbox/"
   - Test file: `InMemoryOutstandingCountOutboxTests.cs` with the fact `When_counting_outstanding_messages_older_than_the_age_should_count_only_stale_ones`
