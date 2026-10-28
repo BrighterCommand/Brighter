@@ -76,7 +76,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 1c - Expiry and the Reset cause
 
-- [ ] **TEST + IMPLEMENT: T1.4 - An in-memory trip ends at exactly D with no cooldown or sweep**
+- [x] **TEST + IMPLEMENT: T1.4 - An in-memory trip ends at exactly D with no cooldown or sweep**
   - **USE COMMAND**: `/tdd:test-first when a tripped topic reaches the maximum trip duration with no cooldown should no longer be listed`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker"
   - Test file: `When_a_trip_reaches_the_maximum_trip_duration_without_cooldown_should_no_longer_be_listed.cs`
