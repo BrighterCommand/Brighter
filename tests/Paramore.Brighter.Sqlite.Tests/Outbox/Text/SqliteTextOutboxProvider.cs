@@ -1,14 +1,17 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
+using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Sqlite.Tests.Outbox.Text.Async;
+using Paramore.Brighter.Sqlite.Tests.Outbox.Text.OutstandingCount;
 using Paramore.Brighter.Sqlite.Tests.Outbox.Text.Sync;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox.Text;
 
-public class SqliteTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
+public class SqliteTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync, IAmAnOutstandingCountOutboxProvider
 {
     private readonly RelationalDatabaseConfiguration _configuration = new(Configuration.ConnectionString,
         databaseName: "brightertests",
@@ -89,4 +92,10 @@ public class SqliteTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProv
         return await outbox.GetAsync(new RequestContext());
     }
 
+    IAmAnOutboxAsync<Message, DbTransaction> IAmAnOutstandingCountOutboxProvider.CreateOutbox() => new SqliteOutbox(_configuration);
+
+    void IAmAnOutstandingCountOutboxProvider.DeleteStore() => DeleteStore(Array.Empty<Message>());
+
+    public Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareCancellationAsync(TimeSpan holdFor) =>
+        HeldSqliteOutstandingCountStore.PrepareAsync(binaryMessagePayload: false);
 }
