@@ -1730,7 +1730,7 @@ No production change is expected in this phase. The named mutation is how RED is
 
 - [ ] **PROJECT: T13.17 Set each gap mark, regenerate and run the audits (ADR 0085 risk :968)**
   - Starts once every Gap-cell issue from T13.15 has been posted and has a number.
-  - Deviation: the marks for the seven Gap cells were set earlier, with the placeholder issue number 9999, so the local branch stays green: Sqlite (c) in two entries of 	ests/Paramore.Brighter.Sqlite.Tests/test-configuration.json, DynamoDB (b) and DynamoDB.V4 (b) as OutstandingCountCeilingGap, and Firestore (a), (b) and (c) in 	ests/Paramore.Brighter.Gcp.Tests/test-configuration.json. The marks went in with T13.7, T13.12 and T13.13 instead of here, and the audit scan was narrowed afterwards, in T13.16. This task replaces every 9999 with the real issue number and checks with a search that none is left. Do not push before it.
+  - Deviation: the marks for the seven Gap cells were set earlier, with the placeholder issue number 9999, so the local branch stays green: Sqlite (c) in two entries of tests/Paramore.Brighter.Sqlite.Tests/test-configuration.json, DynamoDB (b) and DynamoDB.V4 (b) as OutstandingCountCeilingGap, and Firestore (a), (b) and (c) in tests/Paramore.Brighter.Gcp.Tests/test-configuration.json. The marks went in with T13.7, T13.12 and T13.13 instead of here, and the audit scan was narrowed afterwards, in T13.16. This task replaces every 9999 with the real issue number and checks with a search that none is left. Do not push before it.
   - For each Gap-cell issue from T13.15, in order:
     1. Set its mark in the project's `test-configuration.json`.
     2. Regenerate that project.
