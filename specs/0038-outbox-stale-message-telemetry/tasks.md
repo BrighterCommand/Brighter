@@ -1704,7 +1704,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - run the generated-tree audit: `When_auditing_the_generated_tree_should_find_no_missing_files` passes.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before committing the generated files** *(fires in the `review-before` gear, which is the default)*
 
-- [ ] **PROJECT: T13.14 Record that the token reaches the client for each outbox whose store is not held (AC-17)**
+- [x] **PROJECT: T13.14 Record that the token reaches the client for each outbox whose store is not held (AC-17)**
   - For DynamoDB, DynamoDB V4, MongoDb, Spanner and Firestore, review the overall count's code path from the token to the store client.
   - Output: each outbox's FR-14 (c) cell in `specs/0038-outbox-stale-message-telemetry/requirements.md` gains the file and line that pass the token, or the line where it is dropped. For Firestore this is expected at `FirestoreOutbox.cs:1191-1246`.
 
