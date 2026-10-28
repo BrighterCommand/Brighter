@@ -7,7 +7,6 @@
     "CollectionName": "DynamoDBOutbox",
     "ReadConsistencyTimeoutInMilliseconds": 30000,
     "OutstandingCountReadConsistencyTimeoutInMilliseconds": 10000,
-    "OutstandingCountBelowScanConcurrency": true,
-    "OutstandingCountCeilingGap": 9999
+    "OutstandingCountBelowScanConcurrency": true
   }
 }
