@@ -77,6 +77,13 @@ public class OutboxConfiguration
     public int ReadConsistencyTimeoutInMilliseconds { get; set; }
 
     /// <summary>
+    /// Gets or sets the polling timeout for the overall outstanding count in the outstanding-count tests.
+    /// Defaults to zero, requiring the count to reflect writes immediately. Independent of
+    /// <see cref="ReadConsistencyTimeoutInMilliseconds"/>.
+    /// </summary>
+    public int OutstandingCountReadConsistencyTimeoutInMilliseconds { get; set; }
+
+    /// <summary>
     /// Returns a copy of this configuration carrying <paramref name="prefix"/>.
     /// </summary>
     /// <param name="prefix">The prefix the copy should carry.</param>

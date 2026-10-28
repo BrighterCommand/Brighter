@@ -16,7 +16,9 @@ public class WhenCountingOutstandingMessagesWithACeilingShouldStopAtTheCeiling :
     private readonly IAmAnOutstandingCountOutboxProvider _outboxProvider = new {{ OutboxProvider }}();
     private IAmAnOutboxAsync<Message, {{ Transaction }}>? _outbox;
 
-    protected override IAmAnOutboxAsync<Message, {{ Transaction }}> Outbox => _outbox!;
+    protected override IAmAnOutboxAsync<Message, {{ Transaction }}> Outbox => _outbox!;{% if OutstandingCountReadConsistencyTimeoutInMilliseconds > 0 %}
+
+    protected override System.TimeSpan ReadConsistencyTimeout => System.TimeSpan.FromMilliseconds({{ OutstandingCountReadConsistencyTimeoutInMilliseconds }});{% endif %}
 
     protected override void CreateStore()
     {
