@@ -52,11 +52,23 @@ public partial class InMemoryOutboxCircuitBreaker(
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryOutboxCircuitBreaker>();
 
-    private readonly OutboxCircuitBreakerOptions _outboxCircuitBreakerOptions = options ?? new OutboxCircuitBreakerOptions();
+    private readonly OutboxCircuitBreakerOptions _outboxCircuitBreakerOptions = ValidatedOrDefault(options);
 
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     private readonly ConcurrentDictionary<RoutingKey, TripEntry> _trippedTopics = new();
+
+    private static OutboxCircuitBreakerOptions ValidatedOrDefault(OutboxCircuitBreakerOptions? options)
+    {
+        options ??= new OutboxCircuitBreakerOptions();
+
+        var maximumTripDuration = options.MaximumTripDuration;
+        if (maximumTripDuration <= TimeSpan.Zero || maximumTripDuration > TimeSpan.FromHours(24))
+            throw new ArgumentOutOfRangeException(nameof(options), maximumTripDuration,
+                "MaximumTripDuration must be greater than zero and at most 24 hours");
+
+        return options;
+    }
 
     private sealed record TripEntry(int Count, long Timestamp)
     {
