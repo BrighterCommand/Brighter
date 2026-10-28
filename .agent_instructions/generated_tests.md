@@ -117,7 +117,7 @@ Generated into the test project root. These provide common helpers used by both 
 
 Templates containing `Transaction` in the filename are skipped when `SupportsTransactions` is `false`.
 
-**OutstandingCount** (4 templates): the overall `GetOutstandingMessageCountAsync`, which counts outstanding messages older than an age up to a ceiling. It has its own provider interface, `IAmAnOutstandingCountOutboxProvider`, and no sync twin:
+**OutstandingCount** (4 templates): the overall `GetOutstandingMessageCountAsync`, which counts outstanding messages older than an age up to a ceiling. It has its own provider interface, `IAmAnOutstandingCountOutboxProvider`, and no sync version:
 
 | Template | Description |
 |---|---|
@@ -126,7 +126,7 @@ Templates containing `Transaction` in the filename are skipped when `SupportsTra
 | `When_counting_outstanding_messages_with_a_ceiling_should_stop_at_the_ceiling` | Ceiling column: the count stops at `maxCount` |
 | `When_an_outstanding_count_is_cancelled_should_end_the_call` | Cancellation column: a cancelled token ends the call |
 
-The suite is not filtered by `SupportsTransactions`: no template name contains "Transaction", so `SkipTest` never leaves one out. Its settings are on the outbox entry in `test-configuration.json`:
+The suite has no `SkipTest` filter, so every template renders for every outbox, whether or not it supports transactions. Its settings are on the outbox entry in `test-configuration.json`:
 
 | Setting | Effect |
 |---|---|
@@ -365,7 +365,7 @@ Key provider responsibilities:
 - **`CreateTransactionProvider()`** — create a transaction provider for transaction tests
 - **`GetAllMessages()` / `GetAllMessagesAsync()`** — retrieve all stored messages for assertions
 
-The overall count suite has its own interface, `IAmAnOutstandingCountOutboxProvider`, implemented by a provider class of its own. It creates and deletes the store, creates the outbox, and `PrepareCancellationAsync(holdFor)` returns an outbox over a store no other test writes to, held for `holdFor` when the store can be held.
+The overall count suite has its own interface, `IAmAnOutstandingCountOutboxProvider`, implemented by the outbox provider class that already serves the other suites. It creates and deletes the store, creates the outbox, and `PrepareCancellationAsync(holdFor)` returns an outbox over a store no other test writes to, held for `holdFor` when the store can be held.
 
 ### Gateway Conformance Configuration
 
