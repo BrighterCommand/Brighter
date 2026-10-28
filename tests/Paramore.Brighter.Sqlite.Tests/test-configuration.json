@@ -5,15 +5,13 @@
       "Transaction": "System.Data.Common.DbTransaction",
       "OutboxProvider": "SqliteTextOutboxProvider",
       "Category": "Sqlite",
-      "CollectionName": "SqliteTextOutbox",
-      "OutstandingCountCancellationGap": 9999
+      "CollectionName": "SqliteTextOutbox"
     },
     "Binary": {
       "Transaction": "System.Data.Common.DbTransaction",
       "OutboxProvider": "SqliteBinaryOutboxProvider",
       "Category": "Sqlite",
-      "CollectionName": "SqliteBinaryOutbox",
-      "OutstandingCountCancellationGap": 9999
+      "CollectionName": "SqliteBinaryOutbox"
     }
   }
 }

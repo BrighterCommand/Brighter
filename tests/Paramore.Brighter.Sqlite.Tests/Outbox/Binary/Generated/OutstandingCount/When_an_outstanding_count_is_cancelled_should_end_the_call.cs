@@ -18,7 +18,7 @@ public class WhenAnOutstandingCountIsCancelledShouldEndTheCall : OutstandingCoun
     protected override Task<OutstandingCountCancellationSetup<System.Data.Common.DbTransaction>> PrepareStoreAsync(TimeSpan holdFor) =>
         _outboxProvider.PrepareCancellationAsync(holdFor);
 
-    [Fact(Skip = "Deferred: #9999 the cancellation column of the overall count is not yet conformant for this store")]
+    [Fact]
     public async Task When_an_outstanding_count_is_cancelled_should_end_the_call()
     {
         await AssertCancellationEndsTheCountAsync();

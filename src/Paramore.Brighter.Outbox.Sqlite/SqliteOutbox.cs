@@ -27,6 +27,8 @@ using System;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -94,5 +96,36 @@ public class SqliteOutbox : RelationDatabaseOutbox
         var reader = (SqliteDataReader)dr;
         var dataTime = reader.GetDateTimeOffset(ordinal);
         return dataTime; 
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Microsoft.Data.Sqlite runs a step that is blocked on a lock synchronously, so the token cannot interrupt it.
+    /// The read runs on its own thread and the caller stops waiting for it once the token is cancelled. That
+    /// thread ends when the command timeout does.
+    /// </remarks>
+    protected override async Task<T> ReadFromStoreAsync<T>(
+        Func<DbConnection, DbCommand> commandFunc,
+        Func<DbDataReader, Task<T>> resultFunc,
+        CancellationToken cancellationToken)
+    {
+        if (!cancellationToken.CanBeCanceled)
+        {
+            return await base.ReadFromStoreAsync(commandFunc, resultFunc, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+        }
+
+        var read = Task.Run(() => base.ReadFromStoreAsync(commandFunc, resultFunc, cancellationToken), CancellationToken.None);
+        var cancelled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using (cancellationToken.Register(() => cancelled.TrySetResult(true)))
+        {
+            if (await Task.WhenAny(read, cancelled.Task).ConfigureAwait(ContinueOnCapturedContext) == read)
+            {
+                return await read.ConfigureAwait(ContinueOnCapturedContext);
+            }
+        }
+
+        _ = read.ContinueWith(abandoned => abandoned.Exception, TaskContinuationOptions.OnlyOnFaulted);
+        throw new OperationCanceledException(cancellationToken);
     }
 }
