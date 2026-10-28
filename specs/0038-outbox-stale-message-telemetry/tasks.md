@@ -1515,7 +1515,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - Implementation should (only if the test is RED on arrival): none is expected, so stop and ask.
 
-- [ ] **CHARACTERISE: T13.2 `InMemoryOutbox` stops at the ceiling (AC-16 ceiling cases)**
+- [x] **CHARACTERISE: T13.2 `InMemoryOutbox` stops at the ceiling (AC-16 ceiling cases)**
   - **USE COMMAND**: `/test-first InMemoryOutbox counts three with a ceiling of three and five with a ceiling of five over AC-16's messages`
   - Test location: "tests/Paramore.Brighter.InMemory.Tests/Outbox/"
   - Test file: `InMemoryOutstandingCountOutboxTests.cs` with the facts `When_counting_outstanding_messages_with_a_ceiling_of_three_should_return_three` and `When_counting_outstanding_messages_with_a_ceiling_of_five_should_return_five`
