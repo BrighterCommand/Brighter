@@ -1558,7 +1558,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - add the property to `tools/Paramore.Brighter.Test.Generator/Configuration/OutboxConfiguration.cs` (beside `:36-77`), included in `WithDefaultsFrom`, and read it in the templates;
     - expect the generated-tree audit in `Paramore.Brighter.Test.Generator.Tests` to report Missing entries until T13.13. They are not a regression to fix.
 
-- [ ] **TEST + IMPLEMENT: T13.5 The below-scan-concurrency setting renders two observation facts**
+- [x] **TEST + IMPLEMENT: T13.5 The below-scan-concurrency setting renders two observation facts**
   - **USE COMMAND**: `/test-first OutstandingCountBelowScanConcurrency renders facts for a ceiling of one and two that write the observed count to the test output`
   - Test location: "tests/Paramore.Brighter.Test.Generator.Tests/OutboxGenerator/"
   - Test file: `When_an_outbox_counts_below_its_scan_concurrency_should_render_observation_facts.cs`
