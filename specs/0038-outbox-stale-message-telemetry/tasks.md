@@ -1709,7 +1709,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - Output: each outbox's FR-14 (c) cell in `specs/0038-outbox-stale-message-telemetry/requirements.md` gains the file and line that pass the token, or the line where it is dropped. For Firestore this is expected at `FirestoreOutbox.cs:1191-1246`.
 
 - [ ] **PROJECT: T13.15 One issue for each FR-14 gap in columns (a) to (c) (Q-9)**
-  - Draft one issue per Gap cell, including each "To verify" cell that T13.7 to T13.13 found to be a gap. Expected at least: Firestore (a), (b) and (c), and DynamoDB/V4 (b).
+  - Draft one issue per Gap cell, including each "To verify" cell that T13.7 to T13.13 found to be a gap. Expected at least: Firestore (a), (b) and (c), and DynamoDB/V4 (b). Decision after drafting: whatever can be proved here is fixed in this PR instead, so DynamoDB/V4 (b) and Sqlite (c) are closed by their fixes and need no issue. Only Firestore (a), (b) and (c) still need one.
   - Each issue states the observed result, the AC-16 or AC-17 fact that shows it, and the gap mark that skips it until the fix.
   - Also draft the two issues that ADR 0085 :102 names for limits this PR only documents: the read volume of the DynamoDB and DynamoDB V4 counts (NFR-4 (b)), and the row loading of the relational and MongoDb overall counts (NFR-4 (c), Q-5). T14.9 links each known limitation to its issue.
   - Output: the issue texts, then, once each issue is posted, its number in its FR-14 cell (the Notes cell for the two NFR-4 issues).
@@ -1730,7 +1730,7 @@ No production change is expected in this phase. The named mutation is how RED is
 
 - [ ] **PROJECT: T13.17 Set each gap mark, regenerate and run the audits (ADR 0085 risk :968)**
   - Starts once every Gap-cell issue from T13.15 has been posted and has a number.
-  - Deviation: the marks for the seven Gap cells were set earlier, with the placeholder issue number 9999, so the local branch stays green: Sqlite (c) in two entries of tests/Paramore.Brighter.Sqlite.Tests/test-configuration.json, DynamoDB (b) and DynamoDB.V4 (b) as OutstandingCountCeilingGap, and Firestore (a), (b) and (c) in tests/Paramore.Brighter.Gcp.Tests/test-configuration.json. The marks went in with T13.7, T13.12 and T13.13 instead of here, and the audit scan was narrowed afterwards, in T13.16. This task replaces every 9999 with the real issue number and checks with a search that none is left. Do not push before it.
+  - Deviation: the marks for the seven Gap cells were set earlier, with the placeholder issue number 9999, so the local branch stays green. Four of them were later closed by fixing the stores in this spec (Sqlite (c) in its two entries, DynamoDB (b) and DynamoDB.V4 (b)), and their marks were removed. Three are left: Firestore (a), (b) and (c) in tests/Paramore.Brighter.Gcp.Tests/test-configuration.json, which need an emulator that this phase did not have. The marks went in with T13.7, T13.12 and T13.13 instead of here, and the audit scan was narrowed afterwards, in T13.16. This task replaces every 9999 with the real issue number and checks with a search that none is left. Do not push before it.
   - For each Gap-cell issue from T13.15, in order:
     1. Set its mark in the project's `test-configuration.json`.
     2. Regenerate that project.
