@@ -77,13 +77,13 @@ public class NoInstrumentationTests
         });
         builder.UseOutboxStaleMessageMonitor(TimeSpan.FromMinutes(5));
         await using var provider = services.BuildServiceProvider();
-        var monitor = provider.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
+        using var monitor = provider.GetServices<IHostedService>().OfType<TimedOutboxStaleMessageMonitor>().Single();
         var readings = provider.GetRequiredService<OutboxStaleMessageReadings>();
 
         //Act
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await Record.ExceptionAsync(() => monitor.StartAsync(default));
+        if (exception is null)
         {
-            await monitor.StartAsync(default);
             for (var dueTime = 1; dueTime <= 5; dueTime++)
             {
                 Assert.True(SpinWait.SpinUntil(() => _clock.TimersCreated >= dueTime, TimeSpan.FromSeconds(5)));
@@ -94,8 +94,8 @@ public class NoInstrumentationTests
                     TimeSpan.FromSeconds(5)));
             }
 
-            await monitor.StopAsync(default);
-        });
+            exception = await Record.ExceptionAsync(() => monitor.StopAsync(default));
+        }
 
         //Assert
         Assert.Null(exception);
