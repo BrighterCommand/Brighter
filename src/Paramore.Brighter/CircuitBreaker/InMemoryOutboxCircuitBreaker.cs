@@ -54,6 +54,8 @@ public partial class InMemoryOutboxCircuitBreaker(
 
     private readonly OutboxCircuitBreakerOptions _outboxCircuitBreakerOptions = ValidatedOrDefault(options);
 
+    private readonly TimeSpan _maximumTripDuration = ValidatedOrDefault(options).MaximumTripDuration;
+
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     private readonly ConcurrentDictionary<RoutingKey, TripEntry> _trippedTopics = new();
@@ -80,7 +82,27 @@ public partial class InMemoryOutboxCircuitBreaker(
     /// <summary>
     /// A collection of tripped topics.
     /// </summary>
-    public IEnumerable<RoutingKey> TrippedTopics => _trippedTopics.Keys.ToArray();
+    public IEnumerable<RoutingKey> TrippedTopics => ListTrippedTopicsRemovingExpired();
+
+    private RoutingKey[] ListTrippedTopicsRemovingExpired()
+    {
+        var live = new List<RoutingKey>();
+        foreach (var trip in _trippedTopics.ToArray())
+        {
+            if (HasExpired(trip.Value))
+                RemoveEntry(trip.Key, trip.Value);
+            else
+                live.Add(trip.Key);
+        }
+
+        return live.ToArray();
+    }
+
+    private bool HasExpired(TripEntry entry) => _timeProvider.GetElapsedTime(entry.Timestamp) >= _maximumTripDuration;
+
+    private bool RemoveEntry(RoutingKey topic, TripEntry entry) =>
+        ((ICollection<KeyValuePair<RoutingKey, TripEntry>>)_trippedTopics)
+            .Remove(new KeyValuePair<RoutingKey, TripEntry>(topic, entry));
 
 
     /// <summary>
@@ -115,10 +137,7 @@ public partial class InMemoryOutboxCircuitBreaker(
         if (cooled.Count >= 0)
             return;
 
-        var removed = ((ICollection<KeyValuePair<RoutingKey, TripEntry>>)_trippedTopics)
-            .Remove(new KeyValuePair<RoutingKey, TripEntry>(topic, cooled));
-
-        if (!removed)
+        if (!RemoveEntry(topic, cooled))
             return;
 
         var span = tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(CircuitBreakerSpanOperation.Reset, topic, 0), instrumentationOptions);
