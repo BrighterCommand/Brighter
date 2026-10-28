@@ -64,4 +64,16 @@ public class InMemoryOutstandingCountOutboxTests : OutstandingCountOutboxBaseTes
     {
         await AssertAgeAsync();
     }
+
+    [Fact]
+    public async Task When_counting_outstanding_messages_with_a_ceiling_of_three_should_return_three()
+    {
+        await AssertCeilingOfThreeAsync();
+    }
+
+    [Fact]
+    public async Task When_counting_outstanding_messages_with_a_ceiling_of_five_should_return_five()
+    {
+        await AssertCeilingOfFiveAsync();
+    }
 }
