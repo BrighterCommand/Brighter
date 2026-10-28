@@ -184,7 +184,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T1.8
   - References: ADR 0089 Phase 1 invariant: "Time wins when both limits have passed".
 
-- [ ] **CHARACTERISE: T1.10 - Concurrent calls at expiry produce exactly one Reset**
+- [x] **CHARACTERISE: T1.10 - Concurrent calls at expiry produce exactly one Reset**
   - **USE COMMAND**: `/tdd:test-first when two cooldowns run concurrently at expiry should produce exactly one reset and never list the topic again`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker"
   - Test file: `When_two_cooldowns_run_concurrently_at_expiry_should_produce_one_reset.cs`
