@@ -93,7 +93,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T1.2
   - References: `src/Paramore.Brighter/CircuitBreaker/InMemoryOutboxCircuitBreaker.cs:58`. ADR 0089 Phase 1 table, row 1. ADR step 3.
 
-- [ ] **CHARACTERISE: T1.3 - The in-memory breaker copies D at construction and keeps reading CooldownCount at each trip**
+- [x] **CHARACTERISE: T1.3 - The in-memory breaker copies D at construction and keeps reading CooldownCount at each trip**
   - **USE COMMAND**: `/tdd:test-first when the options change after the in-memory breaker is built should keep the maximum trip duration it was built with`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker"
   - Test file: `When_the_options_change_after_construction_should_keep_the_maximum_trip_duration_it_was_built_with.cs`
