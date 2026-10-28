@@ -1,15 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Npgsql;
+using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.Async;
+using Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.OutstandingCount;
 using Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.Sync;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary;
 
-public class PostgresBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
+public class PostgresBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync, IAmAnOutstandingCountOutboxProvider
 {
     private readonly RelationalDatabaseConfiguration _configuration = new(Const.ConnectionString, 
         databaseName: "brightertests",
@@ -78,4 +81,11 @@ public class PostgresBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutbox
     {
         return new PostgreSqlOutbox(_configuration);
     }
+
+    public void DeleteStore() => DeleteStore(Array.Empty<Message>());
+
+    IAmAnOutboxAsync<Message, DbTransaction> IAmAnOutstandingCountOutboxProvider.CreateOutbox() => new PostgreSqlOutbox(_configuration);
+
+    public Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareCancellationAsync(TimeSpan holdFor) =>
+        HeldPostgresOutstandingCountStore.PrepareAsync(binaryMessagePayload: true);
 }
