@@ -2,6 +2,33 @@
 
 ## Master
 
+### Measure how many outbox messages have gone stale, overall and per topic (spec 0038, #4489)
+<!-- spec: 0038-outbox-stale-message-telemetry -->
+
+Messages that stay undispatched in the outbox were invisible until someone queried the store. A new hosted service, `TimedOutboxStaleMessageMonitor`, now counts them on a timer and reports the result as OpenTelemetry metrics, so an alert can fire when messages get stuck. It is opt-in and works with any outbox that supports the async overall count.
+
+#### The monitor and its instruments
+
+`UseOutboxStaleMessageMonitor` on `IBrighterBuilder` registers the monitor. Its settings are `StaleMessageAge` (required, at most 365 days), `CountCeiling` (default 100, at most 1000), `MeasurementInterval` (default 1 minute) and `MeasurementTimeout` (default 10 seconds, below the interval). `AddBrighterInstrumentation` registers three instruments on the Brighter meter:
+
+| Instrument | Type | Unit | Reports |
+|---|---|---|---|
+| `paramore.brighter.outbox.stale.messages` | Observable gauge | `{message}` | Undispatched messages older than the age, up to the ceiling |
+| `paramore.brighter.outbox.stale.topic.messages` | Observable gauge | `{message}` | The same count for one topic, tagged `messaging.destination` |
+| `paramore.brighter.outbox.stale.measurements` | Observable counter | `{measurement}` | Measurements by count (`overall` or `per_topic`) and outcome (`completed`, `failed`, `abandoned`, `skipped`) |
+
+A value equal to the ceiling means the ceiling or more. A `completed` total that stops rising means there is no recent reading.
+
+#### Per topic ages and the optional capability
+
+`Publication.StaleMessageAge` sets the age for one topic, and a topic with several publications uses the smallest. `IAmATopicCountingOutbox` is the optional capability that counts several topics in one call. `InMemoryOutbox` implements it. Other outboxes report the overall count only until they add it, and the monitor logs that once at start.
+
+The telemetry page of the documentation covers the settings, the alerts and the known limitations of each outbox.
+
+#### Breaking changes
+
+No breaking changes.
+
 ### GCP Pub/Sub stream shutdown cancellation
 
 Disposing a Stream or StreamOrdering consumer now logs cancellation reported by the subscriber client
