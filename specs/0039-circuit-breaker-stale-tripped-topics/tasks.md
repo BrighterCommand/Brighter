@@ -217,7 +217,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T1.6, T1.10
   - References: `src/Paramore.Brighter/CircuitBreaker/InMemoryOutboxCircuitBreaker.cs`.
 
-- [ ] **CHARACTERISE: T1.12 - Default D leaves default single-instance sweeping unchanged**
+- [x] **CHARACTERISE: T1.12 - Default D leaves default single-instance sweeping unchanged**
   - **USE COMMAND**: `/tdd:test-first when every sweep obtains the lock on schedule with default options should exclude a tripped topic from exactly ten sweeps`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_sweeps_run_on_schedule_with_default_options_should_exclude_a_tripped_topic_from_exactly_ten_sweeps.cs`
