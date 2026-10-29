@@ -40,39 +40,51 @@ namespace Paramore.Brighter.CircuitBreaker;
 /// if a topic is marked as tripped, record that topic as a failure and cooldown by decrementing
 /// cool down count.
 /// </summary>
-/// <param name="options"></param>
-/// <param name="tracer">Optional tracer used to export a span for each trip/re-trip/reset transition</param>
-/// <param name="instrumentationOptions">How verbose should the exported spans be</param>
-/// <param name="timeProvider">The clock used to timestamp trips; defaults to <see cref="TimeProvider.System"/></param>
-public partial class InMemoryOutboxCircuitBreaker(
-    OutboxCircuitBreakerOptions? options = null,
-    IAmABrighterTracer? tracer = null,
-    InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-    TimeProvider? timeProvider = null) : IAmAnOutboxCircuitBreaker
+public partial class InMemoryOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 {
     private const string COOLDOWN_CAUSE = "cooldown";
     private const string MAXIMUM_TRIP_DURATION_CAUSE = "maximum trip duration";
+    private static readonly TimeSpan s_longestPermittedTripDuration = TimeSpan.FromHours(24);
 
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryOutboxCircuitBreaker>();
 
-    private readonly OutboxCircuitBreakerOptions _outboxCircuitBreakerOptions = ValidatedOrDefault(options);
-
-    private readonly TimeSpan _maximumTripDuration = ValidatedOrDefault(options).MaximumTripDuration;
-
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly OutboxCircuitBreakerOptions _outboxCircuitBreakerOptions;
+    private readonly TimeSpan _maximumTripDuration;
+    private readonly IAmABrighterTracer? _tracer;
+    private readonly InstrumentationOptions _instrumentationOptions;
+    private readonly TimeProvider _timeProvider;
 
     private readonly ConcurrentDictionary<RoutingKey, TripEntry> _trippedTopics = new();
 
-    private static OutboxCircuitBreakerOptions ValidatedOrDefault(OutboxCircuitBreakerOptions? options)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InMemoryOutboxCircuitBreaker"/> class.
+    /// </summary>
+    /// <param name="options">The cooldown and maximum trip duration; defaults are used when null</param>
+    /// <param name="tracer">Optional tracer used to export a span for each trip/re-trip/reset transition</param>
+    /// <param name="instrumentationOptions">How verbose should the exported spans be</param>
+    /// <param name="timeProvider">The clock used to timestamp trips; defaults to <see cref="TimeProvider.System"/></param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when MaximumTripDuration is not greater than zero and at most 24 hours</exception>
+    public InMemoryOutboxCircuitBreaker(
+        OutboxCircuitBreakerOptions? options = null,
+        IAmABrighterTracer? tracer = null,
+        InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+        TimeProvider? timeProvider = null)
     {
-        options ??= new OutboxCircuitBreakerOptions();
+        _outboxCircuitBreakerOptions = options ?? new OutboxCircuitBreakerOptions();
+        _maximumTripDuration = ValidatedMaximumTripDuration(_outboxCircuitBreakerOptions);
+        _tracer = tracer;
+        _instrumentationOptions = instrumentationOptions;
+        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
 
+    private static TimeSpan ValidatedMaximumTripDuration(OutboxCircuitBreakerOptions options)
+    {
         var maximumTripDuration = options.MaximumTripDuration;
-        if (maximumTripDuration <= TimeSpan.Zero || maximumTripDuration > TimeSpan.FromHours(24))
+        if (maximumTripDuration <= TimeSpan.Zero || maximumTripDuration > s_longestPermittedTripDuration)
             throw new ArgumentOutOfRangeException(nameof(options), maximumTripDuration,
                 "MaximumTripDuration must be greater than zero and at most 24 hours");
 
-        return options;
+        return maximumTripDuration;
     }
 
     private sealed record TripEntry(int Count, long Timestamp)
@@ -155,8 +167,8 @@ public partial class InMemoryOutboxCircuitBreaker(
         if (!RemoveEntry(topic, entry))
             return;
 
-        var span = tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(CircuitBreakerSpanOperation.Reset, topic, 0), instrumentationOptions);
-        tracer?.EndSpan(span);
+        var span = _tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(CircuitBreakerSpanOperation.Reset, topic, 0), _instrumentationOptions);
+        _tracer?.EndSpan(span);
 
         Log.Reset(s_logger, topic.Value, resetCause);
     }
@@ -183,8 +195,8 @@ public partial class InMemoryOutboxCircuitBreaker(
             });
 
         var operation = isReTrip ? CircuitBreakerSpanOperation.ReTrip : CircuitBreakerSpanOperation.Trip;
-        var span = tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(operation, topic, cooldownCount), instrumentationOptions);
-        tracer?.EndSpan(span);
+        var span = _tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(operation, topic, cooldownCount), _instrumentationOptions);
+        _tracer?.EndSpan(span);
 
         if (isReTrip)
             Log.ReTripped(s_logger, topic.Value, cooldownCount);
