@@ -1040,6 +1040,7 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
     - no call starts at 12:02 or 12:03, and one Warning naming the outbox type and the count is logged for each;
     - a call starts at 12:04:00, and no V is recorded for 12:01;
     - at the 12:02:20 and 12:03:20 collections, `completed` is 0 while `abandoned` and `skipped` are above 0, which differs from a run with the feature disabled (no series at all).
+  - The test reads these values through `OutboxStaleMessageReadings.GetTotal` and runs no host with the feature disabled. T9.22 reads them through the listener and makes the comparison.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - for each count at each wake, skip every due time while its previous call still runs, and every due time at or before that call's recorded end (row 4): `Skip(count, n)` with one Warning;
@@ -1230,12 +1231,13 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
 - [ ] **CHARACTERISE: T9.22 The listener receives the measurements of T9.6, and none with the feature disabled (AC-9 last item, AC-25)**
   - **USE COMMAND**: `/test-first while a count is still running, the listener receives completed 0 and abandoned and skipped above 0 at 12:02:20 and 12:03:20, and receives no measurements when the stale step is not added`
   - Lines in this task are cited at HEAD 0e9a2bcff.
+  - This task was added after Phase 9 closed. No task in Phases 10 to 15 depends on it, and it runs before T15.6.
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`, as T9.6 is, because the monitor logs through the shared logger)
-  - Test file: `When_a_count_is_still_running_should_report_measurements_unlike_the_feature_disabled.cs`
+  - Test file: `When_a_count_is_still_running_should_report_measurements_unlike_a_host_without_the_monitor.cs`
   - T9.6 checks the last item of AC-9 through `OutboxStaleMessageReadings.GetTotal` and runs no host with the feature disabled. This test reads `paramore.brighter.outbox.stale.measurements`, the FR-6 signal, through the `MeterListener` of `StaleMessageMetricsFixture`, and compares two runs. It leaves the T9.6 test as it is.
   - Test should verify:
-    - in a run with `UseOutboxStaleMessageMonitor` and the T9.6 scenario (the 12:01:00 call ignores cancellation and is cancelled at 12:01:10), at the collections at 12:02:20 and 12:03:20 the overall `completed` value is 0, and the overall `abandoned` and `skipped` values are above 0. The test then releases the call and waits for the double's signal that it has ended, as T9.6 does, so the monitor can stop;
-    - in a run that registers the same producer and outbox but does not call `UseOutboxStaleMessageMonitor`, as `When_the_stale_step_is_not_added_should_measure_nothing.cs` does, the collections at 12:02:20 and 12:03:20 receive no `paramore.brighter.outbox.stale.measurements` value.
+    - in a run with `UseOutboxStaleMessageMonitor` and the T9.6 scenario (the 12:01:00 call ignores cancellation and is cancelled at 12:01:10), at the collections at 12:02:20 and 12:03:20 the overall `completed` value is 0, and the overall `abandoned` and `skipped` values are above 0. The test then releases the call and waits for the double's signal that it has ended, as T9.6 does, so no blocked call is left behind after the test;
+    - in a run that registers the same producer and outbox but does not call `UseOutboxStaleMessageMonitor`, as `When_the_stale_step_is_not_added_should_measure_nothing.cs` does, the test advances the clock to 12:02:20 and 12:03:20 with no waits, since no monitor runs, and neither collection receives a `paramore.brighter.outbox.stale.measurements` value.
     - 🔁 RED mutation: make `ObserveMeasurements` in `src/Paramore.Brighter/Observability/OutboxStaleMessageMeter.cs` (:109-130) yield no measurement, so the first run reads like the second.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - Implementation should (only if the test is RED on arrival):
