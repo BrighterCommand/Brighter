@@ -615,7 +615,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Implementation should:
     - call `readings.Start(outbox.GetType().Name, measuresTopics)` as the last step of `StartAsync`.
 
-- [ ] **STRUCTURAL: T6.12 Run the start tests of T6.7 and T6.11 on a fake clock (AC-25)**
+- [x] **STRUCTURAL: T6.12 Run the start tests of T6.7 and T6.11 on a fake clock (AC-25)**
   - **USE COMMAND**: `/tidy-first register a FakeTimeProvider in the start tests of T6.7 and T6.11`
   - Lines in this task are cited at HEAD 093b69aae.
   - In `When_a_publication_has_a_valid_stale_age_should_start.cs` and in `BuildMonitor` of `When_the_monitor_starts_should_start_the_readings.cs`, under "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/", register `services.AddSingleton<TimeProvider>(new FakeTimeProvider())` right after the `ServiceCollection` is created, and add `using Microsoft.Extensions.Time.Testing;`, as `When_the_monitor_starts_should_dispose_its_scope_before_returning.cs:32` and `:53` do. Leave the assertions as they are.
