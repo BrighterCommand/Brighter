@@ -1843,7 +1843,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - Run `dotnet test tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -f net10.0`.
   - Output: no Missing and no Orphan file; the Skip audits are green.
 
-- [ ] **PROJECT: T15.3 Diff review for public API and dependencies (AC-22, AC-24 second clause; ADR 0085 risk :967)**
+- [x] **PROJECT: T15.3 Diff review for public API and dependencies (AC-22, AC-24 second clause; ADR 0085 risk :967)**
   - Check the PR diff:
     - no member changed on `IAmABrighterMessagingMeter`, `IAmABrighterDbMeter`, `IAmABrighterSweeperMeter` or `IAmABrighterOutboxMeter`;
     - `IAmAnOutbox`, `IAmAnOutboxSync` and `IAmAnOutboxAsync` unchanged;
@@ -1854,6 +1854,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - everything on the "stay unchanged" list at ADR 0085 :685-698 is untouched.
   - Grep the new measurement and recording code (readings, meter, monitor, options) for `OpenTelemetry`. Only `BrighterMetricsBuilderExtensions` may reference it (NFR-5). Note that the core assembly already references the OpenTelemetry package (`src/Paramore.Brighter/Paramore.Brighter.csproj:18`), so the check is by namespace, not by package.
   - Output: a "Reviewed:" sub-bullet under this task.
+  - Reviewed: `git diff 708fa74bf..6f97d22d4 -- src`, 16 files. The four meter interfaces, the three outbox interfaces, `IAmProducersConfiguration`, `IAmABrighterTracer`, `IAmAnOutboxProducerMediator` and the other types on the list at ADR 0085 :685-698 are not in the diff. `Publication.cs` adds only `StaleMessageAge`. `BrighterSemanticConventions.cs` adds only the six constants of T1.1. `InMemoryOutbox.cs` adds `IAmATopicCountingOutbox` and leaves its overall count as it was. The other public changes are new types (`IAmATopicCountingOutbox`, `OutboxStaleMessageMeter`, `OutboxStaleMessageReadings`, `StaleMessageCount`, `StaleMeasurementOutcome`, `TimedOutboxStaleMessageMonitor`, `TimedOutboxStaleMessageMonitorOptions`) and the new `UseOutboxStaleMessageMonitor` extension. `OutboxStaleMessageMeter` is `sealed` (`OutboxStaleMessageMeter.cs:35`) and implements no interface. In the new code, only `BrighterMetricsBuilderExtensions.cs` uses an `OpenTelemetry` namespace (`:30`). One line of that list no longer holds: ADR 0085 :688 keeps every outbox's overall count unchanged, but this spec changed it in `SqliteOutbox` (cancellation), both `DynamoDbOutbox` (the ceiling) and `FirestoreOutbox` (the age, the ceiling and the token). Those changes close the FR-14 gaps that T13.17 lists, which `requirements.md:232` allows.
 
 - [ ] **PROJECT: T15.4 Fake time and listener check (AC-25)**
   - Confirm that the tests for AC-1 to AC-15, AC-19 to AC-21, AC-23, AC-24, AC-27 to AC-33 and AC-35 to AC-40 drive measurement time only through `FakeTimeProvider`, and observe values through a `MeterListener` where they read values.
