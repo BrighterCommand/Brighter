@@ -16,7 +16,7 @@
   - `STRUCTURAL`: use `/tidy-first`. No behaviour changes, and existing tests stay green.
   - `PROJECT`: work that is not a behaviour of the code: a GitHub issue, a suite run, a code review or a recording. Each produces the output the task names, in the place the task names. It does not use `/test-first`.
   - `DOC`: documentation. It does not use `/test-first`.
-  - Counts: 151 tasks. 53 `TEST + IMPLEMENT`, 62 `CHARACTERISE`, 7 `GENERATE`, 5 `STRUCTURAL`, 17 `PROJECT`, 7 `DOC`. `/spec:show-me` counts the `CHARACTERISE` and `GENERATE` tasks as untagged, because its tag pattern knows only the other four (`.claude/commands/spec/show_me_facts.cs:1443`). The tasks template (`.claude/commands/spec/tasks.md:133-143`) lists four tags. `CHARACTERISE` and `GENERATE` are the labels that `.agent_instructions/testing.md:67` and ADR 0071-tdd-review-gear :236-255 define for these shapes, so this file uses them.
+  - Counts: 152 tasks. 53 `TEST + IMPLEMENT`, 63 `CHARACTERISE`, 7 `GENERATE`, 5 `STRUCTURAL`, 17 `PROJECT`, 7 `DOC`. `/spec:show-me` counts the `CHARACTERISE` and `GENERATE` tasks as untagged, because its tag pattern knows only the other four (`.claude/commands/spec/show_me_facts.cs:1443`). The tasks template (`.claude/commands/spec/tasks.md:133-143`) lists four tags. `CHARACTERISE` and `GENERATE` are the labels that `.agent_instructions/testing.md:67` and ADR 0071-tdd-review-gear :236-255 define for these shapes, so this file uses them.
 - **Publishing.** Any text that goes to GitHub (an issue, a pull request in another repository, or this pull request's description) is produced first in the task's output. Posting it is a separate manual step after that text is reviewed, and the task then records the number or link. Nothing in this list posts to GitHub by itself.
 - **Order.** ADR 0085 steps 1 and 2 (Phase 1). Then ADR 0086 steps 1 and 2 (Phase 2), because step 6 of ADR 0085 needs the capability interface and step 8 needs `InMemoryOutbox` to implement it. Then ADR 0085 steps 3 to 14 (Phases 3 to 14). ADR 0086 step 3, the follow-up issues, is in Phase 14 with the documentation. Phase 15 is the final verification.
 - **Line numbers.** Lines are cited at HEAD 942cb8f56. The ADRs cite commit 1ce331eb2. Where a line has moved, the task gives the HEAD line and then the ADR's line in parentheses, as in `:713-720` (ADR: `:716-723`).
@@ -1227,6 +1227,20 @@ Every task here uses the determinism rules and `StaleMessageMetricsFixture`. Pha
   - Output: a "Reviewed:" sub-bullet under this task, with the file and lines checked.
   - Reviewed: `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs` :186-198 and :266-274 (the split), :434 and :444-458 (the call and its end), :245-259, :337-345 and :483-508 (cancel and dispose), :347-354 (queued `Cancel`), and :177-178 and :301-309 (stop task and yield). At each wake, a count whose previous call has not ended, or ended at or after the latest due time, skips every due time that passed. Otherwise it skips all but the latest and measures that one, so no call of a count starts while its previous one runs (FR-8). The due times skipped match rows 3 and 4 together. When one wake has both kinds, though, the code records one `Skip(count, n + M − 1)` with one Warning, where ADR 0085 :255-256 read as two Warnings, one carrying n and one carrying M − 1. The readings total is the same. Each call records its end in a `finally` around a plain `await` of the outbox's task, and nothing else writes the end. The continuation at :344 only reads the exception. Only the loop's measurement code cancels a source (:343) or disposes one. A decided call's source is disposed at the end of the `using` that awaits its task (:245-259), and an abandoned call's source at a later wake or at the stop once its task has completed (:191, :206, :500-506). On netstandard2.0 the cancel is `Task.Run(cancellation.Cancel)`, so a cancel that runs after that disposal throws `ObjectDisposedException`, and `Task.WhenAll(call, cancelled).ContinueWith` observes it. The netstandard2.0 branches yield with `Task.Yield` after `Task.WhenAny` and queue `Cancel`, where net8.0 and later use `ForceYielding` and `CancelAsync`, as ADR 0085 :733, :863 and :874 ask. The netstandard2.0 build succeeds, but the tests run only on net9.0 and net10.0, so no test runs those branches.
 
+- [ ] **CHARACTERISE: T9.22 The listener receives the measurements of T9.6, and none with the feature disabled (AC-9 last item, AC-25)**
+  - **USE COMMAND**: `/test-first while a count is still running, the listener receives completed 0 and abandoned and skipped above 0 at 12:02:20 and 12:03:20, and receives no measurements when the stale step is not added`
+  - Lines in this task are cited at HEAD 0e9a2bcff.
+  - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/" (in `StaleMessageLoggingCollection`, as T9.6 is, because the monitor logs through the shared logger)
+  - Test file: `When_a_count_is_still_running_should_report_measurements_unlike_the_feature_disabled.cs`
+  - T9.6 checks the last item of AC-9 through `OutboxStaleMessageReadings.GetTotal` and runs no host with the feature disabled. This test reads `paramore.brighter.outbox.stale.measurements`, the FR-6 signal, through the `MeterListener` of `StaleMessageMetricsFixture`, and compares two runs. It leaves the T9.6 test as it is.
+  - Test should verify:
+    - in a run with `UseOutboxStaleMessageMonitor` and the T9.6 scenario (the 12:01:00 call ignores cancellation and is cancelled at 12:01:10), at the collections at 12:02:20 and 12:03:20 the overall `completed` value is 0, and the overall `abandoned` and `skipped` values are above 0. The test then releases the call and waits for the double's signal that it has ended, as T9.6 does, so the monitor can stop;
+    - in a run that registers the same producer and outbox but does not call `UseOutboxStaleMessageMonitor`, as `When_the_stale_step_is_not_added_should_measure_nothing.cs` does, the collections at 12:02:20 and 12:03:20 receive no `paramore.brighter.outbox.stale.measurements` value.
+    - 🔁 RED mutation: make `ObserveMeasurements` in `src/Paramore.Brighter/Observability/OutboxStaleMessageMeter.cs` (:109-130) yield no measurement, so the first run reads like the second.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should (only if the test is RED on arrival):
+    - publish `OutboxStaleMessageReadings.GetTotal` for each count and outcome once the readings are started, as the counter of T3.1 does.
+
 ## Phase 10: Stopping (ADR 0085 step 10)
 
 *Depends on Phase 9.*
@@ -1868,7 +1882,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - Confirm that every wall-clock wait (the AC-11, AC-20, AC-36 and AC-37 guards, and the synchronisation wait) only detects hangs or waits for work already due.
   - Output: a "Reviewed:" sub-bullet listing any exception found.
   - Reviewed: the tests under `tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/` move measurement time only through `FakeTimeProvider` and read values through a `MeterListener`, and their wall-clock waits only detect a hang or wait for work already due. T8.1, T8.2, T8.3, T8.5, T8.6, T8.7, T8.9, T8.10, T8.14, T9.2, T9.3, T9.6 to T9.13, T9.15, T9.16 and T9.17 ignore the result of some `SpinUntil` waits, but those waits do not move time, so a hang still shows up as a failed assertion after the wait. T6.7 (`When_a_publication_has_a_valid_stale_age_should_start`) and both facts of T6.11 (`When_the_monitor_starts_should_start_the_readings.cs`) ran the monitor on `TimeProvider.System` until T6.12 registered a `FakeTimeProvider` in them. T6.7 reads only `IsStarted`, and both facts of T6.11 read `IsStarted`, `OutboxType` and `MeasuresTopics`, not meter values. The exceptions:
-    - T8.22, T8.23, T9.1 to T9.6, T10.12 and `When_time_advances_three_intervals_at_once_should_skip_two_due_times_for_each_count`, added by T8.25, assert the counter totals from `OutboxStaleMessageReadings` rather than from the listener. T9.1 and T9.4 also check in the readings that no overall value was recorded. T8.23, T9.1, T9.4, T10.12 and the T8.25 test start the fixture's listener but never read from it.
+    - T8.22, T8.23, T9.1 to T9.6, T10.12 and `When_time_advances_three_intervals_at_once_should_skip_two_due_times_for_each_count`, added by T8.25, assert the counter totals from `OutboxStaleMessageReadings` rather than from the listener. T9.1 and T9.4 also check in the readings that no overall value was recorded. T8.23, T9.1, T9.4, T10.12 and the T8.25 test start the fixture's listener but never read from it. This exception is accepted. The meter's callbacks publish what the readings hold: the counter publishes `GetTotal` for each count and outcome, and the overall gauge publishes the latest overall value (`src/Paramore.Brighter/Observability/OutboxStaleMessageMeter.cs:84-130`, at HEAD 0e9a2bcff). AC-9 also asks for a comparison with the feature disabled, which T9.6 does not make, so T9.22 reads its last item through the listener.
     - T12.3 attaches no listener and reads `OutboxStaleMessageReadings`, which fits AC-24: it checks a host with no instrumentation.
 
 - [ ] **PROJECT: T15.5 FR-14 completeness (AC-18)**
@@ -1902,9 +1916,9 @@ No production change is expected in this phase. The named mutation is how RED is
 | FR-3.1 | T6.9, T8.7, T8.9 to T8.12, T8.16, T8.18 |
 | FR-4 | T2.2, T8.3, T8.17, T8.21, T13.2, T13.7 to T13.13 |
 | FR-5 | T3.1, T3.5, T4.2, T8.1, T8.2, T8.15 |
-| FR-6 | T3.1, T3.2, T3.6 to T3.8, T3.10, T8.13, T9.6, T9.10 to T9.14 |
+| FR-6 | T3.1, T3.2, T3.6 to T3.8, T3.10, T8.13, T9.6, T9.10 to T9.14, T9.22 |
 | FR-7 | T8.1, T8.4, T8.8, T8.25 |
-| FR-8 | T9.6, T9.13, T9.21 |
+| FR-8 | T9.6, T9.13, T9.21, T9.22 |
 | FR-9 | T9.1 to T9.9, T9.13, T9.19, T10.12 |
 | FR-10 | T9.10 to T9.18 |
 | FR-11 | T8.2 (no sweeper), T11.1 |
@@ -1939,7 +1953,7 @@ No production change is expected in this phase. The named mutation is how RED is
 | AC-6 | T8.1 |
 | AC-7 | T9.11, T9.12 |
 | AC-8 | T8.1 (coalescing code), T8.4, T8.8, T8.25 (coalescing by review) |
-| AC-9 | T9.6 |
+| AC-9 | T9.6, T9.22 |
 | AC-10 | T9.1, T9.2, T9.3 |
 | AC-11 | T9.7 (first half), T10.5 (second half) |
 | AC-12 | T9.10 |
@@ -1955,7 +1969,7 @@ No production change is expected in this phase. The named mutation is how RED is
 | AC-22 (NFR-3 diff review) | T15.3 |
 | AC-23 | T8.14 |
 | AC-24 | T12.3, T15.3 |
-| AC-25 (NFR-6 FakeTimeProvider/MeterListener check) | T6.12, T15.4 |
+| AC-25 (NFR-6 FakeTimeProvider/MeterListener check) | T6.12, T9.22, T15.4 |
 | AC-26 (NFR-7 docs) | T14.5, T14.6, T14.7, T14.8, T14.9, T15.7 |
 | AC-27 | T8.15 |
 | AC-28 | T8.9, T8.10 |
@@ -2022,7 +2036,7 @@ No production change is expected in this phase. The named mutation is how RED is
 | 9 invalid per-topic result | T9.15 (and T9.16 for the overall count) |
 | 9 record then cancel; CancelAsync or queued Cancel; observe | T9.1, T9.19 |
 | 9 task records end timestamp; continuation observes | T9.4, T9.20 |
-| 9 row 4 skips; AC-9 and AC-33 still-running case; review the split | T9.6, T9.13, T9.21 |
+| 9 row 4 skips; AC-9 and AC-33 still-running case; review the split | T9.6, T9.13, T9.21, T9.22 |
 | 9 only the loop cancels or disposes a source | T9.6, T9.21 |
 | 9 [LoggerMessage] entries naming the count, written at once | T9.1, T9.5, T9.10, T9.14 |
 | 9 catch loop exceptions at Error; throwing-logger test | T9.18 |
