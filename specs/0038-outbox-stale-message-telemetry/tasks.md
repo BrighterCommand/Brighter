@@ -1805,7 +1805,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - **USE COMMAND**: `/spec:write_release_notes`
   - Add the feature to `release_notes.md`: the step, the three instruments, `Publication.StaleMessageAge`, `IAmATopicCountingOutbox` on `InMemoryOutbox`, and a pointer to the telemetry page.
 
-- [ ] **DOC: T14.7 Telemetry page: what is measured**
+- [x] **DOC: T14.7 Telemetry page: what is measured**
   - Add a section to the telemetry page in the BrighterCommand/Docs repository covering:
     - what each count measures;
     - that the overall value is not the sum of the topic values;
