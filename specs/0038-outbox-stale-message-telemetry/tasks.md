@@ -1838,7 +1838,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - that stopping clears both gauges.
   - Source for the timeout bullet, for the implementer and not for the page: ADR 0085 risk row :963, A-7 and A-9.
 
-- [ ] **DOC: T14.9 Telemetry page: known limitations**
+- [x] **DOC: T14.9 Telemetry page: known limitations**
   - In the same section:
     - each outbox's FR-14 gaps, each linked to its T13.15 issue;
     - the four per-topic family issues from T14.1 to T14.4;
