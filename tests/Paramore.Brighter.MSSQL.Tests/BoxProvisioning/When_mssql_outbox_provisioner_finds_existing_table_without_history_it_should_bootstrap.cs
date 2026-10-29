@@ -41,7 +41,6 @@ public class MsSqlOutboxProvisionerBootstrapTests : IAsyncLifetime
         //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
 
-        // Create table directly via builder (simulating pre-migration install)
         var ddl = SqlOutboxBuilder.GetDDL(_tableName);
         Configuration.CreateTable(_connectionString, ddl);
 
@@ -52,7 +51,6 @@ public class MsSqlOutboxProvisionerBootstrapTests : IAsyncLifetime
         using var connection = new SqlConnection(_connectionString);
         connection.Open();
 
-        // Verify migration history has synthetic version 1
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM [__BrighterMigrationHistory]
@@ -62,7 +60,6 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = 'dbo' AND [MigrationVers
         var historyCount = (int)historyCheck.ExecuteScalar()!;
         Assert.Equal(1, historyCount);
 
-        // Verify the outbox table still exists (wasn't recreated)
         using var tableCheck = connection.CreateCommand();
         tableCheck.CommandText = @"
 SELECT COUNT(1) FROM sys.tables t

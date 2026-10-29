@@ -31,6 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// Detection returns -1 for a table without the box's discriminator column and 0 for one that has it
+/// but matches no version, and the provisioner refuses both; otherwise detection returns the highest
+/// version whose columns are all present (ADR 0057 §2).
+/// </summary>
 public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
@@ -39,8 +44,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_outbox_detects_table_missing_headerbag_discriminator_it_should_return_negative_one()
     {
-        //Arrange — a foreign table with neither HeaderBag (outbox discriminator) nor any V1
-        //columns. Helper must report -1; provisioner must refuse to touch a non-Brighter table.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
         var tableName = TrackTable($"foreign_{Guid.NewGuid():N}");
         Configuration.CreateTable(_connectionString,
@@ -49,7 +53,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
         var migrations = new MsSqlOutboxMigrationCatalog().All(config);
 
-        //Act — direct helper call
+        //Act
         int detected;
         await using (var connection = new SqlConnection(_connectionString))
         {
@@ -58,10 +62,10 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, "dbo", BoxType.Outbox, migrations, default);
         }
 
-        //Assert — helper returns -1 (no discriminator)
+        //Assert
         Assert.Equal(-1, detected);
 
-        //Act — provisioner end-to-end
+        //Act
         var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MsSqlOutboxProvisioner(
             new MsSqlBoxDetectionHelper(),
@@ -71,7 +75,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
-        //Assert — message identifies this as not a Brighter outbox and names the discriminator
+        //Assert
         Assert.Contains("not a Brighter outbox", ex.Message);
         Assert.Contains("HeaderBag", ex.Message);
     }
@@ -79,7 +83,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_inbox_detects_table_missing_commandbody_discriminator_it_should_return_negative_one()
     {
-        //Arrange — a foreign table without CommandBody (inbox discriminator).
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
         var tableName = TrackTable($"foreign_{Guid.NewGuid():N}");
         Configuration.CreateTable(_connectionString,
@@ -88,7 +92,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName);
         var migrations = new MsSqlInboxMigrationCatalog().All(config);
 
-        //Act — direct helper call
+        //Act
         int detected;
         await using (var connection = new SqlConnection(_connectionString))
         {
@@ -97,10 +101,10 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, "dbo", BoxType.Inbox, migrations, default);
         }
 
-        //Assert — helper returns -1
+        //Assert
         Assert.Equal(-1, detected);
 
-        //Act — provisioner end-to-end
+        //Act
         var runner = new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MsSqlInboxProvisioner(
             new MsSqlBoxDetectionHelper(),
@@ -110,7 +114,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
-        //Assert — message identifies this as not a Brighter inbox and names the discriminator
+        //Assert
         Assert.Contains("not a Brighter inbox", ex.Message);
         Assert.Contains("CommandBody", ex.Message);
     }
@@ -118,8 +122,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_outbox_detects_headerbag_present_but_no_v1_columns_it_should_return_zero()
     {
-        //Arrange — table has HeaderBag (passes discriminator gate) but is missing other V1
-        //columns like MessageId, Topic, Body. Helper must return 0; provisioner must throw.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
         var tableName = TrackTable($"unknown_{Guid.NewGuid():N}");
         Configuration.CreateTable(_connectionString,
@@ -128,7 +131,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
         var migrations = new MsSqlOutboxMigrationCatalog().All(config);
 
-        //Act — direct helper call
+        //Act
         int detected;
         await using (var connection = new SqlConnection(_connectionString))
         {
@@ -137,10 +140,10 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, "dbo", BoxType.Outbox, migrations, default);
         }
 
-        //Assert — helper returns 0 (discriminator OK, but unknown schema)
+        //Assert
         Assert.Equal(0, detected);
 
-        //Act — provisioner end-to-end
+        //Act
         var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MsSqlOutboxProvisioner(
             new MsSqlBoxDetectionHelper(),
@@ -150,15 +153,14 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
-        //Assert — message identifies the table as not matching any known schema version
+        //Assert
         Assert.Contains("does not match any known schema version", ex.Message);
     }
 
     [Fact]
     public async Task When_mssql_outbox_detects_v3_shaped_table_it_should_return_three()
     {
-        //Arrange — V3 columns: V1 baseline + V2 (Dispatched) + V3 (CorrelationId, ReplyTo,
-        //ContentType). Crucially, no PartitionKey (V4) so the helper must STOP at 3.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
         var tableName = TrackTable($"v3_outbox_{Guid.NewGuid():N}");
         Configuration.CreateTable(_connectionString,
@@ -189,7 +191,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
                 connection, tableName, "dbo", BoxType.Outbox, migrations, default);
         }
 
-        //Assert — V3 is the highest cumulative match (V4 column PartitionKey absent stops the walk)
+        //Assert
         Assert.Equal(3, detected);
     }
 

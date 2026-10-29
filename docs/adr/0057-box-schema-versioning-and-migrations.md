@@ -163,6 +163,8 @@ The bootstrap-path error message branches on this: `-1` → "Table *{name}* exis
 
 - `IAmABoxMigrationCatalog.FreshInstallDdl(configuration)` — returns the live builder's `CREATE TABLE` (`*Builder.GetDDL(table, binaryMessagePayload)`). This is what the fresh path executes.
 - `migrations[0].UpScript` — returns the literal historical first-shipped DDL for that backend (the string extracted from the first commit that introduced the box, asymmetric per backend). This is **never re-executed** by the runner — bootstrap stamps V1 into history directly when detection says V≥1, and normal-path replay only applies V2..V_latest. V1.UpScript exists for archaeology, auditability, and as the canonical baseline that V2+ idempotency guards (`IF COL_LENGTH IS NULL`, `ADD COLUMN IF NOT EXISTS`, `information_schema` probe, `pragma_table_info`) reason against.
+- On a non-default schema, the fresh-install DDL, every ALTER, and detection all target `[{schema}].[{table}]`: an unqualified `CREATE TABLE` lands in the default schema whatever `SchemaName` says. The runner does not create the box's schema; operators create it beforehand.
+- MSSQL's history-table existence check filters on `schema_id`. Without the filter, a `__BrighterMigrationHistory` in another schema reads as "already exists", the one the runner needs is never created, and the next history `INSERT` fails.
 
 The asymmetry across backends is documented per-catalog: all four outboxes are pre-Dispatched and the MSSQL/MySQL/SQLite inboxes are pre-`ContextKey` (true V1 baselines); only the PostgreSQL inbox is "born past V1" (shipped with `ContextKey` from its first commit). See spec 0027 [README archaeology](../../specs/0027-box-schema-versioning-and-migrations/README.md) and each `*MigrationCatalog` class-level `<remarks>` for the per-backend literal DDL.
 
@@ -213,7 +215,7 @@ The asymmetry across backends is documented per-catalog: all four outboxes are p
 **Normal path** (`TableExists && HistoryExists`):
 - Acquire advisory lock
 - Read `MAX(MigrationVersion)` for `(SchemaName, BoxTableName)`
-- Run migrations above MAX (each UpScript idempotent — see §5; the `migration.Version <= maxVersion` filter is the sole gate. With monotonically-ascending contiguous migrations enforced at runner construction, `maxVersion` was just read inside the lock-bearing transaction, and nothing greater than `maxVersion` can be in history, so a per-migration `IsMigrationAppliedAsync` check is redundant and not run)
+- Run migrations above MAX (each UpScript idempotent — see §5; the `migration.Version <= maxVersion` filter is the sole gate. With monotonically-ascending contiguous migrations enforced at `MigrateAsync` entry, `maxVersion` was just read inside the lock-bearing transaction, and nothing greater than `maxVersion` can be in history, so a per-migration `IsMigrationAppliedAsync` check is redundant and not run)
   - Why contiguity is enforced: duplicate versions would collide on the history table's primary key, a gap would silently skip an ALTER that V_latest depends on, and an out-of-order list would double-apply DDL or stamp history rows in the wrong sequence.
 - Release lock
 
