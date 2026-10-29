@@ -1731,7 +1731,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - For DynamoDB, DynamoDB V4, MongoDb, Spanner and Firestore, review the overall count's code path from the token to the store client.
   - Output: each outbox's FR-14 (c) cell in `specs/0038-outbox-stale-message-telemetry/requirements.md` gains the file and line that pass the token, or the line where it is dropped. For Firestore this is expected at `FirestoreOutbox.cs:1191-1246`.
 
-- [ ] **PROJECT: T13.15 One issue for each FR-14 gap in columns (a) to (c) (Q-9)**
+- [x] **PROJECT: T13.15 One issue for each FR-14 gap in columns (a) to (c) (Q-9)**
   - Draft one issue per Gap cell, including each "To verify" cell that T13.7 to T13.13 found to be a gap. Expected at least: Firestore (a), (b) and (c), and DynamoDB/V4 (b). Decision after drafting: whatever can be proved here is fixed in this PR instead, so DynamoDB/V4 (b), Sqlite (c) and Firestore (a), (b) and (c) are closed by their fixes and need no issue.
   - Each issue states the observed result, the AC-16 or AC-17 fact that shows it, and the gap mark that skips it until the fix.
   - Also draft the two issues that ADR 0085 :102 names for limits this PR only documents: the read volume of the DynamoDB and DynamoDB V4 counts (NFR-4 (b)), and the row loading of the relational and MongoDb overall counts (NFR-4 (c), Q-5). T14.9 links each known limitation to its issue.
