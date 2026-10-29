@@ -2,17 +2,16 @@
 
 ## Master
 
-### Circuit-broken topics no longer stay tripped for ever, and trips can be shared across sweeper instances (spec 0039, #4628)
+### Circuit-broken topics no longer stay tripped for ever (spec 0039, #4628)
 <!-- spec: 0039-circuit-breaker-stale-tripped-topics -->
 
-An outbox sweeper instance that stopped obtaining the distributed lock kept its circuit-broken topics for ever, and held back their messages when it next swept. `InMemoryOutboxCircuitBreaker` now also ends a trip after `MaximumTripDuration` (default 5 minutes) whatever the sweeper does. A new opt-in `DistributedOutboxCircuitBreaker` keeps trips in a table beside the outbox (MsSql, PostgreSql and MySql first), so every instance sees them, and each trip ends one `CooldownDuration` (default 50 seconds) after its latest trip. With it, a failed publish on the async request path costs one store write, and the tripped-topics gauge and investigate check report on every running sweeper. If the store fails, each instance uses its own view and a new `tripped_topics_store_unavailable` condition appears. Brighter still registers no breaker by default, and `IAmAnOutboxCircuitBreaker` is unchanged.
+An outbox sweeper instance that stopped obtaining the distributed lock kept its circuit-broken topics for ever, and held back their messages when it next swept. `InMemoryOutboxCircuitBreaker` now also ends a trip after `MaximumTripDuration` (default 5 minutes) whatever the sweeper does, so a stale trip no longer holds back messages once the sweeper obtains the lock again. The reset log names whether a trip ended by cooldown or by maximum trip duration. `InMemoryOutboxCircuitBreaker` takes an optional `TimeProvider` as its last constructor parameter. Brighter still registers no breaker by default, and `IAmAnOutboxCircuitBreaker` is unchanged.
 
 #### Breaking changes
 
 - `InMemoryOutboxCircuitBreaker` now ends a trip after `MaximumTripDuration` even if its cooldown count has not run out. *(behavioural)* The 5-minute default exceeds the default cooldown of about 50 seconds. Raise it only if `CooldownCount` times `TimerInterval` is longer.
 - The reset log message names its cause, so its text changes. *(behavioural)* Update any alert or query that matches the old message.
-- `InMemoryOutboxCircuitBreaker` and `TimedOutboxSweeper` constructors gain trailing optional parameters. *(binary)* Callers compiled against the old signatures must be recompiled; source is unchanged.
-- `BoxType` gains the value `TrippedTopics`. *(source)* Add a case to any `switch` on `BoxType` that has no default arm.
+- The `InMemoryOutboxCircuitBreaker` constructor gains a trailing optional `TimeProvider` parameter. *(binary)* Callers compiled against the old signature must be recompiled; source is unchanged.
 
 ### GCP Pub/Sub stream shutdown cancellation
 
