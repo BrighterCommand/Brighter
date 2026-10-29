@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Google.Cloud.Firestore.V1;
+using Grpc.Core;
 using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.Firestore;
 using Paramore.Brighter.Gcp.Tests.Firestore;
@@ -124,7 +125,7 @@ public class FirestoreOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
         return Task.FromResult(new OutstandingCountCancellationSetup<FirestoreTransaction>(
             outbox,
             storeHeld: false,
-            clientCancellationException: typeof(OperationCanceledException),
+            clientCancellationException: typeof(RpcException),
             release: () =>
             {
                 DeleteOutstandingCountStore();

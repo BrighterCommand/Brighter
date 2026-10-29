@@ -53,10 +53,7 @@
       "Transaction": "Paramore.Brighter.Firestore.FirestoreTransaction",
       "OutboxProvider": "FirestoreOutboxProvider",
       "Category": "Firestore",
-      "CollectionName": "FirestoreOutbox",
-      "OutstandingCountAgeGap": 9999,
-      "OutstandingCountCeilingGap": 9999,
-      "OutstandingCountCancellationGap": 9999
+      "CollectionName": "FirestoreOutbox"
     },
     "SpannerBinary": {
       "Transaction": "System.Data.Common.DbTransaction",
