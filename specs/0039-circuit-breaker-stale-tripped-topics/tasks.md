@@ -234,7 +234,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 1d - Stale-trip sweep
 
-- [ ] **CHARACTERISE: T1.13 - An instance with a stale trip sweeps the topic once it obtains the lock**
+- [x] **CHARACTERISE: T1.13 - An instance with a stale trip sweeps the topic once it obtains the lock**
   - **USE COMMAND**: `/tdd:test-first when an instance that held a trip without the lock obtains the lock after the maximum trip duration should sweep with no tripped topics`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_stale_trip_instance_obtains_the_lock_after_the_maximum_trip_duration_should_sweep_the_topic.cs`
