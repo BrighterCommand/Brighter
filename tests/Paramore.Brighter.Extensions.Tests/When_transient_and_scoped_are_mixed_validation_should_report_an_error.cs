@@ -43,6 +43,7 @@ public class MixedTransientAndScopedValidationTests
     {
         // Arrange — a producer-only host with a mixed triple: Handler and Transformer Scoped, Mapper Transient
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddLogging();
         var builder = services.AddBrighter(options =>
         {
@@ -75,6 +76,7 @@ public class MixedTransientAndScopedValidationTests
         // Arrange — the identical mixed triple, but with affinity AlwaysNew — the error is not about
         // adopting an ambient scope, it is that the mixed pair can never share a pipeline-scoped dependency
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddLogging();
         var builder = services.AddBrighter(options =>
         {
@@ -107,6 +109,7 @@ public class MixedTransientAndScopedValidationTests
         // Arrange — the same mixed triple, but throwOnError: false
         var capturingProvider = new CapturingLoggerProvider();
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddLogging(logging => logging.AddProvider(capturingProvider));
         var builder = services.AddBrighter(options =>
         {

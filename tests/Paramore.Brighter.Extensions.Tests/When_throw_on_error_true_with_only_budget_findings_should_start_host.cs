@@ -54,6 +54,9 @@ public class ThrowOnErrorTrueWithOnlyBudgetFindingsTests
         // Arrange — one subscription per budget rule; handler registered so no "no handler" error obscures the test
         var actionLog = new List<string>();
         var services = new ServiceCollection();
+        var registry = new SubscriberRegistry();
+        registry.Register<TestEvent, TestEventHandler>();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(registry);
         services
             .AddConsumers(options =>
             {

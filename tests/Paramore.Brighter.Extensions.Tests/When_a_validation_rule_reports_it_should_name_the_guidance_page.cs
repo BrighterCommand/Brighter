@@ -46,6 +46,7 @@ public class ValidationMessageGuidancePageTests
     {
         // Arrange — JoinAmbient with all three lifetimes left at the Transient default: the opt-in has no effect
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         var builder = services.AddBrighter(options => options.DefaultScopeAffinity = ScopeAffinity.JoinAmbient);
         builder.ValidatePipelines(throwOnError: true);
         var provider = services.BuildServiceProvider();
@@ -65,6 +66,7 @@ public class ValidationMessageGuidancePageTests
         // Arrange — Handler and Transformer Scoped, Mapper Transient: a mixed pair cannot share a
         // pipeline-scoped dependency
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         var builder = services.AddBrighter(options =>
         {
             options.HandlerLifetime = ServiceLifetime.Scoped;
@@ -119,6 +121,7 @@ public class ValidationMessageGuidancePageTests
         // Arrange — the application registers IBrighterOptions itself, before AddBrighter, so
         // AddBrighterRequestScope's write-through never runs (D18)
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
             HandlerLifetime = ServiceLifetime.Scoped,
@@ -149,6 +152,7 @@ public class ValidationMessageGuidancePageTests
     {
         // Arrange — two distinct IAmAScopeProvider implementations registered unkeyed
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddSingleton<IAmAScopeProvider, AsyncLocalScopeProvider>();
         services.AddSingleton<IAmAScopeProvider, ThrowingScopeProvider>();
         var builder = services.AddBrighter(options =>
@@ -174,6 +178,7 @@ public class ValidationMessageGuidancePageTests
     {
         // Arrange — two constructed ScopeAffinityOverride instances carrying different affinities
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddSingleton(new ScopeAffinityOverride(ScopeAffinity.AlwaysNew));
         services.AddSingleton(new ScopeAffinityOverride(ScopeAffinity.JoinAmbient));
         var builder = services.AddBrighter(options =>
@@ -200,6 +205,7 @@ public class ValidationMessageGuidancePageTests
         // Arrange — an affinity override registered by factory delegate, so RepeatedOptIn cannot read a
         // value off it
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddSingleton(_ => new ScopeAffinityOverride(ScopeAffinity.JoinAmbient));
         var builder = services.AddBrighter(options =>
         {

@@ -43,7 +43,6 @@ public class MsSqlConnectionNameResolutionTests : IAsyncLifetime
         services.AddSingleton<IConfiguration>(config);
         services.AddLogging();
 
-        // Use the extension via a stub builder to wire up DI properly
         var stubBuilder = new StubBrighterBuilder(services);
         stubBuilder.UseBoxProvisioning(opts =>
         {

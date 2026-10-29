@@ -26,13 +26,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-// Item Q (spec 0027 PR #4039 third review). Pins the factory-entry wiring of
-// Identifiers.AssertSafe at the MSSQL *MigrationCatalog.All(...) entry: any unsafe table or schema
-// name must be rejected before the factory builds migration up-scripts whose UpScript text
-// interpolates the identifier directly. ConfigurationException is the documented contract;
-// no MSSQL connection is required because the rejection happens before any DDL is rendered
-// against a live server (and the connection string is "Server=ignored;Database=ignored;").
-
+/// <summary>
+/// The MSSQL catalogs' <c>All</c> rejects an unsafe table or schema name with a
+/// <see cref="ConfigurationException"/> before building any up-script that would interpolate it
+/// (ADR 0058, Guards and contracts). No connection is opened.
+/// </summary>
 public class MsSqlMigrationsUnsafeIdentifierTests
 {
     [Theory]
@@ -70,9 +68,7 @@ public class MsSqlMigrationsUnsafeIdentifierTests
     [Fact]
     public void When_mssql_outbox_migrations_are_built_with_an_unsafe_schema_name_it_should_throw()
     {
-        //Arrange — schema overrides the safe "dbo" default; an unsafe schema name interpolates
-        //into the V2+ ALTER TABLE up-scripts at AddColumns(schema, table, ...) so it must be
-        //validated alongside the table name.
+        //Arrange
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;",
             outBoxTableName: "Outbox",

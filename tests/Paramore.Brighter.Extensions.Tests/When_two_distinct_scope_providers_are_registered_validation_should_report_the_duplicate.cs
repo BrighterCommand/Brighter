@@ -44,6 +44,7 @@ public class DuplicateScopeProviderValidationTests
         // Arrange — two distinct IAmAScopeProvider implementations, each registered with a plain
         // AddSingleton in a stated order, and all three pipeline lifetimes Scoped
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddSingleton<IAmAScopeProvider, AsyncLocalScopeProvider>();
         services.AddSingleton<IAmAScopeProvider, ThrowingScopeProvider>();
         var builder = services.AddBrighter(options =>
@@ -79,6 +80,7 @@ public class DuplicateScopeProviderValidationTests
     {
         // Arrange — the same implementation type registered twice, all three pipeline lifetimes Scoped
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddSingleton<IAmAScopeProvider, AsyncLocalScopeProvider>();
         services.AddSingleton<IAmAScopeProvider, AsyncLocalScopeProvider>();
         var builder = services.AddBrighter(options =>
