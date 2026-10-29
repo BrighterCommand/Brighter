@@ -1786,7 +1786,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - As T14.1, and it also names the bag-topic filter of the overall count (`src/Paramore.Brighter.Outbox.MongoDb/MongoDbOutbox.cs:497-500`).
   - Output: the issue text, then, once the issue is posted, its number in the MongoDb FR-14 (d) cell.
 
-- [ ] **PROJECT: T14.3 The per-topic follow-up issue for DynamoDB and DynamoDB V4**
+- [x] **PROJECT: T14.3 The per-topic follow-up issue for DynamoDB and DynamoDB V4**
   - As T14.1, and it also:
     - names the outstanding index keyed by topic (`src/Paramore.Brighter.Outbox.DynamoDB/DynamoDbConfiguration.cs:23-25`, and the V4 twin);
     - names the base test's `ReadConsistencyTimeout` for its eventually consistent index (ADR 0086 risk :417).
