@@ -2,6 +2,7 @@
 
 **Created:** 2026-10-11
 **GitHub Issue:** [#4489](https://github.com/BrighterCommand/Brighter/issues/4489)
+**Docs PR:** [BrighterCommand/Docs#207](https://github.com/BrighterCommand/Docs/pull/207)
 
 ## Feature
 
