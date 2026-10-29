@@ -1856,10 +1856,15 @@ No production change is expected in this phase. The named mutation is how RED is
   - Output: a "Reviewed:" sub-bullet under this task.
   - Reviewed: `git diff 708fa74bf..6f97d22d4 -- src`, 16 files. The four meter interfaces, the three outbox interfaces, `IAmProducersConfiguration`, `IAmABrighterTracer`, `IAmAnOutboxProducerMediator` and the other types on the list at ADR 0085 :685-698 are not in the diff. `Publication.cs` adds only `StaleMessageAge`. `BrighterSemanticConventions.cs` adds only the six constants of T1.1. `InMemoryOutbox.cs` adds `IAmATopicCountingOutbox` and leaves its overall count as it was. The other public changes are new types (`IAmATopicCountingOutbox`, `OutboxStaleMessageMeter`, `OutboxStaleMessageReadings`, `StaleMessageCount`, `StaleMeasurementOutcome`, `TimedOutboxStaleMessageMonitor`, `TimedOutboxStaleMessageMonitorOptions`) and the new `UseOutboxStaleMessageMonitor` extension. `OutboxStaleMessageMeter` is `sealed` (`OutboxStaleMessageMeter.cs:35`) and implements no interface. In the new code, only `BrighterMetricsBuilderExtensions.cs` uses an `OpenTelemetry` namespace (`:30`). One line of that list no longer holds: ADR 0085 :688 keeps every outbox's overall count unchanged, but this spec changed it in `SqliteOutbox` (cancellation), both `DynamoDbOutbox` (the ceiling) and `FirestoreOutbox` (the age, the ceiling and the token). Those changes close the FR-14 gaps that T13.17 lists, which `requirements.md:232` allows.
 
-- [ ] **PROJECT: T15.4 Fake time and listener check (AC-25)**
+- [x] **PROJECT: T15.4 Fake time and listener check (AC-25)**
   - Confirm that the tests for AC-1 to AC-15, AC-19 to AC-21, AC-23, AC-24, AC-27 to AC-33 and AC-35 to AC-40 drive measurement time only through `FakeTimeProvider`, and observe values through a `MeterListener` where they read values.
   - Confirm that every wall-clock wait (the AC-11, AC-20, AC-36 and AC-37 guards, and the synchronisation wait) only detects hangs or waits for work already due.
   - Output: a "Reviewed:" sub-bullet listing any exception found.
+  - Reviewed: the tests under `tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/` move measurement time only through `FakeTimeProvider`, and their wall-clock waits only detect a hang or wait for work already due. The exceptions:
+    - T6.7, `When_a_publication_has_a_valid_stale_age_should_start`, builds the monitor with no `FakeTimeProvider` and never stops it, so its loop keeps running on the real clock after the test. It asserts only that the readings started.
+    - T9.1, T9.2, T9.3, T9.6, T8.22, T8.23 and T8.25 read the counter totals from `OutboxStaleMessageReadings` rather than through a `MeterListener`, and T9.1 attaches no listener at all. T9.6 also has no run with the feature off, which the last clause of AC-9 asks for.
+    - T12.3 attaches no listener, which fits AC-24: it checks a host with no instrumentation.
+    - T8.1, T8.2, T9.6, T9.7, T9.8, T9.9, T9.11 and T9.12 ignore the result of `SpinUntil`, so a hang shows up only as a failed assertion after it.
 
 - [ ] **PROJECT: T15.5 FR-14 completeness (AC-18)**
   - Confirm that every Gap cell, including each "To verify" cell found to be a gap and column (d) of every outbox but `InMemoryOutbox`, is closed with its case passing, or linked to an open issue and listed under known limitations (T14.9).
