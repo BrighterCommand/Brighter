@@ -1792,7 +1792,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - names the base test's `ReadConsistencyTimeout` for its eventually consistent index (ADR 0086 risk :417).
   - Output: the issue text, then, once the issue is posted, its number in the DynamoDB FR-14 (d) cell.
 
-- [ ] **PROJECT: T14.4 The per-topic follow-up issue for Firestore**
+- [x] **PROJECT: T14.4 The per-topic follow-up issue for Firestore**
   - As T14.1.
   - Output: the issue text, then, once the issue is posted, its number in the Firestore FR-14 (d) cell.
 
