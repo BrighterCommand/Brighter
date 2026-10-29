@@ -252,7 +252,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 1e - Phase 1 release note and PR boundary
 
-- [ ] **DOC: T1.14 - Check the Phase 1 release-note items in the existing marked section**
+- [x] **DOC: T1.14 - Check the Phase 1 release-note items in the existing marked section**
   - The section `### Circuit-broken topics no longer stay tripped for ever ...` with marker `<!-- spec: 0039-circuit-breaker-stale-tripped-topics -->` already exists under `## Master` in `release_notes.md` (from commit 7f650ff19). Check it against what Phase 1 ships. Do not rewrite it blindly.
   - It must state: `MaximumTripDuration`, its 5-minute default and the effect on existing `InMemoryOutboxCircuitBreaker` users (FR-7.2); that the Reset log names its cause; and the trailing optional `TimeProvider` constructor parameter.
   - The third breaking-change bullet joins the `InMemoryOutboxCircuitBreaker` and `TimedOutboxSweeper` constructors. Split it: Phase 1 keeps the in-memory constructor part only.
