@@ -1782,7 +1782,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - says that a store class sets `Header.TimeStamp` relative to the store's clock, which keeps moving, so the base test's cases keep each message's age well away from every requested topic age (ADR 0086 :271).
   - Output: the issue text, then, once the issue is posted, its number in the FR-14 (d) cells of those outboxes.
 
-- [ ] **PROJECT: T14.2 The per-topic follow-up issue for MongoDb**
+- [x] **PROJECT: T14.2 The per-topic follow-up issue for MongoDb**
   - As T14.1, and it also names the bag-topic filter of the overall count (`src/Paramore.Brighter.Outbox.MongoDb/MongoDbOutbox.cs:497-500`).
   - Output: the issue text, then, once the issue is posted, its number in the MongoDb FR-14 (d) cell.
 
