@@ -21,6 +21,8 @@ Date: 2026-10-11
 
 Accepted
 
+Amended 2026-10-29: the FR-14 gaps in columns (a) to (c) that step 13 found are fixed in PR #4598 instead of in separate issues (see Decision § Amendment 2026-10-29).
+
 ## Context
 
 If Brighter cannot send a message from the outbox, the message stays there undispatched, and the caller is not told. If no sweeper runs, nothing sends the message again. If a topic's circuit breaker is open, the sweeper skips that topic's messages until the breaker cools down. No metric shows that any of these messages is waiting, or on which topic. An operator therefore finds out about an unsent message from a consumer that never received it, not from a dashboard or an alert.
@@ -901,6 +903,46 @@ The loop resumes on a pool thread, so a fake clock alone does not make a monitor
     - a T well below `HostOptions.ShutdownTimeout`;
     - an explicit T when I is 10 seconds or less;
     - a meter provider that shares the application's container, since `Sdk.CreateMeterProviderBuilder()` is not supported.
+
+### Amendment 2026-10-29: FR-14 gaps fixed in PR #4598
+
+Step 13 ran the age, ceiling and cancellation facts against each outbox in scope. The facts found gaps in DynamoDB and DynamoDB V4 (b), Sqlite (c), and Firestore (a), (b) and (c). Each gap could be shown and fixed against a local store or an emulator, so PR #4598 fixes them instead of sending them to separate issues, as FR-14.1 allows. No gap mark is set, and no issue tracks a gap in columns (a) to (c). The FR-14 table records the result of each fix.
+
+Q-9, *Out of scope*, the FR-14 item of *In scope*, *Where the pieces live*, the roles table in *Key Components*, step 13, the Firestore part of *Conformance tests for the overall count*, *Where each type is touched* and *Consequences* planned an issue and a gap mark for each gap and kept every outbox's overall count unchanged. This amendment replaces what they say about these gaps.
+
+#### What changed
+
+| Outbox | Cell | Change |
+| --- | --- | --- |
+| DynamoDB, DynamoDB V4 | (b) | C was split across the `ScanConcurrency` segments, and a segment without stale messages left its share unused. Each segment now counts up to the whole C, and the total is capped at C afterwards. A C below `ScanConcurrency` no longer gives a segment a Scan with `Limit = 0`, which DynamoDB rejected, and a C of zero or less sends no Scan. The synchronous count calls the asynchronous one, so it gets the same fix |
+| Sqlite | (c) | Microsoft.Data.Sqlite runs a step that is blocked on a lock synchronously, so the token could not interrupt it. `SqliteOutbox` now overrides `ReadFromStoreAsync`. When the token can be cancelled, the read runs on a thread of its own, and the caller stops waiting once the token is cancelled, with `OperationCanceledException`. The abandoned read keeps its thread until it ends or the command timeout does |
+| Firestore | (a), (b), (c) | The asynchronous count filtered only on the dispatched flag, had no limit and did not pass the token to the call. It now also keeps only messages whose `TimeStamp` is before now minus A, orders them newest first as `OutstandingMessagesAsync` does, is limited to C, and passes the token to the call and its response stream. The synchronous `GetOutstandingMessageCount` keeps the old query, because the producer's outstanding-message check calls it and changing it would change that check. Measurement never calls it |
+
+#### Where each type is touched (amendment)
+
+| Assembly | Type | Change |
+| --- | --- | --- |
+| Paramore.Brighter.Outbox.DynamoDB, Paramore.Brighter.Outbox.DynamoDB.V4 | `DynamoDbOutbox` | `GetOutstandingMessageCountAsync` and its segment scan |
+| Paramore.Brighter.Outbox.Sqlite | `SqliteOutbox` | A new override of `ReadFromStoreAsync` |
+| Paramore.Brighter.Outbox.Firestore | `FirestoreOutbox` | `GetOutstandingMessageCountAsync` |
+| Paramore.Brighter.Gcp.Tests | `FirestoreOutboxProvider` | A cancelled count now ends with the client's `RpcException`, so the provider expects it, as the held MsSql, PostgreSql, MySql and Sqlite test stores expect their driver's exception |
+| The DynamoDB, DynamoDB V4, Sqlite and Gcp test projects | `test-configuration.json` | No gap mark. The generated files are regenerated |
+
+The overall count of every other outbox stays unchanged.
+
+#### Alternatives considered (amendment)
+
+- **Keep the gaps and track each in an issue, as Q-9 planned.** This keeps every outbox's overall count unchanged. Rejected because each fix is small and is proved by the conformance facts PR #4598 already adds, and with the gaps left open the overall gauge would report the wrong value on Firestore and could undercount on DynamoDB in the first release with the gauge.
+
+#### Consequences (amendment)
+
+- Each outbox in scope meets FR-14 (a) to (c) for the overall count.
+- The override in `SqliteOutbox` covers every asynchronous read that receives a cancellable token, not only the count. Such a read now takes a pool thread of its own. Once its token is cancelled, the caller gets `OperationCanceledException` at once, while that thread stays busy until the read ends or the command timeout does.
+- DynamoDB and DynamoDB V4 now count up to `ScanConcurrency` times C matching items before the cap. The age filter is still applied after the read, so the items read are not bounded by C (NFR-4 (b)).
+- The producer's outstanding-message check calls the synchronous count. On DynamoDB and DynamoDB V4 that count now goes through the fixed asynchronous one, so the check no longer undercounts, a ceiling below `ScanConcurrency` no longer makes its count fail, and it can count up to `ScanConcurrency` times its ceiling before the cap. On Sqlite and Firestore the check is unchanged.
+- The separate issues of Q-9 and *Out of scope* will cover only the limits PR #4598 documents: the read volume of the DynamoDB and DynamoDB V4 counts (NFR-4 (b)), and the row loading of the relational and MongoDb counts (NFR-4 (c), Q-5).
+- On Firestore, the synchronous and asynchronous overall counts can now return different values for the same store.
+- The three gap marks stay in the test generator, unused.
 
 ## Consequences
 
