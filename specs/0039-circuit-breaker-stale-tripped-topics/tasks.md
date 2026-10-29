@@ -261,7 +261,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T1.2, T1.9
   - References: `release_notes.md:3-17`.
 
-- [ ] **DOC: T1.14a - Amend ADRs 0028 and 0058 for the Phase 1 changes**
+- [x] **DOC: T1.14a - Amend ADRs 0028 and 0058 for the Phase 1 changes**
   - Add a short amendment note to the Status section of each ADR, pointing to ADR 0089 and naming only what Phase 1 changes:
     - `docs/adr/0028-support-circuit-breaking-of-topics.md`: an in-memory trip also ends at the maximum trip duration D, and the cooldown no longer has to advance on the lock holder's sweep to end a trip.
     - `docs/adr/0058-outbox-circuit-breaker-trip-logging.md`: the in-memory Reset log names its cause.
