@@ -1839,7 +1839,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - Build `src/Paramore.Brighter`, `src/Paramore.Brighter.Outbox.Hosting` and `src/Paramore.Brighter.Extensions.Diagnostics` for every target (netstandard2.0, net8.0, net9.0, net10.0) with no new warnings. The netstandard2.0 branches are built here and reviewed in T9.21. No test project runs them.
   - Output: pass counts per project in the PR description.
 
-- [ ] **PROJECT: T15.2 Generated-tree audit**
+- [x] **PROJECT: T15.2 Generated-tree audit**
   - Run `dotnet test tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -f net10.0`.
   - Output: no Missing and no Orphan file; the Skip audits are green.
 
