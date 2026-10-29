@@ -1820,7 +1820,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - the trace each measurement may start (Q-12).
   - Output: the page change and the Docs PR text; once that PR is opened, its link in `specs/0038-outbox-stale-message-telemetry/README.md`.
 
-- [ ] **DOC: T14.8 Telemetry page: operational guidance**
+- [x] **DOC: T14.8 Telemetry page: operational guidance**
   - In the same section:
     - how T interacts with the outboxes' own count timeouts. If T is longer than an outbox's own count timeout, the outbox fails first, and the due time is recorded as `failed` with the exception, not `abandoned`. To choose T: set it a little above the outbox's own timeout if `abandoned` should mean "the outbox ignored its own timeout", or below it if T should always be the bound. The page names each outbox's timeout:
       - the relational outboxes (MsSql, PostgreSql, MySql, Sqlite and Spanner): `RelationalDatabaseConfiguration.OutstandingCountTimeout` (`src/Paramore.Brighter/RelationalDatabaseConfiguration.cs:98`), 15 s by default. That is above the default T of 10 s, so T applies first;
