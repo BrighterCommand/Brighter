@@ -85,21 +85,26 @@ public partial class InMemoryOutboxCircuitBreaker(
     /// <summary>
     /// A collection of tripped topics.
     /// </summary>
-    public IEnumerable<RoutingKey> TrippedTopics => EndExpiredTripsAndListLive();
-
-    private RoutingKey[] EndExpiredTripsAndListLive()
+    public IEnumerable<RoutingKey> TrippedTopics
     {
-        var live = new List<RoutingKey>();
+        get
+        {
+            EndExpiredTrips();
+            return ListLiveTopics();
+        }
+    }
+
+    private void EndExpiredTrips()
+    {
         foreach (var trip in _trippedTopics.ToArray())
         {
             if (HasExpired(trip.Value))
                 RemoveAndAnnounceReset(trip.Key, trip.Value, MAXIMUM_TRIP_DURATION_CAUSE);
-            else
-                live.Add(trip.Key);
         }
-
-        return live.ToArray();
     }
+
+    private RoutingKey[] ListLiveTopics() =>
+        _trippedTopics.Where(trip => !HasExpired(trip.Value)).Select(trip => trip.Key).ToArray();
 
     private bool HasExpired(TripEntry entry) => _timeProvider.GetElapsedTime(entry.Timestamp) >= _maximumTripDuration;
 
@@ -115,7 +120,7 @@ public partial class InMemoryOutboxCircuitBreaker(
     /// </summary>
     public void CoolDown()
     {
-        EndExpiredTripsAndListLive();
+        EndExpiredTrips();
 
         foreach (var trippedTopicsKey in _trippedTopics.Keys)
         {
@@ -162,7 +167,7 @@ public partial class InMemoryOutboxCircuitBreaker(
     /// <param name="topic">Name of the entity to circuit break</param>
     public void TripTopic(RoutingKey topic)
     {
-        EndExpiredTripsAndListLive();
+        EndExpiredTrips();
 
         var cooldownCount = _outboxCircuitBreakerOptions.CooldownCount;
         var isReTrip = false;
