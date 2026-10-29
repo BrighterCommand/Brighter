@@ -31,6 +31,10 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// Two provisioners racing on the same legacy table serialise on the advisory lock: exactly one synthetic history row at the
+/// seeded version, one row per version applied after it, and existing rows survive.
+/// </summary>
 public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
 {
     private const int OutboxSeedVersion = 3;
@@ -45,7 +49,7 @@ public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
     [Fact]
     public async Task When_two_outbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v3()
     {
-        //Arrange — seed an outbox at V3 (no history row) plus a marker row to prove preservation.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         PostgreSqlOutboxLegacySeeder.SeedAtV(OutboxSeedVersion, _connectionString, _outboxTableName);
         await SeedOutboxMarkerRow();
@@ -64,10 +68,10 @@ public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
             config,
             new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
-        //Act — race two provisioners against the same legacy table.
+        //Act
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
 
-        //Assert — history has exactly one synthetic V3 + one applied per V4..V7 (no duplicates).
+        //Assert
         var rowsByVersion = await GetHistoryRowsByVersion(_outboxTableName);
         Assert.Equal(ExpectedMigrationVersions.OutboxLatest - OutboxSeedVersion + 1, rowsByVersion.Count);
 
@@ -83,7 +87,6 @@ public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
                 $"(description was: '{appliedDescription}')");
         }
 
-        //Assert — table ends at V7 with seeded marker preserved.
         Assert.Contains("dataref", await GetTableColumns(_outboxTableName));
         Assert.Equal(1, await GetOutboxMarkerRowCount());
     }
@@ -91,8 +94,7 @@ public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
     [Fact]
     public async Task When_two_inbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v1()
     {
-        //Arrange — seed a V1 Postgres inbox (V1 baseline) plus a marker command row. Spec 0027
-        //(#2541) adds a V2 that introduces causationid, so the chain is now V1→V2.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         PostgreSqlInboxLegacySeeder.SeedAtV1(_connectionString, _inboxTableName);
         await SeedInboxMarkerRow();
@@ -111,10 +113,10 @@ public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
             config,
             new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
-        //Act — race two provisioners against the same legacy table.
+        //Act
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
 
-        //Assert — exactly one synthetic V1 row + one applied V2 (causationid), no duplicates.
+        //Assert
         var rowsByVersion = await GetHistoryRowsByVersion(_inboxTableName);
         Assert.Equal(2, rowsByVersion.Count);
 
@@ -127,8 +129,6 @@ public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
             $"V2 should be an applied migration row, not a synthetic bootstrap row " +
             $"(description was: '{appliedV2Description}')");
 
-        //Assert — V1 columns intact (commandid, contextkey present in composite PK), the V2
-        //causationid column landed, and the marker is preserved.
         var columns = await GetTableColumns(_inboxTableName);
         Assert.Contains("commandid", columns);
         Assert.Contains("contextkey", columns);

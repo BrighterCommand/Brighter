@@ -45,6 +45,9 @@ public class ValidatePipelinesUnenforceableBudgetTests
     {
         // Arrange — subscription with requeueCount: 3 and unenforceability reason "no DeadLetterPolicy"
         var services = new ServiceCollection();
+        var registry = new SubscriberRegistry();
+        registry.Register<TestEvent, TestEventHandler>();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(registry);
         services
             .AddConsumers(options =>
             {

@@ -31,6 +31,10 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// When another instance creates the table after detection but before this runner takes the advisory lock, the re-check
+/// under the lock routes to the bootstrap path instead of creating the table again, and existing rows survive (ADR 0057 §3).
+/// </summary>
 public class PostgreSqlRunnerFreshPathRecheckTests : IAsyncLifetime
 {
     private const string MarkerMessageId = "marker-row-must-survive";
@@ -49,19 +53,14 @@ public class PostgreSqlRunnerFreshPathRecheckTests : IAsyncLifetime
     [Fact]
     public async Task When_postgres_runner_fresh_path_acquires_advisory_lock_it_should_re_check_table_existence_before_creating()
     {
-        //Arrange — simulate the TOCTOU race: another instance created the V_latest-shape outbox
-        //table after detection ran but before this runner acquires the migration lock. We seed
-        //the table directly + a marker row to prove preservation, then call MigrateAsync with a
-        //stale BoxTableState that says "TableExists=false", as if detection was racing.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         await ExecuteDdl(PostgreSqlOutboxBuilder.GetDDL(_tableName));
         await SeedMarkerRow();
 
         var staleState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        //Act — the runner must NOT throw a duplicate-CREATE-TABLE exception. The TOCTOU re-check
-        //under the advisory lock has to see that the table exists now and route to the bootstrap
-        //path instead of executing V1's CREATE TABLE on the seeded table.
+        //Act
         var act = async () => await _runner.MigrateAsync(
             _tableName,
             schemaName: "public",
@@ -70,8 +69,7 @@ public class PostgreSqlRunnerFreshPathRecheckTests : IAsyncLifetime
 
         var ex = await Record.ExceptionAsync(act);
 
-        //Assert — no exception, ≥1 history row was inserted (proves bootstrap branch ran), and
-        //the seeded marker row survived (no DROP/recreate happened).
+        //Assert
         Assert.Null(ex);
         Assert.True(await GetHistoryRowCount() >= 1, "Bootstrap branch should have inserted at least one history row");
         Assert.Equal(1, await GetMarkerRowCount());

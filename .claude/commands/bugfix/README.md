@@ -10,11 +10,11 @@ omits the ADR/requirements/review rounds.
 
 Bugs differ from features in one important way: **the root cause is a hypothesis until proven.**
 Issues often arrive with a suggested fix (sometimes from an automated agent), but a suggested fix
-can be wrong, incomplete, or address a *symptom* rather than the cause. `/test-first` jumps
+can be wrong, incomplete, or address a *symptom* rather than the cause. `/tdd:test-first` jumps
 straight to writing a test for an *assumed* behaviour — it has no gate for *confirming the
 diagnosis first*.
 
-`/bugfix` is essentially `/test-first` wrapped with an explicit **Confirm** gate up front, plus a
+`/bugfix` is essentially `/tdd:test-first` wrapped with an explicit **Confirm** gate up front, plus a
 triage step that records the hypothesis.
 
 **Worked example — #4054 (ASB `SessionId` case-sensitivity).** The issue arrived with a plausible
@@ -45,11 +45,11 @@ what the Confirm gate exists to catch.
       │   (refuted → back to triage)
       ▼
  Test-first ──────────► /bugfix:test
-      │                 ✋ delegates to /test-first (approve test in IDE)
+      │                 ✋ delegates to /tdd:test-first (approve test in IDE)
       ▼
  Fix ─────────────────► /bugfix:fix
       │                 (minimal change to green, scoped to confirmed cause;
-      │                  /tidy-first if structural cleanup needed first)
+      │                  /refactor:tidy-first if structural cleanup needed first)
       ▼
  Verify ──────────────► /bugfix:verify
       │                 (run suite; regression test stays; capture root cause,
@@ -63,7 +63,7 @@ what the Confirm gate exists to catch.
 | Gate | Where | What it guarantees |
 |------|-------|--------------------|
 | ✋ **Confirm** | `/bugfix:confirm` | The root-cause diagnosis is **proven**, not assumed, and the fix's scope (including any extra defects) is agreed before code is written. The one on-disk marker: `.confirm-approved`. |
-| ✋ **Test approval** | `/bugfix:test` → `/test-first` | The failing regression test is reviewed in the IDE before any implementation (inherited from `/test-first`). |
+| ✋ **Test approval** | `/bugfix:test` → `/tdd:test-first` | The failing regression test is reviewed in the IDE before any implementation (inherited from `/tdd:test-first`). |
 
 ### Confirm evidence standard — red repro preferred, code-trace allowed
 
@@ -73,7 +73,7 @@ Confirm passes on **either**:
 - a documented **code-trace** that proves the cause (the accepted path when a repro would need a
   real broker/database/etc., as in #4054).
 
-The durable, executable regression test is written later by `/bugfix:test` (via `/test-first`) —
+The durable, executable regression test is written later by `/bugfix:test` (via `/tdd:test-first`) —
 Confirm itself stays read-only and writes no source.
 
 ## Sub-agents & model policy
@@ -87,7 +87,7 @@ interaction (the Confirm gate) and all bookkeeping (writing `bugfix.md`, markers
 |---------|------------------|-------|-----------|
 | `/bugfix:triage`  | Yes — `Plan` (read-only) | **opus** | Diagnostic analysis / locating code |
 | `/bugfix:confirm` | Yes — `Plan` (read-only) | **opus** | Adversarial root-cause proof |
-| `/bugfix:test`    | No — delegates to `/test-first` | **sonnet** | Implementation (interactive approval gate) |
+| `/bugfix:test`    | No — delegates to `/tdd:test-first` | **sonnet** | Implementation (interactive approval gate) |
 | `/bugfix:fix`     | No (main agent) | **sonnet** | Implementation work |
 | `/bugfix:verify`  | No (main agent) | — | Mechanical: run suite, prepare commit/PR |
 | `/bugfix:status`, `/bugfix:switch` | No | — | Bookkeeping |
@@ -140,14 +140,14 @@ approve the diagnosis; on approval it creates `.confirm-approved`. A refuted hyp
 to triage.
 
 ### `/bugfix:test`
-Requires `.confirm-approved`. Delegates to `/test-first` to write the failing regression test for
-the confirmed behaviour (and one per additional defect in the Scope Notes). The `/test-first`
+Requires `.confirm-approved`. Delegates to `/tdd:test-first` to write the failing regression test for
+the confirmed behaviour (and one per additional defect in the Scope Notes). The `/tdd:test-first`
 IDE-approval gate applies.
 
 ### `/bugfix:fix`
 Requires `.confirm-approved` + a red test. Makes the test green with the **minimal** change scoped
 to the confirmed cause — no speculative edits, no default changes. If structural cleanup is needed
-first, defers to `/tidy-first` (separate `refactor:` commit, then the `fix:` commit).
+first, defers to `/refactor:tidy-first` (separate `refactor:` commit, then the `fix:` commit).
 
 ### `/bugfix:verify`
 Runs the regression test(s) and the broader suite; the regression test stays. Suggests a `fix:`
@@ -164,13 +164,13 @@ Switches the active bug (updates `bugfixes/.current-bug`).
 
 - **`/bugfix`** — a defect whose root cause is not yet proven, or that arrived with a suggested fix
   you should verify before trusting. The Confirm gate is the value-add.
-- **`/test-first`** — a small change whose behaviour/cause is already obvious; you just need the
+- **`/tdd:test-first`** — a small change whose behaviour/cause is already obvious; you just need the
   test-first discipline.
-- **`/tidy-first`** — the change is (or includes) structural cleanup; keep refactor and behaviour
+- **`/refactor:tidy-first`** — the change is (or includes) structural cleanup; keep refactor and behaviour
   in separate commits. `/bugfix:fix` calls this when a fix needs cleanup first.
 - **`/spec:*`** — a *feature* or capability needing requirements + ADR design, not a bug fix.
 
 ## Related Commands
-- **`/test-first`** — `.claude/commands/tdd/test-first.md` (the test step delegates here)
-- **`/tidy-first`** — `.claude/commands/refactor/tidy-first.md` (the fix step defers here when needed)
+- **`/tdd:test-first`** — `.claude/commands/tdd/test-first.md` (the test step delegates here)
+- **`/refactor:tidy-first`** — `.claude/commands/refactor/tidy-first.md` (the fix step defers here when needed)
 - **`/spec:*`** — `.claude/commands/spec/README.md` (the heavyweight feature workflow this mirrors)

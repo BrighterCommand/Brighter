@@ -10,7 +10,7 @@ You are reviewing a **completed** unit of work for the code smells catalogued in
 *Refactoring* (2nd ed., ch. 3), and helping the user schedule the refactorings that remove them.
 
 This command is **opt-in** and **reports and schedules only**. You do not change production or test
-code here. The refactorings themselves are carried out later, through `/tidy-first` or as
+code here. The refactorings themselves are carried out later, through `/refactor:tidy-first` or as
 `STRUCTURAL` tasks in a spec's `tasks.md`.
 
 ## Scope
@@ -23,7 +23,7 @@ After a unit of work is complete — a task, a section of a spec's `tasks.md`, o
 tests are green. In the per-task sequence it comes last:
 
 1. GREEN
-2. `/tidy-first`, if needed
+2. `/refactor:tidy-first`, if needed
 3. `/tdd:coverage` (planned)
 4. `/refactor:smells` — optional
 
@@ -141,7 +141,7 @@ person to change this code:
 
 For each finding:
 
-- **Kind** — `structural` if the refactoring leaves every public signature unchanged, so `/tidy-first`
+- **Kind** — `structural` if the refactoring leaves every public signature unchanged, so `/refactor:tidy-first`
   can carry it with all tests green. `public API change` if it renames, removes, moves or changes the
   signature of a `public` or `protected` member: that is a breaking change for Brighter's users, so it
   needs a decision (and possibly an ADR via `/adr`), not just a tidy.
@@ -158,8 +158,8 @@ If you find nothing, say so plainly. A clean result is a valid result.
 
 Ask the user, with `AskUserQuestion`, which findings to schedule and how. Offer:
 
-1. **Run now with `/tidy-first`** — for small and medium structural findings. Give the exact command
-   for each, e.g. `/tidy-first move Calculate from Foo to Bar to remove Feature Envy`. Do not run it
+1. **Run now with `/refactor:tidy-first`** — for small and medium structural findings. Give the exact command
+   for each, e.g. `/refactor:tidy-first move Calculate from Foo to Bar to remove Feature Envy`. Do not run it
    yourself; the user starts it so each refactoring gets its own `refactor:` commit.
 2. **Add to the spec's `tasks.md`** — when a spec is active (`specs/.current-spec` exists and its
    `tasks.md` exists). Append a new phase after the last phase:
@@ -172,7 +172,7 @@ Ask the user, with `AskUserQuestion`, which findings to schedule and how. Offer:
    - [ ] **M. STRUCTURAL: <refactoring> to remove <smell> in <type>**
      - Smell: <smell> — `<file>:<lines>`
      - Refactoring: <Fowler refactoring>
-     - Run with: `/tidy-first <description>`
+     - Run with: `/refactor:tidy-first <description>`
    ```
 
    Number tasks on from the last task in the file. Follow the file's existing heading and label
@@ -194,12 +194,12 @@ If no spec is active, offer only options 1, 3 and 4.
 - **Evidence or nothing.** Every finding names a file, a line range and the code that shows it.
 - **Name the refactoring from Fowler's catalogue**, so the follow-up work has a clear, known shape.
 - **No behaviour changes disguised as refactorings.** If removing a smell needs a behaviour change,
-  say so; it belongs in `/test-first`, not `/tidy-first`.
+  say so; it belongs in `/tdd:test-first`, not `/refactor:tidy-first`.
 
 ## Related
 
-- [`/tidy-first`](tidy-first.md) — carries out the structural refactorings this command schedules
-- [`/test-first`](../tdd/test-first.md) — for any finding that turns out to need a behaviour change
+- [`/refactor:tidy-first`](tidy-first.md) — carries out the structural refactorings this command schedules
+- [`/tdd:test-first`](../tdd/test-first.md) — for any finding that turns out to need a behaviour change
 - [`/adr`](../adr/adr.md) — for a `public API change` finding that needs a recorded decision
 - [Design Principles](../../../.agent_instructions/design_principles.md) and
   [Code Style](../../../.agent_instructions/code_style.md) — Brighter's calibration of the catalogue

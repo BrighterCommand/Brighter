@@ -175,7 +175,7 @@ Scan `tasks.md` top to bottom for the first task that is:
 
 `tasks.md` is a general task list, and the labels in use across this repository vary. Match the
 task's leading bold label **case-insensitively**, and treat the synonyms below as one shape — the
-project's `/tidy-first` vocabulary and the `STRUCTURAL` label mean the same thing, and `DOC`,
+project's `/refactor:tidy-first` vocabulary and the `STRUCTURAL` label mean the same thing, and `DOC`,
 `DOCS` and `DOCUMENT` likewise. Do not invent a new label; match what the file says.
 
 | Task shape | Labels seen in `specs/` | Handling |

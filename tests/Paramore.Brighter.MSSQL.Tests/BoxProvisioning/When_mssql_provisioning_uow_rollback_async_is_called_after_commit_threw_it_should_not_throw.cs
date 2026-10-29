@@ -35,23 +35,12 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// <c>RollbackAsync</c> on a transaction that has already completed — the state a thrown
+/// <c>CommitAsync</c> can leave — logs a Warning and returns instead of throwing (ADR 0058 §B.3).
+/// </summary>
 public class MsSqlProvisioningUnitOfWorkRollbackAfterCommitThrewTests : IAsyncLifetime
 {
-    // Per ADR 0058 §B.3: if CommitAsync throws, the runner enters its catch path and calls
-    // RollbackAsync — even though the commit was already attempted. The underlying
-    // SqlTransaction may already be finalised by that point (committed-but-client-side-failed,
-    // or zombied by a broken connection). RollbackAsync MUST therefore be best-effort: inspect
-    // the transaction state, swallow the "already finalised" failure, log a Warning, and
-    // return cleanly. It MUST NOT throw — the runner's unwind cannot be allowed to abandon.
-    //
-    // The post-failed-commit state is simulated by calling SqlTransaction.Commit() directly:
-    // externally this is indistinguishable from a thrown CommitAsync — both leave the
-    // SqlTransaction in the completed state where Rollback() throws InvalidOperationException
-    // ("This SqlTransaction has completed; it is no longer usable."). A no-op RollbackAsync
-    // would silently return without logging — so this test fails until the impl actually calls
-    // through to the underlying transaction AND catches the resulting exception with a
-    // Warning-level log entry.
-
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
     private readonly FakeMsSqlAdvisoryLock _advisoryLock = new(throwOnAcquire: null);
 
@@ -73,14 +62,15 @@ public class MsSqlProvisioningUnitOfWorkRollbackAfterCommitThrewTests : IAsyncLi
             lockResource: "test_lock_resource",
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None);
-        var transaction = uow.Transaction!;
-        transaction.Commit();   // Force the post-failed-commit finalised state
+        CompleteAsIfCommitHadFailed(uow.Transaction!);
 
         // Act
         var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
 
-        // Assert: best-effort rollback returns cleanly AND emits a Warning
+        // Assert
         Assert.Null(thrown);
         Assert.Contains(capturingLogger.Entries, e => e.Level == LogLevel.Warning);
     }
+
+    private static void CompleteAsIfCommitHadFailed(SqlTransaction transaction) => transaction.Commit();
 }

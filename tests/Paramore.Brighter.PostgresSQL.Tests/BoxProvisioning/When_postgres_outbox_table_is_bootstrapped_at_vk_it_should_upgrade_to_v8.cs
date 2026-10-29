@@ -31,6 +31,10 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// An outbox at V_k with no history is bootstrapped at V_k and upgraded to V8: one synthetic history row at V_k, one row per
+/// version applied after it, and existing rows survive.
+/// </summary>
 public class PostgreSqlOutboxVkToV8UpgradeTests : IAsyncLifetime
 {
     private static readonly string[] s_v8ExpectedColumns =
@@ -51,7 +55,7 @@ public class PostgreSqlOutboxVkToV8UpgradeTests : IAsyncLifetime
     [InlineData(7)]
     public async Task When_postgres_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v8(int k)
     {
-        //Arrange — seed an outbox at V_k (no history row) and a marker row to prove preservation.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         PostgreSqlOutboxLegacySeeder.SeedAtV(k, _connectionString, _tableName);
         SeedMarkerRow();
@@ -68,14 +72,13 @@ public class PostgreSqlOutboxVkToV8UpgradeTests : IAsyncLifetime
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — the table now has the full V8 column set (V_{k+1}..V8 ALTERs applied)
+        //Assert
         var actualColumns = await GetTableColumns();
         foreach (var expected in s_v8ExpectedColumns)
         {
             Assert.Contains(expected, actualColumns);
         }
 
-        //Assert — history rows: one synthetic at V_k + one applied per V_{k+1}..V8
         var rowsByVersion = await GetHistoryRowsByVersion();
         Assert.Equal(8 - k + 1, rowsByVersion.Count);
 
@@ -91,7 +94,6 @@ public class PostgreSqlOutboxVkToV8UpgradeTests : IAsyncLifetime
                 $"(description was: '{appliedDescription}')");
         }
 
-        //Assert — the seeded marker row survived (no DROP/recreate happened)
         Assert.Equal(1, await GetMarkerRowCount());
     }
 

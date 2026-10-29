@@ -125,7 +125,7 @@ public class SqliteOutboxBuilderDriftTests
 
 /// <summary>
 /// The live builder, FreshInstallDdl and V_latest LogicalColumns must not drift apart, and V1.UpScript stays the
-/// historical first-shipped DDL, which carries ContextKey (ADR 0057 §3).
+/// historical first-shipped DDL, the baseline before ContextKey (ADR 0057 §3).
 /// </summary>
 public class SqliteInboxBuilderDriftTests
 {
@@ -157,18 +157,21 @@ public class SqliteInboxBuilderDriftTests
     }
 
     [Fact]
-    public void When_sqlite_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey()
+    public void When_sqlite_inbox_v1_upscript_is_inspected_it_should_carry_the_pre_contextkey_historical_baseline()
     {
+        //Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Data Source=:memory:",
             inboxTableName: tableName);
 
+        //Act
         var migrations = new SqliteInboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
+        //Assert
         Assert.Equal(1, v1.Version.Value);
-        Assert.Contains("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
     }
 

@@ -48,6 +48,7 @@ public class SingletonLifetimeDiscardedFromConsistencyRuleTests
         // AlwaysNew keeps the unrelated FR-22.1 inert-opt-in rule out of play (it only ever fires
         // under JoinAmbient), isolating this fact to the consistency rule alone.
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddLogging();
         var builder = services.AddBrighter(options =>
         {
@@ -72,6 +73,7 @@ public class SingletonLifetimeDiscardedFromConsistencyRuleTests
         // AlwaysNew, matching the four negative facts above and T7.3's own confirmation that the
         // consistency rule is not conditional on affinity.
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddLogging();
         var builder = services.AddBrighter(options =>
         {

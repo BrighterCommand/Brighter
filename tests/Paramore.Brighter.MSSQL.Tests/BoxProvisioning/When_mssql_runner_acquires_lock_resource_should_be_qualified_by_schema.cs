@@ -32,20 +32,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// The runner's lock resource is <c>BrighterMigration_&lt;schema&gt;.&lt;table&gt;</c>, with no schema
+/// meaning <c>dbo</c>, so same-named tables in different schemas take different locks. The fake lock
+/// throws once it has recorded the resource, so neither the schema nor the table need exist.
+/// </summary>
 public class MsSqlRunnerLockResourceSchemaQualificationTests
 {
-    // Two tables with the same name in different schemas (e.g. dbo.Outbox and billing.Outbox)
-    // must acquire DISTINCT advisory locks. The pre-fix lock resource was
-    // `BrighterMigration_<table>` — same-named tables in different schemas would collide on a
-    // single sp_getapplock @Resource, serialising migrations unnecessarily and obscuring real
-    // contention. The fix is `BrighterMigration_<schema>.<table>`. These Theory cases pin the
-    // schema-qualified format for the default `dbo` and a non-default schema, so the resource
-    // string is part of the runner's contract and a regression here can't slip through silently.
-    //
-    // We use a fake IMsSqlAdvisoryLock that throws AFTER recording the resource — that way
-    // the runner returns immediately and we don't depend on the schema or table actually
-    // existing in the test database.
-
     private readonly string _connectionString = Configuration.DefaultConnectingString;
 
     [Theory]
@@ -61,8 +54,6 @@ public class MsSqlRunnerLockResourceSchemaQualificationTests
         var config = new RelationalDatabaseConfiguration(
             _connectionString, outBoxTableName: tableName, schemaName: configuredSchema);
 
-        // Throw on acquire so the runner exits before any DDL fires; we only care about the
-        // resource string the runner passed to AcquireAsync.
         var fakeLock = new FakeMsSqlAdvisoryLock(
             throwOnAcquire: new InvalidOperationException("acquire-then-stop probe for lock-resource assertion"));
 
@@ -71,10 +62,6 @@ public class MsSqlRunnerLockResourceSchemaQualificationTests
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
-        // configuredSchema is a string?; a null reaches MigrateAsync via the implicit
-        // string->SchemaName conversion as a SchemaName wrapping null. The runner must treat that
-        // (and a wrapped-empty) as "no schema supplied" — defaulting the lock resource to dbo —
-        // exactly as it did when this parameter was a string?. See SchemaName.IsNullOrEmpty.
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             runner.MigrateAsync(
                 tableName, configuredSchema, BoxType.Outbox, freshHint));

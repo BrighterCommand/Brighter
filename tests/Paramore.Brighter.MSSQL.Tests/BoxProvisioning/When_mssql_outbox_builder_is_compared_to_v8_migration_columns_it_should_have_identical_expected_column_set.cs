@@ -32,6 +32,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// <c>SqlOutboxBuilder</c> stays in step with the migration chain: its columns are V_latest's logical
+/// columns plus housekeeping, it emits the CausationId replay index, and it is the catalog's fresh-install
+/// DDL; V1's UpScript stays the historical, pre-Dispatched DDL (ADR 0057 §1, §3).
+/// </summary>
 public class MsSqlOutboxBuilderDriftTests
 {
     [Theory]
@@ -40,9 +45,7 @@ public class MsSqlOutboxBuilderDriftTests
     public void When_mssql_outbox_builder_is_compared_to_v8_migration_columns_it_should_have_identical_expected_column_set(
         bool hasBinaryMessagePayload)
     {
-        //Arrange — drive the builder DDL and the V_latest LogicalColumns from the same config
-        //so any developer change to one without the other surfaces here. Connection string is
-        //unused: All() only reads OutBoxTableName and BinaryMessagePayload to render V1's UpScript.
+        //Arrange
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;",
@@ -73,13 +76,6 @@ public class MsSqlOutboxBuilderDriftTests
     public void When_mssql_outbox_v1_upscript_is_inspected_it_should_carry_pre_dispatched_historical_baseline(
         bool hasBinaryMessagePayload)
     {
-        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
-        //44a405b79, April 2019 — pre-Dispatched). The Dispatched column was introduced in V2
-        //(3c30343fa, July 2019). This tripwire prevents a future "helpful" refactor from
-        //quietly rewriting V1.UpScript back to live-builder shape: chain replay against a
-        //legacy installation that bootstrapped at V1 must see the same starting DDL it always
-        //saw. See spec 0027 README archaeology and ADR 0057 §3 for the historical/fresh-path
-        //split. The discriminator column (HeaderBag) is also asserted to guarantee detection.
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;",
@@ -100,9 +96,6 @@ public class MsSqlOutboxBuilderDriftTests
     public void When_mssql_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index(
         bool hasBinaryMessagePayload)
     {
-        //The drift test above compares columns only; the new CausationId replay index (Spec 0027,
-        //#2541) is asserted separately here per AC9. The builder appends a CREATE INDEX after the
-        //CREATE TABLE so a fresh install lands the same index a V8 migration upgrade does.
         const string tableName = "outbox_test";
         var ddl = SqlOutboxBuilder.GetDDL(tableName, hasBinaryMessagePayload);
 
@@ -117,10 +110,6 @@ public class MsSqlOutboxBuilderDriftTests
     public void When_mssql_outbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
         bool hasBinaryMessagePayload)
     {
-        //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
-        //for the fresh-install fast path (ADR 0057 §3), distinct from V1.UpScript which now
-        //carries the historical baseline (Part 4). This tripwire holds the fast-path DDL
-        //identical to the live builder so the two cannot diverge silently.
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;",

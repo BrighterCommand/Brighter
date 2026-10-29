@@ -4,7 +4,7 @@ This directory contains Claude Code commands that enforce Test-Driven Developmen
 
 ## Commands
 
-### `/test-first <behavior description>`
+### `/tdd:test-first <behavior description>`
 
 Guides you through the Red-Green-Refactor TDD cycle with an **approval gate before implementation
 that is armed by default**.
@@ -13,7 +13,7 @@ that is armed by default**.
 
 **Usage:**
 ```bash
-/test-first when an invalid message is received it should be sent to the dead letter queue
+/tdd:test-first when an invalid message is received it should be sent to the dead letter queue
 ```
 
 **Workflow:**
@@ -65,7 +65,7 @@ back down the moment the work produces a test you would not have approved.
 | `review-before` | ✅ armed | Approve each test before implementation. **The default.** |
 | `review-after` | ➖ not armed | RED still proved first; reviewed as a batch afterwards. |
 
-**`/test-first` itself is always gated.** It does not read the gear file — a standalone invocation
+**`/tdd:test-first` itself is always gated.** It does not read the gear file — a standalone invocation
 must never inherit a mode it did not ask for from whichever spec happens to be current. The gear is
 resolved by `/spec:implement` and `/spec:ralph-implement`, which pass the result into this workflow
 explicitly. `/bugfix:test` is always gated too.
@@ -92,7 +92,7 @@ reason for the shift.
 
 ## Integration with Spec Workflow
 
-The `/test-first` command can be used standalone or as part of the [specification workflow](../spec/README.md).
+The `/tdd:test-first` command can be used standalone or as part of the [specification workflow](../spec/README.md).
 
 - **Standalone**: Use anytime you want to add behavior with TDD. **Always gated.**
 - **With /spec:implement**: The spec implement command uses the same TDD workflow, in whichever gear
@@ -103,7 +103,7 @@ The `/test-first` command can be used standalone or as part of the [specificatio
 ## Example Session
 
 ```bash
-$ /test-first when a message fails to send it should retry with exponential backoff
+$ /tdd:test-first when a message fails to send it should retry with exponential backoff
 
 🔴 RED: Writing test...
 [Claude shows test code]
@@ -129,7 +129,7 @@ Should I commit these changes?
 ## Best Practices
 
 1. **Start small**: Write the simplest test that moves you toward your goal
-2. **One behavior at a time**: Use `/test-first` multiple times to build up functionality
+2. **One behavior at a time**: Use `/tdd:test-first` multiple times to build up functionality
 3. **Review the test carefully**: The test is your specification - make sure it's correct before approving
 4. **Trust the process**: Don't skip ahead to implementation. If the gate has stopped earning its
    cost on a run of near-identical tasks, shift gear deliberately with `/spec:gear` — don't quietly
@@ -138,7 +138,7 @@ Should I commit these changes?
 
 ## Related Commands
 
-- [`/tidy-first`](../refactor/tidy-first.md) - Separate structural (refactoring) changes from
+- [`/refactor:tidy-first`](../refactor/tidy-first.md) - Separate structural (refactoring) changes from
   behavioural ones, following Beck's "Tidy First". Use it for refactoring beyond the small,
   in-cycle tidy of the REFACTOR phase above.
 - [`/refactor:smells`](../refactor/smells.md) - Optional review, once a unit of work is complete,
@@ -152,7 +152,7 @@ Planned TDD commands:
   that can only be covered by a special-purpose test (a branch reachable only through an internal or
   private member rather than the public interface) is a sign of speculative code or a design
   problem, not a gap to plug with a test. It runs once the task is GREEN and after any
-  `/tidy-first` refactoring, so it checks the code as it will be committed. The command would
+  `/refactor:tidy-first` refactoring, so it checks the code as it will be committed. The command would
   collect coverage (`dotnet test --collect:"XPlat Code Coverage"`) for the task's diff and report
   uncovered added lines as findings to remove or redesign, rather than suggesting tests to cover
   them.
