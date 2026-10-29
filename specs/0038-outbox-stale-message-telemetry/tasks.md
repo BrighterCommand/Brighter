@@ -16,7 +16,7 @@
   - `STRUCTURAL`: use `/tidy-first`. No behaviour changes, and existing tests stay green.
   - `PROJECT`: work that is not a behaviour of the code: a GitHub issue, a suite run, a code review or a recording. Each produces the output the task names, in the place the task names. It does not use `/test-first`.
   - `DOC`: documentation. It does not use `/test-first`.
-  - Counts: 150 tasks. 53 `TEST + IMPLEMENT`, 62 `CHARACTERISE`, 7 `GENERATE`, 4 `STRUCTURAL`, 17 `PROJECT`, 7 `DOC`. `/spec:show-me` counts the `CHARACTERISE` and `GENERATE` tasks as untagged, because its tag pattern knows only the other four (`.claude/commands/spec/show_me_facts.cs:1443`). The tasks template (`.claude/commands/spec/tasks.md:133-143`) lists four tags. `CHARACTERISE` and `GENERATE` are the labels that `.agent_instructions/testing.md:67` and ADR 0071-tdd-review-gear :236-255 define for these shapes, so this file uses them.
+  - Counts: 151 tasks. 53 `TEST + IMPLEMENT`, 62 `CHARACTERISE`, 7 `GENERATE`, 5 `STRUCTURAL`, 17 `PROJECT`, 7 `DOC`. `/spec:show-me` counts the `CHARACTERISE` and `GENERATE` tasks as untagged, because its tag pattern knows only the other four (`.claude/commands/spec/show_me_facts.cs:1443`). The tasks template (`.claude/commands/spec/tasks.md:133-143`) lists four tags. `CHARACTERISE` and `GENERATE` are the labels that `.agent_instructions/testing.md:67` and ADR 0071-tdd-review-gear :236-255 define for these shapes, so this file uses them.
 - **Publishing.** Any text that goes to GitHub (an issue, a pull request in another repository, or this pull request's description) is produced first in the task's output. Posting it is a separate manual step after that text is reviewed, and the task then records the number or link. Nothing in this list posts to GitHub by itself.
 - **Order.** ADR 0085 steps 1 and 2 (Phase 1). Then ADR 0086 steps 1 and 2 (Phase 2), because step 6 of ADR 0085 needs the capability interface and step 8 needs `InMemoryOutbox` to implement it. Then ADR 0085 steps 3 to 14 (Phases 3 to 14). ADR 0086 step 3, the follow-up issues, is in Phase 14 with the documentation. Phase 15 is the final verification.
 - **Line numbers.** Lines are cited at HEAD 942cb8f56. The ADRs cite commit 1ce331eb2. Where a line has moved, the task gives the HEAD line and then the ADR's line in parentheses, as in `:713-720` (ADR: `:716-723`).
@@ -614,6 +614,13 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - call `readings.Start(outbox.GetType().Name, measuresTopics)` as the last step of `StartAsync`.
+
+- [ ] **STRUCTURAL: T6.12 Run the start tests of T6.7 and T6.11 on a fake clock (AC-25)**
+  - **USE COMMAND**: `/tidy-first register a FakeTimeProvider in the start tests of T6.7 and T6.11`
+  - Lines in this task are cited at HEAD 093b69aae.
+  - In `When_a_publication_has_a_valid_stale_age_should_start.cs` and in `BuildMonitor` of `When_the_monitor_starts_should_start_the_readings.cs`, under "tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/", register `services.AddSingleton<TimeProvider>(new FakeTimeProvider())` right after the `ServiceCollection` is created, and add `using Microsoft.Extensions.Time.Testing;`, as `When_the_monitor_starts_should_dispose_its_scope_before_returning.cs:32` and `:53` do. Leave the assertions as they are.
+  - Today both tests register no `TimeProvider`, so the monitor runs on `TimeProvider.System` (`src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitor.cs:77`). They never stop it, so after each test its loop counts once a real minute, the default interval (`TimedOutboxStaleMessageMonitorOptions.cs:74`), and logs through the shared logger for as long as the test process runs. On a fake clock that no test advances, the loop waits for its first due time (:189) and never counts or logs. T15.4 lists these tests as the exception to AC-25.
+  - Verification: the T6.7 named mutation, "reject an age equal to the maximum", still makes T6.7 fail; the `Observability/StaleMessages/` tests and the full `Paramore.Brighter.Core.Tests` suite stay green on net9.0 and net10.0.
 
 ## Phase 7: Rejecting an outbox without the async count (ADR 0085 step 7)
 
@@ -1918,7 +1925,7 @@ No production change is expected in this phase. The named mutation is how RED is
 | NFR-3 | T1.1, T1.2, T2.1, T15.3 |
 | NFR-4 | T8.14, T8.17, T8.21, T2.2, T13.15, T14.8, T14.9, T15.5 |
 | NFR-5 | T8.1, T12.3, T15.3 |
-| NFR-6 | every Phase 8 to 12 task (determinism rules), T15.4 |
+| NFR-6 | every Phase 8 to 12 task (determinism rules), T6.12, T15.4 |
 | NFR-7 | T14.5 to T14.9, T15.7 |
 
 ### Acceptance criteria
@@ -1949,7 +1956,7 @@ No production change is expected in this phase. The named mutation is how RED is
 | AC-22 (NFR-3 diff review) | T15.3 |
 | AC-23 | T8.14 |
 | AC-24 | T12.3, T15.3 |
-| AC-25 (NFR-6 FakeTimeProvider/MeterListener check) | T15.4 |
+| AC-25 (NFR-6 FakeTimeProvider/MeterListener check) | T6.12, T15.4 |
 | AC-26 (NFR-7 docs) | T14.5, T14.6, T14.7, T14.8, T14.9, T15.7 |
 | AC-27 | T8.15 |
 | AC-28 | T8.9, T8.10 |
