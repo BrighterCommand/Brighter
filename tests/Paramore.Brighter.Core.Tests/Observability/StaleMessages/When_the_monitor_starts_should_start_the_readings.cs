@@ -29,6 +29,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Observability.StaleMessages.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
@@ -78,6 +79,7 @@ public class StaleMessageMonitorStartReadingsTests
         });
 
         var services = new ServiceCollection();
+        services.AddSingleton<TimeProvider>(new FakeTimeProvider());
         var builder = new ServiceCollectionBrighterBuilder(
             services,
             new ServiceCollectionSubscriberRegistry(services),
