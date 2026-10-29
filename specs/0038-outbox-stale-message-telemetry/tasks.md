@@ -1774,7 +1774,7 @@ No production change is expected in this phase. The named mutation is how RED is
 
 *Depends on Phases 1 to 13. T14.9 needs the FR-14 results and the issues of Phase 13.*
 
-- [ ] **PROJECT: T14.1 The per-topic follow-up issue for the relational family (ADR 0086 step 3)**
+- [x] **PROJECT: T14.1 The per-topic follow-up issue for the relational family (ADR 0086 step 3)**
   - Draft the issue for MsSql, PostgreSql, MySql, Sqlite and Spanner. Spanner is included because `SpannerOutbox` derives from `RelationDatabaseOutbox`. The issue:
     - points at `TopicCountingOutboxBaseTests` as the base test the generated suite derives from;
     - says that the first family to land adds the topic-counting suite to `OutboxGenerator.SuitesFor` (`tools/Paramore.Brighter.Test.Generator/Generators/OutboxGenerator.cs:146`) with the `SupportsTopicCounting` setting (ADR 0086 :363), and asks the family to turn the setting on;
