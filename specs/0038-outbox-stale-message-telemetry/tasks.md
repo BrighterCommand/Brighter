@@ -1728,7 +1728,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - confirm `LedgerSkipCrossCheckAudit.cs:270` still walks the set through this method;
     - leave every existing audit test green.
 
-- [ ] **PROJECT: T13.17 Set each gap mark, regenerate and run the audits (ADR 0085 risk :968)**
+- [x] **PROJECT: T13.17 Set each gap mark, regenerate and run the audits (ADR 0085 risk :968)**
   - Starts once every Gap-cell issue from T13.15 has been posted and has a number.
   - Deviation: the marks for the seven Gap cells were set earlier, with the placeholder issue number 9999, so the local branch stays green. All seven were later closed by fixing the stores in this spec (Sqlite (c) in its two entries, DynamoDB (b), DynamoDB.V4 (b), and Firestore (a), (b) and (c), fixed later against the emulator), and their marks were removed. The marks went in with T13.7, T13.12 and T13.13 instead of here, and the audit scan was narrowed afterwards, in T13.16. No Gap cell in columns (a) to (c) is left, so no mark needs a real issue number, and the per-issue steps below have nothing to do; only the search and the audits run. A search of each `test-configuration.json` and of the generated `OutstandingCount` folders for 9999 must find none.
   - For each Gap-cell issue from T13.15, in order:
