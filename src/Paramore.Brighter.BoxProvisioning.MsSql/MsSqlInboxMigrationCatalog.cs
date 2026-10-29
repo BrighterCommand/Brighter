@@ -32,23 +32,19 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// Defines the migration history for MSSQL inbox tables.
 /// </summary>
 /// <remarks>
-/// V1's <c>UpScript</c> is the literal historical baseline DDL — the first MSSQL inbox
-/// builder shape (commit <c>b7f96957b</c>, March 2019). Spec 0027 R1 split "live builder
-/// DDL" away from V1.UpScript: the fresh-install fast path (ADR 0057 §3) now sources its
-/// DDL from <see cref="FreshInstallDdl"/>, so V1.UpScript is free to carry the honest
-/// historical shape. V2 adds <c>ContextKey</c> as a conditional <c>ALTER TABLE ADD</c>
+/// V1's <c>UpScript</c> is the literal historical baseline DDL — the MSSQL inbox builder
+/// shape before <c>ContextKey</c>, with the <c>Id</c> identity key added in commit
+/// <c>f49d8c560</c> (June 2017). The fresh-install fast path
+/// (ADR 0057 §3) takes its DDL from <see cref="FreshInstallDdl"/> instead, so V1.UpScript
+/// carries the historical shape. V2 adds <c>ContextKey</c> as a conditional <c>ALTER TABLE ADD</c>
 /// guarded by <c>IF COL_LENGTH(...) IS NULL</c> per ADR 0057 §5.
 /// <para>
-/// Born-past-V1 asymmetry: the MSSQL inbox first shipped <em>with</em> <c>ContextKey</c> —
-/// there is no pre-ContextKey MSSQL inbox in the wild. V1.UpScript therefore creates a
-/// table whose physical column set is the union of V1.LogicalColumns + V2's additions
-/// (plus the <c>Id</c> housekeeping column). On chain replay V2's idempotency guard sees
-/// the existing column and skips the ALTER. V1.LogicalColumns remains the "logical
-/// pre-V2" set (no ContextKey) so the bootstrap-detection contract (ADR 0057 §4) can
-/// still distinguish a hypothetical pre-V2 table.
+/// The MSSQL inbox shipped without <c>ContextKey</c> (first in commit <c>3cf37bbe9</c>, June
+/// 2015, before the <c>Id</c> column) until commit <c>787c31c52</c> added it, so a legacy table
+/// may be at V1, and V2 adds the column to it.
 /// </para>
 /// <para>
-/// V3 adds <c>CausationId</c> (Spec 0027, #2541) via the same idempotency-guarded
+/// V3 adds <c>CausationId</c> via the same idempotency-guarded
 /// <c>ALTER TABLE ADD</c> pattern. The accumulated <c>LogicalColumns</c> across V1..V3 plus the
 /// MSSQL inbox housekeeping <c>Id</c> column equals the live builder's column set — verified by the drift test in
 /// <c>tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning</c>.
@@ -65,12 +61,8 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v3AddedColumns = ["CausationId"];
 
-    // Literal historical MSSQL inbox DDL extracted from commit b7f96957b (March 2019). The
-    // table first shipped with ContextKey already present — see the born-past-V1 note in the
-    // class remarks. {0} = table name (validated).
-    // The table identifier is bracket-quoted so legal-but-reserved T-SQL keyword names
-    // (User, Order, Group, …) bootstrap correctly — V2 already bracket-quotes, so V1
-    // is the only asymmetric step. 
+    // The inbox DDL before ContextKey (as at 787c31c52^). {0} is the validated table name,
+    // bracket-quoted so reserved words (User, Order) parse.
     private const string V1HistoricalDdl =
         """
         CREATE TABLE [{0}]
@@ -80,7 +72,6 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
                 [CommandType] [NVARCHAR](256) NULL ,
                 [CommandBody] [NTEXT] NULL ,
                 [Timestamp] [DATETIME] NULL ,
-                [ContextKey] [NVARCHAR](256) NULL,
                 PRIMARY KEY ( [Id] )
             );
         """;
@@ -91,9 +82,6 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         Identifiers.AssertSafe(
             configuration.InBoxTableName,
             nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
-        // Pass SchemaName so the builder schema-qualifies the CREATE TABLE — otherwise the
-        // table lands in the connection's default schema (typically [dbo]) regardless of
-        // SchemaName. 
         if (configuration.SchemaName is not null)
         {
             Identifiers.AssertSafe(

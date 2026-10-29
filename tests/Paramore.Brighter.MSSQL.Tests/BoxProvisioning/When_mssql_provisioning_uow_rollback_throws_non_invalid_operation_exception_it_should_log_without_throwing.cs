@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -36,30 +36,25 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
 /// <summary>
-/// Companion to <c>MsSqlProvisioningUnitOfWorkRollbackAfterCommitThrewTests</c>:
-/// that test pins the post-finalised-commit path (<see cref="InvalidOperationException"/>);
-/// this test pins the broader contract — RollbackAsync MUST NOT throw FOR ANY exception
-/// type. Sibling backends (Postgres
-/// <c>When_postgres_provisioning_uow_rollback_release_throws_it_should_log_without_throwing</c>)
-/// already catch <see cref="Exception"/> on the equivalent unwind seam; MSSQL caught only
-/// <see cref="InvalidOperationException"/>, which let zombied-connection
-/// <see cref="SqlException"/> / <see cref="ObjectDisposedException"/> — and cancellation —
-/// escape and mask the runner's primary migration error.
+/// <c>RollbackAsync</c> does not throw whatever the underlying rollback throws, not only
+/// <see cref="InvalidOperationException"/>; it logs one Warning instead, so the runner's primary
+/// migration error is not masked (ADR 0058 §B.3).
 /// </summary>
 /// <remarks>
-/// We force a non-<see cref="InvalidOperationException"/> by handing
-/// <c>uow.RollbackAsync</c> a pre-cancelled token: Microsoft.Data.SqlClient's
-/// <c>SqlTransaction.RollbackAsync</c> short-circuits on a cancelled token with
-/// <see cref="OperationCanceledException"/>, which the old narrow catch did not handle.
-/// This is the simplest deterministic surface; the same widened catch covers the
-/// zombied-connection cases the reviewer cited.
+/// A pre-cancelled token makes <c>SqlTransaction.RollbackAsync</c> throw
+/// <see cref="OperationCanceledException"/>: the simplest deterministic stand-in for the
+/// <see cref="SqlException"/> or <see cref="ObjectDisposedException"/> a broken connection raises.
 /// </remarks>
 public class MsSqlProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLifetime
 {
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
     private readonly FakeMsSqlAdvisoryLock _advisoryLock = new(throwOnAcquire: null);
 
-    public async Task InitializeAsync() => await _connection.OpenAsync();
+    public async Task InitializeAsync()
+    {
+        await Configuration.EnsureDatabaseExistsAsync(_connection.ConnectionString);
+        await _connection.OpenAsync();
+    }
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
@@ -73,21 +68,14 @@ public class MsSqlProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyn
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None);
 
-        // Pre-cancel the token handed to RollbackAsync. SqlTransaction.RollbackAsync honours
-        // the token and throws OperationCanceledException — a representative non-IOE surface
-        // covering the same contract gap as a zombied connection raising SqlException.
-        using var cts = new CancellationTokenSource();
-        cts.Cancel();
+        using var preCancelled = new CancellationTokenSource();
+        preCancelled.Cancel();
 
-        // Act — RollbackAsync MUST NOT throw even though the inner _transaction.RollbackAsync
-        // raises OperationCanceledException. Disposal-style contract: runner's catch path
-        // (catch { uow.RollbackAsync(...); throw; }) cannot have its primary exception masked.
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(cts.Token));
+        // Act
+        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(preCancelled.Token));
 
         Assert.Null(thrown);
 
-        // Best-effort path emitted a Warning naming the lock resource and carrying the
-        // original exception, matching the existing finalised-tx branch's diagnostic shape.
         var warnings = capturingLogger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
         Assert.Single(warnings);
     }

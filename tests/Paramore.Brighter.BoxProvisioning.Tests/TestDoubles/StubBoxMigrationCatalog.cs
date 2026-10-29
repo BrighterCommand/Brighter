@@ -28,14 +28,7 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 
-/// <summary>
-/// Minimal <see cref="IAmABoxMigrationCatalog"/> stub used to satisfy the
-/// <c>SqlBoxMigrationRunner</c> ctor in tests that do not exercise the chain itself.
-/// <see cref="All"/> returns <see cref="Migrations"/> (default empty) and
-/// <see cref="FreshInstallDdl"/> returns <see cref="FreshInstallDdlText"/> (default empty).
-/// Tests that need a malformed chain (e.g. monotonicity guard) set <see cref="Migrations"/>;
-/// tests that probe the null-chain branch set <see cref="AllReturnsNull"/> to true.
-/// </summary>
+// AllReturnsNull makes All return null, to drive the runner's null-chain guard.
 internal sealed class StubBoxMigrationCatalog : IAmABoxMigrationCatalog
 {
     public IReadOnlyList<IAmABoxMigration> Migrations { get; set; } = Array.Empty<IAmABoxMigration>();

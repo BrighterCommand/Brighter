@@ -33,6 +33,7 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
+using Polly;
 using Polly.Registry;
 
 // ReSharper disable StaticMemberInGenericType
@@ -69,26 +70,28 @@ namespace Paramore.Brighter
 
         private readonly SemaphoreSlim _backgroundClearSemaphore = new(1, 1);
 
-        //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static
-        //bool should be made thread-safe by locking the object
-        private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new(1, 1);
-
         private DateTimeOffset _lastOutStandingMessageCheckAt;
 
         private const string NoSyncOutboxError = "A sync Outbox must be defined.";
         private const string NoAsyncOutboxError = "An async Outbox must be defined.";
             
         private int _outStandingCount;
+        // The default ceiling of IAmAnOutboxSync/Async.GetOutstandingMessageCount
+        private const int DefaultOutstandingCountCeiling = 100;
         //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
         //an owner and the container disposing concurrently must run CloseAll() (broker I/O) and the factory
         //disposals exactly once
         private int _disposed;
+        //1 while a check of the outstanding count is queued or running: an int rather than a bool so one caller can
+        //claim it with a single atomic Interlocked.CompareExchange
+        private int _outstandingCheckInFlight;
         private readonly int _maxOutStandingMessages;
         private readonly TimeSpan _maxOutStandingCheckInterval;
         private readonly Dictionary<string, object> _outBoxBag;
         private readonly IAmABrighterTracer? _tracer;
         private readonly TimeProvider _timeProvider;
-        
+        private readonly IAmABrighterOutboxMeter? _outboxMeter;
+
         /// <inheritdoc />
         public IAmAnOutbox? Outbox => (IAmAnOutbox?)_outBox ?? _asyncOutbox;
         
@@ -107,7 +110,13 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory"></param>
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
         /// <param name="maxOutStandingMessages">How many messages can become outstanding in the Outbox before we throw an OutboxLimitReached exception</param>
-        /// <param name="maxOutStandingCheckInterval">How long before we check for maxOutStandingMessages</param>
+        /// <param name="maxOutStandingCheckInterval">
+        /// The minimum time between background checks for maxOutStandingMessages, measured from when the previous check
+        /// was queued. The mediator keeps at most one check in flight, so with <see cref="TimeSpan.Zero"/> a clear queues
+        /// a check only if the previous one has finished. It is also the minimum age a message must have in the outbox
+        /// to count as outstanding. Ignored when maxOutStandingMessages is -1 (no limit), as the outbox is then not
+        /// consulted for the count. Defaults to one second when null.
+        /// </param>
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="timeProvider"></param>
         /// <param name="instrumentationOptions">How verbose do we want our instrumentation to be</param>
@@ -120,6 +129,10 @@ namespace Paramore.Brighter
         /// <param name="ownsTransformerFactories">
         /// Does this mediator own the transform factories, so that <see cref="Dispose()"/> should dispose them?
         /// Defaults to <c>false</c> for the manual-wiring path; the DI path passes <c>true</c>.
+        /// </param>
+        /// <param name="outboxMeter">
+        /// Records Outbox metrics. Optional; when null, no Outbox metrics are recorded. Registered by
+        /// <c>AddBrighterInstrumentation()</c> when Brighter metrics are configured.
         /// </param>
         public OutboxProducerMediator(
             IAmAProducerRegistry producerRegistry,
@@ -139,7 +152,8 @@ namespace Paramore.Brighter
             TimeProvider? timeProvider = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
             bool ownsRegistry = false,
-            bool ownsTransformerFactories = false)
+            bool ownsTransformerFactories = false,
+            IAmABrighterOutboxMeter? outboxMeter = null)
         {
             _producerRegistry = producerRegistry ??
                                 throw new ConfigurationException("Missing Producer Registry for External Bus Services");
@@ -160,6 +174,7 @@ namespace Paramore.Brighter
             
             _timeProvider = timeProvider ?? TimeProvider.System;
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
+            _outboxMeter = outboxMeter;
 
             _messageMapperRegistry = mapperRegistry;
             _messageTransformerFactory = messageTransformerFactory;
@@ -289,6 +304,8 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write request {message.Id} to the outbox");
+
+            RecordAdded(message);
         }
 
         /// <summary>
@@ -327,6 +344,8 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write message {message.Id} to the outbox");
+
+            RecordAdded(message);
         }
 
         /// <summary>
@@ -395,7 +414,7 @@ namespace Paramore.Brighter
 
                     try
                     {
-                        Dispatch([message], requestContext, args);
+                        Dispatch([message], requestContext, OutboxClearSource.Explicit, args);
                     }
                     finally
                     {
@@ -464,7 +483,7 @@ namespace Paramore.Brighter
 
                     try
                     {
-                        await DispatchAsync([message], requestContext, continueOnCapturedContext, cancellationToken);
+                        await DispatchAsync([message], requestContext, OutboxClearSource.Explicit, continueOnCapturedContext, cancellationToken);
                     }
                     finally
                     {
@@ -638,6 +657,9 @@ namespace Paramore.Brighter
             if (!written)
                 throw new ChannelFailureException($"Could not write batch {batchId} to the outbox");
 
+            foreach (var message in batch)
+                RecordAdded(message);
+
             _outboxBatches.TryRemove(batchId, out _);
         }
 
@@ -668,6 +690,9 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write batch {batchId} to the outbox");
+
+            foreach (var message in batch)
+                RecordAdded(message);
 
             _outboxBatches.TryRemove(batchId, out _);
         }
@@ -744,13 +769,15 @@ namespace Paramore.Brighter
 
                     Log.FoundMessagesToClear(s_logger, messages.Length, amountToClear);
 
+                    // Continue on the caller's context: the TimedOutboxSweeper runs this in a context on its own thread, so
+                    // the sweep stays off a starved thread pool. A caller without a context is unaffected.
                     if (useBulk)
                     {
-                        await BulkDispatchAsync(messages, requestContext, false, cancellationToken);
+                        await BulkDispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken);
                     }
                     else
                     {
-                        await DispatchAsync(messages, requestContext, false, cancellationToken);
+                        await DispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken);
                     }
 
                     Log.MessagesHaveBeenCleared(s_logger);
@@ -794,6 +821,11 @@ namespace Paramore.Brighter
 
         private void CheckOutstandingMessages(RequestContext? requestContext)
         {
+            //With no limit (-1) the count is never compared with a limit, so do not queue a task and query the outbox
+            //just to throw the number away
+            if (_maxOutStandingMessages == -1)
+                return;
+
             var now = _timeProvider.GetUtcNow();
 
             var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
@@ -806,11 +838,32 @@ namespace Paramore.Brighter
                 return;
             }                                                    
 
+            //Keep at most one check in flight: only the caller that claims it records the time and queues the check
+            if (Interlocked.CompareExchange(ref _outstandingCheckInFlight, 1, 0) != 0)
+                return;
+
+            //Record the time now, not when the queued check starts, so a burst of posts within the interval
+            //queues one check
+            _lastOutStandingMessageCheckAt = now;
+
+            //This is expensive, so use a background thread. Task.Run uses TaskScheduler.Default and does not carry the
+            //caller's SynchronizationContext. That keeps the blocking call on the async outbox in
+            //OutstandingMessagesCheck from deadlocking the pump, so do not run it inline on the caller's thread.
+            //The flag is released when the check ends, however it ends
+            Task.Run(() =>
+            {
+                try
+                {
+                    OutstandingMessagesCheck(requestContext);
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _outstandingCheckInFlight, 0);
+                }
+            });
+
+            //Logged after the check is queued, so a logger that throws cannot leave the flag claimed
             Log.RunningOutstandingMessageCheck(s_logger, now, timeSinceLastCheck.TotalSeconds);
-            //This is expensive, so use a background thread
-            Task.Run(
-                () => OutstandingMessagesCheck(requestContext)
-            );
         }
 
         /// <summary>
@@ -838,7 +891,7 @@ namespace Paramore.Brighter
         /// Outbox
         /// </summary>
         /// <param name="producer">The producer to add a callback for</param>
-        /// <param name="requestContext">The request context for the pipeline</param>        
+        /// <param name="requestContext">The request context for the pipeline</param>
         /// <returns></returns>
         private void ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducerAsync producer, RequestContext requestContext)
         {
@@ -1032,7 +1085,7 @@ namespace Paramore.Brighter
             return message.Header.Topic;
         }
 
-        private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object>? args = null)
+        private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, OutboxClearSource clearSource, Dictionary<string, object>? args = null)
         {
             var parentSpan = requestContext.Span;
             var producerSpans = new ConcurrentDictionary<string, Activity>();
@@ -1069,10 +1122,17 @@ namespace Paramore.Brighter
                             );
                             if (sent)
                             {
-                                ExecuteWithResiliencePipeline(
-                                    () => _outBox.MarkDispatched(message.Id, requestContext, _timeProvider.GetUtcNow(), args),
+                                DateTimeOffset? dispatchedAt = null;
+                                var marked = ExecuteWithResiliencePipeline(
+                                    () =>
+                                    {
+                                        dispatchedAt = _timeProvider.GetUtcNow();
+                                        _outBox.MarkDispatched(message.Id, requestContext, dispatchedAt.Value, args);
+                                    },
                                     requestContext
                                 );
+                                if (marked && dispatchedAt.HasValue)
+                                    RecordCleared(message.Header.Topic, clearSource, message.Header.TimeStamp, dispatchedAt.Value);
                             }
                         }
                     }
@@ -1090,8 +1150,9 @@ namespace Paramore.Brighter
         }
 
         private async Task BulkDispatchAsync(
-            IEnumerable<Message> posts, 
+            IEnumerable<Message> posts,
             RequestContext requestContext,
+            OutboxClearSource clearSource,
             bool continueOnCapturedContext,
             CancellationToken cancellationToken)
         {
@@ -1127,6 +1188,14 @@ namespace Paramore.Brighter
 
                         Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key.WireTopic.Value);
 
+                        Dictionary<string, DateTimeOffset>? createdAtById = null;
+                        if (_outboxMeter is { Enabled: true })
+                        {
+                            createdAtById = new Dictionary<string, DateTimeOffset>(messages.Length, StringComparer.Ordinal);
+                            foreach (var m in messages)
+                                createdAtById[m.Id.Value] = m.Header.TimeStamp;
+                        }
+
                         foreach (var batch in await bulkMessageProducer.CreateBatchesAsync(messages, cancellationToken))
                         {
                             var sent = await ExecuteWithResiliencePipelineAsync(
@@ -1142,14 +1211,27 @@ namespace Paramore.Brighter
                             {
                                 foreach (var successfulMessage in batch.Ids())
                                 {
-                                    await ExecuteWithResiliencePipelineAsync(async ct =>
+                                    DateTimeOffset? dispatchedAt = null;
+                                    var marked = await ExecuteWithResiliencePipelineAsync(async ct =>
+                                        {
+                                            dispatchedAt = _timeProvider.GetUtcNow();
                                             await _asyncOutbox.MarkDispatchedAsync(
-                                                successfulMessage, requestContext, _timeProvider.GetUtcNow(),
+                                                successfulMessage, requestContext, dispatchedAt.Value,
                                                 cancellationToken: ct
-                                            ),
+                                            );
+                                        },
                                         requestContext,
                                         cancellationToken: cancellationToken
                                     );
+                                    if (marked && dispatchedAt.HasValue)
+                                    {
+                                        createdAtById?.TryGetValue(successfulMessage.Value, out var createdAt);
+                                        RecordCleared(
+                                            topicBatch.Key.WireTopic,
+                                            clearSource,
+                                            createdAtById is not null && createdAtById.TryGetValue(successfulMessage.Value, out var ct) ? ct : null,
+                                            dispatchedAt.Value);
+                                    }
                                 }
                             }
 
@@ -1175,6 +1257,7 @@ namespace Paramore.Brighter
         private async Task DispatchAsync(
             IEnumerable<Message> posts,
             RequestContext requestContext,
+            OutboxClearSource clearSource,
             bool continueOnCapturedContext,
             CancellationToken cancellationToken)
         {
@@ -1210,14 +1293,21 @@ namespace Paramore.Brighter
 
                         if (producer is not ISupportPublishConfirmation && sent)
                         {
-                            await ExecuteWithResiliencePipelineAsync(
-                                async ct => await _asyncOutbox.MarkDispatchedAsync(
-                                    message.Id, requestContext, _timeProvider.GetUtcNow(),
-                                    cancellationToken: ct
-                                ),
+                            DateTimeOffset? dispatchedAt = null;
+                            var marked = await ExecuteWithResiliencePipelineAsync(
+                                async ct =>
+                                {
+                                    dispatchedAt = _timeProvider.GetUtcNow();
+                                    await _asyncOutbox.MarkDispatchedAsync(
+                                        message.Id, requestContext, dispatchedAt.Value,
+                                        cancellationToken: ct
+                                    );
+                                },
                                 requestContext,
                                 cancellationToken: cancellationToken
                             );
+                            if (marked && dispatchedAt.HasValue)
+                                RecordCleared(message.Header.Topic, clearSource, message.Header.TimeStamp, dispatchedAt.Value);
                         }
 
                         if(!sent) TripTopic(message.Header.Topic);
@@ -1331,33 +1421,39 @@ namespace Paramore.Brighter
 
         private void OutstandingMessagesCheck(RequestContext? requestContext)
         {
-            s_checkOutstandingSemaphoreToken.Wait();
-
-            _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
             Log.BeginCountOfOutstandingMessages(s_logger);
             try
             {
+                // Only count up to one more than the limit. CheckOutstandingMessages never queues this check at -1 (no
+                // limit), so the outbox's default ceiling only applies to a limit below -1
+                var maxCount = _maxOutStandingMessages >= 0 ? _maxOutStandingMessages + 1 : DefaultOutstandingCountCeiling;
+
                 if (_outBox != null)
                 {
-                    if (_maxOutStandingMessages >= 0)
-                    {
-                        _outStandingCount = _outBox
-                            .GetOutstandingMessageCount(
-                                _maxOutStandingCheckInterval,
-                                requestContext,
-                                _maxOutStandingMessages + 1,
-                                args: _outBoxBag
-                            );
-                    }
-                    else
-                    {
-                        _outStandingCount = _outBox
-                            .GetOutstandingMessageCount(
-                                _maxOutStandingCheckInterval,
-                                requestContext,
-                                args: _outBoxBag
-                            );
-                    }
+                    _outStandingCount = _outBox
+                        .GetOutstandingMessageCount(
+                            _maxOutStandingCheckInterval,
+                            requestContext,
+                            maxCount,
+                            args: _outBoxBag
+                        );
+
+                    return;
+                }
+
+                if (_asyncOutbox != null)
+                {
+                    // Blocking holds this pool thread but never the pump: this runs inside the Task.Run in
+                    // CheckOutstandingMessages, with no SynchronizationContext, and the caller never waits for that task
+                    _outStandingCount = _asyncOutbox
+                        .GetOutstandingMessageCountAsync(
+                            _maxOutStandingCheckInterval,
+                            requestContext,
+                            maxCount,
+                            args: _outBoxBag
+                        )
+                        .GetAwaiter()
+                        .GetResult();
 
                     return;
                 }
@@ -1373,7 +1469,6 @@ namespace Paramore.Brighter
             finally
             {
                 Log.CurrentOutstandingCount(s_logger, _outStandingCount);
-                s_checkOutstandingSemaphoreToken.Release();
             }
         }
 
@@ -1420,8 +1515,18 @@ namespace Paramore.Brighter
                 }
                 else
                 {
-                    await resiliencePipeline.ExecuteAsync(async ct => await send(ct), cancellationToken)
-                        .ConfigureAwait(continueOnCapturedContext);
+                    // Polly awaits with its context's ContinueOnCapturedContext, so pass the caller's choice through.
+                    var resilienceContext = ResilienceContextPool.Shared.Get(continueOnCapturedContext, cancellationToken);
+                    try
+                    {
+                        await resiliencePipeline
+                            .ExecuteAsync(async context => await send(context.CancellationToken), resilienceContext)
+                            .ConfigureAwait(continueOnCapturedContext);
+                    }
+                    finally
+                    {
+                        ResilienceContextPool.Shared.Return(resilienceContext);
+                    }
                 }
                 
                 return true;
@@ -1439,7 +1544,34 @@ namespace Paramore.Brighter
             if(!RoutingKey.IsNullOrEmpty(routingKey))
                 _outboxCircuitBreaker?.TripTopic(routingKey);
         }
-        
+
+        private void RecordAdded(Message message)
+        {
+            if (_outboxMeter is not { Enabled: true }) return;
+            try { _outboxMeter.AddMessageAdded(message.Header.Topic); }
+            catch (Exception ex) { Log.OutboxMetricsFault(s_logger, ex); }
+        }
+
+        private void RecordCleared(
+            RoutingKey destination,
+            OutboxClearSource clearSource,
+            DateTimeOffset? createdAt,
+            DateTimeOffset dispatchedAt)
+        {
+            if (_outboxMeter is not { Enabled: true }) return;
+            try
+            {
+                _outboxMeter.AddMessageCleared(destination, clearSource);
+                if (createdAt is { } created)
+                {
+                    var wait = dispatchedAt - created;
+                    _outboxMeter.RecordPublishDuration(
+                        wait < TimeSpan.Zero ? TimeSpan.Zero : wait, destination, clearSource);
+                }
+            }
+            catch (Exception ex) { Log.OutboxMetricsFault(s_logger, ex); }
+        }
+
         private static partial class Log
         {
             [LoggerMessage(LogLevel.Information, "Found {NumberOfMessages} to clear out of amount {AmountToClear}")]
@@ -1507,6 +1639,9 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Warning, "Failed to dispose owned resource {ResourceType} while disposing the mediator; continuing with the remaining resources")]
             public static partial void FailedToDisposeOwnedResource(ILogger logger, string resourceType, Exception exception);
+
+            [LoggerMessage(LogLevel.Warning, "Outbox metric recording failed; the metric has been dropped but the Outbox operation was unaffected")]
+            public static partial void OutboxMetricsFault(ILogger logger, Exception ex);
         }
     }
 }

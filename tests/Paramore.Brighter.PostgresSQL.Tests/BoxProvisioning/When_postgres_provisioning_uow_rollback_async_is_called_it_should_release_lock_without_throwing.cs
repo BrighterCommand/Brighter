@@ -34,28 +34,12 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// When the transaction is already finalised, RollbackAsync logs a Warning, still releases the advisory lock, and does not
+/// throw (ADR 0058 §B.3). An out-of-band Commit stands in for a failed CommitAsync: both leave the transaction completed.
+/// </summary>
 public class PostgreSqlProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
 {
-    // Per ADR 0058 §B.3: if CommitAsync throws, the runner enters its catch path and calls
-    // RollbackAsync — even though the commit was already attempted. By that point the
-    // underlying NpgsqlTransaction may already be finalised (committed-but-client-side-failed,
-    // or zombied by a broken connection); calling _transaction.RollbackAsync() on a finalised
-    // tx throws InvalidOperationException ("Cannot rollback; this transaction has been
-    // completed..."). RollbackAsync MUST be best-effort: swallow the failure, log a Warning,
-    // and STILL release the advisory lock — disposal-style semantics. It MUST NOT throw.
-    //
-    // Postgres differs from MSSQL: lock release is EXPLICIT (pg_advisory_unlock) since
-    // pg_advisory_lock is session-scoped, NOT auto-released on tx completion. So this single
-    // test pins THREE things at once:
-    //
-    //   - RollbackAsync does not throw despite the finalised tx
-    //   - A Warning entry is logged about the rollback being skipped
-    //   - The advisory lock is STILL released (best-effort means BOTH halves are attempted)
-    //
-    // The post-failed-commit state is simulated by calling NpgsqlTransaction.Commit() out-of-band
-    // — externally indistinguishable from a thrown CommitAsync, since both leave the tx in the
-    // "completed" state where the next Rollback() throws InvalidOperationException.
-
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(releaseResult: true);
 
@@ -75,16 +59,14 @@ public class PostgreSqlProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None);
         var transaction = uow.Transaction!;
-        transaction.Commit();   // Force the post-failed-commit finalised state
+        transaction.Commit();
 
         // Act
         var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
 
-        // Assert: best-effort rollback returns cleanly...
+        // Assert
         Assert.Null(thrown);
-        // ...emits a Warning naming the rollback failure...
         Assert.Contains(capturingLogger.Entries, e => e.Level == LogLevel.Warning);
-        // ...and STILL releases the advisory lock (both halves of the contract are attempted).
         Assert.Equal("test_lock_resource", _advisoryLock.ReleasedKey);
     }
 }

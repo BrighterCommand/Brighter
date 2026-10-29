@@ -28,13 +28,7 @@ using System.Data.Common;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 
-/// <summary>
-/// Minimal <see cref="DbTransaction"/> stub used as the <c>TTransaction</c> type-argument
-/// when exercising <c>SqlBoxMigrationRunner</c> without a real database. The
-/// runner base only forwards the transaction reference into hooks; <see cref="Commit"/>
-/// and <see cref="Rollback"/> are no-ops so a derived <c>FakeProvisioningUnitOfWork</c>
-/// can return one and have it threaded through the orchestration without side effects.
-/// </summary>
+// Commit and Rollback are no-ops.
 internal sealed class FakeDbTransaction(DbConnection? connection = null) : DbTransaction
 {
     public override IsolationLevel IsolationLevel => IsolationLevel.Unspecified;

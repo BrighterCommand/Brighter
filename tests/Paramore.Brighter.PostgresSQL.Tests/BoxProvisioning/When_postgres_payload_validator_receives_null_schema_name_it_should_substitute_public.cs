@@ -30,6 +30,11 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// The payload-mode validator treats a null schema name as <c>public</c>, so a null call reports the same match or mismatch as
+/// one naming <c>public</c>. Without the substitution, Npgsql's AddWithValue rejects the null value and the call throws
+/// <see cref="InvalidOperationException"/> instead.
+/// </summary>
 public class PostgreSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
@@ -38,14 +43,7 @@ public class PostgreSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
     [Fact]
     public async Task When_postgres_payload_validator_receives_null_schema_name_it_should_substitute_public()
     {
-        // Arrange — two box-shaped tables in public: one with a text payload column
-        // (TEXT), one with a binary payload column (BYTEA). The validator's
-        // null-substitution rule (per ADR 0057 §A.1) must make a call with
-        // schemaName: null behave identically to a call with schemaName: "public".
-        // Without substitution, Npgsql's `AddWithValue` rejects a null Value at
-        // runtime (the `object value` overload is annotated non-null), so the
-        // null arm throws InvalidOperationException — masking real configuration
-        // errors and breaking the role contract.
+        // Arrange
         new PostgresSqlTestHelper().SetupDatabase();
 
         var textTable = TrackTable($"nullschema_text_{Guid.NewGuid():N}");
@@ -61,15 +59,13 @@ public class PostgreSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        // Act + Assert — text column + text mode (no mismatch): both null and "public" return quietly.
+        // Act + Assert
         await validator.ValidateAsync(
             connection, textTable, "public", "body", binaryMessagePayload: false, default);
         await validator.ValidateAsync(
             connection, textTable, schemaName: null, "body", binaryMessagePayload: false, default);
 
-        // Act + Assert — bytea column + text mode (mismatch): both null and "public" throw.
-        // The null arm fails before substitution because Npgsql's strict-null AddWithValue
-        // rejects the parameter outright.
+        // Act + Assert
         await Assert.ThrowsAsync<ConfigurationException>(() =>
             validator.ValidateAsync(
                 connection, binaryTable, "public", "body", binaryMessagePayload: false, default));

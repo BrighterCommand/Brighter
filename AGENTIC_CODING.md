@@ -16,7 +16,7 @@ We welcome code authored with an agent. **You remain responsible for the code yo
   - [Worked Example](#worked-example)
 - [The Bugfix Workflow](#the-bugfix-workflow)
 - [Working Across Sessions: PROMPT.md](#working-across-sessions-promptmd)
-- [Smaller Changes: /test-first and /tidy-first](#smaller-changes-test-first-and-tidy-first)
+- [Smaller Changes: /tdd:test-first and /refactor:tidy-first](#smaller-changes-tddtest-first-and-refactortidy-first)
 - [Reviewing Agent-Authored Pull Requests](#reviewing-agent-authored-pull-requests)
 
 ---
@@ -29,7 +29,7 @@ We welcome code authored with an agent. **You remain responsible for the code yo
 | `AGENTS.md` | The same entry point for other agents. |
 | `.github/copilot-instructions.md` | The same entry point for GitHub Copilot. |
 | `.agent_instructions/` | An agent-oriented version of our contribution guidelines: build, code style, design principles, testing, documentation and dependency management. |
-| `.claude/commands/` | Slash commands that drive our preferred workflows: `/spec:*`, `/bugfix:*`, `/test-first`, `/tidy-first` and `/adr`. See the [commands README](.claude/commands/README.md). |
+| `.claude/commands/` | Slash commands that drive our preferred workflows: `/spec:*`, `/bugfix:*`, `/tdd:test-first`, `/refactor:tidy-first`, `/refactor:smells` and `/adr`. See the [commands README](.claude/commands/README.md). |
 | `PROMPT.md` | Not provided: you create it. A gitignored file of session state that lets work continue across agent sessions. See [Working Across Sessions](#working-across-sessions-promptmd). |
 | `.slopwatch/` | Configuration and a legacy baseline for [SlopWatch](https://github.com/Aaronontheweb/dotnet-slopwatch), which we are trialing to catch agents reward-hacking (for example, weakening a test to make it pass). |
 
@@ -41,8 +41,9 @@ Because our instructions live in plain Markdown under `.agent_instructions/`, an
 | --- | --- | --- |
 | Building a feature or new capability | `/spec:*` | Requirements, ADR design, adversarial review, and a reviewed task list before any code. |
 | Fixing a bug whose cause is not yet proven, or that arrived with a suggested fix | `/bugfix:*` | Proves the root cause before any fix is written. |
-| Making a small change whose behavior is already obvious | `/test-first` | Test-first discipline without the ceremony. |
-| Restructuring code | `/tidy-first` | Keeps structural and behavioral changes in separate commits. |
+| Making a small change whose behavior is already obvious | `/tdd:test-first` | Test-first discipline without the ceremony. |
+| Restructuring code | `/refactor:tidy-first` | Keeps structural and behavioral changes in separate commits. |
+| Looking for what to tidy once a piece of work is finished and green | `/refactor:smells` | Finds Fowler's code smells in the change and schedules the refactorings, without changing code. |
 
 ---
 
@@ -162,7 +163,7 @@ There are two gear settings. The low/medium/high distinction above comes from co
 - **A reason is required.** A gear change is a judgement about certainty; the reason records it.
 - **Scope an upshift where you can.** Name a heading in `tasks.md` (or a range such as `tasks 6-11`) and the gear applies only there; tasks outside it, and the tasks after it, fall back to `review-before`. A scoped upshift expires on its own. This is why task phases with clear, stable names are worth having.
 - **The gear is working state, not a decision record.** It lives in `specs/{spec}/.current-gear`, which is gitignored, and it applies only to that spec. `/spec:gear` adds a pointer to [`PROMPT.md`](#working-across-sessions-promptmd) so a fresh session can find it. If the file is missing, can't be read, or names a scope that doesn't match, the gear is `review-before`; it fails safe.
-- **`/test-first` and `/bugfix:test` are always gated.** Only the spec drivers read the gear.
+- **`/tdd:test-first` and `/bugfix:test` are always gated.** Only the spec drivers read the gear.
 
 **What `review-after` does *not* remove.** It removes the human pause and nothing else. In either gear the agent must:
 
@@ -220,7 +221,7 @@ Bugs differ from features in one important way: **the root cause is a hypothesis
            /bugfix:confirm           ✋ prove or refute the hypothesis before any fix
              │                       (refuted → back to triage)
              ▼
-           /bugfix:test              ✋ write the failing regression test (via /test-first)
+           /bugfix:test              ✋ write the failing regression test (via /tdd:test-first)
              ▼
            /bugfix:fix               the minimal change to go green, scoped to the confirmed cause
              ▼
@@ -228,8 +229,8 @@ Bugs differ from features in one important way: **the root cause is a hypothesis
 ```
 
 - **Confirm is the point of the workflow.** It accepts either a failing reproduction (preferred, when the bug reproduces cheaply) or a code trace with `file:line` evidence (when a reproduction would need a real broker or database). Confirming the cause often changes the scope of the fix, for example by revealing a second defect the suggested fix missed.
-- **The regression test is always gated.** `/bugfix:test` delegates to `/test-first` and always waits for you to approve the test. Bugfixes do not use gears.
-- **Fixes stay minimal.** If the fix needs restructuring first, `/bugfix:fix` hands that to `/tidy-first`, giving a separate `refactor:` commit before the `fix:` commit.
+- **The regression test is always gated.** `/bugfix:test` delegates to `/tdd:test-first` and always waits for you to approve the test. Bugfixes do not use gears.
+- **Fixes stay minimal.** If the fix needs restructuring first, `/bugfix:fix` hands that to `/refactor:tidy-first`, giving a separate `refactor:` commit before the `fix:` commit.
 - **State lives in `bugfixes/NNNN-slug/bugfix.md`**, filled in as you go: symptom, hypothesis, confirmed cause, evidence, test and fix. `/bugfix:status` lists open bugs; `/bugfix:switch` changes the active one.
 
 ---
@@ -276,10 +277,11 @@ Nothing here is specific to Claude Code: any agent that can read a file can work
 
 ---
 
-## Smaller Changes: /test-first and /tidy-first
+## Smaller Changes: /tdd:test-first and /refactor:tidy-first
 
-- **`/test-first <behavior>`** runs one red-green-refactor cycle. It always stops after writing the failing test so you can review it in your IDE before any implementation. See the [TDD README](.claude/commands/tdd/README.md).
-- **`/tidy-first <change>`** separates structural changes (refactoring) from behavioral ones, following Kent Beck's *Tidy First*, so each lands in its own commit. See the [refactoring README](.claude/commands/refactor/README.md).
+- **`/tdd:test-first <behavior>`** runs one red-green-refactor cycle. It always stops after writing the failing test so you can review it in your IDE before any implementation. See the [TDD README](.claude/commands/tdd/README.md).
+- **`/refactor:tidy-first <change>`** separates structural changes (refactoring) from behavioral ones, following Kent Beck's *Tidy First*, so each lands in its own commit. See the [refactoring README](.claude/commands/refactor/README.md).
+- **`/refactor:smells [base-ref | base..head | path...]`** reviews finished, green work for the code smells in Martin Fowler's *Refactoring*, calibrated to our design principles. By default it looks at your branch's changes against `master`; pass a git ref, a `base..head` range (for example, to review a PR that has already merged) or paths to narrow it. Each finding names the smell, where it is, and the refactoring that removes it. It changes no code: you choose which findings to act on, as `/refactor:tidy-first` runs or as `STRUCTURAL` tasks in the current spec's `tasks.md`. It is opt-in, and agents will not run it unless you ask. See the [refactoring README](.claude/commands/refactor/README.md).
 - **`/adr <title>`** creates a correctly numbered ADR outside the spec workflow. See the [ADR README](.claude/commands/adr/README.md).
 
 ---

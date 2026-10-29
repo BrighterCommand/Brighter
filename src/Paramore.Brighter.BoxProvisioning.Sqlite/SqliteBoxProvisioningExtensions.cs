@@ -193,11 +193,7 @@ public static class SqliteBoxProvisioningExtensions
         return options;
     }
 
-    // Detection helper + payload validator are shared across Outbox and Inbox extensions;
-    // TryAddSingleton makes the registration idempotent so calling both AddSqliteOutbox and
-    // AddSqliteInbox does not produce duplicate singletons. Catalogue registration is per
-    // box-type and lives in the call-site (Outbox catalogue from AddSqliteOutbox; Inbox
-    // catalogue from AddSqliteInbox) per ADR 0058 §A.4 Alternatives.
+    // Shared by the outbox and inbox registrations; TryAdd makes calling both safe.
     private static void RegisterSharedRoleImpls(IServiceCollection services)
     {
         services.TryAddSingleton<SqliteBoxDetectionHelper>();

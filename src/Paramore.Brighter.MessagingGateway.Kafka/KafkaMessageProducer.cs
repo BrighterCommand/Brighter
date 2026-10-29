@@ -74,12 +74,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher? _publisher;
         private bool _hasFatalProducerError;
+        private int _disposed;
         private readonly InstrumentationOptions _instrumentation;
         private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
-        // Confirmation raises run on worker tasks (never on Confluent's poll thread); the tracker
-        // lets Dispose wait for those callbacks — including the awaited Outbox mark-dispatched —
-        // after Flush() has drained the delivery reports themselves.
-        private readonly InFlightCallbackTracker _confirmationCallbacks = new();
+        // Confirmation raises run on a single worker, in batches started in delivery order (never on Confluent's
+        // poll thread, and never one thread-pool item per report); the queue lets Dispose wait for those
+        // callbacks — including the awaited Outbox mark-dispatched — after Flush() has drained the delivery
+        // reports themselves.
+        private readonly BatchedCallbackQueue _confirmationCallbacks;
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration configuration, 
@@ -93,6 +95,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 throw new ConfigurationException("Topic is required for a publication");
 
             Publication = publication;
+            _confirmationCallbacks = new BatchedCallbackQueue(MessagingSystem.Kafka, publication.Topic!);
 
             ClientConfig = new ClientConfig
             {
@@ -148,8 +151,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
         
         /// <summary>
-        /// Dispose of the producer 
+        /// Disposes of the producer. Repeated calls are no-ops.
         /// </summary>
+        /// <remarks>Flush, confirmation-callback draining and handle disposal are attempted before any errors are rethrown.</remarks>
+        /// <exception cref="AggregateException">More than one cleanup step failed.</exception>
         public void Dispose()
         {
             Dispose(true);
@@ -158,8 +163,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     
         
         /// <summary>
-        /// Dispose of the producer 
+        /// Disposes of the producer. Repeated calls are no-ops, including calls after <see cref="Dispose()"/>.
         /// </summary>
+        /// <returns>A completed value task after the synchronous Kafka teardown has finished.</returns>
+        /// <remarks>Flush, confirmation-callback draining and handle disposal are attempted before any errors are rethrown.</remarks>
+        /// <exception cref="AggregateException">More than one cleanup step failed.</exception>
         public ValueTask DisposeAsync()
         {
             Dispose(true);
@@ -392,14 +400,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                // Flush drains the delivery reports; the callbacks they spawned (including the
-                // awaited Outbox mark-dispatched) may still be running, so wait for those too.
-                Flush();
-                WaitForConfirmationCallbacks();
-                _producer?.Dispose();
-            }
+            if (!disposing || Interlocked.Exchange(ref _disposed, 1) != 0)
+                return;
+
+            var cleanup = new KafkaResourceCleanup();
+            // Delivery reports can start confirmation callbacks that outlive the flush.
+            cleanup.Try(() => Flush());
+            cleanup.Try(WaitForConfirmationCallbacks);
+            cleanup.Try(_confirmationCallbacks.Complete);
+            cleanup.Try(() => _producer?.Dispose());
+            cleanup.ThrowIfFailed();
         }
         
         private void PublishResults(PersistenceStatus status, Headers headers, RoutingKey topic, ActivityContext? publishContext)
@@ -447,13 +457,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private void RaisePublishConfirmation(PublishConfirmationResult result)
         {
-            // Raise on a worker thread so we never block Confluent's delivery-report handler. Wrap the
-            // invoke so a faulting subscriber is logged rather than left as an unobserved Task exception
-            // (which can escalate via TaskScheduler.UnobservedTaskException). Brighter's own mediator
-            // callback is already self-contained; this guards any other subscriber and the broker thread.
-            // The in-flight tracker must be released on every path or dispose would block on its timeout.
-            _confirmationCallbacks.Begin();
-            Task.Run(async () =>
+            // Raise on the confirmation queue's worker so we never block Confluent's delivery-report handler,
+            // and confirmations reach subscribers in batches started in delivery order. Wrap the invoke so a
+            // faulting subscriber is logged. Brighter's own mediator callback is already self-contained;
+            // this guards any other subscriber and the queue's worker.
+            _confirmationCallbacks.Enqueue(async () =>
             {
                 try
                 {
@@ -463,10 +471,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 catch (Exception ex)
                 {
                     Log.PublishConfirmationRaiseFault(s_logger, ex);
-                }
-                finally
-                {
-                    _confirmationCallbacks.End();
                 }
             });
         }
@@ -505,4 +509,3 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
     }
 }
-

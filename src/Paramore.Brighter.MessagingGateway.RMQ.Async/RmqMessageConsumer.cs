@@ -195,21 +195,31 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     }
 
     /// <summary>
-    /// Purges the specified queue name.
+    /// Purges the broker queue and locally prefetched messages, preserving deliveries already returned to the caller.
     /// </summary>
     public void Purge() => BrighterAsyncContext.Run(() => PurgeAsync());
 
+    /// <summary>
+    /// Purges the broker queue and locally prefetched messages, preserving deliveries already returned to the caller.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the purge operation.</param>
+    /// <returns>A task that completes after consumption has resumed.</returns>
+    /// <remarks>Stopping and restarting broker delivery completes even if cancellation is requested during those steps.</remarks>
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         try
         {
-            //Why bind a queue? Because we use purge to initialize a queue for RPC
             await EnsureChannelAsync(cancellationToken);
             
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
 
             Log.PurgingChannel(s_logger, _queueName.Value);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_consumer != null)
+            {
+                await _consumer.stopForPurgeAsync(_consumerTag);
+            }
 
             try
             {
@@ -223,6 +233,13 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
                 }
 
                 throw;
+            }
+            finally
+            {
+                if (Channel.IsOpen)
+                {
+                    await CreateConsumerAsync(CancellationToken.None);
+                }
             }
         }
         catch (Exception exception)

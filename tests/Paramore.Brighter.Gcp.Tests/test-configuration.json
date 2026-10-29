@@ -45,7 +45,7 @@
       "LedgerKey": "GCP / StreamOrdering",
       "HasSupportToPublishConfirmation": false,
       "HasSupportToValidateBrokerExistence": true,
-      "ReceiveMessageTimeoutInMilliseconds": 5000
+      "ReceiveMessageTimeoutInMilliseconds": 15000
     }
   },
   "Inboxes": {
@@ -73,13 +73,13 @@
       "Transaction": "System.Data.Common.DbTransaction",
       "OutboxProvider": "SpannerBinaryOutboxProvider",
       "Category": "Spanner",
-      "CollectionName": "SpannerBinaryOutbox"
+      "CollectionName": "Spanner"
     },
     "SpannerText": {
       "Transaction": "System.Data.Common.DbTransaction",
       "OutboxProvider": "SpannerTextOutboxProvider",
       "Category": "Spanner",
-      "CollectionName": "SpannerTextOutbox"
+      "CollectionName": "Spanner"
     }
   },
   "GatewayConformance": {

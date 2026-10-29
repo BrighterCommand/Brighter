@@ -34,26 +34,12 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// The session-scoped pg_advisory_lock outlives the transaction, so CommitAsync both commits and explicitly releases the lock
+/// (ADR 0058 §B.1). A second Commit on the captured transaction throws only if CommitAsync really committed it.
+/// </summary>
 public class PostgreSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
 {
-    // Per ADR 0058 §B.1: Postgres pg_advisory_lock is session-scoped — it is NOT released
-    // implicitly when the surrounding transaction commits (unlike MSSQL's
-    // @LockOwner='Transaction' sp_getapplock, where the lock is bound to the tx lifetime).
-    // CommitAsync therefore has TWO obligations: commit the underlying transaction AND
-    // explicitly call pg_advisory_unlock via IPostgreSqlAdvisoryLock.ReleaseAsync. Both halves
-    // of the contract are pinned by this single test:
-    //
-    //   - The "tx was committed" half is pinned by capturing the NpgsqlTransaction reference
-    //     after BeginAsync; after CommitAsync returns, re-issuing tx.Commit() must throw
-    //     InvalidOperationException ("Cannot commit; this transaction has been completed..."
-    //     in Npgsql parlance). A no-op CommitAsync would leave the tx active and the second
-    //     Commit() would succeed silently.
-    //
-    //   - The "lock was released" half is pinned by the fake's ReleasedKey property, which
-    //     records the lock key whenever ReleaseAsync is invoked. After CommitAsync, that
-    //     property must equal the lock resource passed to BeginAsync. A CommitAsync that
-    //     forgets to release the lock would leave ReleasedKey null.
-
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(releaseResult: true);
 
@@ -76,11 +62,8 @@ public class PostgreSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
         // Act
         await uow.CommitAsync(CancellationToken.None);
 
-        // Assert: tx was committed — re-issuing Commit on the captured reference throws
-        // "transaction has been completed". A no-op CommitAsync would leave the tx active and
-        // this second Commit() would succeed silently.
+        // Assert
         Assert.Throws<InvalidOperationException>(() => capturedTx.Commit());
-        // Assert: pg_advisory_unlock was called explicitly with the same lock resource.
         Assert.Equal("test_lock_resource", _advisoryLock.ReleasedKey);
     }
 }

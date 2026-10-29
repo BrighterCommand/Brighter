@@ -2,6 +2,298 @@
 
 ## Master
 
+### GCP Pub/Sub stream shutdown cancellation
+
+Disposing a Stream or StreamOrdering consumer now logs cancellation reported by the subscriber client
+without throwing it out of disposal. Client disposal is attempted even when stopping fails, and
+rejection-routing resources are released on both synchronous and asynchronous disposal paths.
+Non-cancellation failures still propagate. Shutdown timing remains controlled by the Google client.
+
+### Consumer inbox processing is opt-in
+
+`AddConsumers` no longer enables a global in-memory inbox by default. `ConsumersOptions.InboxConfiguration`
+and `IAmConsumerOptions.InboxConfiguration` are nullable, and `null` means no global inbox. Both consumer
+registration overloads support this, with or without producers.
+
+This changes duplicate handling for hosts that relied on the previous default: requests now reach their
+handlers on every delivery. To retain the previous global inbox behavior, configure it explicitly:
+
+```csharp
+services.AddConsumers(options => options.InboxConfiguration = new InboxConfiguration());
+```
+
+The parameterless configuration uses `InMemoryInbox`, whose state is local to one process and lost on restart.
+Configure a persistent inbox for durable deduplication. Handler-level `[UseInbox]` and `[UseInboxAsync]`
+attributes still require an inbox store registered in the container when the global inbox is disabled.
+
+### Detect a hung or failing outbox sweeper, and say what remedy each health condition needs (spec 0038, #4573)
+<!-- spec: 0038-add-sweeper-health-check -->
+
+A sweeper that hangs, keeps failing, or skips tripped topics looked healthy from outside. Two gauges now report the running time of the current sweep and the number of tripped topics on an active sweeper. Opt-in health checks tell an orchestrator or operator whether to restart the process, take it out of service, or investigate. Consumer checks follow the same convention.
+
+#### Two sweeper gauges
+
+`AddBrighterInstrumentation` now registers two observable gauges on the Brighter meter, with no attributes:
+
+| Instrument | Unit | Reports |
+|---|---|---|
+| `paramore.brighter.outbox_sweeper.sweep.running_time` | `s` | How long the sweep now in progress has been running, or 0 when none is |
+| `paramore.brighter.outbox_sweeper.tripped_topics` | `{topic}` | The number of topics whose outbox circuit breaker is tripped |
+
+Recommended alerts:
+
+- `max(paramore.brighter.outbox_sweeper.sweep.running_time) > 3 x TimerInterval`. This catches a hung sweep directly. It is preferable to alerting on the absence of `completed` sweeps, which also fires on an instance that is idle or does not hold the sweeper lock.
+- `paramore.brighter.outbox_sweeper.tripped_topics > 0` at any point in a window of 3 x `TimerInterval` (for example, `max_over_time`). Tripped topics are read only while the sweeper is active, so the gauge reads 0 on an instance that is not the active sweeper and during lock acquisition. A single sample can therefore miss a tripped topic; the window rides over that gap.
+
+Both gauges read the sweeper's state at observation time rather than deriving it from spans, so they report even when traces are sampled out. They report 0 if the state cannot be read. The tripped-topics gauge reads the `IAmAnOutboxCircuitBreaker` registered in the service provider. Register it as a singleton shared with the outbox producer mediator, otherwise the gauge may not match what the sweeper skips. With no circuit breaker registered, the gauge reports 0. Tripped topics are one instance's view: `InMemoryOutboxCircuitBreaker` is per instance. One `TimedOutboxSweeper` per service provider is the supported configuration; with more than one, what the gauges report is undefined.
+
+New public types and parameters, all additive:
+
+- `OutboxSweeperState` and `OutboxSweeperSnapshot` in `Paramore.Brighter.Observability` hold what the sweeper is doing. `UseOutboxSweeper` registers the state as a singleton on the container's `TimeProvider`.
+- `SweeperMeter` takes optional `state` and `findCircuitBreaker` parameters.
+- `TimedOutboxSweeper` takes an optional trailing `state` parameter.
+
+#### Sweeper remedy checks
+
+Two opt-in health checks report what the sweeper needs. Register them on the health checks builder:
+
+```csharp
+services.AddHealthChecks()
+    .AddBrighterOutboxSweeperHealthChecks(); // hangThreshold: 3 x TimerInterval, failureThreshold: 3
+
+// or
+services.AddHealthChecks()
+    .AddBrighterOutboxSweeperHealthChecks(hangThreshold: TimeSpan.FromMinutes(2), failureThreshold: 5);
+```
+
+`hangThreshold` defaults to three times `TimedOutboxSweeperOptions.TimerInterval`, and `failureThreshold` defaults to 3. Both must be greater than zero, otherwise `ArgumentOutOfRangeException` is thrown at registration. Both checks are registered with failure status Degraded, so an unexpected exception inside a check is reported as Degraded, not Unhealthy. If no sweeper is registered, both checks are Healthy.
+
+| Check name | Tag | Condition | Degraded when |
+|---|---|---|---|
+| `brighter-outbox-sweeper-restart` | `brighter-restart` | `hung_sweep` | The sweep in progress has run longer than `hangThreshold` |
+| `brighter-outbox-sweeper-investigate` | `brighter-investigate` | `consecutive_failed_sweeps` | At least `failureThreshold` consecutive sweeps have failed |
+| | | `tripped_topics` | The active sweeper has circuit-broken topics, so messages for them are not swept until their cooldown ends |
+| | | `tripped_topics_unreadable` | The circuit breaker could not be found or its `TrippedTopics` could not be read; the exception is logged |
+
+The tripped-topics conditions are evaluated only while the sweeper is active, so they have the same gaps as the gauge: during lock acquisition and after a lock collision with another instance. The description names at most ten tripped topics and the count of the rest. A circuit breaker whose `TrippedTopics` blocks stalls the check.
+
+Size `hangThreshold` above `BatchSize` times the broker's send latency and above the longest healthy sweep, which you can read from the `sweep.duration` histogram. If you restart on a hung sweep that was only slow, messages already sent but not yet marked as dispatched are sent again by the next sweep, so consumers must tolerate duplicates. With `InMemoryOutbox`, a restart discards every unsent message; route the restart check to monitoring for those deployments, or accept the loss.
+
+Each result carries `Data`:
+
+- `remedy_kind`: `restart` or `investigate` (also `take_out_of_service` for the consumer checks).
+- `conditions`: the names of the conditions present, an empty array when Healthy.
+- One entry per present condition, keyed by its name, holding that condition's values: `running_time_seconds`, `hang_threshold_seconds` and `timer_interval_seconds` for `hung_sweep`; `count`, `threshold` and `timer_interval_seconds` for `consecutive_failed_sweeps`; `count` and `topics` for `tripped_topics`; `exception_type` for `tripped_topics_unreadable`.
+
+The description joins the descriptions of the present conditions with `"; "`.
+
+#### Remedy kinds
+
+Each remedy check carries exactly one tag, which names what an operator should do when it is not Healthy:
+
+| Remedy kind | Tag | Typical use |
+|---|---|---|
+| Restart | `brighter-restart` | Fail a liveness probe |
+| Take out of service | `brighter-take-out-of-service` | Fail a readiness probe |
+| Investigate | `brighter-investigate` | Report to monitoring; fail neither probe |
+
+Select checks with `HealthCheckOptions.Predicate`:
+
+```csharp
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains(RemedyCheckConvention.RestartTag),
+    ResultStatusCodes = { [HealthStatus.Degraded] = StatusCodes.Status503ServiceUnavailable }
+});
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains(RemedyCheckConvention.TakeOutOfServiceTag),
+    ResultStatusCodes = { [HealthStatus.Degraded] = StatusCodes.Status503ServiceUnavailable }
+});
+app.MapHealthChecks("/health/operator", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains(RemedyCheckConvention.InvestigateTag)
+});
+```
+
+ASP.NET Core maps Degraded to HTTP 200 by default, so a probe endpoint that should fail on Degraded must map it to 503 as above. An unexpected exception in a check on a liveness endpoint therefore restarts the process. Brighter ships no response writer; supply one on the operator endpoint to expose descriptions and `Data`.
+
+The convention is built from public, additive types in `Paramore.Brighter.Observability`: `RemedyKind`, `RemedyCondition` (a record struct of `Name`, `Description` and `Values`), and `RemedyCheckConvention` with the tag constants, `Tag`, `Name`, `Data` and `Describe`. Use them to give your own checks the same shape.
+
+#### Consumer remedy checks
+
+`AddBrighterConsumerHealthChecks` registers two opt-in checks that split the conditions of the existing `BrighterServiceActivatorHealthCheck`:
+
+```csharp
+services.AddHealthChecks()
+    .AddBrighterConsumerHealthChecks(channelFailureThreshold: 3);
+```
+
+`channelFailureThreshold` defaults to 3 and must be greater than zero. Both checks read the registered `IDispatcher` and are registered with failure status Degraded.
+
+| Check name | Tag | Condition | Status |
+|---|---|---|---|
+| `brighter-consumer-take-out-of-service` | `brighter-take-out-of-service` | `persistent_channel_failures` | Degraded when any consumer has at least `channelFailureThreshold` consecutive channel failures; never Unhealthy |
+| `brighter-consumer-restart` | `brighter-restart` | `missing_consumers` | Unhealthy if consumers are expected and none is running; Degraded if some but not all are running |
+
+The restart check is a restart condition because Brighter does not recreate a consumer whose pump has stopped. It is Healthy when no dispatcher is registered, when the dispatcher is not running (not started, or `End` has been called), and while `Receive`, `Open` or `SetActivePerformers` is still creating consumers. It compares totals across all subscriptions and ignores subscriptions shut on purpose with `Shut`. After a scale-up or a reopen it can be Degraded briefly, so give a liveness probe a period and failure threshold that tolerate that. A consumer channel creation that hangs is not detected by this check.
+
+`Dispatcher.GetLifecycleSnapshot()` returns a `DispatcherLifecycleSnapshot` taken under the dispatcher's lifecycle lock (state, whether `End` was requested, shut subscriptions, consumer operations in flight, expected consumers and running consumers); the restart check reads it.
+
+`Paramore.Brighter.ServiceActivator.Extensions.Diagnostics` now references `Microsoft.Extensions.Diagnostics.HealthChecks`.
+
+#### BrighterServiceActivatorHealthCheck is obsolete
+
+`BrighterServiceActivatorHealthCheck` is marked `[Obsolete]` and is removed in V11. It still returns the same status for the same conditions and is untagged, so a tag-filtered endpoint never selects it. **Builds that treat warnings as errors fail with CS0618** until you suppress the warning or move to `AddBrighterConsumerHealthChecks`. Do not register the existing check together with the consumer remedy checks; replace it in one change and point probes and monitoring at endpoints that select the new tags.
+
+Migrate in this order so existing endpoints keep their behaviour:
+
+1. Give every existing health endpoint a predicate that excludes the three remedy tags. An endpoint with no predicate would select the new checks, and a hung sweep would turn a readiness endpoint into a 503.
+2. Register the sweeper checks.
+3. Add the liveness, readiness and operator endpoints beside the old ones.
+4. Run old and new side by side. Consumer monitoring stays on the old endpoints.
+5. Replace the existing consumer check with the consumer remedy checks and move probes to the new endpoints, adding your own checks (database and so on) to the new predicates by name or tag. Missing consumers moves from readiness to liveness at this step.
+6. Before V11, remove any remaining old endpoints.
+
+#### Change to readiness guidance for consumer channel failures
+
+Earlier guidance for the channel-failure check (#4555) was to map Degraded to 503 on readiness. That now applies to the take-out-of-service tag only. Map Degraded to 503 on a readiness endpoint that selects `brighter-take-out-of-service`, not on one that also selects the restart or investigate tags: a Degraded restart check belongs on liveness, and a Degraded investigate check should fail neither probe.
+
+#### Breaking changes
+
+- `BrighterServiceActivatorHealthCheck` is marked `[Obsolete]`, so builds that treat warnings as errors fail with CS0618. *(source)* Suppress CS0618, or move to `AddBrighterConsumerHealthChecks`.
+- `Paramore.Brighter.Outbox.Hosting` and `Paramore.Brighter.ServiceActivator.Extensions.Diagnostics` now reference `Microsoft.Extensions.Diagnostics.HealthChecks` and its dependencies. *(compatibility)* Align package versions; no code change is needed.
+- `TimedOutboxSweeper` and `SweeperMeter` constructors gain trailing optional parameters. *(binary)* Callers compiled against the old signatures must be recompiled; source is unchanged.
+- Once registered, the new sweeper and consumer checks are selected by a health endpoint that has no tag predicate. *(behavioural)* Add the exclusion predicate to existing endpoints before registering them.
+
+### Azure Service Bus retry scheduler selection
+
+`Publication.RequeueScheduler` selects native scheduling on the consuming broker (the default)
+or the explicitly configured global scheduler. Pass the publication to `AzureServiceBusConsumerFactory`.
+Global mode requires a queue-targeted retry capability for the selected message pump. Reactor uses
+the synchronous capability and Proactor the asynchronous one. Retries preserve CloudEvents identity,
+record producer telemetry, retry sender acquisition, and report broker failures consistently.
+Subscription and reserved subqueue paths cannot be used as retry destinations.
+Retry telemetry and baggage propagation failures no longer prevent scheduling. Baggage
+allows updating an existing key at its 32-entry limit while still rejecting additional keys.
+
+**Composition change:** queue consumers take a scheduler instead of a producer; direct topic consumers
+no longer take a producer. The abstract consumer constructor takes a nullable scheduler and drops its
+unused `isAsync` parameter. Consumer scheduler property injection is replaced by constructor injection.
+Use the consumer factory or update manual constructor calls and rebuild. See the
+[retry configuration and migration guide](docs/guides/azure-service-bus-retries.md).
+
+### Outbox sweeper and publish confirmations no longer depend on the thread pool (#4560)
+
+`TimedOutboxSweeper` used to run each sweep from a thread-pool `Timer`. When every pool thread was
+busy or blocked, sweeps ran late or not at all, so messages awaiting a publish confirmation stayed in
+the `InMemoryOutbox`. Kafka and RabbitMQ (`RMQ.Sync`) producers also queued one thread-pool work item
+per publish confirmation, which added to that pressure under load.
+
+- **The sweeper runs on its own thread.** Sweeps now start on time even when the thread pool is
+  starved.
+- **`StopAsync` waits for a sweep in flight** before it returns.
+- **A failed sweep no longer crashes the process.** The sweeper logs the error and tries again on the
+  next sweep. It also releases its lock on every path, so one failure no longer blocks every later
+  sweep.
+- **A sweep stays on the sweeper's thread across awaited sends.** A Kafka send completes on
+  Confluent's own thread, so before this each later message in a sweep waited for a pool thread. Now
+  a starved pool cannot slow a Kafka sweep down. A producer or outbox that itself awaits with
+  `ConfigureAwait(false)`, as database clients and the AWS SDK do, still resumes on the pool.
+- **The schedule uses elapsed time, not the wall clock**, so a clock that steps backwards (an NTP
+  correction, a resumed VM) no longer delays the next sweep.
+- **Kafka and `RMQ.Sync` raise publish confirmations on one thread per producer**, in batches of up
+  to 32 rather than one work item per confirmation.
+- **The sweeper and confirmation threads start with an empty `ExecutionContext`**, so they no longer
+  keep the `AsyncLocal` state (logging scopes, baggage) of whichever caller started them.
+- **New metrics.** `AddBrighterInstrumentation` registers:
+  - `paramore.brighter.outbox_sweeper.tick.lag`, `.sweep.duration` and `.sweeps` (by outcome);
+  - `paramore.brighter.publish_confirmation.queue.depth`, by `messaging.system` and
+    `messaging.destination.name`. It counts confirmations waiting or running for each producer, so a
+    backlog is visible before messages are swept again.
+
+  See [ADR 0081](docs/adr/0081-timed-outbox-sweeper-health-metrics.md).
+
+#### Behaviour change: `TimerInterval` below 1 is rejected
+
+`TimedOutboxSweeperOptions.TimerInterval` must be at least 1 second. A value of 0 or less now throws
+a `ConfigurationException` when the sweeper is created. Before, 0 swept once and then never again,
+and a negative value threw when the sweeper started.
+
+#### Behaviour change: publish-confirmation subscribers run in batches on one thread
+
+On Kafka and `RMQ.Sync`, subscribers to `OnMessagePublished` and to the awaited confirmation event
+used to run each on its own thread-pool work item. They now run on the producer's confirmation
+thread: up to 32 start together, in the order the broker confirmed the messages, and may finish in
+any order. A subscriber's continuations come back to that thread unless it uses
+`ConfigureAwait(false)`. Brighter's own subscriber marks the message dispatched in the outbox.
+
+#### Behaviour change: `continueOnCapturedContext` now reaches the resilience pipeline
+
+`OutboxProducerMediator` passes the caller's `continueOnCapturedContext` to Polly when the request
+has no `ResilienceContext` of its own. Before, that path always used Polly's default of `false`. A
+caller that posts with `continueOnCapturedContext: true` (the default for `PostAsync` and
+`ClearOutboxAsync`) from inside a `SynchronizationContext` now has Polly's continuations come back to
+that context too.
+
+The `SynchronizationContext` that matters most here is the Proactor's own. A handler on a Proactor pump
+that posts or clears the outbox now runs the outbox producer's resilience pipeline, including callbacks
+such as a retry's `OnRetry`, on the pump's thread rather than on a thread-pool thread. The mediator's
+own awaits, and Kafka's, already resumed there. This adds no new way to deadlock. Blocking on `PostAsync`
+from a pump thread already deadlocked.
+
+#### Cost: one thread per confirming producer
+
+Each Kafka or `RMQ.Sync` producer now starts one background thread, with its first confirmation, and
+keeps it until the producer is disposed. Both transports create one producer per publication, so an
+app with twenty publications runs twenty confirmation threads, plus one sweeper thread.
+
+An idle thread costs little. Under load, though, those threads compete with the rest of the app for
+CPU. That can matter on a pod limited to 1–2 CPUs. If you run many publications on a small pod, watch
+CPU throttling (`container_cpu_cfs_throttled_periods_total` on Kubernetes), the sweeper tick-lag
+metric and the confirmation queue depth.
+
+### RabbitMQ (`RMQ.Sync`): every message a coalesced publisher confirm covers is now confirmed (#4562)
+
+RabbitMQ can confirm several publishes with one ack or nack. The ack carries `multiple=true` and
+covers every delivery tag up to and including its own. The `RMQ.Sync` producer settled only that one
+tag. The other messages the ack covered never raised `OnMessagePublished` or the awaited
+confirmation event, so an outbox never marked them dispatched and the sweeper sent them again. The
+broker coalesces confirms under load, so this showed up as occasional duplicates. `RMQ.Async` already
+handled it.
+
+- **A coalesced ack or nack settles every message it covers,** once each, in the order they were
+  sent.
+- **A confirmation is raised at most once.** A subscriber that throws no longer stops the rest of a
+  coalesced ack from settling, and no longer causes the same confirmation to be raised again.
+- **A connection reset forgets confirmations still pending on the old channel.** When a send fails
+  with an `IOException`, the producer resets its connection, and the new channel numbers its delivery
+  tags from 1 again. The new channel's acks used to settle the old channel's pending entries, marking
+  messages dispatched that the broker had never confirmed. Those messages are now left for the
+  sweeper to send again, as `RMQ.Async` already does.
+
+**Known gap:** when RabbitMQ.Client's automatic recovery (on by default) rebuilds the channel instead,
+nothing yet forgets the old channel's pending confirmations. #4568 tracks it.
+
+#### Behaviour change: a throwing `OnMessagePublished` subscriber is logged, not rethrown
+
+On `RMQ.Sync`, an exception from a subscriber to the synchronous `OnMessagePublished` event is now
+caught and logged as a Warning ("Confirmation callback for message {MessageId} faulted"), as faults
+in awaited subscribers already were. Before, it went to RabbitMQ.Client, which also swallowed it, so
+no caller could have relied on seeing it.
+
+### Dispatcher shutdown drains consumers still being created (#4541)
+
+The Dispatcher now tracks accepted consumer operations until their channels have either been
+registered with a performer task or disposed. A concurrent `End()` cannot finish before those
+operations complete. Consumers shut before opening are removed and disposed without registering
+a null task. A disposal failure is logged and does not prevent the remaining consumers from draining.
+
+**Behaviour change:** `Receive()`, `Open()`, and `SetActivePerformers()` throw
+`InvalidOperationException` while shutdown is in progress. Await `End()` before restarting.
+After disposal, these operations throw `ObjectDisposedException`. Channel creation and disposal
+run outside the lifecycle lock. See [ADR 0083](docs/adr/0083-coordinate-dispatcher-startup-and-shutdown.md).
+
 ### AWS SQS, GCP Pub/Sub and RocketMQ: `requeueCount` now runs down (#4341, spec 0037)
 
 On these transports the broker re-serves its own stored copy of a requeued message, and Brighter never
@@ -912,6 +1204,96 @@ because checking whether a subscription exists is itself a management-API call.
 
 `AzureServiceBusConsumerFactory`, used on its own without the channel factory, is unchanged: its
 consumers still provision on first use.
+
+### Outbox: `MaxOutStandingMessages` is now enforced for an async-only outbox (#4552)
+
+The outstanding message count only went through `IAmAnOutboxSync`, so with an outbox that implements
+only `IAmAnOutboxAsync` the count stayed at 0 and `MaxOutStandingMessages` was never enforced. It
+now counts through the async outbox when there is no sync one. No outbox that ships with Brighter is
+async-only, so none of them is affected. If you use a custom or third-party outbox that is
+async-only and set `MaxOutStandingMessages` to 0 or more, `PostAsync` and `DepositPostAsync` can now
+throw `OutboxLimitReachedException` where they never did before. With the default of -1 (no limit)
+nothing changes. The async count blocks a thread-pool thread while it runs, and with the change for
+issue #4554 below a mediator has at most one count queued or running.
+
+### Outbox: the outstanding message check is skipped with no limit, no longer piles up and is cheaper for the `InMemoryOutbox` (#4554)
+
+With the default `AddProducers` settings (`MaxOutStandingMessages` of -1 and
+`MaxOutStandingCheckInterval` of zero), every `Post` and clear queued a background count of the
+outstanding messages, even though with no limit the count is never compared with one. Each count
+waited on a thread-pool thread for a semaphore shared by every mediator with the same message and
+transaction types, and then queried the outbox: a sort of every entry it held for the
+`InMemoryOutbox`, a query per `Post` for a relational outbox. With a limit of -1 the count no
+longer runs. A limit of 0 is a real limit and is still checked.
+
+With no limit, the span the outbox creates for the count no longer appears under a clear
+(`count.outstanding_messages` for the `InMemoryOutbox`, `retrieve.outstanding_messages` for a
+relational outbox), the debug line "Outbox outstanding message count is" always reports 0, and the
+other debug lines of the check, such as "Current outstanding count is", are no longer logged.
+
+With a limit set, the checks no longer pile up. Each mediator keeps at most one check queued or
+running, and a post that comes while one is in flight does not queue another, so with the default
+interval of zero a clear queues a check only if the previous one has finished. Before, a burst of
+posts could queue a check per post, each holding a thread-pool thread while it waited on the
+semaphore. The time of the last check is now recorded when the check is queued rather than when it
+starts, so `MaxOutStandingCheckInterval` is measured from then, and the debug lines "Time since last
+check is" and "Running outstanding message check" measure from the same point. A post that finds a
+check in flight does not log "Running outstanding message check".
+
+The `InMemoryOutbox` also no longer copies and sorts every entry it holds to count the outstanding
+messages. It walks its entries in place and stops as soon as it has counted one more than the limit,
+so a count no longer allocates more as the outbox grows, and writes to the outbox no longer wait for
+it. It returns the same count as before.
+
+### Outbox: a count that does not return no longer stops the outstanding message check of other mediators (#4584)
+
+The outstanding message count waited on a semaphore shared by every mediator with the same message and
+transaction types. A count that never returned, for example a relational count blocked by a lock, kept
+it, so every other mediator of those types with `MaxOutStandingMessages` set stopped counting too and
+checked its limit against a stale count. Since the change for issue #4554 each mediator has at most one
+count queued or running, so the shared semaphore only made the counts of different mediators wait for
+each other. It is gone, and each mediator counts on its own. Several mediators of the same types in one
+process, such as one per host or command processors built by hand, can now run their counts at the
+same time, one each. A count that never returns still stops the checks of its own mediator.
+
+### Outbox: a relational outstanding count gives up after a configurable timeout, 15 seconds by default (#4584)
+
+The outstanding message count of a relational outbox (MSSQL, PostgreSQL, MySQL, SQLite and Spanner)
+ran with no command timeout, so a count blocked by a lock on the outbox table waited for as long as
+the lock was held, and its mediator checked `MaxOutStandingMessages` against its last count until
+then. The count now gives up after a timeout, 15 seconds by default, so a relational count that does
+not return no longer stops the checks of its own mediator for good. As with any count that fails, the
+mediator logs the error and reads the count as 0, so while the count keeps timing out, the limit does
+not stop posts. Only a mediator with `MaxOutStandingMessages` set runs the count. The timeout replaces
+any Command Timeout in the connection string for this query, as the unlimited timeout did before. On
+Spanner the count's timeout goes from 60 to 15 seconds by default. The sweeper's read of outstanding
+messages keeps the timeout it had: none, or 60 seconds on Spanner.
+
+To change it, pass `outstandingCountTimeout` to the `RelationalDatabaseConfiguration` constructor. The
+configuration exposes it as `OutstandingCountTimeout`, and null keeps the 15 seconds. A command timeout
+takes whole seconds, so the value is rounded up: 500 ms becomes 1 second and 1.25 seconds becomes 2. A
+timeout of zero or less, or of more than 2147483 seconds, throws an `ArgumentOutOfRangeException` when
+the configuration is built. If a custom implementation of `IAmARelationalDatabaseConfiguration` returns
+such a value, the outbox throws when it is built. The `RelationalDatabaseConfiguration` constructor
+gains a parameter, which is binary-breaking, so recompile code built against an earlier version.
+
+```csharp
+var configuration = new RelationalDatabaseConfiguration(
+    connectionString,
+    outstandingCountTimeout: TimeSpan.FromSeconds(30));
+```
+
+#### Source-breaking change: `IAmARelationalDatabaseConfiguration.OutstandingCountTimeout`
+
+`IAmARelationalDatabaseConfiguration` gains a `TimeSpan? OutstandingCountTimeout` member with no default
+body, as `Paramore.Brighter` targets `netstandard2.0`, which does not support default interface
+members. A custom implementation of the interface must add it to compile; returning null keeps the
+default of 15 seconds. Code that only uses `RelationalDatabaseConfiguration` needs no source change.
+
+```csharp
+// A custom IAmARelationalDatabaseConfiguration must add:
+public TimeSpan? OutstandingCountTimeout => null;
+```
 
 ## 10.7.0
 

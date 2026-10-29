@@ -41,8 +41,10 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 BuildDispatcher,
                 ServiceLifetime.Singleton));
             
-            services.TryAddSingleton(options.InboxConfiguration);
-            var inbox = options.InboxConfiguration.Inbox;
+            if (options.InboxConfiguration != null)
+                services.TryAddSingleton(options.InboxConfiguration);
+
+            var inbox = options.InboxConfiguration?.Inbox;
             if (inbox is IAmAnInboxSync)
             {
                 services.TryAdd(
@@ -73,6 +75,12 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         /// <param name="services">The .NET IoC container to register with</param>
         /// <param name="configure">The configuration function that receives IServiceProvider and returns ConsumersOptions</param>
         /// <returns>A brighter handler builder, used for chaining</returns>
+        /// <remarks>
+        /// Inbox services are resolved lazily. Resolving an inbox without an
+        /// <see cref="InboxConfiguration"/>, or with an inbox that does not implement the requested
+        /// sync or async interface, throws <see cref="ConfigurationException"/>.
+        /// Handlers without inbox middleware do not require an inbox configuration.
+        /// </remarks>
         /// <exception cref="ArgumentNullException">Throws if no .NET IoC container or configure function provided</exception>
         public static IBrighterBuilder AddConsumers(
             this IServiceCollection services,
@@ -96,31 +104,15 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             services.TryAddSingleton<InboxConfiguration>(sp =>
             {
                 var options = sp.GetRequiredService<IAmConsumerOptions>();
-                return options.InboxConfiguration;
+                return options.InboxConfiguration
+                    ?? throw new ConfigurationException(
+                        "InboxConfiguration is required to resolve an inbox. " +
+                        "Set ConsumersOptions.InboxConfiguration in AddConsumers.");
             });
 
             // Register inbox implementations with deferred resolution
-            services.TryAdd(new ServiceDescriptor(typeof(IAmAnInboxSync), sp =>
-            {
-                var options = sp.GetRequiredService<IAmConsumerOptions>();
-                var inbox = options.InboxConfiguration.Inbox;
-                if (inbox is IAmAnInboxSync)
-                {
-                    return BuildInbox<IAmAnInboxSync>(sp);
-                }
-                return null!;
-            }, ServiceLifetime.Singleton));
-
-            services.TryAdd(new ServiceDescriptor(typeof(IAmAnInboxAsync), sp =>
-            {
-                var options = sp.GetRequiredService<IAmConsumerOptions>();
-                var inbox = options.InboxConfiguration.Inbox;
-                if (inbox is IAmAnInboxAsync)
-                {
-                    return BuildInbox<IAmAnInboxAsync>(sp);
-                }
-                return null!;
-            }, ServiceLifetime.Singleton));
+            services.TryAddSingleton<IAmAnInboxSync>(BuildInbox<IAmAnInboxSync>);
+            services.TryAddSingleton<IAmAnInboxAsync>(BuildInbox<IAmAnInboxAsync>);
 
             services.Configure<BrighterPipelineValidationOptions>(o => o.ConsumerOwnsValidation = true);
 
@@ -184,6 +176,11 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         private static T BuildInbox<T>(IServiceProvider serviceProvider) where T : class, IAmAnInbox
         {
             var inboxConfig = serviceProvider.GetRequiredService<InboxConfiguration>();
+            if (inboxConfig.Inbox is not T inbox)
+                throw new ConfigurationException(
+                    $"InboxConfiguration.Inbox must implement {typeof(T).Name}, " +
+                    $"but the configured inbox is '{inboxConfig.Inbox.GetType().Name}'.");
+
             var tracer = serviceProvider.GetService<IAmABrighterTracer>();
 
             if (tracer != null)
@@ -191,7 +188,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 inboxConfig.Inbox.Tracer = tracer;
             }
 
-            return (inboxConfig.Inbox as T)!;
+            return inbox;
         }
 
         private static void RegisterConsumerValidationSpecs(IServiceCollection services)

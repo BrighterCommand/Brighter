@@ -33,6 +33,10 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// The advisory-lock key includes the schema, so provisioners of the same table in different schemas do not contend: while
+/// A holds its lock, B, with a one-second lock timeout, still completes.
+/// </summary>
 public class PostgreSqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
@@ -42,14 +46,7 @@ public class PostgreSqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
     [Fact]
     public async Task When_postgres_runner_runs_two_provisioners_in_distinct_schemas_they_should_not_block_each_other()
     {
-        //Arrange — two provisioners share a table name but use distinct schemas (public vs. a
-        //test-only billing_<guid>). Provisioner A's advisory lock is wrapped with a holding
-        //decorator: once A's underlying Postgres advisory lock is acquired, the decorator parks
-        //until releaseGate fires, keeping the lock held. Provisioner B has a short 1-second
-        //lockTimeout. With the schema-aware fix, B's lock key is distinct from A's
-        //(BrighterMigration_billing_<guid>.<table> vs BrighterMigration_public.<table>), so B
-        //completes without contention. Without the fix, both keys collapse to
-        //BrighterMigration_<table>, B contends with A's held lock, and B times out after 1s.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         await EnsureBillingSchemaExists();
 
@@ -78,16 +75,15 @@ public class PostgreSqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
         var taskA = Task.Run(() => provisionerA.ProvisionAsync());
         try
         {
-            await holdingLock.AcquireSeen.Task; // synchronization: A has acquired the lock and is parked
+            await holdingLock.AcquireSeen.Task;
 
             var taskBException = await Record.ExceptionAsync(() => provisionerB.ProvisionAsync());
 
-            //Assert — B should complete without timing out on a shared lock key.
+            //Assert
             Assert.Null(taskBException);
         }
         finally
         {
-            //Cleanup A: release the gate, let A finish, regardless of B's outcome.
             releaseGate.TrySetResult(true);
             await taskA;
         }

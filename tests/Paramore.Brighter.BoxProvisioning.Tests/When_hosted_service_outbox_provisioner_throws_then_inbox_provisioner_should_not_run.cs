@@ -30,24 +30,16 @@ using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
+/// <summary>
+/// The hosted service stops at the first provisioner that fails: an inbox registered ahead of a
+/// failing outbox is still ordered after it, and never runs.
+/// </summary>
 public class BoxProvisioningHostedServiceFailureShortCircuitTests
 {
-    // BoxProvisioningHostedService.StartAsync orders provisioners outbox-first then iterates
-    // with a foreach that re-raises after wrapping any non-cancellation failure in
-    // ConfigurationException. The reviewer of PR #4039 flagged that no test pinned
-    // OrderingOrdinal semantics under failure — i.e. that an inbox registered alongside a
-    // throwing outbox does not run after the outbox fails. The behaviour exists today (a
-    // throw exits the foreach before the next iteration), but without a test it could
-    // silently regress if a future contributor "improves" StartAsync by swapping the
-    // foreach for Task.WhenAll, a try/continue, or any aggregator that collects failures.
-
     [Fact]
     public async Task When_hosted_service_outbox_provisioner_throws_then_inbox_provisioner_should_not_run()
     {
-        //Arrange — register the inbox FIRST in the IEnumerable so that any failure to apply
-        //          OrderingOrdinal would surface as "inbox ran before outbox could fail",
-        //          and the short-circuit assertion would still catch the regression because
-        //          inbox.ProvisionCalled would have been set.
+        //Arrange
         var outboxFailure = new InvalidOperationException("simulated outbox migration failure");
         var inbox = new StubBoxProvisioner(BoxType.Inbox, "MyInbox");
         var outbox = new StubBoxProvisioner(BoxType.Outbox, "MyOutbox", throwOnProvision: outboxFailure);
@@ -58,9 +50,7 @@ public class BoxProvisioningHostedServiceFailureShortCircuitTests
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() =>
             service.StartAsync(default));
 
-        //Assert — outbox ran (and threw), inbox was never reached. The wrapped exception
-        //         identifies which provisioner failed so an operator reading the startup log
-        //         can find the offending box without grep-walking every registration.
+        //Assert
         Assert.True(outbox.ProvisionCalled, "outbox should have run first per OrderingOrdinal");
         Assert.False(inbox.ProvisionCalled, "inbox must not run after an earlier provisioner has thrown");
         Assert.Same(outboxFailure, ex.InnerException);

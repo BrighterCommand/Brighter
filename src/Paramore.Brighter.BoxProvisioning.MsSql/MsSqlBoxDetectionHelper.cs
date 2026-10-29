@@ -42,10 +42,19 @@ public class MsSqlBoxDetectionHelper :
 {
     private const string DefaultSchemaName = "dbo";
 
+    // Null means the Global default, "dbo". Validated because a schema cannot be a bind parameter,
+    // so it is inlined into the SQL.
+    private static string ValidatedHistorySchema(string? historySchema)
+    {
+        var historyTableSchema = historySchema ?? DefaultSchemaName;
+        Identifiers.AssertSafe(historyTableSchema, nameof(historySchema));
+        return historyTableSchema;
+    }
+
     /// <summary>
     /// Returns true if a table with the given name exists in the given schema.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c>.</param>
     public async Task<bool> DoesTableExistAsync(
         SqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
@@ -60,10 +69,6 @@ WHERE t.name = @TableName AND s.name = @SchemaName";
         command.Parameters.AddWithValue("@TableName", tableName);
         command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
 
-        // Pattern-match rather than (int)raw! so a driver returning null surfaces as a named
-        // InvalidOperationException instead of a bare NullReferenceException — Npgsql and
-        // MS.Data.SqlClient have both returned null from ExecuteScalarAsync under server-side
-        // errors in the wild, and the cast would otherwise paper over that.
         var raw = await command.ExecuteScalarAsync(cancellationToken);
         var count = raw is int i
             ? i
@@ -77,9 +82,9 @@ WHERE t.name = @TableName AND s.name = @SchemaName";
     /// given box table.
     /// </summary>
     /// <param name="schemaName">Optional. The box-table schema used to filter history rows. Null
-    /// is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
+    /// is substituted with <c>"dbo"</c>.</param>
     /// <param name="historySchema">Optional. The physical schema holding the history table; null
-    /// resolves to <c>"dbo"</c> (today's behaviour). Drives the history-table existence probe.</param>
+    /// resolves to <c>"dbo"</c>, the Global default. Drives the history-table existence probe.</param>
     public async Task<bool> DoesHistoryExistAsync(
         SqlConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
@@ -90,12 +95,7 @@ WHERE t.name = @TableName AND s.name = @SchemaName";
         if (!historyTableExists)
             return false;
 
-        // historySchema is the physical location of the history table: the configured schema under
-        // PerSchema, else dbo (null). AssertSafe + bracket-quote because the schema cannot be a bind
-        // parameter for the table qualifier; the runner folds the same ResolveHistorySchema() value
-        // on the write side, so read and write target the same table.
-        var historyTableSchema = historySchema ?? DefaultSchemaName;
-        Identifiers.AssertSafe(historyTableSchema, nameof(historySchema));
+        var historyTableSchema = ValidatedHistorySchema(historySchema);
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
         command.CommandText = $@"
@@ -117,18 +117,15 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
     /// or 0 if no rows exist.
     /// </summary>
     /// <param name="schemaName">Optional. The box-table schema used to filter history rows. Null
-    /// is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
+    /// is substituted with <c>"dbo"</c>.</param>
     /// <param name="historySchema">Optional. The physical schema holding the history table; null
-    /// resolves to <c>"dbo"</c> (today's behaviour).</param>
+    /// resolves to <c>"dbo"</c>, the Global default.</param>
     public async Task<int> GetMaxVersionAsync(
         SqlConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         SqlTransaction? transaction = null)
     {
-        // historySchema is the physical location of the history table (configured schema under
-        // PerSchema, else dbo). AssertSafe + bracket-quote — folded identically to the write side.
-        var historyTableSchema = historySchema ?? DefaultSchemaName;
-        Identifiers.AssertSafe(historyTableSchema, nameof(historySchema));
+        var historyTableSchema = ValidatedHistorySchema(historySchema);
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
         command.CommandText = $@"
@@ -148,7 +145,7 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
     /// Reads the column name set for the given table from <c>INFORMATION_SCHEMA.COLUMNS</c>,
     /// case-insensitively.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c>.</param>
     public async Task<IReadOnlyCollection<string>> GetTableColumnsAsync(
         SqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
@@ -168,7 +165,7 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
     /// </list>
     /// </summary>
     /// <param name="boxType">Selects the discriminator: <c>HeaderBag</c> for outbox, <c>CommandBody</c> for inbox.</param>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c>.</param>
     public async Task<int> DetectCurrentVersionAsync(
         SqlConnection connection, string tableName, string? schemaName,
         BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -39,6 +39,7 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
 /// </summary>
 [Trait("Category", "GcpPubSubStream")]
 [Collection("Stream")]
+[Trait("Requires", "PubSubEmulator")]
 public class GcpStreamDeliveryAttemptAttributeAsyncTests
 {
     private const string DeliveryAttemptAttrKey = "googclient_deliveryattempt";

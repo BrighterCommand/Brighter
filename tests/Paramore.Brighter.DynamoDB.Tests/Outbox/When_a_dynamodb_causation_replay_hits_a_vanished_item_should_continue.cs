@@ -147,7 +147,7 @@ public sealed class DynamoDbCausationReplayVanishedItemTests : IDisposable
     }
 
     private static DynamoDbOutbox OutboxFor(IAmazonDynamoDB client, string tableName)
-        => new(client, new DynamoDbConfiguration { TableName = tableName });
+        => new(client, new DynamoDbConfiguration(tableName, timeout: Const.OUTBOX_TIMEOUT_IN_MILLISECONDS));
 
     private static Message CreateMessage()
         => new(

@@ -175,11 +175,11 @@ Options:
 1. Make the behavioral changes you identified in Phase 1
 2. Follow code style and documentation guidelines
 3. Add proper error handling
-4. Update or add XML documentation for new/changed public APIs
-5. Follow test-first if adding new behavior (consider using `/test-first` for this)
+4. Update or add XML documentation for new/changed public APIs; no comments inside method bodies ([documentation.md § Comments in Code](../../../.agent_instructions/documentation.md#comments-in-code))
+5. Follow test-first if adding new behavior (consider using `/tdd:test-first` for this)
 
 **If adding significant new behavior:**
-- Suggest using `/test-first` command instead
+- Suggest using `/tdd:test-first` command instead
 - Tidy First is best for changes with both refactoring and behavior modifications
 - Pure feature additions work better with TDD workflow
 
@@ -251,7 +251,7 @@ Show the user:
 
 **Not a good fit:**
 - Pure refactoring (no behavioral changes planned)
-- Pure feature addition (use `/test-first` instead)
+- Pure feature addition (use `/tdd:test-first` instead)
 - Trivial changes that don't need structural cleanup
 
 ### Handling Edge Cases
@@ -279,7 +279,7 @@ Show the user:
 ## Example Session
 
 ```
-User: /tidy-first optimize the message processing in KafkaConsumer
+User: /refactor:tidy-first optimize the message processing in KafkaConsumer
 
 [Claude reads KafkaConsumer.cs and analyzes]
 
@@ -348,6 +348,6 @@ From [.agent_instructions/code_style.md](../../../.agent_instructions/code_style
 
 ## Related Commands
 
-- **`/test-first`** - Use for pure feature addition with TDD
+- **`/tdd:test-first`** - Use for pure feature addition with TDD
 - **`/spec:implement`** - Uses TDD workflow, could benefit from tidy-first approach
 - **`/commit`** - Standard commit workflow (doesn't separate structural/behavioral)

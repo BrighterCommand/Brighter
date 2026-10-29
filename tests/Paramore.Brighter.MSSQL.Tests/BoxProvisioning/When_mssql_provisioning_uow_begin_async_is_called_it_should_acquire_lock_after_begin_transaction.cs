@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -34,23 +34,21 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// <c>BeginAsync</c> opens the transaction first and acquires the lock in it, because
+/// <c>sp_getapplock @LockOwner='Transaction'</c> needs one (ADR 0058 §B.1). The acquire seeing the
+/// transaction the unit of work exposes shows the order.
+/// </summary>
 public class MsSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
 {
-    // Per ADR 0058 §B.1: MSSQL uses sp_getapplock with @LockOwner='Transaction'. The lock is
-    // bound to the surrounding transaction's lifetime, so BeginAsync MUST call BeginTransaction
-    // first and then pass that transaction into the advisory-lock primitive's AcquireAsync.
-    // Reverse ordering would attempt to acquire a lock against a non-existent transaction.
-    //
-    // The ordering is proved with a spy IMsSqlAdvisoryLock that captures the SqlTransaction it
-    // was called with. After BeginAsync returns, the test asserts reference-equality between
-    // that captured transaction and the UoW's Transaction property. Only an implementation
-    // that opens the transaction first and threads the same instance into AcquireAsync can
-    // satisfy both Same-arguments — so this single assertion pins the §B.1 ordering contract.
-
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
     private readonly FakeMsSqlAdvisoryLock _advisoryLock = new(throwOnAcquire: null);
 
-    public async Task InitializeAsync() => await _connection.OpenAsync();
+    public async Task InitializeAsync()
+    {
+        await Configuration.EnsureDatabaseExistsAsync(_connection.ConnectionString);
+        await _connection.OpenAsync();
+    }
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
@@ -66,8 +64,7 @@ public class MsSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None);
 
-        // Assert: BeginTransaction ran before AcquireAsync — the spy captured a non-null
-        // transaction and it is the same instance now exposed by the UoW.
+        // Assert
         Assert.NotNull(uow.Transaction);
         Assert.NotNull(_advisoryLock.CapturedTransaction);
         Assert.Same(uow.Transaction, _advisoryLock.CapturedTransaction);

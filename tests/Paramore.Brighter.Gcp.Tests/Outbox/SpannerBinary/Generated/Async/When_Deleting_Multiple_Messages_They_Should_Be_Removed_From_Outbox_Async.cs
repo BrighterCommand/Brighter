@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerBinary.Async;
 
 [Trait("Category", "Spanner")]
-[Collection("SpannerBinaryOutbox")]
+[Collection("Spanner")]
 public class WhenDeletingMultipleMessagesTheyShouldBeRemovedFromOutboxAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

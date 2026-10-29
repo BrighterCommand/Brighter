@@ -45,6 +45,9 @@ public class ValidatePipelinesBudgetAtNativeLimitTests
     {
         // Arrange — subscription with requeueCount: 5 and NativeRedriveLimit: 5 (R == M)
         var services = new ServiceCollection();
+        var registry = new SubscriberRegistry();
+        registry.Register<TestEvent, TestEventHandler>();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(registry);
         services
             .AddConsumers(options =>
             {

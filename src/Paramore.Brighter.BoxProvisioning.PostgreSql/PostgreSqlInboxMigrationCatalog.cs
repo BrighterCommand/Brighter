@@ -35,17 +35,15 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// PostgreSQL inbox skips the <c>ContextKey</c> catch-up the other backends carry. Unlike
 /// MSSQL/MySQL/SQLite — which have a V1 baseline followed by a V2 that adds <c>ContextKey</c>
 /// (commit <c>787c31c52</c>, Oct 2018) — the PostgreSQL inbox was born with <c>ContextKey</c> +
-/// composite primary key <c>(CommandId, ContextKey)</c> in PR #1401 (Nov 2023, commit
-/// <c>1cdc04b60</c>). No pre-ContextKey PostgreSQL inbox ever shipped (ADR 0057 "Alternatives →
+/// composite primary key <c>(CommandId, ContextKey)</c> (Feb 2021, commit <c>79100f509</c>). No pre-ContextKey PostgreSQL inbox ever shipped (ADR 0057 "Alternatives →
 /// E"), so V1's <see cref="IAmABoxMigration.LogicalColumns"/> already includes <c>contextkey</c>.
-/// Spec 0027 (#2541) then adds a V2 that introduces <c>causationid</c> via an idempotent
+/// A V2 then introduces <c>causationid</c> via an idempotent
 /// <c>ALTER TABLE ... ADD COLUMN IF NOT EXISTS</c>, so the chain is V1→V2 — exactly one version
 /// behind the other three (which run V1→V2→V3).
 /// <para>
 /// V1's <c>UpScript</c> is the literal historical baseline DDL extracted from commit
-/// <c>1cdc04b60</c> — the first PostgreSQL inbox builder shape. Spec 0027 R1 split "live
-/// builder DDL" away from V1.UpScript: the fresh-install fast path (ADR 0057 §3) now
-/// sources its DDL from <see cref="FreshInstallDdl"/>. V1.UpScript is the historical
+/// <c>79100f509</c> — the first PostgreSQL inbox builder shape. The fresh-install fast path
+/// (ADR 0057 §3) takes its DDL from <see cref="FreshInstallDdl"/> instead. V1.UpScript is the historical
 /// reference for legacy bootstrap; V2's <c>ADD COLUMN IF NOT EXISTS causationid</c> is safe to
 /// re-execute on chain replay via Postgres's native idempotency clause.
 /// </para>
@@ -58,15 +56,9 @@ public class PostgreSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
 {
     private const string DefaultSchema = "public";
 
-    // Literal historical PostgreSQL inbox DDL extracted from commit 1cdc04b60 (Nov 2023, PR
-    // #2560). First-shipped state already carried ContextKey with a composite PRIMARY KEY on
-    // (CommandId, ContextKey) — see the V1-only/born-past-V1 note in the class remarks.
-    // {0} = quoted, lowercased table identifier (via PgIdentifier).
-    // Lowercase-then-quote: PG case-folds unquoted identifiers to lowercase at parse time, so
-    // the legacy unquoted form created e.g. `inbox` from a configured `"Inbox"`. Quoting the
-    // already-lowercased form ("inbox") resolves to the same physical table as the legacy
-    // unquoted form, AND lets reserved-keyword names (User, Order, …) parse cleanly. All
-    // PG catalogs and builders share this fold-then-quote convention via PgIdentifier.
+    // From commit 79100f509 (Feb 2021); born with ContextKey, see the class remarks.
+    // {0} is the table name folded to lowercase then quoted: that names the same table the
+    // original unquoted DDL created, and lets reserved words (Order, User) parse.
     private const string V1HistoricalDdl =
         """
         CREATE TABLE {0}
@@ -86,9 +78,6 @@ public class PostgreSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         Identifiers.AssertSafe(
             configuration.InBoxTableName,
             nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
-        // Pass SchemaName so the builder schema-qualifies the CREATE TABLE IF NOT EXISTS.
-        // Per PR #4039 reviewer item M4-1 (F1b). See the outbox catalog for the full
-        // rationale — the same fix applies symmetrically to the inbox.
         if (configuration.SchemaName is not null)
         {
             Identifiers.AssertSafe(
@@ -105,7 +94,7 @@ public class PostgreSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
     /// <summary>
     /// Returns the migration list for the PostgreSQL inbox: V1 (the literal historical
     /// PostgreSQL inbox DDL, composite primary key on <c>(CommandId, ContextKey)</c>) followed
-    /// by V2 (idempotent <c>ADD COLUMN IF NOT EXISTS causationid</c>, Spec 0027 #2541).
+    /// by V2 (idempotent <c>ADD COLUMN IF NOT EXISTS causationid</c>).
     /// </summary>
     /// <param name="configuration">The relational database configuration.</param>
     /// <returns>An ordered list of migrations from V1 to V2.</returns>
@@ -140,11 +129,7 @@ public class PostgreSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         ];
     }
 
+    // Column names are emitted bare: the catalog's are already lowercase (ADR 0057 §1).
     private static string AddColumn(string schema, string table, string column, string type) =>
-        // schema/table are lowercase-then-quoted via PgIdentifier so the ALTER targets the same
-        // physical table that V1's CREATE produced — and so reserved-keyword names parse cleanly.
-        // Column names are sourced from the catalog and are already ADR 0057 §1 lowercase, so they
-        // are emitted bare. Postgres's native ADD COLUMN IF NOT EXISTS keeps the migration safe to
-        // re-execute on chain replay.
         $"ALTER TABLE {PgIdentifier.QuoteQualified(schema, table)} ADD COLUMN IF NOT EXISTS {column} {type} NULL;";
 }

@@ -34,22 +34,14 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// SQLite unit-of-work for box-table migrations. Per ADR 0057 §4 / ADR 0058 §B.1 SQLite has no
 /// advisory-lock primitive — the database-wide RESERVED writer slot acquired by
 /// <c>BEGIN IMMEDIATE</c> is itself the migration lock, combined atomically with opening the
-/// transaction. The ctor therefore takes only the connection and a logger; there is no
-/// <c>IAmA*AdvisoryLock</c> dependency to inject.
+/// transaction.
 /// </summary>
 /// <remarks>
 /// Microsoft.Data.Sqlite's <c>BeginTransactionAsync</c> overload does not expose the
 /// <c>deferred</c> flag, so the synchronous <see cref="SqliteConnection.BeginTransaction(IsolationLevel, bool)"/>
-/// form is used to guarantee <c>BEGIN IMMEDIATE</c> (<c>deferred: false</c>). The wait under
-/// writer-slot contention is bounded by <see cref="SqliteConnection.DefaultTimeout"/>, which
-/// <see cref="SqliteBoxMigrationRunner"/> sets from the caller-supplied <c>lockTimeout</c>
-/// before opening the connection. The driver translates DefaultTimeout into
-/// sqlite3_busy_timeout on every internal statement (PRAGMA busy_timeout issued in SQL is
-/// silently overwritten by the next command), so the retry-with-backoff under SQLITE_BUSY is
-/// driver-side; if the budget expires the original <see cref="SqliteException"/> with
-/// <c>SqliteErrorCode == 5</c> propagates to the runner's catch path. Per ADR 0057 §4 /
-/// ADR 0058 §B.1 this replaces a separate advisory-lock primitive — BEGIN IMMEDIATE is itself
-/// the lock acquisition.
+/// form is used to guarantee <c>BEGIN IMMEDIATE</c>. The wait under writer-slot contention is
+/// bounded by <see cref="SqliteConnection.DefaultTimeout"/>, which
+/// <see cref="SqliteBoxMigrationRunner"/> sets from the caller-supplied <c>lockTimeout</c>.
 /// </remarks>
 public class SqliteProvisioningUnitOfWork(
     SqliteConnection connection,
@@ -74,10 +66,7 @@ public class SqliteProvisioningUnitOfWork(
     /// translates it into <see cref="SqliteConnection.DefaultTimeout"/> on the connection
     /// before this call, which the driver applies as sqlite3_busy_timeout on the synthesised
     /// <c>BEGIN IMMEDIATE</c>. If the slot remains held past the budget the call throws
-    /// <see cref="SqliteException"/> with <c>SqliteErrorCode == 5</c> (<c>SQLITE_BUSY</c>) and
-    /// propagates to the runner's catch path. See the class-level remarks for the driver
-    /// quirk that makes DefaultTimeout the only reliable hook (PRAGMA busy_timeout is
-    /// overwritten per-command).
+    /// <see cref="SqliteException"/> with <c>SqliteErrorCode == 5</c> (<c>SQLITE_BUSY</c>).
     /// </para>
     /// </remarks>
     public Task BeginAsync(string lockResource, TimeSpan lockTimeout, CancellationToken cancellationToken)
@@ -90,12 +79,8 @@ public class SqliteProvisioningUnitOfWork(
 
     /// <inheritdoc />
     /// <remarks>
-    /// Commits the underlying transaction opened by <see cref="BeginAsync"/>. Per ADR 0058
-    /// §B.1 SQLite has no advisory-lock primitive — the database-wide RESERVED writer slot
-    /// reserved by the initial <c>BEGIN IMMEDIATE</c> is itself the migration lock — so
-    /// committing the transaction is what releases the writer slot. There is no separate
-    /// lock-release call. A no-op return when <c>_transaction</c> is null tolerates a
-    /// Commit-without-Begin or a Begin-that-threw-before-opening-the-transaction.
+    /// Commits the transaction opened by <see cref="BeginAsync"/>, which releases the writer
+    /// slot. A no-op if <see cref="BeginAsync"/> did not open a transaction.
     /// </remarks>
     public Task CommitAsync(CancellationToken cancellationToken)
     {
@@ -105,20 +90,11 @@ public class SqliteProvisioningUnitOfWork(
 
     /// <inheritdoc />
     /// <remarks>
-    /// Best-effort per ADR 0058 §B.3. The runner may invoke <see cref="RollbackAsync"/> from
-    /// its catch path after a thrown <see cref="CommitAsync"/>, by which time the underlying
-    /// transaction may already be finalised (committed-but-client-side-failed, or zombied by
-    /// a closed connection); in those cases <see cref="SqliteTransaction.Rollback"/> throws
-    /// <see cref="InvalidOperationException"/> ("Transaction has completed; it is no longer
-    /// usable."). A zombied connection or async cancellation can surface as
-    /// <see cref="ObjectDisposedException"/> / <see cref="OperationCanceledException"/> too.
-    /// <see cref="RollbackAsync"/> MUST NOT throw for any of these — the runner's catch path
-    /// (<c>catch { uow.RollbackAsync(...); throw; }</c>) cannot have its primary migration
-    /// exception masked by a cleanup-side failure. Catch <see cref="Exception"/> (matching the
-    /// MSSQL UoW stance at MsSqlProvisioningUnitOfWork.cs:108 and the PG UoW stance at
-    /// PostgreSqlProvisioningUnitOfWork.cs:165) and log a Warning so the unwind continues.
-    /// SQLite has no advisory-lock primitive to release separately; completing the transaction
-    /// (or a zombied tx being disposed) releases the writer slot regardless of rollback success.
+    /// Best-effort per ADR 0058 §B.3: never throws, so a failed rollback cannot mask the
+    /// migration exception that caused it. The runner may roll back after a failed
+    /// <see cref="CommitAsync"/>, when the transaction is already finalised; the failure is
+    /// logged as a warning. The writer slot is released when the transaction completes,
+    /// whether or not the rollback succeeds.
     /// </remarks>
     public async Task RollbackAsync(CancellationToken cancellationToken)
     {

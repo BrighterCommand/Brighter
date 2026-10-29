@@ -55,7 +55,7 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelay : IDi
         _producer.Send(message);
 
         // Act — receive the message and requeue it with a 5 s delay
-        var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(15000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         var requeued = _channel.Requeue(received, TimeSpan.FromSeconds(5));

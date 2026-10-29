@@ -39,41 +39,24 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// The deadline is measured against an injectable <see cref="TimeProvider"/>; the default
 /// <see cref="TimeProvider.System"/> reads <see cref="System.Diagnostics.Stopwatch.GetTimestamp"/>
 /// (monotonic), so a wall-clock jump (NTP correction during a long lock wait, leap-second
-/// smear, container clock skew on VM resume) cannot collapse or extend the budget. Tests
-/// inject a fake provider to drive the deadline check deterministically.
+/// smear, container clock skew on VM resume) cannot collapse or extend the budget.
 /// <para>
 /// Lock-key derivation: the per-call key (typically <c>BrighterMigration_&lt;schema&gt;.&lt;table&gt;</c>
-/// from the runner) is combined with the Brighter namespace constant into the composite
-/// <c>"74726:&lt;lockKey&gt;"</c>, hashed with SHA-256, and the first 8 bytes of the digest are read
-/// fixed big-endian (via <c>BinaryPrimitives.ReadInt64BigEndian</c>) into a signed <c>long</c>.
-/// That single 64-bit value is passed to the single-argument <c>pg_try_advisory_lock(bigint)</c> /
-/// <c>pg_advisory_unlock(bigint)</c> overloads; there is no <c>hashtext</c> call and the namespace
-/// is folded into the hash input rather than passed as a separate SQL argument. The birthday-bound
-/// collision probability across distinct lock keys is therefore ~1 in 2^64, hardened from the
-/// ~1 in 2^32 of the prior <c>hashtext → int4</c> scheme and aligned with the 64-bit SHA-256
-/// principle the MySQL long-form fallback in <c>MySqlMigrationLockName</c> follows. Any collision
-/// merely serialises two migrations on a shared advisory lock (correctness preserved, only the
-/// concurrency boundary widens), and the per-deployment population is typically &lt; 100 box tables.
-/// Fixing big-endian keeps the derived key identical on every host, OS, and culture (deterministic);
-/// see ADR 0062.
+/// from the runner) is prefixed with a Brighter namespace as <c>"74726:&lt;lockKey&gt;"</c>, hashed
+/// with SHA-256, and the first 8 bytes of the digest are read big-endian into the signed
+/// <c>bigint</c> passed to <c>pg_try_advisory_lock</c> / <c>pg_advisory_unlock</c>. Reading
+/// big-endian keeps the key identical on every host. A collision between two lock keys
+/// (about 1 in 2^64) only serialises two migrations on one lock. See ADR 0062.
 /// </para>
 /// </remarks>
 public class PostgreSqlAdvisoryLock : IPostgreSqlAdvisoryLock
 {
-    // Brighter-specific advisory-lock namespace, folded into the hash input by DeriveLockKey (the
-    // composite prefix "74726:<lockKey>") rather than passed as a separate SQL argument. The single
-    // 64-bit advisory-lock space is partitioned per box table by the lock-key string; the namespace
-    // distinguishes Brighter's locks from any other application using the same composite scheme. The
-    // numeric value is "BRIG" interpreted as ASCII (74726 decimal); not load-bearing — collision
-    // with another application's choice is diagnostic not correctness.
+    // Prefixed to every lock key before hashing, to keep Brighter's advisory locks apart from
+    // other applications' (ADR 0062).
     private const int BRIGHTER_LOCK_NAMESPACE = 74726;
 
     private readonly TimeProvider _timeProvider;
 
-    // Derives the 64-bit advisory-lock key for a Brighter lock key. The namespace is folded into a
-    // composite ("74726:<lockKey>"), hashed with SHA-256, and the first 8 bytes are read fixed
-    // big-endian into a signed long (ADR 0062). Both AcquireAsync and ReleaseAsync route through
-    // this single helper, so they always derive byte-identical keys for the same lockKey.
     private static long DeriveLockKey(string lockKey)
     {
         var composite = $"{BRIGHTER_LOCK_NAMESPACE}:{lockKey}";
@@ -85,8 +68,7 @@ public class PostgreSqlAdvisoryLock : IPostgreSqlAdvisoryLock
     /// Initialises a new <see cref="PostgreSqlAdvisoryLock"/>.
     /// </summary>
     /// <param name="timeProvider">Source of timestamps for the acquisition deadline. Defaults
-    /// to <see cref="TimeProvider.System"/> (monotonic). Tests pass
-    /// <c>FakeTimeProvider</c> from <c>Microsoft.Extensions.TimeProvider.Testing</c>.</param>
+    /// to <see cref="TimeProvider.System"/> (monotonic).</param>
     public PostgreSqlAdvisoryLock(TimeProvider? timeProvider = null)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;

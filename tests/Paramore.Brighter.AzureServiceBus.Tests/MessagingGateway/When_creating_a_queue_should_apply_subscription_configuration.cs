@@ -66,8 +66,7 @@ public class AzureServiceBusQueueConfigurationTests
             makeChannels: OnMissingChannel.Create, subscriptionConfiguration: configuration);
         var administration = new InMemoryServiceBusAdministrationClient();
         await using var client = new InMemoryServiceBusClient(ServiceBusModelFactory.ServiceBusReceivedMessage(), administration);
-        using var producer = new InMemoryMessageProducer(new InternalBus());
-        using var consumer = new AzureServiceBusQueueConsumer(subscription, producer,
+        using var consumer = new AzureServiceBusQueueConsumer(subscription, new AzureServiceBusRequeueScheduler(client),
             new AdministrationClientWrapper(client),
             new FakeServiceBusReceiverProvider(new FakeServiceBusReceiverWrapper()));
 

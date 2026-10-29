@@ -35,24 +35,19 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// When pg_advisory_unlock returns false the chain has already committed, so the runner logs one Warning naming the table
+/// and the lock key, and completes normally (ADR 0057 §5b). A null schema name folds into the lock key as <c>public</c>.
+/// </summary>
 public class PostgreSqlAdvisoryUnlockReturnsFalseTests : IAsyncLifetime
 {
-    // pg_advisory_unlock returns false when the calling session does not currently hold the
-    // named lock — a diagnostic anomaly because the runner just acquired it. The release
-    // happens after the chain has committed, so we cannot fail the migration; we surface the
-    // condition through a Warning-level log entry naming the table name and the lock key, and
-    // continue. Per ADR 0057 §5b, this contract is the public boundary between the runner and
-    // its IPostgreSqlAdvisoryLock collaborator.
-
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
     public async Task When_postgres_advisory_unlock_returns_false_runner_should_log_warning_and_complete_normally()
     {
-        //Arrange — ensure database exists; runner uses a real Postgres connection for DDL,
-        //          a fake advisory lock that returns false from Release, and a capturing
-        //          logger so we can assert the warning emission.
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
@@ -64,24 +59,18 @@ public class PostgreSqlAdvisoryUnlockReturnsFalseTests : IAsyncLifetime
             new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), fakeLock, capturingLogger);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        //Act — runner must not throw despite the false release result.
+        //Act
         await runner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint);
 
-        //Assert — migration committed normally: box table created, history populated.
+        //Assert
         Assert.Equal(1, await GetBoxTableCount());
         Assert.True(await GetHistoryRowCount() >= 1);
 
-        //Assert — fake observed both the acquire and release calls under the expected lock key.
-        //schemaName=null in MigrateAsync resolves to effectiveSchema="public" in the runner, and
-        //the lock key folds the schema in (BrighterMigration_<schema>.<table>) to keep same-named
-        //tables in different schemas from sharing a lock. See Item O / ADR 0057.
         var expectedLockKey = $"BrighterMigration_public.{_tableName}";
         Assert.Equal(expectedLockKey, fakeLock.AcquiredKey);
         Assert.Equal(expectedLockKey, fakeLock.ReleasedKey);
 
-        //Assert — exactly one Warning entry whose message names both the table name and the
-        //         lock key, with no exception attached (diagnostic only).
         var warnings = capturingLogger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
         Assert.Single(warnings);
         Assert.Contains(_tableName, warnings[0].Message, StringComparison.Ordinal);

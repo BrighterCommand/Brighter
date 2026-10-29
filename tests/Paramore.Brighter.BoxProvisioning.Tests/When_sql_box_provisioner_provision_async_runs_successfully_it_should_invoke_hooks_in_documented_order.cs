@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,14 +33,9 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// The abstract base <c>SqlBoxProvisioner&lt;TConnection, TTransaction&gt;</c> must orchestrate
-/// its hooks (connection lifecycle, detection helper, payload validator, migration runner) in a
-/// documented, fixed order on each of the three table-state branches so derived classes have a
-/// stable contract to extend (per ADR 0058 §B.5). This test pins the order on each branch — table
-/// exists with history (normal path), table exists without history (bootstrap path), table missing
-/// (fresh path) — by recording the sequence of hook invocations into a shared list. Mirrors the
-/// §B.2 sibling-base hook-order test at
-/// <c>When_relational_box_migration_runner_base_migrate_runs_successfully_it_should_invoke_hooks_in_documented_order</c>.
+/// <c>SqlBoxProvisioner&lt;TConnection, TTransaction&gt;</c> calls its hooks in a fixed order on each
+/// table-state branch (normal, bootstrap, fresh), so derived classes have a stable contract to
+/// extend (ADR 0058 §B.5). Pre-lock detection and payload validation share one connection.
 /// </summary>
 public class SqlBoxProvisionerHookOrderTests
 {
@@ -64,9 +60,7 @@ public class SqlBoxProvisionerHookOrderTests
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert: normal-path order — detection takes the GetMaxVersion branch (history exists),
-        //        payload validation runs on the SAME connection (item #11: prior shape opened a
-        //        second connection here and closed both back-to-back), then MigrateAsync.
+        //Assert
         Assert.Equal(
             new[]
             {
@@ -107,9 +101,7 @@ public class SqlBoxProvisionerHookOrderTests
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert: bootstrap-path order — detection takes the DetectCurrentVersion branch
-        //        (table present, no history); payload validation runs on the SAME connection
-        //        (item #11: prior shape opened a second connection here), then MigrateAsync.
+        //Assert
         Assert.Equal(
             new[]
             {
@@ -147,9 +139,7 @@ public class SqlBoxProvisionerHookOrderTests
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert: fresh-path order — DoesTableExistAsync returns false, so DoesHistoryExistAsync
-        //        is NOT called, payload validation is NOT called, and MigrateAsync is invoked
-        //        directly with TableExists: false / HistoryExists: false / CurrentVersion: 0.
+        //Assert
         Assert.Equal(
             new[]
             {
@@ -166,12 +156,6 @@ public class SqlBoxProvisionerHookOrderTests
         Assert.Equal(0, migrationRunner.CapturedTableState!.CurrentVersion);
     }
 
-    /// <summary>
-    /// Hard-codes <c>CreateConnection</c> (returns a recording <see cref="FakeDbConnection"/> that
-    /// logs <c>OpenAsync</c> and <c>Dispose</c>) and <c>PayloadColumnName</c> (<c>"Body"</c> — the
-    /// Outbox convention; the test does not exercise the casing decision per se). The base hosts
-    /// the orchestration; this test derivative supplies only the abstract hooks.
-    /// </summary>
     private sealed class TestSqlBoxProvisioner : SqlBoxProvisioner<FakeDbConnection, FakeDbTransaction>
     {
         private readonly List<string> _log;
@@ -198,14 +182,7 @@ public class SqlBoxProvisionerHookOrderTests
         protected override string PayloadColumnName => "Body";
     }
 
-    /// <summary>
-    /// Subclass of the existing <see cref="FakeDbConnection"/> test double that records the
-    /// <c>OpenAsync</c> and <c>Dispose</c> calls into the shared log. <c>Dispose</c> is recorded
-    /// via the <see cref="System.Data.Common.DbConnection.Dispose(bool)"/> override (the abstract
-    /// <c>DbConnection.Dispose(bool)</c> does NOT call <c>Close()</c> by default — concrete ADO.NET
-    /// providers override one or the other to wire them together); the sync <c>using</c> contract
-    /// in <c>SqlBoxProvisioner</c> routes through this code path.
-    /// </summary>
+    // Records Dispose via Dispose(bool): DbConnection.Dispose(bool) does not call Close().
     private sealed class RecordingFakeDbConnection : FakeDbConnection
     {
         private readonly List<string> _log;
@@ -229,12 +206,6 @@ public class SqlBoxProvisionerHookOrderTests
         }
     }
 
-    /// <summary>
-    /// Records each detection-helper call into the shared log so the assertion can pin the call
-    /// order across the three branches. <see cref="GetMaxVersionAsync"/> and
-    /// <see cref="DetectCurrentVersionAsync"/> return configured values; the other members are
-    /// not exercised by these tests and throw if reached.
-    /// </summary>
     private sealed class RecordingDetectionHelper : IAmAVersionDetectingMigrationHelper<FakeDbConnection, FakeDbTransaction>
     {
         private readonly List<string> _log;
@@ -351,14 +322,6 @@ public class SqlBoxProvisionerHookOrderTests
             => string.Empty;
     }
 
-    /// <summary>
-    /// Returns a non-null schema name (<c>"dbo"</c>) so the test exercises the schema-propagation
-    /// path. Slice 1's implementation hard-codes <c>_configuration.SchemaName</c>; slice 2 extracts
-    /// the <c>EffectiveSchemaName</c> virtual hook and slice 3 adds <c>ClampDetectedVersion</c> —
-    /// neither is needed here, so the recording configuration only differs from the existing
-    /// <see cref="StubRelationalDatabaseConfiguration"/> in returning a non-null schema name and
-    /// non-empty box-table names so the runner-call argument capture is meaningful.
-    /// </summary>
     private sealed class RecordingConfiguration : IAmARelationalDatabaseConfiguration
     {
         public bool BinaryMessagePayload => false;
@@ -369,5 +332,6 @@ public class SqlBoxProvisionerHookOrderTests
         public string OutBoxTableName => "Messages";
         public string QueueStoreTable => "Queues";
         public string? SchemaName => "dbo";
+        public TimeSpan? OutstandingCountTimeout => null;
     }
 }

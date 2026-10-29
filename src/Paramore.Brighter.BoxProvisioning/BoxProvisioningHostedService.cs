@@ -70,15 +70,6 @@ public class BoxProvisioningHostedService : IHostedService
     /// The original failure is preserved as the inner exception.</exception>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        // OrderBy is stable, but the upstream IEnumerable<IAmABoxProvisioner> resolution order
-        // is not guaranteed across DI containers — Microsoft.Extensions.DependencyInjection
-        // preserves registration order today, but third-party containers (Autofac with
-        // resolve-by-tag, Lamar, etc.) may not. Within an outbox/inbox group, ordering across
-        // multiple provisioners (e.g. one tenant per provisioner) is intentionally
-        // implementation-defined: the per-table startup log ("Provisioning Outbox '{BoxTableName}'…")
-        // disambiguates which provisioner is running, so a non-deterministic intra-group order
-        // is operationally tolerable and a deterministic secondary sort by BoxTableName would
-        // entrench an ordering callers cannot influence today.
         var ordered = _provisioners.OrderBy(p => OrderingOrdinal(p.BoxType));
 
         foreach (var provisioner in ordered)
@@ -91,9 +82,6 @@ public class BoxProvisioningHostedService : IHostedService
             }
             catch (OperationCanceledException)
             {
-                // Propagate cancellation as-is. Wrapping it in ConfigurationException would
-                // misreport host-shutdown / startup-deadline timeouts as configuration errors —
-                // particularly confusing for k8s readiness-probe diagnostics.
                 throw;
             }
             catch (Exception ex)
@@ -119,10 +107,7 @@ public class BoxProvisioningHostedService : IHostedService
     /// <returns>A <see cref="Task"/> that has already run to completion.</returns>
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    // Single source of truth for provisioner ordering. The default arm converts a silent
-    // mis-ordering (intermittent, DI-registration-order-dependent) into a loud startup
-    // failure that names the file and method to update — so the next contributor adding
-    // a BoxType value (Lockbox / DeadLetterBox / etc.) sees exactly where to add the arm.
+    // Throws for an unknown BoxType, so a new box type fails loudly at startup instead of being silently mis-ordered.
     private static int OrderingOrdinal(BoxType type) => type switch
     {
         BoxType.Outbox => 0,

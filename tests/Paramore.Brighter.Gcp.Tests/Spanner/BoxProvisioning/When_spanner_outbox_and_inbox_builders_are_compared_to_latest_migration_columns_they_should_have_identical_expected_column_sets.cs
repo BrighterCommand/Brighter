@@ -52,6 +52,7 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 // declares the PK after the closing paren) so the column set is the logical model exactly.
 
 [Trait("Category", "Spanner")]
+[Collection("Spanner")]
 public class SpannerOutboxBuilderDriftTests
 {
     [Theory]
@@ -104,6 +105,7 @@ public class SpannerOutboxBuilderDriftTests
 }
 
 [Trait("Category", "Spanner")]
+[Collection("Spanner")]
 public class SpannerInboxBuilderDriftTests
 {
     [Fact]

@@ -275,7 +275,7 @@ You are a skeptical reviewer. Assume the task list has problems — your job is 
 
 **Test-First Framing:**
 - Does every behavioral task (not tidy/structural) follow the pattern: write test → get approval → implement → refactor?
-- Does each TEST task specify a `/test-first` command?
+- Does each TEST task specify a `/tdd:test-first` command?
 - Are there implementation tasks without corresponding test tasks?
 - Does each test target a single behavior? (Not "test the whole feature".)
 
@@ -342,7 +342,8 @@ Every finding MUST cite concrete evidence: a file path, a line range, a diff hun
 - Primary constructors for new classes (project default)
 - `Async` suffix on async methods; `ValueTask` vs `Task` consistency with surrounding code
 - Nullability annotations consistent with the file's existing style
-- XML doc comments on public APIs (project requires them)
+- XML doc comments on public APIs (project requires them), and not on internal/private members
+- Comments follow `.agent_instructions/documentation.md` § *Comments in Code*: no comments inside method bodies (beyond `//Arrange` `//Act` `//Assert` and suppression reasons), no issue/PR/spec references, no change history or reviewer notes. A violation is a finding; suggest `/refactor:tidy-comments`
 - No dead code, speculative abstractions, or commented-out blocks
 - No mixing of structural and behavioral changes in the same commit (tidy-first rule)
 
@@ -451,6 +452,7 @@ After the sub-agent returns:
    - If counts are wrong, fix them before writing
 
 2. **Write the findings file** to `specs/{current-spec}/review-{phase}.md` using the validated output. For the `code` phase the file is `specs/{current-spec}/review-code.md`.
+   The file is **untracked working state** (gitignored by `specs/**/review-*.md`): it records one review pass, not a decision, so do not stage or commit it. Stage a spec's files by name, never `git add specs/{current-spec}/`.
 
 3. **Present a summary to the user** in the conversation:
    - Verdict (PASS / NEEDS WORK)

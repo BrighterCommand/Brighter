@@ -26,14 +26,10 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-// Item Q-postgres (spec 0027 PR #4039 third review). Pins the factory-entry wiring of
-// Identifiers.AssertSafe at the PostgreSQL *MigrationCatalog.All(...) entry: any unsafe table or
-// schema name must be rejected before the factory builds migration up-scripts whose UpScript
-// text interpolates the identifier directly into ALTER TABLE / CREATE TABLE strings.
-// ConfigurationException is the documented contract; no Postgres connection is required because
-// the rejection happens before any DDL is rendered against a live server (the connection string
-// is "Host=ignored;Database=ignored;").
-
+/// <summary>
+/// The PostgreSQL migration catalogs reject an unsafe table or schema name with <see cref="ConfigurationException"/> before
+/// rendering any DDL, because the names are interpolated into it. No connection is needed.
+/// </summary>
 public class PostgresMigrationsUnsafeIdentifierTests
 {
     [Theory]
@@ -71,9 +67,7 @@ public class PostgresMigrationsUnsafeIdentifierTests
     [Fact]
     public void When_postgres_outbox_migrations_are_built_with_an_unsafe_schema_name_it_should_throw()
     {
-        //Arrange — schema overrides the safe "public" default; an unsafe schema name interpolates
-        //into the V2+ ALTER TABLE up-scripts at AddColumns(schema, table, ...) so it must be
-        //validated alongside the table name.
+        //Arrange
         var config = new RelationalDatabaseConfiguration(
             "Host=ignored;Database=ignored;",
             outBoxTableName: "Outbox",

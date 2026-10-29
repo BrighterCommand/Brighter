@@ -26,7 +26,7 @@ Which review mode applies is called the **gear** (see
 
 **This command runs `review-before` unless the invoking command states otherwise in its prompt.**
 
-- Invoked directly by the user (`/test-first <behavior>`) → **`review-before`**, always. Do **not**
+- Invoked directly by the user (`/tdd:test-first <behavior>`) → **`review-before`**, always. Do **not**
   read `specs/*/.current-gear` yourself. A standalone run must never inherit a mode it did not ask
   for from whichever spec happens to be current.
 - Invoked by `/bugfix:test` → **`review-before`**, always. Bugfixes are outside this mechanism.
@@ -146,7 +146,8 @@ proceed once RED is proved.
 **Documentation Requirements** (from [.agent_instructions/documentation.md](../../../.agent_instructions/documentation.md)):
 1. Add XML documentation comments (`///`) for all public members
 2. Use `<summary>`, `<param>`, `<returns>`, `<exception>` tags
-3. Add `<remarks>` for complex implementation details
+3. Add `<remarks>` for notes to the user of a public API — caveats, side effects, implementation details that affect use
+4. No comments inside method bodies (tests may use `//Arrange` `//Act` `//Assert`) — extract a method to express intent instead. No XML docs on non-public members; at most a `//` above the signature when the method is complex or guards against a trap. No issue/spec references, change history or notes to a reviewer. See [documentation.md § Comments in Code](../../../.agent_instructions/documentation.md#comments-in-code)
 
 **Steps:**
 1. Write ONLY the code needed to make this specific test pass
@@ -225,7 +226,7 @@ After completing all phases:
 ## Example Session
 
 ```
-User: /test-first when an invalid message is received it should be sent to the dead letter queue
+User: /tdd:test-first when an invalid message is received it should be sent to the dead letter queue
 
 🔴 RED: Writing test When_message_is_invalid_should_send_to_dead_letter_queue
 
@@ -270,4 +271,4 @@ Should I commit these changes?
 - The gate is armed by default; `/spec:gear` is the only supported way to disarm it, and it does so
   for one spec (optionally one section of its task list) at a time — see ADR 0071
 - Following this workflow provides scope control and better design
-- You may run `/test-first` multiple times to build up functionality incrementally
+- You may run `/tdd:test-first` multiple times to build up functionality incrementally

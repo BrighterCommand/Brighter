@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -65,8 +66,9 @@ namespace Paramore.Brighter.ServiceActivator
     /// Retry and circuit breaker should be provided by exception policy using an attribute on the handler
     /// Timeout on the handler should be provided by timeout policy using an attribute on the handler 
     /// </summary>
-    public abstract partial class MessagePump
+    public abstract partial class MessagePump : IHaveAChannelFailureCount
     {
+        private int _consecutiveChannelFailures;
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump>();
 
         protected const string NoMessageReceivedDescription = "Could not receive message. Note that should return an MT_NONE from an empty queue on timeout";
@@ -84,6 +86,9 @@ namespace Paramore.Brighter.ServiceActivator
         /// The delay to wait when the channel has failed
         /// </summary>
         public TimeSpan ChannelFailureDelay { get; set; }
+
+        /// <inheritdoc />
+        public int ConsecutiveChannelFailures => Volatile.Read(ref _consecutiveChannelFailures);
 
         /// <summary>
         /// The delay to wait before the next pump iteration after a <see cref="Actions.DontAckAction"/>
@@ -168,6 +173,20 @@ namespace Paramore.Brighter.ServiceActivator
             PumpTimeProvider = timeProvider ?? TimeProvider.System;
         }
 
+
+        /// <summary>
+        /// Records a failed receive attempt for channel health reporting.
+        /// </summary>
+        protected void RecordChannelFailure()
+        {
+            if (_consecutiveChannelFailures < int.MaxValue)
+                Interlocked.Increment(ref _consecutiveChannelFailures);
+        }
+
+        /// <summary>
+        /// Clears the channel failure count after a successful receive, including an empty channel.
+        /// </summary>
+        protected void ResetChannelFailures() => Interlocked.Exchange(ref _consecutiveChannelFailures, 0);
 
         protected bool DiscardRequeuedMessagesEnabled()
         {

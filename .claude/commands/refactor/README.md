@@ -4,7 +4,7 @@ This directory contains Claude Code commands for safe, disciplined refactoring f
 
 ## Commands
 
-### `/tidy-first <description of desired change>`
+### `/refactor:tidy-first <description of desired change>`
 
 Implements Kent Beck's "Tidy First" methodology by separating structural changes from behavioral changes into distinct commits.
 
@@ -12,7 +12,52 @@ Implements Kent Beck's "Tidy First" methodology by separating structural changes
 
 **Usage:**
 ```bash
-/tidy-first optimize the message processing in KafkaConsumer
+/refactor:tidy-first optimize the message processing in KafkaConsumer
+```
+
+### `/refactor:smells [base-ref | base..head | path...]`
+
+An opt-in review, run after a unit of work completes (a task, a spec section, or a branch) and its
+tests are green, that looks for Martin Fowler's code smells (*Refactoring*, 2nd ed.) in the changed
+code — for example Long Function, Feature Envy, Data Clumps, Primitive Obsession, Shotgun Surgery,
+Speculative Generality and Message Chains — calibrated against Brighter's design principles.
+
+**Purpose**: Turn "this could be tidier" into scheduled, named refactorings. Each finding gives the
+smell, its location and evidence, and the refactoring from Fowler's catalogue that removes it, and is
+marked `structural` (a `/refactor:tidy-first` job) or `public API change` (needs a decision first).
+
+**It reports and schedules; it does not refactor.** Findings become a `/refactor:tidy-first` run, or
+`STRUCTURAL` tasks appended to the active spec's `tasks.md`, as you choose.
+
+**Usage:**
+```bash
+/refactor:smells                 # current branch vs master, plus uncommitted changes
+/refactor:smells HEAD~3          # changes since a ref
+/refactor:smells abc123^1..abc123  # changes between two refs, e.g. a merged PR's merge commit
+/refactor:smells src/Paramore.Brighter/CommandProcessor.cs
+```
+
+### `/refactor:tidy-comments [base-ref | base..head | path...]`
+
+Brings the comments in a unit of work into line with
+[documentation.md § Comments in Code](../../../.agent_instructions/documentation.md#comments-in-code):
+XML docs on public members only, at most a comment above the signature elsewhere, and none inside
+method bodies.
+
+**Purpose**: Remove comments that narrate the code, record its history, cite issues or specs, or talk
+to a reviewer; replace comments that explain a block or expression with Extract Method, Extract
+Variable, a named constant or a rename. Comments that were written *instead of* a refactoring
+("must be called first", "can be null when…") are reported and scheduled, as `/refactor:smells` does.
+
+**It changes code, structurally only**: a comment-only `refactor:` commit, then an extraction
+`refactor:` commit, with tests green and no public signature changed. Reviewer rationale missing from
+the ADR is shown to you rather than deleted.
+
+**Usage:**
+```bash
+/refactor:tidy-comments                 # comments this branch added or changed
+/refactor:tidy-comments HEAD~3          # comments changed since a ref
+/refactor:tidy-comments src/Paramore.Brighter/CommandProcessor.cs  # every comment in a file with no changes
 ```
 
 ## The Core Principle
@@ -39,7 +84,7 @@ From [.agent_instructions/code_style.md](../../../.agent_instructions/code_style
 
 ## Workflow
 
-The `/tidy-first` command guides you through 9 phases:
+The `/refactor:tidy-first` command guides you through 9 phases:
 
 ### 1. **Analysis**
 Reads code and categorizes changes into structural vs behavioral
@@ -96,7 +141,7 @@ Shows both commits and suggests next steps
 ## Example: Optimizing Message Processing
 
 ```bash
-$ /tidy-first optimize the message processing in KafkaConsumer
+$ /refactor:tidy-first optimize the message processing in KafkaConsumer
 
 Analyzing KafkaConsumer.cs...
 
@@ -148,7 +193,7 @@ Done! Two commits created:
 
 **Not a Good Fit:**
 - Pure refactoring with no functionality changes (just do it and commit as `refactor:`)
-- Pure feature addition (use `/test-first` instead for TDD)
+- Pure feature addition (use `/tdd:test-first` instead for TDD)
 - Trivial changes that don't need structural cleanup
 
 ## Best Practices
@@ -186,7 +231,7 @@ Done! Two commits created:
 - Add caching
 
 **Consider:**
-- Using `/test-first` for significant new features
+- Using `/tdd:test-first` for significant new features
 - Writing tests before behavioral changes (TDD)
 - Breaking large behavioral changes into smaller commits
 
@@ -220,7 +265,7 @@ if (message.Size < GetMaxSizeForTopic(message.Topic))
 
 ## Integration with Other Workflows
 
-**With TDD (`/test-first`):**
+**With TDD (`/tdd:test-first`):**
 - Use tidy-first when refactoring existing code before adding features
 - Use test-first when adding pure new functionality
 - Can combine: tidy-first to clean up, then test-first to add features
@@ -273,7 +318,7 @@ dotnet test
 dotnet test
 
 # May need to write new tests for new functionality
-# Consider using /test-first for test-driven approach
+# Consider using /tdd:test-first for test-driven approach
 ```
 
 ## Related Documentation
@@ -284,7 +329,8 @@ dotnet test
 
 ## Related Commands
 
-- **`/test-first`** - TDD workflow for pure feature additions
+- **`/refactor:smells`** - Find code smells in a completed unit of work and schedule refactorings
+- **`/tdd:test-first`** - TDD workflow for pure feature additions
 - **`/spec:implement`** - Specification-driven implementation (uses TDD)
 - **`/commit`** - Standard commit (doesn't enforce separation)
 - **`/adr`** - Document significant refactoring decisions

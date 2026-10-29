@@ -1,5 +1,8 @@
 ﻿using System.Threading.Channels;
 using Google.Cloud.PubSub.V1;
+using Google.Protobuf.WellKnownTypes;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
@@ -9,9 +12,13 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// </summary>
 public class GcpStreamConsumer(SubscriberClient client)
 {
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpStreamConsumer>();
     private readonly object _lock = new();
     private int _handlers;
     private bool _stopped;
+    private readonly GcpPurgeWatermark _purgeWatermark = new();
+
+    internal SemaphoreSlim PurgeLock { get; } = new(1, 1);
 
     private readonly Channel<GcpStreamMessage> _channel =
         System.Threading.Channels.Channel.CreateUnbounded<GcpStreamMessage>(new UnboundedChannelOptions
@@ -19,12 +26,12 @@ public class GcpStreamConsumer(SubscriberClient client)
             SingleWriter = false,
             SingleReader = false,
         });
-    
+
     /// <summary>
     /// Gets the channel reader used by message consumers to asynchronously read received Pub/Sub messages.
     /// </summary>
     public ChannelReader<GcpStreamMessage> Reader => _channel.Reader;
-    
+
     /// <summary>
     /// Registers a handler, starting the Pub/Sub streaming client on the first registration so that it begins
     /// reading messages into the channel.
@@ -46,7 +53,7 @@ public class GcpStreamConsumer(SubscriberClient client)
             _handlers++;
             if (_handlers == 1)
             {
-                client.StartAsync(new BrighterStreamHandler(_channel.Writer));
+                client.StartAsync(new BrighterStreamHandler(_channel.Writer) { IsPurged = IsPurged });
             }
 
             return true;
@@ -61,6 +68,8 @@ public class GcpStreamConsumer(SubscriberClient client)
     /// callback but not settled by Brighter (buffered unread in the channel, or received and never acknowledged,
     /// rejected or requeued) is nacked for redelivery. <see cref="SubscriberClient.ShutdownMode.WaitForProcessing"/>
     /// would wait on such a message until the client's own timeout, by default about an hour.
+    /// Cancellation reported by the client during shutdown is logged and does not escape this method.
+    /// Client disposal is always attempted; other failures propagate.
     /// </remarks>
     /// <returns>A task representing the asynchronous stop operation.</returns>
     public async Task StopAsync()
@@ -78,28 +87,58 @@ public class GcpStreamConsumer(SubscriberClient client)
 
         if (lastHandler)
         {
-            await client.StopAsync(new SubscriberClient.ShutdownOptions() {Mode = SubscriberClient.ShutdownMode.NackImmediately}, CancellationToken.None);
-            await client.DisposeAsync();
+            try
+            {
+                await client.StopAsync(new SubscriberClient.ShutdownOptions { Mode = SubscriberClient.ShutdownMode.NackImmediately }, CancellationToken.None)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException ex)
+            {
+                s_logger.LogWarning(ex, "GcpStreamConsumer: shutdown was canceled; unsettled messages may be redelivered");
+            }
+            finally
+            {
+                await DisposeClientAsync().ConfigureAwait(false);
+            }
+        }
+    }
+
+    private async ValueTask DisposeClientAsync()
+    {
+        try
+        {
+            await client.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException ex)
+        {
+            s_logger.LogDebug(ex, "GcpStreamConsumer: disposal completed with shutdown cancellation");
         }
     }
 
     /// <summary>
-    /// Removes every buffered message from the local channel, acknowledging each one.
+    /// Removes messages already buffered in the local channel, acknowledging each one.
     /// </summary>
     /// <remarks>
-    /// A Seek purges only the subscription's backlog on the service. Messages the streaming client has already
-    /// delivered into the channel are outside it, so a purge must remove them here too. They are acknowledged, not
-    /// dropped: an unsettled message keeps its flow-control slot and its lease is extended for ever. Every buffered
-    /// message is drained, rather than only those published before the purge started, because a buffered message's
-    /// publish time is stamped by the service's clock, which cannot be compared reliably with the client's.
+    /// Acknowledges buffered deliveries to release their flow-control slots. The drain is bounded by the
+    /// initial buffer count so concurrent arrivals cannot keep it running indefinitely. This method does
+    /// not seek the service subscription or establish a cutoff for late deliveries.
     /// </remarks>
     public void PurgeBuffered()
     {
-        while (_channel.Reader.TryRead(out var message))
+        var bufferedCount = _channel.Reader.Count;
+        for (var i = 0; i < bufferedCount && _channel.Reader.TryRead(out var message); i++)
         {
             message.Accepted();
         }
     }
+
+    internal void PurgeBuffered(Timestamp purgeBefore)
+    {
+        _purgeWatermark.Advance(purgeBefore);
+        PurgeBuffered();
+    }
+
+    internal bool IsPurged(PubsubMessage message) => _purgeWatermark.Includes(message);
 }
 
 
@@ -108,8 +147,10 @@ public class GcpStreamConsumer(SubscriberClient client)
 /// that processes incoming <see cref="PubsubMessage"/>s and writes them to an internal 
 /// channel for further consumption.
 /// </summary>
-public class BrighterStreamHandler(ChannelWriter<GcpStreamMessage> writer) :  SubscriptionHandler
+public class BrighterStreamHandler(ChannelWriter<GcpStreamMessage> writer) : SubscriptionHandler
 {
+    internal Func<PubsubMessage, bool>? IsPurged { get; init; }
+
     /// <summary>
     /// The handler invoked by the Pub/Sub client whenever a new message is received. 
     /// It wraps the message in a <see cref="GcpStreamMessage"/> and waits asynchronously 
@@ -122,11 +163,16 @@ public class BrighterStreamHandler(ChannelWriter<GcpStreamMessage> writer) :  Su
     {
         try
         {
+            if (IsPurged?.Invoke(message) == true)
+            {
+                return SubscriberClient.Reply.Ack;
+            }
+
             var streamMessage = new GcpStreamMessage(message);
             // The token lives as long as the client, so the registration must go once the message is settled,
             // or the token keeps every message the client ever delivers reachable
             using var registration = cancellationToken.Register(() => streamMessage.Cancel(cancellationToken));
-            
+
             await writer.WriteAsync(streamMessage, cancellationToken);
             return await streamMessage.WaitForCompleteAsync();
         }

@@ -43,6 +43,7 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 // "needs migration V8" forever on Spanner installs.
 
 [Trait("Category", "Spanner")]
+[Collection("Spanner")]
 public class SpannerVLatestDriftAgainstRelationalCatalogTests
 {
     // Catalog .All(cfg) does not touch the database — it only emits SQL strings keyed off the

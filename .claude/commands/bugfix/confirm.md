@@ -12,7 +12,7 @@ Current bug: !`cat bugfixes/.current-bug 2>/dev/null || echo "No active bug"`
 
 **Workflow**: Issue → Triage → **Confirm (✋ gate)** → Test-first (✋ gate) → Fix → Verify
 
-This is the step that makes `/bugfix` different from a plain `/test-first`. **Prove the root-cause
+This is the step that makes `/bugfix` different from a plain `/tdd:test-first`. **Prove the root-cause
 hypothesis before writing any fix.** A suggested fix — even an agent-authored one — is unverified
 until this passes. Confirming the theory frequently changes the *scope* of the fix (e.g. issue
 #4054: confirming the camelCase serialization cause surfaced a *second* defect that the suggested
@@ -113,6 +113,6 @@ Options:
 
 Remind the user:
 - The diagnosis is approved. Run `/bugfix:test` to write the failing regression test (it delegates
-  to `/test-first`, which has its own approval gate).
+  to `/tdd:test-first`, which has its own approval gate).
 - If the Scope Notes widened the fix, the regression test(s) should cover the additional defects
   too.

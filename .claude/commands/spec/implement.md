@@ -228,6 +228,7 @@ for the routine case, not a gag order.
    - Enable nullable reference types
    - Follow Responsibility Driven Design principles
    - Avoid primitive obsession
+   - Comments: XML docs on public members only; no comments inside method bodies — extract a method to express intent; no issue/spec references, history or notes to a reviewer ([documentation.md § Comments in Code](../../../.agent_instructions/documentation.md#comments-in-code))
 
 4. **Create/Update Implementation Files**: Use Write or Edit tool
 
@@ -246,7 +247,11 @@ for the routine case, not a gag order.
 1. **Review the Code** for design improvements:
    - Is it tidy and simple?
    - Can complexity be reduced?
-   - Are there any code smells?
+   - Are there any code smells (Fowler's catalogue, as listed in
+     [`/refactor:smells`](../refactor/smells.md))? Fix a smell here only if it is a small, in-cycle
+     tidy of the code this task added. Anything larger is left for the user to schedule: once a task or
+     a section of `tasks.md` is complete and green, they may opt to run `/refactor:smells`, which
+     schedules refactorings as `/refactor:tidy-first` runs or `STRUCTURAL` tasks. Do not run it on their behalf.
    - Does it follow Responsibility Driven Design?
    - Does it avoid primitive obsession?
    - Are methods small and focused?

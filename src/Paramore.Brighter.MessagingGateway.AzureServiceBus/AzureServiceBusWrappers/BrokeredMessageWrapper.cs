@@ -40,5 +40,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         public string Subject => _brokeredMessage.Subject ?? string.Empty;
 
         public string PartitionKey => _brokeredMessage.PartitionKey ?? string.Empty;
+
+        internal string? SessionId => _brokeredMessage.SessionId;
     }
 }

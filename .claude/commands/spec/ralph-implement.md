@@ -175,7 +175,7 @@ Scan `tasks.md` top to bottom for the first task that is:
 
 `tasks.md` is a general task list, and the labels in use across this repository vary. Match the
 task's leading bold label **case-insensitively**, and treat the synonyms below as one shape — the
-project's `/tidy-first` vocabulary and the `STRUCTURAL` label mean the same thing, and `DOC`,
+project's `/refactor:tidy-first` vocabulary and the `STRUCTURAL` label mean the same thing, and `DOC`,
 `DOCS` and `DOCUMENT` likewise. Do not invent a new label; match what the file says.
 
 | Task shape | Labels seen in `specs/` | Handling |
@@ -263,6 +263,8 @@ from conversation.
   constants, expression-bodied members for simple members, `readonly` where appropriate,
   nullable reference types enabled, Responsibility-Driven Design, avoid primitive obsession.
   XML documentation on new public members; MIT licence header on new files.
+  No comments inside method bodies — extract a method to express intent; no issue/spec
+  references, history or notes to a reviewer (`documentation.md` § *Comments in Code*).
 - Run the verify command and confirm the test **PASSES**.
 - Run the **full suite** for the affected project(s) — `dotnet test {project}`, not just the
   filter — to catch regressions. If a regression appears, fix it before finishing.

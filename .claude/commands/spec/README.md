@@ -481,7 +481,7 @@ then a separate `docs:` commit ticking the task off in `tasks.md`.
 
 ### `/spec:gear [review-before|review-after] ["phase"] [--because "..."]`
 
-Report or shift the **review gear** — whether `/test-first`'s approval gate is armed for the
+Report or shift the **review gear** — whether `/tdd:test-first`'s approval gate is armed for the
 current spec. See [ADR 0071](../../../docs/adr/0071-tdd-review-gear.md).
 
 ```bash
@@ -521,7 +521,7 @@ which branch is checked out rather than on what the operator last chose.
 **Why per-spec**: a root-level gear file would survive branch switches and silently disarm the gate
 for unrelated work. Inside the spec directory it cannot reach past the spec that owns it.
 
-**Who honours it**: `/spec:implement` and `/spec:ralph-implement`. A standalone `/test-first` and
+**Who honours it**: `/spec:implement` and `/spec:ralph-implement`. A standalone `/tdd:test-first` and
 `/bugfix:test` are **always gated** — they never read the file, so they cannot inherit a mode they
 did not ask for.
 

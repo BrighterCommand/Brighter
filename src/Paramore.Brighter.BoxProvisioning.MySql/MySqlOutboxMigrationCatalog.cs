@@ -32,27 +32,23 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// Defines the migration history for MySQL outbox tables.
 /// </summary>
 /// <remarks>
-/// V1's <c>UpScript</c> is the literal historical baseline DDL — the first MySQL outbox
-/// builder shape (commit <c>695522367</c>, March 2019; pre-Dispatched). Spec 0027 R1
-/// split "live builder DDL" away from V1.UpScript: the fresh-install fast path (ADR
-/// 0057 §3) now sources its DDL from <see cref="FreshInstallDdl"/>, so V1.UpScript is
-/// free to carry the honest historical shape. V2..V7 use the MySQL
-/// <c>information_schema.columns</c> + prepared-statement idempotency pattern (ADR 0057
-/// §5) — MySQL 5.7 lacks native <c>ALTER TABLE ADD COLUMN IF NOT EXISTS</c> (it landed
-/// in MySQL 8.0.29), so each ALTER is wrapped in a runtime conditional that emits the
-/// ALTER only when the column is absent. The <c>table_schema</c> filter uses
-/// <see cref="https://dev.mysql.com/doc/refman/8.0/en/information-functions.html#function_database">
-/// the runtime <c>DATABASE()</c> function</see> — same DB the runner's connection is bound to,
-/// matching the ALTER's implicit schema target.
+/// V1's <c>UpScript</c> is the literal historical baseline DDL — the MySQL outbox builder
+/// shape before <c>Dispatched</c> (as at commit <c>3c30343fa^</c>; first shipped in commit
+/// <c>3a80d74e2</c>, August 2017). The fresh-install fast
+/// path (ADR 0057 §3) takes its DDL from <see cref="FreshInstallDdl"/> instead, so V1.UpScript
+/// carries the historical shape. V2..V7 use the MySQL <c>information_schema.columns</c> +
+/// prepared-statement idempotency pattern (ADR 0057 §5) — MySQL 5.7 lacks native
+/// <c>ALTER TABLE ADD COLUMN IF NOT EXISTS</c> (it landed in MySQL 8.0.29), so each ALTER is
+/// wrapped in a runtime conditional that emits the ALTER only when the column is absent. With
+/// no schema configured, the probe's <c>table_schema</c> filter is the runtime <c>DATABASE()</c>
+/// function — the database the connection is bound to, which the unqualified ALTER targets.
 /// <para>
-/// MySQL outbox V1 is one of three relational outboxes whose first-shipped state matches
-/// the "logical pre-V2 baseline" (alongside MSSQL and SQLite). The PostgreSQL outbox is
-/// the lone exception — see the born-past-V1 note in <see cref="PostgreSqlOutboxMigrationCatalog"/>.
+/// MySQL outbox V1, like every relational outbox's, is the pre-<c>Dispatched</c> baseline.
 /// </para>
 /// <para>
 /// LogicalColumns are stored PascalCase with <see cref="StringComparer.OrdinalIgnoreCase"/> —
-/// MySQL identifiers are case-insensitive on lookup. V8 adds <c>CausationId</c> (Spec 0027,
-/// #2541) plus a replay index on it. The accumulated columns across V1..V8 plus
+/// MySQL identifiers are case-insensitive on lookup. V8 adds <c>CausationId</c>
+/// plus a replay index on it. The accumulated columns across V1..V8 plus
 /// MySQL housekeeping (<c>Created</c>, <c>CreatedID</c>) equal the live builder's column set,
 /// verified by the drift test in <c>tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning</c>.
 /// </para>
@@ -73,13 +69,9 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     private static readonly string[] s_v7AddedColumns = ["DataRef", "SpecVersion"];
     private static readonly string[] s_v8AddedColumns = ["CausationId"];
 
-    // Literal historical MySQL outbox DDL extracted from commit 695522367 (March 2019). The
-    // exact pre-Dispatched shape that shipped as "V1" — preserved here so chain replay against
-    // a legacy table sees the same starting DDL it always saw. {0} = table name (validated).
-    // Created/CreatedID are MySQL housekeeping columns present from V1.
-    // The table identifier is backtick-quoted so legal-but-reserved MySQL keyword names
-    // (User, Order, Group, …) bootstrap correctly — V2..V7 already backtick-quote, so V1
-    // is the only asymmetric step. Per PR #4039 reviewer item F2-1.
+    // The outbox DDL before Dispatched (as at 3c30343fa^); Created/CreatedID are MySQL
+    // housekeeping columns. {0} is the table name, backtick-quoted so reserved words (Order,
+    // User) parse.
     private const string V1HistoricalDdl =
         """
         CREATE TABLE `{0}` (
@@ -102,11 +94,6 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
         Identifiers.AssertSafe(
             configuration.OutBoxTableName,
             nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName));
-        // In MySQL "schema" is synonymous with "database". When SchemaName is set, the
-        // builder schema-qualifies the CREATE TABLE so the table lands in the configured
-        // database rather than the connection's bound DATABASE(). V2..V7 ALTERs below pick
-        // up the same qualification via the `schema` parameter on AddColumns. Per PR #4039
-        // reviewer item M4-1 (F1c).
         if (configuration.SchemaName is not null)
         {
             Identifiers.AssertSafe(
@@ -227,18 +214,9 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     private static string AddColumns(string? schema, string table, params (string Column, string Type)[] columns) =>
         string.Join(Environment.NewLine, columns.Select(c => AddColumn(schema, table, c.Column, c.Type)));
 
-    /// <summary>
-    /// MySQL 5.7+ idempotent ADD COLUMN — runtime <c>information_schema.columns</c> probe drives
-    /// a prepared-statement that conditionally emits the ALTER. When <paramref name="schema"/>
-    /// is null, the probe targets <c>DATABASE()</c> (the connection's bound database) and the
-    /// ALTER is unqualified — original behaviour preserved. When <paramref name="schema"/> is
-    /// non-null, both the probe's <c>table_schema</c> filter and the ALTER target are pinned
-    /// to that schema, so the chain reaches the box table created in the configured database
-    /// (per PR #4039 reviewer item M4-1 / F1c).
-    /// All added columns are <c>NULL</c>-able — required because MySQL ADD COLUMN against a
-    /// non-empty table must permit NULL or supply a DEFAULT, and we make no assumption about
-    /// emptiness during bootstrap.
-    /// </summary>
+    // MySQL 5.7 has no ADD COLUMN IF NOT EXISTS, so an information_schema probe decides whether a
+    // prepared statement runs the ALTER. A null schema means DATABASE() and an unqualified ALTER.
+    // Columns are added NULL-able: ADD COLUMN on a non-empty table needs NULL or a DEFAULT.
     private static string AddColumn(string? schema, string table, string column, string type)
     {
         var tableScopeForProbe = schema is null ? "DATABASE()" : $"'{schema}'";
@@ -253,19 +231,13 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;";
     }
 
-    /// <summary>
-    /// MySQL 5.7+ idempotent replay index (Spec 0027, #2541) on <c>CausationId</c> — MySQL lacks
-    /// <c>CREATE INDEX IF NOT EXISTS</c>, so an <c>information_schema.statistics</c> probe drives a
-    /// prepared statement that emits the <c>CREATE INDEX</c> only when the index is absent. Schema
-    /// scoping mirrors <see cref="AddColumn"/>: <c>DATABASE()</c> when <paramref name="schema"/> is
-    /// null, otherwise the configured schema.
-    /// </summary>
+    // MySQL has no CREATE INDEX IF NOT EXISTS, so this probes information_schema.statistics the way
+    // AddColumn probes columns. Index names are scoped to their table, so the bare idx_CausationId
+    // (matching the live builder's inline KEY) is unambiguous.
     private static string AddCausationIndex(string? schema, string table)
     {
         var tableScopeForProbe = schema is null ? "DATABASE()" : $"'{schema}'";
         var qualifiedAlterTarget = schema is null ? $"`{table}`" : $"`{schema}`.`{table}`";
-        // MySQL index names are scoped to their table, so the bare `idx_CausationId` (matching
-        // the live builder's inline KEY) is unambiguous and avoids embedding the table name.
         return $@"SET @qi = (SELECT IF(
     (SELECT COUNT(*) FROM information_schema.statistics
      WHERE table_schema = {tableScopeForProbe} AND table_name = '{table}' AND index_name = 'idx_CausationId') = 0,

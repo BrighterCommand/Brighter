@@ -1,4 +1,6 @@
-﻿namespace Paramore.Brighter
+﻿using System;
+
+namespace Paramore.Brighter
 {
     public interface IAmARelationalDatabaseConfiguration
     {
@@ -42,6 +44,13 @@
         string QueueStoreTable { get; }
 
         /// <summary>
+        /// Gets the command timeout for the outbox's outstanding message count.
+        /// </summary>
+        /// <value>The timeout, or <c>null</c> for the default of 15 seconds.</value>
+        /// <remarks>Only the count uses it, rounded up to whole seconds; reading the outstanding messages is not bounded by it.</remarks>
+        TimeSpan? OutstandingCountTimeout { get; }
+
+        /// <summary>
         /// Gets the name of the schema containing the tables.
         /// </summary>
         /// <value>The schema name, or <c>null</c> for the backend's default schema.</value>
@@ -55,8 +64,7 @@
         /// other backends accept them, so the regex picks the strictest backend's rule to keep
         /// portable configuration safe. Schema names that fail the regex surface as
         /// <see cref="ConfigurationException"/> at provisioning entry rather than as a
-        /// downstream SQL error. Per PR #4039 reviewer items M2-7 and the multi-part 2026-05-20
-        /// review item 1.
+        /// downstream SQL error.
         /// </remarks>
         string? SchemaName { get; }
     }

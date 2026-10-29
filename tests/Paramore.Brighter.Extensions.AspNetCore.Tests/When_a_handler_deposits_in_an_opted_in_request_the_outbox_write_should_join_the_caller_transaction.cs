@@ -42,6 +42,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 // behaviour - the handler's own, unrelated write is never rolled back with the controller's, because it
 // was never part of the same transaction to begin with, and nothing here is reported as a warning or an
 // error, silently.
+[Collection(SqliteOutboxCollection.NAME)]
 public class DepositTransactionSharesOutboxWriteTests
 {
     [Fact]

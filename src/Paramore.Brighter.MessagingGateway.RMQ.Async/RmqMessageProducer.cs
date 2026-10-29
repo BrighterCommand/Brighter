@@ -59,6 +59,9 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     private RmqPublication _publication;
     private readonly Dictionary<ulong, PendingConfirmation> _pendingConfirmations = new();
     private readonly object _stateLock = new();
+    // The channel our confirm handlers are attached to. The gateway replaces a closed channel in place,
+    // so compare by reference, not null, to notice a new channel and move the handlers to it.
+    private IChannel? _confirmChannel;
     private readonly int _waitForConfirmsTimeOutInMilliseconds;
     private TaskCompletionSource<bool> _activeSendsCompleted = NewCompletedTaskCompletionSource();
     private TaskCompletionSource<bool> _publisherConfirmationsCompleted = NewCompletedTaskCompletionSource();
@@ -172,6 +175,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
         // Tracks the publish sequence we have registered for confirmation. Cleared once the publish succeeds
         // (broker takes ownership of the ack) or once we have explicitly removed the orphan in the catch path.
         ulong? pendingDeliveryTag = null;
+        PendingConfirmation? pendingConfirmation = null;
 
         try
         {
@@ -182,15 +186,11 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
 
             Log.PreparingToSendAsync(s_logger, Connection.Exchange.Name);
 
-            var channelInitialized = Channel is not null;
             await EnsureBrokerAsync(makeExchange: _publication.MakeChannels, cancellationToken: cancellationToken);
 
-            if (Channel is null) throw new ChannelFailureException($"RmqMessageProducer: Channel is not set for {_publication.Topic}");
-            if (!channelInitialized)
-            {
-                Channel.BasicAcksAsync += OnPublishSucceeded;
-                Channel.BasicNacksAsync += OnPublishFailed;
-            }
+            var channel = Channel;
+            if (channel is null) throw new ChannelFailureException($"RmqMessageProducer: Channel is not set for {_publication.Topic}");
+            ListenForConfirmsOnChannel(channel);
 
             message.Persist = Connection.PersistMessages;
 
@@ -201,9 +201,10 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
 
             if (PublishesOnChannel(delay.Value))
             {
-                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
-                var deliveryTag = await Channel.GetNextPublishSequenceNumberAsync(cancellationToken);
-                AddPendingConfirmation(deliveryTag, new PendingConfirmation(message.Id, message.Header.Topic, publishContext));
+                var rmqMessagePublisher = new RmqMessagePublisher(channel, Connection);
+                var deliveryTag = await channel.GetNextPublishSequenceNumberAsync(cancellationToken);
+                pendingConfirmation = new PendingConfirmation(message.Id, message.Header.Topic, publishContext);
+                RecordPendingConfirmation(deliveryTag, pendingConfirmation);
                 pendingDeliveryTag = deliveryTag;
                 await rmqMessagePublisher.PublishMessageAsync(message, delay.Value, cancellationToken);
                 // Publish succeeded; the broker now owns the confirmation and will ack/nack via the handler.
@@ -230,15 +231,8 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
             ClearPendingConfirmations();
             // ClearPendingConfirmations removed the orphan; suppress the per-tag cleanup in finally.
             pendingDeliveryTag = null;
-            // Capture the failed channel before reset; otherwise the detach fires on the recovered channel
-            // and the next send loses confirm tracking.
-            var failedChannel = Channel;
             await ResetConnectionToBrokerAsync(cancellationToken);
-            if (failedChannel is not null)
-            {
-                failedChannel.BasicAcksAsync -= OnPublishSucceeded;
-                failedChannel.BasicNacksAsync -= OnPublishFailed;
-            }
+            DetachPublisherConfirmHandlers();
             throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
         }
         finally
@@ -247,7 +241,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
             // the registered tag in flight without a corresponding broker ack — remove it so disposal does
             // not block waiting on a confirmation that will never arrive.
             if (pendingDeliveryTag.HasValue)
-                RemovePendingConfirmations(pendingDeliveryTag.Value, multiple: false, beginCallbacks: false);
+                RemoveOwnPendingConfirmation(pendingDeliveryTag.Value, pendingConfirmation!);
 
             CompleteSend();
         }
@@ -425,7 +419,8 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
             Log.FailedToAwaitConfirmationCallbacks(s_logger, inFlightCallbacks, waitMilliseconds);
     }
 
-    private void AddPendingConfirmation(ulong deliveryTag, PendingConfirmation confirmation)
+    // A tag already pending cannot be attributed to either message, so neither is recorded; the Outbox resends both.
+    private void RecordPendingConfirmation(ulong deliveryTag, PendingConfirmation confirmation)
     {
         lock (_stateLock)
         {
@@ -434,7 +429,21 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
             if (_publisherConfirmationsCompleted.Task.IsCompleted)
                 _publisherConfirmationsCompleted = NewPendingTaskCompletionSource();
 
-            _pendingConfirmations[deliveryTag] = confirmation;
+            if (_pendingConfirmations.Remove(deliveryTag))
+                CompleteConfirmationsIfDrainedLocked();
+            else
+                _pendingConfirmations.Add(deliveryTag, confirmation);
+        }
+    }
+
+    private void RemoveOwnPendingConfirmation(ulong deliveryTag, PendingConfirmation confirmation)
+    {
+        lock (_stateLock)
+        {
+            if (_pendingConfirmations.TryGetValue(deliveryTag, out var pending) && ReferenceEquals(pending, confirmation))
+                _pendingConfirmations.Remove(deliveryTag);
+
+            CompleteConfirmationsIfDrainedLocked();
         }
     }
 
@@ -526,10 +535,30 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     private static TaskCompletionSource<bool> NewPendingTaskCompletionSource()
         => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    private void ListenForConfirmsOnChannel(IChannel channel)
+    {
+        lock (_stateLock)
+        {
+            if (ReferenceEquals(channel, _confirmChannel)) return;
+
+            DetachPublisherConfirmHandlers();
+            ClearPendingConfirmations();
+            channel.BasicAcksAsync += OnPublishSucceeded;
+            channel.BasicNacksAsync += OnPublishFailed;
+            _confirmChannel = channel;
+        }
+    }
+
     private void DetachPublisherConfirmHandlers()
     {
-        Channel?.BasicAcksAsync -= OnPublishSucceeded;
-        Channel?.BasicNacksAsync -= OnPublishFailed;
+        lock (_stateLock)
+        {
+            if (_confirmChannel is null) return;
+
+            _confirmChannel.BasicAcksAsync -= OnPublishSucceeded;
+            _confirmChannel.BasicNacksAsync -= OnPublishFailed;
+            _confirmChannel = null;
+        }
     }
 
     private Task OnPublishFailed(object sender, BasicNackEventArgs e) => SettleConfirmationsAsync(e.DeliveryTag, e.Multiple, success: false);
@@ -618,5 +647,5 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
 /// <param name="MessageId">The id of the published message.</param>
 /// <param name="Topic">The wire topic the message was published to (<c>message.Header.Topic</c>).</param>
 /// <param name="Context">The publish span context captured at send time, used to link the settle span; null when no <see cref="Activity"/> was active.</param>
-internal readonly record struct PendingConfirmation(Id MessageId, RoutingKey Topic, ActivityContext? Context);
+internal sealed record PendingConfirmation(Id MessageId, RoutingKey Topic, ActivityContext? Context);
 

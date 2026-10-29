@@ -180,7 +180,7 @@ public sealed class DynamoDbOutboxCausationIndexProbeTests : IDisposable
     }
 
     private static DynamoDbOutbox OutboxFor(string tableName)
-        => new(Const.DynamoDbClient, new DynamoDbConfiguration { TableName = tableName });
+        => new(Const.DynamoDbClient, new DynamoDbConfiguration(tableName, timeout: Const.OUTBOX_TIMEOUT_IN_MILLISECONDS));
 
     private static Message CreateMessage()
         => new(

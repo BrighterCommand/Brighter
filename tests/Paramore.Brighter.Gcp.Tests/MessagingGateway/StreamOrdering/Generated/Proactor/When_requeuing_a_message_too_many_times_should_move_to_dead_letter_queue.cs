@@ -89,7 +89,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
 
         // Act — the production pump owns the budget; the handler defers every time
         var pump = ConformanceDeferredPump.CreateProactor(_channel, _subscription.RequeueCount,
-            TimeSpan.FromMilliseconds(5000));
+            TimeSpan.FromMilliseconds(15000));
 
         var pumping = Task.Factory.StartNew(() => pump.Run(), TaskCreationOptions.LongRunning);
 

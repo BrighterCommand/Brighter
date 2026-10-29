@@ -35,6 +35,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// When <c>CommitAsync</c> throws after the transaction has completed, the runner still calls
+/// <c>RollbackAsync</c>, which logs a Warning instead of throwing, and the caller sees the original
+/// commit exception (ADR 0058 §B.3).
+/// </summary>
 public class MsSqlCommitThrowsBestEffortRollbackTests : IAsyncLifetime
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
@@ -43,13 +48,7 @@ public class MsSqlCommitThrowsBestEffortRollbackTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_commit_throws_rollback_should_be_best_effort_without_throwing()
     {
-        //Arrange — wire a runner whose UoW spy first commits the inner real SqlTransaction
-        // (transitioning it to "completed" — indistinguishable from the post-failed-commit
-        // zombied state per ADR 0058 §B.3) and THEN throws an InvalidOperationException
-        // simulating a client-side commit failure after server-side completion (e.g. broken
-        // connection mid-commit). The capturing logger is threaded into the runner so the
-        // real MsSqlProvisioningUnitOfWork.RollbackAsync — which the spy delegates to from
-        // the runner's catch-path — emits its Warning into a buffer the test can assert on.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
@@ -63,49 +62,23 @@ public class MsSqlCommitThrowsBestEffortRollbackTests : IAsyncLifetime
             catalog, config, TimeSpan.FromSeconds(30), capturingLogger, commitFailure);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        //Act — runner enters the try-block, succeeds through DDL, then the spy's CommitAsync
-        // throws after committing the inner real tx. The runner's catch-path calls
-        // uow.RollbackAsync(CancellationToken.None) → spy → real UoW, where the underlying
-        // SqlTransaction.RollbackAsync throws InvalidOperationException ("This SqlTransaction
-        // has completed; it is no longer usable.") because the inner tx was committed by the
-        // spy. The real UoW catches that, logs a Warning, and returns cleanly. The catch-block's
-        // `throw;` then rethrows the original commitFailure — NOT the swallowed rollback IOE.
+        //Act
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => commitThrowingRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
-        //Assert — the SAME instance of commitFailure surfaces to the caller (per ADR §B.3).
-        // If a different IOE were rethrown, this assertion catches that — for example, if the
-        // runner's catch-path RollbackAsync threw and replaced the original exception (which
-        // would happen if the UoW didn't swallow the finalised-tx IOE), Assert.Same would fail
-        // even though Assert.ThrowsAsync<InvalidOperationException> would still pass.
+        //Assert
         Assert.Same(commitFailure, thrown);
 
-        //Assert — the spy observed the runner's catch-path actually call RollbackAsync. This
-        // pins "RollbackAsync runs" — the contract under test. Without this, a regression where
-        // the runner skipped Rollback after a thrown Commit would still pass the warning and
-        // exception-identity assertions only by coincidence (it wouldn't log the Warning, but
-        // the test author might miss why).
         var spy = commitThrowingRunner.LastUnitOfWork;
         Assert.NotNull(spy);
         Assert.True(spy!.RollbackInvoked,
             "The runner's catch-path MUST call RollbackAsync after CommitAsync throws (per ADR §B.3 best-effort unwind).");
 
-        //Assert — a Warning was logged by MsSqlProvisioningUnitOfWork.RollbackAsync's catch
-        // block (the only Warning emitted on the box-provisioning code path). The captured
-        // exception is the rollback's swallowed InvalidOperationException ("transaction
-        // completed; no longer usable") — distinct from commitFailure by reference, since the
-        // rollback IOE is constructed by the SqlTransaction itself, not by the test.
         Assert.Contains(capturingLogger.Entries, entry =>
             entry.Level == LogLevel.Warning
             && entry.Exception is InvalidOperationException
             && !ReferenceEquals(entry.Exception, commitFailure));
 
-        //Assert — the inner real CommitAsync DID succeed before the spy threw, so the migration
-        // was actually applied to the database despite MigrateAsync throwing. This proves the
-        // spy correctly produced the "zombied" state (a no-op spy that just threw without
-        // committing wouldn't transition the SqlTransaction to "completed", and RollbackAsync
-        // would succeed cleanly without logging the Warning — the test would silently
-        // characterise the wrong scenario).
         Assert.True(TableExists(),
             "The spy must commit the inner transaction before throwing — otherwise the SqlTransaction is not in the finalised state and the contract being tested is not actually exercised.");
     }
@@ -175,6 +148,8 @@ file sealed class CommitThrowingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunne
     }
 }
 
+// Commits the real transaction before throwing: a spy that only threw would leave it open, so
+// RollbackAsync would succeed and the Warning path under test would never run.
 file sealed class CommitFinalisingThrowingUnitOfWork : IAmAProvisioningUnitOfWork<SqlTransaction>
 {
     private readonly IAmAProvisioningUnitOfWork<SqlTransaction> _inner;
@@ -196,16 +171,7 @@ file sealed class CommitFinalisingThrowingUnitOfWork : IAmAProvisioningUnitOfWor
 
     public async Task CommitAsync(CancellationToken cancellationToken)
     {
-        // Step 1 — actually commit the inner real SqlTransaction. This transitions it to the
-        // "completed" state externally indistinguishable from a post-failed-commit zombied
-        // transaction (e.g. mid-commit connection drop where the server committed but the
-        // client never received the ACK).
         await _inner.CommitAsync(cancellationToken);
-
-        // Step 2 — throw the configured commit failure. The runner sees CommitAsync as having
-        // thrown; it enters its catch-path and calls RollbackAsync. Because the inner tx is
-        // now finalised, the underlying SqlTransaction.RollbackAsync will throw IOE, which
-        // the real MsSqlProvisioningUnitOfWork is contracted to swallow + Warning-log.
         throw _commitFailure;
     }
 

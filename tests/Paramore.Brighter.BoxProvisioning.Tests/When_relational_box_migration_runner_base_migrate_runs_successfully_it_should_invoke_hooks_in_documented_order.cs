@@ -34,11 +34,9 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// The template-method runner base must orchestrate its hooks in a documented, fixed
-/// order on the success path so derived classes have a stable contract to extend (per
-/// ADR 0058 §B.2). This test pins the order on each of the three detection paths —
-/// fresh, bootstrap, normal — by recording the sequence of hook invocations against a
-/// fake backend whose <c>RedetectStateAsync</c> override drives the dispatch directly.
+/// The runner must call its hooks in a fixed order on the success path, so derived classes have a
+/// stable contract to extend (ADR 0058 §B.2). Each test pins the order on one path: fresh, bootstrap
+/// or normal.
 /// </summary>
 public class SqlBoxMigrationRunnerHookOrderTests
 {
@@ -49,7 +47,6 @@ public class SqlBoxMigrationRunnerHookOrderTests
         var unitOfWork = new RecordingProvisioningUnitOfWork();
         var runner = new RecordingTestRunner(unitOfWork)
         {
-            // Fresh path discriminator: no table → no history.
             TableExistsForRedetect = false,
             HistoryExistsForRedetect = false
         };
@@ -84,7 +81,6 @@ public class SqlBoxMigrationRunnerHookOrderTests
         var unitOfWork = new RecordingProvisioningUnitOfWork();
         var runner = new RecordingTestRunner(unitOfWork)
         {
-            // Bootstrap path discriminator: legacy table present, no history rows.
             TableExistsForRedetect = true,
             HistoryExistsForRedetect = false
         };
@@ -119,7 +115,6 @@ public class SqlBoxMigrationRunnerHookOrderTests
         var unitOfWork = new RecordingProvisioningUnitOfWork();
         var runner = new RecordingTestRunner(unitOfWork)
         {
-            // Normal path discriminator: table present AND history rows present.
             TableExistsForRedetect = true,
             HistoryExistsForRedetect = true
         };
@@ -147,12 +142,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
             unitOfWork.Log);
     }
 
-    /// <summary>
-    /// Records every hook invocation and the UoW lifecycle into a single shared list so
-    /// the test can assert the exact ordered interleaving (runner hooks AND UoW lifecycle).
-    /// Overrides <c>RedetectStateAsync</c> directly — this isolates the orchestration test
-    /// from the detection helper's behaviour (which is exercised separately in Phase 6.4).
-    /// </summary>
+    // Overrides RedetectStateAsync so the order under test does not depend on the detection helper.
     private sealed class RecordingTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         private readonly RecordingProvisioningUnitOfWork _unitOfWork;
@@ -230,11 +220,6 @@ public class SqlBoxMigrationRunnerHookOrderTests
         }
     }
 
-    /// <summary>
-    /// Records every UoW lifecycle call into the shared <see cref="Log"/>. The runner and
-    /// the UoW share the same list so the assertion sees runner hooks AND UoW operations
-    /// interleaved in their actual call order.
-    /// </summary>
     private sealed class RecordingProvisioningUnitOfWork : IAmAProvisioningUnitOfWork<FakeDbTransaction>
     {
         public List<string> Log { get; } = new();

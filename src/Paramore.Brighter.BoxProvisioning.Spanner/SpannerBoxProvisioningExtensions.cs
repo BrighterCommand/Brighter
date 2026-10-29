@@ -154,13 +154,8 @@ public static class SpannerBoxProvisioningExtensions
         return options;
     }
 
-    // Detection helper + payload validator are shared across Outbox and Inbox extensions;
-    // TryAddSingleton makes the registration idempotent so calling both AddSpannerOutbox and
-    // AddSpannerInbox does not produce duplicate singletons. The detection helper is ALSO
-    // consumed by SpannerBoxMigrationRunner (Phase 7.5) — the runner is constructed inside
-    // the factory using the same singleton so both the runner and provisioner see one
-    // shared instance per service-provider scope. NO catalogue registration per ADR 0057 §6
-    // (Spanner is degenerate fresh-only).
+    // TryAddSingleton lets both AddSpannerOutbox and AddSpannerInbox be called; the runner and
+    // the provisioner share the one detection helper.
     private static void RegisterSharedRoleImpls(IServiceCollection services)
     {
         services.TryAddSingleton<SpannerBoxDetectionHelper>();
