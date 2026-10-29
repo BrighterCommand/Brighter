@@ -19,40 +19,58 @@ No findings at or above threshold 60. Consider addressing lower-scored items.
 > findings of pass 12 were fixed, PASS (3 findings, 0 at or above 60). Pass 14, after findings 1 and 2 of pass 13
 > were fixed and finding 3 was left as it was, PASS (2 findings, 0 at or above 60). Pass 15, after finding 1 of
 > pass 14 was fixed and finding 2 was left as it was, PASS (3 findings, 0 at or above 60). Pass 16, after T6.12
-> was added, PASS (3 findings, 0 at or above 60), recorded below.
+> was added, PASS (3 findings, 0 at or above 60). Pass 17, after T9.22 was added, PASS (5 findings, 0 at or above
+> 60), recorded below.
 
 ## Findings
 
-### 1. T6.12 leaves the T15.4 exception out of date, and no task says to update it (Score: 55)
+### 1. Phase 9 is reopened while Phases 10 to 15 are already ticked, and the dependency is not addressed (Score: 50)
 
-T6.12 exists to remove the exception that T15.4 records, and it cites that record as its reason. T15.4 is ticked, and its record is written in the present tense, so once T6.12 is ticked the record is false. The record also says more than the clock: it says the tests "assert only what start set on the readings", which T6.12 leaves alone. So it is not clear whether the whole bullet goes or only the part about the clock.
+T9.22 is added unticked at the end of Phase 9 (tasks.md:1230). Phase 10 says "*Depends on Phase 9.*" (tasks.md:1246), and its tasks, along with later ones such as T15.4 (tasks.md:1880), are already `[x]`. The ticked T15.4 record now uses T9.22 to justify its exception ("so T9.22 reads its last item through the listener", tasks.md:1885), but T9.22 has not been done. Nothing in T9.22 says that no ticked task depends on it, or that it may run after later phases. A reader running `/spec:status` or T15.6 sees an open Phase 9 task behind closed phases, with no stated reason.
 
-**Evidence**:
-- tasks.md:1871, the T15.4 bullet on T6.7 and T6.11.
-- tasks.md:622: "T15.4 lists these tests as the exception to AC-25."
-- T6.12 names no output that touches T15.4.
+**Evidence**: `- [ ] **CHARACTERISE: T9.22 …**` (:1230) followed by `## Phase 10 … *Depends on Phase 9.*` (:1244-1246). T15.4 is `[x]` and cites T9.22 (:1880, :1885).
 
-**Recommendation**: Add an output to T6.12 that updates the T15.4 bullet: the tests run on a `FakeTimeProvider` (T6.12) and still read only `OutboxStaleMessageReadings.IsStarted`, `OutboxType` and `MeasuresTopics`, not meter values. Or say that T15.4 is checked again for these two files after T6.12.
+**Recommendation**: In T9.22, add one line saying it was added after Phase 9 closed, that no task in Phases 10 to 15 depends on it, and that it runs before T15.6. Or make T15.4's acceptance conditional on T9.22 being ticked.
 
 ---
 
-### 2. The verification does not show that the fake clock reaches the monitor, and names no mutation for T6.11 (Score: 45)
+### 2. T9.6's ticked "Test should verify" still claims the feature-disabled comparison that T9.22 says it does not make (Score: 45)
 
-The aim of T6.12 is that the monitors these tests start run on the fake clock and never count or log after the test. The verification runs the T6.7 mutation and the suite. Neither would notice a `FakeTimeProvider` registered where the monitor never gets it, since the tests were green before the change and stay green after it. `BuildMonitor` changes for both T6.11 facts, but no T6.11 mutation is named, so nothing shows those facts still fail when they should.
+T9.22 says, correctly, that "T9.6 checks the last item of AC-9 through `OutboxStaleMessageReadings.GetTotal` and runs no host with the feature disabled" (:1235). This matches the test: it asserts `whileRunning` from `readings.GetTotal` (test :99-102, :135-140) and runs only one host. But T9.6's own bullet, ticked, still reads "which differs from a run with the feature disabled (no series at all)" (:1042). The file now contradicts itself about what T9.6 verified.
 
-**Evidence**: tasks.md:623.
+**Evidence**: tasks.md:1042 against tasks.md:1235. In `When_a_count_is_still_running_at_the_next_due_time_should_skip_it.cs`, `collected` (:94-99) is only checked for the MESSAGES instrument (:141).
 
-**Recommendation**: Add a T6.11 mutation, for example skipping `_readings.Start(...)` (`TimedOutboxStaleMessageMonitor.cs:117`), which should fail both facts. Add one check that the clock reaches the monitor, by reading the diff or with a probe: set `MeasurementInterval` to 1 ms in the changed tests for a while and confirm that the outbox double records no count after a short wait on the real clock.
+**Recommendation**: Add a note under T9.6 that the feature-disabled comparison and the listener read moved to T9.22.
 
 ---
 
-### 3. T6.12 names its own line baseline, and the header does not allow for it (Score: 20)
+### 3. The first run of T9.22 largely repeats T9.6's scenario (Score: 35)
 
-The header fixes one baseline for line numbers. T6.12 names its own, and no other task does. The lines are right, because nothing under `src` or `tests` changed between 093b69aae and HEAD, but the header at :22 does not say that a task may do this.
+The first run copies T9.6 step by step. T9.6 already calls `metrics.Observe()` at both collections (test :98). Only the assertion target changes, from readings to listener values. CLAUDE.md says to "stop and ask if a test … duplicates an existing test". The task justifies keeping T9.6 as it is ("It leaves the T9.6 test as it is"), but it does not weigh adding the listener assertions and a second run to T9.6 instead.
 
-**Evidence**: tasks.md:22, "Lines are cited at HEAD 942cb8f56."; tasks.md:620, "Lines in this task are cited at HEAD 093b69aae."
+**Evidence**: tasks.md:1235, :1237. T9.6 test :94-113.
 
-**Recommendation**: Optional. Add half a sentence to :22 saying that a task added later can name its own baseline.
+**Recommendation**: Say in one line why a new test was chosen over extending T9.6, for example that the ticked T9.6 test stays unchanged. Or accept this as is.
+
+---
+
+### 4. The feature-disabled run's "collections at 12:02:20 and 12:03:20" have no timing meaning, and the release rationale is loose (Score: 25)
+
+With `UseOutboxStaleMessageMonitor` absent, no monitor exists. There are no timers, so the T9.6 helper `WaitUntilTheMonitorWaits` cannot be used, and the instants are just `Advance` points. That is feasible, but the wording suggests a mirrored schedule. In the first run, "releases the call … so the monitor can stop" overstates the need. Per T10.1, stop returns within T even while a call is still running. The release mainly avoids leaving a blocked double task behind after the test.
+
+**Evidence**: tasks.md:1237-1239. `When_the_stale_step_is_not_added_should_measure_nothing.cs` :76 uses a single `Advance(10 min)`.
+
+**Recommendation**: Optionally say that the disabled run advances the clock to the same instants with no waits, and that the release avoids a dangling task.
+
+---
+
+### 5. Test file name reads awkwardly (Score: 15)
+
+`When_a_count_is_still_running_should_report_measurements_unlike_the_feature_disabled` ends on "the feature disabled" with no noun ("…unlike_a_host_with_the_feature_disabled"). It still follows `When_..._should_...`.
+
+**Evidence**: tasks.md:1234.
+
+**Recommendation**: Optionally rename, for example `..._should_report_measurements_unlike_a_host_without_the_monitor`.
 
 ---
 
@@ -63,11 +81,11 @@ The header fixes one baseline for line numbers. T6.12 names its own, and no othe
 | 90-100 (Critical) | 0 |
 | 70-89 (High) | 0 |
 | 50-69 (Medium) | 1 |
-| 0-49 (Low) | 2 |
+| 0-49 (Low) | 4 |
 
-**Total findings**: 3
+**Total findings**: 5
 **Findings at or above threshold (60)**: 0
 
-## Checked in T6.12, with no finding
+## Checked in T9.22, with no finding
 
-Both files exist under `tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/` and create their `ServiceCollection` at the lines T6.12 cites (:63, and :80 in `BuildMonitor`), with no `TimeProvider` and no `Microsoft.Extensions.Time.Testing` using. The pattern T6.12 copies is at `When_the_monitor_starts_should_dispose_its_scope_before_returning.cs:32` and `:53`. The monitor lines it cites (`TimedOutboxStaleMessageMonitor.cs:77` and `:189`, `TimedOutboxStaleMessageMonitorOptions.cs:74`) hold at HEAD. `UseOutboxStaleMessageMonitor` registers the monitor with `AddHostedService` (`HostedServiceCollectionExtensions.cs:106`), its constructor takes an optional `TimeProvider`, and nothing under `src/Paramore.Brighter.Extensions.DependencyInjection` registers one, so the monitor gets the `FakeTimeProvider` the test registers. Only the test arrangement changes, so the task is structural. These two files are the only start tests under `Observability/StaleMessages/` without a `TimeProvider`. The counts at tasks.md:19 match the 151 checkboxes, 5 of them `STRUCTURAL`, and the NFR-6 and AC-25 rows fit requirements.md:461. The three findings of pass 15 were not scored again; T6.12 does not touch them.
+The counts at tasks.md:19 match the 152 checkboxes: 53 TEST + IMPLEMENT, 63 CHARACTERISE, 7 GENERATE, 5 STRUCTURAL, 17 PROJECT and 7 DOC. The meter lines that T9.22 and T15.4 cite (`ObserveOverall` :84-92, `ObserveTopics` :94-107, `ObserveMeasurements` :109-130) hold at HEAD, since the commit that added T9.22 changes only docs. With no readings, `OutboxStaleMessageMeter` creates no instruments (:59-60), so the run without the monitor receives nothing. Each `StaleMessageMetricsFixture` listens only to its own `IMeterFactory` (:68), so the two runs in one test do not see each other. The RED mutation fails only the first run. The test belongs in `StaleMessageLoggingCollection`, because its first run logs the skip warnings that T9.6 counts. The lead-in, the per-task line baseline (as in T6.12) and the CHARACTERISE gate wording match the rest of the file. The FR-6, FR-8, AC-9 and AC-25 rows trace to requirements.md. The findings of pass 16 were not scored again; T9.22 does not touch them.
