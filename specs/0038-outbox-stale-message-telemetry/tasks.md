@@ -1854,13 +1854,24 @@ No production change is expected in this phase. The named mutation is how RED is
 
 *Depends on every earlier phase.*
 
-- [ ] **PROJECT: T15.1 Run every affected suite**
+- [x] **PROJECT: T15.1 Run every affected suite**
   - `tests/Paramore.Brighter.Core.Tests` on net9.0 and net10.0, including `Sweeping/`, `Observability/`, `CommandProcessors/` and the Outbox.Hosting tests, which live in Core.Tests (`Paramore.Brighter.Core.Tests.csproj:12`).
   - `tests/Paramore.Brighter.InMemory.Tests`.
   - The Base.Test-derived suites: `MSSQL.Tests`, `MySQL.Tests`, `PostgresSQL.Tests`, `Sqlite.Tests`, `MongoDb.Tests`, `DynamoDB.Tests`, `DynamoDB.V4.Tests`, and `Gcp.Tests` (Spanner and Firestore run by hand against their emulators).
   - `tests/Paramore.Brighter.Test.Generator.Tests`.
   - Build `src/Paramore.Brighter`, `src/Paramore.Brighter.Outbox.Hosting` and `src/Paramore.Brighter.Extensions.Diagnostics` for every target (netstandard2.0, net8.0, net9.0, net10.0) with no new warnings. The netstandard2.0 branches are built here and reviewed in T9.21. No test project runs them.
   - Output: pass counts per project in the PR description.
+  - Ran at 8c80db247 on Windows, with the Spanner and Firestore emulators. The three builds give 0 warnings and 0 errors on every target. Passed, skipped and total per project:
+    - Core.Tests: 2006, 7, 2013 on net9.0 and on net10.0.
+    - InMemory.Tests: 183, 0, 183 on net9.0 and on net10.0.
+    - MSSQL.Tests (net10.0): 376, 4, 380.
+    - MySQL.Tests (net9.0, its only target): 195, 0, 195.
+    - PostgresSQL.Tests (net10.0, its only target): 296, 0, 297. The failure is `When_many_postgres_provisioners_race_to_create_history_table_they_should_all_complete`, whose race window did not open. It passed in three runs on its own, and its file is not in this PR.
+    - Sqlite.Tests (net10.0): 187, 0, 187.
+    - MongoDb.Tests (net10.0): 93, 0, 93.
+    - DynamoDB.Tests (net10.0): 148, 0, 148. DynamoDB.V4.Tests (net10.0): 147, 0, 147.
+    - Gcp.Tests, Spanner and Firestore only (net10.0): 169, 0, 184. The 15 failures are the Firestore inbox tests, which get `Unauthenticated` because the inbox does not connect to the emulator. No inbox file is in this PR.
+    - Test.Generator.Tests (net10.0): 334, 0, 336. The 2 failures are the gateway facts of `GenerationPlanCoverageTests`, which build paths with `Path.Combine("/sample", ...)` and fail on Windows. That file comes from master.
 
 - [x] **PROJECT: T15.2 Generated-tree audit**
   - Run `dotnet test tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -f net10.0`.
