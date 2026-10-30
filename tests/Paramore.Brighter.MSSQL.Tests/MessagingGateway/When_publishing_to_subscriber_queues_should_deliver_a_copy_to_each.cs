@@ -136,6 +136,42 @@ public class MsSqlFanOutTests : IDisposable
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task When_a_subscriber_requests_an_explicit_delay_without_a_scheduler_should_preserve_its_copy(bool async)
+    {
+        //Arrange
+        using var first = Consumer("first");
+        using var second = Consumer("second");
+        using var unbound = Consumer(_topic.Value);
+        var message = CreateMessage();
+        message.Header.Bag["tenant"] = "customer";
+        await Send(message, async);
+        var failed = await Receive(first, async);
+        AssertCopy(message, failed);
+        AssertCopy(message, await Receive(second, async));
+        failed.Header.UpdateHandledCount();
+        var delay = TimeSpan.FromSeconds(1);
+
+        //Act
+        var accepted = async
+            ? await first.RequeueAsync(failed, delay)
+            : first.Requeue(failed, delay);
+
+        //Assert
+        Assert.True(accepted);
+        var retried = await Receive(first, async);
+        AssertCopy(message, retried);
+        Assert.Equal("customer", retried.Header.Bag["tenant"].ToString());
+        Assert.Equal(message.Id.Value, retried.Header.Bag[Message.OriginalMessageIdHeaderName].ToString());
+        Assert.Equal(failed.Header.HandledCount, retried.Header.HandledCount);
+        Assert.True((await Receive(first, async)).IsEmpty);
+        Assert.True((await Receive(second, async)).IsEmpty);
+        Assert.True((await Receive(unbound, async)).IsEmpty);
+        Assert.Equal(_topic, failed.Header.Topic);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task When_purging_one_subscriber_should_preserve_other_subscribers(bool async)
     {
         //Arrange
@@ -252,6 +288,7 @@ public class MsSqlFanOutTests : IDisposable
         ExecuteSql($"DROP INDEX [IX_{_configuration.QueueStoreTable}_Topic] ON [{_configuration.QueueStoreTable}]");
         ExecuteSql($"ALTER TABLE [{_configuration.QueueStoreTable}] ALTER COLUMN Topic nvarchar(255) COLLATE Latin1_General_CI_AI NOT NULL");
         _publication.SubscriberChannels = [new("café"), new("CAFE"), new("cafe ")];
+        _producer.Publication = _publication;
         using var consumer = Consumer("café");
         var message = CreateMessage();
 
@@ -271,6 +308,7 @@ public class MsSqlFanOutTests : IDisposable
         //Arrange
         const string name = "subscriber'; SELECT 1; -- 雪";
         _publication.SubscriberChannels = [new(name)];
+        _producer.Publication = _publication;
         using var consumer = Consumer(name);
         var message = CreateMessage();
 
@@ -291,6 +329,7 @@ public class MsSqlFanOutTests : IDisposable
         ExecuteSql($"DROP INDEX [IX_{_configuration.QueueStoreTable}_Topic] ON [{_configuration.QueueStoreTable}]");
         ExecuteSql($"ALTER TABLE [{_configuration.QueueStoreTable}] ALTER COLUMN Topic nvarchar(255) COLLATE Latin1_General_100_BIN2 NOT NULL");
         _publication.SubscriberChannels = [new("subscriber"), new("SUBSCRIBER")];
+        _producer.Publication = _publication;
         var message = CreateMessage();
 
         //Act
@@ -365,6 +404,7 @@ public class MsSqlFanOutTests : IDisposable
         //Arrange
         var queue = new string('q', 253) + "🚀";
         _publication.SubscriberChannels = [new(queue), new("second")];
+        _producer.Publication = _publication;
         var body = string.Concat(Enumerable.Repeat("雪🚀", 4000));
         var message = new Message(new MessageHeader(Id.Random(), _topic, MessageType.MT_EVENT), new MessageBody(body));
 
@@ -388,9 +428,9 @@ public class MsSqlFanOutTests : IDisposable
             _configuration, [_publication]).CreateAsync()).Single().Value;
         var factory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
         using var first = await factory.CreateAsyncChannelAsync(new MsSqlSubscription<Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand>(
-            new("first"), new("first"), _topic));
+            new("first"), new("first"), _topic) { IsIndependentSubscriber = true });
         using var second = factory.CreateAsyncChannel(new MsSqlSubscription<Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand>(
-            new("second"), new("second"), _topic));
+            new("second"), new("second"), _topic) { IsIndependentSubscriber = true });
         var message = CreateMessage();
 
         //Act
@@ -407,7 +447,7 @@ public class MsSqlFanOutTests : IDisposable
     public async Task When_rejecting_one_copy_should_leave_the_other_subscriber_untouched(bool async)
     {
         //Arrange
-        using var first = new MsSqlMessageConsumer(_configuration, "first", deadLetterRoutingKey: new RoutingKey("dead"));
+        using var first = new MsSqlMessageConsumer(_configuration, "first", true, deadLetterRoutingKey: new RoutingKey("dead"));
         using var second = Consumer("second");
         using var dead = Consumer("dead");
         var message = CreateMessage();
@@ -436,6 +476,7 @@ public class MsSqlFanOutTests : IDisposable
     {
         //Arrange
         _publication.SubscriberChannels = Enumerable.Range(0, 1000).Select(i => new ChannelName($"subscriber{i}")).ToArray();
+        _producer.Publication = _publication;
         var message = CreateMessage();
 
         //Act
@@ -461,7 +502,7 @@ public class MsSqlFanOutTests : IDisposable
 
     private MsSqlMessageConsumer Consumer(string channel) =>
         (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(_configuration).Create(
-            new MsSqlSubscription(new SubscriptionName(Guid.NewGuid().ToString()), new ChannelName(channel), _topic, requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand)));
+            new MsSqlSubscription(new SubscriptionName(Guid.NewGuid().ToString()), new ChannelName(channel), _topic, requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand)) { IsIndependentSubscriber = true });
 
     private Message CreateMessage() => new(new MessageHeader(Id.Random(), _topic, MessageType.MT_EVENT), new MessageBody("payload"));
 

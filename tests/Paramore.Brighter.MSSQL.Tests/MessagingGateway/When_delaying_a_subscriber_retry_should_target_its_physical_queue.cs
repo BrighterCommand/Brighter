@@ -93,30 +93,11 @@ public class MsSqlSubscriberRetryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task When_directly_requesting_a_delayed_subscriber_retry_without_a_scheduler_should_fail(bool async)
-    {
-        //Arrange
-        using var consumer = new MsSqlMessageConsumer(_configuration, "subscriber");
-        var message = Message();
-
-        //Act
-        var exception = async
-            ? await Assert.ThrowsAsync<ConfigurationException>(() => consumer.RequeueAsync(message, _delay))
-            : Assert.Throws<ConfigurationException>(() => consumer.Requeue(message, _delay));
-
-        //Assert
-        Assert.Contains("scheduler", exception.Message);
-        Assert.Equal("logical.topic", message.Header.Topic.Value);
-    }
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
     public async Task When_a_subscriber_retry_is_already_cancelled_should_not_schedule_or_modify_the_message(bool delayed)
     {
         //Arrange
         var scheduler = new InMemorySubscriberRetryScheduler();
-        using var consumer = new MsSqlMessageConsumer(_configuration, "subscriber", scheduler);
+        using var consumer = new MsSqlMessageConsumer(_configuration, "subscriber", true, scheduler: scheduler);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         var message = Message();
@@ -132,7 +113,7 @@ public class MsSqlSubscriberRetryTests
     }
 
     private MsSqlSubscription Subscription() => new(new("subscription"), new("subscriber"), new("logical.topic"),
-        requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand), requeueDelay: _delay);
+        requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand), requeueDelay: _delay) { IsIndependentSubscriber = true };
 
     private static Message Message() => new(new MessageHeader(Id.Random(), new RoutingKey("logical.topic"), MessageType.MT_EVENT), new MessageBody("payload"));
 }

@@ -26,6 +26,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private MsSqlMessageProducer? _requeueProducer;
         private bool _requeueProducerInitialized;
         private object? _requeueProducerLock;
+        private readonly bool _isIndependentSubscriber;
 
         public MsSqlMessageConsumer(
             RelationalDatabaseConfiguration msSqlConfiguration,
@@ -61,6 +62,30 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {}
 
         /// <summary>
+        /// Initializes a consumer with an explicit choice of topic or independent subscriber routing.
+        /// </summary>
+        /// <param name="msSqlConfiguration">The SQL queue configuration.</param>
+        /// <param name="topic">The physical queue name.</param>
+        /// <param name="isIndependentSubscriber">True to target this queue when scheduling retries of fan-out copies.</param>
+        /// <param name="connectionProvider">An optional connection provider; defaults to the MS SQL provider.</param>
+        /// <param name="scheduler">The optional message scheduler.</param>
+        /// <param name="deadLetterRoutingKey">The optional dead-letter destination.</param>
+        /// <param name="invalidMessageRoutingKey">The optional invalid-message destination.</param>
+        public MsSqlMessageConsumer(
+            RelationalDatabaseConfiguration msSqlConfiguration,
+            string topic,
+            bool isIndependentSubscriber,
+            RelationalDbConnectionProvider? connectionProvider = null,
+            IAmAMessageScheduler? scheduler = null,
+            RoutingKey? deadLetterRoutingKey = null,
+            RoutingKey? invalidMessageRoutingKey = null)
+            : this(msSqlConfiguration, topic, connectionProvider ?? new MsSqlConnectionProvider(msSqlConfiguration),
+                scheduler, deadLetterRoutingKey, invalidMessageRoutingKey)
+        {
+            _isIndependentSubscriber = isIndependentSubscriber;
+        }
+
+        /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
         /// <remarks>
@@ -89,14 +114,29 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         }
 
         /// <summary>
-        /// Purges the specified queue name.
+        /// Purges this consumer's physical queue in bounded batches.
         /// </summary>
+        /// <remarks>
+        /// Rows above the queue's highest identity observed at the start are preserved.
+        /// Outside an ambient transaction each batch commits independently, so failure can leave a partial purge.
+        /// An ambient transaction retains locks across batches until it completes.
+        /// </remarks>
         public void Purge()
         {
             Log.PurgingQueue(s_logger);
             _sqlMessageQueue.PurgeTopic(_topic);
         }
 
+        /// <summary>
+        /// Purges this consumer's physical queue asynchronously in bounded batches.
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation for the purge command.</param>
+        /// <returns>A task that completes when all rows up to the initial identity cutoff have been purged.</returns>
+        /// <remarks>
+        /// Rows above the initial identity cutoff remain queued. Outside an ambient transaction,
+        /// cancellation or failure can leave committed batches deleted and later batches still queued.
+        /// An ambient transaction retains locks across batches until it completes.
+        /// </remarks>
         public async Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             Log.PurgingQueue(s_logger);
@@ -271,10 +311,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// </summary>
         /// <remarks>
         /// Retries return to this consumer's physical queue and preserve the logical topic.
-        /// Delayed subscriber retries require an <see cref="IAmAMessageRequeueSchedulerSync"/>.
+        /// A subscriber retry uses an <see cref="IAmAMessageRequeueSchedulerSync"/> to honor a delay.
+        /// Without one, the copy is requeued immediately to the receiving queue and a warning is logged.
         /// </remarks>
         /// <param name="message"></param>
-        /// <param name="delay">When greater than zero, schedules delivery to the receiving queue.</param>
+        /// <param name="delay">The requested retry delay. Subscriber retries fall back to immediate delivery without a queue-targeted scheduler.</param>
         /// <returns>True when message is requeued</returns>
         public bool Requeue(Message message, TimeSpan? delay = null)
         {
@@ -290,16 +331,18 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             if (delay > TimeSpan.Zero)
             {
-                if (_topic != topic.Value)
+                if (!_isIndependentSubscriber)
                 {
-                    if (_scheduler is not IAmAMessageRequeueSchedulerSync scheduler)
-                        throw new ConfigurationException("Delayed MS SQL subscriber retries require an IAmAMessageRequeueSchedulerSync scheduler targeting the receiving queue.");
+                    EnsureRequeueProducer();
+                    _requeueProducer!.SendWithDelay(message, delay);
+                    return true;
+                }
+                if (_scheduler is IAmAMessageRequeueSchedulerSync scheduler)
+                {
                     scheduler.Requeue(message, new ChannelName(_topic), delay.Value);
                     return true;
                 }
-                EnsureRequeueProducer();
-                _requeueProducer!.SendWithDelay(message, delay);
-                return true;
+                Log.SubscriberRetryDelayIgnored(s_logger, message.Id.Value, _topic, delay.Value);
             }
 
             _sqlMessageQueue.Send(message, new RoutingKey(_topic));
@@ -311,11 +354,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// </summary>
         /// <remarks>
         /// Retries return to this consumer's physical queue and preserve the logical topic.
-        /// Delayed subscriber retries require an <see cref="IAmAMessageRequeueSchedulerAsync"/>.
+        /// A subscriber retry uses an <see cref="IAmAMessageRequeueSchedulerAsync"/> to honor a delay.
+        /// Without one, the copy is requeued immediately to the receiving queue and a warning is logged.
         /// Cancellation requested before the call prevents scheduling and message metadata changes.
         /// </remarks>
         /// <param name="message"></param>
-        /// <param name="delay">When greater than zero, schedules delivery to the receiving queue.</param>
+        /// <param name="delay">The requested retry delay. Subscriber retries fall back to immediate delivery without a queue-targeted scheduler.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> for the operation</param>
         /// <returns>True when message is requeued</returns>
         public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken))
@@ -333,16 +377,18 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             if (delay > TimeSpan.Zero)
             {
-                if (_topic != topic.Value)
+                if (!_isIndependentSubscriber)
                 {
-                    if (_scheduler is not IAmAMessageRequeueSchedulerAsync scheduler)
-                        throw new ConfigurationException("Delayed MS SQL subscriber retries require an IAmAMessageRequeueSchedulerAsync scheduler targeting the receiving queue.");
+                    EnsureRequeueProducer();
+                    await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
+                    return true;
+                }
+                if (_scheduler is IAmAMessageRequeueSchedulerAsync scheduler)
+                {
                     await scheduler.RequeueAsync(message, new ChannelName(_topic), delay.Value, cancellationToken);
                     return true;
                 }
-                EnsureRequeueProducer();
-                await _requeueProducer!.SendWithDelayAsync(message, delay, cancellationToken);
-                return true;
+                Log.SubscriberRetryDelayIgnored(s_logger, message.Id.Value, _topic, delay.Value);
             }
 
             await _sqlMessageQueue.SendAsync(message, _topic, null, cancellationToken: cancellationToken);
@@ -450,6 +496,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             [LoggerMessage(LogLevel.Debug, "MsSqlMessagingConsumer: re-queuing message with topic {Topic} and id {Id}")]
             public static partial void RequeuingMessage(ILogger logger, string topic, string id);
+
+            [LoggerMessage(LogLevel.Warning, "MsSqlMessagingConsumer: Requeuing message {MessageId} immediately to subscriber queue {ChannelName}; requested delay {Delay} requires a queue-targeted scheduler for this message pump")]
+            public static partial void SubscriberRetryDelayIgnored(ILogger logger, string messageId, string channelName, TimeSpan delay);
 
             [LoggerMessage(LogLevel.Warning, "MsSqlMessagingConsumer: No DLQ or invalid message channels configured for message {MessageId}, rejection reason: {RejectionReason}")]
             public static partial void NoChannelsConfiguredForRejection(ILogger logger, string messageId, string rejectionReason);

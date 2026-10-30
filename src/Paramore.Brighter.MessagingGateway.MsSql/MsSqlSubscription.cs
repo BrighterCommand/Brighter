@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2020 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -34,10 +34,20 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     /// <see cref="MsSqlPublication"/> it must name one of the configured subscriber queues. Receivers using the same queue table
     /// and channel compete for messages: each queued message is removed by one receiver.
     /// Different subscription names do not create separate copies of messages.
-    /// Use <see cref="MsSqlPublication"/> to opt in to explicit subscriber fan-out.
+    /// Use <see cref="MsSqlPublication"/> with <see cref="IsIndependentSubscriber"/> enabled to opt in to explicit subscriber fan-out.
     /// </remarks>
     public class MsSqlSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
     {
+        /// <summary>
+        /// Gets or sets whether the channel is an independent subscriber queue of an <see cref="MsSqlPublication"/>.
+        /// </summary>
+        /// <value>Defaults to false for legacy topic queues, including SQL-equivalent spellings of the topic.</value>
+        /// <remarks>
+        /// Enable this for fan-out subscribers so delayed retries target only the receiving queue.
+        /// A positive subscription requeue delay requires a queue-targeted scheduler.
+        /// </remarks>
+        public bool IsIndependentSubscriber { get; set; }
+
         /// <inheritdoc />
         public override Type ChannelFactoryType => typeof(ChannelFactory);
 

@@ -39,12 +39,21 @@ namespace Paramore.Brighter.MessagingGateway.MsSql;
 public class MsSqlPublication : Publication
 {
     /// <summary>
+    /// Gets or sets the SQL command timeout for an atomic fan-out send.
+    /// </summary>
+    /// <value>Defaults to 30 seconds. Zero disables the timeout. Positive fractions round up to whole seconds.</value>
+    /// <remarks>The producer captures this value when its publication is assigned.</remarks>
+    public TimeSpan SendTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Gets or sets the physical queues that receive a copy of each published message.
     /// </summary>
     /// <value>Between one and 1,000 nonblank channel names, each at most 255 UTF-16 code units.</value>
     /// <remarks>
     /// Names equivalent under the queue column's collation receive one copy.
-    /// Each channel name must differ from the publication's logical topic.
+    /// Each channel name must differ from the publication's logical topic under that collation.
+    /// The producer copies and validates the collection when its publication is assigned.
+    /// Later changes to this collection do not change that producer's routing.
     /// </remarks>
     public IReadOnlyCollection<ChannelName> SubscriberChannels { get; set; } = Array.Empty<ChannelName>();
 

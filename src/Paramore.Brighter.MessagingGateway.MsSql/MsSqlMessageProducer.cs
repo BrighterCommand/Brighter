@@ -44,11 +44,21 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageProducer>();
         private readonly InstrumentationOptions _instrumentation;
         private readonly MsSqlMessageQueue<Message> _sqlQ;
+        private MsSqlPublicationSnapshot _publication;
 
         /// <summary>
-        /// Gets the publication used to configure the producer.
+        /// Gets or sets the publication used to configure the producer.
         /// </summary>
-        public Publication Publication { get; set; }
+        /// <remarks>
+        /// Assignment captures and validates fan-out routing and the send timeout atomically.
+        /// Mutating the supplied publication afterward does not change active sends.
+        /// Reassign this property to apply a new configuration.
+        /// </remarks>
+        public Publication Publication
+        {
+            get => Volatile.Read(ref _publication).Publication;
+            set => Volatile.Write(ref _publication, new MsSqlPublicationSnapshot(value));
+        }
 
         /// <summary>
         /// Gets or sets the OTel span for writing producer events.
@@ -72,9 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             InstrumentationOptions instrumentation = InstrumentationOptions.All
         )
         {
-            Publication = publication ?? new Publication { MakeChannels = OnMissingChannel.Create };
-            if (Publication is MsSqlPublication fanOut)
-                fanOut.GetSubscriberChannels();
+            _publication = new MsSqlPublicationSnapshot(publication ?? new Publication { MakeChannels = OnMissingChannel.Create });
             _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectonProvider);
             _instrumentation = instrumentation;
         }
@@ -120,7 +128,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public void SendWithDelay(Message message, TimeSpan? delay = null)
         { 
             delay ??= TimeSpan.Zero;
-            var subscriberChannels = (Publication as MsSqlPublication)?.GetSubscriberChannels(message.Header.Topic);
+            var publication = Volatile.Read(ref _publication);
+            publication.ValidateMessageTopic(message.Header.Topic);
+            var subscriberChannels = publication.SubscriberChannels;
             if (delay != TimeSpan.Zero)
             {
                 if (Scheduler is IAmAMessageSchedulerSync sync)
@@ -147,7 +157,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             if (subscriberChannels == null)
                 _sqlQ.Send(message, topic);
             else
-                _sqlQ.SendToChannels(message, subscriberChannels);
+                _sqlQ.SendToChannels(message, message.Header.Topic, subscriberChannels, publication.SendTimeoutSeconds);
         }
 
         /// <summary>
@@ -162,7 +172,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             cancellationToken.ThrowIfCancellationRequested();
             delay ??= TimeSpan.Zero;
-            var subscriberChannels = (Publication as MsSqlPublication)?.GetSubscriberChannels(message.Header.Topic);
+            var publication = Volatile.Read(ref _publication);
+            publication.ValidateMessageTopic(message.Header.Topic);
+            var subscriberChannels = publication.SubscriberChannels;
             if (delay != TimeSpan.Zero)
             {
                 if (Scheduler is IAmAMessageSchedulerAsync async)
@@ -189,7 +201,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             if (subscriberChannels == null)
                 await _sqlQ.SendAsync(message, topic.Value, TimeSpan.Zero, cancellationToken);
             else
-                await _sqlQ.SendToChannelsAsync(message, subscriberChannels, cancellationToken);
+                await _sqlQ.SendToChannelsAsync(message, message.Header.Topic, subscriberChannels, publication.SendTimeoutSeconds, cancellationToken);
         }
 
         /// <summary>

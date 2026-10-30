@@ -36,19 +36,35 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 
 public partial class MsSqlMessageQueue<T>
 {
-    internal void SendToChannels(T message, ChannelName[] channels)
+    private const int PURGE_BATCH_SIZE = 500;
+
+    internal void SendToChannels(T message, RoutingKey logicalTopic, ChannelName[] channels, int timeoutSeconds)
     {
         using var connection = _connectionProvider.GetConnection();
-        using var command = FanOutCommand(connection, message, channels);
-        command.ExecuteNonQuery();
+        using var command = FanOutCommand(connection, message, logicalTopic, channels, timeoutSeconds);
+        try
+        {
+            command.ExecuteNonQuery();
+        }
+        catch (SqlException exception) when (exception.Number == 51001)
+        {
+            throw new ConfigurationException("An MS SQL subscriber channel must differ from its logical topic under the queue column's collation.", exception);
+        }
     }
 
-    internal async Task SendToChannelsAsync(T message, ChannelName[] channels, CancellationToken cancellationToken)
+    internal async Task SendToChannelsAsync(T message, RoutingKey logicalTopic, ChannelName[] channels, int timeoutSeconds, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-        using var command = FanOutCommand(connection, message, channels);
-        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+        using var command = FanOutCommand(connection, message, logicalTopic, channels, timeoutSeconds);
+        try
+        {
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+        }
+        catch (SqlException exception) when (exception.Number == 51001)
+        {
+            throw new ConfigurationException("An MS SQL subscriber channel must differ from its logical topic under the queue column's collation.", exception);
+        }
     }
 
     internal void PurgeTopic(string topic)
@@ -68,15 +84,25 @@ public partial class MsSqlMessageQueue<T>
 
     // The empty table projection makes UNION compare names using the Topic column's collation.
     // One INSERT keeps delivery atomic even when one destination fails a table constraint.
-    private DbCommand FanOutCommand(DbConnection connection, T message, ChannelName[] channels)
+    private DbCommand FanOutCommand(DbConnection connection, T message, RoutingKey logicalTopic, ChannelName[] channels, int timeoutSeconds)
     {
         var table = _configuration.QueueStoreTable.Replace("]", "]]");
         var parameters = channels.Select((channel, index) =>
             new SqlParameter($"@channel{index}", SqlDbType.NVarChar, 255) { Value = channel.Value }).ToArray();
         var values = string.Join(", ", parameters.Select(parameter => $"({parameter.ParameterName})"));
         var command = connection.CreateCommand();
+        command.CommandTimeout = timeoutSeconds;
         command.CommandText = $"""
             SET NOCOUNT ON;
+            IF EXISTS (
+                SELECT 1 FROM (
+                    SELECT Topic FROM [{table}] WHERE 1 = 0
+                    UNION
+                    SELECT Topic FROM (VALUES {values}) AS recipients(Topic)
+                ) AS destinations
+                WHERE Topic = @logicalTopic
+            )
+                THROW 51001, 'An MS SQL subscriber channel must differ from its logical topic.', 1;
             INSERT INTO [{table}] (Topic, MessageType, Payload)
             SELECT Topic, @messageType, @payload
             FROM (
@@ -86,6 +112,7 @@ public partial class MsSqlMessageQueue<T>
             ) AS destinations;
             """;
         command.Parameters.AddRange(parameters);
+        command.Parameters.Add(new SqlParameter("@logicalTopic", SqlDbType.NVarChar, -1) { Value = logicalTopic.Value });
         command.Parameters.Add(new SqlParameter("@messageType", SqlDbType.NVarChar, 1024)
         { Value = typeof(T).FullName ?? throw new InvalidOperationException("The message type must have a full name.") });
         command.Parameters.Add(new SqlParameter("@payload", SqlDbType.NVarChar, -1)
@@ -97,7 +124,16 @@ public partial class MsSqlMessageQueue<T>
     {
         var table = _configuration.QueueStoreTable.Replace("]", "]]");
         var command = connection.CreateCommand();
-        command.CommandText = $"DELETE FROM [{table}] WHERE Topic = @topic;";
+        command.CommandText = $"""
+            SET NOCOUNT ON;
+            DECLARE @maxId bigint = (SELECT MAX(Id) FROM [{table}] WHERE Topic = @topic);
+            WHILE @maxId IS NOT NULL
+            BEGIN
+                DELETE TOP ({PURGE_BATCH_SIZE}) FROM [{table}] WITH (ROWLOCK)
+                WHERE Topic = @topic AND Id <= @maxId;
+                IF @@ROWCOUNT = 0 BREAK;
+            END;
+            """;
         command.Parameters.Add(CreateDbDataParameter("@topic", topic));
         return command;
     }

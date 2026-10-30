@@ -143,7 +143,7 @@ public class MsSqlFanOutConfigurationTests
     {
         //Arrange
         var subscription = new MsSqlSubscription(new("subscriber"), new("queue"), new("topic"),
-            requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand), requeueDelay: TimeSpan.FromSeconds(1));
+            requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand), requeueDelay: TimeSpan.FromSeconds(1)) { IsIndependentSubscriber = true };
         var factory = new MsSqlMessageConsumerFactory(_configuration);
 
         //Act
@@ -169,7 +169,7 @@ public class MsSqlFanOutConfigurationTests
         var configuration = new RelationalDatabaseConfiguration("invalid-connection-string", queueStoreTable: "queue");
         var subscription = new MsSqlSubscription(new("subscriber"), new("queue"), new("topic"),
             requestType: typeof(Paramore.Brighter.MSSQL.Tests.TestDoubles.MyCommand),
-            requeueDelay: TimeSpan.FromSeconds(1), makeChannels: OnMissingChannel.Create);
+            requeueDelay: TimeSpan.FromSeconds(1), makeChannels: OnMissingChannel.Create) { IsIndependentSubscriber = true };
         var factory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
 
         //Act

@@ -113,7 +113,6 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             Dictionary<ProducerKey, IAmAMessageProducer> producers, Publication publication)
         {
             var producer = new MsSqlMessageProducer(_msSqlConfiguration, publication);
-            producer.Publication = publication;
             var producerKey = new ProducerKey(publication.Topic!, publication.Type);
             if (producers.ContainsKey(producerKey))
                 throw new ConfigurationException($"MS SQL Message Producer Factory: A publication with the topic {publication.Topic} and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");
