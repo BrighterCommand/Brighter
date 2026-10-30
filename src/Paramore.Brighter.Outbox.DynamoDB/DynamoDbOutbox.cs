@@ -871,8 +871,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
                 // Spin off requests to scan each segment
                 var tasks = new List<Task<int>>();
-                // A segment may hold none of the stale messages, so each one counts up to the whole ceiling
-                // and the total is capped afterwards.
                 for (var segmentNumber = 0; segmentNumber < _configuration.ScanConcurrency; segmentNumber++)
                 {
                     tasks.Add(ScanOutstandingIndexSegmentForCount(olderThan, maxCount, segmentNumber, cancellationToken));
