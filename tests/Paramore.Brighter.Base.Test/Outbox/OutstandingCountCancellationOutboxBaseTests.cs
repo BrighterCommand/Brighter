@@ -32,11 +32,13 @@ public abstract class OutstandingCountCancellationOutboxBaseTests<TTransaction>
     /// </summary>
     protected async Task AssertCancellationEndsTheCountAsync()
     {
+        // Arrange
         var setup = await PrepareStoreAsync(s_holdFor);
         using var cancellation = new CancellationTokenSource();
         Task<int> count = null;
         try
         {
+            // Act
             if (!setup.StoreHeld)
                 cancellation.Cancel();
 
@@ -54,6 +56,7 @@ public abstract class OutstandingCountCancellationOutboxBaseTests<TTransaction>
             var finished = await Task.WhenAny(count, Task.Delay(s_mustEndWithin + s_margin));
             cancelledAt.Stop();
 
+            // Assert
             Assert.True(ReferenceEquals(finished, count),
                 $"The count was still running {cancelledAt.Elapsed.TotalSeconds:F1} seconds after the cancellation");
             Assert.True(cancelledAt.Elapsed <= s_mustEndWithin,

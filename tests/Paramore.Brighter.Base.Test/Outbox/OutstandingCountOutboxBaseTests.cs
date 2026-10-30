@@ -83,11 +83,14 @@ public abstract class OutstandingCountOutboxBaseTests<TTransaction> : IDisposabl
     /// </summary>
     protected async Task AssertAgeAsync()
     {
+        // Arrange
         await AddAc16MessagesAsync();
         BeforeCount();
 
+        // Act
         var count = await WaitForCountAsync(100, 5);
 
+        // Assert
         Assert.Equal(5, count);
     }
 
@@ -96,11 +99,14 @@ public abstract class OutstandingCountOutboxBaseTests<TTransaction> : IDisposabl
     /// </summary>
     protected async Task AssertCeilingOfThreeAsync()
     {
+        // Arrange
         await AddAc16MessagesAsync();
         BeforeCount();
 
+        // Act
         var count = await WaitForCountAsync(3, 3);
 
+        // Assert
         Assert.Equal(3, count);
     }
 
@@ -109,11 +115,14 @@ public abstract class OutstandingCountOutboxBaseTests<TTransaction> : IDisposabl
     /// </summary>
     protected async Task AssertCeilingOfFiveAsync()
     {
+        // Arrange
         await AddAc16MessagesAsync();
         BeforeCount();
 
+        // Act
         var count = await WaitForCountAsync(5, 5);
 
+        // Assert
         Assert.Equal(5, count);
     }
 
