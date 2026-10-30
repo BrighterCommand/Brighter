@@ -2102,7 +2102,7 @@ No production change is expected in this phase. The named mutation is how RED is
 
 ### Design review items left for the task breakdown
 
-These are the items that `specs/0038-outbox-stale-message-telemetry/review-design.md` :18-25 leaves open for the task breakdown, and pass 14's finding 2 (:36-38).
+These are the items that the design review left open for the task breakdown, and finding 2 of its pass 14.
 
 | Item | Tasks |
 |---|---|
