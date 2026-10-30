@@ -14,7 +14,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Collection("RMQ connection pool")]
 public class RmqAutoRecoveryConfirmationTests : IDisposable
 {
     private const string ManagementApi = "http://localhost:15672/api/connections";
@@ -23,6 +23,8 @@ public class RmqAutoRecoveryConfirmationTests : IDisposable
     private readonly string _connectionName = $"bugfix-0056-{Guid.NewGuid()}";
     private readonly HttpClient _management = new();
     private readonly CoalescingConfirmsRmqProducer _messageProducer;
+    private readonly ConnectionFactory _connectionFactory;
+    private readonly RmqMessageGatewayConnectionPool _connectionPool;
 
     public RmqAutoRecoveryConfirmationTests()
     {
@@ -34,6 +36,8 @@ public class RmqAutoRecoveryConfirmationTests : IDisposable
         };
 
         _messageProducer = new CoalescingConfirmsRmqProducer(rmqConnection);
+        _connectionFactory = new ConnectionFactory { Uri = rmqConnection.AmpqUri.Uri };
+        _connectionPool = new RmqMessageGatewayConnectionPool(_connectionName, rmqConnection.Heartbeat);
 
         //we need a queue to avoid a discard
         new QueueFactory(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), new RoutingKeys(_routingKey))
@@ -54,11 +58,14 @@ public class RmqAutoRecoveryConfirmationTests : IDisposable
         _messageProducer.Send(NewMessage());
 
         var channel = (IModel)(object)_messageProducer.Confirms;
+        var pooledConnection = _connectionPool.GetConnection(_connectionFactory);
+        Assert.NotNull(pooledConnection);
         CloseConnectionFromTheBroker();
 
         // nothing sends during the outage, so the client recovers the same channel rather than the gateway replacing it
         WaitUntil(() => channel.IsClosed, "the channel to close");
         WaitUntil(() => channel.IsOpen, "the client to recover the channel");
+        Assert.Same(pooledConnection, _connectionPool.GetConnection(_connectionFactory));
         Assert.Single(_messageProducer.Channels);
         Assert.Equal(1ul, channel.NextPublishSeqNo);
 

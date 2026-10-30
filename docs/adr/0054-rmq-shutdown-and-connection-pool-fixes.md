@@ -5,7 +5,7 @@ status: Accepted
 author:
   - "Brighter Team"
 created: 2026-03-11
-summary: "Fixes a sync-over-async shutdown deadlock in the RabbitMQ Proactor by adding `IAsyncDisposable` to `IAmAChannelAsync` and awaiting `DisposeAsync()` on MT_QUIT, and resolves a connection pool race condition where stale `ConnectionShutdown` handlers could dispose active connections via `ReferenceEquals` guards and `ConfigureAwait(false)`."
+summary: "Fixes the RabbitMQ Proactor shutdown deadlock with awaited disposal and ConfigureAwait(false). Guards async pool shutdown eviction by connection identity. RMQ.Sync preserves automatic recovery and replaces closed connections lazily."
 tags:
   - "rabbitmq"
   - "transports"
@@ -115,11 +115,11 @@ Affected methods:
 - `TryRemoveConnectionAsync` — `await pooledConnection.Connection.DisposeAsync().ConfigureAwait(false)`
 - `CreateConnectionAsync` — `await TryRemoveConnectionAsync().ConfigureAwait(false)`, `await connectionFactory.CreateConnectionAsync().ConfigureAwait(false)`
 
-### 4. Guard `ConnectionShutdown` handler with `ReferenceEquals`
+### 4. Separate shutdown notification from connection ownership
 
 **Role**: Connection Pool — responsible for **deciding** whether a shutdown event applies to the current pooled connection.
 
-The `ShutdownHandler` closure must verify the connection being shut down is the same instance currently in the pool:
+The async `ShutdownHandler` closure must verify the connection being shut down is the same instance currently in the pool:
 
 ```csharp
 // Async variant
@@ -141,22 +141,25 @@ async Task ShutdownHandler(object sender, ShutdownEventArgs e)
 }
 ```
 
-```csharp
-// Sync variant
-void ShutdownHandler(object? sender, ShutdownEventArgs e)
-{
-    lock (s_lock)
-    {
-        if (s_connectionPool.TryGetValue(connectionId, out var pooled)
-            && ReferenceEquals(pooled.Connection, sender))
-        {
-            TryRemoveConnection(connectionId);
-        }
-    }
-}
-```
+The guard prevents a stale notification from removing a different pooled instance. It only matches when the event sender is the pooled object.
 
-The `sender` parameter of the `ConnectionShutdown` event is the `IConnection` instance that is shutting down. By comparing it with `ReferenceEquals` against what's currently in the pool, stale handlers become no-ops.
+#### RMQ.Sync retains automatic recovery and replaces closed connections lazily
+
+RabbitMQ.Client 6.8.1 forwards shutdown subscriptions from its `AutorecoveringConnection` wrapper to an inner connection. The inner connection raises the event as its sender, so comparing it with the pooled wrapper never matches.
+
+**RMQ.Sync does not evict connections on shutdown notifications.** Disposing the wrapper cancels automatic recovery for every gateway sharing it. The pool therefore has no shutdown handler; this also prevents stale notifications from removing a replacement connection.
+
+| Situation | Pool behavior |
+|---|---|
+| Connection recovers before another acquisition | Reuse the recovered connection and its channels |
+| A pool lookup or gateway acquisition finds a closed connection | Dispose the old connection and create a replacement under the pool lock |
+| Explicit reset, removal, or release of the last gateway reference | Dispose the pooled connection |
+
+Brighter keeps the client's default automatic recovery setting. Recovery is not guaranteed to finish before a caller requests a replacement. A closed connection that is neither recovered nor requested remains in the pool until it is explicitly removed or its last gateway reference is released.
+
+This resolves [#4596](https://github.com/BrighterCommand/Brighter/issues/4596) without disabling recovery or adding a configuration option. Real-broker tests cover recovery preserving the pooled instance and lazy replacement remaining usable after cleanup of the old connection.
+
+The replacement test covers both client recovery settings. Direct pool callers can supply a factory with recovery disabled; their closed entries also remain until the next lookup or explicit cleanup.
 
 ### 5. Fix TOCTOU in sync `RemoveConnection`
 
@@ -245,7 +248,7 @@ Ctrl+C → ServiceActivatorHostedService.StopAsync()
 | `ChannelAsync` | Implement `DisposeAsync()` | Paramore.Brighter |
 | `Proactor` | `await Channel.DisposeAsync()` on MT_QUIT | Paramore.Brighter.ServiceActivator |
 | `RmqMessageGatewayConnectionPool` (async) | `ConfigureAwait(false)`, `ReferenceEquals` guard, simplify `RemoveConnectionAsync` | Paramore.Brighter.MessagingGateway.RMQ.Async |
-| `RmqMessageGatewayConnectionPool` (sync) | `ReferenceEquals` guard, fix TOCTOU in `RemoveConnection` | Paramore.Brighter.MessagingGateway.RMQ.Sync |
+| `RmqMessageGatewayConnectionPool` (sync) | Lazy replacement without shutdown eviction, fix TOCTOU in `RemoveConnection` | Paramore.Brighter.MessagingGateway.RMQ.Sync |
 
 ### Impact on Other Transports
 
@@ -266,7 +269,7 @@ The interface change is technically breaking for any **external** code that impl
 
 - The shutdown deadlock is eliminated — the Proactor's dispose path is fully async.
 - `ConfigureAwait(false)` provides defence-in-depth against future sync-over-async regressions.
-- The `ReferenceEquals` guard prevents stale shutdown handlers from disposing active connections, fixing CI test flakiness.
+- The async `ReferenceEquals` guard prevents stale shutdown handlers from disposing different connections. RMQ.Sync avoids shutdown eviction entirely, preserving automatic recovery.
 - The TOCTOU fix in `RemoveConnection` eliminates a subtle race condition.
 - The fix is minimal and surgical — no architectural redesign of the connection pool or dispatcher.
 
@@ -279,8 +282,8 @@ The interface change is technically breaking for any **external** code that impl
 
 - **Risk**: Other transports' `IAmAMessageConsumerAsync` implementations may not implement `DisposeAsync()` correctly.
   - **Mitigation**: `IAmAMessageConsumerAsync` already extends `IAsyncDisposable`; all existing implementations already have `DisposeAsync()`.
-- **Risk**: The `ReferenceEquals` guard could prevent legitimate shutdown cleanup if the RabbitMQ client reuses connection objects.
-  - **Mitigation**: RabbitMQ client creates new `IConnection` instances per `CreateConnection()` call; it does not pool or reuse them internally.
+- **Risk**: An event sender can be an inner connection rather than the pooled recovery wrapper.
+  - **Mitigation**: RMQ.Sync replaces closed connections on demand instead of relying on event sender identity. It leaves automatic recovery active until replacement or explicit disposal.
 
 ## Alternatives Considered
 
@@ -311,5 +314,7 @@ Make each consumer/producer own its own connection.
 - Requirements: [specs/0024-rmq_shutdown/requirements.md](../../specs/0024-rmq_shutdown/requirements.md)
 - Issue #3684: [ServiceActivatorHostedService does not exit with RabbitMQ subscription](https://github.com/BrighterCommand/Brighter/issues/3684)
 - Issue #4024: [RMQ connection pool: stale ConnectionShutdown handler can dispose a newer connection](https://github.com/BrighterCommand/Brighter/issues/4024)
+- Issue #4596: [RMQ.Sync shutdown eviction and automatic recovery](https://github.com/BrighterCommand/Brighter/issues/4596)
+- [RabbitMQ.Client 6.8.1 automatic recovery implementation](https://github.com/rabbitmq/rabbitmq-dotnet-client/blob/v6.8.1/projects/RabbitMQ.Client/client/impl/AutorecoveringConnection.cs)
 - [Proactor Pattern](https://www.dre.vanderbilt.edu/~schmidt/PDF/Proactor.pdf)
 - [ConfigureAwait FAQ](https://devblogs.microsoft.com/dotnet/configureawait-faq/)
