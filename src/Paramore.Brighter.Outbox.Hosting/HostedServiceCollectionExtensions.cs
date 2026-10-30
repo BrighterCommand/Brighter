@@ -75,5 +75,36 @@ namespace Paramore.Brighter.Outbox.Hosting
 
             return brighterBuilder;
         }
+
+        /// <summary>
+        /// Use the outbox stale-message monitor, which counts the messages in the outbox that have not been dispatched
+        /// and are older than the stale age.
+        /// </summary>
+        /// <remarks>
+        /// The settings are validated before anything is registered. When the monitor is added more than once, the
+        /// settings of the first call are kept.
+        /// </remarks>
+        /// <param name="brighterBuilder">The Brighter Builder</param>
+        /// <param name="staleMessageAge">How old a message that has not been dispatched must be to count as stale.</param>
+        /// <param name="configure">Configuration actions for the other settings of the monitor <see cref="TimedOutboxStaleMessageMonitorOptions"/></param>
+        /// <returns>The Brighter Builder</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="brighterBuilder"/> is null.</exception>
+        /// <exception cref="ConfigurationException">A setting is outside the range the monitor accepts.</exception>
+        public static IBrighterBuilder UseOutboxStaleMessageMonitor(this IBrighterBuilder brighterBuilder,
+            TimeSpan staleMessageAge,
+            Action<TimedOutboxStaleMessageMonitorOptions>? configure = null)
+        {
+            if (brighterBuilder is null)
+                throw new ArgumentNullException(nameof(brighterBuilder));
+
+            var options = new TimedOutboxStaleMessageMonitorOptions(staleMessageAge);
+            configure?.Invoke(options);
+            options.Validate();
+
+            brighterBuilder.Services.TryAddSingleton(options);
+            brighterBuilder.Services.TryAddSingleton<OutboxStaleMessageReadings>();
+            brighterBuilder.Services.AddHostedService<TimedOutboxStaleMessageMonitor>();
+            return brighterBuilder;
+        }
     }
 }

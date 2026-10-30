@@ -102,6 +102,41 @@ public static class BrighterSemanticConventions
     public const string OutboxPublishDuration = "paramore.brighter.outbox.publish.duration";
     public const string OutboxClearSource = "paramore.brighter.outbox.clear_source";
     public const string OutboxSharedTransaction = "paramore.brighter.outbox.shared_transaction";
+
+    /// <summary>
+    /// The gauge that reports the latest count of outstanding outbox messages older than the stale-message age.
+    /// </summary>
+    public const string OutboxStaleMessages = "paramore.brighter.outbox.stale.messages";
+
+    /// <summary>
+    /// The gauge that reports, for each measured topic, the latest count of outstanding outbox messages on that topic
+    /// that are older than the topic's stale-message age.
+    /// </summary>
+    public const string OutboxStaleTopicMessages = "paramore.brighter.outbox.stale.topic.messages";
+
+    /// <summary>
+    /// The counter that reports, for each stale-message count (<c>overall</c> or <c>per_topic</c>) and each outcome,
+    /// the number of due times since measurement started at which that count had that outcome.
+    /// </summary>
+    public const string OutboxStaleMeasurements = "paramore.brighter.outbox.stale.measurements";
+
+    /// <summary>
+    /// The attribute that names which stale-message count an outcome belongs to: <c>overall</c> or <c>per_topic</c>.
+    /// </summary>
+    public const string OutboxStaleCount = "paramore.brighter.outbox.stale.count";
+
+    /// <summary>
+    /// The attribute that records how one stale-message count ended at one due time: <c>completed</c>, <c>failed</c>,
+    /// <c>abandoned</c> or <c>skipped</c>.
+    /// </summary>
+    public const string OutboxStaleOutcome = "paramore.brighter.outbox.stale.outcome";
+
+    /// <summary>
+    /// The attribute that carries the type name of the outbox being measured, such as <c>MsSqlOutbox</c>. Unlike
+    /// <see cref="OutboxType"/>, which carries the write mode on outbox spans, it names the implementation.
+    /// </summary>
+    public const string OutboxImplementation = "paramore.brighter.outbox.implementation";
+
     public const string OutboxSweeperOutcome = "paramore.brighter.outbox_sweeper.outcome";
     public const string OutboxSweeperSweepDuration = "paramore.brighter.outbox_sweeper.sweep.duration";
     /// <summary>
