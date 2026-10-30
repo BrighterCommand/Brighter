@@ -34,21 +34,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// <c>CommitAsync</c> commits the transaction, which also releases the lock: <c>sp_getapplock
+/// @LockOwner='Transaction'</c> has nothing to release separately (ADR 0058 §B.1). A second
+/// <c>Commit()</c> throwing shows the transaction completed.
+/// </summary>
 public class MsSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
 {
-    // Per ADR 0058 §B.1: MSSQL uses sp_getapplock with @LockOwner='Transaction'. CommitAsync
-    // therefore only needs to commit the underlying SqlTransaction — SQL Server releases the
-    // application lock implicitly when the transaction completes. The "no explicit lock
-    // release" contract is enforced structurally by IMsSqlAdvisoryLock exposing only
-    // AcquireAsync (no Release method exists), so this test pins only the commit half of the
-    // contract: after CommitAsync, the SqlTransaction is in the completed state.
-    //
-    // Re-invoking Commit() on a completed SqlTransaction throws InvalidOperationException
-    // ("This SqlTransaction has completed; it is no longer usable."). A no-op CommitAsync
-    // would leave the transaction active and the second Commit() would succeed silently — so
-    // this single assertion fails for a no-op and passes only when CommitAsync actually
-    // committed.
-
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
     private readonly FakeMsSqlAdvisoryLock _advisoryLock = new(throwOnAcquire: null);
 
@@ -74,9 +66,7 @@ public class MsSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
         // Act
         await uow.CommitAsync(CancellationToken.None);
 
-        // Assert: post-commit, re-issuing Commit on the same SqlTransaction throws because the
-        // transaction is already completed. A no-op CommitAsync would leave the tx active and
-        // this call would succeed silently.
+        // Assert
         Assert.Throws<InvalidOperationException>(() => transaction.Commit());
     }
 }

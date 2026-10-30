@@ -32,6 +32,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// The MSSQL inbox catalog stays in step with <c>SqlInboxBuilder</c>: V_latest's columns plus the
+/// housekeeping columns equal the builder's, <c>FreshInstallDdl</c> is the builder's DDL, and V1 is
+/// the pre-<c>ContextKey</c> historical baseline (ADR 0057 §3).
+/// </summary>
 public class MsSqlInboxBuilderDriftTests
 {
     [Theory]
@@ -40,9 +45,7 @@ public class MsSqlInboxBuilderDriftTests
     public void When_mssql_inbox_builder_is_compared_to_v3_migration_columns_it_should_have_identical_expected_column_set(
         bool hasBinaryMessagePayload)
     {
-        //Arrange — drive the builder DDL and the V_latest LogicalColumns from the same config
-        //so any developer change to one without the other surfaces here. Connection string is
-        //unused: All() only reads InBoxTableName and BinaryMessagePayload to render V1's UpScript.
+        //Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;",
@@ -70,27 +73,23 @@ public class MsSqlInboxBuilderDriftTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void When_mssql_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey(
+    public void When_mssql_inbox_v1_upscript_is_inspected_it_should_carry_the_pre_contextkey_historical_baseline(
         bool hasBinaryMessagePayload)
     {
-        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
-        //b7f96957b, March 2019). The MSSQL inbox is one of the five "born past V1" backends:
-        //it shipped with ContextKey from the first commit, so V1.UpScript already contains it
-        //and V2's idempotency-guarded ALTER (IF COL_LENGTH ... IS NULL) skips on chain replay.
-        //This tripwire prevents a future "helpful" rewrite from dropping ContextKey out of V1
-        //(which would then re-apply the V2 ALTER and corrupt chain replay against legacy
-        //tables). See spec 0027 README archaeology and ADR 0057 §3.
+        //Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;",
             inboxTableName: tableName,
             binaryMessagePayload: hasBinaryMessagePayload);
 
+        //Act
         var migrations = new MsSqlInboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
+        //Assert
         Assert.Equal(1, v1.Version.Value);
-        Assert.Contains("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -100,10 +99,6 @@ public class MsSqlInboxBuilderDriftTests
     public void When_mssql_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
         bool hasBinaryMessagePayload)
     {
-        //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
-        //for the fresh-install fast path (ADR 0057 §3), distinct from V1.UpScript which now
-        //carries the historical baseline (Part 4). This tripwire holds the fast-path DDL
-        //identical to the live builder so the two cannot diverge silently.
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;",

@@ -29,6 +29,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// The MSSQL outbox catalog lists V1..V8 in order with cumulative logical columns; V2..V8 each cite a
+/// source commit (V1 has none), and V8's UpScript also creates the CausationId replay index.
+/// </summary>
 public class MsSqlOutboxMigrationsTests
 {
     private static readonly string[] s_v1Columns =
@@ -48,8 +52,7 @@ public class MsSqlOutboxMigrationsTests
     [Fact]
     public void When_mssql_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_correct_logical_columns()
     {
-        //Arrange — derive each version's expected LogicalColumns by accumulating the
-        //per-version additions from the archaeology (spec README outbox table).
+        //Arrange
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;",
             outBoxTableName: "outbox_test");
@@ -58,14 +61,13 @@ public class MsSqlOutboxMigrationsTests
         //Act
         var migrations = new MsSqlOutboxMigrationCatalog().All(config);
 
-        //Assert — exactly eight migrations numbered 1..8 in order
+        //Assert
         Assert.Equal(8, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
             Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
-        //Assert — LogicalColumns at each version matches the cumulative archaeology
         for (var v = 1; v <= 8; v++)
         {
             var migration = migrations[v - 1];
@@ -77,8 +79,6 @@ public class MsSqlOutboxMigrationsTests
                 $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
         }
 
-        //Assert — V2..V8 each carry a non-null SourceReference (archaeology pointer);
-        //V1 has no single source commit so SourceReference is null.
         Assert.Null(migrations[0].SourceReference);
         for (var v = 2; v <= 8; v++)
         {
@@ -87,8 +87,6 @@ public class MsSqlOutboxMigrationsTests
                 $"V{v} must have a non-empty SourceReference (archaeology pointer)");
         }
 
-        //Assert — V8 (Spec 0027, #2541) adds the CausationId column AND its replay index. Its UpScript
-        //carries the EXEC-wrapped CREATE INDEX on CausationId — the "index asserted separately" check for AC9.
         var v8Script = migrations[7].UpScript;
         Assert.Contains("[CausationId]", v8Script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CREATE INDEX", v8Script, StringComparison.OrdinalIgnoreCase);

@@ -44,6 +44,7 @@ public class InertOptInValidationTests
         // Arrange — a producer-only host (AddBrighter alone), JoinAmbient, all three lifetimes left at
         // the Transient defaults
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddLogging();
         var builder = services.AddBrighter(options => options.DefaultScopeAffinity = ScopeAffinity.JoinAmbient);
         builder.ValidatePipelines(throwOnError: true);
@@ -71,6 +72,7 @@ public class InertOptInValidationTests
         // Arrange — the same inert configuration, but throwOnError: false
         var capturingProvider = new CapturingLoggerProvider();
         var services = new ServiceCollection();
+        services.AddSingleton<IAmASubscriberRegistryInspector>(new SubscriberRegistry());
         services.AddLogging(logging => logging.AddProvider(capturingProvider));
         var builder = services.AddBrighter(options => options.DefaultScopeAffinity = ScopeAffinity.JoinAmbient);
         builder.ValidatePipelines(throwOnError: false);

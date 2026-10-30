@@ -30,6 +30,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// <see cref="MsSqlPayloadModeValidator"/> treats a null schema as <c>dbo</c>. Without that, the
+/// column lookup would match no rows and a payload-mode mismatch would pass silently.
+/// </summary>
 public class MsSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
@@ -38,14 +42,7 @@ public class MsSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_payload_validator_receives_null_schema_name_it_should_substitute_dbo()
     {
-        // Arrange — two box-shaped tables in dbo: one with a text payload column
-        // (NVARCHAR), one with a binary payload column (VARBINARY). The validator's
-        // null-substitution rule (per ADR 0057 §A.1) must make a call with
-        // schemaName: null behave identically to a call with schemaName: "dbo".
-        // Without substitution, null would coerce to DBNull at the bind site, the
-        // INFORMATION_SCHEMA query would return zero rows, dataType would be null,
-        // and the mismatch arm would silently return — masking a real configuration
-        // error.
+        // Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
 
         var textTable = TrackTable($"nullschema_text_{Guid.NewGuid():N}");
@@ -61,15 +58,12 @@ public class MsSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        // Act + Assert — text column + text mode (no mismatch): both null and "dbo" return quietly.
+        // Act + Assert
         await validator.ValidateAsync(
             connection, textTable, "dbo", "Body", binaryMessagePayload: false, default);
         await validator.ValidateAsync(
             connection, textTable, schemaName: null, "Body", binaryMessagePayload: false, default);
 
-        // Act + Assert — binary column + text mode (mismatch): both null and "dbo" throw.
-        // The null arm fails without substitution because the unsubstituted query
-        // matches no rows and the validator returns silently.
         await Assert.ThrowsAsync<ConfigurationException>(() =>
             validator.ValidateAsync(
                 connection, binaryTable, "dbo", "Body", binaryMessagePayload: false, default));

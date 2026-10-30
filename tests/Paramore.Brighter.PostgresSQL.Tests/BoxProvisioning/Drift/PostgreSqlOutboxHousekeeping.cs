@@ -26,16 +26,9 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.Drift;
 
-/// <summary>
-/// Backend-specific housekeeping columns present in the PostgreSQL outbox builder DDL but
-/// excluded from logical-version <see cref="IAmABoxMigration.LogicalColumns"/>. Used by drift
-/// tests to bridge between the builder's actual column set and the cross-backend logical model.
-/// Identifiers are lowercase because PostgreSQL folds unquoted identifiers to lowercase, and
-/// <see cref="QuoteStyle.Postgres"/> extraction is case-sensitive.
-/// </summary>
+// Lowercase, as Postgres folds unquoted identifiers and QuoteStyle.Postgres extraction is case-sensitive.
 internal static class PostgreSqlOutboxHousekeeping
 {
-    /// <summary>V1 baseline: <c>id</c> BIGSERIAL primary key + <c>messageid</c> UNIQUE.</summary>
     public static readonly ISet<string> V1 = new HashSet<string>(StringComparer.Ordinal)
     {
         "id",

@@ -34,6 +34,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// When the lock acquire inside <c>BeginAsync</c> throws, the runner propagates the exception
+/// unwrapped, calls neither <c>CommitAsync</c> nor <c>RollbackAsync</c>, still disposes the unit of
+/// work, and leaves nothing behind that would block the next migration (ADR 0058 §B.3).
+/// </summary>
 public class MsSqlAdvisoryLockAcquireThrowsDuringBeginTests : IAsyncLifetime
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
@@ -42,14 +47,7 @@ public class MsSqlAdvisoryLockAcquireThrowsDuringBeginTests : IAsyncLifetime
     [Fact]
     public async Task When_mssql_advisory_lock_acquire_throws_during_begin_async_runner_should_not_call_commit_or_rollback()
     {
-        //Arrange — fake IMsSqlAdvisoryLock whose AcquireAsync throws MigrationLockDeadlockException
-        // (spec 0027 Item N -3 deadlock-victim path). The runner's CreateUnitOfWorkAsync hook is
-        // overridden to wrap the real MsSqlProvisioningUnitOfWork with a spy that records whether
-        // CommitAsync, RollbackAsync, and DisposeAsync were invoked. Per SqlBoxMigrationRunner
-        // (ADR 0058 §B.3): the try-block is entered AFTER `await uow.BeginAsync(...)` returns, so
-        // a throw from BeginAsync must propagate WITHOUT entering the try (CommitAsync) or its
-        // catch (explicit RollbackAsync). The `await using uow = ...` declaration sits OUTSIDE
-        // that try, so DisposeAsync MUST still run on the way out.
+        //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
@@ -62,47 +60,25 @@ public class MsSqlAdvisoryLockAcquireThrowsDuringBeginTests : IAsyncLifetime
         var spyingRunner = new SpyingMsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(30), fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        //Act — runner's BeginAsync throws because AcquireAsync throws; per ADR §B.3 the throw
-        // propagates from MigrateAsync without the runner's try-block ever executing.
+        //Act
         var thrown = await Assert.ThrowsAsync<MigrationLockDeadlockException>(() => spyingRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
-        //Assert — the original deadlock exception propagates unwrapped (per spec 0027 Item N
-        // distinguishable-exception contract — the operator must see the typed exception so
-        // they can choose retry-with-backoff vs deployment failure).
+        //Assert
         Assert.Same(deadlock, thrown);
 
-        //Assert — the runner DID construct the UoW (BeginAsync is called on it; the throw comes
-        // from inside BeginAsync itself, not before it), so the spy is observable.
         var spy = spyingRunner.LastUnitOfWork;
         Assert.NotNull(spy);
 
-        //Assert — CommitAsync was NEVER called: the runner only commits inside its try-block,
-        // and the throw from BeginAsync prevents the try-block from being entered.
         Assert.False(spy!.CommitInvoked,
             "CommitAsync must NOT be called when BeginAsync throws — the runner's try-block never executed.");
 
-        //Assert — RollbackAsync was NEVER called: the runner's catch-path RollbackAsync is the
-        // unwind for failures INSIDE the try-block (after BeginAsync succeeds). A throw from
-        // BeginAsync itself happens before the try is entered, so the catch is never hit. The
-        // partially-initialised transaction (BeginTransaction succeeded, AcquireAsync threw) is
-        // released via DisposeAsync on the implicit rollback that SqlTransaction.Dispose performs.
         Assert.False(spy.RollbackInvoked,
             "RollbackAsync must NOT be called when BeginAsync throws — the catch-block guards the try-block, not BeginAsync.");
 
-        //Assert — DisposeAsync IS called via the `await using uow = ...` declaration sitting
-        // OUTSIDE the runner's try-block. This is the contract that releases the partial-init
-        // transaction back to SQL Server (sp_getapplock with @LockOwner='Transaction' is bound
-        // to the SqlTransaction's lifetime; SqlTransaction.Dispose implicitly rolls back, which
-        // in turn releases any application lock state — though in this scenario AcquireAsync
-        // threw before any lock was registered).
         Assert.True(spy.DisposeInvoked,
             "DisposeAsync MUST run via `await using` even when BeginAsync throws — otherwise the partial-init transaction leaks.");
 
-        //Assert — a fresh runner (no fake lock) immediately succeeds against the same lock
-        // resource, proving the failed acquire left no lingering server-side state. If the
-        // partial transaction had been left undisposed, the next BeginTransaction on the same
-        // connection-pool slot would block or error.
         var freshRunner = new MsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint, CancellationToken.None);

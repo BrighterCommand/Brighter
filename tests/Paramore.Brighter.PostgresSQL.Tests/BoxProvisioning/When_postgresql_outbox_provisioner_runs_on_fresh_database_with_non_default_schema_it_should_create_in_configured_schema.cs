@@ -31,16 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-// Per PR #4039 reviewer item M4-1 (F1b): PG had the same fresh-install SchemaName bug
-// as MSSQL — PostgreSqlOutboxBuilder.GetDDL produced `CREATE TABLE IF NOT EXISTS {table}`
-// (unqualified) so the table landed in the connection's search_path default (`public`)
-// regardless of the configured SchemaName. V2..V7 ALTERs use `{schema}.{table}`, the
-// detection helper queries `INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = @SchemaName`,
-// and the box-table state ended up partially-in-public, history-says-vN-in-billing, and
-// drift on a second run.
-//
-// This test pre-creates a non-default schema, runs the provisioner with SchemaName set,
-// and asserts the table actually lives in that schema (not in `public`).
+/// <summary>
+/// With a non-default SchemaName, a fresh install creates the outbox in that schema rather than the search_path default
+/// (<c>public</c>), where the schema-qualified ALTERs and detection would not find it; a second run is idempotent. The runner
+/// does not create schemas, so the test does.
+/// </summary>
 public class PostgreSqlOutboxNonDefaultSchemaTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
@@ -66,16 +61,16 @@ public class PostgreSqlOutboxNonDefaultSchemaTests : IAsyncLifetime
     [Fact]
     public async Task When_postgresql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
-        //Arrange — non-default schema is pre-created (PG runner does not create schemas itself).
+        //Arrange
         new PostgresSqlTestHelper().SetupDatabase();
         await EnsureSchemaExistsAsync(_nonDefaultSchema);
         await DropAnyExistingTableAsync(_tableName, _nonDefaultSchema);
         await DropAnyExistingTableAsync(_tableName, "public");
 
-        //Act — first fresh-install run
+        //Act
         var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
 
-        //Assert — table lives in the configured schema (not `public`).
+        //Assert
         Assert.Null(firstException);
         Assert.True(
             await TableExistsInSchemaAsync(_tableName, _nonDefaultSchema),
@@ -86,10 +81,10 @@ public class PostgreSqlOutboxNonDefaultSchemaTests : IAsyncLifetime
 
         Assert.Equal(1, await GetHistoryRowCountAsync(_nonDefaultSchema, _tableName));
 
-        //Act — second run on a provisioned database
+        //Act
         var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
 
-        //Assert — idempotent
+        //Assert
         Assert.Null(secondException);
         Assert.True(await TableExistsInSchemaAsync(_tableName, _nonDefaultSchema));
         Assert.Equal(1, await GetHistoryRowCountAsync(_nonDefaultSchema, _tableName));

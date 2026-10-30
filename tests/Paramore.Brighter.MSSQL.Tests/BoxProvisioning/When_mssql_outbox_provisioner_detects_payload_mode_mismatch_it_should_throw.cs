@@ -29,11 +29,9 @@ public class MsSqlOutboxPayloadModeMismatchTests : IAsyncLifetime
         //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);
 
-        // Create a text-mode outbox table
         var ddl = SqlOutboxBuilder.GetDDL(_tableName, hasBinaryMessagePayload: false);
         Configuration.CreateTable(_connectionString, ddl);
 
-        // Configure provisioner with binary mode (mismatch)
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             outBoxTableName: _tableName,
