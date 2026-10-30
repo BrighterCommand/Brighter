@@ -32,6 +32,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// Two provisioners with the same table name in different MySQL databases take different lock names,
+/// so while A holds its <c>GET_LOCK</c>, B, with a one-second timeout, still completes (ADR 0057 §5b).
+/// </summary>
 public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
 {
     private const string DefaultDatabase = "BrighterTests";
@@ -43,15 +47,7 @@ public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
     [Fact]
     public async Task When_mysql_runner_runs_two_provisioners_in_distinct_schemas_they_should_not_block_each_other()
     {
-        //Arrange — two provisioners share a table name but bind to distinct MySQL databases
-        //("schemas" in MySQL parlance). Provisioner A's advisory lock is wrapped with a holding
-        //decorator: once A's underlying GET_LOCK succeeds, the decorator parks until releaseGate
-        //fires, keeping the lock held server-side. Provisioner B has a short 1-second
-        //lockTimeout. With the schema-aware fix, B's lock name folds the schema in
-        //(BrighterMigration_<schema>.<table>, hash-folded if it exceeds MySQL's 64-char limit),
-        //so B's name differs from A's and B completes without contention. Without the fix, both
-        //names collapse to BrighterMigration_<table>, B contends with A's held GET_LOCK, and
-        //B times out after 1s.
+        //Arrange
         await EnsureBillingDatabaseExists();
 
         var releaseGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -79,16 +75,15 @@ public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
         var taskA = Task.Run(() => provisionerA.ProvisionAsync());
         try
         {
-            await holdingLock.AcquireSeen.Task; // synchronization: A has acquired GET_LOCK and is parked
+            await holdingLock.AcquireSeen.Task;
 
             var taskBException = await Record.ExceptionAsync(() => provisionerB.ProvisionAsync());
 
-            //Assert — B should complete without timing out on a shared lock name.
+            //Assert
             Assert.Null(taskBException);
         }
         finally
         {
-            //Cleanup A: release the gate, let A finish, regardless of B's outcome.
             releaseGate.TrySetResult(true);
             await taskA;
         }

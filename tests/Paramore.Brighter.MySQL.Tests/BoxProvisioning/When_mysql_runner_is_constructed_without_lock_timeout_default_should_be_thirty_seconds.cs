@@ -33,6 +33,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// A runner built without a <c>lockTimeout</c> asks <c>GET_LOCK</c> to wait 30 seconds, as on every
+/// relational backend (ADR 0058, Guards and contracts). Only the detection-helper constructor makes
+/// <c>lockTimeout</c> optional, so the test uses it.
+/// </summary>
 public class MySqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
@@ -41,23 +46,12 @@ public class MySqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
     [Fact]
     public async Task When_mysql_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds()
     {
-        //Arrange — the runner is constructed via the detection-helper ctor with `lockTimeout`
-        // OMITTED, exercising the optional-parameter default path. A fake IMySqlAdvisoryLock
-        // captures the timeout value flowed through MigrateAsync → BeginAsync → AcquireAsync
-        // and then immediately throws to short-circuit the migration (we only care about the
-        // captured timeout, not a successful round-trip). Per the cross-backend harmonisation
-        // contract (PR #4039 review item #1), the default MUST be 30 seconds so that direct
-        // ctor callers do not silently get TimeSpan.Zero — which after MySql's 1-second floor
-        // would still leak a non-default behaviour relative to the SqliteBoxMigrationRunner
-        // reference value and the BoxProvisioningOptions DI default.
+        //Arrange
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
 
         var shortCircuit = new TimeoutException("short-circuit to read captured timeout");
         var fakeLock = new FakeMySqlAdvisoryLock(releaseResult: true, throwOnAcquire: shortCircuit);
 
-        // Detection-helper ctor is the ONLY one that exposes `lockTimeout` as optional. The
-        // backward-compat ctor (MySqlBoxMigrationRunner.cs:84) takes it as required, so it
-        // cannot exercise the default path.
         var runner = new MySqlBoxMigrationRunner(new MySqlBoxDetectionHelper(), new MySqlOutboxMigrationCatalog(), config, advisoryLock: fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
@@ -65,9 +59,7 @@ public class MySqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
         await Assert.ThrowsAsync<TimeoutException>(() => runner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
-        //Assert — the omitted `lockTimeout` resolves to the 30-second default rather than
-        // TimeSpan.Zero. The default is now consistent with SqliteBoxMigrationRunner's existing
-        // default (the reference value the four relational runners are being harmonised against).
+        //Assert
         Assert.Equal(TimeSpan.FromSeconds(30), fakeLock.AcquiredTimeout);
     }
 
