@@ -39,6 +39,18 @@ Three outboxes had an async overall count that did not follow the age, the ceili
 
 No breaking changes.
 
+### RMQ.Sync connection recovery and pool cleanup (#4596)
+
+The synchronous RabbitMQ connection pool no longer registers an ineffective shutdown eviction handler.
+Automatic recovery remains enabled by default. If the client recovers before the next pool lookup,
+the recovered connection is reused. A lookup that finds a closed connection disposes it and creates
+a replacement, cancelling recovery on the old connection. Explicit reset, removal and release of the
+last gateway reference still dispose connections. The pool's shutdown warning log is also removed
+with the handler.
+
+Direct pool callers that supply a `ConnectionFactory` with `AutomaticRecoveryEnabled = false`
+also use lazy replacement: shutdown no longer removes their closed pool entry immediately.
+
 ### GCP Pub/Sub stream shutdown cancellation
 
 Disposing a Stream or StreamOrdering consumer now logs cancellation reported by the subscriber client
