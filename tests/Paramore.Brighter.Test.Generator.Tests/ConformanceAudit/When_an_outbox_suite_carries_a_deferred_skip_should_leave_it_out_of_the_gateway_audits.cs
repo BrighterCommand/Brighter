@@ -9,10 +9,10 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// The gateway Skip audits cover the messaging-gateway artifacts only. A generated outbox suite
 /// carries its own deferred marks, so its files must stay outside the set they walk.
 /// </summary>
-public class When_an_outbox_suite_carries_a_deferred_skip_should_leave_it_out_of_the_gateway_audits
+public class GatewayArtifactScopeAuditTests
 {
     [Fact]
-    public void When_enumerating_gateway_artifacts_should_yield_gateway_files_and_not_outbox_files()
+    public void When_an_outbox_suite_carries_a_deferred_skip_should_leave_it_out_of_the_gateway_audits()
     {
         // Arrange
         var repoRoot = Path.Combine(Path.GetTempPath(), $"gateway-scope-{Guid.NewGuid():N}");
