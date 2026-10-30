@@ -124,6 +124,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         return Task.FromResult(Wrap(message, publication));
     }
 
+    /// <inheritdoc cref="Unwrap" />
     public Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken)
     {
         return Task.FromResult(Unwrap(message));
@@ -138,6 +139,11 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
 
 
     /// <inheritdoc />
+    /// <remarks>
+    /// For structured JSON events without a data content type, a data member is interpreted as JSON.
+    /// Binary payloads and events without data use application/octet-stream because Brighter requires
+    /// a content type even when the CloudEvent does not specify one.
+    /// </remarks>
     public Message Unwrap(Message message)
     {
         if (_format == CloudEventFormat.Binary)
@@ -174,7 +180,10 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
                 SpecVersion = cloudEvents.SpecVersion,
                 Source = cloudEvents.Source,
                 Type = new CloudEventsType(cloudEvents.Type),
-                ContentType = new ContentType(cloudEvents.DataContentType!),
+                ContentType = new ContentType(cloudEvents.DataContentType
+                    ?? (cloudEvents.DataBase64 is null && cloudEvents.HasData
+                        ? "application/json"
+                        : "application/octet-stream")),
                 DataSchema = cloudEvents.DataSchema,
                 Subject = cloudEvents.Subject,
                 TimeStamp = cloudEvents.Time ?? DateTimeOffset.UtcNow,
@@ -193,23 +202,27 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
                 Bag = bag
             };
            
+            var bodyContentType = new ContentType(header.ContentType.ToString());
             MessageBody body;
-            if (!string.IsNullOrEmpty(cloudEvents.DataBase64))
+            if (cloudEvents.DataBase64 is not null)
             {
-                // Binary data: decode from base64
-                var bytes = Convert.FromBase64String(cloudEvents.DataBase64!);
-                body = new MessageBody(bytes);
+                var bytes = Convert.FromBase64String(cloudEvents.DataBase64);
+                body = new MessageBody(bytes, bodyContentType);
             }
             else if (cloudEvents.Data.HasValue)
             {
-                // JSON or string data
-                body = cloudEvents.Data.Value.ValueKind == JsonValueKind.String 
-                    ? new MessageBody(cloudEvents.Data.Value.GetString() ?? string.Empty) 
-                    : new MessageBody(cloudEvents.Data.Value.GetRawText());
+                body = cloudEvents.Data.Value.ValueKind == JsonValueKind.String
+                    && cloudEvents.DataContentType is not null
+                    ? new MessageBody(cloudEvents.Data.Value.GetString() ?? string.Empty, bodyContentType)
+                    : new MessageBody(cloudEvents.Data.Value.GetRawText(), bodyContentType);
+            }
+            else if (cloudEvents.HasData && cloudEvents.DataContentType is null)
+            {
+                body = new MessageBody("null", bodyContentType);
             }
             else
             {
-                body = new MessageBody(string.Empty);
+                body = new MessageBody(string.Empty, bodyContentType);
             }
             
             return new Message(header, body);
@@ -316,6 +329,10 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     /// </summary>
     public class JsonEvent
     {
+        private JsonElement? _data;
+
+        internal bool HasData { get; private set; }
+
         /// <summary>
         /// Gets or sets the unique identifier for the event.
         /// Complies with the 'id' attribute of the CloudEvents specification.
@@ -394,7 +411,15 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         /// This allows for deferred deserialization or direct manipulation of the JSON data.
         /// </summary>
         [JsonPropertyName("data")]
-        public JsonElement? Data { get; set; }
+        public JsonElement? Data
+        {
+            get => _data;
+            set
+            {
+                _data = value;
+                HasData = true;
+            }
+        }
 
         /// <summary>
         /// Used for binary data in CloudEvents.
