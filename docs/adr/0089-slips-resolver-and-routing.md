@@ -92,8 +92,8 @@ The Decision also depends on these words, which this ADR introduces:
 | ADR | Decides |
 | --- | --- |
 | **0089** *(this one)* | The slip and approval-table formats, the route resolver and its report, and how commands consult it |
-| 0090 | How a command runs a sub-flow (approval is the first trigger), the provenance line, the gate run contract, and the `/adr:*` commands that carry the `design` sub-flow |
-| 0091 | How a slip is installed and frozen at creation (`/spec:new`'s copy and record, numbering, the starter contract), how tampering is detected, and how a route is changed |
+| 0090 | How a command runs a sub-flow (approval is the first trigger), the provenance line, the gate run contract, the `/adr:*` commands that carry the `design` sub-flow, and the README's notes on running a sub-flow and on the provenance line |
+| 0091 | How a slip is installed and frozen at creation (`/spec:new`'s copy and record, numbering, the starter contract), how tampering is detected, how a route is changed, and the README's notes on the route-change command and the starter checklist |
 | 0092 | The resolver's and show-me's fixture tests, the fixture flow-definition directories, and the README's notes on running the tests and on a `/bugfix:*` migration |
 
 *"A spec's route is data it carries; commands ask the resolver, not themselves, where it is going."*
@@ -197,7 +197,7 @@ Rows 3–5 also list any detours attached to the first unapproved step, as optio
 
 In the route report, each row sets the `next` fields as follows:
 
-- Row 1: `step` is `null` and `commands` is empty. `stop` carries the violation.
+- Row 1 applies whenever `violations` is non-empty, including on a tampered slip. `step` is `null` and `commands` is empty. The stop ladder sets `stop`, which is the violation unless the slip is also tampered.
 - Row 2: `step` is `null`, because no slip step remains. `commands` is `["/spec:implement"]`, `unattended_driver` is `"/spec:ralph-implement"`, and `detours` holds the hand-off's detours.
 - Row 3: `step` is the first unapproved step, and `commands` is `[producer]`.
 - Row 4: `step` is the first unapproved step, and `commands` is `["/spec:review {kind}", marker-writer]`.
@@ -229,7 +229,7 @@ flowchart LR
         direction TB
         subgraph ADRCMD["adr/"]
             ADR["adr.md<br/>changed - route check block"]
-            SUB["sub-flow commands<br/>new - named by 0090"]
+            SUB["sub-flow commands<br/>prerequisite - 0090"]
         end
         subgraph SPECCMD["spec/"]
             CMDS["requirements, design, tasks, approve,<br/>review, implement, ralph-implement<br/>changed - route check block"]
@@ -307,8 +307,8 @@ classDiagram
     class SlipValidator
     class RouteResolver
     class SpecStateReader
-    Slip "1" *-- "many" Step : holds
-    Slip "1" *-- "many" Detour : holds
+    Slip "1" *-- "*" Step : holds
+    Slip "1" *-- "*" Detour : holds
     SlipValidator ..> Slip : checks
     SlipValidator ..> ApprovalTable : checks entries
     SpecStateReader ..> Slip : reads markers named by
@@ -413,7 +413,15 @@ R9 and R10 divide the gate rules between them. R9 judges a command that serves t
 - `/bugfix:confirm` is the marker-writer of `diagnosis` (step 1) and the producer of `tasks` (step 2). Step 2 immediately follows step 1, so R9 holds.
 - `/bugfix:confirm` is both the producer and the marker-writer of `tasks`. It is also the marker-writer of the step before, `diagnosis`, so it is a gate approving the step before, and R10 holds.
 
-R12 (b) and (c) make every slip resolved against that table invalid, as FR-3 and FR-29 require for a duplicate entry. R12 (c) goes beyond FR-3's list: an approval table that names a missing command would fail at approval time, so the resolver reports it before then. A missing definition is violation R0 in two cases only: a legacy spec when `feature.flow` is missing, and flow form when `{name}.flow` is missing. The violation's `step` is `null`, its detail is `definition missing`, `flow.definition_present` is `false`, and its message is `Flow {name} has no definition at {flows-dir}/{name}.flow.` For a spec with its own `.flow`, a missing definition sets only `definition_present` to `false`, and the spec stays valid (FR-22). In flow form, a name that does not match `[a-z][a-z0-9-]*` is also R0, with the detail `bad name` and the message `{name} is not a valid flow name.` `/spec:new` then stops before creating anything and names that fault (FR-18).
+R12 (b) and (c) make every slip resolved against that table invalid, as FR-3 and FR-29 require for a duplicate entry. R12 (c) goes beyond FR-3's list: an approval table that names a missing command would fail at approval time, so the resolver reports it before then. A missing definition is violation R0 in two cases only: a legacy spec when `feature.flow` is missing, and flow form when `{name}.flow` is missing.
+
+- The violation's `step` is `null` and its detail is `definition missing`.
+- `flow.definition_present` is `false`.
+- Its message is `Flow {name} has no definition at {flows-dir}/{name}.flow.`
+- For a spec with its own `.flow`, a missing definition sets only `definition_present` to `false`. The spec stays valid (FR-22).
+- In flow form, a name that does not match `[a-z][a-z0-9-]*` is also R0. The detail is `bad name` and the message is `{name} is not a valid flow name.`
+
+`/spec:new` then stops before creating anything and names that fault (FR-18).
 
 #### The resolver's command line
 
@@ -444,10 +452,10 @@ Each field below is written in the order given, so that key order is fixed. Fiel
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `schema_version` | number | `1` |
-| `mode` | string | `spec`, `current` or `flow` |
+| `mode` | string | `spec`, `current` or `flow` on a route report. `all` appears only on the `route-current:` line |
 | `current_spec` | object or null | `current` mode only: `{state: "ok"\|"missing"\|"empty"\|"stale", value: string or null}`, where `value` is the trimmed content |
 | `spec` | string or null | `{specs-root}/{dir-name}`, with forward slashes and no trailing slash. `null` in the no-spec form. The flow form has no `spec` key |
-| `flow` | object | `{name, source: "slip"\|"default"\|"definition", definition_present: bool}`. `definition` is used in flow form only |
+| `flow` | object | `{name, source: "slip"\|"default"\|"definition", definition_present: bool}`. `name` is the name on line 1 of the slip or definition, or `null` when line 1 is malformed (R0). `definition` is used in flow form only |
 | `valid` | bool | `true` when `violations` is empty |
 | `violations` | array | `{rule, code, step: string or null, detail, message}`, ordered as above |
 | `tampered` | object | `{value: bool, case: "a"\|"b"\|"c" or null}`. 0091 fills it. Always `{false, null}` for a legacy spec |
@@ -493,20 +501,28 @@ The intent-marker set is the union of the markers named by every `*.flow` in the
 | --- | --- | --- | --- |
 | Argument grammar | Today's grammar, plus an optional `--flows-dir {path}` in any position after the target. It is a test-only input, like `--pinned` | — | A missing path after the flag is a usage error, exit `1` |
 | `RouteProbe` | The target directory, with any trailing `/` removed, split into parent (specs root) and leaf (directory name), and the optional flows directory. A leaf whose case differs from the directory's name makes the resolver exit `1`, which is a tooling fault | `has_requirements_step` (bool or null) and the flow name | Exit status not `0`, no `route-report:` line, or a line that does not parse: the script exits `ToolingFaultExitCode` and writes no ledger |
-| Ledger field `route` | — | `{flow: string or null, has_requirements_step: bool or null}` | `null` values, with a `null_reasons.route` entry, when the slip fails R0 |
+| Ledger field `route` | — | `{flow: string or null, has_requirements_step: bool or null}`. `flow` is always the report's `flow.name` | `has_requirements_step` is `null`, with a `null_reasons.route` entry, when the slip fails R0. `flow` is not affected |
 
 - `RouteProbe` derives `has_requirements_step` from the report. It is `null` when any violation has rule R0, because the slip could not be read. Otherwise it is `true` when `known_kinds.requirements` is not `null`, and `false` when it is `null`. Violations other than R0 do not change the value, because show-me reports on a spec and does not stop on its route.
 - `RouteProbe` runs after the completeness gate and before any ref resolution. The gate's exit-`2` path is therefore unchanged, and a resolver fault happens before any `git` or `gh` call.
-- When `has_requirements_step` is `false`, the script does not read `requirements.md`, as FR-10 requires. It keeps today's shape for an absent file, `requirements: {present: false, bytes: null, windows: null}` (`show_me_facts.cs:290-295`), so the conditions in `show-me.md` that test `requirements.present` still hold and F5 stays `Medium`. It writes `declared_ids`, `declared_total` and `declarations` as `null`, so `declared_total` is never `0` for such a spec. The null reasons for `requirements`, `declared_ids`, `declared_total` and `declarations` become `not on this spec's route`, in place of today's `not present` (`show_me_facts.cs:296-302`). Row 8 and Inputs-used row 1 choose FR-23's route wording when `route.has_requirements_step` is `false`, and today's missing-file wording otherwise.
+- When `has_requirements_step` is `false`, the script does not read `requirements.md`, as FR-10 requires.
+  - It keeps today's shape for an absent file, `requirements: {present: false, bytes: null, windows: null}` (`show_me_facts.cs:290-295`). The conditions in `show-me.md` that test `requirements.present` still hold, and F5 stays `Medium`.
+  - It writes `declared_ids`, `declared_total` and `declarations` as `null`, so `declared_total` is never `0` for such a spec.
+  - The null reasons for `requirements`, `declared_ids`, `declared_total` and `declarations` become `not on this spec's route`, in place of today's `not present` (`show_me_facts.cs:296-302`).
+  - Row 8 and Inputs-used row 1 choose FR-23's route wording when `route.has_requirements_step` is `false`, and today's missing-file wording otherwise.
 - When `has_requirements_step` is `true`, `null`, or a legacy spec's `true`, the ledger is exactly as today, apart from the additive `route` field.
 - `schema_version` stays `1`, because the field is additive and the existing test asserts `1`.
 - `/spec:show-me` already maps any status other than `0` or `2` to its tooling-fault message (`show-me.md:96`), so a failed resolver needs no new branch in the command.
 
 #### How each command consults the resolver
 
-The route check block is carried by the seven route-following `/spec:*` commands (`requirements`, `design`, `tasks`, `approve`, `review`, `implement` and `ralph-implement`) and `/adr:adr`. `/spec:status`, `/spec:switch` and `/spec:new` run their own modes (`--all`, `--spec` and `--flow`), as the table below gives, and do not carry the block. The block's canonical text lives in `.claude/commands/spec/README.md`:
+The route check block is carried by the seven route-following `/spec:*` commands (`requirements`, `design`, `tasks`, `approve`, `review`, `implement` and `ralph-implement`) and `/adr:adr`. The block is identical in each of those eight commands, and 0092 compares only the block itself.
 
-The block is identical in each of those eight commands. `/adr:adr` adds one sentence after the block: when `stop.reason` is `current-spec-missing`, `current-spec-empty` or `current-spec-stale`, it proceeds with no linked spec instead of stopping. 0092 compares only the block itself.
+`/adr:adr` has one sentence of its own, placed before the block. It overrides the block's last sentence: when `stop.reason` is `current-spec-missing`, `current-spec-empty` or `current-spec-stale`, the command proceeds with no linked spec instead of stopping.
+
+`/spec:status`, `/spec:switch` and `/spec:new` run their own modes (`--all`, `--spec` and `--flow`) and do not carry the block. Each has a failure branch of its own. It uses the block's tooling-fault test and creates or modifies no file. `/spec:status` and `/spec:new` print the block's message. `/spec:switch` prints its own on exit `1`, because an unknown directory name also exits `1` (*The resolver's command line*). None falls back to reading markers.
+
+The block's canonical text lives in `.claude/commands/spec/README.md`:
 
 > Run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current`. If the exit status is not `0`, or standard output has no line beginning `route-report: `, or the JSON after that prefix on the last such line does not parse, stop. Print `{command} could not run the route resolver (.claude/commands/spec/resolve_route.cs): {state}. This is a tooling fault, not a fault in the spec — re-run after restoring the script.` Create or modify no file. Otherwise hold that JSON object as the route report. If `stop` is not `null`, print `stop.message` and stop, creating or modifying no file.
 
@@ -527,9 +543,9 @@ Two message templates complete the block, and each is filled from report fields:
 | `/spec:implement` | `--current` | `hand_off.precondition`, `known_kinds.design` | Stops with the precondition message. Runs the ADR-`Accepted` check and the ADR reads only with a `design` step |
 | `/spec:ralph-implement` | `--current` | `hand_off.precondition`, `known_kinds.requirements`, `known_kinds.design` | Stops with the precondition message. Passes `requirements.md` and the ADR paths to sub-agents only for kinds on the slip |
 | `/adr:adr` | `--current` | `current_spec.state`, `stop`, `known_kinds.design`, `known_kinds.requirements`, `next` | A missing, empty or stale state means no linked spec, and it proceeds. Otherwise it stops on `stop`, and stops with no design step, naming `next` and leaving `.adr-list` untouched. Prints `next` as closing guidance |
-| `/spec:status` | `--all` | every summary field, and `current_spec` | Reports flow and source, steps, stray and out-of-order markers, invalid or tampered state, missing definitions, route change, and `next`. Never stops on `stop`. It still reads ADR statuses from `docs/adr/` itself for a `design` step |
-| `/spec:switch {id}` | `--spec {dir}` after writing `.current-spec` | as status, for one spec | Shows the same per-spec report and next step |
-| `/spec:new {name}` | `--flow feature` | `valid`, `violations`, `flow.definition_present` | Stops before creating anything and names the fault. What it then copies and records is 0091's |
+| `/spec:status` | `--all` | every summary field, and `current_spec` | Reports flow and source, steps, stray and out-of-order markers, invalid or tampered state, missing definitions, route change, and `next`. Never stops on `stop`. On a resolver fault it prints the tooling-fault message and nothing else. It still reads ADR statuses from `docs/adr/` itself for a `design` step |
+| `/spec:switch {id}` | `--spec {dir}`, run before `.current-spec` is written | as status, for one spec | Writes `.current-spec` only when the resolver exits `0` and its report parses, whatever the report says about validity. It builds `{dir}` from the id as `switch.md:16` does today. On exit `1` it leaves `.current-spec` as it was and prints its own message in place of the block's: ``/spec:switch could not resolve `{dir}`: the resolver exited 1. Either it is not the exact name of a spec directory (check the case and the listing above), or the resolver script failed — re-run after restoring it.`` Then shows the same per-spec report and next step |
+| `/spec:new {name}` | `--flow feature` | `valid`, `violations`, `flow.definition_present` | Stops before creating anything and names the fault. On a resolver fault it prints the tooling-fault message and creates nothing. What it then copies and records is 0091's |
 | Route-change command (0091) | `--flow {target}`, `--spec {dir}` | `valid`, `tampered`, `flow` | Its checks and writes are 0091's. It passes `--flows-dir` through for tests |
 | `/spec:show-me` | through `show_me_facts.cs` | `route.has_requirements_step` in the ledger | Row 8 checks the route first and writes FR-23's route line. Inputs-used row 1 reads `not available: not on this spec's route` |
 
@@ -543,7 +559,7 @@ Two message templates complete the block, and each is filled from report fields:
 | `.claude/commands/spec/` | `show_me_facts.cs` | `--flows-dir`, `RouteProbe`, and the ledger's `route` field |
 | `.claude/commands/spec/` | `show-me.md` | Row 8's route branch, and Inputs-used row 1, using FR-23's strings |
 | `.claude/commands/spec/` | `requirements.md`, `design.md`, `tasks.md`, `approve.md`, `review.md`, `implement.md`, `ralph-implement.md` | The route check, the field-driven branches, and the `allowed-tools` entry where needed. The literal markers are removed |
-| `.claude/commands/spec/` | `status.md`, `switch.md` | `--all` and `--spec` reporting |
+| `.claude/commands/spec/` | `status.md`, `switch.md` | `--all` and `--spec` reporting, each with a resolver-failure branch. `switch.md` runs `--spec` before it writes `.current-spec` |
 | `.claude/commands/spec/` | `new.md` | The `--flow feature` check. 0091 makes its other changes |
 | `.claude/commands/spec/` | `README.md` | The resolver's invocation and the canonical route check, in *Supporting scripts*. The route-model section, the Workflow label, the slip-based preconditions and `.flow` in the File Structure block (FR-26) |
 | `.claude/commands/adr/` | `adr.md` | The route check, with its `.current-spec` exemption |
@@ -607,12 +623,14 @@ Numbered in commit order. Structural steps add files that nothing yet reads. Eac
 7. **Behavioural, 0091.** `RouteRecordInspector` fills `tampered` and `route_change`. Until 0091 lands, they report `{false, null}` and `null`. No starter writes `.flow` before then.
 8. **Behavioural.** In `show_me_facts.cs`, add `--flows-dir` to the option loop (`show_me_facts.cs:45-70`), call `RouteProbe` after the gate (after `:72-100`), and branch the `requirements.md` block (`show_me_facts.cs:272-304`) on `has_requirements_step`. In `show-me.md`, add the route branch to row 8 at `:447` and `:559-560`, and the Inputs-used row at `:689-691`. Then run `dotnet run .claude/commands/spec/show_me_facts_tests.cs` and confirm it passes with no assertion edited.
 9. **Behavioural, one commit per command.** Do the reporters first, because they cannot block work. Each commit adds the command's resolver call (the route check block, or its own mode) and the `allowed-tools` entry where needed, and replaces the cited text:
-   1. `status.md:16-21`, `:45-60` and `:71`, with `--all`. Then `switch.md:15-18`, with `--spec`.
+   1. `status.md:16-21`, `:45-60` and `:71`, with `--all`. Then `switch.md:15-18`, with `--spec` run before the `.current-spec` write. The resolver replaces the file-system existence check at `:15`.
    2. `review.md:30` (auto-detect), `:57`, `:68`, `:78`, `:182-185`, `:294` and `:316` (FR criteria by kind), `:462` (closing reminder) and `:466-472` (Spec Status).
    3. `requirements.md:30-33` (no longer creates a directory) and `:203-208`.
    4. `design.md:31-37`, `:97`, `:108`, `:164-166` and `:413-424`.
-   5. `tasks.md:24-31`, `:172-173` and `:201-206`.
-   6. `approve.md:15-28`, `:64`, `:81-87` and `:95-100`. The kind-specific `design` text at `:34-58` and the report at `:60-61` move out in 0090's extraction. The "Regenerate the ADR index" section from `:102` moves with them. Three lines stay in `approve.md` and become generic steps: the presence check at `:32`, the artefact read at `:33` (today it reads `.adr-list`), and the marker write at `:59`. The route-independent advice at `:62-63` and `:66-79` stays as it is.
+   5. `tasks.md:24-31`, `:46-47` (the sub-agent's inputs, chosen by kind: `requirements.md` only with a `requirements` step, ADR paths only with a `design` step), `:172-173` and `:201-206`.
+   6. `approve.md:15-28`, `:64`, `:81-87` and `:95-100`. The kind-specific `design` text at `:34-58` and the report at `:60-61` move out in 0090's extraction. The "Regenerate the ADR index" section from `:102` moves with them.
+      - Three lines stay in `approve.md` and become generic steps: the presence check at `:32`, the artefact read at `:33` (today it reads `.adr-list`), and the marker write at `:59`.
+      - The route-independent advice at `:62-63` and `:66-79` stays as it is.
    7. `implement.md:65-70` and `:113-118`, then `ralph-implement.md:152-155` and `:222`.
    8. `adr.md:40-50` and `:345`.
    9. `new.md`: add the `--flow feature` check before step 1 (`new.md:15`), and the resolver's `allowed-tools` entry at `new.md:2`. This commit lands before 0091's changes to the same file, which add the copy, the creation record and the numbering rule.
@@ -639,9 +657,10 @@ Numbered in commit order. Structural steps add files that nothing yet reads. Eac
 
 - Every route-following command now starts a .NET process. That costs about 0.2 s warm, and seconds on the first run after a fresh clone or an edit to the script.
 - The resolver becomes a single point of failure. If it is broken, every route-following command halts with a tooling-fault message until the script is fixed.
+- `/spec:status`, `/spec:switch` and `/spec:new` also stop on a resolver fault, and none falls back to reading markers. `/spec:switch` writes `.current-spec` only after the resolver succeeds, so a fault leaves the current spec as it was.
 - `/spec:show-me` gains a new way to fail. A broken resolver now stops it as a tooling fault, where today it would have run.
 - Message wording for preconditions, violations and stops lives in C#. Changing a sentence needs a code change and a test update.
-- The route-check block is repeated in about ten command files. Only 0092's comparison test keeps the copies identical.
+- The route-check block is repeated in eight command files. Only 0092's comparison test keeps the copies identical.
 - The grammar is strict. A helpful comment line in a definition makes it malformed, and every spec on that flow stops until it is removed.
 - `.flow` files show as plain text, not as rendered tables, on GitHub.
 - Legacy specs follow whatever `feature.flow` says now. An edit to `feature.flow` changes the route of every legacy spec at once, guarded only by 0092's all-specs check.
@@ -693,7 +712,10 @@ Each command would parse the slip in prose, which brings back the defect class t
 
 - Parent requirement: [specs/0040-routing-slips/requirements.md](../../specs/0040-routing-slips/requirements.md)
 - Issue: [#4661](https://github.com/BrighterCommand/Brighter/issues/4661)
-- Siblings: 0090 (how a command runs a sub-flow, the provenance line, the gate run contract, and the `/adr:*` commands that carry the `design` sub-flow), 0091 (how a slip is installed and frozen at creation (`/spec:new`'s copy and record, numbering, the starter contract), how tampering is detected, and how a route is changed), 0092 (the resolver's and show-me's fixture tests, the fixture flow-definition directories, and the README's notes on running the tests and on a `/bugfix:*` migration)
+- Siblings, as the *Where this ADR sits* table words them:
+  - 0090: how a command runs a sub-flow (approval is the first trigger), the provenance line, the gate run contract, the `/adr:*` commands that carry the `design` sub-flow, and the README's notes on running a sub-flow and on the provenance line.
+  - 0091: how a slip is installed and frozen at creation (`/spec:new`'s copy and record, numbering, the starter contract), how tampering is detected, how a route is changed, and the README's notes on the route-change command and the starter checklist.
+  - 0092: the resolver's and show-me's fixture tests, the fixture flow-definition directories, and the README's notes on running the tests and on a `/bugfix:*` migration.
 - [ADR 0072 — The Measurement Seam and Output of `/spec:show-me`](0072-show-me-command-resolution-and-output.md): file-based app, exit codes, the `--` separator, standard output pollution, the allow-list entry form, and the test-script pattern this ADR follows
 - [ADR 0073 — The Advisory Risk Model for /spec:show-me](0073-show-me-advisory-risk-model.md): F5 and show-me's risk-table row 8, which FR-23's route branch sits beside and does not change
 - [ADR 0071 — Shiftable Review Gear for the TDD Approval Gate](0071-tdd-review-gear.md): per-spec state with a reason. It is the analogue of the route-change command, but its state is untracked, while routing state is tracked (NFR-5)
