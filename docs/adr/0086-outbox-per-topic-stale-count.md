@@ -71,7 +71,7 @@ Each requirement below is met by the mechanism named on its bullet. Where the mo
 - **`Publication.StaleMessageAge` and the smallest-age rule (Q-14).** ADR 0085-outbox-stale-message-telemetry decides them. This ADR receives each topic's age as an input.
 - **The capability on the other outbox families (OOS-15).** Four follow-up issues track it, one for each family. Each follow-up adds an implementation and turns on the generated conformance tests for its outboxes (*Why only `InMemoryOutbox` implements the capability here?*).
 - **An age-aware count for the overall count (Q-5).** ADR 0085-outbox-stale-message-telemetry leaves it to a follow-up. The capability counts only measured topics, so it cannot replace the overall count.
-- **The overall count's gaps in FR-14 columns (a) to (c) (Q-9).** Separate issues track them, as step 13 of ADR 0085-outbox-stale-message-telemetry states.
+- **The overall count's gaps in FR-14 columns (a) to (c) (Q-9).** ADR 0085-outbox-stale-message-telemetry decides them. Its amendment of 2026-10-29 records that PR #4598 fixes them.
 - **The circuit breaker.** It does not change, and the capability reads no breaker state (OOS-14).
 
 ### Where this ADR sits
@@ -285,7 +285,7 @@ The following stay unchanged:
 - Both `AddProducers` overloads. The monitor detects the capability on the outbox instance it resolves, so neither overload registers it.
 - `IAmACausationTrackingOutbox`, its registration in both `AddProducers` overloads, and its check in `HandlerPipelineValidationRules`.
 - `InMemoryOutbox`'s existing members, including its overall count and `OutstandingMessagesAsync`.
-- Every outbox other than `InMemoryOutbox`. Four follow-up issues add the capability to them.
+- Every outbox other than `InMemoryOutbox`, as far as the capability goes. Four follow-up issues add the capability to them. The 2026-10-29 amendment of ADR 0085-outbox-stale-message-telemetry records the changes PR #4598 makes to DynamoDB, DynamoDB V4, Sqlite and Firestore.
 - `IAmAnOutboxCircuitBreaker` and its implementations. The capability takes no tripped topics.
 - `MessageHeader`, `WrapPipeline` and the `ProducerTopic` bag entry. The capability reads the header topic as it is.
 

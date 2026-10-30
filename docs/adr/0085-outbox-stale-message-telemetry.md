@@ -940,7 +940,7 @@ The overall count of every other outbox stays unchanged.
 - The override in `SqliteOutbox` covers every asynchronous read that receives a cancellable token, not only the count. Such a read now takes a pool thread of its own. Once its token is cancelled, the caller gets `OperationCanceledException` at once, while that thread stays busy until the read ends. A read blocked on a lock with no command timeout ends only when the lock is released.
 - DynamoDB and DynamoDB V4 now count up to `ScanConcurrency` times C matching items before the cap. The age filter is still applied after the read, so the items read are not bounded by C (NFR-4 (b)).
 - The producer's outstanding-message check calls the synchronous count. On DynamoDB and DynamoDB V4 that count now goes through the fixed asynchronous one, so the check no longer undercounts, a ceiling below `ScanConcurrency` no longer makes its count fail, and it can count up to `ScanConcurrency` times its ceiling before the cap. On Sqlite and Firestore the check is unchanged.
-- The separate issues of Q-9 and *Out of scope* will cover only the limits PR #4598 documents: the read volume of the DynamoDB and DynamoDB V4 counts (NFR-4 (b)), and the row loading of the relational and MongoDb counts (NFR-4 (c), Q-5).
+- The separate issues of Q-9 and *Out of scope*, issue #4684 and issue #4685, cover only the limits PR #4598 documents: the read volume of the DynamoDB and DynamoDB V4 counts (NFR-4 (b)), and the row loading of the relational and MongoDb counts (NFR-4 (c), Q-5).
 - On Firestore, the synchronous and asynchronous overall counts can now return different values for the same store.
 - The three gap marks stay in the test generator, unused.
 
