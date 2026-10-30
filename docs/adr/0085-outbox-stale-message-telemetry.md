@@ -387,7 +387,7 @@ public static IBrighterBuilder UseOutboxStaleMessageMonitor(
 public sealed class TimedOutboxStaleMessageMonitorOptions
 {
     public static readonly TimeSpan MaxStaleMessageAge;      // 365 days
-    public const int MaxCountCeiling = 1000;
+    public const int MAX_COUNT_CEILING = 1000;
     public static readonly TimeSpan MaxMeasurementInterval;  // 4,294,967,294 ms
 
     public TimedOutboxStaleMessageMonitorOptions(TimeSpan staleMessageAge);
@@ -405,7 +405,7 @@ The trailing comments in the sketch are annotations for this ADR. In the code, e
 | --- | --- | --- | --- |
 | `UseOutboxStaleMessageMonitor` | The builder, A, and an optional action that sets C, I and T | The same builder | `ConfigurationException` when a value is invalid. The message names the setting and the value. Nothing is registered in that case. `ArgumentNullException` for a null builder |
 | Options constructor | A | Options with the default C, I and T | None. The extension checks the value when it runs, and the monitor's constructor checks it again, after `configure` has run |
-| Validation | A, C, I and T | None | A must be greater than zero and at most `MaxStaleMessageAge`. C must be from 1 to `MaxCountCeiling`. I must be greater than zero and at most `MaxMeasurementInterval`. T must be greater than zero and less than I |
+| Validation | A, C, I and T | None | A must be greater than zero and at most `MaxStaleMessageAge`. C must be from 1 to `MAX_COUNT_CEILING`. I must be greater than zero and at most `MaxMeasurementInterval`. T must be greater than zero and less than I |
 
 A is a constructor argument, so an application cannot turn the feature on without naming it. The monitor copies the four values when it is constructed, so they do not change while measurement runs.
 

@@ -39,7 +39,7 @@ public sealed class TimedOutboxStaleMessageMonitorOptions
     /// <summary>
     /// The largest ceiling the monitor accepts: 1000.
     /// </summary>
-    public const int MaxCountCeiling = 1000;
+    public const int MAX_COUNT_CEILING = 1000;
 
     /// <summary>
     /// The largest measurement interval the monitor accepts: 4,294,967,294 milliseconds, the longest period a .NET
@@ -85,9 +85,9 @@ public sealed class TimedOutboxStaleMessageMonitorOptions
             throw new ConfigurationException(
                 $"{nameof(StaleMessageAge)} must be greater than zero and at most {MaxStaleMessageAge}, but was {StaleMessageAge}");
 
-        if (CountCeiling < 1 || CountCeiling > MaxCountCeiling)
+        if (CountCeiling < 1 || CountCeiling > MAX_COUNT_CEILING)
             throw new ConfigurationException(
-                $"{nameof(CountCeiling)} must be at least 1 and at most {MaxCountCeiling}, but was {CountCeiling}");
+                $"{nameof(CountCeiling)} must be at least 1 and at most {MAX_COUNT_CEILING}, but was {CountCeiling}");
 
         if (MeasurementInterval <= TimeSpan.Zero || MeasurementInterval > MaxMeasurementInterval)
             throw new ConfigurationException(

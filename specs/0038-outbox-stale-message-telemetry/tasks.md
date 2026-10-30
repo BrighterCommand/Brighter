@@ -404,7 +404,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
   - Test file: `When_only_the_stale_age_is_given_should_use_the_default_settings.cs`
   - Test should verify:
     - `new TimedOutboxStaleMessageMonitorOptions(TimeSpan.FromMinutes(5))` has C 100, I 1 min and T 10 s, with T < I;
-    - `MaxStaleMessageAge` is 365 d, `MaxCountCeiling` 1000 and `MaxMeasurementInterval` 4,294,967,294 ms.
+    - `MaxStaleMessageAge` is 365 d, `MAX_COUNT_CEILING` 1000 and `MaxMeasurementInterval` 4,294,967,294 ms.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - add `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxStaleMessageMonitorOptions.cs`;
@@ -430,7 +430,7 @@ Tests construct the meter directly over an `IMeterFactory` from `new ServiceColl
     - C of 0 and of `int.MaxValue` each throw, naming the ceiling setting and the value, and nothing is registered.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - check 1 ≤ C ≤ `MaxCountCeiling` in the options validation.
+    - check 1 ≤ C ≤ `MAX_COUNT_CEILING` in the options validation.
 
 - [x] **TEST + IMPLEMENT: T5.4 An invalid I throws `ConfigurationException` (AC-2)**
   - **USE COMMAND**: `/test-first a measurement interval of zero or fifty days throws ConfigurationException naming the setting and value`

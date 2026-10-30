@@ -48,7 +48,7 @@ public class StaleMessageMonitorOptionsDefaultsTests
         Assert.True(options.MeasurementTimeout < options.MeasurementInterval);
 
         Assert.Equal(TimeSpan.FromDays(365), TimedOutboxStaleMessageMonitorOptions.MaxStaleMessageAge);
-        Assert.Equal(1000, TimedOutboxStaleMessageMonitorOptions.MaxCountCeiling);
+        Assert.Equal(1000, TimedOutboxStaleMessageMonitorOptions.MAX_COUNT_CEILING);
         Assert.Equal(TimeSpan.FromMilliseconds(4_294_967_294), TimedOutboxStaleMessageMonitorOptions.MaxMeasurementInterval);
     }
 }
