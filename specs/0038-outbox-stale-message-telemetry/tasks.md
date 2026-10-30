@@ -1915,7 +1915,7 @@ No production change is expected in this phase. The named mutation is how RED is
   - Output: a "Reviewed:" sub-bullet under this task with the Docs PR link.
   - Reviewed: https://github.com/BrighterCommand/Docs/pull/207 is open, as a draft, at d0830da. It adds the "Outbox Stale Message Metrics" section to `contents/Telemetry.md` and links it from `contents/BrighterOutboxSupport.md`. That section covers each telemetry page item of NFR-7: the two counts and why the overall value is not the sum of the topic values, the settings with `Publication.StaleMessageAge`, their defaults and their maximums, the smallest age of a topic's publications, a topic with no publication in the overall count only, the header topic limitation, a value equal to C meaning C or more, the linear cost and series of the count per topic with how to choose C, no recent reading for each count, max rather than sum across instances and per topic, the MongoDb bag topic, which outboxes offer the count per topic, tripped topics and the circuit breaker registration, the meter provider that must share the container, the example alerts, A and `StaleMessageAge` against the sweeper's settings, and the known limitations. The XML documentation and the release notes items of NFR-7 are in this PR. The description of PR #4598 links the Docs PR under Related Issues, and the PR is still a draft.
 
-- [ ] **DOC: T15.8 Close the spec**
+- [x] **DOC: T15.8 Close the spec**
   - Tick "Implementation" in `specs/0038-outbox-stale-message-telemetry/README.md`, with the PR number.
 
 ---
