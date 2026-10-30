@@ -1870,7 +1870,7 @@ No production change is expected in this phase. The named mutation is how RED is
     - Sqlite.Tests (net10.0): 187, 0, 187.
     - MongoDb.Tests (net10.0): 93, 0, 93.
     - DynamoDB.Tests (net10.0): 148, 0, 148. DynamoDB.V4.Tests (net10.0): 147, 0, 147.
-    - Gcp.Tests, Spanner and Firestore only (net10.0): 169, 0, 184. The 15 failures are the Firestore inbox tests, which get `Unauthenticated` because the inbox does not connect to the emulator. No inbox file is in this PR.
+    - Gcp.Tests, Spanner and Firestore only (net10.0): 169, 0, 184. The 15 failures are the Firestore inbox tests, which get `Unauthenticated` because `CreateInbox()` in `Firestore/Configuration.cs` does not point at the emulator. This PR adds the emulator hook to `CreateOutbox()` only and leaves `CreateInbox()` as it was.
     - Test.Generator.Tests (net10.0): 334, 0, 336. The 2 failures are the gateway facts of `GenerationPlanCoverageTests`, which build paths with `Path.Combine("/sample", ...)` and fail on Windows. That file comes from master.
 
 - [x] **PROJECT: T15.2 Generated-tree audit**
