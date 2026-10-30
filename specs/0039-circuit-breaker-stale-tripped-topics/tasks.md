@@ -270,7 +270,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T1.7
   - References: `docs/adr/0089-distributed-outbox-circuit-breaker.md` (*Amends*).
 
-- [ ] **PROJECT: T1.15 - Phase 1 PR boundary: run Core.Tests Sweeping/Metrics/CircuitBreaker suites + AC-31 + AC-38 check, merge as own PR before starting Phase 2**
+- [x] **PROJECT: T1.15 - Phase 1 PR boundary: run Core.Tests Sweeping/Metrics/CircuitBreaker suites + AC-31 + AC-38 check, merge as own PR before starting Phase 2**
   - Run `tests/Paramore.Brighter.Core.Tests` filtered to `CircuitBreaker`, `Sweeping`, `Observability/Metrics` and `Confirmation`. All must be green.
   - AC-31: `ListedTopicsCircuitBreaker` and `ThrowingOutboxCircuitBreaker` are unchanged and compile, and every existing `new InMemoryOutboxCircuitBreaker(...)` call compiles unchanged. The only changed assertion is the Reset template (T1.7).
   - AC-38: compare `dotnet list package --include-transitive` for `src/Paramore.Brighter` with the previous release. No new package.
