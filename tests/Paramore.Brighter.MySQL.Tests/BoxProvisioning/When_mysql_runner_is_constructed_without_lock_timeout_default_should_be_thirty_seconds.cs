@@ -40,6 +40,8 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// </summary>
 public class MySqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
 {
+    private static readonly TimeSpan s_expectedDefaultLockTimeout = TimeSpan.FromSeconds(30);
+
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
@@ -60,7 +62,7 @@ public class MySqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
             _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
         //Assert
-        Assert.Equal(TimeSpan.FromSeconds(30), fakeLock.AcquiredTimeout);
+        Assert.Equal(s_expectedDefaultLockTimeout, fakeLock.AcquiredTimeout);
     }
 
     public Task InitializeAsync() => Task.CompletedTask;

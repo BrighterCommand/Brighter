@@ -40,6 +40,7 @@ public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
 {
     private const string DefaultDatabase = "BrighterTests";
     private const string MasterConnectionString = "Server=localhost;Uid=root;Pwd=root";
+    private static readonly TimeSpan s_timeoutBWouldHitIfContending = TimeSpan.FromSeconds(1);
 
     private readonly string _billingDatabase = $"brighter_billing_{Guid.NewGuid():N}";
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -69,7 +70,7 @@ public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
             new MySqlOutboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             configB,
-            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configB, TimeSpan.FromSeconds(1)));
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configB, s_timeoutBWouldHitIfContending));
 
         //Act
         var taskA = Task.Run(() => provisionerA.ProvisionAsync());

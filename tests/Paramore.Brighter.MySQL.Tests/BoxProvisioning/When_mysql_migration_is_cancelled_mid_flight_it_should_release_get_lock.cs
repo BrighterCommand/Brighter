@@ -38,6 +38,9 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// </summary>
 public class MySqlMigrationCancellationTests : IAsyncLifetime
 {
+    private static readonly TimeSpan s_cancelAfter = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan s_freshRunnerLockTimeout = TimeSpan.FromSeconds(5);
+
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
@@ -52,7 +55,7 @@ public class MySqlMigrationCancellationTests : IAsyncLifetime
         var staleHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         using var cts = new CancellationTokenSource();
-        cts.CancelAfter(TimeSpan.FromMilliseconds(250));
+        cts.CancelAfter(s_cancelAfter);
 
         //Act
         var thrown = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancellingRunner.MigrateAsync(
@@ -70,7 +73,7 @@ public class MySqlMigrationCancellationTests : IAsyncLifetime
             "RollbackAsync should receive CancellationToken.None to ensure RELEASE_LOCK completes.");
         Assert.Equal(CancellationToken.None, spy.RollbackToken);
 
-        var freshRunner = new MySqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
+        var freshRunner = new MySqlBoxMigrationRunner(catalog, config, s_freshRunnerLockTimeout);
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
@@ -119,6 +122,8 @@ DELETE FROM `__BrighterMigrationHistory` WHERE `BoxTableName` = @BoxTableName";
 
 file sealed class CancellingMySqlBoxMigrationRunner : MySqlBoxMigrationRunner
 {
+    private static readonly TimeSpan s_longerThanTheTestWaitsToCancel = TimeSpan.FromSeconds(10);
+
     public RollbackTokenCapturingUnitOfWork? LastUnitOfWork { get; private set; }
 
     public CancellingMySqlBoxMigrationRunner(
@@ -137,11 +142,11 @@ file sealed class CancellingMySqlBoxMigrationRunner : MySqlBoxMigrationRunner
         return LastUnitOfWork;
     }
 
-    // Waits long enough for the caller's token to cancel it while the lock is held.
+    // The cancellation lands while GET_LOCK is held.
     protected override Task RunFreshPathAsync(
         MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
         string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
-        => Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+        => Task.Delay(s_longerThanTheTestWaitsToCancel, cancellationToken);
 }
 
 file sealed class RollbackTokenCapturingUnitOfWork : IAmAProvisioningUnitOfWork<MySqlTransaction>
