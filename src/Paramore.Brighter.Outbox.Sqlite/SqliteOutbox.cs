@@ -102,7 +102,8 @@ public class SqliteOutbox : RelationDatabaseOutbox
     /// <remarks>
     /// Microsoft.Data.Sqlite runs a step that is blocked on a lock synchronously, so the token cannot interrupt it.
     /// The read runs on its own thread and the caller stops waiting for it once the token is cancelled. That
-    /// thread ends when the command timeout does.
+    /// thread stays busy until the read ends. A read blocked on a lock with no command timeout ends only when
+    /// the lock is released.
     /// </remarks>
     protected override async Task<T> ReadFromStoreAsync<T>(
         Func<DbConnection, DbCommand> commandFunc,
