@@ -1897,9 +1897,10 @@ No production change is expected in this phase. The named mutation is how RED is
   - Walk AC-1 to AC-40, and every ADR 0085 and ADR 0086 step, against the ticked tasks, using the coverage cross-reference at the end of this list.
   - Output: every AC maps to at least one ticked task; any gap becomes a new task, reviewed again with `/spec:review tasks`, before the merge.
 
-- [ ] **PROJECT: T15.7 The Docs PR is open and linked before this PR leaves draft (AC-26, NFR-7)**
+- [x] **PROJECT: T15.7 The Docs PR is open and linked before this PR leaves draft (AC-26, NFR-7)**
   - Confirm that the Docs PR from T14.7 to T14.9 is open, covers every NFR-7 item and is linked from this PR's description before this PR leaves draft.
   - Output: a "Reviewed:" sub-bullet under this task with the Docs PR link.
+  - Reviewed: https://github.com/BrighterCommand/Docs/pull/207 is open, as a draft, at d0830da. It adds the "Outbox Stale Message Metrics" section to `contents/Telemetry.md` and links it from `contents/BrighterOutboxSupport.md`. That section covers each telemetry page item of NFR-7: the two counts and why the overall value is not the sum of the topic values, the settings with `Publication.StaleMessageAge`, their defaults and their maximums, the smallest age of a topic's publications, a topic with no publication in the overall count only, the header topic limitation, a value equal to C meaning C or more, the linear cost and series of the count per topic with how to choose C, no recent reading for each count, max rather than sum across instances and per topic, the MongoDb bag topic, which outboxes offer the count per topic, tripped topics and the circuit breaker registration, the meter provider that must share the container, the example alerts, A and `StaleMessageAge` against the sweeper's settings, and the known limitations. The XML documentation and the release notes items of NFR-7 are in this PR. The description of PR #4598 links the Docs PR under Related Issues, and the PR is still a draft.
 
 - [ ] **DOC: T15.8 Close the spec**
   - Tick "Implementation" in `specs/0038-outbox-stale-message-telemetry/README.md`, with the PR number.
