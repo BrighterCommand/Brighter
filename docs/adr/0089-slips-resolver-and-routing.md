@@ -1,7 +1,7 @@
 ---
 id: 0089-slips-resolver-and-routing
 title: "Routing Slips, the Route Resolver and the Approval Table"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-10-28
@@ -18,7 +18,7 @@ Date: 2026-10-28
 
 ## Status
 
-Proposed
+Accepted
 
 Implements part of [issue #4661](https://github.com/BrighterCommand/Brighter/issues/4661). Supersedes no prior ADR. This is a decision about the project's own agent tooling, not its runtime. [ADR 0065](0065-add-frontmatter-to-adrs.md) and [ADR 0071](0071-tdd-review-gear.md) set the precedent.
 
