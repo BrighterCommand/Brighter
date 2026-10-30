@@ -68,8 +68,8 @@ The existing `Topic` column holds the physical channel; the serialized message r
 
 | Step | Action | Result |
 |---|---|---|
-| 1 | Validate publication and snapshot the channel list | Invalid configuration fails before opening a connection |
-| 2 | Compare channel parameters under the queue column's collation | Equivalent names receive one copy |
+| 1 | Capture and validate publication settings when assigned | Invalid shape fails before opening a connection |
+| 2 | Compare channel parameters under the queue column's collation | Equivalent names receive one copy; a logical-topic alias rejects the send |
 | 3 | Insert all destinations with one statement | Failure or transaction rollback removes every inserted copy |
 | 4 | Receive from a physical channel | One worker removes that group's copy |
 | 5 | Retry or purge through the consumer | The operation targets only the receiving queue |
@@ -118,19 +118,22 @@ All new transport behavior lives in the SQL gateway assembly. The core publicati
 | Member | Input | Output | Error conditions |
 |---|---|---|---|
 | `Topic` | Nonblank logical topic | Topic used to validate messages | Missing topic or a message with a different topic |
-| `SubscriberChannels` | 1–1,000 names, each 1–255 UTF-16 code units | One copy per SQL-distinct name | Null, blank, oversized, or a name exactly equal to the logical topic |
-| `Send` / `SendAsync` | Message for the configured topic | Atomic insertion into every destination | SQL failure propagates; async cancellation propagates |
+| `SubscriberChannels` | 1–1,000 names, each 1–255 UTF-16 code units | One copy per SQL-distinct name | Null, blank, oversized, or a name SQL considers equivalent to the logical topic |
+| `SendTimeout` | Nonnegative duration, up to `Int32.MaxValue` seconds | Command timeout, rounded up; zero means infinite | Negative or excessive duration |
+| `Send` / `SendAsync` | Message for the configured topic | Atomic insertion into every destination | SQL-equivalent logical-topic aliases fail configuration; other SQL failures and async cancellation propagate |
 
 #### Consumer contract
 
 | Member | Input | Output | Error conditions |
 |---|---|---|---|
-| `Requeue` / `RequeueAsync` | Message and optional delay | Retry targets the receiving queue | Delayed subscriber retries require the matching targeted scheduler interface |
-| `Purge` / `PurgeAsync` | Consumer's physical queue | Deletes rows only for that queue | SQL failure propagates; async cancellation propagates |
+| `Requeue` / `RequeueAsync` | Message and optional delay | Retry targets the receiving queue; without a matching targeted scheduler a subscriber retry is immediate and logs a warning | SQL and scheduler failures propagate |
+| `Purge` / `PurgeAsync` | Consumer's physical queue | Deletes batches of up to 500 rows through the initial identity cutoff | SQL failures and cancellation propagate; completed batches can remain committed |
 | Channel creation | Subscription and scheduler | Consumer for the physical queue | Incompatible delayed-retry configuration fails before provisioning |
 
 A pre-cancelled async retry neither modifies metadata nor invokes the scheduler.
-The subscriber channel must differ from the logical topic so retries cannot use legacy topic-based scheduling and broadcast again.
+Each fan-out subscription sets `IsIndependentSubscriber = true` so retries use its physical queue.
+Plain subscriptions leave this false and retain topic-based scheduling, including SQL-equivalent topic spellings.
+Subscriber channels must remain distinct from the logical topic to prevent plain sends and subscriber copies sharing a queue.
 
 #### Where each type is touched
 
@@ -140,7 +143,7 @@ The subscriber channel must differ from the logical topic so retries cannot use 
 | SQL gateway | Producer and producer factory | Validate and select fan-out |
 | SQL gateway | SQL queue | Add atomic fan-out and channel-scoped purge |
 | SQL gateway | Consumer and factories | Preserve retry destinations and validate scheduling |
-| SQL gateway | `MsSqlSubscription` | Explain physical channel semantics |
+| SQL gateway | `MsSqlSubscription` | Explicitly select independent subscriber retry routing |
 
 Plain publication behavior, the queue schema, acknowledgements, and rejection routing remain unchanged.
 The low-level queue's table-wide `Purge()` remains available for administration.
@@ -157,16 +160,37 @@ The 1,000-destination limit bounds statement size and keeps the parameter count 
 
 An empty projection from the queue table gives `UNION` the `Topic` column's collation.
 Equivalent channel names therefore receive one copy, including case, accent, and trailing-space equivalence where the collation defines it.
+The SQL batch also compares each destination with the logical topic using that same collation.
+A match raises a configuration exception before any insertion, including trailing-space aliases under a binary collation.
+Structural validation still happens before database access. SQL identity validation happens when sending.
 
 #### Explicit membership
 
 Publisher configuration avoids a subscription registry and its registration lifecycle.
 All publishers for a logical topic must use the same destination configuration.
+The producer snapshots the logical topic, subscriber collection, and command timeout at publication assignment.
+Later caller mutations cannot change an active send. Reassigning the publication atomically replaces that snapshot.
+Fan-out command timeout defaults to 30 seconds; zero means infinite and positive fractions round up to whole seconds.
+
+#### Bounded purge
+
+Consumer purge captures the highest queue identity before deleting batches of at most 500 rows with row locks.
+Rows above that cutoff remain queued, so ongoing publication does not extend the purge indefinitely.
+The cutoff is an identity boundary, not a snapshot of commit times.
+Without an ambient transaction each statement commits independently, releasing its locks before the next batch.
+Cancellation or failure can therefore leave a partial purge. An ambient transaction retains locks until it completes.
+Batching reduces escalation risk but cannot prevent blocking from other transactions, indexes, or memory pressure.
 
 #### Targeted delayed retries
 
 Delayed retries require `IAmAMessageRequeueSchedulerSync` or its async counterpart, configured for this SQL store.
 The transport rejects an incompatible scheduler when a subscription requests a positive requeue delay.
+Handlers can request a per-message delay through `DeferMessageAction` even when the subscription's
+requeue delay is zero. Without a matching queue-targeted scheduler, the consumer logs a warning and
+immediately returns that copy to its physical queue. Throwing at this point would lose the already-dequeued
+copy because SQL's negative acknowledgement does not restore it. The logical topic, message ID, headers,
+and handled count are retained. Failures from a configured scheduler still propagate; scheduling may have
+succeeded before the failure was reported, so falling back then could create a duplicate.
 No built-in persistent SQL retry scheduler is added.
 
 ### Implementation Approach
@@ -191,11 +215,15 @@ No built-in persistent SQL retry scheduler is added.
 - Delete-on-receive can lose a subscriber's copy if the receiver crashes before processing finishes.
 - A lost commit acknowledgement can cause duplicates when a publisher retries.
 - Delayed subscriber retries require a compatible scheduler supplied by the application.
+- Each subscriber copy duplicates the full payload and its transaction-log writes.
+- Physical queues share one table and indexes; row isolation does not guarantee freedom from lock contention.
 
 ### Risks and Mitigations
 
 - Retired queues retain their backlog. Drain them before removing consumers or reverting to plain publication.
 - SQL collation can merge names. Tests cover equivalent names and distinct names under binary collation.
+- Large ambient transactions can still escalate to a table lock despite batched purge. `READPAST` does not skip page or table locks.
+- Concurrent transactions and skipped locked rows can change delivery order; identity order is not a commit-order guarantee.
 - `READPAST` requires compatible isolation. Use locking Read Committed or Repeatable Read for application scopes sharing the consumer pool.
 - Snapshot-based Read Committed needs different dequeue hints. The deployment configuration query detects that unsupported default configuration.
 

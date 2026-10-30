@@ -2,6 +2,28 @@
 
 ## Master
 
+### MS SQL subscriber queues and consumer purge (#4665)
+
+`MsSqlPublication` opts into one copy per configured subscriber channel. Workers sharing a channel
+continue to compete. Subscriber retries return to the receiving queue. A per-message delay requested
+without a matching queue-targeted scheduler falls back to immediate requeue with a warning; a positive
+subscription requeue delay still requires that scheduler at startup.
+
+Set `MsSqlSubscription.IsIndependentSubscriber = true` for each fan-out receiver. Plain subscriptions
+retain topic-based delayed retries, including SQL-equivalent channel and topic spellings. Fan-out sends
+reject subscriber names equivalent to the logical topic under the queue column's collation.
+
+The producer snapshots routing and timeout settings when `Publication` is assigned. Later mutations
+require reassignment to take effect. `MsSqlPublication.SendTimeout` controls the fan-out command timeout;
+it defaults to 30 seconds, rounds positive fractions up, and accepts zero for an infinite timeout.
+
+`MsSqlMessageConsumer.Purge()` and `PurgeAsync()` now delete only the consumer's physical queue,
+including for plain publications. They previously cleared the entire queue table. Administrative
+callers that need to clear the table can use `MsSqlMessageQueue<T>.Purge()`.
+Consumer purge uses batches of up to 500 rows and preserves rows above its initial identity cutoff.
+Outside an ambient transaction, each batch commits independently; cancellation or failure can leave a
+partial purge. Ambient transactions retain locks until completion.
+
 ### RMQ.Sync connection recovery and pool cleanup (#4596)
 
 The synchronous RabbitMQ connection pool no longer registers an ineffective shutdown eviction handler.
