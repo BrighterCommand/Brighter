@@ -310,6 +310,9 @@ namespace Paramore.Brighter
                 var age = now - dispatchedSince;
                 return Requests.Values
                     .Where(oe => (oe.TimeFlushed != DateTimeOffset.MinValue) && (oe.TimeFlushed <= age))
+                    .OrderBy(oe => oe.Message.Header.TimeStamp)
+                    .ThenBy(oe => oe.Message.Id.Value, StringComparer.Ordinal)
+                    .Skip((int)Math.Min(((long)pageNumber - 1) * pageSize, int.MaxValue))
                     .Take(pageSize)
                     .Select(oe => oe.Message).ToArray();
             }
@@ -569,11 +572,13 @@ namespace Paramore.Brighter
                 var now = _timeProvider.GetUtcNow();
                 var sentBefore = now - dispatchedSince;
                 var outstandingMessages = Requests.Values
-                    .OrderBy(oe=>oe.Message.Header.TimeStamp)
+                    .OrderBy(oe => oe.Message.Header.TimeStamp)
+                    .ThenBy(oe => oe.Message.Id.Value, StringComparer.Ordinal)
                     .Where(oe => 
                         oe.TimeFlushed == DateTimeOffset.MinValue 
                         && oe.WriteTime <= sentBefore
                         && !trippedTopics.Contains(oe.Message.Header.Topic))
+                    .Skip((int)Math.Min(((long)pageNumber - 1) * pageSize, int.MaxValue))
                     .Take(pageSize)
                     .Select(oe => oe.Message).ToArray();
                 return outstandingMessages;
