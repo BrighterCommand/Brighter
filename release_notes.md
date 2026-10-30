@@ -2,6 +2,18 @@
 
 ## Master
 
+### RMQ.Sync connection recovery and pool cleanup (#4596)
+
+The synchronous RabbitMQ connection pool no longer registers an ineffective shutdown eviction handler.
+Automatic recovery remains enabled by default. If the client recovers before the next pool lookup,
+the recovered connection is reused. A lookup that finds a closed connection disposes it and creates
+a replacement, cancelling recovery on the old connection. Explicit reset, removal and release of the
+last gateway reference still dispose connections. The pool's shutdown warning log is also removed
+with the handler.
+
+Direct pool callers that supply a `ConnectionFactory` with `AutomaticRecoveryEnabled = false`
+also use lazy replacement: shutdown no longer removes their closed pool entry immediately.
+
 ### GCP Pub/Sub stream shutdown cancellation
 
 Disposing a Stream or StreamOrdering consumer now logs cancellation reported by the subscriber client
@@ -144,9 +156,11 @@ The restart check is a restart condition because Brighter does not recreate a co
 
 #### BrighterServiceActivatorHealthCheck is obsolete
 
-`BrighterServiceActivatorHealthCheck` is marked `[Obsolete]` and is removed in V11. It still returns the same status for the same conditions and is untagged, so a tag-filtered endpoint never selects it. **Builds that treat warnings as errors fail with CS0618** until you suppress the warning or move to `AddBrighterConsumerHealthChecks`. Do not register the existing check together with the consumer remedy checks; replace it in one change and point probes and monitoring at endpoints that select the new tags.
+`BrighterServiceActivatorHealthCheck` is marked `[Obsolete]` and is removed in V11. Marking it obsolete does not itself change the statuses it reports. It remains untagged, so a tag-filtered endpoint never selects it. **Builds that treat warnings as errors fail with CS0618** until you suppress the warning or move to `AddBrighterConsumerHealthChecks`. Do not register the existing check together with the consumer remedy checks; replace it in one change and point probes and monitoring at endpoints that select the new tags.
 
-Migrate in this order so existing endpoints keep their behaviour:
+Starting with 10.8.1, the existing check also reports Degraded when any consumer has at least `channelFailureThreshold` consecutive channel failures (default: 3), as introduced by #4555. This applies even when all expected consumers are running. In 10.8.0, matching expected and running consumer counts reported Healthy regardless of channel failures. After upgrading from 10.8.0, readiness probes configured to map Degraded to HTTP 503 can therefore start taking affected instances out of service.
+
+Migrate in this order to control when existing endpoints select the new checks:
 
 1. Give every existing health endpoint a predicate that excludes the three remedy tags. An endpoint with no predicate would select the new checks, and a hung sweep would turn a readiness endpoint into a 503.
 2. Register the sweeper checks.
