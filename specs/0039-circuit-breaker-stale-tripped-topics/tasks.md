@@ -300,7 +300,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2b - Options and the trip-store contract
 
-- [ ] **PROJECT: T2.2 - Make the store contract suite reusable by core and by the SQL test projects**
+- [x] **PROJECT: T2.2 - Make the store contract suite reusable by core and by the SQL test projects**
   - Put the abstract store contract suites in `tests/Paramore.Brighter.Base.Test/CircuitBreaker/`, following the pattern of `Outbox/OutboxTest.cs`. There are two: `TrippedTopicStoreWriteContractTest` (T2.4, T2.5, T2.8) and `TrippedTopicStoreEndedContractTest` (T2.6, T2.7). Each store has one concrete runner per suite. Add a `ProjectReference` from `Paramore.Brighter.Core.Tests` to `Paramore.Brighter.Base.Test`. The MSSQL, PostgresSQL and MySQL test projects already reference Base.Test.
   - Add what T2.66 and T2.67 need and these projects lack, with versions in `Directory.Packages.props`: `Microsoft.Extensions.TimeProvider.Testing` to `Paramore.Brighter.MSSQL.Tests` and `Paramore.Brighter.MySQL.Tests` (PostgresSQL.Tests has it), and the OpenTelemetry packages the telemetry assertions use (`OpenTelemetry`, `OpenTelemetry.Exporter.InMemory`) to `Paramore.Brighter.MySQL.Tests`. Add the same two OpenTelemetry packages to `Paramore.Brighter.MSSQL.Tests` and `Paramore.Brighter.PostgresSQL.Tests` if they are missing.
   - Build the test solution to confirm the new reference causes no type or package conflicts.
