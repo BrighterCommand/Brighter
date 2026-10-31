@@ -465,7 +465,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.10
   - References: ADR 0089 *`IAmAnOutboxCircuitBreakerAsync` and `IAmATripBatch`* and *Why one batched write*.
 
-- [ ] **CHARACTERISE: T2.13 - A batch trip shows in the view at once, and reaches the store only at the end of the call**
+- [x] **CHARACTERISE: T2.13 - A batch trip shows in the view at once, and reaches the store only at the end of the call**
   - **USE COMMAND**: `/tdd:test-first when a topic is tripped mid batch should list it at once and write it to the store only when the batch is written`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_topic_is_tripped_mid_batch_should_list_it_at_once_and_write_it_at_the_end.cs`
