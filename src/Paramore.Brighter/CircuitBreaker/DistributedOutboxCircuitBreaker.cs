@@ -293,6 +293,12 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     {
         var read = await _store.ReadAsync(_timeProvider.GetUtcNow(), _tripLength, cancellationToken).ConfigureAwait(false);
         MergeLive(read.Live);
+        foreach (var ended in read.Ended)
+        {
+            DropEnded(ended.Topic, ended.TripTime);
+            Announce(CircuitBreakerSpanOperation.Reset, ended.Topic);
+        }
+
         return TrippedTopics.ToList();
     }
 
