@@ -542,7 +542,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.16, T2.11
   - References: ADR 0089 *How a write is announced*. `src/Paramore.Brighter/OutboxProducerMediator.cs:946,:1040`.
 
-- [ ] **TEST + IMPLEMENT: T2.17 - Distributed breaker spans carry the cooldown duration, and the counter attributes are unchanged**
+- [x] **TEST + IMPLEMENT: T2.17 - Distributed breaker spans carry the cooldown duration, and the counter attributes are unchanged**
   - **USE COMMAND**: `/tdd:test-first when the distributed breaker announces a transition should tag its span with the cooldown duration and keep the counter attributes unchanged`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_distributed_breaker_announces_a_trip_should_tag_the_span_with_the_cooldown_duration.cs`
