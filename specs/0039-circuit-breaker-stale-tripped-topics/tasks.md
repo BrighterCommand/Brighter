@@ -396,7 +396,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2c - Distributed breaker view and coalesced writes
 
-- [ ] **TEST + IMPLEMENT: T2.9 - The distributed breaker validates C, the leeway and the store timeout at construction**
+- [x] **TEST + IMPLEMENT: T2.9 - The distributed breaker validates C, the leeway and the store timeout at construction**
   - **USE COMMAND**: `/tdd:test-first when the distributed breaker is built with an out of range duration should throw argument out of range`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_distributed_breaker_is_built_with_an_out_of_range_duration_should_throw.cs`
