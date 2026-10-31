@@ -37,15 +37,18 @@ namespace Paramore.Brighter.CircuitBreaker;
 public class InMemoryTrippedTopicStore : IAmATrippedTopicStore
 {
     private readonly object _lock = new();
-    private readonly Dictionary<RoutingKey, DateTimeOffset> _trips = new();
+    private readonly Dictionary<RoutingKey, Row> _trips = new();
 
     /// <inheritdoc />
     public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
     {
         lock (_lock)
         {
-            var live = _trips.Select(trip => new TopicTrip(trip.Key, trip.Value)).ToList();
-            return Task.FromResult(new TrippedTopicStoreRead(live, []));
+            var ended = MarkEnded(now, now - tripLength);
+            var live = _trips.Where(trip => trip.Value.EndedAt is null)
+                .Select(trip => new TopicTrip(trip.Key, trip.Value.TripTime))
+                .ToList();
+            return Task.FromResult(new TrippedTopicStoreRead(live, ended));
         }
     }
 
@@ -59,11 +62,22 @@ public class InMemoryTrippedTopicStore : IAmATrippedTopicStore
         }
     }
 
+    private List<TopicTrip> MarkEnded(DateTimeOffset now, DateTimeOffset cutoff)
+    {
+        var expired = _trips.Where(trip => trip.Value.EndedAt is null && trip.Value.TripTime <= cutoff).ToList();
+        foreach (var trip in expired)
+            _trips[trip.Key] = trip.Value with { EndedAt = now };
+
+        return expired.Select(trip => new TopicTrip(trip.Key, trip.Value.TripTime)).ToList();
+    }
+
     private TripWriteResult Write(TopicTrip trip)
     {
-        DateTimeOffset? prior = _trips.TryGetValue(trip.Topic, out var stored) ? stored : null;
+        DateTimeOffset? prior = _trips.TryGetValue(trip.Topic, out var stored) ? stored.TripTime : null;
         var storedTripTime = prior.HasValue && prior.Value > trip.TripTime ? prior.Value : trip.TripTime;
-        _trips[trip.Topic] = storedTripTime;
+        _trips[trip.Topic] = new Row(storedTripTime, null);
         return new TripWriteResult(trip.Topic, prior, storedTripTime, false);
     }
+
+    private sealed record Row(DateTimeOffset TripTime, DateTimeOffset? EndedAt);
 }
