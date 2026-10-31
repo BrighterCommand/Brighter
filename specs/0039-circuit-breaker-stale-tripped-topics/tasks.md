@@ -286,7 +286,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2a - Thread a trip batch through dispatch
 
-- [ ] **STRUCTURAL: T2.1 - Add an optional trip-batch parameter to the dispatch methods, passing null everywhere**
+- [x] **STRUCTURAL: T2.1 - Add an optional trip-batch parameter to the dispatch methods, passing null everywhere**
   - **USE COMMAND**: `/refactor:tidy-first add a trailing IAmATripBatch? trips parameter to DispatchAsync and BulkDispatchAsync, pass null from every caller, route TripTopic through the batch when present, and add empty role interfaces`
   - Change:
     - `OutboxProducerMediator.cs`: give `DispatchAsync` (`:1257`) and `BulkDispatchAsync` (`:1152`) a trailing `IAmATripBatch? trips` parameter.
