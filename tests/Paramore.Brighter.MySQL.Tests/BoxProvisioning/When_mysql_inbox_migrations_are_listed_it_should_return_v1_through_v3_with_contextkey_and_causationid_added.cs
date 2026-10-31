@@ -29,6 +29,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// The MySQL inbox catalog lists V1 to V3 in order, each with the cumulative columns of the versions
+/// before it; V2 and V3 use the <c>information_schema</c> prepared-statement guard (ADR 0057 §5), V2 and V3
+/// carry a <c>SourceReference</c> and V1 does not, and none sets <c>IdempotencyCheckSql</c>.
+/// </summary>
 public class MySqlInboxMigrationsTests
 {
     private static readonly string[] s_v1Columns =
@@ -41,8 +46,7 @@ public class MySqlInboxMigrationsTests
     [Fact]
     public void When_mysql_inbox_migrations_are_listed_it_should_return_v1_through_v3_with_contextkey_and_causationid_added()
     {
-        //Arrange — derive each version's expected LogicalColumns by accumulating the
-        //per-version additions from the archaeology (spec README inbox table).
+        //Arrange
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
             inboxTableName: "inbox_test");
@@ -51,14 +55,13 @@ public class MySqlInboxMigrationsTests
         //Act
         var migrations = new MySqlInboxMigrationCatalog().All(config);
 
-        //Assert — exactly three migrations numbered 1..3 in order.
+        //Assert
         Assert.Equal(3, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
             Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
-        //Assert — LogicalColumns at each version matches the cumulative archaeology.
         for (var v = 1; v <= 3; v++)
         {
             var migration = migrations[v - 1];
@@ -70,8 +73,6 @@ public class MySqlInboxMigrationsTests
                 $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
         }
 
-        //Assert — V2 and V3 UpScripts use the MySQL information_schema + prepared-statement
-        //idempotency pattern (ADR §5). Same pattern used by MySQL outbox V2..V7.
         var v2Script = migrations[1].UpScript;
         Assert.Contains("information_schema.columns", v2Script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("PREPARE stmt FROM @q", v2Script, StringComparison.OrdinalIgnoreCase);
@@ -80,9 +81,6 @@ public class MySqlInboxMigrationsTests
         Assert.Contains("information_schema.columns", v3Script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("PREPARE stmt FROM @q", v3Script, StringComparison.OrdinalIgnoreCase);
 
-        //Assert — V1 has no single source commit so SourceReference is null;
-        //V2 carries the archaeology pointer for the ContextKey addition (787c31c52, Oct 2018);
-        //V3 carries the issue pointer for the CausationId addition (#2541).
         Assert.Null(migrations[0].SourceReference);
         Assert.False(
             string.IsNullOrWhiteSpace(migrations[1].SourceReference),
@@ -91,7 +89,6 @@ public class MySqlInboxMigrationsTests
             string.IsNullOrWhiteSpace(migrations[2].SourceReference),
             "V3 must have a non-empty SourceReference (issue pointer for CausationId addition)");
 
-        //Assert — IdempotencyCheckSql is null for MySQL (only SQLite uses that field per ADR §6).
         Assert.Null(migrations[0].IdempotencyCheckSql);
         Assert.Null(migrations[1].IdempotencyCheckSql);
         Assert.Null(migrations[2].IdempotencyCheckSql);

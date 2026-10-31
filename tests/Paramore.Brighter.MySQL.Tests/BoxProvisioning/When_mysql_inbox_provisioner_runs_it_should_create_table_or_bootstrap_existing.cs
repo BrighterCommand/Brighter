@@ -62,7 +62,7 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
     [Fact]
     public async Task When_inbox_provisioner_runs_against_existing_table_without_history_it_should_bootstrap_existing()
     {
-        // Arrange — create inbox table directly (simulating pre-migration install)
+        // Arrange
         using (var setupConn = new MySqlConnection(_connectionString))
         {
             await setupConn.OpenAsync();
@@ -89,7 +89,6 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
         using var connection = new MySqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        // History should have a synthetic row at the latest inbox version
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM `__BrighterMigrationHistory`

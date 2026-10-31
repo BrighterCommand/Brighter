@@ -33,6 +33,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// A MySQL chain that fails at V6 keeps the V4/V5 migrations and history rows it already committed
+/// (DDL commits implicitly, ADR 0057 §5a) and the next run resumes from <c>MAX(V)</c>.
+/// </summary>
 public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
 {
     private const int SeedVersion = 3;
@@ -47,7 +51,7 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
     [Fact]
     public async Task When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied_version_on_next_invocation()
     {
-        //Arrange — seed an outbox at V3 (no history) plus a marker row to prove preservation.
+        //Arrange
         MySqlOutboxLegacySeeder.SeedAtV(SeedVersion, _connectionString, _tableName);
         await SeedMarkerRow();
 
@@ -61,14 +65,10 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
         var brokenRunner = new MySqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30));
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
-        //Act + Assert (1) — broken V6 in chain: runner throws, but per ADR §5a MySQL implicit-DDL
-        //commit means the V4/V5 ALTERs and history INSERTs already committed before V6 failed.
+        //Act + Assert
         await Assert.ThrowsAsync<MySqlException>(() => brokenRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint));
 
-        //Assert — exactly 3 history rows survive: synthetic V3 (bootstrap) + applied V4 + applied V5.
-        //The runner's three-path branching emits ONE synthetic row at the detected version (V3),
-        //not one row per version 1..3 — so V1/V2 history rows must be absent.
         var rowsByVersion = await GetHistoryRowsByVersion();
         Assert.Equal(3, rowsByVersion.Count);
         Assert.True(rowsByVersion.ContainsKey(SeedVersion));
@@ -82,16 +82,14 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
             rowsByVersion[SeedVersion + 2].StartsWith("bootstrap:", StringComparison.Ordinal),
             "V5 should be an applied migration row, not a synthetic bootstrap row");
 
-        //Assert — table shape reflects V5 (CloudEvents Source column committed) but not V6.
         var columnsAfterFailure = await GetTableColumns();
         Assert.Contains("PartitionKey", columnsAfterFailure); // V4 ALTER committed
         Assert.Contains("Source", columnsAfterFailure);       // V5 ALTER committed
         Assert.DoesNotContain("WorkflowId", columnsAfterFailure); // V6 never applied (script threw before ALTER)
 
-        //Assert — seeded marker row preserved.
         Assert.Equal(1, await GetMarkerRowCount());
 
-        //Act + Assert (2) — retry with the real migration list via the provisioner.
+        //Act
         var realRunner = new MySqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
         var provisioner = new MySqlOutboxProvisioner(
             new MySqlBoxDetectionHelper(),
@@ -101,7 +99,7 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
             realRunner);
         await provisioner.ProvisionAsync();
 
-        //Assert — V6..V8 now applied; total exactly 6 history rows (V3 synthetic + V4..V8 applied).
+        //Assert
         var rowsAfterRetry = await GetHistoryRowsByVersion();
         Assert.Equal(6, rowsAfterRetry.Count);
 
@@ -113,7 +111,6 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
                 $"V{v} should be an applied migration row on retry");
         }
 
-        //Assert — table now at V8 shape with marker still present.
         var columnsAfterRetry = await GetTableColumns();
         Assert.Contains("WorkflowId", columnsAfterRetry);  // V6 applied on retry
         Assert.Contains("DataRef", columnsAfterRetry);     // V7 applied on retry

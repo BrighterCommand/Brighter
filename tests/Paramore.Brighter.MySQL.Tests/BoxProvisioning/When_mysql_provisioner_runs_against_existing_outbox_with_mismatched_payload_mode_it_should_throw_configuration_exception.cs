@@ -38,7 +38,7 @@ public class MySqlOutboxPayloadModeMismatchTests : IAsyncLifetime
     [Fact]
     public async Task When_existing_outbox_body_is_text_and_provisioner_is_configured_for_binary_it_should_throw_configuration_exception()
     {
-        //Arrange — text-mode outbox already exists; configure provisioner for binary.
+        //Arrange
         await CreateTable(MySqlOutboxBuilder.GetDDL(_tableName, hasBinaryMessagePayload: false));
 
         var config = new RelationalDatabaseConfiguration(
@@ -60,7 +60,7 @@ public class MySqlOutboxPayloadModeMismatchTests : IAsyncLifetime
     [Fact]
     public async Task When_existing_outbox_body_is_binary_and_provisioner_is_configured_for_text_it_should_throw_configuration_exception()
     {
-        //Arrange — binary (BLOB) outbox already exists; configure provisioner for text.
+        //Arrange
         await CreateTable(MySqlOutboxBuilder.GetDDL(_tableName, hasBinaryMessagePayload: true));
 
         var config = new RelationalDatabaseConfiguration(
