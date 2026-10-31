@@ -413,7 +413,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.3, T2.4
   - References: ADR 0089 *`DistributedOutboxCircuitBreaker`* and the options table.
 
-- [ ] **TEST + IMPLEMENT: T2.10 - A sync trip updates the view at once and never waits on the store**
+- [x] **TEST + IMPLEMENT: T2.10 - A sync trip updates the view at once and never waits on the store**
   - **USE COMMAND**: `/tdd:test-first when a synchronous callback trips a topic while the store blocks should return at once and list the topic`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_synchronous_trip_happens_while_the_store_blocks_should_return_at_once_and_list_the_topic.cs`
