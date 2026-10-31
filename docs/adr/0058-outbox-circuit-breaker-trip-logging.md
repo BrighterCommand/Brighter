@@ -6,6 +6,8 @@ Date: 2026-09-22
 
 Proposed
 
+Amended by ADR 0089 (`0089-distributed-outbox-circuit-breaker.md`): the in-memory Reset log names its cause, `cooldown` or `maximum trip duration`, through a `{ResetCause}` placeholder.
+
 ## Context
 
 **Scope**: This ADR covers everything emitted when `IAmAnOutboxCircuitBreaker`'s state actually

@@ -2,6 +2,29 @@
 
 ## Master
 
+### Circuit-broken topics no longer stay tripped for ever (spec 0039, #4628)
+<!-- spec: 0039-circuit-breaker-stale-tripped-topics -->
+
+An outbox sweeper instance that stopped obtaining the distributed lock kept its circuit-broken topics for ever, and held back their messages when it next swept. `InMemoryOutboxCircuitBreaker` now also ends a trip after `MaximumTripDuration` (default 5 minutes) whatever the sweeper does, so a stale trip no longer holds back messages once the sweeper obtains the lock again. The reset log names whether a trip ended by cooldown or by maximum trip duration. `InMemoryOutboxCircuitBreaker` takes an optional `TimeProvider` as its last constructor parameter. Brighter still registers no breaker by default, and `IAmAnOutboxCircuitBreaker` is unchanged.
+
+#### Breaking changes
+
+- `InMemoryOutboxCircuitBreaker` now ends a trip after `MaximumTripDuration` even if its cooldown count has not run out. *(behavioural)* The 5-minute default exceeds the default cooldown of about 50 seconds. Raise it only if `CooldownCount` times `TimerInterval` is longer.
+- The reset log message names its cause, so its text changes. *(behavioural)* Update any alert or query that matches the old message.
+- The `InMemoryOutboxCircuitBreaker` constructor gains a trailing optional `TimeProvider` parameter. *(binary)* Callers compiled against the old signature must be recompiled; source is unchanged.
+
+### RMQ.Sync connection recovery and pool cleanup (#4596)
+
+The synchronous RabbitMQ connection pool no longer registers an ineffective shutdown eviction handler.
+Automatic recovery remains enabled by default. If the client recovers before the next pool lookup,
+the recovered connection is reused. A lookup that finds a closed connection disposes it and creates
+a replacement, cancelling recovery on the old connection. Explicit reset, removal and release of the
+last gateway reference still dispose connections. The pool's shutdown warning log is also removed
+with the handler.
+
+Direct pool callers that supply a `ConnectionFactory` with `AutomaticRecoveryEnabled = false`
+also use lazy replacement: shutdown no longer removes their closed pool entry immediately.
+
 ### GCP Pub/Sub stream shutdown cancellation
 
 Disposing a Stream or StreamOrdering consumer now logs cancellation reported by the subscriber client
