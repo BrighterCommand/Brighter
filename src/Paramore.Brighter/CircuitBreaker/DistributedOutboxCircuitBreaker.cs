@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -197,6 +198,31 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
     }
 
+    private async Task WriteLiveAsync(IReadOnlyCollection<KeyValuePair<RoutingKey, DateTimeOffset>> pending)
+    {
+        var trips = LiveTrips(pending);
+        if (trips.Count == 0)
+            return;
+
+        var results = await _store.WriteAsync(trips).ConfigureAwait(false);
+        ApplyWriteResults(results);
+    }
+
+    private List<TopicTrip> LiveTrips(IReadOnlyCollection<KeyValuePair<RoutingKey, DateTimeOffset>> pending)
+    {
+        var now = _timeProvider.GetUtcNow();
+        var trips = new List<TopicTrip>(pending.Count);
+        foreach (var trip in pending)
+        {
+            if (now - trip.Value < _tripLength)
+                trips.Add(new TopicTrip(trip.Key, trip.Value));
+            else
+                DropStale(trip.Key, trip.Value);
+        }
+
+        return trips;
+    }
+
     private bool HasRunOut(DateTimeOffset stamp) => _timeProvider.GetUtcNow() - stamp >= _tripLength;
 
     private void DropEnded(RoutingKey topic, DateTimeOffset storedStamp)
@@ -248,7 +274,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
                 _pendingWrites.Remove(topic);
             }
 
-            await _store.WriteAsync([new TopicTrip(topic, stamp)]).ConfigureAwait(false);
+            await WriteLiveAsync([new KeyValuePair<RoutingKey, DateTimeOffset>(topic, stamp)]).ConfigureAwait(false);
 
             lock (_lock)
             {
@@ -289,28 +315,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             if (_trips.Count == 0)
                 return;
 
-            var trips = LiveTrips();
+            var pending = _trips.ToArray();
             _trips.Clear();
-            if (trips.Count == 0)
-                return;
-
-            var results = await breaker._store.WriteAsync(trips).ConfigureAwait(false);
-            breaker.ApplyWriteResults(results);
-        }
-
-        private List<TopicTrip> LiveTrips()
-        {
-            var now = breaker._timeProvider.GetUtcNow();
-            var trips = new List<TopicTrip>(_trips.Count);
-            foreach (var trip in _trips)
-            {
-                if (now - trip.Value < breaker._tripLength)
-                    trips.Add(new TopicTrip(trip.Key, trip.Value));
-                else
-                    breaker.DropStale(trip.Key, trip.Value);
-            }
-
-            return trips;
+            await breaker.WriteLiveAsync(pending).ConfigureAwait(false);
         }
     }
 
