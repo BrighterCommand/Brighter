@@ -61,7 +61,7 @@ These words keep the meaning that [requirements § Definitions](../../specs/0040
 - That a marker counts as approved whatever it holds (FR-5). The resolver decides that (0089). It never reads a provenance line.
 - Tampering, route change, slip creation and the starter-command checklist itself. All are 0091's.
 - Fixture directories, a fixture gate, a fixture sub-flow command and every test script. All are 0092's. *What 0092 needs from this ADR* lists the inputs.
-- Any change to what the `design` sub-flow does to a valid ADR and the index (requirements, Out of Scope). Its location moves. It differs from today's `approve.md:34-58` in these places, which narrows requirements Out of Scope, FR-29's description of the move as a structural refactoring, AC-24 and AC-77: an ADR that fails `write_adr_metadata`'s Step 3 checks, which today is repaired or asked about in the middle of the approval, now stops it before any write; an ADR selector that matches other than one ADR fails; the supersession question comes before the first write; the question offers at most three ADRs; a target already `Superseded` by a different ADR is refused; and `deprecate` is reached by a free-text answer. For an ADR whose frontmatter passes the checks, and whose supersession targets are not already retired, the files that result are today's. The rule for when to ask is today's, made explicit.
+- Any change to what the `design` sub-flow does to a valid ADR and the index (requirements, Out of Scope). Its location moves. It differs from today's `approve.md:34-58` in these places, which narrows requirements Out of Scope, FR-29's description of the move as a structural refactoring, AC-24 and AC-77: an ADR that fails `write_adr_metadata`'s Step 3 checks, which today is repaired or asked about in the middle of the approval, now stops it before any write; an ADR selector that matches other than one ADR fails, and so does more than one selector word, where today the words after the first selector word are ignored; the supersession question comes before the first write; an ADR already `Superseded` by another selected ADR is not accepted again on a re-run; the question offers at most three ADRs; a target already `Superseded` by a different ADR is refused; and `deprecate` is reached by a free-text answer. For an ADR whose frontmatter passes the checks, and whose supersession targets are not already retired, the files that result are today's. The rule for when to ask is today's, made explicit.
 
 ### Where this ADR sits
 
@@ -101,9 +101,9 @@ The mechanism behind all three is the same. Approval is a procedure, but it is w
 - **Questions before writes.** A sub-flow asks everything before its first write, and a re-run asks again (FR-29).
 - **No progress record.** A failed sub-flow re-runs from its first command, so every command must be idempotent for the same answers (FR-29).
 - **The approver stays generic.** `/spec:approve` holds no kind-specific action, and the table cell holds bare command names (FR-12, 0089).
-- **Same outcome as today.** A `feature` spec's design approval must end with the same ADRs, statuses and index as `approve.md` produces now, for ADRs whose frontmatter passes `write_adr_metadata`'s checks (AC-24, AC-77).
+- **Same outcome as today.** A `feature` spec's design approval must end with the same ADRs, statuses and index as `approve.md` produces now, within the limits that Scope lists (AC-24, AC-77).
 - **Markers stay valid as they are.** Existing markers hold nothing, free text or paragraphs, and the resolver tests only that the file exists (FR-5).
-- **A flow adds files, not edits.** A flow-specific kind adds a table row and its own commands. It edits no `/spec:*` file (FR-25, FR-28).
+- **A flow adds files, not edits.** A flow-specific kind adds a table row and its own commands. A flow that reuses an existing command edits that command, and the edit changes it when run directly too. It edits no `/spec:*` file (FR-25, FR-28).
 - **No new runtime or parser.** A provenance line must be readable with the shell tools the commands already use (NFR-2).
 
 ## Decision
@@ -172,7 +172,7 @@ Then `/spec:approve` runs 0089's closing instructions, and a gate runs them at t
 
 | Command | Re-run with the same answers | Why it changes nothing further |
 | --- | --- | --- |
-| `/adr:accept` | No change | It skips an ADR whose frontmatter and body Status are both `Accepted` |
+| `/adr:accept` | No change | It skips an ADR whose frontmatter and body Status are both `Accepted`, and an ADR already `Superseded` by another selected ADR |
 | `/adr:retire-superseded` | No change | It skips a target already `Superseded` by the same ADR, or, for `deprecate`, already `Deprecated` |
 | `/adr:regenerate-index` | The same `index.md` | The awk generator is deterministic |
 | `/adr:report-approval` | The same report | It writes nothing and reads the same inputs |
@@ -211,13 +211,13 @@ Rows 1 to 4 need N+1 unapproved and row 5 needs it approved, so exactly one row 
 1. When N is unapproved and `steps[N].artefacts_present` is false, print 0089's artefacts-missing template and stop. Nothing is written.
 2. Ask the first question in rows 1, 2 and 5 when N is unapproved. On `Cancel`, print the declined message and stop. Nothing is written.
 3. In rows 1 and 2, and in row 5 when N is unapproved, approve N with the sub-flow instructions. A failure stops the gate with no marker for N, and a re-run lands on the same row.
-4. In rows 1 to 4, run the resolver again and read `steps[N+1].precondition`. When `holds` is false, print its `message` and stop, leaving N approved (FR-27).
-5. In rows 1 and 3, produce N+1. In rows 2 and 4, ask the existing-artefact question. `Regenerate` produces N+1 again. `Cancel` stops, leaving the state of row 4.
+4. In rows 1 to 4, run the resolver again and read `steps[N+1].precondition`. When `holds` is false, print its `message` and go to step 8, leaving N approved (FR-27).
+5. In rows 1 and 3, produce N+1. In rows 2 and 4, ask the existing-artefact question. `Regenerate` produces N+1 again. `Cancel` leaves the state of row 4 and goes to step 8.
 6. When `also_approves_produced` is true, ask the second question after a fresh production or `Regenerate`. Choosing `Approve as is` at the existing-artefact question counts as approval.
-7. On approval, run the sub-flow instructions for N+1. `Not now` stops with the state of row 4.
+7. On approval, run the sub-flow instructions for N+1. `Not now` leaves the state of row 4 and goes to step 8.
 8. Run the closing instructions.
 
-A gate produces N+1 only in rows 1 and 3, or after `Regenerate`, so it never overwrites an artefact without asking. A gate that is not N+1's marker-writer offers `Keep as is`, and stops after it.
+A gate produces N+1 only in rows 1 and 3, or after `Regenerate`, so it never overwrites an artefact without asking. A gate that is not N+1's marker-writer offers `Keep as is`, and goes to step 8 after it. Every path ends at step 8, except the stops in steps 1 to 3, which write no marker, so the user sees the next step.
 
 ### Where the pieces live
 
@@ -296,7 +296,7 @@ Every sub-flow command, in any flow, is one Markdown command file with these par
 
 A command with no questions has a Questions section that checks its inputs, or says it has nothing to ask, and prints `sub-flow-done`. A command that uses none of the common arguments, such as `/adr:regenerate-index`, needs none and can be run by hand with no arguments.
 
-An existing command joins a sub-flow by gaining these three parts, and by moving any question out of its writes. The mechanism does not change it otherwise.
+An existing command joins a sub-flow by gaining these three parts, by moving any question out of its writes, and by making its Actions idempotent for the same answers (FR-29). The mechanism does not change it otherwise.
 
 #### Arguments and answers
 
@@ -308,7 +308,7 @@ Every sub-flow command takes one argument form:
 
 A command requires only the common arguments it uses (*The sub-flow command shape*).
 
-- With no mode word the command was run directly. It runs its Questions section, then its Actions section.
+- With no mode word the command was run directly. It runs its Questions section, then its Actions section, and the Actions section uses the answers that its own Questions section printed in the same run, plus any `--answer` arguments given.
 - `{command}` is the command's name as the approval table gives it, with the leading `/`. The Skill call drops the `/`.
 - `{spec}` is always double-quoted, because a spec directory name may contain spaces.
 - `--select` carries a selector word. Each sub-flow defines what its selector words mean, and a command that defines none ignores them. The `design` commands read them as an ADR selector.
@@ -355,9 +355,9 @@ The `design` row of `.claude/flows/approvals.md` reads `/adr:accept, /adr:retire
 
 | Member | Input | Output | Error conditions (the `{reason}`) |
 | --- | --- | --- | --- |
-| `/adr:accept` Questions | common arguments | `sub-flow-done` | a selection fault; a selected ADR with no frontmatter (`run write_adr_metadata docs/adr/{name} init first`); a selected ADR that fails any of the six checks in `write_adr_metadata` Step 3, with the fix named |
-| `/adr:accept` Actions | common arguments | `write_adr_metadata docs/adr/{name} status Accepted` per ADR not yet `Accepted`; `approved-artefacts:` listing every selected ADR | `write_adr_metadata did not pass its checks for docs/adr/{name}`, including a question it raises, which the Actions section does not answer; the Actions section prints `sub-flow-failed` whoever could answer |
-| `/adr:retire-superseded` Questions | common arguments | one `answer:` per selected ADR. The key is `/adr:retire-superseded.{stem}` and the value is `none` or a `,`-list of `supersede:{stem}` and `deprecate:{stem}` | a selection fault; `question not answered`; a retirement target that fails the six checks, with the fix named |
+| `/adr:accept` Questions | common arguments | `sub-flow-done` | a selection fault; a selected ADR with no frontmatter (`run write_adr_metadata docs/adr/{name} init first`); a selected ADR that fails any of the six checks in `write_adr_metadata` Step 3, with the fix named. A mismatch between the frontmatter and body status, where one side is already `Accepted`, is not a fault, because the Actions section sets both |
+| `/adr:accept` Actions | common arguments | `write_adr_metadata docs/adr/{name} status Accepted` per ADR not yet `Accepted` in both frontmatter and body and not already `Superseded` by another selected ADR; `approved-artefacts:` listing every selected ADR | `write_adr_metadata did not pass its checks for docs/adr/{name}`, including a question it raises, which the Actions section does not answer; the Actions section prints `sub-flow-failed` whoever could answer |
+| `/adr:retire-superseded` Questions | common arguments | one `answer:` per selected ADR. The key is `/adr:retire-superseded.{stem}` and the value is `none` or a `,`-list of `supersede:{stem}` and `deprecate:{stem}` | a selection fault; `question not answered`; a retirement target that fails the six checks, with the fix named, except a frontmatter and body status that differ where one side is already `Superseded` or `Deprecated`, which the Actions section sets |
 | `/adr:retire-superseded` Actions | answers | `supersede --by {approved stem}` or `deprecate` on each target, through `write_adr_metadata` | `write_adr_metadata did not pass its checks for docs/adr/{stem}.md`, including a question it raises, which the Actions section does not answer |
 | `/adr:regenerate-index` both passes | none used | `awk -f .claude/commands/adr/generate_adr_index.awk docs/adr/[0-9]*.md > docs/adr/index.md` in Actions | `awk exited {code}` |
 | `/adr:report-approval` Questions | common arguments | `sub-flow-done` | a selection fault |
@@ -365,20 +365,18 @@ The `design` row of `.claude/flows/approvals.md` reads `/adr:accept, /adr:retire
 
 The six checks in the Questions rows are read-only. They stop an input fault before the first write, where today `write_adr_metadata` would repair it or ask in the middle of the approval. An ADR whose frontmatter passes them is approved as today, within the limits that Scope lists.
 
-`/adr:retire-superseded` asks only when needed, as `approve.md` does today. An ADR whose `## Status` and `## References` name no earlier ADR after "Supersedes" gets `none` without a question. An ADR that names exactly one existing ADR after "Supersedes", with no section mark (`§`), gets `supersede:{stem}` without a question, unless that target is already `Superseded` by a different ADR. Every other ADR gets the supersession question, which offers the first three ADRs named after "Supersedes", in the order the text names them. The free-text answer is one or more of `supersede {stem}` or `deprecate {stem}`, separated by commas, and the command stores it as the `,`-list above. An answer that names a missing file, the ADR itself, or a target already `Superseded` by a different ADR repeats the question with the reason.
+`/adr:retire-superseded` asks only when needed, as `approve.md` does today. An ADR whose `## Status` and `## References` name no earlier ADR after "Supersedes" gets `none` without a question. An ADR that names exactly one existing ADR after "Supersedes", with no section mark (`§`), gets `supersede:{stem}` without a question, unless that target is already `Superseded` by a different ADR. Every other ADR gets the supersession question, which offers the first three ADRs named after "Supersedes" that exist, are not the ADR itself and are not already `Superseded` by a different ADR, in the order the text names them. Others can still be named in the free-text answer, which is validated. The free-text answer is one or more of `supersede {stem}` or `deprecate {stem}`, separated by commas, and the command stores it as the `,`-list above. An answer that names a missing file, the ADR itself, or a target already `Superseded` by a different ADR repeats the question with the reason.
 
 #### A second sub-flow
 
-A refactoring flow can give a kind of its own, `change`, the sub-flow `/refactor:smells, /refactor:tidy-first`. The flow adds one row to the approval table and edits no `/spec:*` file. This spec does not ship it. It shows a sub-flow that is not about ADRs, with different commands, different answers and no `--select` word:
+A refactoring flow can give a kind of its own, `change`, the sub-flow `/refactor:smells, /refactor:tidy-first`. The flow adds one row to the approval table and edits no `/spec:*` file. This spec does not ship it. It shows a sub-flow that is not about ADRs, with different commands, different answers and no `--select` word. Neither command fits as it stands, and the changes each needs belong to the flow:
 
-| Command | Questions | Actions |
-| --- | --- | --- |
-| `/refactor:smells` | Reviews the step's artefacts, asks which smells to act on, prints one `answer:` per chosen smell | Writes nothing |
-| `/refactor:tidy-first` | Confirms its analysis with the user, and checks that each file that an answer chose exists | Makes each chosen structural refactoring, skipping one already made |
+| Command | Questions | Actions | What the flow must change in the command |
+| --- | --- | --- | --- |
+| `/refactor:smells` | Reads the scope from the step's artefact, asks which smells to act on, prints one `answer:` per chosen smell | Writes nothing | Add the three sub-flow parts. Drop its rule that the user, not the command, starts `/refactor:tidy-first`. Drop or move its write to `tasks.md` |
+| `/refactor:tidy-first` | Confirms its analysis with the user, and checks that each file an answer names exists | Makes each chosen structural refactoring, skipping one already made | Add the three sub-flow parts. Move its questions into Questions. Limit it to structural changes. Make its commits idempotent (FR-29) |
 
-An answer key is `/refactor:smells.{type}.{smell-slug}`, so two types that share a smell name do not collide. `/refactor:tidy-first`'s Questions section receives those answers, because a Questions section receives the answers of the commands before it. The sub-flow's artefacts come from the step. The instructions, the protocol lines, the provenance line and the failure rules are as for `design`. Choosing this flow is the user's opt-in to running `/refactor:smells` at approval.
-
-Both commands exist today, take no mode word and read no `--select` word. `/refactor:tidy-first` asks the user and commits as it works, so joining a sub-flow means moving its questions into its Questions section and making its Actions idempotent (FR-29). That work belongs to the flow.
+A step's artefacts are file names in the spec directory (0089), so a `change` step cannot name source code. Its artefact is a spec file, say `scope.md`, that names the base ref or the paths, and `/refactor:smells` reads the scope from it. An answer key is `/refactor:smells.{type}.{smell-slug}.{n}`, where `{n}` numbers the findings of that smell in that type, and its value is the path of the file that holds the finding, so two types that share a smell name do not collide and `/refactor:tidy-first` can check the file. `/refactor:tidy-first`'s Questions section receives those answers, because a Questions section receives the answers of the commands before it. The instructions, the protocol lines, the provenance line and the failure rules are as for `design`. Choosing this flow is the user's opt-in to `/refactor:smells` and `/refactor:tidy-first` running at approval.
 
 #### Message templates
 
@@ -394,7 +392,7 @@ The approver's templates and the gate's templates have canonical text in `.claud
 | Gate, declined | a gate | ``{approver} stopped: step `{N}` was not approved. Nothing was written.`` |
 | Gate, existing artefact | a gate | ``Step `{N+1}`'s artefacts ({steps[N+1].artefacts joined with ", "}) already exist. What should {approver} do?`` Options `Approve as is` (or `Keep as is`), `Regenerate`, `Cancel` |
 | Gate, second question | a gate | ``Approve step `{N+1}` ({steps[N+1].artefacts joined with ", "})?`` Options `Approve`, `Not now` |
-| Supersession question | `/adr:retire-superseded` | ``Does `{adr}` supersede or retire an earlier ADR?`` Options `No`, then `Supersedes {stem}` for each of the first three ADRs its text names. The tool's free-text answer is read as one or more of `supersede {stem}` or `deprecate {stem}`, separated by commas |
+| Supersession question | `/adr:retire-superseded` | ``Does `{adr}` supersede or retire an earlier ADR?`` Options `No`, then `Supersedes {stem}` for each of the first three ADRs its text names that exist, are not `{adr}` and are not already `Superseded` by a different ADR. The tool's free-text answer is read as one or more of `supersede {stem}` or `deprecate {stem}`, separated by commas |
 | Report | `/adr:report-approval` | ``ADRs approved: {selected stems joined with ", "}.`` then ``ADRs superseded: {old} by {new}, ….`` or ``ADRs superseded: none.``, then ``ADRs deprecated: {old}, ….`` or ``ADRs deprecated: none.``, then ``Commit the approved ADRs and the regenerated docs/adr/index.md to git.`` |
 
 A gate also prints 0089's artefacts-missing template, with `{step}` as `{N}` and `{producer}` as `steps[N].producer`. In a gate, `{N}` is `steps[i].gate.approves` and `{N+1}` is `steps[i].name`, for the step `i` that the gate produces.
@@ -405,7 +403,7 @@ A gate also prints 0089's artefacts-missing template, with `{step}` as `{N}` and
 | --- | --- | --- |
 | `.claude/commands/adr/` | `accept.md`, `retire-superseded.md`, `regenerate-index.md`, `report-approval.md` | **new** — none collides with an existing command name |
 | `.claude/commands/spec/` | `approve.md` | The per-ADR status work, the supersession work, the index regeneration and the report move out (lines `:34-58`, `:60-61`, `:102-112` and `:130` of today's file). The marker `touch` (`:59`) becomes the provenance step. The route-dependent lines (`:32-33`) become generic (0089 step 9.6). The sub-flow instructions and templates are added. `allowed-tools` (`approve.md:2`) gains `Bash(git rev-parse:*)` and `Bash(tail:*)`; `Bash(test:*)` and `Bash(echo:*)` are already granted |
-| `.claude/commands/spec/` | `README.md` | Sections on running a sub-flow, the protocol lines, the gate run contract and the provenance line. Templates. The approve entry (`README.md:244-260`). The marker comments in File Structure (`README.md:817-819`) |
+| `.claude/commands/spec/` | `README.md` | Sections on running a sub-flow, the protocol lines, the gate run contract and the provenance line. Templates. The approve entry (`README.md:233` and `:244-260`). The marker comments in File Structure (`README.md:817-819`) |
 | `.claude/commands/adr/` | `README.md` | The four commands, the ADR selection rule and their templates. `README.md:51-52`, `:64-66` and `:182-194` name the `design` sub-flow |
 | `.agent_instructions/` | `adr_frontmatter.md` | `:78-79` and `:159` name the `design` sub-flow, not `/spec:approve` alone |
 | `.claude/commands/adr/` | `write_adr_metadata.md` | `:116` names `/adr:accept` and `/adr:retire-superseded` as callers, in place of `/spec:approve` |
@@ -447,19 +445,20 @@ Numbered in commit order. A step that changes what a command does is behavioural
 2. **Documentation.** Add the canonical sub-flow instructions, protocol lines, templates, gate run contract and provenance-line notes to `.claude/commands/spec/README.md`. Add the ADR selection rule and `/adr:*` templates to `.claude/commands/adr/README.md`.
 3. **Behavioural, after 0089 step 9.6.** In `approve.md`, replace the per-ADR status work and the supersession work (`:34-58`) and the report (`:60-61`) with the sub-flow instructions, and remove the index regeneration (`:102-112`) and the `:130` note. This adds the two-pass protocol, the questions-before-writes rule, the stricter ADR selection and the frontmatter checks, so the approval can now stop where it did not before. Keep `touch` for the marker in this commit, so a valid approval ends with the files it ends with today.
 4. **Behavioural.** Replace the `touch` at `approve.md:59` with the provenance commands, and add the two `allowed-tools` entries at `approve.md:2`. Change `argument-hint` at `approve.md:4` to `<step> [selector]`.
-5. **Documentation.** Update `adr_frontmatter.md:78-79` and `:159`, `adr/README.md:51-52`, `:64-66` and `:182-194`, `write_adr_metadata.md:116`, and `spec/README.md:244-260` and `:817-819`.
+5. **Documentation.** Update `adr_frontmatter.md:78-79` and `:159`, `adr/README.md:51-52`, `:64-66` and `:182-194`, `write_adr_metadata.md:116`, and `spec/README.md:233`, `:244-260` and `:817-819`.
 6. **Verification of AC-79.** `grep -n -e write_adr_metadata -e supersede -e deprecate -e generate_adr_index -e index.md -e Accepted -e '\.adr-list' -e 'ADRs approved' .claude/commands/spec/approve.md` matches nothing.
-7. **Verification of AC-24, AC-25, AC-26, AC-27, AC-76 and AC-77, by hand on a throwaway branch.** Use a `feature` spec with two `Proposed` ADRs, one recording "Supersedes" an `Accepted` ADR. Record the outcome of today's `approve.md` before step 3, then repeat after step 4, and compare items 1 to 6. Items 7 to 10 run after step 4 only. For item 7, also note today's behaviour on the same input before step 3 as a baseline; it is not compared:
+7. **Verification of AC-24, AC-25, AC-26, AC-27, AC-76 and AC-77, by hand on a throwaway branch.** Use a `feature` spec with two `Proposed` ADRs, one recording "Supersedes" an `Accepted` ADR. Items 1 to 5 are one scenario: approve every ADR in the list, then commit the result. Item 6 and item 7 each start from the starting commit again, so that neither `Proposed` ADR is yet `Accepted` and the older ADR is not yet `Superseded`. Record the outcome of today's `approve.md` before step 3, then repeat after step 4, and compare items 1 to 6. Items 7 to 11 run after step 4 only. Items 8 to 10 start from any state, and item 9 needs a `tasks.md`. For item 7, also note today's behaviour on the same input before step 3 as a baseline; it is not compared:
    1. Each approved ADR has frontmatter `status: Accepted` and body Status `Accepted`.
    2. The superseded ADR is `Superseded`, with one `Superseded by` link.
-   3. Re-running the awk command leaves `git diff --exit-code docs/adr/index.md` clean.
+   3. A fresh run of the awk command produces output identical to `docs/adr/index.md` (`awk -f .claude/commands/adr/generate_adr_index.awk docs/adr/[0-9]*.md | diff - docs/adr/index.md` prints nothing).
    4. `.design-approved` exists. After step 4 it also ends with one provenance line listing both ADR files.
    5. The report names both ADRs and the superseded one, then the commit reminder.
-   6. `/spec:approve design {number}` changes only that ADR's status and the index, and writes the marker.
+   6. `/spec:approve design {number}`, where `{number}` is the ADR that records no "Supersedes", changes only that ADR's status and the index, and writes the marker.
    7. With the superseded ADR made read-only (`chmod a-w`), approval stops naming `/adr:retire-superseded`, and no marker is written. After `chmod u+w` a re-run completes, with no duplicated link and one provenance line that lists both ADR files, as the first run would have.
    8. With `GIT_DIR` set to a directory that does not exist, `git rev-parse --verify --quiet HEAD` exits `128`, and the line ends `sha=unavailable` (AC-27).
    9. `/spec:approve tasks`, with HEAD at sha `S`, adds one line `approved: step=tasks artefacts=tasks.md sha=S` to `.tasks-approved` (AC-25).
    10. An approval of a step whose marker holds free text with no final newline keeps that text and adds the line on a new line (AC-26).
+   11. With the superseding and the superseded ADR both selected, run the approval, then run it again. The older ADR stays `Superseded` and carries one `Superseded by` link (AC-76).
 
 #### What 0092 needs from this ADR
 
@@ -485,7 +484,7 @@ Numbered in commit order. A step that changes what a command does is behavioural
 - An agent must follow a two-pass protocol and read protocol lines. A careless agent that skips the questions pass breaks the "nothing written" promise.
 - A `design` approval makes eight Skill runs more than today, on top of the `write_adr_metadata` runs it already makes, which costs time and context.
 - An ADR whose frontmatter fails a `write_adr_metadata` check now stops the approval with a named fix, where today the skill repairs it or asks mid-approval.
-- A command that already exists, such as `/refactor:smells`, must gain Arguments, Questions and Actions sections to join a sub-flow.
+- A command that already exists, such as `/refactor:smells`, must gain Arguments, Questions and Actions sections, and idempotent Actions, to join a sub-flow.
 - A marker whose last byte is a space or a tab shows no visible final byte in `tail -c 1`, so the newline is not added and the provenance line joins the text. The edge case is accepted.
 - Each provenance write is three small commands, and the harness may prompt for the `echo >>` write the first time.
 - Answers travel as arguments, so a value cannot hold a double quote or a newline.
@@ -497,7 +496,7 @@ Numbered in commit order. A step that changes what a command does is behavioural
 ### Risks and Mitigations
 
 - **Risk: a sub-flow command needs a tool outside the approver's grants.** Mitigation: the harness prompts, which is not a failure. A denied prompt makes the command fail, and the approver stops with no marker.
-- **Risk: `write_adr_metadata` asks a question during the actions pass.** Mitigation: `/adr:accept` and `/adr:retire-superseded` run the six `write_adr_metadata` checks read-only in their questions passes, so a fault stops the approval before any write. Any question that still arises in the actions pass is a failure with a named fix.
+- **Risk: `write_adr_metadata` asks a question during the actions pass.** Mitigation: `/adr:accept` and `/adr:retire-superseded` run the six `write_adr_metadata` checks read-only in their questions passes, so a fault stops the approval before any write. A half-written status is exempt, because the Actions set it. Any question that still arises in the actions pass is a failure with a named fix.
 - **Risk: re-approving an old spec re-accepts an ADR superseded since.** Mitigation: the behaviour is today's and stays out of scope. The report names every ADR accepted, and `git diff` shows the change before commit.
 - **Risk: a marker without a final newline joins the line to its last line of text.** Mitigation: provenance command 2 adds a newline first, except for a marker ending in a space or a tab (*Negative*).
 
