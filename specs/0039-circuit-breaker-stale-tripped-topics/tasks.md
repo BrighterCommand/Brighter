@@ -366,7 +366,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.4
   - References: ADR 0089 *How a read ends trips*. Alternative 15 (no `DELETE`).
 
-- [ ] **TEST + IMPLEMENT: T2.7 - A write over an ended row revives it only with a later stamp**
+- [x] **TEST + IMPLEMENT: T2.7 - A write over an ended row revives it only with a later stamp**
   - **USE COMMAND**: `/tdd:test-first when a trip is written over an ended row should revive it only with a later stamp and otherwise leave it ended`
   - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker"
   - Test file: `TrippedTopicStoreEndedContractTest.cs` (method `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp`), run by the runner T2.6 created
