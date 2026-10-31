@@ -493,6 +493,9 @@ public class BrighterTracer : IAmABrighterTracer
         {
             tags.Add(BrighterSemanticConventions.CircuitBreakerTopic, info.Topic.Value);
             tags.Add(BrighterSemanticConventions.CircuitBreakerCooldownCount, info.CooldownCount);
+
+            if (info.CooldownDuration is { } cooldownDuration)
+                tags.Add(BrighterSemanticConventions.CircuitBreakerCooldownDuration, cooldownDuration.TotalSeconds);
         }
 
         var activity = ActivitySource.StartActivity(

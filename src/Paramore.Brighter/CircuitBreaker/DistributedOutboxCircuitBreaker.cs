@@ -245,7 +245,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private void Announce(CircuitBreakerSpanOperation operation, RoutingKey topic)
     {
-        var span = _tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(operation, topic, 0), _instrumentationOptions);
+        var span = _tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(operation, topic, 0) { CooldownDuration = _cooldownDuration }, _instrumentationOptions);
         _tracer?.EndSpan(span);
 
         switch (operation)
