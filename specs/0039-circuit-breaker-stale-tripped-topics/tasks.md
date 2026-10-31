@@ -308,7 +308,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.1
   - References: `tests/Paramore.Brighter.Base.Test/Paramore.Brighter.Base.Test.csproj`. `tests/Paramore.Brighter.Base.Test/Outbox/OutboxTest.cs`. `tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj`.
 
-- [ ] **TEST + IMPLEMENT: T2.3 - The options expose the distributed defaults: C = 50 s, leeway zero, store timeout 2 s**
+- [x] **TEST + IMPLEMENT: T2.3 - The options expose the distributed defaults: C = 50 s, leeway zero, store timeout 2 s**
   - **USE COMMAND**: `/tdd:test-first when outbox circuit breaker options are created should default cooldown duration to fifty seconds, clock skew leeway to zero and store timeout to two seconds`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker"
   - Test file: `When_outbox_circuit_breaker_options_are_created_should_default_the_distributed_durations.cs`
