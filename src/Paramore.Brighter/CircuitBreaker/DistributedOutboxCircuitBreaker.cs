@@ -44,6 +44,12 @@ public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnO
     private readonly TimeSpan _cooldownDuration;
     private readonly TimeSpan _clockSkewLeeway;
     private readonly TimeSpan _storeTimeout;
+    private readonly TimeSpan _tripLength;
+    private readonly TimeProvider _timeProvider;
+    private readonly object _lock = new();
+    private readonly Dictionary<RoutingKey, DateTimeOffset> _view = new();
+    private readonly Dictionary<RoutingKey, DateTimeOffset> _pendingWrites = new();
+    private readonly HashSet<RoutingKey> _writesInFlight = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DistributedOutboxCircuitBreaker"/> class.
@@ -68,6 +74,8 @@ public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnO
         _cooldownDuration = ValidatedCooldownDuration(options);
         _clockSkewLeeway = ValidatedClockSkewLeeway(options);
         _storeTimeout = ValidatedStoreTimeout(options);
+        _tripLength = _cooldownDuration + _clockSkewLeeway;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     private static TimeSpan ValidatedCooldownDuration(OutboxCircuitBreakerOptions options)
@@ -101,7 +109,24 @@ public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnO
     }
 
     /// <inheritdoc />
-    public IEnumerable<RoutingKey> TrippedTopics => throw new NotImplementedException();
+    public IEnumerable<RoutingKey> TrippedTopics
+    {
+        get
+        {
+            var now = _timeProvider.GetUtcNow();
+            lock (_lock)
+            {
+                var topics = new List<RoutingKey>();
+                foreach (var trip in _view)
+                {
+                    if (now - trip.Value < _tripLength)
+                        topics.Add(trip.Key);
+                }
+
+                return topics;
+            }
+        }
+    }
 
     /// <inheritdoc />
     public TrippedTopicStoreStatus StoreStatus => throw new NotImplementedException();
@@ -112,7 +137,33 @@ public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnO
     }
 
     /// <inheritdoc />
-    public void TripTopic(RoutingKey topic) => throw new NotImplementedException();
+    public void TripTopic(RoutingKey topic)
+    {
+        var now = _timeProvider.GetUtcNow();
+        var stamp = now.AddTicks(-(now.Ticks % 10));
+        bool startWrite;
+        lock (_lock)
+        {
+            _view[topic] = stamp;
+            _pendingWrites[topic] = stamp;
+            startWrite = _writesInFlight.Add(topic);
+        }
+
+        if (startWrite)
+            _ = Task.Run(() => WritePendingAsync(topic));
+    }
+
+    private async Task WritePendingAsync(RoutingKey topic)
+    {
+        DateTimeOffset stamp;
+        lock (_lock)
+        {
+            stamp = _pendingWrites[topic];
+            _pendingWrites.Remove(topic);
+        }
+
+        await _store.WriteAsync([new TopicTrip(topic, stamp)]).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
     public IAmATripBatch BeginTripBatch() => throw new NotImplementedException();
