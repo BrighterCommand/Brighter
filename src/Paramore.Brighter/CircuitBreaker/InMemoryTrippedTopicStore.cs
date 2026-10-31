@@ -55,11 +55,19 @@ public class InMemoryTrippedTopicStore : IAmATrippedTopicStore
     /// <inheritdoc />
     public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
     {
+        RejectRepeatedTopics(trips);
+
         lock (_lock)
         {
             IReadOnlyList<TripWriteResult> results = trips.Select(Write).ToList();
             return Task.FromResult(results);
         }
+    }
+
+    private static void RejectRepeatedTopics(IReadOnlyList<TopicTrip> trips)
+    {
+        if (trips.Select(trip => trip.Topic).Distinct().Count() != trips.Count)
+            throw new ArgumentException("A write must name each topic once.", nameof(trips));
     }
 
     private List<TopicTrip> MarkEnded(DateTimeOffset now, DateTimeOffset cutoff)

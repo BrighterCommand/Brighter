@@ -61,4 +61,26 @@ public abstract class TrippedTopicStoreWriteContractTest
         var live = Assert.Single(read.Live, trip => trip.Topic == topic);
         Assert.Equal(microsecondStamp, live.TripTime);
     }
+
+    [Fact]
+    public async Task When_a_write_repeats_a_topic_should_reject_it_and_change_nothing()
+    {
+        // Arrange
+        var orders = new RoutingKey($"orders-{Uuid.NewAsString()}");
+        var invoices = new RoutingKey($"invoices-{Uuid.NewAsString()}");
+        var stamp = s_firstStamp;
+
+        // Act
+        var repeatsATopic = async () => await Store.WriteAsync(
+            [new TopicTrip(orders, stamp), new TopicTrip(invoices, stamp), new TopicTrip(orders, stamp)]);
+        await Assert.ThrowsAsync<ArgumentException>(repeatsATopic);
+        var afterRejectedWrite = await Store.ReadAsync(stamp.AddSeconds(1), TimeSpan.FromHours(1));
+        var results = await Store.WriteAsync([new TopicTrip(orders, stamp), new TopicTrip(invoices, stamp)]);
+
+        // Assert
+        Assert.DoesNotContain(afterRejectedWrite.Live, trip => trip.Topic == orders || trip.Topic == invoices);
+        Assert.Equal(2, results.Count);
+        Assert.Contains(results, result => result.Topic == orders);
+        Assert.Contains(results, result => result.Topic == invoices);
+    }
 }
