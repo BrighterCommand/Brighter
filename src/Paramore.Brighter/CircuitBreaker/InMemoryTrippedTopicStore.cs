@@ -73,10 +73,19 @@ public class InMemoryTrippedTopicStore : IAmATrippedTopicStore
 
     private TripWriteResult Write(TopicTrip trip)
     {
-        DateTimeOffset? prior = _trips.TryGetValue(trip.Topic, out var stored) ? stored.TripTime : null;
-        var storedTripTime = prior.HasValue && prior.Value > trip.TripTime ? prior.Value : trip.TripTime;
-        _trips[trip.Topic] = new Row(storedTripTime, null);
-        return new TripWriteResult(trip.Topic, prior, storedTripTime, false);
+        if (!_trips.TryGetValue(trip.Topic, out var stored))
+            return Store(trip.Topic, new Row(trip.TripTime, null), null);
+
+        var tripTime = stored.TripTime > trip.TripTime ? stored.TripTime : trip.TripTime;
+        var remainsEnded = stored.EndedAt is not null && trip.TripTime <= stored.TripTime;
+        var prior = stored.EndedAt is null ? stored.TripTime : (DateTimeOffset?)null;
+        return Store(trip.Topic, new Row(tripTime, remainsEnded ? stored.EndedAt : null), prior);
+    }
+
+    private TripWriteResult Store(RoutingKey topic, Row row, DateTimeOffset? prior)
+    {
+        _trips[topic] = row;
+        return new TripWriteResult(topic, prior, row.TripTime, row.EndedAt is not null);
     }
 
     private sealed record Row(DateTimeOffset TripTime, DateTimeOffset? EndedAt);
