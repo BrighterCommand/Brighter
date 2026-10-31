@@ -352,7 +352,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.4
   - References: ADR 0089 *Terms*.
 
-- [ ] **TEST + IMPLEMENT: T2.6 - A read marks ended rows and gives each one to exactly one caller, never deleting**
+- [x] **TEST + IMPLEMENT: T2.6 - A read marks ended rows and gives each one to exactly one caller, never deleting**
   - **USE COMMAND**: `/tdd:test-first when many readers read an ended row concurrently should return it as ended to exactly one caller`
   - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker"
   - Test file: `TrippedTopicStoreEndedContractTest.cs` (method `When_readers_race_over_an_ended_row_should_return_it_to_exactly_one`), runner `When_the_in_memory_trip_store_runs_the_ended_contract_should_pass.cs`
