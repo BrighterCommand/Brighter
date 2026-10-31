@@ -496,7 +496,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.12
   - References: ADR 0089 *How a write is announced*.
 
-- [ ] **TEST + IMPLEMENT: T2.15 - A write whose stamp has already run out is not issued and is dropped silently**
+- [x] **TEST + IMPLEMENT: T2.15 - A write whose stamp has already run out is not issued and is dropped silently**
   - **USE COMMAND**: `/tdd:test-first when a write's stamp is a trip length or more before the writer's clock should not issue it and drop the topic silently`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_write_stamp_has_already_run_out_should_not_write_and_drop_the_topic_silently.cs`
