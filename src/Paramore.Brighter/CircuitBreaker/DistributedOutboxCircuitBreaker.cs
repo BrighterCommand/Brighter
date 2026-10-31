@@ -169,8 +169,11 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     {
         foreach (var result in results)
         {
-            if (result.LeftEnded)
+            if (result.LeftEnded || (result.PriorTripTime is not null && HasRunOut(result.StoredTripTime)))
+            {
+                DropEnded(result.Topic, result.StoredTripTime);
                 continue;
+            }
 
             lock (_lock)
             {
@@ -178,7 +181,30 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
                     _view[result.Topic] = result.StoredTripTime;
             }
 
-            Announce(result.PriorTripTime is null ? CircuitBreakerSpanOperation.Trip : CircuitBreakerSpanOperation.ReTrip, result.Topic);
+            if (result.PriorTripTime is null)
+            {
+                Announce(CircuitBreakerSpanOperation.Trip, result.Topic);
+            }
+            else if (HasRunOut(result.PriorTripTime.Value))
+            {
+                Announce(CircuitBreakerSpanOperation.Reset, result.Topic);
+                Announce(CircuitBreakerSpanOperation.Trip, result.Topic);
+            }
+            else
+            {
+                Announce(CircuitBreakerSpanOperation.ReTrip, result.Topic);
+            }
+        }
+    }
+
+    private bool HasRunOut(DateTimeOffset stamp) => _timeProvider.GetUtcNow() - stamp >= _tripLength;
+
+    private void DropEnded(RoutingKey topic, DateTimeOffset storedStamp)
+    {
+        lock (_lock)
+        {
+            if (_view.TryGetValue(topic, out var viewed) && viewed <= storedStamp)
+                _view.Remove(topic);
         }
     }
 
@@ -196,10 +222,18 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         var span = _tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(operation, topic, 0), _instrumentationOptions);
         _tracer?.EndSpan(span);
 
-        if (operation == CircuitBreakerSpanOperation.ReTrip)
-            Log.ReTripped(s_logger, topic.Value);
-        else
-            Log.Tripped(s_logger, topic.Value);
+        switch (operation)
+        {
+            case CircuitBreakerSpanOperation.ReTrip:
+                Log.ReTripped(s_logger, topic.Value);
+                break;
+            case CircuitBreakerSpanOperation.Reset:
+                Log.Reset(s_logger, topic.Value);
+                break;
+            default:
+                Log.Tripped(s_logger, topic.Value);
+                break;
+        }
     }
 
     private async Task WritePendingAsync(RoutingKey topic)
@@ -287,5 +321,8 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         [LoggerMessage(LogLevel.Debug, "Circuit breaker re-tripped for topic {Topic}; trip extended to the stored stamp")]
         public static partial void ReTripped(ILogger logger, string topic);
+
+        [LoggerMessage(LogLevel.Information, "Circuit breaker reset for topic {Topic} (trip length elapsed); publish suppression lifted")]
+        public static partial void Reset(ILogger logger, string topic);
     }
 }
