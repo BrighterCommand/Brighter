@@ -289,8 +289,24 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     public IAmATripBatch BeginTripBatch() => new TripBatch(this);
 
     /// <inheritdoc />
-    public Task<IReadOnlyCollection<RoutingKey>> ReadTrippedTopicsAsync(CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+    public async Task<IReadOnlyCollection<RoutingKey>> ReadTrippedTopicsAsync(CancellationToken cancellationToken = default)
+    {
+        var read = await _store.ReadAsync(_timeProvider.GetUtcNow(), _tripLength, cancellationToken).ConfigureAwait(false);
+        MergeLive(read.Live);
+        return TrippedTopics.ToList();
+    }
+
+    private void MergeLive(IReadOnlyCollection<TopicTrip> live)
+    {
+        lock (_lock)
+        {
+            foreach (var trip in live)
+            {
+                if (!_view.TryGetValue(trip.Topic, out var viewed) || viewed < trip.TripTime)
+                    _view[trip.Topic] = trip.TripTime;
+            }
+        }
+    }
 
     /// <inheritdoc />
     public void StartRefresh() => throw new NotImplementedException();
