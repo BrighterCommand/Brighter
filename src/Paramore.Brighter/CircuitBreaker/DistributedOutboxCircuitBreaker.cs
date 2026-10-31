@@ -27,6 +27,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.CircuitBreaker;
@@ -34,11 +36,12 @@ namespace Paramore.Brighter.CircuitBreaker;
 /// <summary>
 /// An outbox circuit breaker that shares its trips between instances through an <see cref="IAmATrippedTopicStore"/>.
 /// </summary>
-public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnOutboxCircuitBreakerAsync, IAmASharedOutboxCircuitBreaker
+public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnOutboxCircuitBreakerAsync, IAmASharedOutboxCircuitBreaker
 {
     private static readonly TimeSpan s_longestPermittedDuration = TimeSpan.FromHours(24);
     private static readonly TimeSpan s_shortestPermittedStoreTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan s_longestPermittedStoreTimeout = TimeSpan.FromSeconds(60);
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<DistributedOutboxCircuitBreaker>();
 
     private readonly IAmATrippedTopicStore _store;
     private readonly TimeSpan _cooldownDuration;
@@ -46,6 +49,8 @@ public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnO
     private readonly TimeSpan _storeTimeout;
     private readonly TimeSpan _tripLength;
     private readonly TimeProvider _timeProvider;
+    private readonly IAmABrighterTracer? _tracer;
+    private readonly InstrumentationOptions _instrumentationOptions;
     private readonly object _lock = new();
     private readonly Dictionary<RoutingKey, DateTimeOffset> _view = new();
     private readonly Dictionary<RoutingKey, DateTimeOffset> _pendingWrites = new();
@@ -76,6 +81,8 @@ public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnO
         _storeTimeout = ValidatedStoreTimeout(options);
         _tripLength = _cooldownDuration + _clockSkewLeeway;
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _tracer = tracer;
+        _instrumentationOptions = instrumentationOptions;
     }
 
     private static TimeSpan ValidatedCooldownDuration(OutboxCircuitBreakerOptions options)
@@ -158,6 +165,34 @@ public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnO
         return now.AddTicks(-(now.Ticks % 10));
     }
 
+    private void ApplyWriteResults(IReadOnlyList<TripWriteResult> results)
+    {
+        foreach (var result in results)
+        {
+            if (result.LeftEnded)
+                continue;
+
+            lock (_lock)
+            {
+                if (!_view.TryGetValue(result.Topic, out var viewed) || viewed < result.StoredTripTime)
+                    _view[result.Topic] = result.StoredTripTime;
+            }
+
+            Announce(result.PriorTripTime is null ? CircuitBreakerSpanOperation.Trip : CircuitBreakerSpanOperation.ReTrip, result.Topic);
+        }
+    }
+
+    private void Announce(CircuitBreakerSpanOperation operation, RoutingKey topic)
+    {
+        var span = _tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(operation, topic, 0), _instrumentationOptions);
+        _tracer?.EndSpan(span);
+
+        if (operation == CircuitBreakerSpanOperation.ReTrip)
+            Log.ReTripped(s_logger, topic.Value);
+        else
+            Log.Tripped(s_logger, topic.Value);
+    }
+
     private async Task WritePendingAsync(RoutingKey topic)
     {
         var more = true;
@@ -216,7 +251,17 @@ public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnO
                 trips.Add(new TopicTrip(trip.Key, trip.Value));
             _trips.Clear();
 
-            await breaker._store.WriteAsync(trips).ConfigureAwait(false);
+            var results = await breaker._store.WriteAsync(trips).ConfigureAwait(false);
+            breaker.ApplyWriteResults(results);
         }
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning, "Circuit breaker tripped for topic {Topic}; suppressing publish for the trip length")]
+        public static partial void Tripped(ILogger logger, string topic);
+
+        [LoggerMessage(LogLevel.Debug, "Circuit breaker re-tripped for topic {Topic}; trip extended to the stored stamp")]
+        public static partial void ReTripped(ILogger logger, string topic);
     }
 }
