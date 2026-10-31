@@ -56,13 +56,13 @@ public class MySqlInboxMigrationsTests
         var migrations = new MySqlInboxMigrationCatalog().All(config);
 
         //Assert
-        Assert.Equal(3, migrations.Count);
+        Assert.Equal(ExpectedMigrationVersions.InboxLatest, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
             Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
-        for (var v = 1; v <= 3; v++)
+        for (var v = 1; v <= ExpectedMigrationVersions.InboxLatest; v++)
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];

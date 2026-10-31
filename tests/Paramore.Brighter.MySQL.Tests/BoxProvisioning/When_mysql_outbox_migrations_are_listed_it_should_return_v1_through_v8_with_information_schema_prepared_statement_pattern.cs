@@ -63,13 +63,13 @@ public class MySqlOutboxMigrationsTests
         var migrations = new MySqlOutboxMigrationCatalog().All(config);
 
         //Assert
-        Assert.Equal(8, migrations.Count);
+        Assert.Equal(ExpectedMigrationVersions.OutboxLatest, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
             Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
-        for (var v = 1; v <= 8; v++)
+        for (var v = 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
@@ -80,7 +80,7 @@ public class MySqlOutboxMigrationsTests
                 $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
         }
 
-        for (var v = 2; v <= 8; v++)
+        for (var v = 2; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
             var script = migrations[v - 1].UpScript;
             Assert.Contains("information_schema.columns", script, StringComparison.OrdinalIgnoreCase);
@@ -88,7 +88,7 @@ public class MySqlOutboxMigrationsTests
         }
 
         Assert.Null(migrations[0].SourceReference);
-        for (var v = 2; v <= 8; v++)
+        for (var v = 2; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
             Assert.False(
                 string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference),
@@ -97,7 +97,7 @@ public class MySqlOutboxMigrationsTests
 
         Assert.Equal("1cdc04b60 / #2560", migrations[3].SourceReference);
 
-        for (var v = 1; v <= 8; v++)
+        for (var v = 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
             Assert.Null(migrations[v - 1].IdempotencyCheckSql);
         }

@@ -38,24 +38,29 @@ public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
         using var connection = new MySqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        // Verify table exists
+        Assert.True(await TableExistsAsync(connection));
+        Assert.Equal(1, await CountHistoryRowsAtLatestVersionAsync(connection));
+    }
+
+    private async Task<bool> TableExistsAsync(MySqlConnection connection)
+    {
         using var tableCheck = connection.CreateCommand();
         tableCheck.CommandText = @"
 SELECT EXISTS(SELECT 1 FROM information_schema.tables
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @TableName)";
         tableCheck.Parameters.AddWithValue("@TableName", _tableName);
-        var tableExists = Convert.ToBoolean(await tableCheck.ExecuteScalarAsync());
-        Assert.True(tableExists);
+        return Convert.ToBoolean(await tableCheck.ExecuteScalarAsync());
+    }
 
-        // Verify migration history
+    private async Task<long> CountHistoryRowsAtLatestVersionAsync(MySqlConnection connection)
+    {
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM `__BrighterMigrationHistory`
 WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.OutboxLatest);
-        var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-        Assert.Equal(1, historyCount);
+        return (long)(await historyCheck.ExecuteScalarAsync())!;
     }
 
     public Task InitializeAsync() => Task.CompletedTask;

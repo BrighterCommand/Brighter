@@ -39,6 +39,11 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// </summary>
 public class MySqlAdvisoryAcquireSubsecondTimeoutFloorTests
 {
+    private const int MinimumBlockMilliseconds = 900;
+    private static readonly TimeSpan s_holderTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan s_subsecondTimeout = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan s_holderReleaseDelay = TimeSpan.FromMilliseconds(300);
+
     private readonly string _connectionString = Const.DefaultConnectingString;
 
     [Fact]
@@ -49,7 +54,7 @@ public class MySqlAdvisoryAcquireSubsecondTimeoutFloorTests
         var advisoryLock = new MySqlAdvisoryLock();
 
         await using var holder = await OpenAsync();
-        await advisoryLock.AcquireAsync(holder, lockKey, TimeSpan.FromSeconds(30), CancellationToken.None);
+        await advisoryLock.AcquireAsync(holder, lockKey, s_holderTimeout, CancellationToken.None);
         try
         {
             await using var contender = await OpenAsync();
@@ -57,12 +62,12 @@ public class MySqlAdvisoryAcquireSubsecondTimeoutFloorTests
 
             //Act + Assert
             await Assert.ThrowsAsync<TimeoutException>(() =>
-                advisoryLock.AcquireAsync(contender, lockKey, TimeSpan.FromMilliseconds(500), CancellationToken.None));
+                advisoryLock.AcquireAsync(contender, lockKey, s_subsecondTimeout, CancellationToken.None));
 
             stopwatch.Stop();
             Assert.True(
-                stopwatch.ElapsedMilliseconds >= 900,
-                $"Expected acquire to block for ≥ 900ms (one-second floor minus jitter); blocked for {stopwatch.ElapsedMilliseconds}ms.");
+                stopwatch.ElapsedMilliseconds >= MinimumBlockMilliseconds,
+                $"Expected acquire to block for ≥ {MinimumBlockMilliseconds}ms (one-second floor minus jitter); blocked for {stopwatch.ElapsedMilliseconds}ms.");
         }
         finally
         {
@@ -78,11 +83,11 @@ public class MySqlAdvisoryAcquireSubsecondTimeoutFloorTests
         var advisoryLock = new MySqlAdvisoryLock();
 
         await using var holder = await OpenAsync();
-        await advisoryLock.AcquireAsync(holder, lockKey, TimeSpan.FromSeconds(30), CancellationToken.None);
+        await advisoryLock.AcquireAsync(holder, lockKey, s_holderTimeout, CancellationToken.None);
 
         var releaseAfter = Task.Run(async () =>
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(300));
+            await Task.Delay(s_holderReleaseDelay);
             await advisoryLock.ReleaseAsync(holder, lockKey, CancellationToken.None);
         });
 
@@ -90,7 +95,7 @@ public class MySqlAdvisoryAcquireSubsecondTimeoutFloorTests
         try
         {
             //Act
-            await advisoryLock.AcquireAsync(contender, lockKey, TimeSpan.FromMilliseconds(500), CancellationToken.None);
+            await advisoryLock.AcquireAsync(contender, lockKey, s_subsecondTimeout, CancellationToken.None);
 
             //Assert
             var releaseResult = await advisoryLock.ReleaseAsync(contender, lockKey, CancellationToken.None);

@@ -44,6 +44,11 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
     private const string BrokenUpScript =
         "SELECT 1 FROM non_existent_table_for_spec_0027_task_3_4;";
     private const string MarkerMessageId = "marker-row-must-survive";
+    private const string V4Column = "PartitionKey";
+    private const string V5Column = "Source";
+    private const string V6Column = "WorkflowId";
+    private const string V7Column = "DataRef";
+    private const string V8Column = "CausationId";
 
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -83,9 +88,9 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
             "V5 should be an applied migration row, not a synthetic bootstrap row");
 
         var columnsAfterFailure = await GetTableColumns();
-        Assert.Contains("PartitionKey", columnsAfterFailure); // V4 ALTER committed
-        Assert.Contains("Source", columnsAfterFailure);       // V5 ALTER committed
-        Assert.DoesNotContain("WorkflowId", columnsAfterFailure); // V6 never applied (script threw before ALTER)
+        Assert.Contains(V4Column, columnsAfterFailure);
+        Assert.Contains(V5Column, columnsAfterFailure);
+        Assert.DoesNotContain(V6Column, columnsAfterFailure);
 
         Assert.Equal(1, await GetMarkerRowCount());
 
@@ -112,9 +117,9 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
         }
 
         var columnsAfterRetry = await GetTableColumns();
-        Assert.Contains("WorkflowId", columnsAfterRetry);  // V6 applied on retry
-        Assert.Contains("DataRef", columnsAfterRetry);     // V7 applied on retry
-        Assert.Contains("CausationId", columnsAfterRetry); // V8 applied on retry
+        Assert.Contains(V6Column, columnsAfterRetry);
+        Assert.Contains(V7Column, columnsAfterRetry);
+        Assert.Contains(V8Column, columnsAfterRetry);
         Assert.Equal(1, await GetMarkerRowCount());
     }
 

@@ -40,6 +40,8 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 /// </summary>
 public class MySqlOutboxBuilderDriftTests
 {
+    private const string IgnoredConnectionString = "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;";
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -49,7 +51,7 @@ public class MySqlOutboxBuilderDriftTests
         //Arrange
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
-            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            IgnoredConnectionString,
             outBoxTableName: tableName,
             binaryMessagePayload: hasBinaryMessagePayload);
 
@@ -79,7 +81,7 @@ public class MySqlOutboxBuilderDriftTests
     {
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
-            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            IgnoredConnectionString,
             outBoxTableName: tableName,
             binaryMessagePayload: hasBinaryMessagePayload);
 
@@ -99,7 +101,7 @@ public class MySqlOutboxBuilderDriftTests
     {
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
-            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            IgnoredConnectionString,
             outBoxTableName: tableName,
             binaryMessagePayload: hasBinaryMessagePayload);
 
@@ -130,13 +132,15 @@ public class MySqlOutboxBuilderDriftTests
 /// </summary>
 public class MySqlInboxBuilderDriftTests
 {
+    private const string IgnoredConnectionString = "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;";
+
     [Fact]
     public void When_mysql_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
     {
         //Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
-            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            IgnoredConnectionString,
             inboxTableName: tableName);
 
         var builderColumns = DdlColumnExtractor.GetExpectedColumns(
@@ -163,7 +167,7 @@ public class MySqlInboxBuilderDriftTests
         //Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
-            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            IgnoredConnectionString,
             inboxTableName: tableName);
 
         //Act
@@ -181,7 +185,7 @@ public class MySqlInboxBuilderDriftTests
     {
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
-            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            IgnoredConnectionString,
             inboxTableName: tableName);
 
         var expected = MySqlInboxBuilder.GetDDL(tableName, config.BinaryMessagePayload);
