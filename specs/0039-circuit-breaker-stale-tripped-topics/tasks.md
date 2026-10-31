@@ -338,7 +338,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.2, T2.3
   - References: ADR 0089 *`IAmATrippedTopicStore`* and *The trip table and the SQL stores*.
 
-- [ ] **CHARACTERISE: T2.5 - A microsecond-truncated stamp reads back equal**
+- [x] **CHARACTERISE: T2.5 - A microsecond-truncated stamp reads back equal**
   - **USE COMMAND**: `/tdd:test-first when a stamp truncated to whole microseconds is written should read back equal`
   - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker"
   - Test file: `TrippedTopicStoreWriteContractTest.cs` (method `When_a_microsecond_stamp_is_written_should_read_back_equal`)
