@@ -574,7 +574,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.14
   - References: ADR 0089 *Testing strategy*.
 
-- [ ] **TEST + IMPLEMENT: T2.19 - A re-trip on another instance restarts the cooldown everywhere**
+- [x] **TEST + IMPLEMENT: T2.19 - A re-trip on another instance restarts the cooldown everywhere**
   - **USE COMMAND**: `/tdd:test-first when another instance re-trips a topic should restart its cooldown on every instance`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_another_instance_re_trips_a_topic_should_restart_the_cooldown_everywhere.cs`
