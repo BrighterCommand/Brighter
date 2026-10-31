@@ -448,7 +448,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.10
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:946,:1040`. `tests/Paramore.Brighter.Core.Tests/Confirmation/When_concurrent_same_topic_confirmations_fail_should_not_lose_trips.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.12 - A trip batch writes each distinct topic once, in one store operation**
+- [x] **TEST + IMPLEMENT: T2.12 - A trip batch writes each distinct topic once, in one store operation**
   - **USE COMMAND**: `/tdd:test-first when a trip batch collects many failures should write each distinct topic once in one store operation`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_trip_batch_collects_many_failures_should_write_each_topic_once.cs`
