@@ -380,7 +380,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.6
   - References: ADR 0089 *How a read ends trips* (re-trip race paragraph).
 
-- [ ] **TEST + IMPLEMENT: T2.8 - A store write rejects duplicate topics and is all-or-nothing**
+- [x] **TEST + IMPLEMENT: T2.8 - A store write rejects duplicate topics and is all-or-nothing**
   - **USE COMMAND**: `/tdd:test-first when a write contains the same topic twice should reject it with argument exception and change nothing`
   - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker"
   - Test file: `TrippedTopicStoreWriteContractTest.cs` (method `When_a_write_repeats_a_topic_should_reject_it_and_change_nothing`)
