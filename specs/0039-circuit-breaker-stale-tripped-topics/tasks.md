@@ -480,7 +480,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.12
   - References: ADR 0089 Phase 2 sequence diagram.
 
-- [ ] **TEST + IMPLEMENT: T2.14 - Writes landing out of order keep the later stamp, announce a ReTrip, and the writer's view takes the stored stamp**
+- [x] **TEST + IMPLEMENT: T2.14 - Writes landing out of order keep the later stamp, announce a ReTrip, and the writer's view takes the stored stamp**
   - **USE COMMAND**: `/tdd:test-first when an earlier stamped write lands after a later one should keep the later stamp, announce a retrip and move the writer's view to the stored stamp`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_an_earlier_stamped_write_lands_after_a_later_one_should_keep_the_later_stamp.cs`
