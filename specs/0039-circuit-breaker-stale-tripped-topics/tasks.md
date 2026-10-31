@@ -605,7 +605,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.19, T2.6
   - References: ADR 0089 *How a read ends trips*.
 
-- [ ] **CHARACTERISE: T2.21 - The number of sweeps and instances does not change the cooldown**
+- [x] **CHARACTERISE: T2.21 - The number of sweeps and instances does not change the cooldown**
   - **USE COMMAND**: `/tdd:test-first when three instances with offset ticks sweep should exclude the topic from every sweep before the cooldown duration`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_three_instances_with_offset_ticks_sweep_should_exclude_the_topic_until_the_cooldown_duration.cs`
