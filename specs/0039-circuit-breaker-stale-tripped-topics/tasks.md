@@ -653,7 +653,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.20
   - References: ADR 0089 *Testing strategy* (AC-12).
 
-- [ ] **CHARACTERISE: T2.24 - The clock skew leeway bounds the trip across skewed clocks**
+- [x] **CHARACTERISE: T2.24 - The clock skew leeway bounds the trip across skewed clocks**
   - **USE COMMAND**: `/tdd:test-first when instance clocks differ by a skew covered by the leeway should list the topic until the cooldown and drop it by the cooldown plus twice the skew`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_instance_clocks_are_skewed_within_the_leeway_should_bound_the_trip.cs`
