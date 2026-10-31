@@ -620,7 +620,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.20
   - References: requirements FR-4 example.
 
-- [ ] **CHARACTERISE: T2.22 - An instance that had lock_unavailable neither holds back nor keeps a trip**
+- [x] **CHARACTERISE: T2.22 - An instance that had lock_unavailable neither holds back nor keeps a trip**
   - **USE COMMAND**: `/tdd:test-first when an instance obtains the lock after a long lock unavailable spell should include the topic whose trip ended`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_an_instance_obtains_the_lock_after_lock_unavailable_should_include_the_ended_topic.cs`
