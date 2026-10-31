@@ -432,7 +432,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.9
   - References: ADR 0089 *`DistributedOutboxCircuitBreaker`* member table.
 
-- [ ] **TEST + IMPLEMENT: T2.11 - A burst of callbacks keeps at most one pending and one in-flight write per topic**
+- [x] **TEST + IMPLEMENT: T2.11 - A burst of callbacks keeps at most one pending and one in-flight write per topic**
   - **USE COMMAND**: `/tdd:test-first when ten thousand callbacks trip a topic while its write is in flight should keep one pending write holding the latest stamp and write it afterwards`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_many_callbacks_trip_a_topic_during_an_in_flight_write_should_keep_one_pending_write.cs`
