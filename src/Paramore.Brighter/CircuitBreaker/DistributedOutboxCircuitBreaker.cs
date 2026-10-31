@@ -182,6 +182,15 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
     }
 
+    private void DropStale(RoutingKey topic, DateTimeOffset stamp)
+    {
+        lock (_lock)
+        {
+            if (_view.TryGetValue(topic, out var viewed) && viewed == stamp)
+                _view.Remove(topic);
+        }
+    }
+
     private void Announce(CircuitBreakerSpanOperation operation, RoutingKey topic)
     {
         var span = _tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(operation, topic, 0), _instrumentationOptions);
@@ -246,13 +255,28 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             if (_trips.Count == 0)
                 return;
 
-            var trips = new List<TopicTrip>(_trips.Count);
-            foreach (var trip in _trips)
-                trips.Add(new TopicTrip(trip.Key, trip.Value));
+            var trips = LiveTrips();
             _trips.Clear();
+            if (trips.Count == 0)
+                return;
 
             var results = await breaker._store.WriteAsync(trips).ConfigureAwait(false);
             breaker.ApplyWriteResults(results);
+        }
+
+        private List<TopicTrip> LiveTrips()
+        {
+            var now = breaker._timeProvider.GetUtcNow();
+            var trips = new List<TopicTrip>(_trips.Count);
+            foreach (var trip in _trips)
+            {
+                if (now - trip.Value < breaker._tripLength)
+                    trips.Add(new TopicTrip(trip.Key, trip.Value));
+                else
+                    breaker.DropStale(trip.Key, trip.Value);
+            }
+
+            return trips;
         }
     }
 
