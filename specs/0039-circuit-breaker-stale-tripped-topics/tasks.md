@@ -322,7 +322,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.1
   - References: `src/Paramore.Brighter/CircuitBreaker/OutboxCircuitBreakerOptions.cs`. ADR 0089 options table and *Why 2 seconds for the store timeout*.
 
-- [ ] **TEST + IMPLEMENT: T2.4 - The trip store keeps the later stamp and returns the prior one**
+- [x] **TEST + IMPLEMENT: T2.4 - The trip store keeps the later stamp and returns the prior one**
   - **USE COMMAND**: `/tdd:test-first when a trip is written to the store should keep the later stamp and return the prior stamp`
   - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker" (abstract contract) with a concrete `InMemoryTrippedTopicStore` runner in "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `TrippedTopicStoreWriteContractTest.cs` (method `When_a_trip_is_written_should_keep_the_later_stamp_and_return_the_prior`), runner `When_the_in_memory_trip_store_runs_the_write_contract_should_pass.cs`
