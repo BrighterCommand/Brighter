@@ -559,7 +559,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.14
   - References: `src/Paramore.Brighter/Observability/CircuitBreakerSpanInfo.cs`, `BrighterSemanticConventions.cs`, `BrighterTracer.cs`. `docs/adr/0058-outbox-circuit-breaker-trip-logging.md`.
 
-- [ ] **CHARACTERISE: T2.18 - Concurrent first trips on two instances list the topic once, with one Trip and one ReTrip**
+- [x] **CHARACTERISE: T2.18 - Concurrent first trips on two instances list the topic once, with one Trip and one ReTrip**
   - **USE COMMAND**: `/tdd:test-first when two instances trip the same untripped topic at the same moment should list it once with exactly one trip and one retrip`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_two_instances_trip_a_topic_at_the_same_moment_should_announce_one_trip_and_one_retrip.cs`
