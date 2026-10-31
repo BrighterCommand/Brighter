@@ -525,7 +525,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.14
   - References: ADR 0089 *How a write is announced*, rows 4 and 6 and the paragraph after the table.
 
-- [ ] **TEST + IMPLEMENT: T2.16a - A write started by a synchronous or callback trip is announced and reconciled like a batch write**
+- [x] **TEST + IMPLEMENT: T2.16a - A write started by a synchronous or callback trip is announced and reconciled like a batch write**
   - **USE COMMAND**: `/tdd:test-first when a synchronous trip's write completes should announce it by the stored prior stamp, take the stored stamp and drop a stamp that has run out`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_synchronous_trip_write_completes_should_announce_and_reconcile_like_a_batch_write.cs`
