@@ -139,8 +139,7 @@ public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnO
     /// <inheritdoc />
     public void TripTopic(RoutingKey topic)
     {
-        var now = _timeProvider.GetUtcNow();
-        var stamp = now.AddTicks(-(now.Ticks % 10));
+        var stamp = CurrentStamp();
         bool startWrite;
         lock (_lock)
         {
@@ -151,6 +150,12 @@ public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnO
 
         if (startWrite)
             _ = Task.Run(() => WritePendingAsync(topic));
+    }
+
+    private DateTimeOffset CurrentStamp()
+    {
+        var now = _timeProvider.GetUtcNow();
+        return now.AddTicks(-(now.Ticks % 10));
     }
 
     private async Task WritePendingAsync(RoutingKey topic)
@@ -177,7 +182,7 @@ public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnO
     }
 
     /// <inheritdoc />
-    public IAmATripBatch BeginTripBatch() => throw new NotImplementedException();
+    public IAmATripBatch BeginTripBatch() => new TripBatch(this);
 
     /// <inheritdoc />
     public Task<IReadOnlyCollection<RoutingKey>> ReadTrippedTopicsAsync(CancellationToken cancellationToken = default) =>
@@ -185,4 +190,33 @@ public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnO
 
     /// <inheritdoc />
     public void StartRefresh() => throw new NotImplementedException();
+
+    private sealed class TripBatch(DistributedOutboxCircuitBreaker breaker) : IAmATripBatch
+    {
+        private readonly Dictionary<RoutingKey, DateTimeOffset> _trips = new();
+
+        public void TripTopic(RoutingKey topic)
+        {
+            var stamp = breaker.CurrentStamp();
+            lock (breaker._lock)
+            {
+                breaker._view[topic] = stamp;
+            }
+
+            _trips[topic] = stamp;
+        }
+
+        public async Task WriteAsync()
+        {
+            if (_trips.Count == 0)
+                return;
+
+            var trips = new List<TopicTrip>(_trips.Count);
+            foreach (var trip in _trips)
+                trips.Add(new TopicTrip(trip.Key, trip.Value));
+            _trips.Clear();
+
+            await breaker._store.WriteAsync(trips).ConfigureAwait(false);
+        }
+    }
 }
