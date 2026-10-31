@@ -588,7 +588,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.14
   - References: ADR 0089 Phase 2 invariants.
 
-- [ ] **TEST + IMPLEMENT: T2.20 - A distributed trip ends by elapsed time whichever instance reads, with one Reset**
+- [x] **TEST + IMPLEMENT: T2.20 - A distributed trip ends by elapsed time whichever instance reads, with one Reset**
   - **USE COMMAND**: `/tdd:test-first when instances alternate holding the lock should end a distributed trip at exactly the cooldown duration with one reset`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_instances_alternate_the_lock_should_end_the_trip_at_the_cooldown_duration_with_one_reset.cs`
