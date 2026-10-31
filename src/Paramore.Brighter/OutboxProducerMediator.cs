@@ -483,7 +483,7 @@ namespace Paramore.Brighter
 
                     try
                     {
-                        await DispatchAsync([message], requestContext, OutboxClearSource.Explicit, continueOnCapturedContext, cancellationToken);
+                        await DispatchAsync([message], requestContext, OutboxClearSource.Explicit, continueOnCapturedContext, cancellationToken, null);
                     }
                     finally
                     {
@@ -773,11 +773,11 @@ namespace Paramore.Brighter
                     // the sweep stays off a starved thread pool. A caller without a context is unaffected.
                     if (useBulk)
                     {
-                        await BulkDispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken);
+                        await BulkDispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken, null);
                     }
                     else
                     {
-                        await DispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken);
+                        await DispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken, null);
                     }
 
                     Log.MessagesHaveBeenCleared(s_logger);
@@ -1154,7 +1154,8 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             OutboxClearSource clearSource,
             bool continueOnCapturedContext,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            IAmATripBatch? trips)
         {
             var parentSpan = requestContext.Span;
             var producerSpans = new ConcurrentDictionary<string, Activity>();
@@ -1237,7 +1238,7 @@ namespace Paramore.Brighter
 
                             if (!sent)
                             {
-                                TripTopic(batch.RoutingKey);
+                                TripTopic(batch.RoutingKey, trips);
                             }
                         }
                     }
@@ -1259,7 +1260,8 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             OutboxClearSource clearSource,
             bool continueOnCapturedContext,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            IAmATripBatch? trips)
         {
             var parentSpan = requestContext.Span;
             var producerSpans = new ConcurrentDictionary<string, Activity>();
@@ -1310,7 +1312,7 @@ namespace Paramore.Brighter
                                 RecordCleared(message.Header.Topic, clearSource, message.Header.TimeStamp, dispatchedAt.Value);
                         }
 
-                        if(!sent) TripTopic(message.Header.Topic);
+                        if(!sent) TripTopic(message.Header.Topic, trips);
                     }
                     else
                         throw new InvalidOperationException("No async message producer defined.");
@@ -1539,9 +1541,13 @@ namespace Paramore.Brighter
             }
         }
 
-        private void TripTopic(RoutingKey? routingKey)
+        private void TripTopic(RoutingKey? routingKey, IAmATripBatch? trips = null)
         {
-            if(!RoutingKey.IsNullOrEmpty(routingKey))
+            if (RoutingKey.IsNullOrEmpty(routingKey)) return;
+
+            if (trips is not null)
+                trips.TripTopic(routingKey);
+            else
                 _outboxCircuitBreaker?.TripTopic(routingKey);
         }
 
