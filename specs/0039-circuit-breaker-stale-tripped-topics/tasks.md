@@ -636,7 +636,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.20
   - References: ADR 0089 Phase 2 invariants.
 
-- [ ] **CHARACTERISE: T2.23 - Trips survive a restart, are listed after the first read, and still end by C**
+- [x] **CHARACTERISE: T2.23 - Trips survive a restart, are listed after the first read, and still end by C**
   - **USE COMMAND**: `/tdd:test-first when every breaker is recreated over a durable store should list a live trip after the first read and drop an ended one`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_breakers_are_recreated_over_the_store_should_list_live_trips_after_the_first_read.cs`
