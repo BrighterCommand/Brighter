@@ -43,5 +43,21 @@ namespace Paramore.Brighter.CircuitBreaker
         /// most 24 hours. Defaults to 5 minutes.
         /// </value>
         public TimeSpan MaximumTripDuration { get; set; } = TimeSpan.FromMinutes(5);
+
+        /// <value>
+        /// How long a trip shared through a store lasts, before the clock skew leeway is added. Defaults to 50 seconds.
+        /// </value>
+        public TimeSpan CooldownDuration { get; set; } = TimeSpan.FromSeconds(50);
+
+        /// <value>
+        /// The allowance for clock skew between instances, added to <see cref="CooldownDuration"/> to give the trip
+        /// length of a shared trip. Defaults to zero.
+        /// </value>
+        public TimeSpan ClockSkewLeeway { get; set; } = TimeSpan.Zero;
+
+        /// <value>
+        /// The longest a read or write of the trip store may take. Defaults to 2 seconds.
+        /// </value>
+        public TimeSpan StoreTimeout { get; set; } = TimeSpan.FromSeconds(2);
     }
 }
