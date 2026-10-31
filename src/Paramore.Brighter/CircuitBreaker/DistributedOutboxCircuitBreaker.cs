@@ -155,14 +155,25 @@ public class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnO
 
     private async Task WritePendingAsync(RoutingKey topic)
     {
-        DateTimeOffset stamp;
-        lock (_lock)
+        var more = true;
+        while (more)
         {
-            stamp = _pendingWrites[topic];
-            _pendingWrites.Remove(topic);
-        }
+            DateTimeOffset stamp;
+            lock (_lock)
+            {
+                stamp = _pendingWrites[topic];
+                _pendingWrites.Remove(topic);
+            }
 
-        await _store.WriteAsync([new TopicTrip(topic, stamp)]).ConfigureAwait(false);
+            await _store.WriteAsync([new TopicTrip(topic, stamp)]).ConfigureAwait(false);
+
+            lock (_lock)
+            {
+                more = _pendingWrites.ContainsKey(topic);
+                if (!more)
+                    _writesInFlight.Remove(topic);
+            }
+        }
     }
 
     /// <inheritdoc />
