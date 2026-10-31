@@ -510,7 +510,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.14
   - References: ADR 0089 *How a write is announced*, row 1.
 
-- [ ] **TEST + IMPLEMENT: T2.16 - A write over an ended but unmarked row announces Reset then Trip, by the writer only**
+- [x] **TEST + IMPLEMENT: T2.16 - A write over an ended but unmarked row announces Reset then Trip, by the writer only**
   - **USE COMMAND**: `/tdd:test-first when a later write lands over an ended but unmarked row should have the writer announce one reset then one trip`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_later_write_lands_over_an_ended_unmarked_row_should_announce_reset_then_trip.cs`
