@@ -117,16 +117,26 @@ public class SqliteOutbox : RelationDatabaseOutbox
         }
 
         var read = Task.Run(() => base.ReadFromStoreAsync(commandFunc, resultFunc, cancellationToken), CancellationToken.None);
-        var cancelled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using (cancellationToken.Register(() => cancelled.TrySetResult(true)))
+        if (await EndsBeforeCancellationAsync(read, cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
         {
-            if (await Task.WhenAny(read, cancelled.Task).ConfigureAwait(ContinueOnCapturedContext) == read)
-            {
-                return await read.ConfigureAwait(ContinueOnCapturedContext);
-            }
+            return await read.ConfigureAwait(ContinueOnCapturedContext);
         }
 
         _ = read.ContinueWith(abandoned => abandoned.Exception, TaskContinuationOptions.OnlyOnFaulted);
         throw new OperationCanceledException(cancellationToken);
+    }
+
+    private async Task<bool> EndsBeforeCancellationAsync(Task task, CancellationToken cancellationToken)
+    {
+        if (task.IsCompleted)
+        {
+            return true;
+        }
+
+        var cancelled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using (cancellationToken.Register(() => cancelled.TrySetResult(true)))
+        {
+            return await Task.WhenAny(task, cancelled.Task).ConfigureAwait(ContinueOnCapturedContext) == task;
+        }
     }
 }
