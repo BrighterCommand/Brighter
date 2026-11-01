@@ -33,6 +33,22 @@ commit/PR.
 3. **Report results faithfully.** If anything fails, say so with the output and stop — do not
    declare the bug fixed. The regression test must stay (never delete or `[Skip]` it).
 
+### Step 2a: Check the Comments the Fix Added
+
+A bug fix is where comments like "fix for #4519" or "previously this threw" creep in. Before marking
+the bug verified, size the comments the branch added, including uncommitted work:
+
+```bash
+dotnet run .claude/commands/refactor/comment_census.cs -- $(git merge-base HEAD master)
+```
+
+If the `refs` column is non-zero, or the fix put comments inside method bodies (other than
+`//Arrange` `//Act` `//Assert`), bring them into line with
+[documentation.md § Comments in Code](../../../.agent_instructions/documentation.md#comments-in-code)
+— for more than a line or two, run `/refactor:tidy-comments` with no arguments. The confirmed root
+cause belongs in the commit and PR body (Step 4), not in a comment. Re-run Step 2 afterwards; the
+regression test must pass unedited.
+
 ### Step 3: Mark Verified
 
 Use `Edit` to set Status to `Verified` in `bugfixes/{current-bug}/bugfix.md`.
