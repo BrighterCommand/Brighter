@@ -123,13 +123,14 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         var originalContentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
         var contentType = new ContentType(mimeType);
         contentType.CharSet = message.Header.ContentType?.CharSet ?? CharacterEncoding.UTF8.FromCharacterEncoding();
-        message.Header.ContentType = contentType;
-        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
 
-        if (output.TryGetBuffer(out var buffer))
-            message.Body = new MessageBody(buffer.AsMemory(), contentType, CharacterEncoding.Raw);
-        else
-            message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
+        var body = output.TryGetBuffer(out var buffer)
+            ? new MessageBody(buffer.AsMemory(), contentType, CharacterEncoding.Raw)
+            : new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
+
+        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
+        message.Header.ContentType = contentType;
+        message.Body = body;
 
         return message;
     }
@@ -167,6 +168,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
             message.Body = new MessageBody(output.ToArray(), contentType);
 
         message.Header.ContentType = contentType;
+        message.Header.Bag.Remove(ORIGINAL_CONTENTTYPE_HEADER);
 
         return message;
     }
@@ -198,13 +200,14 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
 
         var originalContentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
         var contentType = new ContentType(mimeType);
-        message.Header.ContentType = contentType;
-        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
 
-        if (output.TryGetBuffer(out var buffer))
-            message.Body = new MessageBody(buffer.AsMemory(), contentType, CharacterEncoding.Raw);
-        else
-            message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
+        var body = output.TryGetBuffer(out var buffer)
+            ? new MessageBody(buffer.AsMemory(), contentType, CharacterEncoding.Raw)
+            : new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
+
+        message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
+        message.Header.ContentType = contentType;
+        message.Body = body;
 
         return message;
     }
@@ -238,6 +241,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
             message.Body = new MessageBody(output.ToArray(), contentType);
 
         message.Header.ContentType = contentType;
+        message.Header.Bag.Remove(ORIGINAL_CONTENTTYPE_HEADER);
 
         return message;
     }
