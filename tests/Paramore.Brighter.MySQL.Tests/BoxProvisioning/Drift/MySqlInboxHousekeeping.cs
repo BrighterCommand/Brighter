@@ -26,17 +26,9 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning.Drift;
 
-/// <summary>
-/// Backend-specific housekeeping columns present in the MySQL inbox builder DDL but excluded
-/// from logical-version <see cref="IAmABoxMigration.LogicalColumns"/>. Used by drift tests to
-/// bridge between the builder's actual column set and the cross-backend logical model.
-/// </summary>
-/// <remarks>
-/// MySQL inbox has no housekeeping beyond its logical columns — the <c>PRIMARY KEY</c> is
-/// `CommandId`, which is already a logical column. <see cref="V1"/> is therefore empty.
-/// </remarks>
+// MySQL inbox columns outside the cross-backend logical schema (ADR 0057 §1): none, because its primary
+// key, CommandId, is a logical column. Drift tests add the set to V_latest's columns like the others.
 internal static class MySqlInboxHousekeeping
 {
-    /// <summary>V1 baseline: empty — `CommandId` is the PK and lives in LogicalColumns.</summary>
     public static readonly ISet<string> V1 = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 }

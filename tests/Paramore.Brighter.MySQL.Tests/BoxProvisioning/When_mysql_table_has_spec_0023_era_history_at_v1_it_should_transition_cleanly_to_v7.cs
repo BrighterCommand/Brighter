@@ -31,6 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// A MySQL outbox already at the latest shape but with only a V1 history row, as the single-version
+/// provisioner wrote it, takes the normal path: the guarded ALTERs are no-ops, the V1 row is kept, and each
+/// later version is recorded as applied.
+/// </summary>
 public class MySqlSpec0023EraHistoryTransitionTests : IAsyncLifetime
 {
     private const string Spec0023EraDescription = "spec 0023 fresh install";
@@ -42,7 +47,7 @@ public class MySqlSpec0023EraHistoryTransitionTests : IAsyncLifetime
     [Fact]
     public async Task When_mysql_table_has_spec_0023_era_history_at_v1_it_should_transition_cleanly_to_v7()
     {
-        //Arrange — V7-shaped outbox via the live builder DDL + spec-0023-era history at V1.
+        //Arrange
         await ExecuteDdl(MySqlOutboxBuilder.GetDDL(_tableName, hasBinaryMessagePayload: false));
         await EnsureHistoryTable();
         await SeedSpec0023EraHistoryRowAtV1();
@@ -60,10 +65,9 @@ public class MySqlSpec0023EraHistoryTransitionTests : IAsyncLifetime
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — table shape unchanged (idempotent information_schema-checked ALTERs were no-ops).
+        //Assert
         Assert.Equal(columnsBefore, await GetTableColumns());
 
-        //Assert — V1 row preserved with original spec-0023-era description; V2..V7 inserted normally.
         var rowsByVersion = await GetHistoryRowsByVersion();
         Assert.Equal(ExpectedMigrationVersions.OutboxLatest, rowsByVersion.Count);
         Assert.Equal(Spec0023EraDescription, rowsByVersion[1]);

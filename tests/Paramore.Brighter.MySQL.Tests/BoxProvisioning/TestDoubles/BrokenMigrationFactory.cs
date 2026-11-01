@@ -26,13 +26,7 @@ using Paramore.Brighter.BoxProvisioning;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
 
-/// <summary>
-/// Builds a migration list that is identical to a real backend's list except for one entry,
-/// whose <c>UpScript</c> is replaced with SQL that intentionally throws when executed. Used by
-/// mid-chain-failure tests to verify the runner's recovery semantics. MySQL has per-DDL implicit
-/// commit (ADR 0057 §5a) so unlike MSSQL/Postgres the prior history rows survive — recovery is
-/// resume-from-MAX(V), not whole-chain rollback.
-/// </summary>
+// Copies a migration chain with one version's UpScript replaced by SQL that fails, for mid-chain resume tests.
 internal static class BrokenMigrationFactory
 {
     public static IReadOnlyList<IAmABoxMigration> WithBrokenVersion(

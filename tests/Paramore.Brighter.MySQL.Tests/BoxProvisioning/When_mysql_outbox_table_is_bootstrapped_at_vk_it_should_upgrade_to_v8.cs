@@ -31,6 +31,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// A MySQL outbox at V_k with no history upgrades to the latest version: one synthetic row at V_k, one
+/// applied row per later version, and existing rows preserved.
+/// </summary>
 public class MySqlOutboxVkToV8UpgradeTests : IAsyncLifetime
 {
     private const string MarkerMessageId = "marker-row-must-survive";
@@ -53,7 +57,7 @@ public class MySqlOutboxVkToV8UpgradeTests : IAsyncLifetime
     [InlineData(7)]
     public async Task When_mysql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v8(int k)
     {
-        //Arrange — seed an outbox at V_k (no history row) and a marker row to prove preservation.
+        //Arrange
         MySqlOutboxLegacySeeder.SeedAtV(k, _connectionString, _tableName);
         await SeedMarkerRow();
 
@@ -69,14 +73,13 @@ public class MySqlOutboxVkToV8UpgradeTests : IAsyncLifetime
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — the table now has the full V8 column set (V_{k+1}..V8 ALTERs applied)
+        //Assert
         var actualColumns = await GetTableColumns();
         foreach (var expected in s_v8ExpectedColumns)
         {
             Assert.Contains(expected, actualColumns);
         }
 
-        //Assert — history rows: one synthetic at V_k + one applied per V_{k+1}..V8
         var rowsByVersion = await GetHistoryRowsByVersion();
         Assert.Equal(8 - k + 1, rowsByVersion.Count);
 
@@ -92,7 +95,6 @@ public class MySqlOutboxVkToV8UpgradeTests : IAsyncLifetime
                 $"(description was: '{appliedDescription}')");
         }
 
-        //Assert — the seeded marker row survived (no DROP/recreate happened)
         Assert.Equal(1, await GetMarkerRowCount());
     }
 
