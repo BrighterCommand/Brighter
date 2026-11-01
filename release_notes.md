@@ -39,6 +39,39 @@ Three outboxes had an async overall count that did not follow the age, the ceili
 
 No breaking changes.
 
+### MS SQL subscriber queues and consumer purge (#4665)
+
+`MsSqlPublication` opts into one copy per configured subscriber channel. Workers sharing a channel
+continue to compete. Subscriber retries return to the receiving queue. A per-message delay requested
+without a matching queue-targeted scheduler falls back to immediate requeue with a warning; a positive
+subscription requeue delay still requires that scheduler at startup.
+
+Set `MsSqlSubscription.IsIndependentSubscriber = true` for each fan-out receiver. Plain subscriptions
+retain topic-based delayed retries, including SQL-equivalent channel and topic spellings. Fan-out sends
+reject subscriber names equivalent to the logical topic under the queue column's collation.
+
+The producer snapshots routing and timeout settings when `Publication` is assigned. Later mutations
+require reassignment to take effect. `MsSqlPublication.SendTimeout` controls the fan-out command timeout;
+it defaults to 30 seconds, rounds positive fractions up, and accepts zero for an infinite timeout.
+
+`MsSqlMessageConsumer.Purge()` and `PurgeAsync()` now delete only the consumer's physical queue,
+including for plain publications. They previously cleared the entire queue table. Administrative
+callers that need to clear the table can use `MsSqlMessageQueue<T>.Purge()`.
+Consumer purge uses batches of up to 500 rows and preserves rows above its initial identity cutoff.
+Outside an ambient transaction, each batch commits independently; cancellation or failure can leave a
+partial purge. Ambient transactions retain locks until completion.
+
+### Circuit-broken topics no longer stay tripped for ever (spec 0039, #4628)
+<!-- spec: 0039-circuit-breaker-stale-tripped-topics -->
+
+An outbox sweeper instance that stopped obtaining the distributed lock kept its circuit-broken topics for ever, and held back their messages when it next swept. `InMemoryOutboxCircuitBreaker` now also ends a trip after `MaximumTripDuration` (default 5 minutes) whatever the sweeper does, so a stale trip no longer holds back messages once the sweeper obtains the lock again. The reset log names whether a trip ended by cooldown or by maximum trip duration. `InMemoryOutboxCircuitBreaker` takes an optional `TimeProvider` as its last constructor parameter. Brighter still registers no breaker by default, and `IAmAnOutboxCircuitBreaker` is unchanged.
+
+#### Breaking changes
+
+- `InMemoryOutboxCircuitBreaker` now ends a trip after `MaximumTripDuration` even if its cooldown count has not run out. *(behavioural)* The 5-minute default exceeds the default cooldown of about 50 seconds. Raise it only if `CooldownCount` times `TimerInterval` is longer.
+- The reset log message names its cause, so its text changes. *(behavioural)* Update any alert or query that matches the old message.
+- The `InMemoryOutboxCircuitBreaker` constructor gains a trailing optional `TimeProvider` parameter. *(binary)* Callers compiled against the old signature must be recompiled; source is unchanged.
+
 ### RMQ.Sync connection recovery and pool cleanup (#4596)
 
 The synchronous RabbitMQ connection pool no longer registers an ineffective shutdown eviction handler.

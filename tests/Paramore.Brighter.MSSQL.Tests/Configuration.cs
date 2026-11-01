@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Data;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -30,7 +31,8 @@ namespace Paramore.Brighter.MSSQL.Tests;
 
 public static class Configuration
 {
-    public const string DefaultConnectingString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password123!;Application Name=BrighterTests;Connect Timeout=60;Encrypt=false";
+    public static string DefaultConnectingString => Environment.GetEnvironmentVariable("Sql__TestsBrighterConnectionString")
+        ?? "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password123!;Application Name=BrighterTests;Connect Timeout=60;Encrypt=false";
     public const string TablePrefix = "Table";
 
     private const string ENSURE_DATABASE_SQL = """
