@@ -35,16 +35,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// A <c>RELEASE_LOCK</c> that returns 0 or NULL after a migration is logged as one Warning naming the
+/// table, the lock key and the result, and the migration still completes: the chain has already
+/// committed (ADR 0057 §5b).
+/// </summary>
 public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
 {
-    // MySQL RELEASE_LOCK has three outcomes: 1 (released by this session — true), 0 (lock
-    // exists but held by another session — false), NULL (lock did not exist). The runner
-    // just acquired the lock immediately before, so any non-true result is a diagnostic
-    // anomaly. We surface it through a Warning-level log entry naming the table name, the
-    // lock key, and the result code, then continue normally — the chain has already
-    // committed by the time release runs. Per ADR 0057 §5b, this contract is the public
-    // boundary between the runner and its IMySqlAdvisoryLock collaborator.
-
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
@@ -67,7 +64,7 @@ public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
     [Fact]
     public async Task When_release_returns_true_it_should_complete_migration_with_no_warning()
     {
-        //Arrange — happy-path fake returns 1 (released by us).
+        //Arrange
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
 
         var fakeLock = new FakeMySqlAdvisoryLock(releaseResult: true);
@@ -81,16 +78,14 @@ public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
         await runner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint);
 
-        //Assert — migration committed normally and no warning was emitted.
+        //Assert
         Assert.Equal(1, await GetBoxTableCount());
         Assert.DoesNotContain(capturingLogger.Entries, e => e.Level == LogLevel.Warning);
     }
 
     private async Task AssertSingleWarningAndMigrationCompletes(bool? releaseResult, string expectedResultMarker)
     {
-        //Arrange — runner uses a real MySQL connection for DDL, a fake advisory lock that
-        //          returns the parameterised non-true result from Release, and a capturing
-        //          logger so we can assert the warning emission.
+        //Arrange
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
 
         var fakeLock = new FakeMySqlAdvisoryLock(releaseResult);
@@ -100,24 +95,17 @@ public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
             new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), fakeLock, capturingLogger);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        //Act — runner must not throw despite the non-true release result.
+        //Act
         await runner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint);
 
-        //Assert — migration committed normally: box table created.
+        //Assert
         Assert.Equal(1, await GetBoxTableCount());
 
-        //Assert — fake observed acquire and release under the expected lock key
-        //         (derived via the existing public MySqlMigrationLockName.For helper).
-        //schemaName=null in MigrateAsync resolves to effectiveSchema=DATABASE() (the connection's
-        //bound database — "BrighterTests" here) in the runner, and the lock key folds the schema
-        //in to keep same-named tables in different schemas from sharing a lock. See Item O.
         var expectedLockKey = MySqlMigrationLockName.For("BrighterTests", _tableName);
         Assert.Equal(expectedLockKey, fakeLock.AcquiredKey);
         Assert.Equal(expectedLockKey, fakeLock.ReleasedKey);
 
-        //Assert — exactly one Warning entry whose message names the table name, lock key,
-        //         and result-code marker, with no exception attached (diagnostic only).
         var warnings = capturingLogger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
         Assert.Single(warnings);
         Assert.Contains(_tableName, warnings[0].Message, StringComparison.Ordinal);
