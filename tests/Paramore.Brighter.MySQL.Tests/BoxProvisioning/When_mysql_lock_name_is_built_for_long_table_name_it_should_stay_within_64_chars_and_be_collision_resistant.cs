@@ -26,6 +26,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// <see cref="MySqlMigrationLockName"/> folds the schema into the lock name and keeps it within
+/// <c>GET_LOCK</c>'s 64-character limit, hashing a long composite so that distinct long names, or the
+/// same table in two schemas, never share a lock (ADR 0057 §5b).
+/// </summary>
 public class MySqlMigrationLockNameTests
 {
     // MySQL `GET_LOCK(name, timeout)` accepts a name of at most 64 characters; from MySQL 5.7.5
@@ -36,16 +41,14 @@ public class MySqlMigrationLockNameTests
     [Fact]
     public void When_schema_and_table_name_are_short_lock_name_should_use_simple_composite_form()
     {
-        //Arrange — short schema + short table well within the GET_LOCK limit
-        //(18 prefix + 6 schema + 1 dot + 12 table = 37).
+        //Arrange
         const string schema = "public";
         const string tableName = "outbox_users";
 
         //Act
         var lockName = MySqlMigrationLockName.For(schema, tableName);
 
-        //Assert — schema folded into the lock name so two same-named tables in distinct schemas
-        //do not serialise on a shared key.
+        //Assert
         Assert.Equal("BrighterMigration_public.outbox_users", lockName);
         Assert.True(lockName.Length <= MySqlGetLockNameLimit);
     }
@@ -53,15 +56,13 @@ public class MySqlMigrationLockNameTests
     [Fact]
     public void When_schema_is_null_lock_name_should_omit_schema_segment()
     {
-        //Arrange — direct callers of the helper that have no schema info.
+        //Arrange
         const string tableName = "outbox_users";
 
         //Act
         var lockName = MySqlMigrationLockName.For(schema: null, tableName);
 
-        //Assert — schema is optional at the helper boundary; when omitted the composite is just
-        //the table name. The runner always passes a non-empty schema (effectiveSchema resolved
-        //via SELECT DATABASE()) so this fallback is exercised only by direct helper users.
+        //Assert
         Assert.Equal("BrighterMigration_outbox_users", lockName);
         Assert.True(lockName.Length <= MySqlGetLockNameLimit);
     }
@@ -69,7 +70,7 @@ public class MySqlMigrationLockNameTests
     [Fact]
     public void When_composite_is_long_lock_name_should_stay_within_64_chars()
     {
-        //Arrange — schema + table whose composite (18 + 60) blows MySQL's 64-char GET_LOCK limit.
+        //Arrange
         const string schema = "public";
         var tableName = new string('a', 60);
 
@@ -85,9 +86,7 @@ public class MySqlMigrationLockNameTests
     [Fact]
     public void When_two_long_table_names_share_a_long_prefix_lock_names_should_differ()
     {
-        //Arrange — two table names that are identical for a long prefix (longer than the
-        //long-form truncatedPrefix budget). A naïve truncation would collapse both to the same
-        //lock name, allowing one runner to skip the lock another already holds.
+        //Arrange
         const string schema = "public";
         var sharedPrefix = new string('x', 46);
         var firstTableName = sharedPrefix + "_alpha_suffix_uniquely_distinguishes_first";
@@ -97,8 +96,7 @@ public class MySqlMigrationLockNameTests
         var firstLockName = MySqlMigrationLockName.For(schema, firstTableName);
         var secondLockName = MySqlMigrationLockName.For(schema, secondTableName);
 
-        //Assert — both within the limit, and distinct (collision-resistant via hashed suffix
-        //over the full schema.table composite).
+        //Assert
         Assert.True(firstLockName.Length <= MySqlGetLockNameLimit);
         Assert.True(secondLockName.Length <= MySqlGetLockNameLimit);
         Assert.NotEqual(firstLockName, secondLockName);
@@ -107,9 +105,7 @@ public class MySqlMigrationLockNameTests
     [Fact]
     public void When_two_distinct_schemas_share_a_table_name_lock_names_should_differ()
     {
-        //Arrange — two distinct schemas with the same table name. Without schema folding both
-        //runners would acquire the same lock and serialise unnecessarily; this is the bug
-        //Item O fixes.
+        //Arrange
         const string firstSchema = "public";
         const string secondSchema = "billing";
         const string sharedTableName = "outbox_users";
@@ -118,8 +114,7 @@ public class MySqlMigrationLockNameTests
         var firstLockName = MySqlMigrationLockName.For(firstSchema, sharedTableName);
         var secondLockName = MySqlMigrationLockName.For(secondSchema, sharedTableName);
 
-        //Assert — distinct lock names so concurrent provisioning of public.outbox_users and
-        //billing.outbox_users does not contend on a shared GET_LOCK.
+        //Assert
         Assert.NotEqual(firstLockName, secondLockName);
     }
 }
