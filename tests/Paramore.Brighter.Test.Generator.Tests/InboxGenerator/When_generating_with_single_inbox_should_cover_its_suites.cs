@@ -94,6 +94,36 @@ public class SingleInboxSuiteGenerationTests : IDisposable
             File.Exists(Path.Combine(generated, "Async", "IAmAnInboxProviderAsync.cs")),
             "a singular Inbox should still generate the Async suite"
         );
+
+        string[] syncCausationTests =
+        [
+            "When_Adding_To_Inbox_With_Causation_Id_Should_Store_And_Retrieve.cs",
+            "When_Adding_To_Inbox_Without_Causation_Id_Should_Return_Null.cs",
+            "When_Asking_Inbox_If_It_Supports_Causation_Tracking_Should_Be_True.cs"
+        ];
+
+        foreach (var testFile in syncCausationTests)
+        {
+            Assert.True(
+                File.Exists(Path.Combine(generated, "Sync", testFile)),
+                $"the Sync suite should include {testFile}"
+            );
+        }
+
+        string[] asyncCausationTests =
+        [
+            "When_Adding_To_Inbox_With_Causation_Id_Should_Store_And_Retrieve_Async.cs",
+            "When_Adding_To_Inbox_Without_Causation_Id_Should_Return_Null_Async.cs",
+            "When_Asking_Inbox_If_It_Supports_Causation_Tracking_Should_Be_True_Async.cs"
+        ];
+
+        foreach (var testFile in asyncCausationTests)
+        {
+            Assert.True(
+                File.Exists(Path.Combine(generated, "Async", testFile)),
+                $"the Async suite should include {testFile}"
+            );
+        }
     }
 
     [Fact]
