@@ -68,6 +68,8 @@ public abstract class BaseMongoDb<TCollection>
     /// Gets the <see cref="IMongoCollection{TCollection}"/> instance for the configured collection.
     /// This property ensures the collection is resolved or created according to the
     /// <see cref="MongoDbCollectionConfiguration.MakeCollection"/> setting before returning.
+    /// A configured TTL index is ensured before the collection is cached. Index creation
+    /// errors propagate to the caller, and subsequent access retries initialization.
     /// </summary>
     protected IMongoCollection<TCollection> Collection => _collection ??= CreateCollection();
 
@@ -75,25 +77,35 @@ public abstract class BaseMongoDb<TCollection>
     
     private IMongoCollection<TCollection> CreateCollection()
     {
-        if (_collection != null)
+        if (CollectionConfiguration.MakeCollection != OnResolvingACollection.Assume)
         {
-            return _collection;
+            EnsureCollectionExists();
         }
 
-        if (CollectionConfiguration.MakeCollection == OnResolvingACollection.Assume)
+        var collection = _database.GetCollection<TCollection>(CollectionConfiguration.Name, CollectionConfiguration.Settings);
+        if (CollectionConfiguration.TimeToLive != null)
         {
-            _collection = _database.GetCollection<TCollection>(CollectionConfiguration.Name, CollectionConfiguration.Settings);
-            return _collection;
+            collection.Indexes.CreateOne(
+                new CreateIndexModel<TCollection>(Builders<TCollection>.IndexKeys.Ascending(x => x.TimeStamp),
+                    new CreateIndexOptions
+                    {
+                        Name = $"brighter_ttl_{CollectionConfiguration.Name}",
+                        ExpireAfter = CollectionConfiguration.TimeToLive
+                    }));
         }
 
+        return collection;
+    }
+
+    private void EnsureCollectionExists()
+    {
         var filter = new BsonDocument("name", CollectionConfiguration.Name);
         var options = new ListCollectionNamesOptions { Filter = filter };
 
-        var collections = _database.ListCollectionNames(options);
+        using var collections = _database.ListCollectionNames(options);
         if (collections.Any())
         {
-            _collection = _database.GetCollection<TCollection>(CollectionConfiguration.Name, CollectionConfiguration.Settings);
-            return _collection;
+            return;
         }
 
         if (CollectionConfiguration.MakeCollection == OnResolvingACollection.Validate)
@@ -104,24 +116,9 @@ public abstract class BaseMongoDb<TCollection>
         {
             using var session = _client.StartSession();
             _database.CreateCollection(session, CollectionConfiguration.Name, CollectionConfiguration.CreateCollectionOptions);
-            _collection = _database.GetCollection<TCollection>(CollectionConfiguration.Name, CollectionConfiguration.Settings);
-            if (CollectionConfiguration.TimeToLive != null)
-            {
-                _collection.Indexes.CreateOne(
-                    new CreateIndexModel<TCollection>(Builders<TCollection>.IndexKeys.Ascending(x => x.TimeStamp),
-                        new CreateIndexOptions
-                        {
-                            Name = $"brighter_ttl_{CollectionConfiguration.Name}",
-                            ExpireAfter = CollectionConfiguration.TimeToLive
-                        }));
-            }
-
-            return _collection;
         }
         catch(MongoCommandException ex) when(ex.Code == NamespaceExists)
         {
-            _collection = _database.GetCollection<TCollection>(CollectionConfiguration.Name, CollectionConfiguration.Settings);
-            return _collection;
         }
     }
 }
