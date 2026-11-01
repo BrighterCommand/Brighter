@@ -43,6 +43,8 @@ public class SqliteOutbox : RelationDatabaseOutbox
 {
     private const int SqliteDuplicateKeyError = 1555;
     private const int SqliteUniqueKeyError = 19;
+    private readonly object _abandonedReadsLock = new();
+    private Task _abandonedReads = Task.CompletedTask;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SqliteOutbox" /> class.
@@ -104,6 +106,9 @@ public class SqliteOutbox : RelationDatabaseOutbox
     /// The read runs on its own thread and the caller stops waiting for it once the token is cancelled. That
     /// thread stays busy until the read ends. A read blocked on a lock with no command timeout ends only when
     /// the lock is released.
+    /// While a read whose caller stopped waiting has not ended, a later read with a token that can be cancelled
+    /// waits for it before it starts, and ends with <see cref="OperationCanceledException"/> without reading if its
+    /// own token is cancelled first.
     /// </remarks>
     protected override async Task<T> ReadFromStoreAsync<T>(
         Func<DbConnection, DbCommand> commandFunc,
@@ -116,14 +121,39 @@ public class SqliteOutbox : RelationDatabaseOutbox
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
+        if (!await EndsBeforeCancellationAsync(AbandonedReads, cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
+
         var read = Task.Run(() => base.ReadFromStoreAsync(commandFunc, resultFunc, cancellationToken), CancellationToken.None);
         if (await EndsBeforeCancellationAsync(read, cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
         {
             return await read.ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        _ = read.ContinueWith(abandoned => abandoned.Exception, TaskContinuationOptions.OnlyOnFaulted);
+        Abandon(read);
         throw new OperationCanceledException(cancellationToken);
+    }
+
+    private Task AbandonedReads
+    {
+        get
+        {
+            lock (_abandonedReadsLock)
+            {
+                return _abandonedReads;
+            }
+        }
+    }
+
+    private void Abandon(Task read)
+    {
+        var observed = read.ContinueWith(abandoned => abandoned.Exception, TaskScheduler.Default);
+        lock (_abandonedReadsLock)
+        {
+            _abandonedReads = _abandonedReads.IsCompleted ? observed : Task.WhenAll(_abandonedReads, observed);
+        }
     }
 
     private async Task<bool> EndsBeforeCancellationAsync(Task task, CancellationToken cancellationToken)
