@@ -30,7 +30,7 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
 /// <summary>
-/// The MSSQL outbox catalog lists V1..V8 in order with cumulative logical columns; V2..V8 each cite a
+/// The MSSQL outbox catalog lists V1..V9 in order with cumulative logical columns; V2..V9 each cite a
 /// source commit (V1 has none), and V8's UpScript also creates the CausationId replay index.
 /// </summary>
 public class MsSqlOutboxMigrationsTests
@@ -50,7 +50,7 @@ public class MsSqlOutboxMigrationsTests
     private static readonly string[] s_v8Added = ["CausationId"];
 
     [Fact]
-    public void When_mssql_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_correct_logical_columns()
+    public void When_mssql_outbox_migrations_are_listed_it_should_return_v1_through_v9_with_correct_logical_columns()
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -62,13 +62,13 @@ public class MsSqlOutboxMigrationsTests
         var migrations = new MsSqlOutboxMigrationCatalog().All(config);
 
         //Assert
-        Assert.Equal(8, migrations.Count);
+        Assert.Equal(9, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
             Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
-        for (var v = 1; v <= 8; v++)
+        for (var v = 1; v <= 9; v++)
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
@@ -80,12 +80,17 @@ public class MsSqlOutboxMigrationsTests
         }
 
         Assert.Null(migrations[0].SourceReference);
-        for (var v = 2; v <= 8; v++)
+        for (var v = 2; v <= 9; v++)
         {
             Assert.False(
                 string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference),
                 $"V{v} must have a non-empty SourceReference (archaeology pointer)");
         }
+
+        var v9Script = migrations[8].UpScript;
+        Assert.Contains("[MessageId]", v9Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("CREATE UNIQUE INDEX", v9Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("IGNORE_DUP_KEY = ON", v9Script, StringComparison.OrdinalIgnoreCase);
 
         var v8Script = migrations[7].UpScript;
         Assert.Contains("[CausationId]", v8Script, StringComparison.OrdinalIgnoreCase);
@@ -106,6 +111,8 @@ public class MsSqlOutboxMigrationsTests
         cumulative.UnionWith(s_v6Added); byVersion[6] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
         cumulative.UnionWith(s_v7Added); byVersion[7] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
         cumulative.UnionWith(s_v8Added); byVersion[8] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
+
+        byVersion[9] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
 
         return byVersion;
     }

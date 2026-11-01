@@ -120,6 +120,10 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// cannot guarantee.
         /// </param>
         /// <returns>The required DDL</returns>
+        /// <remarks>
+        /// MessageId is unique. Duplicate IDs are ignored on insert, including within a bulk insert,
+        /// while distinct messages in the same batch are stored. Existing messages are not overwritten.
+        /// </remarks>
         public static string GetDDL(string outboxTableName, bool hasBinaryMessagePayload = false, string? schemaName = null)
         {
             if (string.IsNullOrEmpty(outboxTableName))
@@ -129,15 +133,12 @@ namespace Paramore.Brighter.Outbox.MsSql
                 ? outboxTableName
                 : $"[{schemaName}].[{outboxTableName}]";
             var ddl = string.Format(hasBinaryMessagePayload ? BinaryOutboxDdl : TextOutboxDdl, qualifiedTable);
-            // Replay index (Spec 0027, #2541) on CausationId — emitted as a separate statement
-            // after the CREATE TABLE in the same fresh-install batch. None of the outbox builders
-            // indexed any column before this. Guarded on sys.indexes (matching the V8 migration and
-            // the Sqlite/Postgres/Spanner builders' IF NOT EXISTS) so re-running the DDL is idempotent;
-            // the CREATE INDEX is EXEC-wrapped so it compiles at run time rather than batch-parse time.
             var indexObjectId = schemaName is null
                 ? $"OBJECT_ID(N'[{outboxTableName}]')"
                 : $"OBJECT_ID(N'[{schemaName}].[{outboxTableName}]')";
             return ddl + Environment.NewLine +
+                $"CREATE UNIQUE INDEX [UX_BrighterOutbox_MessageId] ON {qualifiedTable} ([MessageId]) " +
+                $"WITH (IGNORE_DUP_KEY = ON);{Environment.NewLine}" +
                 $"IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = N'idx_{outboxTableName}_CausationId' " +
                 $"AND [object_id] = {indexObjectId}){Environment.NewLine}" +
                 $"    EXEC('CREATE INDEX [idx_{outboxTableName}_CausationId] ON {qualifiedTable} ([CausationId]);');";
