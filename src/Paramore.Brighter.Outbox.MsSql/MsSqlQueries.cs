@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.Outbox.MsSql
 {
-    public class MsSqlQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCausationQueries
+    public class MsSqlQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
     {
         public string PagedDispatchedCommand { get; } = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY [Timestamp] DESC) AS NUMBER, * FROM {0} WHERE [Dispatched] IS NOT NULL AND [Dispatched] < @DispatchedSince) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY [Timestamp] DESC";
         public string PagedReadCommand { get; } = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY [Timestamp] DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
@@ -39,5 +39,40 @@
             "VALUES {1}";
         public string ReplayCausationCommand { get; } = "UPDATE {0} SET [Dispatched] = NULL WHERE [CausationId] = @CausationId";
         public string CausationColumnExistsCommand { get; } = "SELECT 1 FROM sys.columns WHERE [object_id]=OBJECT_ID('{0}') AND [name]='CausationId'";
+
+        /// <inheritdoc />
+        public string AddDataRefCommand { get; } =
+            "INSERT INTO {0} ([MessageId],[MessageType],[Topic],[Timestamp],[CorrelationId]," +
+            "[ReplyTo],[ContentType],[PartitionKey],[HeaderBag],[Body]," +
+            "[Source],[Type],[DataSchema],[Subject],[TraceParent],[TraceState],[Baggage], [WorkflowId], [JobId], [DataRef]) " +
+            "VALUES (@MessageId,@MessageType,@Topic,@Timestamp,@CorrelationId," +
+            "@ReplyTo,@ContentType,@PartitionKey,@HeaderBag,@Body," +
+            "@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId, @JobId, @DataRef)";
+
+        /// <inheritdoc />
+        public string BulkAddDataRefCommand { get; } =
+            "INSERT INTO {0} ([MessageId],[MessageType],[Topic],[Timestamp],[CorrelationId]," +
+            "[ReplyTo],[ContentType],[PartitionKey],[HeaderBag],[Body]," +
+            "[Source],[Type],[DataSchema],[Subject],[TraceParent],[TraceState],[Baggage],[WorkflowId],[JobId], [DataRef]) " +
+            "VALUES {1}";
+
+        /// <inheritdoc />
+        public string AddDataRefCausationCommand { get; } =
+            "INSERT INTO {0} ([MessageId],[MessageType],[Topic],[Timestamp],[CorrelationId]," +
+            "[ReplyTo],[ContentType],[PartitionKey],[HeaderBag],[Body]," +
+            "[Source],[Type],[DataSchema],[Subject],[TraceParent],[TraceState],[Baggage], [WorkflowId], [JobId], [DataRef], [CausationId]) " +
+            "VALUES (@MessageId,@MessageType,@Topic,@Timestamp,@CorrelationId," +
+            "@ReplyTo,@ContentType,@PartitionKey,@HeaderBag,@Body," +
+            "@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId, @JobId, @DataRef, @CausationId)";
+
+        /// <inheritdoc />
+        public string BulkAddDataRefCausationCommand { get; } =
+            "INSERT INTO {0} ([MessageId],[MessageType],[Topic],[Timestamp],[CorrelationId]," +
+            "[ReplyTo],[ContentType],[PartitionKey],[HeaderBag],[Body]," +
+            "[Source],[Type],[DataSchema],[Subject],[TraceParent],[TraceState],[Baggage],[WorkflowId],[JobId], [DataRef],[CausationId]) " +
+            "VALUES {1}";
+
+        /// <inheritdoc />
+        public string DataRefColumnExistsCommand { get; } = "SELECT 1 FROM sys.columns WHERE [object_id]=OBJECT_ID('{0}') AND [name]='DataRef'";
     }
 }
