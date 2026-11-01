@@ -18,11 +18,10 @@ public class When_box_provisioning_hosted_service_starts_it_should_provision_out
         var inboxProvisioner = new OrderTrackingBoxProvisioner(BoxType.Inbox, callOrder);
         var outboxProvisioner = new OrderTrackingBoxProvisioner(BoxType.Outbox, callOrder);
 
-        // Deliberately register inbox first to verify ordering
-        var provisioners = new List<IAmABoxProvisioner> { inboxProvisioner, outboxProvisioner };
+        var provisionersRegisteredInboxFirst = new List<IAmABoxProvisioner> { inboxProvisioner, outboxProvisioner };
 
         var hostedService = new BoxProvisioningHostedService(
-            provisioners,
+            provisionersRegisteredInboxFirst,
             NullLogger<BoxProvisioningHostedService>.Instance
         );
 

@@ -32,25 +32,11 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
-// Item #9 (PR #4039 third review). MSSQL/MySQL/PostgreSQL/SQLite each have a builder-vs-V_latest
-// drift test that parses the live builder DDL via DdlColumnExtractor and asserts the column set
-// equals the V_latest LogicalColumns plus per-backend housekeeping. Spanner had no such guard
-// even though the same drift class is possible: a developer can add a column to
-// SpannerOutboxBuilder / SpannerInboxBuilder without bumping VLatestOutbox / VLatestInbox or
-// the relational catalogs' V_latest LogicalColumns, and the bug would not surface until a real
-// Spanner deploy detected the schema mismatch.
-//
-// Spanner is fresh-install-only (ADR 0057 §6) so it has no per-Spanner migration catalog of its
-// own. We compare against the MySQL catalog because (a) MySQL uses the same identifier-quoting
-// convention as Spanner — backticks, case-insensitive — so QuoteStyle.Spanner and the MySQL
-// V_latest LogicalColumns line up without case-folding gymnastics, and (b) Item #8's drift test
-// already pins MySQL .All(cfg).Count == VLatestOutbox / VLatestInbox, so MySQL is the canonical
-// reference for "what columns are expected at V_latest across the whole relational tier".
-//
-// Spanner has NO housekeeping union — the relational backends each add an extra `id` or
-// `CreatedID` column, but Spanner's PRIMARY KEY clause lives OUTSIDE the column body (Spanner
-// declares the PK after the closing paren) so the column set is the logical model exactly.
-
+/// <summary>
+/// <c>SpannerOutboxBuilder</c>'s columns equal V_latest's logical columns, taken from the MySQL catalog
+/// (Spanner has no catalog of its own, ADR 0057 §6), with no housekeeping columns; and it emits the
+/// <c>CausationId</c> replay index as a separate statement.
+/// </summary>
 [Trait("Category", "Spanner")]
 [Collection("Spanner")]
 public class SpannerOutboxBuilderDriftTests
@@ -61,9 +47,7 @@ public class SpannerOutboxBuilderDriftTests
     public void When_spanner_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
         bool binaryMessagePayload)
     {
-        // Arrange — drive the builder DDL and the V_latest LogicalColumns from the same config so
-        // any developer change to one without the other surfaces here. Spanner uses GoogleSQL
-        // backticks; QuoteStyle.Spanner is case-insensitive.
+        // Arrange
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
@@ -74,8 +58,7 @@ public class SpannerOutboxBuilderDriftTests
             SpannerOutboxBuilder.GetDDL(tableName, binaryMessagePayload),
             QuoteStyle.Spanner);
 
-        // Act — MySQL outbox V8 LogicalColumns is the canonical V_latest set (the four relational
-        // outbox catalogs agree at V8 per Item #8's drift test).
+        // Act
         var migrations = new MySqlOutboxMigrationCatalog().All(config);
         var migrationColumns = new HashSet<string>(
             migrations[migrations.Count - 1].LogicalColumns,
@@ -91,10 +74,6 @@ public class SpannerOutboxBuilderDriftTests
     [Fact]
     public void When_spanner_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index()
     {
-        // The drift test above compares columns only; the new CausationId replay index (Spec 0027,
-        // #2541) is asserted separately here per AC9. Spanner has no inline secondary index, so the
-        // index is a standalone CREATE INDEX IF NOT EXISTS executed alongside the table on fresh
-        // install (SpannerBoxMigrationRunner batches both via CreateDdlCommand).
         const string tableName = "outbox_test";
         var indexDdl = SpannerOutboxBuilder.GetCausationIndexDDL(tableName);
 
@@ -104,6 +83,10 @@ public class SpannerOutboxBuilderDriftTests
     }
 }
 
+/// <summary>
+/// <c>SpannerInboxBuilder</c>'s columns equal V_latest's logical columns, taken from the MySQL catalog
+/// (Spanner has no catalog of its own, ADR 0057 §6), with no housekeeping columns.
+/// </summary>
 [Trait("Category", "Spanner")]
 [Collection("Spanner")]
 public class SpannerInboxBuilderDriftTests
@@ -111,10 +94,7 @@ public class SpannerInboxBuilderDriftTests
     [Fact]
     public void When_spanner_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
     {
-        // Arrange — Spanner inbox is fresh-install-only at V3-equivalent: the builder ships
-        // CommandId + CommandType + CommandBody + Timestamp + ContextKey + CausationId, which
-        // matches the MySQL inbox V3 LogicalColumns (V1 + ContextKey + CausationId). MySQL is the
-        // canonical V_latest reference for the four-backend invariant.
+        // Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
