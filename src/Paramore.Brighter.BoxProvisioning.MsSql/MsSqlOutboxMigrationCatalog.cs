@@ -40,15 +40,30 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// instead, so V1.UpScript carries the historical shape. V2..V7 are conditional
 /// <c>ALTER TABLE ADD</c> statements guarded by <c>IF COL_LENGTH(...) IS NULL</c> per ADR
 /// 0057 §5, so each one is idempotent and safe to re-execute on chain replay. V8 adds
-/// <c>CausationId</c> plus a replay index on it.
+/// <c>CausationId</c> plus a replay index on it. V9 adds a unique MessageId index that ignores
+/// duplicate inserts without discarding distinct messages from a bulk insert. Existing duplicate
+/// IDs stop the migration without changing rows or advancing history; resolve them and retry.
+/// <para>
+/// V9 takes an exclusive table lock while checking duplicates and creating the index. Schedule
+/// provisioning accordingly for large or busy outboxes. To identify conflicts before upgrading,
+/// substitute the configured schema and table in this query:
+/// <code>
+/// SELECT [MessageId], COUNT_BIG(*) AS [Copies]
+/// FROM [dbo].[Outbox]
+/// GROUP BY [MessageId] HAVING COUNT_BIG(*) &gt; 1;
+/// </code>
+/// Review payloads and dispatch state before choosing which conflicting rows to retain.
+/// </para>
 /// <para>
 /// The accumulated <c>LogicalColumns</c> across
-/// V1..V8 plus the MSSQL housekeeping <c>Id</c> column equals the live builder's column set
+/// V1..V9 plus the MSSQL housekeeping <c>Id</c> column equals the live builder's column set
 /// — verified by the drift test in <c>tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning</c>.
 /// </para>
 /// </remarks>
 public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
 {
+    internal const int MESSAGE_ID_UNIQUENESS_VERSION = 9;
+
     private const string DefaultSchema = "dbo";
 
     private static readonly string[] s_v1Columns =
@@ -104,7 +119,7 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     /// Returns all migrations for the MSSQL outbox, ordered by version.
     /// </summary>
     /// <param name="configuration">The relational database configuration.</param>
-    /// <returns>An ordered list of migrations from V1 to V8.</returns>
+    /// <returns>An ordered list of migrations from V1 to V9.</returns>
     public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
     {
         var schema = configuration.SchemaName ?? DefaultSchema;
@@ -184,9 +199,43 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
                     + Environment.NewLine
                     + AddCausationIndex(schema, table),
                 LogicalColumns: Cumulative(8),
-                SourceReference: "#2541")
+                SourceReference: "#2541"),
+
+            new BoxMigration(
+                Version: MESSAGE_ID_UNIQUENESS_VERSION,
+                Description: "Enforce MessageId uniqueness",
+                UpScript: AddMessageIdIndex(schema, table),
+                LogicalColumns: Cumulative(9),
+                SourceReference: "#4677")
         ];
     }
+
+    internal static string MessageIdIndexQuery(string objectId) => $"""
+        SELECT 1 FROM sys.indexes i
+        WHERE i.object_id = {objectId}
+          AND i.is_unique = 1 AND i.ignore_dup_key = 1
+          AND i.is_disabled = 0 AND i.is_hypothetical = 0 AND i.has_filter = 0
+          AND (SELECT COUNT(*) FROM sys.index_columns ic
+               WHERE ic.object_id = i.object_id AND ic.index_id = i.index_id AND ic.key_ordinal > 0) = 1
+          AND EXISTS (SELECT 1 FROM sys.index_columns ic
+                      JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+                      WHERE ic.object_id = i.object_id AND ic.index_id = i.index_id
+                        AND ic.key_ordinal = 1 AND c.name = 'MessageId')
+        """;
+
+    private static string AddMessageIdIndex(string schema, string table) => $"""
+        IF NOT EXISTS ({MessageIdIndexQuery($"OBJECT_ID(N'[{schema}].[{table}]')")})
+        BEGIN
+            IF EXISTS (
+                SELECT [MessageId] FROM [{schema}].[{table}] WITH (TABLOCKX, HOLDLOCK)
+                GROUP BY [MessageId] HAVING COUNT_BIG(*) > 1
+            )
+                THROW 50001, 'Cannot enforce MessageId uniqueness on [{schema}].[{table}]: duplicate MessageId values exist. Resolve the conflicting rows and retry provisioning. No messages have been removed.', 1;
+
+            CREATE UNIQUE INDEX [UX_BrighterOutbox_MessageId]
+                ON [{schema}].[{table}] ([MessageId]) WITH (IGNORE_DUP_KEY = ON);
+        END;
+        """;
 
     private static IReadOnlyCollection<string> Cumulative(int upToVersion)
     {
