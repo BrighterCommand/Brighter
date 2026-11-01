@@ -42,11 +42,11 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// </summary>
 /// <remarks>
 /// <para>
-/// SQLite's grammar lacks <c>ALTER TABLE ADD COLUMN IF NOT EXISTS</c>, so each V2..V_latest
-/// migration carries an <see cref="IAmABoxMigration.IdempotencyCheckSql"/> probing
-/// <c>pragma_table_info</c>. The runner evaluates this scalar before applying
-/// <see cref="IAmABoxMigration.UpScript"/> and skips the ALTER (still inserting the history row)
-/// when the column is already present.
+/// SQLite's grammar lacks <c>ALTER TABLE ADD COLUMN IF NOT EXISTS</c>, so column migrations
+/// carry an <see cref="IAmABoxMigration.IdempotencyCheckSql"/> probing <c>pragma_table_info</c>.
+/// Index migrations check index metadata instead. The runner evaluates this scalar before
+/// applying <see cref="IAmABoxMigration.UpScript"/> and skips changes already present,
+/// while still inserting the history row.
 /// </para>
 /// <para>
 /// The whole bootstrap/normal chain runs inside the single BEGIN IMMEDIATE transaction (per
