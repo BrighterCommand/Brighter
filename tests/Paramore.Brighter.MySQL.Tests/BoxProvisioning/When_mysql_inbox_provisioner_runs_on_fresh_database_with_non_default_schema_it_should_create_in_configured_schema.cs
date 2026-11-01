@@ -31,10 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-// Inbox companion to When_mysql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_*.
-// Per PR #4039 reviewer item M4-1 (F1c): MySqlInboxBuilder.GetDDL is now schema-aware, and
-// MySqlInboxMigrationCatalog threads configuration.SchemaName through to both FreshInstallDdl
-// and the V2 AddContextKey ALTER.
+/// <summary>
+/// On MySQL a schema is a database: with <c>SchemaName</c> set to a database other than the connection's,
+/// a fresh install creates the inbox there rather than in the connection's database, and a second run is
+/// a no-op (ADR 0057 §3, ADR 0060).
+/// </summary>
 public class MySqlInboxNonDefaultSchemaTests : IAsyncLifetime
 {
     private readonly string _baseConnectionString = Const.DefaultConnectingString;
@@ -66,7 +67,7 @@ public class MySqlInboxNonDefaultSchemaTests : IAsyncLifetime
         await DropAnyExistingTableAsync(_tableName, _nonDefaultDatabase);
         await DropAnyExistingTableAsync(_tableName, "BrighterTests");
 
-        //Act — first fresh-install run
+        //Act
         var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
 
         //Assert
@@ -75,7 +76,7 @@ public class MySqlInboxNonDefaultSchemaTests : IAsyncLifetime
         Assert.False(await TableExistsInDatabaseAsync(_tableName, "BrighterTests"));
         Assert.Equal(1, await GetHistoryRowCountAsync(_nonDefaultDatabase, _tableName));
 
-        //Act — idempotent second run
+        //Act
         var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
 
         //Assert
