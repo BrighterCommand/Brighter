@@ -39,6 +39,8 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 [Collection("Spanner")]
 public class SpannerVLatestDriftAgainstRelationalCatalogTests
 {
+    private const int PostgreSqlInboxLatest = 2;
+
     // All(cfg) only builds SQL strings, so no database is needed.
     private static readonly RelationalDatabaseConfiguration Configuration =
         new(
@@ -61,6 +63,6 @@ public class SpannerVLatestDriftAgainstRelationalCatalogTests
         Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new MsSqlInboxMigrationCatalog().All(Configuration).Count);
         Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new MySqlInboxMigrationCatalog().All(Configuration).Count);
         Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new SqliteInboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(2, new PostgreSqlInboxMigrationCatalog().All(Configuration).Count);
+        Assert.Equal(PostgreSqlInboxLatest, new PostgreSqlInboxMigrationCatalog().All(Configuration).Count);
     }
 }

@@ -38,6 +38,8 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 [Collection("Spanner")]
 public class SpannerRunnerUnsafeIdentifierTests
 {
+    private const string IgnoredConnectionString = "Data Source=ignored;";
+
     [Theory]
     [InlineData("O'Brien")]    // single quote — would break inlined predicates in information_schema probe
     [InlineData("1Outbox")]    // leading digit — invalid as bare identifier
@@ -45,7 +47,7 @@ public class SpannerRunnerUnsafeIdentifierTests
     public async Task When_spanner_runner_migrates_an_outbox_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
-        var config = new RelationalDatabaseConfiguration("Data Source=ignored;");
+        var config = new RelationalDatabaseConfiguration(IgnoredConnectionString);
         var runner = new SpannerBoxMigrationRunner(config);
         var tableState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
@@ -62,7 +64,7 @@ public class SpannerRunnerUnsafeIdentifierTests
     public async Task When_spanner_runner_migrates_an_inbox_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
-        var config = new RelationalDatabaseConfiguration("Data Source=ignored;");
+        var config = new RelationalDatabaseConfiguration(IgnoredConnectionString);
         var runner = new SpannerBoxMigrationRunner(config);
         var tableState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
