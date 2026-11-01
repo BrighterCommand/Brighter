@@ -2,6 +2,45 @@
 
 ## Master
 
+### SQLite outbox message-ID uniqueness (#4676)
+
+New text and binary SQLite outbox tables enforce case-insensitive `MessageId` uniqueness.
+Duplicate writes retain the original message. Bulk writes skip duplicate rows while storing
+the other messages in the batch; non-uniqueness constraint errors still propagate.
+
+Existing databases need the SQLite outbox provisioner's V9 migration. Calling
+`SqliteOutboxBuilder.GetDDL` again does not alter an existing table's constraints.
+V9 accepts an existing, non-partial unique index on `MessageId` with `NOCASE` collation,
+or creates one. It does not change payloads, dispatch state, or existing index definitions.
+
+Before upgrading, pause writers and sweepers and back up the database. To identify duplicates,
+replace `Outbox` with your configured table name:
+
+```sql
+SELECT MessageId, COUNT(*) AS Copies
+FROM [Outbox]
+GROUP BY MessageId COLLATE NOCASE
+HAVING COUNT(*) > 1;
+```
+
+Review each group's payloads and dispatch state, archive the conflicting rows, and retain the
+intended record through an explicit operator decision. The migration never chooses a winner
+or deletes messages automatically. If duplicates remain, index creation fails and the migration
+transaction rolls back, including its history changes. Resolve the duplicates and retry provisioning.
+An incompatible index named `idx_<table>_MessageId` also requires operator resolution before retrying.
+
+For databases managed without Brighter provisioning, apply the equivalent index after resolving
+duplicates, in a transaction with writes paused:
+
+```sql
+BEGIN IMMEDIATE;
+CREATE UNIQUE INDEX [idx_Outbox_MessageId] ON [Outbox] ([MessageId] COLLATE NOCASE);
+COMMIT;
+```
+
+Roll back if index creation fails. If an equivalent index already exists, keep it; Brighter's
+provisioner recognizes equivalent indexes by their definition, regardless of name.
+
 ### MS SQL subscriber queues and consumer purge (#4665)
 
 `MsSqlPublication` opts into one copy per configured subscriber channel. Workers sharing a channel

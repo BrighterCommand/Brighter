@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             """
             CREATE TABLE IF NOT EXISTS {0}
             (
-                [MessageId] TEXT NOT NULL COLLATE NOCASE,
+                [MessageId] TEXT NOT NULL COLLATE NOCASE PRIMARY KEY,
                 [MessageType] TEXT NULL,
                 [Topic] TEXT NULL,
                 [Timestamp] TEXT NULL,
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             """
             CREATE TABLE IF NOT EXISTS {0}
             (
-                [MessageId] TEXT NOT NULL COLLATE NOCASE,
+                [MessageId] TEXT NOT NULL COLLATE NOCASE PRIMARY KEY,
                 [MessageType] TEXT NULL,
                 [Topic] TEXT NULL,
                 [Timestamp] TEXT NULL,
@@ -99,6 +99,10 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <param name="outboxTableName"></param>
         /// <param name="hasBinaryMessagePayload">Is the payload for the message binary or UTF-8. Defaults to false, or UTF-8</param>
         /// <returns>The required DDL</returns>
+        /// <remarks>
+        /// New tables enforce case-insensitive MessageId uniqueness. Existing tables are not
+        /// altered by this script; use the SQLite outbox provisioner to apply schema migrations.
+        /// </remarks>
         public static string GetDDL(string outboxTableName, bool hasBinaryMessagePayload = false)
         {
             var ddl = hasBinaryMessagePayload ? string.Format(BinaryOutboxDdl, outboxTableName) : string.Format(TextOutboxDDL, outboxTableName);

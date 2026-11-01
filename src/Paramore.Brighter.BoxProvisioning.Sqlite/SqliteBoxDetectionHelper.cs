@@ -137,6 +137,11 @@ WHERE [BoxTableName] = @BoxTableName";
     ///   <item><description><c>V &gt;= 1</c> for the highest version whose cumulative <c>LogicalColumns</c> is a subset of the actual columns.</description></item>
     /// </list>
     /// </summary>
+    /// <remarks>
+    /// A migration with the same logical columns as its predecessor is detected only when
+    /// its idempotency check succeeds. This distinguishes index-only migrations from schemas
+    /// that have the columns but lack the required index.
+    /// </remarks>
     /// <param name="boxType">Selects the discriminator: <c>HeaderBag</c> for outbox, <c>CommandBody</c> for inbox.</param>
     /// <param name="schemaName">Accepted and ignored — SQLite has no schema concept.</param>
     public async Task<int> DetectCurrentVersionAsync(
@@ -160,9 +165,23 @@ WHERE [BoxTableName] = @BoxTableName";
         {
             if (!actualColumns.IsSupersetOf(migrations[i].LogicalColumns))
                 break;
+            if (new HashSet<string>(migrations[i - 1].LogicalColumns, StringComparer.OrdinalIgnoreCase)
+                    .SetEquals(migrations[i].LogicalColumns)
+                && migrations[i].IdempotencyCheckSql is { } check
+                && !await IsMigrationAppliedAsync(connection, transaction, check.Value, cancellationToken))
+                break;
             matched = migrations[i].Version;
         }
         return matched;
+    }
+
+    private static async Task<bool> IsMigrationAppliedAsync(
+        SqliteConnection connection, SqliteTransaction? transaction, string sql, CancellationToken cancellationToken)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = sql;
+        return Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken)) > 0;
     }
 
     /// <summary>

@@ -14,7 +14,7 @@
         public string BulkAddCommand { get; } =
             "INSERT INTO {0} " +
             "(MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, PartitionKey,  HeaderBag, Body, Source, Type, DataSchema, Subject, TraceParent, TraceState, Baggage, WorkflowId, JobId) " +
-            "VALUES {1}"; 
+            "VALUES {1} ON CONFLICT DO NOTHING";
         public string MarkDispatchedCommand { get; } = "UPDATE {0} SET [Dispatched] = @DispatchedAt WHERE [MessageId] = @MessageId";
         public string MarkMultipleDispatchedCommand { get; } = "UPDATE {0} SET [Dispatched] = @DispatchedAt WHERE [MessageId] IN ( {1} )";
         public string GetMessageCommand { get; } = "SELECT * FROM {0} WHERE [MessageId] = @MessageId";
@@ -29,7 +29,7 @@
         public string BulkAddCausationCommand { get; } =
             "INSERT INTO {0} " +
             "(MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, PartitionKey, HeaderBag, Body, Source, Type, DataSchema, Subject, TraceParent, TraceState, Baggage, WorkflowId, JobId, CausationId) " +
-            "VALUES {1}";
+            "VALUES {1} ON CONFLICT DO NOTHING";
         public string ReplayCausationCommand { get; } = "UPDATE {0} SET [Dispatched] = NULL WHERE [CausationId] = @CausationId";
         public string CausationColumnExistsCommand { get; } = "SELECT 1 FROM pragma_table_info('{0}') WHERE name = 'CausationId'";
     }
