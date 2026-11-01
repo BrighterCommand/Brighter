@@ -272,7 +272,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
             var contentType = message.Header.ContentType.ToString()?? string.Empty;
             if (message.Body.Value.Length > 0)
             {
-                if (contentType.Contains("application/json") || contentType.Contains("text/json"))
+                if (IsJsonContentType(message.Header.ContentType))
                 {
                     data = JsonSerializer.Deserialize<JsonElement>(message.Body.Value, JsonSerialisationOptions.Options);
                 }
@@ -320,6 +320,14 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
             Log.ErrorDuringDeserializerAJsonOnWrap(s_logger, e);
             return message;
         }
+    }
+
+    private static bool IsJsonContentType(ContentType contentType)
+    {
+        var mediaType = contentType.MediaType;
+        var subtype = mediaType.Substring(mediaType.IndexOf('/') + 1);
+        return subtype.Equals("json", StringComparison.OrdinalIgnoreCase)
+            || subtype.EndsWith("+json", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
