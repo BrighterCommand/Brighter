@@ -37,7 +37,7 @@ public class When_spanner_outbox_provisioner_finds_existing_table_without_histor
     [Fact]
     public async Task Should_bootstrap_with_synthetic_history()
     {
-        // Arrange — create outbox table directly (simulating pre-migration install)
+        // Arrange
         using (var setupConn = CreateConnection())
         {
             await setupConn.OpenAsync();
