@@ -2,6 +2,51 @@
 
 ## Master
 
+### MS SQL subscriber queues and consumer purge (#4665)
+
+`MsSqlPublication` opts into one copy per configured subscriber channel. Workers sharing a channel
+continue to compete. Subscriber retries return to the receiving queue. A per-message delay requested
+without a matching queue-targeted scheduler falls back to immediate requeue with a warning; a positive
+subscription requeue delay still requires that scheduler at startup.
+
+Set `MsSqlSubscription.IsIndependentSubscriber = true` for each fan-out receiver. Plain subscriptions
+retain topic-based delayed retries, including SQL-equivalent channel and topic spellings. Fan-out sends
+reject subscriber names equivalent to the logical topic under the queue column's collation.
+
+The producer snapshots routing and timeout settings when `Publication` is assigned. Later mutations
+require reassignment to take effect. `MsSqlPublication.SendTimeout` controls the fan-out command timeout;
+it defaults to 30 seconds, rounds positive fractions up, and accepts zero for an infinite timeout.
+
+`MsSqlMessageConsumer.Purge()` and `PurgeAsync()` now delete only the consumer's physical queue,
+including for plain publications. They previously cleared the entire queue table. Administrative
+callers that need to clear the table can use `MsSqlMessageQueue<T>.Purge()`.
+Consumer purge uses batches of up to 500 rows and preserves rows above its initial identity cutoff.
+Outside an ambient transaction, each batch commits independently; cancellation or failure can leave a
+partial purge. Ambient transactions retain locks until completion.
+
+### Circuit-broken topics no longer stay tripped for ever (spec 0039, #4628)
+<!-- spec: 0039-circuit-breaker-stale-tripped-topics -->
+
+An outbox sweeper instance that stopped obtaining the distributed lock kept its circuit-broken topics for ever, and held back their messages when it next swept. `InMemoryOutboxCircuitBreaker` now also ends a trip after `MaximumTripDuration` (default 5 minutes) whatever the sweeper does, so a stale trip no longer holds back messages once the sweeper obtains the lock again. The reset log names whether a trip ended by cooldown or by maximum trip duration. `InMemoryOutboxCircuitBreaker` takes an optional `TimeProvider` as its last constructor parameter. Brighter still registers no breaker by default, and `IAmAnOutboxCircuitBreaker` is unchanged.
+
+#### Breaking changes
+
+- `InMemoryOutboxCircuitBreaker` now ends a trip after `MaximumTripDuration` even if its cooldown count has not run out. *(behavioural)* The 5-minute default exceeds the default cooldown of about 50 seconds. Raise it only if `CooldownCount` times `TimerInterval` is longer.
+- The reset log message names its cause, so its text changes. *(behavioural)* Update any alert or query that matches the old message.
+- The `InMemoryOutboxCircuitBreaker` constructor gains a trailing optional `TimeProvider` parameter. *(binary)* Callers compiled against the old signature must be recompiled; source is unchanged.
+
+### RMQ.Sync connection recovery and pool cleanup (#4596)
+
+The synchronous RabbitMQ connection pool no longer registers an ineffective shutdown eviction handler.
+Automatic recovery remains enabled by default. If the client recovers before the next pool lookup,
+the recovered connection is reused. A lookup that finds a closed connection disposes it and creates
+a replacement, cancelling recovery on the old connection. Explicit reset, removal and release of the
+last gateway reference still dispose connections. The pool's shutdown warning log is also removed
+with the handler.
+
+Direct pool callers that supply a `ConnectionFactory` with `AutomaticRecoveryEnabled = false`
+also use lazy replacement: shutdown no longer removes their closed pool entry immediately.
+
 ### GCP Pub/Sub stream shutdown cancellation
 
 Disposing a Stream or StreamOrdering consumer now logs cancellation reported by the subscriber client
@@ -144,9 +189,11 @@ The restart check is a restart condition because Brighter does not recreate a co
 
 #### BrighterServiceActivatorHealthCheck is obsolete
 
-`BrighterServiceActivatorHealthCheck` is marked `[Obsolete]` and is removed in V11. It still returns the same status for the same conditions and is untagged, so a tag-filtered endpoint never selects it. **Builds that treat warnings as errors fail with CS0618** until you suppress the warning or move to `AddBrighterConsumerHealthChecks`. Do not register the existing check together with the consumer remedy checks; replace it in one change and point probes and monitoring at endpoints that select the new tags.
+`BrighterServiceActivatorHealthCheck` is marked `[Obsolete]` and is removed in V11. Marking it obsolete does not itself change the statuses it reports. It remains untagged, so a tag-filtered endpoint never selects it. **Builds that treat warnings as errors fail with CS0618** until you suppress the warning or move to `AddBrighterConsumerHealthChecks`. Do not register the existing check together with the consumer remedy checks; replace it in one change and point probes and monitoring at endpoints that select the new tags.
 
-Migrate in this order so existing endpoints keep their behaviour:
+Starting with 10.8.1, the existing check also reports Degraded when any consumer has at least `channelFailureThreshold` consecutive channel failures (default: 3), as introduced by #4555. This applies even when all expected consumers are running. In 10.8.0, matching expected and running consumer counts reported Healthy regardless of channel failures. After upgrading from 10.8.0, readiness probes configured to map Degraded to HTTP 503 can therefore start taking affected instances out of service.
+
+Migrate in this order to control when existing endpoints select the new checks:
 
 1. Give every existing health endpoint a predicate that excludes the three remedy tags. An endpoint with no predicate would select the new checks, and a hung sweep would turn a readiness endpoint into a 503.
 2. Register the sweeper checks.

@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
                 var logEvents = TestCorrelator.GetLogEventsFromCurrentContext();
                 Assert.Contains(logEvents, e =>
                     e.Level == LogEventLevel.Information &&
-                    e.MessageTemplate.Text == "Circuit breaker reset for topic {Topic}; publish suppression lifted" &&
+                    e.MessageTemplate.Text == "Circuit breaker reset for topic {Topic} ({ResetCause}); publish suppression lifted" &&
                     e.Properties["Topic"].ToString() == "\"cooling.down.topic\"");
 
                 // Assert: Reset span exported

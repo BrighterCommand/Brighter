@@ -21,6 +21,8 @@ Date: 2025-07-04
 
 Proposed
 
+Amended by ADR 0089 (`0089-distributed-outbox-circuit-breaker.md`): an in-memory trip also ends at the maximum trip duration D (`OutboxCircuitBreakerOptions.MaximumTripDuration`, default 5 minutes), and the cooldown no longer has to advance on the lock holder's sweep to end a trip.
+
 ---
 
 ## Context

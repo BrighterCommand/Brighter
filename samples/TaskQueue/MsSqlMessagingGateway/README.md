@@ -90,6 +90,139 @@ certificate your clients trust, drop it.
 | `GreetingsSender` | `GreetingsReceiverConsole` | the sender provisions the Outbox, deposits and clears; the receiver prints the greeting once. Redelivery of the same id is de-duplicated, but you have to force one — see *Idempotence* |
 | `CompetingSender <count>` | two or more `CompetingReceiverConsole` | the count divided between the consumers — the split is arbitrary, and six messages across two receivers came out 3 and 3, 4 and 2, and 3 and 3 on three runs. The sender exits on its own; the receivers are hosts, so Ctrl-C when you have seen enough |
 
+### Multiple receivers: competing queues and fan-out
+
+With a plain `Publication`, receivers sharing a queue table and channel compete for messages.
+Reading a message atomically deletes its row. This also applies to events: changing a message's
+type does not enable broadcast delivery. `SubscriptionName` identifies a dispatcher subscription,
+not an independent broker queue.
+
+This is the shared-channel behavior reported in
+[issue #2792](https://github.com/BrighterCommand/Brighter/issues/2792). To give each receiver group
+a copy, keep the same logical topic and use a distinct subscriber channel for each group, as below.
+Keeping the original shared channel continues to distribute messages between competing receivers.
+
+For each subscriber group to receive its own copy, configure explicit subscriber queues on the
+producer. All publishers of that topic must use the same list:
+
+```csharp
+var publication = new MsSqlPublication<GreetingEvent>
+{
+    Topic = new RoutingKey("greeting.event"),
+    SubscriberChannels =
+    [
+        new ChannelName("greeting.email"),
+        new ChannelName("greeting.audit")
+    ]
+};
+
+var emailSubscription = new MsSqlSubscription<GreetingEvent>(
+    subscriptionName: new SubscriptionName("email"),
+    channelName: new ChannelName("greeting.email"),
+    routingKey: new RoutingKey("greeting.event")) { IsIndependentSubscriber = true };
+
+var auditSubscription = new MsSqlSubscription<GreetingEvent>(
+    subscriptionName: new SubscriptionName("audit"),
+    channelName: new ChannelName("greeting.audit"),
+    routingKey: new RoutingKey("greeting.event")) { IsIndependentSubscriber = true };
+```
+
+Pass the publication to the producer factory and the subscriptions to the consumer configuration,
+using the same SQL database and queue table. Match each subscription's message pump to its handler.
+Each send inserts a copy for every configured subscriber queue in one atomic statement. Each copy
+retains the logical topic, message id, body, and headers. Receivers can start after the send; their
+copies remain in the queue. Multiple workers on `greeting.email` still compete for that group's copy.
+
+The list must contain 1–1,000 nonblank channel names of at most 255 UTF-16 code units. A subscriber
+channel must differ from the logical topic. Equivalent channel names under the queue column's SQL
+collation receive one copy. Channel names are SQL parameter values, not SQL identifiers.
+
+SQL rejects subscriber names equivalent to the logical topic under the actual column collation before
+inserting any copies. This includes case, accent, and trailing-space aliases where SQL treats them as equal.
+Set `IsIndependentSubscriber = true` on each fan-out subscription. This explicitly selects physical-queue
+retry routing. Plain subscriptions retain topic-based scheduling, including when channel and topic spelling
+differ but identify the same SQL queue.
+
+The producer captures its logical topic, subscriber list, and `SendTimeout` when its publication is assigned.
+Later changes to the caller's list or publication do not change active routing. Assign `producer.Publication`
+again to apply new settings. Prepare that configuration before assignment; do not mutate it during capture.
+Fan-out sends default to a 30-second command timeout. Set `MsSqlPublication.SendTimeout` to a nonnegative
+`TimeSpan`; zero disables the command timeout, and positive fractions round up to whole seconds.
+
+No schema migration is needed. The queue table's `Topic` column holds the destination queue, while
+the serialized message holds the logical topic. A plain publication continues to write to its topic.
+A subscription alone does not register a binding: adding a receiver without updating the producer's
+subscriber list does not create new copies. Adding a destination affects future sends only; removing
+one does not delete that queue's backlog. Drain retired queues before removing their consumers.
+Also drain legacy topic queues before switching their producer registration to fan-out: a legacy
+consumer's topic-based delayed retry can resolve the new producer and broadcast that retry to every
+subscriber.
+
+Immediate retries return only to the receiving queue. Purging a consumer clears only that queue.
+For delayed subscriber retries, configure a SQL-targeted scheduler implementing
+`IAmAMessageRequeueSchedulerSync` or `IAmAMessageRequeueSchedulerAsync` for the selected pump.
+An ordinary topic scheduler is insufficient: it could broadcast the failed copy again. The consumer
+factory rejects a positive subscription `requeueDelay` without the matching targeted scheduler.
+Channel creation performs this validation before provisioning the queue store. An already-cancelled
+async retry stops before changing message metadata or invoking the scheduler.
+If a handler requests an explicit delay with `DeferMessageAction` despite a zero subscription delay,
+and no matching targeted scheduler is available, the consumer logs a warning and immediately requeues
+the copy to its physical queue. It preserves the logical topic and retry metadata without broadcasting
+to other subscribers. A configured scheduler's failures still propagate.
+There is no built-in persistent SQL retry scheduler in this change; use zero delay unless one is supplied.
+
+The existing delivery guarantees still apply. A rollback undoes every inserted copy, but a lost
+commit acknowledgement can produce duplicates when the sender retries. Receive deletes before the
+handler runs, so a process crash after receive can lose that subscriber's copy. Fan-out does not add
+acknowledgement-based redelivery or exactly-once processing. If subscriber handlers share an Inbox,
+use distinct handler identities so deduplication in one group does not suppress another group.
+
+Each destination stores the full serialized message. Size storage and transaction-log capacity for
+subscriber count multiplied by payload size. A send inside an ambient transaction keeps its copies
+uncommitted until that transaction completes. Concurrent transactions can commit out of identity order,
+and consumers can skip locked rows, so delivery is not guaranteed to follow publication or commit order.
+
+Consumer purge deletes at most 500 rows per statement and requests row locks. It records the queue's
+highest identity first, so rows with higher identities remain queued. Without an ambient transaction,
+each batch commits independently; cancellation or failure can therefore leave a partial purge. Inside
+an ambient transaction, locks remain held until that transaction completes. The cutoff is an identity
+boundary, not a snapshot of commit times.
+
+Batching reduces lock escalation during purge, but does not guarantee freedom from blocking. Large
+ambient transactions, memory pressure, or other table operations can still block unrelated queues.
+`READPAST` skips row locks; it does not skip page or table locks, and deleting from secondary indexes can
+still block.
+Keep transactions short and schedule large purges with this shared-table contention in mind.
+See SQL Server's [table hints](https://learn.microsoft.com/en-us/sql/t-sql/queries/hints-transact-sql-table)
+and [lock escalation guidance](https://learn.microsoft.com/en-us/troubleshoot/sql/database-engine/performance/resolve-blocking-problems-caused-lock-escalation).
+
+The existing dequeue query uses `READPAST` and requires locking Read Committed or Repeatable Read
+isolation. If sends use an ambient `TransactionScope` and share a connection pool with consumers,
+set its `TransactionOptions.IsolationLevel` explicitly to `IsolationLevel.ReadCommitted`.
+The default Serializable isolation can remain on pooled connections and cause later dequeues to fail.
+Databases using `READ_COMMITTED_SNAPSHOT` also require different dequeue locking hints; this
+fan-out change does not add support for that configuration.
+
+### Validating the transport
+
+Run [verify-production.sql](verify-production.sql) in the intended deployment database to report
+its SQL Server version, collation, and isolation configuration. It reads configuration only and
+fails if `READ_COMMITTED_SNAPSHOT` is enabled. It does not certify application transaction scopes
+or pooled session state. Keep the queue column's collation consistent between test and deployment.
+
+With the test SQL Server available on `127.0.0.1:11433`, run the complete regression suite:
+
+```bash
+dotnet test tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj
+```
+
+The `MsSqlFanOutTests`, `MsSqlFanOutConfigurationTests`, `MsSqlSubscriberRetryTests`, and
+`MsSqlCompetingReceiversTests` cover the new contract and legacy queue behavior. Run them against
+the SQL Server version and database collation used by the deployment before release.
+The concurrency test runs four publishers and four consumers per subscriber queue simultaneously,
+checking all 200 message IDs and payloads in both queues. Additional cases cover case-insensitive
+and binary collations, maximum-length queue names, and large Unicode payloads.
+
 ### What the competing demo looks like from outside
 
 Each `Post` commits on its own, so the receivers start taking messages while the sender is still

@@ -54,6 +54,7 @@ public partial class ChannelFactory : MsSqlMessagingGateway, IAmAChannelFactory,
         if (msSqlSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
 
+        _msSqlMessageConsumerFactory.ValidateSubscription(msSqlSubscription, false);
         EnsureQueueStoreExists(msSqlSubscription.MakeChannels);
 
         Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
@@ -76,6 +77,7 @@ public partial class ChannelFactory : MsSqlMessagingGateway, IAmAChannelFactory,
         if (msSqlSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
 
+        _msSqlMessageConsumerFactory.ValidateSubscription(msSqlSubscription, true);
         EnsureQueueStoreExists(msSqlSubscription.MakeChannels);
 
         Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
@@ -100,6 +102,8 @@ public partial class ChannelFactory : MsSqlMessagingGateway, IAmAChannelFactory,
         if (msSqlSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
 
+        ct.ThrowIfCancellationRequested();
+        _msSqlMessageConsumerFactory.ValidateSubscription(msSqlSubscription, true);
         await EnsureQueueStoreExistsAsync(msSqlSubscription.MakeChannels, ct);
 
         Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
