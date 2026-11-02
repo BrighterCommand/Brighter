@@ -33,20 +33,25 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// <c>MySqlOutboxBuilder</c> stays in step with the migration chain: its columns are V_latest's logical
+/// columns plus housekeeping, it emits the CausationId replay index, and it is the catalog's fresh-install
+/// DDL; V1's UpScript stays the historical, pre-Dispatched DDL (ADR 0057 §1, §3).
+/// </summary>
 public class MySqlOutboxBuilderDriftTests
 {
+    private const string IgnoredConnectionString = "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;";
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public void When_mysql_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
         bool hasBinaryMessagePayload)
     {
-        //Arrange — drive the builder DDL and the V_latest LogicalColumns from the same config so
-        //any developer change to one without the other surfaces here. MySQL identifiers are
-        //quoted with `backticks`; QuoteStyle.MySql is case-insensitive.
+        //Arrange
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
-            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            IgnoredConnectionString,
             outBoxTableName: tableName,
             binaryMessagePayload: hasBinaryMessagePayload);
 
@@ -74,15 +79,9 @@ public class MySqlOutboxBuilderDriftTests
     public void When_mysql_outbox_v1_upscript_is_inspected_it_should_carry_pre_dispatched_historical_baseline(
         bool hasBinaryMessagePayload)
     {
-        //V1.UpScript is the literal historical DDL (Spec 0027 R1, commit
-        //3c30343fa^, the shape before Dispatched). The Dispatched column was introduced in V2
-        //(3c30343fa, July 2019). This tripwire prevents a future "helpful" refactor from
-        //quietly rewriting V1.UpScript back to live-builder shape: chain replay against a
-        //legacy installation that bootstrapped at V1 must see the same starting DDL it always
-        //saw. See spec 0027 README archaeology and ADR 0057 §3.
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
-            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            IgnoredConnectionString,
             outBoxTableName: tableName,
             binaryMessagePayload: hasBinaryMessagePayload);
 
@@ -100,13 +99,9 @@ public class MySqlOutboxBuilderDriftTests
     public void When_mysql_outbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
         bool hasBinaryMessagePayload)
     {
-        //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
-        //for the fresh-install fast path (ADR 0057 §3), distinct from V1.UpScript which now
-        //carries the historical baseline (Part 4). This tripwire holds the fast-path DDL
-        //identical to the live builder so the two cannot diverge silently.
         const string tableName = "outbox_test";
         var config = new RelationalDatabaseConfiguration(
-            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            IgnoredConnectionString,
             outBoxTableName: tableName,
             binaryMessagePayload: hasBinaryMessagePayload);
 
@@ -122,9 +117,6 @@ public class MySqlOutboxBuilderDriftTests
     public void When_mysql_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index(
         bool hasBinaryMessagePayload)
     {
-        //The drift test above compares columns only; the new CausationId replay index (Spec 0027,
-        //#2541) is asserted separately here per AC9. MySQL expresses it as an inline KEY inside the
-        //CREATE TABLE IF NOT EXISTS so a fresh install lands the same index a V8 migration does.
         const string tableName = "outbox_test";
         var ddl = MySqlOutboxBuilder.GetDDL(tableName, hasBinaryMessagePayload);
 
@@ -133,16 +125,22 @@ public class MySqlOutboxBuilderDriftTests
     }
 }
 
+/// <summary>
+/// The MySQL inbox catalog stays in step with <c>MySqlInboxBuilder</c>: V_latest's columns plus the
+/// housekeeping columns equal the builder's, <c>FreshInstallDdl</c> is the builder's DDL, and V1 is
+/// the pre-<c>ContextKey</c> historical baseline (ADR 0057 §3).
+/// </summary>
 public class MySqlInboxBuilderDriftTests
 {
+    private const string IgnoredConnectionString = "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;";
+
     [Fact]
     public void When_mysql_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
     {
-        //Arrange — MySQL inbox has V1 + V2 (V2 added ContextKey). After Task 3.3 the migration
-        //list should reach V_latest=2 and the live builder column set should match V2.
+        //Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
-            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            IgnoredConnectionString,
             inboxTableName: tableName);
 
         var builderColumns = DdlColumnExtractor.GetExpectedColumns(
@@ -169,7 +167,7 @@ public class MySqlInboxBuilderDriftTests
         //Arrange
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
-            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            IgnoredConnectionString,
             inboxTableName: tableName);
 
         //Act
@@ -185,13 +183,9 @@ public class MySqlInboxBuilderDriftTests
     [Fact]
     public void When_mysql_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder()
     {
-        //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
-        //for the fresh-install fast path (ADR 0057 §3), distinct from V1.UpScript which now
-        //carries the historical baseline (Part 4). This tripwire holds the fast-path DDL
-        //identical to the live builder so the two cannot diverge silently.
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
-            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            IgnoredConnectionString,
             inboxTableName: tableName);
 
         var expected = MySqlInboxBuilder.GetDDL(tableName, config.BinaryMessagePayload);

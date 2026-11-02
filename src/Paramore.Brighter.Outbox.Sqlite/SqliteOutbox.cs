@@ -41,8 +41,8 @@ namespace Paramore.Brighter.Outbox.Sqlite;
 /// </summary>
 public class SqliteOutbox : RelationDatabaseOutbox
 {
-    private const int SqliteDuplicateKeyError = 1555;
-    private const int SqliteUniqueKeyError = 19;
+    private const int SQLITE_DUPLICATE_KEY_ERROR = 1555;
+    private const int SQLITE_UNIQUE_KEY_ERROR = 2067;
     private readonly object _abandonedReadsLock = new();
     private Task _abandonedReads = Task.CompletedTask;
 
@@ -72,7 +72,7 @@ public class SqliteOutbox : RelationDatabaseOutbox
     /// <inheritdoc />
     protected override bool IsExceptionUniqueOrDuplicateIssue(Exception ex)
     {
-        return ex is SqliteException { SqliteErrorCode: SqliteDuplicateKeyError or SqliteUniqueKeyError };
+        return ex is SqliteException { SqliteExtendedErrorCode: SQLITE_DUPLICATE_KEY_ERROR or SQLITE_UNIQUE_KEY_ERROR };
     }
 
     /// <inheritdoc />
