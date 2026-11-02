@@ -47,7 +47,11 @@ Then:
 2. **Exclude** generated tests (see `.agent_instructions/generated_tests.md`) — fix the template
    instead, if the template is in scope — and `*.Designer.cs`, migrations, and non-code files.
 3. **Size the scope before reading it.** Count the comment lines the scope added, split into `//`
-   or `/* */` lines and `///` lines, per project (`git diff <scope> -- <project> | grep -E '^\+\s*//'`).
+   or `/* */` lines and `///` lines, per project:
+   `dotnet run .claude/commands/refactor/comment_census.cs -- <range> [path...] [--liquid]`.
+   It prints one row per project (`//` lines excluding bare AAA markers, `///` lines, files, and lines
+   carrying a spec, PR, issue or `File.cs:N` reference), skipping licence regions, `Generated/` and
+   `*.Designer.cs`; `--liquid` adds the generator's templates.
    If the scope is more than one project, or more than about 150 `//` lines, a single plan is too big
    to review. Propose slices with `AskUserQuestion`:
    - one project per slice, `src/` before `tests/`;
@@ -226,9 +230,11 @@ changes they name, or stop. Also ask whether to commit as you go or leave the co
 Two passes, so a reviewer can read each one quickly:
 
 1. **Comment-only pass** — Delete, Strip reference, Trim, Move to signature, Convert XML.
-   - Check that the pass changed only comments: no added or removed line in `git diff -U0` may be
-     anything other than a comment or blank line. The one expected exception is a line whose trailing
-     comment changed, with the code before it identical.
+   - Check that the pass changed only comments:
+     `dotnet run .claude/commands/refactor/comment_only_check.cs -- [git diff arguments]` (with none,
+     the working tree against `HEAD`). It exits 0 when every changed line in a `.cs` or `.liquid` file
+     is a comment or blank, allowing a changed trailing comment whose code is identical, and exits 2,
+     printing each offending line, otherwise. Fix or explain every line it prints before committing.
    - Grep the changed files for references that survived (`Spec 0`, `PR #`, `#NNNN`, `Item X`,
      `File.cs:N`, `Phase N`).
    - Build (`dotnet build` on the affected projects). A comment-only change cannot change behaviour,

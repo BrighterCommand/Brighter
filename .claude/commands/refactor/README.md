@@ -58,6 +58,14 @@ ADR section references, magic literals in tests, …) are settled in the skill's
 section and applied without asking. A large range is worked in slices, one PR each, tracked in
 `PROMPT.md`.
 
+Two file-based helpers sit beside the skill, each with a sibling test script
+(`dotnet run .claude/commands/refactor/<name>_tests.cs`):
+
+- `comment_census.cs <range> [path...] [--liquid]` sizes the comments a range added, per project, for
+  slicing.
+- `comment_only_check.cs [git diff arguments]` exits 2 if a diff changes anything but comments and
+  blank lines in code files — the check for a comment-only commit.
+
 **Usage:**
 ```bash
 /refactor:tidy-comments                 # comments this branch added or changed
