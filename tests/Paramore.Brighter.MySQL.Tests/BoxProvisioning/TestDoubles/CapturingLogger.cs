@@ -29,11 +29,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
 
-/// <summary>
-/// Minimal <see cref="ILogger"/> that buffers entries in memory so tests can assert on log
-/// emission. Each captured entry exposes the level, the formatted message, and any attached
-/// <see cref="Exception"/>.
-/// </summary>
 internal sealed class CapturingLogger : ILogger
 {
     public List<CapturedEntry> Entries { get; } = new();

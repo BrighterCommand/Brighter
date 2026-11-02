@@ -31,21 +31,12 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// <see cref="MySqlAdvisoryLock"/> rejects a lock timeout that is negative or does not fit
+/// <c>GET_LOCK</c>'s <c>INT</c> seconds argument, and accepts <c>int.MaxValue</c> seconds (ADR 0057 §5b).
+/// </summary>
 public class MySqlAdvisoryLockTimeoutValidationTests
 {
-    // GET_LOCK takes its @timeout via a SQL INT bind (whole seconds), so any TimeSpan whose
-    // ceil(TotalSeconds) exceeds int.MaxValue silently overflows on cast and may wrap to a
-    // negative int — which GET_LOCK then interprets as "wait forever". A negative TimeSpan has
-    // no meaningful interpretation for an exclusive application lock and would otherwise be
-    // silently floored to a 1-second wait by the `Math.Max(1, Math.Ceiling(...))` shape,
-    // masking the bad input. Per ADR 0057 §5b the validation lives inside the abstraction's
-    // acquire path so any caller of MySqlAdvisoryLock — including but not limited to
-    // MySqlBoxMigrationRunner — is protected. The boundary value (int.MaxValue seconds ≈ 68
-    // years) is the largest value that fits GET_LOCK's INT @timeout argument without overflow
-    // and must be accepted by the validation guard. Mirrors
-    // `MsSqlAdvisoryLockTimeoutValidationTests` per PR #4039 review item #7; the MSSQL boundary
-    // is int.MaxValue *milliseconds* (~24.85 days) because sp_getapplock takes ms.
-
     private readonly string _connectionString = Const.DefaultConnectingString;
 
     [Fact]
@@ -68,15 +59,7 @@ public class MySqlAdvisoryLockTimeoutValidationTests
     [Fact]
     public async Task When_lock_timeout_exceeds_int_max_seconds_acquire_should_throw()
     {
-        //Arrange — GET_LOCK takes its timeout via an INT bind (whole seconds), so any TimeSpan
-        //whose ceil(TotalSeconds) exceeds int.MaxValue silently overflows on cast (wraps to a
-        //negative int) and GET_LOCK then interprets the bind as "wait forever" — defeating the
-        //migration lock for callers expecting bounded waits. Surface as ArgumentOutOfRangeException
-        //so the failure mode at acquire time is a clear diagnostic rather than a deadlocked
-        //deployment. Mirrors `MsSqlAdvisoryLockTimeoutValidationTests` per PR #4039 review item #7;
-        //note the MSSQL boundary is int.MaxValue *milliseconds* (~24.85 days) because sp_getapplock
-        //takes ms, whereas GET_LOCK takes seconds — so the MySQL boundary is int.MaxValue seconds
-        //(~68 years).
+        //Arrange
         var overflowingTimeout = TimeSpan.FromSeconds((double)int.MaxValue + 1);
 
         await using var connection = new MySqlConnection(_connectionString);
@@ -93,14 +76,7 @@ public class MySqlAdvisoryLockTimeoutValidationTests
     [Fact]
     public async Task When_lock_timeout_is_at_int_max_seconds_acquire_should_succeed()
     {
-        //Arrange — the inclusive upper bound (int.MaxValue seconds ≈ 68 years) is the largest
-        //value that fits GET_LOCK's INT @timeout argument without overflow; it must NOT be
-        //rejected by the validation guard. Acquisition itself succeeds because no other session
-        //holds the lock — GET_LOCK returns 1 immediately. Regression pin against any future
-        //tightening of the overflow guard from `>` to `>=`, which would silently reject a
-        //legitimate boundary input. Unique lock name avoids contention with parallel test runs;
-        //short prefix because MySQL caps user-level lock names at 64 chars (32-char Guid + a
-        //"bm_bnd_" prefix fits comfortably; MSSQL's 255-char @Resource limit does not apply).
+        //Arrange
         var boundaryTimeout = TimeSpan.FromSeconds(int.MaxValue);
         var lockResource = $"bm_bnd_{Guid.NewGuid():N}";
 
@@ -114,10 +90,8 @@ public class MySqlAdvisoryLockTimeoutValidationTests
             advisoryLock.AcquireAsync(
                 connection, lockResource, boundaryTimeout, default));
 
-        //Assert — boundary must not be rejected by the validation guard.
+        //Assert
         Assert.IsNotType<ArgumentOutOfRangeException>(ex);
         Assert.Null(ex);
-
-        //Cleanup — session-scoped GET_LOCK is released by the `await using` connection dispose.
     }
 }
