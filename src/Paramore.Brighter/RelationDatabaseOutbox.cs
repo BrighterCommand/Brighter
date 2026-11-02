@@ -101,7 +101,7 @@ namespace Paramore.Brighter
 
             try
             {
-                DataRefColumnExists();
+                var includeDataRef = DataRefColumnExists();
                 var parameters = InitAddDbParameters(message);
                 var includeCausation = CausationColumnExists();
                 if (includeCausation)
@@ -109,7 +109,7 @@ namespace Paramore.Brighter
                     parameters = [.. parameters, CreateSqlParameter("@CausationId", DbType.String, ReadCausationId(requestContext))];
                 }
 
-                WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters, includeCausation), () =>
+                WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters, includeDataRef, includeCausation), () =>
                 {
                     logger.LogWarning(
                         "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
@@ -152,14 +152,12 @@ namespace Paramore.Brighter
 
             try
             {
-                // Gate the bulk write on the same memoized probe as the single Add so a batch deposited under
-                // [UseInbox] persists its CausationId; an un-migrated table keeps the plain bulk insert (AC10).
-                DataRefColumnExists();
+                var includeDataRef = DataRefColumnExists();
                 var includeCausation = CausationColumnExists();
                 var causationId = includeCausation ? ReadCausationId(requestContext) : null;
 
                 WriteToStore(transactionProvider,
-                    connection => InitBulkAddDbCommand(messages.ToList(), connection, includeCausation, causationId),
+                    connection => InitBulkAddDbCommand(messages.ToList(), connection, includeDataRef, includeCausation, causationId),
                     () => logger.LogWarning("Outbox: At least one message already exists in the outbox"));
             }
             finally
@@ -199,7 +197,8 @@ namespace Paramore.Brighter
 
             try
             {
-                await DataRefColumnExistsAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                var includeDataRef = await DataRefColumnExistsAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
                 var parameters = InitAddDbParameters(message);
                 var includeCausation = await CausationColumnExistsAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
@@ -209,7 +208,7 @@ namespace Paramore.Brighter
                 }
 
                 await WriteToStoreAsync(transactionProvider,
-                    connection => InitAddDbCommand(connection, parameters, includeCausation), () =>
+                    connection => InitAddDbCommand(connection, parameters, includeDataRef, includeCausation), () =>
                     {
                         logger.LogWarning(
                             "A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
@@ -253,15 +252,14 @@ namespace Paramore.Brighter
 
             try
             {
-                // Gate the bulk write on the same memoized probe as the single AddAsync so a batch deposited under
-                // [UseInbox] persists its CausationId; an un-migrated table keeps the plain bulk insert (AC10).
-                await DataRefColumnExistsAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                var includeDataRef = await DataRefColumnExistsAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
                 var includeCausation = await CausationColumnExistsAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
                 var causationId = includeCausation ? ReadCausationId(requestContext) : null;
 
                 await WriteToStoreAsync(transactionProvider,
-                    connection => InitBulkAddDbCommand(messages.ToList(), connection, includeCausation, causationId),
+                    connection => InitBulkAddDbCommand(messages.ToList(), connection, includeDataRef, includeCausation, causationId),
                     () => logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"),
                     cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
@@ -1064,17 +1062,17 @@ namespace Paramore.Brighter
             return exists;
         }
 
-        private string AddCommand(bool includeCausation)
+        private string AddCommand(bool includeDataRef, bool includeCausation)
         {
-            if (IncludeDataRef)
+            if (includeDataRef)
                 return includeCausation ? DataRefQueries!.AddDataRefCausationCommand : DataRefQueries!.AddDataRefCommand;
 
             return includeCausation ? CausationQueries!.AddCausationCommand : queries.AddCommand;
         }
 
-        private string BulkAddCommand(bool includeCausation)
+        private string BulkAddCommand(bool includeDataRef, bool includeCausation)
         {
-            if (IncludeDataRef)
+            if (includeDataRef)
                 return includeCausation ? DataRefQueries!.BulkAddDataRefCausationCommand : DataRefQueries!.BulkAddDataRefCommand;
 
             return includeCausation ? CausationQueries!.BulkAddCausationCommand : queries.BulkAddCommand;
@@ -1395,23 +1393,22 @@ namespace Paramore.Brighter
         private DbCommand InitAddDbCommand(
             DbConnection connection,
             IDbDataParameter[] parameters,
+            bool includeDataRef,
             bool includeCausation
         )
-            // The caller threads in the result of its own CausationColumnExists[Async]() probe, so the
-            // SQL choice and the parameter list are decided from a single read; absent column → plain AddCommand.
             => CreateCommand(connection,
-                GenerateSqlText(AddCommand(includeCausation)),
+                GenerateSqlText(AddCommand(includeDataRef, includeCausation)),
                 0, parameters);
 
         private DbCommand InitReplayCausationCommand(DbConnection connection, string causationId)
             => CreateCommand(connection, GenerateSqlText(CausationQueries!.ReplayCausationCommand), 0,
                 CreateSqlParameter("@CausationId", DbType.String, causationId));
 
-        private DbCommand InitBulkAddDbCommand(List<Message> messages, DbConnection connection, bool includeCausation,
-            string? causationId)
+        private DbCommand InitBulkAddDbCommand(List<Message> messages, DbConnection connection, bool includeDataRef,
+            bool includeCausation, string? causationId)
         {
             var insertClause = GenerateBulkInsert(messages, includeCausation, causationId);
-            var addCommand = BulkAddCommand(includeCausation);
+            var addCommand = BulkAddCommand(includeDataRef, includeCausation);
             return CreateCommand(connection, GenerateSqlText(addCommand, insertClause.insertClause), 0,
                 insertClause.parameters);
         }
