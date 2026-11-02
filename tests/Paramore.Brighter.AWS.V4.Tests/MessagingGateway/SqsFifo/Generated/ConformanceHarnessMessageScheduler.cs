@@ -17,13 +17,10 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsFifo;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A transport with no native delayed delivery honours a requested delay by delegating to the
+/// For a transport with no native delayed delivery, which honours a delay by delegating to the
 /// scheduler seam: a producer's <c>SendWithDelay</c> for a delayed send, and the consumer
-/// factory's scheduler for a delayed requeue. The conformance suite tests the <em>gateway's</em>
-/// delay-delegation contract, not Brighter's scheduler implementations (which have their own
-/// tests), so the harness supplies a scheduler that honours the delay by wall-clock and
-/// re-publishes the message to its topic once the delay elapses - exactly the
-/// universal-by-wall-clock behaviour the delayed-send and delayed-requeue tests assert.
+/// factory's scheduler for a delayed requeue. It re-publishes the message to its topic once the
+/// delay elapses. See ADR 0066.
 /// </para>
 /// <para>
 /// Everything that varies between transports is in <paramref name="republish"/>: the caller builds
@@ -35,8 +32,10 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsFifo;
 /// </para>
 /// <para>
 /// No broker is needed to exercise the machinery: a caller supplying its own delegate drives the
-/// timers, identity and disposal directly, which is what
-/// <c>ConformanceHarnessMessageSchedulerTests</c> does.
+/// timers, identity and disposal directly.
+/// </para>
+/// <para>
+/// <c>ReScheduler</c> always returns <c>false</c>: no delayed-send or delayed-requeue behaviour calls it.
 /// </para>
 /// </remarks>
 /// <param name="republish">
@@ -50,9 +49,7 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
         IAmAMessageSchedulerAsync,
         IDisposable
 {
-    // Keyed by the id Schedule hands back, because that id is the only handle Cancel is given. A
-    // scheduler that returns an id it does not record can never honour a Cancel: it looks for a
-    // timer it has no way to find, and the message arrives anyway with the caller told nothing.
+    // Keyed by the id Schedule returns: it is the only handle Cancel is given.
     private readonly Dictionary<string, Timer> _timers = new();
     private readonly List<IDisposable> _disposables = [];
     private readonly object _lock = new();
@@ -102,8 +99,6 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
         CancellationToken cancellationToken = default
     ) => Task.FromResult(Schedule(message, at));
 
-    // ReScheduler is not exercised by the delayed-send or delayed-requeue behaviours.
-
     /// <inheritdoc />
     public bool ReScheduler(string schedulerId, DateTimeOffset at) => false;
 
@@ -136,8 +131,6 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
             }
         }
 
-        // Disposing a one-shot timer that has not yet fired is what cancellation is: the callback
-        // never runs, so the message is never republished.
         try
         {
             timer.Dispose();
@@ -163,9 +156,7 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
     /// The scheduler only ever learns about a resource that is returned to it, so a republish that
     /// allocates a producer and then fails on the way out would take that producer with it - the
     /// delegate never returns, nothing else holds a reference, and the broker connection it opened
-    /// stays open for the life of the process. The copies this type replaces did not have the
-    /// problem because they put the producer on a list *before* sending; a delegate that returns
-    /// its allocation cannot, so the rule lives here, once, rather than in all seventeen callers.
+    /// stays open for the life of the process.
     /// </remarks>
     /// <param name="allocated">What publishing allocated, or <c>null</c> if it allocated nothing.</param>
     /// <param name="send">Publishes the message. Its exception is propagated unchanged.</param>
@@ -184,8 +175,7 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
             }
             catch
             {
-                // The send's exception is the one worth reporting; a failure closing up after it
-                // must not replace it on the way out.
+                // Best-effort: the send's exception is the one to report.
             }
 
             throw;
@@ -196,13 +186,12 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
 
     private static TimeSpan Clamp(TimeSpan delay) => delay > TimeSpan.Zero ? delay : TimeSpan.Zero;
 
+    // Claims its own entry first: Cancel and Dispose take a timer out of the map before disposing
+    // it, so a callback already in flight finds nothing and stops instead of racing the cancel.
     private void Fire(string id, Message message)
     {
         lock (_lock)
         {
-            // Cancel and Dispose both take the timer out of the map before they dispose it, so a
-            // callback that was already in flight when they ran finds nothing here and stops. This
-            // is the only thing standing between a cancelled schedule and a republish that races it.
             if (!_timers.Remove(id, out _))
             {
                 return;

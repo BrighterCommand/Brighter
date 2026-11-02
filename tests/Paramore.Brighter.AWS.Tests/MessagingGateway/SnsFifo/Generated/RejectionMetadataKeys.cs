@@ -5,17 +5,15 @@
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SnsFifo;
 
 /// <summary>
-/// Strongly-typed record of the per-transport <c>Header.Bag</c> key strings under which
-/// rejection metadata is stamped. The semantic set is universal; only the key names
-/// and casing vary per transport.
-/// A provider whose gateway stamps Brighter rejection metadata returns the real key names.
-/// A provider whose gateway dead-letters via a native broker mechanism (e.g. RabbitMQ's DLX)
-/// routes the untouched original message and stamps no Brighter metadata; it declares this by
-/// returning <c>string.Empty</c> for every key (never <c>null</c>). Reject-to-DLQ/invalid
-/// behaviours then assert the message's arrival at the dead-letter/invalid destination
-/// unconditionally, and skip the metadata sub-assertions when the provider does not stamp
-/// metadata (the relaxation granted to native-dead-letter transports).
+/// The per-transport <c>Header.Bag</c> key names under which rejection metadata is stamped. The
+/// semantic set is universal; only the key names and their casing vary by transport.
 /// </summary>
+/// <remarks>
+/// A provider whose gateway dead-letters through a native broker mechanism (e.g. RabbitMQ's DLX)
+/// routes the untouched original and stamps no Brighter metadata. It declares this by returning
+/// <c>string.Empty</c> for every key, never <c>null</c>; the reject behaviours then assert arrival
+/// at the dead-letter or invalid destination and skip the metadata sub-assertions.
+/// </remarks>
 public sealed record RejectionMetadataKeys(
     string OriginalTopic,
     string OriginalType,
@@ -24,10 +22,9 @@ public sealed record RejectionMetadataKeys(
     string RejectionTimestamp)
 {
     /// <summary>
-    /// Whether the provider's gateway stamps Brighter rejection metadata onto dead-lettered /
-    /// invalid messages. <c>false</c> for a transport that dead-letters via a native broker
-    /// mechanism (which routes the untouched original and adds no Brighter metadata), signalled
-    /// by empty keys. When <c>false</c>, reject behaviours assert routing only.
+    /// Whether the provider's gateway stamps Brighter rejection metadata onto dead-lettered or
+    /// invalid messages; <c>false</c>, signalled by empty keys, for a transport that dead-letters
+    /// natively. When <c>false</c>, reject behaviours assert routing only.
     /// </summary>
     public bool StampsRejectionMetadata => !string.IsNullOrEmpty(RejectionReason);
 }
