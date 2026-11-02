@@ -176,26 +176,31 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
                 continue;
             }
 
-            lock (_lock)
-            {
-                if (!_view.TryGetValue(result.Topic, out var viewed) || viewed < result.StoredTripTime)
-                    _view[result.Topic] = result.StoredTripTime;
-            }
+            RaiseView(result);
 
-            if (result.PriorTripTime is null)
-            {
-                Announce(CircuitBreakerSpanOperation.Trip, result.Topic);
-            }
-            else if (HasRunOut(result.PriorTripTime.Value))
-            {
-                Announce(CircuitBreakerSpanOperation.Reset, result.Topic);
-                Announce(CircuitBreakerSpanOperation.Trip, result.Topic);
-            }
-            else
-            {
-                Announce(CircuitBreakerSpanOperation.ReTrip, result.Topic);
-            }
+            foreach (var operation in AnnouncementsFor(result))
+                Announce(operation, result.Topic);
         }
+    }
+
+    private void RaiseView(TripWriteResult result)
+    {
+        lock (_lock)
+        {
+            if (!_view.TryGetValue(result.Topic, out var viewed) || viewed < result.StoredTripTime)
+                _view[result.Topic] = result.StoredTripTime;
+        }
+    }
+
+    private CircuitBreakerSpanOperation[] AnnouncementsFor(TripWriteResult result)
+    {
+        if (result.PriorTripTime is null)
+            return [CircuitBreakerSpanOperation.Trip];
+
+        if (HasRunOut(result.PriorTripTime.Value))
+            return [CircuitBreakerSpanOperation.Reset, CircuitBreakerSpanOperation.Trip];
+
+        return [CircuitBreakerSpanOperation.ReTrip];
     }
 
     private async Task WriteLiveAsync(IReadOnlyCollection<KeyValuePair<RoutingKey, DateTimeOffset>> pending)
