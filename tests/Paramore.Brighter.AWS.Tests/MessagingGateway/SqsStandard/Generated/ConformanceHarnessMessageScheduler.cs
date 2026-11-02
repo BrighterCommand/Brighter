@@ -59,25 +59,8 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
     public string Schedule(Message message, TimeSpan delay)
     {
         var id = Guid.NewGuid().ToString();
-
-        // Created disarmed and armed under the lock, after it is recorded. A timer armed before
-        // the dictionary knows about it can fire first, find no entry for its own id, and drop the
-        // message; armed outside the lock, a Cancel that lands in between disposes it and the
-        // Change that follows throws. Arming last, and inside, closes both.
-        var timer = new Timer(_ => Fire(id, message), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-
-        lock (_lock)
-        {
-            if (_disposed)
-            {
-                timer.Dispose();
-                return id;
-            }
-
-            _timers.Add(id, timer);
-            timer.Change(Clamp(delay), Timeout.InfiniteTimeSpan);
-        }
-
+        var disarmedTimer = new Timer(_ => Fire(id, message), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        RecordThenArm(id, disarmedTimer, delay);
         return id;
     }
 
@@ -184,6 +167,23 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
         return allocated;
     }
 
+    // Arms only after recording, and under the lock: armed earlier, the timer can fire, find no entry
+    // for its id and drop the message; armed outside, a racing Cancel disposes it and Change throws.
+    private void RecordThenArm(string id, Timer timer, TimeSpan delay)
+    {
+        lock (_lock)
+        {
+            if (_disposed)
+            {
+                timer.Dispose();
+                return;
+            }
+
+            _timers.Add(id, timer);
+            timer.Change(Clamp(delay), Timeout.InfiniteTimeSpan);
+        }
+    }
+
     private static TimeSpan Clamp(TimeSpan delay) => delay > TimeSpan.Zero ? delay : TimeSpan.Zero;
 
     // Claims its own entry first: Cancel and Dispose take a timer out of the map before disposing
@@ -205,14 +205,7 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
         }
         catch (Exception ex)
         {
-            // Redelivery is best-effort, so a broker error does not fail the harness - but it must
-            // not be silent either. Unlogged, a scheduler that failed to republish and a transport
-            // that ignored the delay produce the same red test: the after-delay arm timing out with
-            // no message and no exception. The delayed-send and delayed-requeue verdicts in the ledger are
-            // read off those results, so the two have to be tellable apart.
-            Console.Error.WriteLine(
-                $"ConformanceHarnessMessageScheduler: republish of {message.Id} to {message.Header.Topic} failed; "
-                + $"the after-delay arm will time out. {ex.GetType().Name}: {ex.Message}");
+            ReportRepublishFailure(message, ex);
         }
 
         if (allocated == null)
@@ -220,6 +213,20 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
             return;
         }
 
+        HandBackOrRelease(allocated);
+    }
+
+    // Logged, not thrown: unlogged, a failed republish looks exactly like a transport that ignored
+    // the delay - the after-delay arm times out with no message and no exception.
+    private static void ReportRepublishFailure(Message message, Exception ex) =>
+        Console.Error.WriteLine(
+            $"ConformanceHarnessMessageScheduler: republish of {message.Id} to {message.Header.Topic} failed; "
+            + $"the after-delay arm will time out. {ex.GetType().Name}: {ex.Message}");
+
+    // Once Dispose has run its list is never walked again, so an allocation handed back after it is
+    // released here, or a live producer holds a broker connection open past the end of the test.
+    private void HandBackOrRelease(IDisposable allocated)
+    {
         lock (_lock)
         {
             if (!_disposed)
@@ -229,9 +236,6 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
             }
         }
 
-        // Dispose ran while this republish was in flight, so its list will never be walked again.
-        // Whatever publishing allocated is this callback's to release, or it leaks - a live producer
-        // holding a broker connection open past the end of the test that created it.
         try
         {
             allocated.Dispose();
