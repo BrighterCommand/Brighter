@@ -62,14 +62,22 @@ Then:
    `<head>`:
    - A comment the range added that has since been deleted is gone; skip it.
    - A comment the range added that has since been edited is still in scope.
-   - A comment added **after** the range, in a file the range touched, is out of scope by the
-     rule in step 5. Mark these comments **†** in the plan and ask the user, with the plan
-     approval, whether to include them. Tidying a file once is cheaper than coming back to it.
+   - A comment added **after** the range, in a file the range **created**, is marked **†** in the
+     plan and included: tidying a file once is cheaper than coming back to it. In a file the range
+     only modified, a later comment stays out of scope by the rule in step 5.
+   - **Files renamed since the range** are still in scope under their current names. Map them with
+     `git diff --name-status -M <head> HEAD -- <path>`. A file the range created that has since been
+     deleted is gone.
+   - **Files added after the range** stay out of scope, even when their names match the slice's
+     filter.
 5. With a diff scope, tidy only the comments **this diff added or changed**. Untouched comments are
    out of scope; churning them hides the real change in review. Read each file in full anyway — you
    need the surrounding method to decide whether a comment can become an extraction.
-6. Check the build is green and the relevant tests pass. If the work is still moving or the tests
-   fail, say so and stop: the extractions below need a green baseline.
+6. Check the build is green and the relevant tests pass, **before you edit anything**, and note the
+   test count. If the work is still moving or the tests fail, say so and stop: the extractions below
+   need a green baseline. For tests that need a container, bring it up first (`/test-infra:run-tests`);
+   check the run actually executed tests, since a framework filter the project does not target runs
+   nothing and still reports success.
 
 If the scope is empty, say so and stop.
 
@@ -88,7 +96,7 @@ itself.
 | **Move to signature** | A genuine "what is this for" or "beware this trap" comment inside the body of a method that already does one thing | Move it above the signature — `//` for a non-public member, into `<remarks>` for a public or protected one |
 | **Convert XML** | `///` on an internal or private type or member | Replace with a `//` comment above the signature if it says something the name does not; otherwise delete |
 | **Extract** | The comment labels a block, or explains an expression, a literal or a variable | Let the code say it. **Extract Method** for a block (the comment becomes the method name); **Extract Variable** or **Decompose Conditional** for a condition; a **named constant** for a magic literal; **Rename** for a variable or parameter. Keep a comment above the new method's signature only if the name cannot carry it |
-| **Rationale to ADR** | Reviewer-facing rationale (why this approach, alternatives rejected) that is **not** already in an ADR | Do not silently delete it. List it for the user: add it to the relevant ADR, or drop it |
+| **Rationale to ADR** | Reviewer-facing rationale (why this approach, alternatives rejected) that is **not** already in an ADR | Do not silently delete it. List it in the plan with the ADR and section it will go into; adding it is the default, and the user may drop it instead |
 | **Side-stepped refactoring** | The comment papers over a design problem that a local extraction does not fix — see below | Leave the code alone. Report it and schedule it in Phase 5 |
 
 ### Spotting a side-stepped refactoring
@@ -110,6 +118,85 @@ and wrote it down instead of fixing it:
 Name the refactoring from Fowler's catalogue, as `/refactor:smells` does. If the refactoring would
 change behaviour (a new guard that throws, a changed type a caller depends on) or change a `public` or
 `protected` signature, say so: it belongs in `/tdd:test-first` or needs a decision, not a tidy.
+
+## Settled Decisions
+
+These cases came up again and again in earlier tidies and have been decided. Apply them in the plan
+without raising them as questions; raise a case only when it does not fit.
+
+### Production code
+
+- **Issue links in XML docs** ("tracked at …/issues/4140") are stripped, even where they point users at
+  planned work.
+- **ADR section references that do not exist** are corrected when the right section is clear, otherwise
+  stripped, keeping the rest of the sentence. Check the section, not just the ADR number.
+- **Commit SHAs that give the provenance of a historical literal** (a legacy DDL string, say) are kept;
+  `PR #…` beside them is stripped.
+- **Data is not comment.** Leave `SourceReference`-style values in catalogs, sentinel strings, exception
+  messages and assert messages, even when they carry spec or PR labels.
+- **A trailing comment on a `_ = param;` discard** is deleted; the `<param>` docs or class remarks
+  already say it. A discard that exists only to carry a comment (the value is used elsewhere) goes with
+  it.
+- **A `//` comment above a protected override** becomes `/// <inheritdoc />` plus `<remarks>`.
+- **Long public remarks** that repeat another type's remarks, or cite `File.cs:line`, are trimmed to the
+  point a user needs.
+- **A comment justifying a `!`** goes above the one private method that does the `!`. When the same `!`
+  and justification appear more than once, extract that method.
+- **An invalid `cref`** (a URL, a type in another assembly) becomes plain text or `<c>…</c>`.
+- **Rationale living in a catch block** goes to the ADR; the catch keeps at most one trap line, above the
+  method signature.
+
+### Rationale and ADRs
+
+- **Rationale not in an ADR** is added to the ADR as its own `docs:` commit, before the comment is
+  deleted. Rationale that lives only in a production signature comment still goes to the ADR before a
+  test's copy of it is deleted.
+- **Verify every claimed gap** against the ADRs before writing. Search every ADR on the subject, including
+  later ones (a multi-tenancy ADR may already say what a migrations ADR does not). Many claimed gaps are
+  already covered.
+- **The ADR can be the thing that is wrong.** When a deleted comment was right and the ADR disagrees with
+  the code, fix the ADR in the `docs:` commit. When the comment was wrong, check the code before writing
+  anything down.
+
+### Extractions
+
+- Extracted members are `private`; tests pass unedited. Before moving code out of a type, check for tests
+  that reflect over it (`GetMethods`, `BindingFlags`).
+- **Don't add a comment above an extracted local;** let its name carry it.
+- **When an extraction merges two guards**, keep the exception's `ParamName` and message as they were:
+  use the name that can actually surface (the first one called).
+- **Never re-indent the inside of a verbatim SQL string** when moving it into a helper. Check the diff
+  shows no SQL text changed.
+- **Magic error numbers** in `catch … when` filters become named `private const int`s; use a provider
+  constant (`PostgresErrorCodes.*`) where one exists.
+- **A comment over a run of guard clauses** becomes one `private static void ThrowIf…` per guard, keeping
+  any trap as that method's signature comment.
+- **A literal derived from other constants** (a length budget, say) is computed from them, as a
+  `private static readonly` when a `.Length` is involved.
+
+### Tests
+
+- **`///` on a public test class:** keep it as XML, cut to the behaviour pinned and why. Strip spec, PR,
+  item, phase and slice references, "pre-fix" or "previously" history, repo file paths and `§… line N`;
+  keep the ADR number and section.
+- **A `//` block above a test class, or a narrative inside its braces above the fields:** delete the
+  history. Any remaining why goes to the ADR; the block becomes a one- or two-line `/// <summary>`. A class
+  with no XML doc whose narrative is deleted gets a one- to three-line `/// <summary>`.
+- **AAA markers carrying text** (`//Assert — …`) become bare; a reason not carried by the test name or
+  class summary moves into the class summary. `//Arrange + Act` and `//Act + Assert` stay.
+- **Comments between assertions,** and "discriminator" comments in object initialisers, are deleted.
+- **`///` on private nested doubles and `internal` test doubles or helpers:** a one-line `//` above the
+  type only when it names a trap (for example "post-Begin hooks throw NotSupportedException, so reaching
+  one surfaces as the wrong exception"); otherwise delete it.
+- **A trailing comment on `[InlineData]`** keeps a short label and drops `File.cs:N` and review
+  references.
+- **Empty-catch markers** (`// Best-effort cleanup`, `/* best-effort */`) are kept.
+- **Test extractions:** a magic literal becomes a `private const`; a magic duration a
+  `private static readonly TimeSpan s_<name>`; a comment-labelled assert block (`// Verify table exists`
+  over an inline command) a private helper returning the value; a trailing label on a literal
+  (`"PartitionKey" // V4 column`) a `private const string V4Column`; a hard-coded latest version the
+  project's `ExpectedMigrationVersions`-style constant; a comment over an Act block repeated across tests
+  a shared `private static` helper; a comment justifying a local a better name for the local.
 
 ## Phase 3: Present the Plan
 
@@ -139,9 +226,18 @@ changes they name, or stop. Also ask whether to commit as you go or leave the co
 Two passes, so a reviewer can read each one quickly:
 
 1. **Comment-only pass** — Delete, Strip reference, Trim, Move to signature, Convert XML.
+   - Check that the pass changed only comments: no added or removed line in `git diff -U0` may be
+     anything other than a comment or blank line. The one expected exception is a line whose trailing
+     comment changed, with the code before it identical.
+   - Grep the changed files for references that survived (`Spec 0`, `PR #`, `#NNNN`, `Item X`,
+     `File.cs:N`, `Phase N`).
    - Build (`dotnet build` on the affected projects). A comment-only change cannot change behaviour,
      but a broken `/* */` or a malformed `///` can break the build or add warnings.
    - Commit, if the user chose to: `refactor: tidy comments in <area>`
+   - **For 30 or more files**, two agents doing this pass on disjoint file sets work well. Neither
+     commits, extracts or edits an ADR. Each reports its changes, claimed ADR gaps and extraction
+     candidates. Verify the gaps yourself, then run the comment-only check on the combined diff
+     before committing.
 2. **Extraction pass** — Extract actions only.
    - Extracted members are `private` (or `private static`). Do not change any public or protected
      signature.
@@ -150,7 +246,9 @@ Two passes, so a reviewer can read each one quickly:
      refactoring instead.
    - Commit, if the user chose to: `refactor: extract methods to express intent in <area>`
 
-If the user approved adding rationale to an ADR, make that edit as its own `docs:` commit.
+If the user approved adding rationale to an ADR, make that edit as its own `docs:` commit, first, so
+the commits read `docs:`, then `refactor: tidy comments in <area>`, then
+`refactor: extract methods to express intent in <area>`.
 
 Show the user the diff stat for each pass.
 
@@ -180,12 +278,20 @@ repo root (gitignored, local) is where that state lives; see CLAUDE.md § *Conte
 Keep a `## Comment tidy` section in `PROMPT.md` with:
 
 - the branch the tidy commits land on;
-- the scope as a whole, and the decisions made on the first slice that later slices should repeat
-  (for example whether † comments are included, or whether issue links in XML docs are stripped);
+- the scope as a whole, and any decisions made on the first slice that later slices should repeat
+  and that *Settled Decisions* does not cover;
 - a checklist of slices, each as its exact command, ticked with its commit SHAs when it lands;
 - the issues or tasks filed in Phase 5, so they are not filed twice.
 
 Update it at the end of each run. Show the user the section before writing it, the first time.
+
+A decision made on one slice that *Settled Decisions* does not already cover goes into `PROMPT.md` so
+the next slice repeats it. Once the scope is finished, propose adding the ones that will recur to
+*Settled Decisions*.
+
+Each slice gets its own branch and PR from `master`, and touches only its own files, so a slice can
+start while the previous slice's PR is still open. Before pushing, if an earlier slice has merged,
+merge `origin/master` into the slice branch and re-run its tests.
 
 ## Rules
 
