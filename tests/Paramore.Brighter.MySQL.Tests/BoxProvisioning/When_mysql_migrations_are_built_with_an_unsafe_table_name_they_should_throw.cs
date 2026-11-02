@@ -26,23 +26,15 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-// Item Q-mysql (spec 0027 PR #4039 third review). Pins the factory-entry wiring of
-// Identifiers.AssertSafe at the MySQL *MigrationCatalog.All(...) entry: any unsafe table name must be
-// rejected before the factory builds migration up-scripts. The injection vector called out in the
-// reviewer comment sits at MySqlOutboxMigrationCatalog.cs:165 where a single quote in tableName breaks
-// the inlined information_schema.columns predicate ('{table}'); the helper guarantees no quote
-// ever reaches that interpolation path.
-//
-// MySQL has no schema concept — V2+ ALTER scripts run against the runtime DATABASE() function,
-// not a configured schema name — so only the table identifier is validated at the factory.
-// ConfigurationException is the documented contract; no MySQL connection is required because the
-// rejection happens before any DDL is rendered against a live server (connection string is
-// "Server=ignored;Database=ignored;").
-
+/// <summary>
+/// The MySQL catalogs' <c>All</c> rejects an unsafe table name with a <see cref="ConfigurationException"/>
+/// before building any up-script that would interpolate it (ADR 0058, Guards and contracts). No connection
+/// is opened.
+/// </summary>
 public class MySqlMigrationsUnsafeIdentifierTests
 {
     [Theory]
-    [InlineData("O'Brien")]    // single quote — exact injection vector at MySqlOutboxMigrationCatalog.cs:165
+    [InlineData("O'Brien")]    // single quote — would break inlined string predicates
     [InlineData("1Outbox")]    // leading digit — invalid as bare identifier
     [InlineData("my-outbox")]  // hyphen — would need backtick-quoting to be legal
     public void When_mysql_outbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)

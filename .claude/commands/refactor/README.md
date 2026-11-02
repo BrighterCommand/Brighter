@@ -53,11 +53,25 @@ Variable, a named constant or a rename. Comments that were written *instead of* 
 `refactor:` commit, with tests green and no public signature changed. Reviewer rationale missing from
 the ADR is shown to you rather than deleted.
 
+Recurring cases (issue links in XML docs, AAA markers carrying text, XML docs on test doubles, wrong
+ADR section references, magic literals in tests, …) are settled in the skill's *Settled Decisions*
+section and applied without asking. A large range is worked in slices, one PR each, tracked in
+`PROMPT.md`.
+
+Two file-based helpers sit beside the skill, each with a sibling test script
+(`dotnet run .claude/commands/refactor/<name>_tests.cs`):
+
+- `comment_census.cs <range> [path...] [--liquid]` sizes the comments a range added, per project, for
+  slicing.
+- `comment_only_check.cs [git diff arguments]` exits 2 if a diff changes anything but comments and
+  blank lines in code files — the check for a comment-only commit.
+
 **Usage:**
 ```bash
 /refactor:tidy-comments                 # comments this branch added or changed
 /refactor:tidy-comments HEAD~3          # comments changed since a ref
 /refactor:tidy-comments src/Paramore.Brighter/CommandProcessor.cs  # every comment in a file with no changes
+/refactor:tidy-comments 83e0e5e47^1..83e0e5e47 src/Paramore.Brighter.BoxProvisioning  # one slice of a merged range
 ```
 
 ## The Core Principle
