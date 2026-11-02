@@ -63,16 +63,13 @@ public class FailedBuildScopeDisposalLoggingTests
 
         var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactory);
 
-        //added to Initializer.Factory directly — the one instance every Brighter static logger in this
-        //process is bound to — not to ApplicationLogging.LoggerFactory, which another test may reassign
-        var loggerProvider = new CapturingLoggerProvider();
-        Initializer.Factory.AddProvider(loggerProvider);
+        using var logs = new InMemoryLogCapture();
 
         //act
         Assert.Throws<ConfigurationException>(() => pipelineBuilder.BuildWrapPipeline<PoisonedScopeCommand>());
 
         //assert — the no-pipeline-constructed branch's own Error message fired once, naming the request type
-        var disposalFailures = loggerProvider.Entries
+        var disposalFailures = logs.Entries
             .Where(e => e.EventId.Name == "FailedToDisposePipelineScopeAfterFailedBuild")
             .ToList();
         var disposalFailure = Assert.Single(disposalFailures);
@@ -80,6 +77,6 @@ public class FailedBuildScopeDisposalLoggingTests
         Assert.Contains(nameof(PoisonedScopeCommand), disposalFailure.Message);
 
         //assert — the outer cleanup guard did not also log a Warning for the same event
-        Assert.DoesNotContain(loggerProvider.Entries, e => e.EventId.Name == "FailedToCleanUpAfterFailedBuild");
+        Assert.DoesNotContain(logs.Entries, e => e.EventId.Name == "FailedToCleanUpAfterFailedBuild");
     }
 }
