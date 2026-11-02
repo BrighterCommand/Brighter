@@ -1,18 +1,22 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
+using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.DynamoDB.Tests.Outbox.Async;
 using Paramore.Brighter.DynamoDB.Tests.Outbox.Sync;
+using Paramore.Brighter.DynamoDB.Tests.Outbox.OutstandingCount;
 using Paramore.Brighter.Outbox.DynamoDB;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox;
 
-public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
+public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync, IAmAnOutstandingCountOutboxProvider
 {
     private string _tableName = "";
+    private readonly List<string> _outstandingCountTables = [];
 
     public IAmAnOutboxSync<Message, TransactWriteItemsRequest> CreateOutbox()
     {
@@ -120,5 +124,46 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
         } while (lastKey != null && lastKey.Keys.Count != 0);
 
         return receivedMessages;
+    }
+
+    public void DeleteOutstandingCountStore()
+    {
+        foreach (var tableName in _outstandingCountTables)
+        {
+            try
+            {
+                DynamoDbOutboxTable.DeleteTableAsync(Const.DynamoDbClient, tableName).GetAwaiter().GetResult();
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        _outstandingCountTables.Clear();
+    }
+
+    public IAmAnOutboxAsync<Message, TransactWriteItemsRequest> CreateOutstandingCountStore()
+    {
+        return CreateOutstandingCountOutbox(Const.OUTBOX_TIMEOUT_IN_MILLISECONDS);
+    }
+
+    public Task<OutstandingCountCancellationSetup<TransactWriteItemsRequest>> PrepareCancellationAsync(TimeSpan holdFor)
+    {
+        var tableName = DynamoDbOutboxTable.CreateTableAsync(Const.DynamoDbClient).GetAwaiter().GetResult();
+        var outbox = new DynamoDbOutbox(Const.DynamoDbClient, new DynamoDbConfiguration(tableName, timeout: 0));
+
+        return Task.FromResult(new OutstandingCountCancellationSetup<TransactWriteItemsRequest>(
+            outbox,
+            storeHeld: false,
+            clientCancellationException: typeof(OperationCanceledException),
+            release: async () => await DynamoDbOutboxTable.DeleteTableAsync(Const.DynamoDbClient, tableName)));
+    }
+
+    private DynamoDbOutbox CreateOutstandingCountOutbox(int timeout)
+    {
+        var tableName = DynamoDbOutboxTable.CreateTableAsync(Const.DynamoDbClient).GetAwaiter().GetResult();
+        _outstandingCountTables.Add(tableName);
+
+        return new DynamoDbOutbox(Const.DynamoDbClient, new DynamoDbConfiguration(tableName, timeout: timeout));
     }
 }

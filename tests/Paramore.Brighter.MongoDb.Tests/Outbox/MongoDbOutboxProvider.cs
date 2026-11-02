@@ -1,14 +1,17 @@
 ﻿
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MongoDB.Driver;
+using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.MongoDB.Tests.Outbox.Async;
+using Paramore.Brighter.MongoDB.Tests.Outbox.OutstandingCount;
 using Paramore.Brighter.MongoDB.Tests.Outbox.Sync;
 using Paramore.Brighter.Outbox.MongoDb;
 
 namespace Paramore.Brighter.MongoDb.Tests.Outbox;
 
-public class MongoDbOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
+public class MongoDbOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync, IAmAnOutstandingCountOutboxProvider
 {
     private readonly string _collectionName = $"Outbox{Uuid.New():N}";
 
@@ -92,5 +95,32 @@ public class MongoDbOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvide
         });
 
         return await outbox.GetAsync();
+    }
+
+    public void DeleteOutstandingCountStore()
+    {
+        try
+        {
+            DeleteStore(Array.Empty<Message>());
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    public IAmAnOutboxAsync<Message, IClientSessionHandle> CreateOutstandingCountStore()
+    {
+        CreateStore();
+        return CreateOutboxAsync();
+    }
+
+    public Task<OutstandingCountCancellationSetup<IClientSessionHandle>> PrepareCancellationAsync(TimeSpan holdFor)
+    {
+        var outbox = CreateOutboxAsync();
+        return Task.FromResult(new OutstandingCountCancellationSetup<IClientSessionHandle>(
+            outbox,
+            storeHeld: false,
+            clientCancellationException: typeof(OperationCanceledException),
+            release: () => new ValueTask(DeleteStoreAsync(Array.Empty<Message>()))));
     }
 }

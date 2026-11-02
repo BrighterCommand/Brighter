@@ -44,15 +44,19 @@ public class OutboxCollectionGenerationTests : IDisposable
     [InlineData("Sync", false, "SharedOutbox")]
     [InlineData("Async", false, "SharedOutbox")]
     [InlineData("Causation", false, "SharedOutbox")]
+    [InlineData("OutstandingCount", false, "SharedOutbox")]
     [InlineData("Sync", true, "SharedOutbox")]
     [InlineData("Async", true, "SharedOutbox")]
     [InlineData("Causation", true, "SharedOutbox")]
+    [InlineData("OutstandingCount", true, "SharedOutbox")]
     [InlineData("Sync", false, null)]
     [InlineData("Async", false, null)]
     [InlineData("Causation", false, null)]
+    [InlineData("OutstandingCount", false, null)]
     [InlineData("Sync", true, null)]
     [InlineData("Async", true, null)]
     [InlineData("Causation", true, null)]
+    [InlineData("OutstandingCount", true, null)]
     public async Task When_generating_outbox_suites_should_honor_collection_configuration(
         string suite, bool usePluralConfiguration, string? collectionName)
     {
@@ -106,7 +110,8 @@ public class OutboxCollectionGenerationTests : IDisposable
     private static void AssertCollection(string suiteDirectory, string? collectionName)
     {
         var testFiles = Directory.GetFiles(suiteDirectory, "*.cs")
-            .Where(file => !Path.GetFileName(file).StartsWith("IAmAnOutboxProvider", StringComparison.Ordinal))
+            .Where(file => !Path.GetFileName(file).StartsWith("IAmAnOutboxProvider", StringComparison.Ordinal)
+                           && !Path.GetFileName(file).StartsWith("IAmAnOutstandingCountOutboxProvider", StringComparison.Ordinal))
             .ToArray();
         Assert.NotEmpty(testFiles);
         Assert.All(testFiles, file =>

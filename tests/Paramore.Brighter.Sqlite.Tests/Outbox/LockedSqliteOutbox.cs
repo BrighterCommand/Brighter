@@ -42,6 +42,7 @@ public sealed class LockedSqliteOutbox : IDisposable
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_locked_outbox_{Guid.NewGuid():N}.db");
     private readonly string _connectionString;
+    private readonly CountingSqliteConnectionProvider _connectionProvider;
     private SqliteConnection? _lockHolder;
     private Task? _release;
 
@@ -72,11 +73,18 @@ public sealed class LockedSqliteOutbox : IDisposable
             Execute(setup, SqliteOutboxBuilder.GetDDL(tableName));
         }
 
-        Outbox = new SqliteOutbox(configure(_connectionString, tableName));
+        var configuration = configure(_connectionString, tableName);
+        _connectionProvider = new CountingSqliteConnectionProvider(configuration);
+        Outbox = new SqliteOutbox(configuration, _connectionProvider);
         Outbox.Add(new DefaultMessageFactory().Create(DateTimeOffset.UtcNow.AddMinutes(-5)), new RequestContext());
     }
 
     public SqliteOutbox Outbox { get; }
+
+    /// <summary>
+    /// How many connections the outbox has asked for to run an asynchronous call. Each asynchronous read asks for one.
+    /// </summary>
+    public int AsyncConnections => _connectionProvider.AsyncConnections;
 
     /// <summary>
     /// Takes the exclusive lock now and releases it after <paramref name="holdFor"/>, on another thread.

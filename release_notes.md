@@ -2,6 +2,43 @@
 
 ## Master
 
+### Measure how many outbox messages have gone stale, overall and per topic (spec 0038, #4489)
+<!-- spec: 0038-outbox-stale-message-telemetry -->
+
+Messages that stay undispatched in the outbox were invisible until someone queried the store. A new hosted service, `TimedOutboxStaleMessageMonitor`, now counts them on a timer and reports the result as OpenTelemetry metrics, so an alert can fire when messages get stuck. It is opt-in and works with any outbox that supports the async overall count.
+
+#### The monitor and its instruments
+
+`UseOutboxStaleMessageMonitor` on `IBrighterBuilder` registers the monitor, and needs the outbox and producer configuration that `AddProducers` registers. Its settings are `StaleMessageAge` (required, at most 365 days), `CountCeiling` (default 100, at most 1000), `MeasurementInterval` (default 1 minute) and `MeasurementTimeout` (default 10 seconds, below the interval). When the monitor is in use, `AddBrighterInstrumentation` registers three instruments on the Brighter meter. Every series carries `paramore.brighter.outbox.implementation`, the outbox's type name. The counter's count is in `paramore.brighter.outbox.stale.count` and its outcome in `paramore.brighter.outbox.stale.outcome`.
+
+| Instrument | Type | Unit | Reports |
+|---|---|---|---|
+| `paramore.brighter.outbox.stale.messages` | Observable gauge | `{message}` | Undispatched messages older than the age, up to the ceiling |
+| `paramore.brighter.outbox.stale.topic.messages` | Observable gauge | `{message}` | The same count for one topic, tagged `messaging.destination.name` |
+| `paramore.brighter.outbox.stale.measurements` | Observable counter | `{measurement}` | Measurements by count (`overall` or `per_topic`) and outcome (`completed`, `failed`, `abandoned`, `skipped`) |
+
+A value equal to the ceiling means the ceiling or more. A `completed` total that stops rising means there is no recent reading.
+
+#### Per-topic ages and the optional capability
+
+`Publication.StaleMessageAge` sets the age for one topic, and a topic with several publications uses the smallest. `IAmATopicCountingOutbox` is the optional capability that counts several topics in one call. `InMemoryOutbox` implements it. Other outboxes report the overall count only until they add it, and the monitor logs that once at start.
+
+New public types and members, all additive: `TimedOutboxStaleMessageMonitor` and `TimedOutboxStaleMessageMonitorOptions` in `Paramore.Brighter.Outbox.Hosting`; `OutboxStaleMessageMeter`, `OutboxStaleMessageReadings`, `StaleMessageCount` and `StaleMeasurementOutcome` in `Paramore.Brighter.Observability`; `IAmATopicCountingOutbox`; and `Publication.StaleMessageAge`.
+
+The telemetry page of the documentation covers the settings, the alerts and the known limitations of each outbox.
+
+#### Fixes to the overall count
+
+Three outboxes had an async overall count that did not follow the age, the ceiling or the cancellation token. This release fixes them:
+
+- `FirestoreOutbox.GetOutstandingMessageCountAsync` now counts only messages older than the age, stops at the ceiling and passes the token to the call. Before, it counted every undispatched message. With a token that is already cancelled, it ends with an `RpcException` whose status is `Cancelled`. The synchronous count is unchanged.
+- The DynamoDB and DynamoDB.V4 count could stop short of the ceiling, because it split the ceiling across the scan segments, and a ceiling below `ScanConcurrency` made it fail. Each segment now counts up to the whole ceiling, so the segments together can count up to `ScanConcurrency` times the ceiling, and the total is then capped at the ceiling. A ceiling of zero or less sends no Scan. The synchronous count calls the async one, so the producer's outstanding message check gets the same change.
+- When an async read of `SqliteOutbox` gets a token that can be cancelled, it now runs on a pool thread of its own, so the caller stops waiting once the token is cancelled, even while the store is locked. The abandoned read keeps that thread until it ends. A `GetOutstandingMessageCountAsync` call waiting on the lock ends when `OutstandingCountTimeout` passes, 15 seconds by default. The other reads have no command timeout by default. While the abandoned read runs, a later async read of the same `SqliteOutbox` with a token that can be cancelled waits for it, and ends with `OperationCanceledException` without reading if its own token is cancelled first. That includes the read `AddAsync` and `ReplayCausationAsync` make to find out whether the table has the causation column, until the outbox has read the answer once.
+
+#### Breaking changes
+
+No breaking changes.
+
 ### MS SQL subscriber queues and consumer purge (#4665)
 
 `MsSqlPublication` opts into one copy per configured subscriber channel. Workers sharing a channel
