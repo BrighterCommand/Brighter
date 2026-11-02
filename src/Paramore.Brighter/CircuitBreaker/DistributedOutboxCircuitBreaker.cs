@@ -127,7 +127,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
                 var topics = new List<RoutingKey>();
                 foreach (var trip in _view)
                 {
-                    if (now - trip.Value < _tripLength)
+                    if (IsLive(now, trip.Value))
                         topics.Add(trip.Key);
                 }
 
@@ -214,7 +214,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         var trips = new List<TopicTrip>(pending.Count);
         foreach (var trip in pending)
         {
-            if (now - trip.Value < _tripLength)
+            if (IsLive(now, trip.Value))
                 trips.Add(new TopicTrip(trip.Key, trip.Value));
             else
                 DropStale(trip.Key, trip.Value);
@@ -223,7 +223,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         return trips;
     }
 
-    private bool HasRunOut(DateTimeOffset stamp) => _timeProvider.GetUtcNow() - stamp >= _tripLength;
+    private bool IsLive(DateTimeOffset now, DateTimeOffset stamp) => now - stamp < _tripLength;
+
+    private bool HasRunOut(DateTimeOffset stamp) => !IsLive(_timeProvider.GetUtcNow(), stamp);
 
     private void DropEnded(RoutingKey topic, DateTimeOffset storedStamp)
     {
