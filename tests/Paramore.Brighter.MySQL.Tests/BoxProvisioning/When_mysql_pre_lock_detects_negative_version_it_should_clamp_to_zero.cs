@@ -35,19 +35,14 @@ using Xunit;
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
 /// <summary>
-/// Pins F11 behavioural unification (Phase 13.B): the MySQL provisioners' pre-lock detection
-/// MUST clamp negative version sentinels (-1, spec 0027's "discriminator missing") to 0 in the
-/// <see cref="BoxTableState"/> handed to the migration runner — matching MSSQL / Postgres /
-/// SQLite. Pre-13.B, MySQL's transitional identity override propagated -1 unchanged; post-13.B,
-/// the override is gone and the inlined clamp in <c>SqlBoxProvisioner.DetectTableStateAsync</c>
-/// maps -1 → 0.
+/// The MySQL provisioners' pre-lock detection clamps a negative version (the -1 "discriminator
+/// missing" sentinel) to 0 in the <see cref="BoxTableState"/> handed to the runner, as the other
+/// relational backends do.
 /// </summary>
 /// <remarks>
-/// Stubbed helper short-circuits real schema I/O once the connection is open; the test requires
-/// only that <see cref="MySqlConnection.OpenAsync"/> succeeds (Docker MySQL up). Bootstrap branch
-/// is exercised by claiming the table exists but history does not — the only call site where the
-/// clamp applies (the history-exists branch goes through <c>GetMaxVersionAsync</c>, which the
-/// stub raises <see cref="NotSupportedException"/> on to make any accidental traversal loud).
+/// The stub detection helper reports a table without history, the only branch where the clamp applies;
+/// it throws <see cref="NotSupportedException"/> from <c>GetMaxVersionAsync</c> so taking the other branch
+/// fails loudly. The connection must still open, so MySQL must be running.
 /// </remarks>
 public class MySqlPreLockNegativeVersionClampTests
 {
@@ -56,7 +51,7 @@ public class MySqlPreLockNegativeVersionClampTests
     [Fact]
     public async Task When_mysql_outbox_provisioner_pre_lock_detection_returns_negative_version_it_should_clamp_to_zero()
     {
-        //Arrange — bootstrap branch (table exists, history missing); DetectCurrentVersionAsync = -1.
+        //Arrange
         var detection = new BootstrapDetectionHelper { DetectedVersionResult = -1 };
         var migrationRunner = new VersionCapturingMigrationRunner();
         var config = new RelationalDatabaseConfiguration(
@@ -72,7 +67,7 @@ public class MySqlPreLockNegativeVersionClampTests
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — captured BoxTableState.CurrentVersion clamped from -1 to 0 by the base.
+        //Assert
         Assert.NotNull(migrationRunner.CapturedTableState);
         Assert.Equal(0, migrationRunner.CapturedTableState!.CurrentVersion);
     }
@@ -80,7 +75,7 @@ public class MySqlPreLockNegativeVersionClampTests
     [Fact]
     public async Task When_mysql_inbox_provisioner_pre_lock_detection_returns_negative_version_it_should_clamp_to_zero()
     {
-        //Arrange — bootstrap branch (table exists, history missing); DetectCurrentVersionAsync = -1.
+        //Arrange
         var detection = new BootstrapDetectionHelper { DetectedVersionResult = -1 };
         var migrationRunner = new VersionCapturingMigrationRunner();
         var config = new RelationalDatabaseConfiguration(
@@ -96,7 +91,7 @@ public class MySqlPreLockNegativeVersionClampTests
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — captured BoxTableState.CurrentVersion clamped from -1 to 0 by the base.
+        //Assert
         Assert.NotNull(migrationRunner.CapturedTableState);
         Assert.Equal(0, migrationRunner.CapturedTableState!.CurrentVersion);
     }
