@@ -31,13 +31,7 @@ using Paramore.Brighter.BoxProvisioning.MySql;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
 
-/// <summary>
-/// Test decorator over <see cref="IMySqlAdvisoryLock"/>: delegates Acquire to the underlying
-/// implementation, then signals <see cref="AcquireSeen"/> and parks until the caller-supplied
-/// <c>releaseGate</c> task completes. While parked, the underlying real MySQL <c>GET_LOCK</c>
-/// is genuinely held — any concurrent acquire of the same lock name on a separate session will
-/// block (or time out).
-/// </summary>
+// While parked in AcquireAsync the real GET_LOCK is held, so a concurrent acquire of the same name blocks.
 internal sealed class HoldingMySqlAdvisoryLock(
     IMySqlAdvisoryLock inner,
     Task releaseGate) : IMySqlAdvisoryLock
