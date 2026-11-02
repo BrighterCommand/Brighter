@@ -29,23 +29,17 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
-// Item Q-spanner (spec 0027 PR #4039 third review). Pins the runner-entry wiring of
-// Identifiers.AssertSafe at SpannerBoxMigrationRunner.MigrateAsync. Spanner is a degenerate
-// runner per ADR 0057 §6 (no V_k chain, no *MigrationCatalog.All(...) factory), so the runner entry
-// is the only place to assert. The injection vectors sit at BuildBoxDdl (which interpolates
-// tableName into Spanner CREATE TABLE DDL via SpannerOutboxBuilder.GetDDL / SpannerInboxBuilder.GetDDL)
-// and at BootstrapExistingTableAsync (which interpolates tableName into the
-// information_schema.columns probe). The helper guarantees no unsafe character ever reaches
-// either path.
-//
-// ConfigurationException is the documented contract; no Spanner emulator connection is
-// required because the rejection happens at MigrateAsync's entry, before SpannerConnection
-// is opened. Connection string is "Data Source=ignored;".
-
+/// <summary>
+/// <c>SpannerBoxMigrationRunner.MigrateAsync</c> rejects an unsafe table name with a
+/// <see cref="ConfigurationException"/> at entry, before any DDL or probe interpolates it; Spanner has no
+/// catalog, so the runner is the only guard (ADR 0057 §6; ADR 0058, Guards and contracts). No connection is opened.
+/// </summary>
 [Trait("Category", "Spanner")]
 [Collection("Spanner")]
 public class SpannerRunnerUnsafeIdentifierTests
 {
+    private const string IgnoredConnectionString = "Data Source=ignored;";
+
     [Theory]
     [InlineData("O'Brien")]    // single quote — would break inlined predicates in information_schema probe
     [InlineData("1Outbox")]    // leading digit — invalid as bare identifier
@@ -53,7 +47,7 @@ public class SpannerRunnerUnsafeIdentifierTests
     public async Task When_spanner_runner_migrates_an_outbox_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
-        var config = new RelationalDatabaseConfiguration("Data Source=ignored;");
+        var config = new RelationalDatabaseConfiguration(IgnoredConnectionString);
         var runner = new SpannerBoxMigrationRunner(config);
         var tableState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
@@ -70,7 +64,7 @@ public class SpannerRunnerUnsafeIdentifierTests
     public async Task When_spanner_runner_migrates_an_inbox_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
-        var config = new RelationalDatabaseConfiguration("Data Source=ignored;");
+        var config = new RelationalDatabaseConfiguration(IgnoredConnectionString);
         var runner = new SpannerBoxMigrationRunner(config);
         var tableState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
