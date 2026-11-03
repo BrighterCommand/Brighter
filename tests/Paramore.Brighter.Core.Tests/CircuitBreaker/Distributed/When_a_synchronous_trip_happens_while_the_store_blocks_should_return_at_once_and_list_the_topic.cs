@@ -41,7 +41,7 @@ public class DistributedBreakerSynchronousTripTests
     public async Task When_a_synchronous_trip_happens_while_the_store_blocks_should_return_at_once_and_list_the_topic()
     {
         // Arrange
-        var store = new BlockingTrippedTopicStore();
+        var store = new SignallingTrippedTopicStore(hold: WriteHold.AllWrites);
         var breaker = new DistributedOutboxCircuitBreaker(store, timeProvider: new FakeTimeProvider());
 
         // Act
@@ -57,7 +57,7 @@ public class DistributedBreakerSynchronousTripTests
     public async Task When_a_synchronous_trip_happens_should_attempt_the_write_off_the_calling_thread()
     {
         // Arrange
-        var store = new BlockingTrippedTopicStore();
+        var store = new SignallingTrippedTopicStore(hold: WriteHold.AllWrites);
         var breaker = new DistributedOutboxCircuitBreaker(store, timeProvider: new FakeTimeProvider());
         var callingThreadId = Environment.CurrentManagedThreadId;
 
@@ -74,7 +74,7 @@ public class DistributedBreakerSynchronousTripTests
     public void When_the_topics_are_listed_should_make_no_store_call()
     {
         // Arrange
-        var store = new BlockingTrippedTopicStore();
+        var store = new SignallingTrippedTopicStore(hold: WriteHold.AllWrites);
         var breaker = new DistributedOutboxCircuitBreaker(store, timeProvider: new FakeTimeProvider());
 
         // Act
@@ -90,7 +90,7 @@ public class DistributedBreakerSynchronousTripTests
     public async Task When_a_synchronous_trip_happens_should_stamp_with_the_breaker_clock_truncated_to_microseconds()
     {
         // Arrange
-        var store = new BlockingTrippedTopicStore();
+        var store = new SignallingTrippedTopicStore(hold: WriteHold.AllWrites);
         var clock = new FakeTimeProvider();
         var now = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero).AddTicks(1234567);
         clock.SetUtcNow(now);
@@ -111,7 +111,7 @@ public class DistributedBreakerSynchronousTripTests
         // Arrange
         var clock = new FakeTimeProvider();
         var options = new OutboxCircuitBreakerOptions { CooldownDuration = TimeSpan.FromSeconds(50) };
-        var breaker = new DistributedOutboxCircuitBreaker(new BlockingTrippedTopicStore(), options, timeProvider: clock);
+        var breaker = new DistributedOutboxCircuitBreaker(new SignallingTrippedTopicStore(hold: WriteHold.AllWrites), options, timeProvider: clock);
         breaker.TripTopic(_orders);
 
         // Act

@@ -87,7 +87,7 @@ public class SynchronousTripWriteCompletionTests
     {
         // Arrange
         using var recorder = new ActivityRecorder("sync-trip-announce-tracer");
-        var store = new SignallingTrippedTopicStore(new InMemoryTrippedTopicStore(), holdWrites: true);
+        var store = new SignallingTrippedTopicStore(new InMemoryTrippedTopicStore(), WriteHold.AllWrites);
         var breaker = new DistributedOutboxCircuitBreaker(store, s_options, new BrighterTracer(), timeProvider: new FakeTimeProvider(s_start));
 
         // Act
@@ -131,16 +131,16 @@ public class SynchronousTripWriteCompletionTests
     {
         // Arrange
         using var recorder = new ActivityRecorder("sync-trip-run-out-tracer");
-        var store = new FirstWriteGatedTrippedTopicStore();
+        var store = new SignallingTrippedTopicStore(hold: WriteHold.FirstWriteOnly);
         var clock = new FakeTimeProvider(s_start);
         var breaker = new DistributedOutboxCircuitBreaker(store, s_options, new BrighterTracer(), timeProvider: clock);
         breaker.TripTopic(_orders);
-        await store.FirstWriteStarted;
+        await store.WriteStarted;
         breaker.TripTopic(_orders);
         clock.Advance(s_cooldown);
 
         // Act
-        store.ReleaseFirstWrite();
+        store.ReleaseWrites();
         var secondWriteIssued = await Task.WhenAny(store.SecondWriteStarted, Task.Delay(s_settle)) == store.SecondWriteStarted;
 
         // Assert

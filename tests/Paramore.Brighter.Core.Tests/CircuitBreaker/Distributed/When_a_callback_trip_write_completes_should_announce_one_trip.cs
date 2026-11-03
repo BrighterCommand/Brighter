@@ -55,7 +55,7 @@ public class ConfirmationCallbackTripWriteCompletionTests
             .ConfigureResource(r => r.AddService("callback-trip-tracer"))
             .AddInMemoryExporter(activities)
             .Build();
-        var store = new SignallingTrippedTopicStore(new InMemoryTrippedTopicStore(), holdWrites: true);
+        var store = new SignallingTrippedTopicStore(new InMemoryTrippedTopicStore(), WriteHold.AllWrites);
         var breaker = new DistributedOutboxCircuitBreaker(
             store,
             new OutboxCircuitBreakerOptions { CooldownDuration = TimeSpan.FromSeconds(50) },

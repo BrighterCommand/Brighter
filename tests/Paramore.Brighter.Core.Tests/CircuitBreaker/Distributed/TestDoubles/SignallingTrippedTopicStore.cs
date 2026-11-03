@@ -31,29 +31,62 @@ using Paramore.Brighter.CircuitBreaker;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
-public class SignallingTrippedTopicStore(InMemoryTrippedTopicStore inner, bool holdWrites = false) : IAmATrippedTopicStore
+public enum WriteHold
+{
+    None,
+    AllWrites,
+    FirstWriteOnly
+}
+
+public class SignallingTrippedTopicStore(InMemoryTrippedTopicStore? inner = null, WriteHold hold = WriteHold.None) : IAmATrippedTopicStore
 {
     private readonly TaskCompletionSource<bool> _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource<bool> _writeStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<bool> _secondWriteStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource<bool> _writeCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly WriteRecorder _recorder = new();
+    private int _readCount;
+
+    public int ReadCount => Volatile.Read(ref _readCount);
+
+    public int? WriteThreadId { get; private set; }
+
+    public IReadOnlyList<TopicTrip> WrittenTrips => _recorder.Trips;
 
     public Task WriteStarted => _writeStarted.Task;
+
+    public Task SecondWriteStarted => _secondWriteStarted.Task;
 
     public Task WriteCompleted => _writeCompleted.Task;
 
     public void ReleaseWrites() => _release.TrySetResult(true);
 
-    public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default) =>
-        inner.ReadAsync(now, tripLength, cancellationToken);
+    public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    {
+        Interlocked.Increment(ref _readCount);
+        return inner is null
+            ? Task.FromResult(new TrippedTopicStoreRead([], []))
+            : inner.ReadAsync(now, tripLength, cancellationToken);
+    }
 
     public async Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
     {
+        WriteThreadId = Environment.CurrentManagedThreadId;
+        var writeNumber = _recorder.Record(trips);
         _writeStarted.TrySetResult(true);
-        if (holdWrites)
+        if (writeNumber > 1)
+            _secondWriteStarted.TrySetResult(true);
+
+        if (IsHeld(writeNumber))
             await _release.Task;
 
-        var results = await inner.WriteAsync(trips, cancellationToken);
+        IReadOnlyList<TripWriteResult> results = [];
+        if (inner is not null)
+            results = await inner.WriteAsync(trips, cancellationToken);
+
         _writeCompleted.TrySetResult(true);
         return results;
     }
+
+    private bool IsHeld(int writeNumber) => hold == WriteHold.AllWrites || (hold == WriteHold.FirstWriteOnly && writeNumber == 1);
 }

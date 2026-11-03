@@ -40,12 +40,12 @@ public class DistributedBreakerCoalescedWriteTests
     public async Task When_many_callbacks_trip_a_topic_during_an_in_flight_write_should_keep_one_pending_write()
     {
         // Arrange
-        var store = new FirstWriteGatedTrippedTopicStore();
+        var store = new SignallingTrippedTopicStore(hold: WriteHold.FirstWriteOnly);
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
         var breaker = new DistributedOutboxCircuitBreaker(store, timeProvider: clock);
         var firstStamp = clock.GetUtcNow();
         breaker.TripTopic(_orders);
-        await store.FirstWriteStarted.WaitAsync(TimeSpan.FromSeconds(5));
+        await store.WriteStarted.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Act
         clock.Advance(TimeSpan.FromSeconds(1));
@@ -54,7 +54,7 @@ public class DistributedBreakerCoalescedWriteTests
         var latestStamp = clock.GetUtcNow();
         breaker.TripTopic(_orders);
         var writesWhileBlocked = store.WrittenTrips.Count;
-        store.ReleaseFirstWrite();
+        store.ReleaseWrites();
         await store.SecondWriteStarted.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Assert
