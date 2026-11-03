@@ -858,7 +858,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30a, T2.29
   - References: ADR 0089 *How a write is announced*, row 7. *`DistributedOutboxCircuitBreaker`* member table.
 
-- [ ] **CHARACTERISE: T2.34 - A breaker started during an outage leaves out only its own trips, then uses the store's**
+- [x] **CHARACTERISE: T2.34 - A breaker started during an outage leaves out only its own trips, then uses the store's**
   - **USE COMMAND**: `/tdd:test-first when a breaker starts while the store cannot be read should exclude only its own trips and use the store's trips once a read succeeds`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_breaker_starts_during_a_store_outage_should_exclude_only_its_own_trips.cs`
