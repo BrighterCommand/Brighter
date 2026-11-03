@@ -721,7 +721,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.25
   - References: ADR 0089 *Store failure and the health signals*, ladder row 4.
 
-- [ ] **TEST + IMPLEMENT: T2.28 - A failed write leaves the trip unshared and never aborts the batch**
+- [x] **TEST + IMPLEMENT: T2.28 - A failed write leaves the trip unshared and never aborts the batch**
   - **USE COMMAND**: `/tdd:test-first when the store throws on write during a batch should keep dispatching the batch and keep the trip as unshared`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_store_throws_on_write_during_a_batch_should_keep_dispatching_and_keep_the_trip_unshared.cs`
