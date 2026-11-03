@@ -811,7 +811,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30a
   - References: ADR 0089 *Store failure and the health signals*.
 
-- [ ] **TEST + IMPLEMENT: T2.31 - A slow, stale read never undoes a newer read or drops a trip just written**
+- [x] **TEST + IMPLEMENT: T2.31 - A slow, stale read never undoes a newer read or drops a trip just written**
   - **USE COMMAND**: `/tdd:test-first when a slow refresh completes after a newer sweep read should discard its live rows but still announce its ended rows`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_slow_refresh_completes_after_a_newer_read_should_discard_its_live_rows.cs`
