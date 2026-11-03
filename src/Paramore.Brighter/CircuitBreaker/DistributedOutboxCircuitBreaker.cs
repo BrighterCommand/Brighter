@@ -59,7 +59,8 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private readonly TripView _view = new();
     private readonly Dictionary<RoutingKey, PendingTrip> _pendingWrites = new();
     private readonly HashSet<RoutingKey> _writesInFlight = new();
-    private bool _isReadInFlight;
+    private readonly InFlightGuard _readGuard = new();
+    private readonly InFlightGuard _refreshGuard = new();
     private bool _isUsingFallback;
     private bool _isReadFailing;
     private string? _lastFailure;
@@ -166,31 +167,6 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         catch (Exception)
         {
             return;
-        }
-    }
-
-    private async Task ReleaseReadGuardAfterAsync(Task settled)
-    {
-        try
-        {
-            await settled.ConfigureAwait(false);
-        }
-        finally
-        {
-            lock (_view.Lock)
-                _isReadInFlight = false;
-        }
-    }
-
-    private bool TryEnterReadGuard()
-    {
-        lock (_view.Lock)
-        {
-            if (_isReadInFlight)
-                return false;
-
-            _isReadInFlight = true;
-            return true;
         }
     }
 
@@ -404,24 +380,30 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     /// <inheritdoc />
     public async Task<IReadOnlyCollection<RoutingKey>> ReadTrippedTopicsAsync(CancellationToken cancellationToken = default)
     {
-        if (!TryEnterReadGuard())
-            return TrippedTopics.ToList();
+        await MergeStoreIntoViewAsync(_readGuard, cancellationToken).ConfigureAwait(false);
+        return TrippedTopics.ToList();
+    }
+
+    private async Task MergeStoreIntoViewAsync(InFlightGuard guard, CancellationToken cancellationToken)
+    {
+        if (!guard.TryEnter())
+            return;
 
         TrippedTopicStoreRead? read;
         try
         {
             read = await WithinStoreTimeoutAsync(
                 token => _store.ReadAsync(_timeProvider.GetUtcNow(), _tripLength, token), cancellationToken,
-                settled => _ = ReleaseReadGuardAfterAsync(settled)).ConfigureAwait(false);
+                settled => _ = guard.ReleaseAfterAsync(settled)).ConfigureAwait(false);
         }
         catch (Exception e) when (!cancellationToken.IsCancellationRequested)
         {
             RecordReadFailure(e);
-            return TrippedTopics.ToList();
+            return;
         }
 
         if (read is null)
-            return TrippedTopics.ToList();
+            return;
 
         MergeLive(read.Live);
         foreach (var ended in read.Ended)
@@ -429,8 +411,6 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             _view.DropIfNotNewerThan(ended.Topic, ended.TripTime);
             Announce(CircuitBreakerSpanOperation.Reset, ended.Topic);
         }
-
-        return TrippedTopics.ToList();
     }
 
     private void MergeLive(IReadOnlyCollection<TopicTrip> live)
@@ -443,7 +423,50 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     }
 
     /// <inheritdoc />
-    public void StartRefresh() => throw new NotImplementedException();
+    public void StartRefresh() => _ = Task.Run(RefreshAsync);
+
+    private async Task RefreshAsync()
+    {
+        try
+        {
+            await MergeStoreIntoViewAsync(_refreshGuard, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            RecordReadFailure(e);
+        }
+    }
+
+    private sealed class InFlightGuard
+    {
+        private readonly object _lock = new();
+        private bool _isInFlight;
+
+        public bool TryEnter()
+        {
+            lock (_lock)
+            {
+                if (_isInFlight)
+                    return false;
+
+                _isInFlight = true;
+                return true;
+            }
+        }
+
+        public async Task ReleaseAfterAsync(Task settled)
+        {
+            try
+            {
+                await settled.ConfigureAwait(false);
+            }
+            finally
+            {
+                lock (_lock)
+                    _isInFlight = false;
+            }
+        }
+    }
 
     private sealed class TripBatch(DistributedOutboxCircuitBreaker breaker) : IAmATripBatch
     {
