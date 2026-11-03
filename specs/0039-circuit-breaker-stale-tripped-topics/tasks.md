@@ -783,7 +783,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.27, T2.28
   - References: ADR 0089 *Store failure and the health signals* (the paragraph after the ladder and the bullets).
 
-- [ ] **TEST + IMPLEMENT: T2.30a - An unshared trip keeps the fallback state through successful reads until a write of its topic succeeds or it ends**
+- [x] **TEST + IMPLEMENT: T2.30a - An unshared trip keeps the fallback state through successful reads until a write of its topic succeeds or it ends**
   - **USE COMMAND**: `/tdd:test-first when reads succeed and writes fail should stay in fallback until a write of the topic succeeds or the trip ends`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_reads_succeed_and_writes_fail_should_stay_in_fallback_until_a_write_succeeds.cs`
