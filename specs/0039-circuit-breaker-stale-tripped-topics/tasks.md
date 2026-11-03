@@ -873,7 +873,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30
   - References: ADR 0089 ladder rows 7-8.
 
-- [ ] **CHARACTERISE: T2.35 - TrippedTopics and StoreStatus never wait on a blocked store**
+- [x] **CHARACTERISE: T2.35 - TrippedTopics and StoreStatus never wait on a blocked store**
   - **USE COMMAND**: `/tdd:test-first when the store blocks indefinitely should return tripped topics and store status within a second from the fallback view`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_store_blocks_indefinitely_should_return_tripped_topics_and_store_status_at_once.cs`
