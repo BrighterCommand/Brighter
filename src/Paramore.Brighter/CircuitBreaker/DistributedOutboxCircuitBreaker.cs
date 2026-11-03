@@ -61,6 +61,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private readonly HashSet<RoutingKey> _writesInFlight = new();
     private readonly InFlightGuard _readGuard = new();
     private readonly InFlightGuard _refreshGuard = new();
+    private readonly InFlightGuard _recoveryGuard = new();
     private readonly HashSet<RoutingKey> _unsharedTopics = new();
     private long _readsStarted;
     private long _newestAppliedRead;
@@ -309,10 +310,11 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private async Task WriteLiveAsync(IReadOnlyCollection<KeyValuePair<RoutingKey, PendingTrip>> pending, Action<Task> holdGuardUntil)
     {
         var live = LivePending(pending);
-        if (live.Count == 0)
+        var trips = live.Select(trip => new TopicTrip(trip.Key, trip.Value.Stamp)).ToList();
+        trips.AddRange(UnsharedTripsExcluding(live.Select(trip => trip.Key)));
+        if (trips.Count == 0)
             return;
 
-        var trips = live.Select(trip => new TopicTrip(trip.Key, trip.Value.Stamp)).ToList();
         IReadOnlyList<TripWriteResult>? results;
         try
         {
@@ -320,15 +322,32 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
         catch (Exception e)
         {
-            RecordWriteFailure(e, live.Select(trip => trip.Key));
+            RecordWriteFailure(e, trips.Select(trip => trip.Topic));
             AnnounceUnshared(live);
             return;
         }
 
         if (results is null)
-            RecordWriteTimeout(live.Select(trip => trip.Key));
+            RecordWriteTimeout(trips.Select(trip => trip.Topic));
         else
             ApplyWriteResults(results);
+    }
+
+    private List<TopicTrip> UnsharedTripsExcluding(IEnumerable<RoutingKey> tripped)
+    {
+        var now = _timeProvider.GetUtcNow();
+        lock (_view.Lock)
+        {
+            var carried = new List<TopicTrip>();
+            foreach (var topic in _unsharedTopics.Except(tripped))
+            {
+                var stamp = _view.StampOf(topic);
+                if (stamp is not null && IsLive(now, stamp.Value))
+                    carried.Add(new TopicTrip(topic, stamp.Value));
+            }
+
+            return carried;
+        }
     }
 
     private void AnnounceUnshared(IEnumerable<KeyValuePair<RoutingKey, PendingTrip>> unshared)
@@ -461,12 +480,38 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         {
             RecordReadSuccess();
             MergeLive(read.Live);
+            StartRecoveryWrite();
         }
 
         foreach (var ended in read.Ended)
         {
             _view.DropIfNotNewerThan(ended.Topic, ended.TripTime);
             Announce(CircuitBreakerSpanOperation.Reset, ended.Topic);
+        }
+    }
+
+    private void StartRecoveryWrite()
+    {
+        lock (_view.Lock)
+        {
+            if (_unsharedTopics.Count == 0)
+                return;
+        }
+
+        if (_recoveryGuard.TryEnter())
+            _ = Task.Run(RecoverUnsharedAsync);
+    }
+
+    private async Task RecoverUnsharedAsync()
+    {
+        var settled = Task.CompletedTask;
+        try
+        {
+            await WriteLiveAsync([], task => settled = task).ConfigureAwait(false);
+        }
+        finally
+        {
+            await _recoveryGuard.ReleaseAfterAsync(settled).ConfigureAwait(false);
         }
     }
 
@@ -589,6 +634,12 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
                 if (!_stamps.TryGetValue(topic, out var viewed) || viewed < stamp)
                     _stamps[topic] = stamp;
             }
+        }
+
+        public DateTimeOffset? StampOf(RoutingKey topic)
+        {
+            lock (Lock)
+                return _stamps.TryGetValue(topic, out var stamp) ? stamp : null;
         }
 
         public void DropIfNotNewerThan(RoutingKey topic, DateTimeOffset stamp)
