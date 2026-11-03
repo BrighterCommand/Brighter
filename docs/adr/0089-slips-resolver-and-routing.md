@@ -38,7 +38,7 @@ The Decision also depends on these words, which this ADR introduces:
 - **Violation** — one broken validity rule, identified by a rule id from *The validity rules* table.
 - **Stop** — the report field that tells a route-following command to halt before it does any work, and gives the message to print.
 - **Route instructions** — the identical paragraph of eight commands that runs the resolver. It halts on a tooling fault or a `stop`, and otherwise holds the route report. Its canonical text lives in `.claude/commands/spec/README.md`. FR-7 requires every command to take its routing decisions from the resolver, and the route instructions are how a command does so.
-- **Closing instructions** — a second paragraph, carried by exactly five commands: `/spec:requirements`, `/spec:design`, `/spec:tasks`, `/spec:approve` and `/adr:adr`. These are the commands whose write changes the next step. The paragraph is the command's last step: after the last write, it runs the resolver again and prints the next step from that second report.
+- **Closing instructions** — a second paragraph, carried by exactly five commands: `/spec:requirements`, `/spec:design`, `/spec:tasks`, `/spec:approve` and `/adr:adr`. These are the commands that carry the paragraph. `/spec:route` and `/spec:new` print the next step from their own post-check (0091). The paragraph is the command's last step: after the last write, it runs the resolver again and prints the next step from that second report.
 
 ### Scope
 
@@ -545,7 +545,7 @@ The route instructions are carried by the seven route-following `/spec:*` comman
 
 `/adr:adr` has one sentence of its own, placed before the route instructions. It overrides their last sentence: when `stop.reason` is `current-spec-missing`, `current-spec-empty` or `current-spec-stale`, the command proceeds with no linked spec instead of stopping, and with no linked spec it skips the closing instructions.
 
-`/spec:status`, `/spec:switch` and `/spec:new` run their own modes (`--all`, `--spec` and `--definition`) and do not carry the route instructions. Each has a failure branch of its own, and creates or modifies no file on a fault. None falls back to reading markers.
+`/spec:status`, `/spec:switch` and `/spec:new` run their own modes (`--all`, `--spec` and `--definition`, and for `/spec:new` also `--spec` after its writes) and do not carry the route instructions. Each has a failure branch of its own, and creates or modifies no file on a fault. None falls back to reading markers.
 
 - `/spec:switch` and `/spec:new` use the route instructions' tooling-fault test and message.
 - `/spec:status` reads many record lines, so it applies the `--all` rule below.
@@ -562,7 +562,7 @@ The `--all` rule, which only `/spec:status` applies:
 - Otherwise it parses each `route-report:` line on its own. `specs: 0` with no `route-report:` line is a valid run.
 - A spec directory with no parsed line is listed as `route unavailable`. When fewer lines parsed than `specs` says, status adds that the output may have been cut short.
 
-The closing instructions are the last step of the four writing `/spec:*` commands (`requirements`, `design`, `tasks` and `approve`) and of `/adr:adr`. No other command carries them: `/spec:implement`, `/spec:ralph-implement`, `/spec:review` and the route-change command write, but what they print next does not depend on that write. Their canonical text also lives in `README.md`:
+The closing instructions are the last step of the four writing `/spec:*` commands (`requirements`, `design`, `tasks` and `approve`) and of `/adr:adr`. No other command carries them: `/spec:implement`, `/spec:ralph-implement`, `/spec:review` write, but what they print next does not depend on that write. The route-change command and `/spec:new` change the route or add a spec, so each runs its own post-check report and prints the next-step line from it (0091). Their canonical text also lives in `README.md`:
 
 > After your last write, run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current` again, and apply the same test for a tooling fault as above. If it passes, print the next-step line, built from `next` in this second report. If it fails, print the tooling-fault message in place of the next-step line. Undo no write.
 
@@ -572,7 +572,7 @@ Message templates serve the commands that carry the route instructions, and `/sp
 
 | Template | Printed by | Text |
 | --- | --- | --- |
-| Next-step line | the closing instructions, `/spec:status`, `/spec:switch`, `/spec:review`'s closing reminder, and the three templates below that end in it | ``Next: {next.commands joined with " then "}.``, or ``No next step: the slip is invalid (see violations).`` when `next.commands` is empty. Then ``Unattended: {next.unattended_driver}.`` when it is not `null`, and one ``Optional: {detour.command}, then return to {detour.return_to}.`` for each entry of `next.detours`, in order, all on the same line. With empty `next.commands` there is no driver and no detour |
+| Next-step line | the closing instructions, `/spec:status`, `/spec:switch`, `/spec:review`'s closing reminder, the route-changed template (0091), `/spec:new`'s post-check (0091), and the three templates below that end in it | ``Next: {next.commands joined with " then "}.``, or ``No next step: the slip is invalid (see violations).`` when `next.commands` is empty. Then ``Unattended: {next.unattended_driver}.`` when it is not `null`, and one ``Optional: {detour.command}, then return to {detour.return_to}.`` for each entry of `next.detours`, in order, all on the same line. With empty `next.commands` there is no driver and no detour |
 | Not on the route | the producing commands | ``{command} is not on flow `{flow}`'s route.`` followed by the next-step line |
 | Another producer | the producing commands | ``Step `{step}` on flow `{flow}` is produced by `{producer}`, not {command}. Run `{producer}`.`` |
 | Step not on the slip | `/spec:approve` | ``Step `{arg}` is not on flow `{flow}`'s route. Approvable steps: {approve_steps joined with ", ", or "none"}.`` For a missing argument the text is ``/spec:approve needs a step. Approvable steps on flow `{flow}`: {approve_steps joined with ", ", or "none"}.`` |
@@ -600,8 +600,8 @@ Message templates serve the commands that carry the route instructions, and `/sp
 | `/adr:adr` | `--current` | `current_spec.state`, `stop`, `known_kinds.design`, `known_kinds.requirements`, `next` | A missing, empty or stale state means no linked spec, and it proceeds. Otherwise it stops on `stop`, and stops with the no-design-step template when there is no design step, leaving `.adr-list` untouched. With a linked spec, prints `next` from the second report |
 | `/spec:status` | `--all` | every summary field, and `current_spec` | Applies the `--all` rule and reports each spec from its summary line, as set out under the table. Never stops on `stop`. It still reads ADR statuses from `docs/adr/` itself for a `design` step |
 | `/spec:switch {id}` | `--spec {dir}`, run before `.current-spec` is written | as status, for one spec | Chooses `{dir}`, runs `--spec`, then writes `.current-spec` only after a successful run, as set out under the table. Then shows the same per-spec report and next step |
-| `/spec:new {name}` | `--definition feature` | `valid`, `violations`, `flow.definition_present` | Prints the flow-not-usable template and creates nothing when `valid` is false or the definition is missing. On a resolver fault it prints the tooling-fault message and creates nothing. What it then copies and records is 0091's |
-| Route-change command (0091) | `--definition {target}`, `--spec {dir}` | `valid`, `tampered`, `flow` | Its checks and writes are 0091's. It passes `--flows-dir` through for tests |
+| `/spec:new {name}` | `--definition feature`, and `--spec {dir}` after its writes | `valid`, `violations`, `flow.definition_present`, then `flow`, `tampered` and `next` | Prints the flow-not-usable template and creates nothing when `valid` is false or the definition is missing. On a resolver fault it prints the tooling-fault message and creates nothing. What it then copies and records is 0091's |
+| Route-change command (0091) | `--current`, `--definition {target}`, and `--current` again after its writes | `current_spec`, `spec`, `stop`, `valid`, `violations`, `tampered`, `flow`, `stray_markers`, `next` | Its checks and writes are 0091's. It passes `--flows-dir` through for tests |
 | `/spec:show-me` | through `show_me_facts.cs` | `route.has_requirements_step` in the ledger | Row 8 checks the route first and writes a route line within FR-23's constraints. Inputs-used row 1 reads `not available: not on this spec's route` |
 
 **`/spec:status`**, per spec:
@@ -724,7 +724,7 @@ Numbered in commit order. Structural steps add files that nothing yet reads. Eac
 
 ### Negative
 
-- Every route-following command now starts a .NET process. That costs about 0.2 s warm, and seconds on the first run after a fresh clone or an edit to the script. The five commands that write start a second one, after the write.
+- Every route-following command now starts a .NET process. That costs about 0.2 s warm, and seconds on the first run after a fresh clone or an edit to the script. The five commands that write start a second one, after the write, and `/spec:route` and `/spec:new` also run a post-check (0091).
 - The resolver becomes a single point of failure. If it is broken, every route-following command halts before its work with a tooling-fault message until the script is fixed. A writing command that fails on its second run has already done its work, and prints the message in place of its closing guidance.
 - `/spec:status`, `/spec:switch` and `/spec:new` also stop on a resolver fault, and none falls back to reading markers. `/spec:switch` writes `.current-spec` only after the resolver succeeds, so a fault leaves the current spec as it was.
 - `/spec:show-me` gains a new way to fail. A broken resolver now stops it as a tooling fault, where today it would have run.

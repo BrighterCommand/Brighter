@@ -25,6 +25,26 @@ Implements part of [issue #4661](https://github.com/BrighterCommand/Brighter/iss
 
 Approving a step can involve work beyond writing a marker, and that work depends on the kind of artefact. Today only `design` has any, and `/spec:approve` holds it: it flips each ADR to `Accepted`, retires the ADRs that the approved ones supersede, regenerates `docs/adr/index.md` and reports the result. A gate, or a flow that brings its own kind and its own approving command, would have to copy that work by hand, and the copies would drift. Nothing says how such a command must behave when it stops part-way through, and a marker records only that a step was approved, not what was approved or at which commit.
 
+### How an approval runs
+
+Every approver follows the same stages for every step, whatever its kind. An approver is `/spec:approve`, a gate or a flow's own marker-writing command.
+
+1. **Route check** (0089). The approver asks the resolver about the step: it must be on the slip, this command must be its marker writer, and its artefacts must be present, such as `requirements.md` or `tasks.md`. A failed check stops the approver before any write. For a gate, this stage is step 1 of *The gate run contract*.
+2. **Choose the sub-flow.** The approver reads the step's `approval_subflow`, which the approval table keys by artefact kind. `null` means the step has no usable entry (0089 R12 (a) to (c): no entry, two entries, or a command that does not exist), so the slip is invalid and the approver stops. An **empty** entry means there is no approval work, and the approver goes to stage 5. Otherwise it goes to stage 3.
+3. **Questions pass.** Each sub-flow command asks its questions and checks its inputs, and writes nothing. A failure stops the approver, with nothing written.
+4. **Actions pass.** Each sub-flow command makes its writes. A failure stops the approver with no marker.
+5. **Marker.** The approver appends a provenance line to the step's marker, and prints the step-approved message. `/spec:approve` then runs 0089's closing instructions. A gate runs them once, at the last step of its ladder.
+
+| Kind | Table entry | What runs between the route check and the marker |
+| --- | --- | --- |
+| `requirements` | empty | Nothing. The approval is the route check and the marker |
+| `tasks` | empty | Nothing, as for `requirements` |
+| `design` | four `/adr:*` commands | Stages 3 and 4: accept the ADRs, retire the superseded ones, regenerate the index, report |
+| `change` (a refactoring flow's kind; illustrative, not shipped) | `/refactor:smells, /refactor:tidy-first` | Stages 3 and 4: ask which smells to act on, confirm the analysis, then make the structural refactorings |
+| Any other kind | whatever its flow's entry names, possibly empty | The same stages, with that flow's commands |
+
+Stages 1 and 5 are the same for every kind. The rest of this ADR covers the sub-flow (stages 2 to 4), the provenance line, and the gate ladder, which applies stages 1 to 5 to each step it approves, except that it runs the closing instructions only once. `design` is the only non-empty sub-flow shipped today, and it is one use of a general mechanism. A flow can give any kind its own sub-flow by naming commands in the approval table. This ADR uses two examples throughout: the shipped `design` sub-flow, which is about ADRs, and the proposed `change` sub-flow of a refactoring flow, which is not about ADRs and is described under *A second sub-flow*. Where a rule belongs to the mechanism, the text says so and the `change` sub-flow follows it as `design` does. Where a rule belongs to the `design` commands alone, the text says that instead.
+
 ### Terms
 
 These words keep the meaning that [requirements § Definitions](../../specs/0040-routing-slips/requirements.md#definitions) gives them: **step**, **artefact**, **artefact kind**, **gate**, **approval table**, **approval sub-flow**, **approval marker**, **provenance line** and **marker-writing command**. **Route report**, **route instructions** and **closing instructions** are defined in [ADR 0089 § Terms](0089-slips-resolver-and-routing.md#terms). This ADR introduces these words:
@@ -48,7 +68,7 @@ These words keep the meaning that [requirements § Definitions](../../specs/0040
 - FR-13 — the provenance line: its format, the append-only write, and the `unavailable` sha.
 - FR-27, run side — the gate ladder, its questions, the three interrupted states and the never-overwrite rule. The structural rules (R9, R10) and the `gates` report fields are 0089's.
 - FR-29, run side — the two-pass protocol, the argument convention, the protocol lines, failure and re-run, and per-command idempotence. It also names the four `/adr:*` commands that carry the `design` sub-flow. 0089 step 2 writes the `design` row of `.claude/flows/approvals.md` with those names.
-- FR-19, contributing — the checklist clauses on provenance lines, on running the sub-flow before the marker, and on the run contract point at this ADR's README text. 0091 owns the checklist.
+- FR-19, contributing — four checklist items, which 0091 owns: (a) the step checks a flow's own marker-writing command runs before its sub-flow (*The sub-flow instructions*, lead-in), (b) the provenance line, (c) running the sub-flow before the marker, and (d) the gate run contract. Items (b) to (d) point at this ADR's README text.
 - FR-26, two parts — the README notes on running a sub-flow (and the gate run contract) and on the provenance line.
 - NFR-2 — a provenance line is one plain-text line that `grep` and `awk` read.
 - NFR-3, contributing — sub-flow commands write their kind's files (for `design`, ADR files and the index), which are not routing state. Only the approver writes the marker.
@@ -76,7 +96,7 @@ These words keep the meaning that [requirements § Definitions](../../specs/0040
 
 ### Approval work is written into one command
 
-`design` is the only kind with approval work today. The approval table gives `requirements` and `tasks` an empty sub-flow, and a flow's own kinds will have their own. The table below shows how `design` is handled now and after this ADR; the mechanism it leads to does not depend on ADRs.
+`design` is the only kind with approval work today (*How an approval runs*). The table below shows how `design` is handled now and after this ADR; the mechanism it leads to does not depend on ADRs.
 
 | Approval question | Answered today by | After this ADR |
 | --- | --- | --- |
@@ -154,6 +174,16 @@ The diagram shows the `design` sub-flow. Another kind changes the participants b
 - **The approver decides nothing about the kind.** It reads command names from the report and protocol lines from the commands.
 - **A re-run is a full re-run.** The approver keeps no record of which commands finished.
 
+The same two passes serve both examples. Only the commands, their answers and their selector words differ:
+
+| | `design` (shipped) | `change` (illustrative) |
+| --- | --- | --- |
+| Questions pass | `accept` checks each ADR's frontmatter. `retire-superseded` asks the supersession question, when the ADR is ambiguous. `regenerate-index` and `report-approval` check their inputs | `smells` asks which smells to act on and prints one answer per finding of each chosen smell. `tidy-first` receives those answers, confirms its analysis and checks that each named file exists |
+| Actions pass | Set each ADR `Accepted`, retire the superseded ADRs, regenerate the index, print the report | `smells` writes nothing. `tidy-first` makes each chosen structural refactoring and skips one already made |
+| Selector words | Name one ADR | None |
+| Artefacts recorded in the provenance line | The selected ADR files, from `approved-artefacts:` | The step's artefacts, say `scope.md`, because neither command prints `approved-artefacts:` |
+| Marker | Written last, by the approver | Written last, by the approver |
+
 #### The sub-flow instructions
 
 The canonical text lives in `.claude/commands/spec/README.md`. Every approver carries an identical copy: `approve.md`, each gate and each flow's own marker-writing command. An approver runs them after 0089's route instructions and its step checks. For `/spec:approve` the step checks are those of 0089's approve row. For a gate they are step 1 of *The gate run contract*; the artefacts of N+1 are present because the ladder has just produced or kept them. This lead-in is not part of the canonical copy. For a flow's own marker-writing command they are the equivalent checks that 0091's checklist adds to FR-19's. Gates and flow approvers carry copies of 0089's route instructions and closing instructions as part of FR-19, outside the counts of eight and five commands, which count the commands this spec ships.
@@ -176,8 +206,10 @@ Then `/spec:approve` runs 0089's closing instructions, and a gate runs them at t
 | `/adr:retire-superseded` | No change | It skips a target already `Superseded` by the same ADR, or, for `deprecate`, already `Deprecated` |
 | `/adr:regenerate-index` | The same `index.md` | The awk generator is deterministic |
 | `/adr:report-approval` | The same report | It writes nothing and reads the same inputs |
+| `/refactor:smells` (`change`, not shipped) | No change | It writes nothing |
+| `/refactor:tidy-first` (`change`, not shipped) | No change | It skips a refactoring already made |
 
-A failure in the questions pass leaves nothing written. A failure in the actions pass leaves the writes of earlier commands in place, and the message says so. Idempotence holds only for the same answers. A re-run that gives a different supersession answer leaves the earlier retirement in place. That limitation is accepted (requirements, Constraints). The user sees it in `git diff` and reverts it with git.
+Idempotence for the same answers is a rule of the mechanism (FR-29), so every sub-flow command meets it, whatever its kind. A failure in the questions pass leaves nothing written. A failure in the actions pass leaves the writes of earlier commands in place, and the message says so. Idempotence holds only for the same answers. A re-run that gives a different supersession answer leaves the earlier retirement in place. That limitation is accepted (requirements, Constraints). The user sees it in `git diff` and reverts it with git.
 
 #### The provenance line
 
@@ -311,8 +343,8 @@ A command requires only the common arguments it uses (*The sub-flow command shap
 - With no mode word the command was run directly. It runs its Questions section, then its Actions section, and the Actions section uses the answers that its own Questions section printed in the same run, plus any `--answer` arguments given.
 - `{command}` is the command's name as the approval table gives it, with the leading `/`. The Skill call drops the `/`.
 - `{spec}` is always double-quoted, because a spec directory name may contain spaces.
-- `--select` carries a selector word. Each sub-flow defines what its selector words mean, and a command that defines none ignores them. The `design` commands read them as an ADR selector.
-- An answer key is `{command}.{name}`, for example `/adr:retire-superseded.0090-approval-sub-flows`, where `{name}` is whatever the command chooses to tell its answers apart by. The prefix keeps keys from two commands apart. A Questions section receives the answers printed by the commands before it in the pass, and an Actions section receives every answer.
+- `--select` carries a selector word. Each sub-flow defines what its selector words mean, and a command that defines none ignores them. The `design` commands read them as an ADR selector. The `change` commands define none.
+- An answer key is `{command}.{name}`, for example `/adr:retire-superseded.0090-approval-sub-flows` or `/refactor:smells.{type}.{smell-slug}.{n}`, where `{name}` is whatever the command chooses to tell its answers apart by. The prefix keeps keys from two commands apart. A Questions section receives the answers printed by the commands before it in the pass, and an Actions section receives every answer.
 - A value that contains a space is quoted as `--answer "{key}={value}"`. A value may not contain `"` or a newline.
 - `/spec:approve design 0043` therefore reaches each `design` command as `questions "specs/0040-routing-slips" design .adr-list --select 0043`.
 
@@ -343,7 +375,7 @@ approved: step=design artefacts=docs/adr/0089-slips-resolver-and-routing.md,docs
 approved: step=requirements artefacts=requirements.md sha=unavailable
 ```
 
-A free-text marker keeps its text, and the line follows it. `grep '^approved: ' {marker}` lists every approval. `awk '/^approved: /{print $2, $NF}' {marker}` prints each step and sha. `test -f` still decides approval.
+A `change` step would record `artefacts=scope.md`, because neither of its commands prints `approved-artefacts:`. A free-text marker keeps its text, and the line follows it. `grep '^approved: ' {marker}` lists every approval. `awk '/^approved: /{print $2, $NF}' {marker}` prints each step and sha. `test -f` still decides approval.
 
 #### The `design` sub-flow commands
 
@@ -373,7 +405,7 @@ A refactoring flow can give a kind of its own, `change`, the sub-flow `/refactor
 
 | Command | Questions | Actions | What the flow must change in the command |
 | --- | --- | --- | --- |
-| `/refactor:smells` | Reads the scope from the step's artefact, asks which smells to act on, prints one `answer:` per chosen smell | Writes nothing | Add the three sub-flow parts. Drop its rule that the user, not the command, starts `/refactor:tidy-first`. Drop or move its write to `tasks.md` |
+| `/refactor:smells` | Reads the scope from the step's artefact, asks which smells to act on, prints one `answer:` per finding of each chosen smell | Writes nothing | Add the three sub-flow parts. Drop its rule that the user, not the command, starts `/refactor:tidy-first`. Drop or move its write to `tasks.md` |
 | `/refactor:tidy-first` | Confirms its analysis with the user, and checks that each file an answer names exists | Makes each chosen structural refactoring, skipping one already made | Add the three sub-flow parts. Move its questions into Questions. Limit it to structural changes. Make its commits idempotent (FR-29) |
 
 A step's artefacts are file names in the spec directory (0089), so a `change` step cannot name source code. Its artefact is a spec file, say `scope.md`, that names the base ref or the paths, and `/refactor:smells` reads the scope from it. An answer key is `/refactor:smells.{type}.{smell-slug}.{n}`, where `{n}` numbers the findings of that smell in that type, and its value is the path of the file that holds the finding, so two types that share a smell name do not collide and `/refactor:tidy-first` can check the file. `/refactor:tidy-first`'s Questions section receives those answers, because a Questions section receives the answers of the commands before it. The instructions, the protocol lines, the provenance line and the failure rules are as for `design`. Choosing this flow is the user's opt-in to `/refactor:smells` and `/refactor:tidy-first` running at approval.
