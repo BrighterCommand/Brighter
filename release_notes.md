@@ -41,6 +41,55 @@ COMMIT;
 Roll back if index creation fails. If an equivalent index already exists, keep it; Brighter's
 provisioner recognizes equivalent indexes by their definition, regardless of name.
 
+### SQL Server outbox MessageId uniqueness (#4677, #4711)
+
+New SQL Server outbox tables enforce uniqueness on `MessageId` for both text and binary payloads.
+Duplicate inserts preserve the existing message, and bulk inserts containing duplicate IDs still
+store the distinct messages in the batch. The unique index uses `IGNORE_DUP_KEY = ON`.
+
+**Existing databases require a schema migration.** Upgrading the Brighter packages alone does not
+change an existing outbox table. A V8 outbox remains usable, but without the unique index it can
+still store duplicate MessageIds and dispatch those messages more than once. V8 and V9 here refer
+to outbox schema versions, not Brighter package versions.
+
+For deployments using Brighter box provisioning, run the V9 outbox migration. It checks for existing
+duplicate IDs under an exclusive table lock before creating the index. If duplicates exist, the
+migration fails without removing messages or advancing migration history; resolve the conflicts
+and retry. Schedule the migration for an appropriate maintenance window on large or busy outboxes.
+
+If production schema changes are managed separately, apply the equivalent index change through
+your normal database migration process. Replace `[dbo].[Outbox]` below with your configured schema
+and table. First identify existing conflicts:
+
+```sql
+SELECT [MessageId], COUNT_BIG(*) AS [Copies]
+FROM [dbo].[Outbox]
+GROUP BY [MessageId]
+HAVING COUNT_BIG(*) > 1;
+```
+
+Review the payloads and dispatch state of conflicting rows before deciding which to retain; do not
+automatically discard duplicates. Inspect existing indexes before applying the change. If an enabled,
+unfiltered unique index on `MessageId` alone already has `IGNORE_DUP_KEY = ON`, no additional index
+is needed. If `UX_BrighterOutbox_MessageId` already exists with a different definition or is disabled,
+have your database migration process reconcile it first: both the V9 migration and the statement
+below otherwise fail on the index name collision. Do not drop an existing index without reviewing
+its purpose and dependencies.
+
+After resolving conflicts and checking existing indexes, create the index if needed:
+
+```sql
+CREATE UNIQUE INDEX [UX_BrighterOutbox_MessageId]
+    ON [dbo].[Outbox] ([MessageId]) WITH (IGNORE_DUP_KEY = ON);
+```
+
+Index creation takes locks and fails if duplicate IDs remain or are inserted after the preliminary
+check. Coordinate outbox writers during the migration and retry after resolving any new conflicts.
+`IGNORE_DUP_KEY = ON` applies to subsequent inserts; it does not remove existing duplicates.
+Verify that the resulting index is enabled, unfiltered, unique on `MessageId` alone, and has
+`IGNORE_DUP_KEY = ON` before treating the duplicate-insert fix as deployed. This enforces uniqueness
+only while a message remains in the outbox; consumers must still tolerate message redelivery.
+
 ### MS SQL subscriber queues and consumer purge (#4665)
 
 `MsSqlPublication` opts into one copy per configured subscriber channel. Workers sharing a channel

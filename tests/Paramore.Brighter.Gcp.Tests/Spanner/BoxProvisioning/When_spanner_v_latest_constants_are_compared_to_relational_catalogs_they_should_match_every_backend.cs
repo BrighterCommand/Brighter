@@ -30,24 +30,18 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
-// Item #8 (PR #4039 third review). SpannerBoxMigrationRunner stores VLatestOutbox / VLatestInbox
-// as bare constants because Spanner is fresh-install-only (ADR 0057 §6) — no V_k migration chain
-// runs against Spanner, so the latest version is just a stamp. The constants MUST track the
-// relational chain length: every relational backend ships the same outbox migrations V1..Vn and
-// the same inbox migrations V1..Vm, and Spanner's history row needs to record V_latest equal to
-// `n` (outbox) and `m` (inbox).
-//
-// Without this drift guard, a relational backend bump (e.g. all four catalogs going to V8) could
-// land without bumping Spanner, leaving Spanner's history row stamped at V7 while Spanner's
-// freshly-installed table actually carries V8's schema. Detection-by-history would then report
-// "needs migration V8" forever on Spanner installs.
-
+/// <summary>
+/// <c>SpannerBoxMigrationRunner.VLatestOutbox</c> and <c>VLatestInbox</c> equal every relational catalog's
+/// length, so Spanner stamps the version its fresh-install schema really has (ADR 0057 §6). The PostgreSQL
+/// inbox, born with <c>ContextKey</c>, is one version behind the others (ADR 0057 §1).
+/// </summary>
 [Trait("Category", "Spanner")]
 [Collection("Spanner")]
 public class SpannerVLatestDriftAgainstRelationalCatalogTests
 {
-    // Catalog .All(cfg) does not touch the database — it only emits SQL strings keyed off the
-    // configured table name. Any non-empty, identifier-safe name works for the drift comparison.
+    private const int PostgreSqlInboxLatest = 2;
+
+    // All(cfg) only builds SQL strings, so no database is needed.
     private static readonly RelationalDatabaseConfiguration Configuration =
         new(
             connectionString: "Server=localhost",
@@ -57,8 +51,6 @@ public class SpannerVLatestDriftAgainstRelationalCatalogTests
     [Fact]
     public void Vlatest_outbox_should_equal_every_relational_outbox_catalog_count()
     {
-        // Asserts each backend separately so a drift on a single backend surfaces in the
-        // failure message rather than collapsing into a generic "counts disagreed" assertion.
         Assert.Equal(SpannerBoxMigrationRunner.VLatestOutbox, new MsSqlOutboxMigrationCatalog().All(Configuration).Count);
         Assert.Equal(SpannerBoxMigrationRunner.VLatestOutbox, new MySqlOutboxMigrationCatalog().All(Configuration).Count);
         Assert.Equal(SpannerBoxMigrationRunner.VLatestOutbox, new PostgreSqlOutboxMigrationCatalog().All(Configuration).Count);
@@ -68,17 +60,9 @@ public class SpannerVLatestDriftAgainstRelationalCatalogTests
     [Fact]
     public void Vlatest_inbox_should_equal_every_relational_inbox_catalog_count_except_postgres()
     {
-        // PostgreSQL inbox is always exactly one version behind the other three (ADR 0057 §E) —
-        // it was born with the ContextKey column that MSSQL/MySQL/Sqlite add at V2, so it skips
-        // that catch-up step. Spec 0027 (#2541) adds CausationId to every relational inbox,
-        // advancing MSSQL/MySQL/Sqlite V2→V3 (== VLatestInbox = 3) and PostgreSQL V1→V2, so its
-        // catalog returns 2 while the other three return 3. Pin that asymmetry here as a known
-        // carve-out: if PostgreSQL ever catches up (a column added to PG but not the others, or
-        // vice-versa), this literal drifts and the assertion fails — at that point re-derive the
-        // carve-out (or fold PostgreSQL back into the main set if it reaches parity).
         Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new MsSqlInboxMigrationCatalog().All(Configuration).Count);
         Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new MySqlInboxMigrationCatalog().All(Configuration).Count);
         Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new SqliteInboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(2, new PostgreSqlInboxMigrationCatalog().All(Configuration).Count);
+        Assert.Equal(PostgreSqlInboxLatest, new PostgreSqlInboxMigrationCatalog().All(Configuration).Count);
     }
 }
