@@ -193,9 +193,15 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private bool HasRunOut(DateTimeOffset stamp) => !IsLive(_timeProvider.GetUtcNow(), stamp);
 
+    private CircuitBreakerSpanInfo CreateSpanInfo(CircuitBreakerSpanOperation operation, RoutingKey topic)
+    {
+        const int noCooldownCount = 0;
+        return new CircuitBreakerSpanInfo(operation, topic, noCooldownCount) { CooldownDuration = _cooldownDuration };
+    }
+
     private void Announce(CircuitBreakerSpanOperation operation, RoutingKey topic)
     {
-        var span = _tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(operation, topic, 0) { CooldownDuration = _cooldownDuration }, _instrumentationOptions);
+        var span = _tracer?.CreateCircuitBreakerSpan(CreateSpanInfo(operation, topic), _instrumentationOptions);
         _tracer?.EndSpan(span);
 
         switch (operation)
