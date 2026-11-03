@@ -797,7 +797,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30, T2.28
   - References: ADR 0089 *Store failure and the health signals*, the paragraph after the ladder.
 
-- [ ] **CHARACTERISE: T2.30b - Writes that succeed do not end a read failure**
+- [x] **CHARACTERISE: T2.30b - Writes that succeed do not end a read failure**
   - **USE COMMAND**: `/tdd:test-first when writes succeed and reads fail should stay in fallback until a read succeeds`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_writes_succeed_and_reads_fail_should_stay_in_fallback_until_a_read_succeeds.cs`
