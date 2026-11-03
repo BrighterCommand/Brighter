@@ -769,7 +769,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.26
   - References: ADR 0089 *Refresh on every running sweeper*.
 
-- [ ] **TEST + IMPLEMENT: T2.30 - A read failure sets the fallback state, and recovery merges per topic**
+- [x] **TEST + IMPLEMENT: T2.30 - A read failure sets the fallback state, and recovery merges per topic**
   - **USE COMMAND**: `/tdd:test-first when reads fail and then recover should report fallback until a read succeeds and merge the store's trips with the local ones`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_reads_and_writes_fail_and_recover_should_follow_the_fallback_rules.cs`
