@@ -43,7 +43,7 @@ public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatch
     [Fact]
     public async Task Should_throw_when_existing_outbox_body_is_string_and_provisioner_is_configured_for_binary()
     {
-        //Arrange — text-mode outbox already exists; configure provisioner for binary.
+        //Arrange
         await CreateTable(SpannerOutboxBuilder.GetDDL(_tableName, binaryMessagePayload: false));
 
         var config = new RelationalDatabaseConfiguration(
@@ -64,7 +64,7 @@ public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatch
     [Fact]
     public async Task Should_throw_when_existing_outbox_body_is_bytes_and_provisioner_is_configured_for_text()
     {
-        //Arrange — binary (BYTES) outbox already exists; configure provisioner for text.
+        //Arrange
         await CreateTable(SpannerOutboxBuilder.GetDDL(_tableName, binaryMessagePayload: true));
 
         var config = new RelationalDatabaseConfiguration(

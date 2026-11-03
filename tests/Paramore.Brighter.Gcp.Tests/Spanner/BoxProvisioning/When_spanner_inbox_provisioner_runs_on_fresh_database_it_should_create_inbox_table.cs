@@ -43,14 +43,20 @@ public class InboxProvisionerFreshDatabaseTests : IAsyncLifetime
         using var connection = CreateConnection();
         await connection.OpenAsync();
 
-        // Verify table exists via INFORMATION_SCHEMA
+        Assert.Equal(1, await CountBoxTablesAsync(connection));
+        Assert.Equal(1, await CountHistoryRowsAtLatestVersionAsync(connection));
+    }
+
+    private async Task<long> CountBoxTablesAsync(SpannerConnection connection)
+    {
         using var tableCheck = connection.CreateSelectCommand(
             "SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @TableName",
             new SpannerParameterCollection { { "TableName", SpannerDbType.String, _tableName } });
-        var tableCount = (long)(await tableCheck.ExecuteScalarAsync())!;
-        Assert.Equal(1, tableCount);
+        return (long)(await tableCheck.ExecuteScalarAsync())!;
+    }
 
-        // Verify migration history
+    private async Task<long> CountHistoryRowsAtLatestVersionAsync(SpannerConnection connection)
+    {
         using var historyCheck = connection.CreateSelectCommand(
             @"SELECT COUNT(1) FROM `BrighterMigrationHistory`
 WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
@@ -59,8 +65,7 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
                 { "BoxTableName", SpannerDbType.String, _tableName },
                 { "ExpectedVersion", SpannerDbType.Int64, (long)ExpectedMigrationVersions.InboxLatest }
             });
-        var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-        Assert.Equal(1, historyCount);
+        return (long)(await historyCheck.ExecuteScalarAsync())!;
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
