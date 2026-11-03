@@ -44,6 +44,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private static readonly TimeSpan s_longestPermittedDuration = TimeSpan.FromHours(24);
     private static readonly TimeSpan s_shortestPermittedStoreTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan s_longestPermittedStoreTimeout = TimeSpan.FromSeconds(60);
+    private const string TimeoutFailure = "timeout";
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<DistributedOutboxCircuitBreaker>();
 
     private readonly IAmATrippedTopicStore _store;
@@ -57,6 +58,8 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private readonly TripView _view = new();
     private readonly Dictionary<RoutingKey, DateTimeOffset> _pendingWrites = new();
     private readonly HashSet<RoutingKey> _writesInFlight = new();
+    private bool _isUsingFallback;
+    private string? _lastFailure;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DistributedOutboxCircuitBreaker"/> class.
@@ -107,7 +110,41 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     }
 
     /// <inheritdoc />
-    public TrippedTopicStoreStatus StoreStatus => throw new NotImplementedException();
+    public TrippedTopicStoreStatus StoreStatus
+    {
+        get
+        {
+            lock (_view.Lock)
+                return new TrippedTopicStoreStatus(_isUsingFallback, _lastFailure);
+        }
+    }
+
+    private void RecordTimeout()
+    {
+        lock (_view.Lock)
+        {
+            _isUsingFallback = true;
+            _lastFailure = TimeoutFailure;
+        }
+    }
+
+    private async Task<T?> WithinStoreTimeoutAsync<T>(Func<CancellationToken, Task<T>> call, CancellationToken cancellationToken) where T : class
+    {
+        using var timeout = _timeProvider.CreateCancellationTokenSource(_storeTimeout);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+        var task = call(linked.Token);
+        _ = task.ContinueWith(abandoned => _ = abandoned.Exception, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+
+        try
+        {
+            return await task.WaitAsync(_storeTimeout, _timeProvider, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception e) when (e is TimeoutException || (e is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            RecordTimeout();
+            return null;
+        }
+    }
 
     /// <inheritdoc />
     public void CoolDown()
@@ -170,8 +207,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         if (trips.Count == 0)
             return;
 
-        var results = await _store.WriteAsync(trips).ConfigureAwait(false);
-        ApplyWriteResults(results);
+        var results = await WithinStoreTimeoutAsync(_ => _store.WriteAsync(trips), CancellationToken.None).ConfigureAwait(false);
+        if (results is not null)
+            ApplyWriteResults(results);
     }
 
     private List<TopicTrip> LiveTrips(IReadOnlyCollection<KeyValuePair<RoutingKey, DateTimeOffset>> pending)
@@ -247,7 +285,11 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     /// <inheritdoc />
     public async Task<IReadOnlyCollection<RoutingKey>> ReadTrippedTopicsAsync(CancellationToken cancellationToken = default)
     {
-        var read = await _store.ReadAsync(_timeProvider.GetUtcNow(), _tripLength, cancellationToken).ConfigureAwait(false);
+        var read = await WithinStoreTimeoutAsync(
+            token => _store.ReadAsync(_timeProvider.GetUtcNow(), _tripLength, token), cancellationToken).ConfigureAwait(false);
+        if (read is null)
+            return TrippedTopics.ToList();
+
         MergeLive(read.Live);
         foreach (var ended in read.Ended)
         {

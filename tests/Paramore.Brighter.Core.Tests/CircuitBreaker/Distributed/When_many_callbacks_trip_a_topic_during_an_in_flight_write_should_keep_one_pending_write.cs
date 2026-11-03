@@ -42,7 +42,7 @@ public class DistributedBreakerCoalescedWriteTests
         // Arrange
         var store = new SignallingTrippedTopicStore(hold: WriteHold.FirstWriteOnly);
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
-        var breaker = new DistributedOutboxCircuitBreaker(store, timeProvider: clock);
+        var breaker = new DistributedOutboxCircuitBreaker(store, new OutboxCircuitBreakerOptions { StoreTimeout = TimeSpan.FromSeconds(60) }, timeProvider: clock);
         var firstStamp = clock.GetUtcNow();
         breaker.TripTopic(_orders);
         await store.WriteStarted.WaitAsync(TimeSpan.FromSeconds(5));
