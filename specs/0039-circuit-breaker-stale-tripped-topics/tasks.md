@@ -738,7 +738,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.25, T2.16a
   - References: `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/SweepableOutbox.cs`. ADR *How a write is announced*, row 2.
 
-- [ ] **CHARACTERISE: T2.28a - A store disposed under a write at host shutdown logs a Warning and throws nothing**
+- [x] **CHARACTERISE: T2.28a - A store disposed under a write at host shutdown logs a Warning and throws nothing**
   - **USE COMMAND**: `/tdd:test-first when the store is disposed under an in flight write should log a warning, throw nothing and keep the trip unshared`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_store_is_disposed_under_a_write_should_log_a_warning_and_throw_nothing.cs`
