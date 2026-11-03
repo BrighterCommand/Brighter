@@ -39,6 +39,8 @@ namespace Paramore.Brighter.CircuitBreaker;
 /// </summary>
 public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker, IAmAnOutboxCircuitBreakerAsync, IAmASharedOutboxCircuitBreaker
 {
+    private static readonly TimeSpan s_shortestPermittedCooldown = TimeSpan.FromTicks(1);
+    private static readonly TimeSpan s_shortestPermittedLeeway = TimeSpan.Zero;
     private static readonly TimeSpan s_longestPermittedDuration = TimeSpan.FromHours(24);
     private static readonly TimeSpan s_shortestPermittedStoreTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan s_longestPermittedStoreTimeout = TimeSpan.FromSeconds(60);
@@ -76,43 +78,22 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
         options ??= new OutboxCircuitBreakerOptions();
-        _cooldownDuration = ValidatedCooldownDuration(options);
-        _clockSkewLeeway = ValidatedClockSkewLeeway(options);
-        _storeTimeout = ValidatedStoreTimeout(options);
+        _cooldownDuration = RequireWithin(options.CooldownDuration, s_shortestPermittedCooldown, s_longestPermittedDuration, nameof(options.CooldownDuration));
+        _clockSkewLeeway = RequireWithin(options.ClockSkewLeeway, s_shortestPermittedLeeway, s_longestPermittedDuration, nameof(options.ClockSkewLeeway));
+        _storeTimeout = RequireWithin(options.StoreTimeout, s_shortestPermittedStoreTimeout, s_longestPermittedStoreTimeout, nameof(options.StoreTimeout));
         _tripLength = _cooldownDuration + _clockSkewLeeway;
         _timeProvider = timeProvider ?? TimeProvider.System;
         _tracer = tracer;
         _instrumentationOptions = instrumentationOptions;
     }
 
-    private static TimeSpan ValidatedCooldownDuration(OutboxCircuitBreakerOptions options)
+    private static TimeSpan RequireWithin(TimeSpan value, TimeSpan min, TimeSpan max, string optionName)
     {
-        var cooldownDuration = options.CooldownDuration;
-        if (cooldownDuration <= TimeSpan.Zero || cooldownDuration > s_longestPermittedDuration)
-            throw new ArgumentOutOfRangeException(nameof(options), cooldownDuration,
-                "CooldownDuration must be greater than zero and at most 24 hours");
+        if (value < min || value > max)
+            throw new ArgumentOutOfRangeException("options", value,
+                $"{optionName} must be at least {min} and at most {max}");
 
-        return cooldownDuration;
-    }
-
-    private static TimeSpan ValidatedClockSkewLeeway(OutboxCircuitBreakerOptions options)
-    {
-        var clockSkewLeeway = options.ClockSkewLeeway;
-        if (clockSkewLeeway < TimeSpan.Zero || clockSkewLeeway > s_longestPermittedDuration)
-            throw new ArgumentOutOfRangeException(nameof(options), clockSkewLeeway,
-                "ClockSkewLeeway must not be negative and at most 24 hours");
-
-        return clockSkewLeeway;
-    }
-
-    private static TimeSpan ValidatedStoreTimeout(OutboxCircuitBreakerOptions options)
-    {
-        var storeTimeout = options.StoreTimeout;
-        if (storeTimeout < s_shortestPermittedStoreTimeout || storeTimeout > s_longestPermittedStoreTimeout)
-            throw new ArgumentOutOfRangeException(nameof(options), storeTimeout,
-                "StoreTimeout must be at least 1 second and at most 60 seconds");
-
-        return storeTimeout;
+        return value;
     }
 
     /// <inheritdoc />
