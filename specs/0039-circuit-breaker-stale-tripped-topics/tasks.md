@@ -671,7 +671,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2d - Store failure, timeouts and fallback
 
-- [ ] **TEST + IMPLEMENT: T2.25 - Every store operation is bounded by the store timeout and counts as a failure on timeout**
+- [x] **TEST + IMPLEMENT: T2.25 - Every store operation is bounded by the store timeout and counts as a failure on timeout**
   - **USE COMMAND**: `/tdd:test-first when the store never completes should give up after the store timeout and use the fallback view`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_store_never_completes_should_give_up_after_the_store_timeout.cs`
