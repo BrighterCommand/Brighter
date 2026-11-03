@@ -690,7 +690,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.12, T2.19
   - References: ADR 0089 *`IAmATrippedTopicStore`*, paragraph after the table.
 
-- [ ] **TEST + IMPLEMENT: T2.26 - Abandoned store calls are guarded, so a hung store cannot pile up calls or disable refresh**
+- [x] **TEST + IMPLEMENT: T2.26 - Abandoned store calls are guarded, so a hung store cannot pile up calls or disable refresh**
   - **USE COMMAND**: `/tdd:test-first when a store call is abandoned after the timeout should hold its in flight guard until it completes or four store timeouts pass then release it with a warning`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_store_call_is_abandoned_should_hold_its_guard_until_four_store_timeouts.cs`
