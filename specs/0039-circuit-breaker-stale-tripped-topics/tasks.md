@@ -842,7 +842,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30a, T2.16a
   - References: ADR 0089 *How the remaining small points are settled*: "Recovery writes".
 
-- [ ] **TEST + IMPLEMENT: T2.33 - Telemetry under failure: at most one Reset per instance per unshared trip, and no second announcement**
+- [x] **TEST + IMPLEMENT: T2.33 - Telemetry under failure: at most one Reset per instance per unshared trip, and no second announcement**
   - **USE COMMAND**: `/tdd:test-first when two instances hold the same unshared trip and it ends should each announce one reset from the first announcing call`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_two_instances_hold_an_unshared_trip_and_it_ends_should_each_announce_one_reset.cs`
