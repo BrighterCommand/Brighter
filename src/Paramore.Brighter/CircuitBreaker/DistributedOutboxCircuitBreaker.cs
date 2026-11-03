@@ -154,6 +154,16 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         Log.ReadFailed(s_logger, failure, failure.GetType().Name);
     }
 
+    private void RecordReadSuccess()
+    {
+        lock (_view.Lock)
+        {
+            _isReadFailing = false;
+            if (!_isUsingFallback)
+                _lastFailure = null;
+        }
+    }
+
     private async Task SettleAsync(Task call)
     {
         try
@@ -405,6 +415,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         if (read is null)
             return;
 
+        RecordReadSuccess();
         MergeLive(read.Live);
         foreach (var ended in read.Ended)
         {
