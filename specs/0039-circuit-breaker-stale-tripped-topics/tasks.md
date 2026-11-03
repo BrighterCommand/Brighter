@@ -826,7 +826,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30, T2.29
   - References: ADR 0089 bullets *Stale reads*, *Ended rows are always announced*, *Recently written trips*.
 
-- [ ] **TEST + IMPLEMENT: T2.32 - Unshared trips are written after recovery**
+- [x] **TEST + IMPLEMENT: T2.32 - Unshared trips are written after recovery**
   - **USE COMMAND**: `/tdd:test-first when a read succeeds while unshared trips remain should write them in the background without the sweep awaiting it`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_read_succeeds_with_unshared_trips_should_write_them_in_the_background.cs`
