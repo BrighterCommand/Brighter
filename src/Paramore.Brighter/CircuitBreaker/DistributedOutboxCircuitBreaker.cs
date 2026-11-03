@@ -61,7 +61,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private readonly HashSet<RoutingKey> _writesInFlight = new();
     private readonly InFlightGuard _readGuard = new();
     private readonly InFlightGuard _refreshGuard = new();
-    private bool _isUsingFallback;
+    private readonly HashSet<RoutingKey> _unsharedTopics = new();
     private bool _isReadFailing;
     private string? _lastFailure;
 
@@ -119,28 +119,59 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         get
         {
             lock (_view.Lock)
-                return new TrippedTopicStoreStatus(_isUsingFallback || _isReadFailing, _lastFailure);
+            {
+                ClearFailureWhenFallbackEnds();
+                return new TrippedTopicStoreStatus(IsFallbackActive(), _lastFailure);
+            }
         }
+    }
+
+    private bool IsFallbackActive() => _isReadFailing || _unsharedTopics.Count > 0;
+
+    private void ClearFailureWhenFallbackEnds()
+    {
+        var now = _timeProvider.GetUtcNow();
+        _unsharedTopics.RemoveWhere(topic => !_view.IsLive(topic, stamp => IsLive(now, stamp)));
+        if (!IsFallbackActive())
+            _lastFailure = null;
     }
 
     private void RecordTimeout()
     {
         lock (_view.Lock)
-        {
-            _isUsingFallback = true;
             _lastFailure = TimeoutFailure;
-        }
     }
 
-    private void RecordWriteFailure(Exception failure)
+    private void RecordReadTimeout()
+    {
+        lock (_view.Lock)
+            _isReadFailing = true;
+    }
+
+    private void RecordWriteTimeout(IEnumerable<RoutingKey> topics)
+    {
+        lock (_view.Lock)
+            _unsharedTopics.UnionWith(topics);
+    }
+
+    private void RecordWriteFailure(Exception failure, IEnumerable<RoutingKey> topics)
     {
         lock (_view.Lock)
         {
-            _isUsingFallback = true;
+            _unsharedTopics.UnionWith(topics);
             _lastFailure = failure.GetType().Name;
         }
 
         Log.WriteFailed(s_logger, failure, failure.GetType().Name);
+    }
+
+    private void RecordWriteSuccess(RoutingKey topic)
+    {
+        lock (_view.Lock)
+        {
+            _unsharedTopics.Remove(topic);
+            ClearFailureWhenFallbackEnds();
+        }
     }
 
     private void RecordReadFailure(Exception failure)
@@ -159,8 +190,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         lock (_view.Lock)
         {
             _isReadFailing = false;
-            if (!_isUsingFallback)
-                _lastFailure = null;
+            ClearFailureWhenFallbackEnds();
         }
     }
 
@@ -249,6 +279,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     {
         foreach (var result in results)
         {
+            RecordWriteSuccess(result.Topic);
             if (result.LeftEnded || (result.PriorTripTime is not null && HasRunOut(result.StoredTripTime)))
             {
                 _view.DropIfNotNewerThan(result.Topic, result.StoredTripTime);
@@ -287,12 +318,14 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
         catch (Exception e)
         {
-            RecordWriteFailure(e);
+            RecordWriteFailure(e, live.Select(trip => trip.Key));
             AnnounceUnshared(live);
             return;
         }
 
-        if (results is not null)
+        if (results is null)
+            RecordWriteTimeout(live.Select(trip => trip.Key));
+        else
             ApplyWriteResults(results);
     }
 
@@ -413,7 +446,10 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
 
         if (read is null)
+        {
+            RecordReadTimeout();
             return;
+        }
 
         RecordReadSuccess();
         MergeLive(read.Live);
@@ -543,6 +579,12 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
                 if (_stamps.TryGetValue(topic, out var viewed) && viewed == stamp)
                     _stamps.Remove(topic);
             }
+        }
+
+        public bool IsLive(RoutingKey topic, Func<DateTimeOffset, bool> isLive)
+        {
+            lock (Lock)
+                return _stamps.TryGetValue(topic, out var stamp) && isLive(stamp);
         }
 
         public List<RoutingKey> LiveTopics(Func<DateTimeOffset, bool> isLive)

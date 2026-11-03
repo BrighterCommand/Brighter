@@ -109,14 +109,15 @@ public class When_the_store_throws_on_write_during_a_batch_should_keep_dispatchi
         await batch.WriteAsync();
         clock.Advance(TimeSpan.FromSeconds(20));
         var listedUntilCooldown = await breaker.ReadTrippedTopicsAsync();
+        var statusUntilCooldown = breaker.StoreStatus;
         clock.Advance(s_cooldown);
         var listedAfterCooldown = await breaker.ReadTrippedTopicsAsync();
 
         // Assert
         Assert.Equal([Span(CircuitBreakerSpanOperation.Trip)], recorder.SpanNames());
         Assert.Contains(TestCorrelator.GetLogEventsFromCurrentContext(), NamesTheFailure);
-        Assert.True(breaker.StoreStatus.IsUsingFallback);
-        Assert.Equal("InvalidOperationException", breaker.StoreStatus.LastFailure);
+        Assert.True(statusUntilCooldown.IsUsingFallback);
+        Assert.Equal("InvalidOperationException", statusUntilCooldown.LastFailure);
         Assert.Equal([_orders], listedUntilCooldown.ToArray());
         Assert.Empty(listedAfterCooldown);
     }
