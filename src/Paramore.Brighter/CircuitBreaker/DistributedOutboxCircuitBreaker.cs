@@ -61,6 +61,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private readonly HashSet<RoutingKey> _writesInFlight = new();
     private bool _isReadInFlight;
     private bool _isUsingFallback;
+    private bool _isReadFailing;
     private string? _lastFailure;
 
     /// <summary>
@@ -117,7 +118,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         get
         {
             lock (_view.Lock)
-                return new TrippedTopicStoreStatus(_isUsingFallback, _lastFailure);
+                return new TrippedTopicStoreStatus(_isUsingFallback || _isReadFailing, _lastFailure);
         }
     }
 
@@ -128,6 +129,17 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             _isUsingFallback = true;
             _lastFailure = TimeoutFailure;
         }
+    }
+
+    private void RecordReadFailure(Exception failure)
+    {
+        lock (_view.Lock)
+        {
+            _isReadFailing = true;
+            _lastFailure = failure.GetType().Name;
+        }
+
+        Log.ReadFailed(s_logger, failure, failure.GetType().Name);
     }
 
     private async Task SettleAsync(Task call)
@@ -360,9 +372,19 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         if (!TryEnterReadGuard())
             return TrippedTopics.ToList();
 
-        var read = await WithinStoreTimeoutAsync(
-            token => _store.ReadAsync(_timeProvider.GetUtcNow(), _tripLength, token), cancellationToken,
-            settled => _ = ReleaseReadGuardAfterAsync(settled)).ConfigureAwait(false);
+        TrippedTopicStoreRead? read;
+        try
+        {
+            read = await WithinStoreTimeoutAsync(
+                token => _store.ReadAsync(_timeProvider.GetUtcNow(), _tripLength, token), cancellationToken,
+                settled => _ = ReleaseReadGuardAfterAsync(settled)).ConfigureAwait(false);
+        }
+        catch (Exception e) when (!cancellationToken.IsCancellationRequested)
+        {
+            RecordReadFailure(e);
+            return TrippedTopics.ToList();
+        }
+
         if (read is null)
             return TrippedTopics.ToList();
 
@@ -475,6 +497,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         [LoggerMessage(LogLevel.Information, "Circuit breaker reset for topic {Topic} (trip length elapsed); publish suppression lifted")]
         public static partial void Reset(ILogger logger, string topic);
+
+        [LoggerMessage(LogLevel.Warning, "Reading tripped topics from the store failed with {FailureType}; using this instance's own view")]
+        public static partial void ReadFailed(ILogger logger, Exception exception, string failureType);
 
         [LoggerMessage(LogLevel.Warning, "A store call is still running after {Seconds} seconds; no longer holding its in-flight guard")]
         public static partial void InFlightGuardReleased(ILogger logger, double seconds);
