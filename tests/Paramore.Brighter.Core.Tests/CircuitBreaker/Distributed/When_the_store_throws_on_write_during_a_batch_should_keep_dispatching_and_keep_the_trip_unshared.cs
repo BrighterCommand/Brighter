@@ -114,7 +114,7 @@ public class When_the_store_throws_on_write_during_a_batch_should_keep_dispatchi
         var listedAfterCooldown = await breaker.ReadTrippedTopicsAsync();
 
         // Assert
-        Assert.Equal([Span(CircuitBreakerSpanOperation.Trip)], recorder.SpanNames());
+        Assert.Equal([Span(CircuitBreakerSpanOperation.Trip), Span(CircuitBreakerSpanOperation.Reset)], recorder.SpanNames());
         Assert.Contains(TestCorrelator.GetLogEventsFromCurrentContext(), NamesTheFailure);
         Assert.True(statusUntilCooldown.IsUsingFallback);
         Assert.Equal("InvalidOperationException", statusUntilCooldown.LastFailure);

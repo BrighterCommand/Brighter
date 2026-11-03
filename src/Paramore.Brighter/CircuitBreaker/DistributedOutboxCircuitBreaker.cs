@@ -63,6 +63,8 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private readonly InFlightGuard _refreshGuard = new();
     private readonly InFlightGuard _recoveryGuard = new();
     private readonly HashSet<RoutingKey> _unsharedTopics = new();
+    private readonly HashSet<RoutingKey> _announcedUnshared = new();
+    private readonly HashSet<RoutingKey> _endedUnsharedToAnnounce = new();
     private long _readsStarted;
     private long _newestAppliedRead;
     private bool _isReadFailing;
@@ -134,9 +136,35 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private void ClearFailureWhenFallbackEnds()
     {
         var now = _timeProvider.GetUtcNow();
-        _unsharedTopics.RemoveWhere(topic => !_view.IsLive(topic, stamp => IsLive(now, stamp)));
+        foreach (var topic in _unsharedTopics.Where(topic => !_view.IsLive(topic, stamp => IsLive(now, stamp))).ToList())
+        {
+            _unsharedTopics.Remove(topic);
+            if (_announcedUnshared.Remove(topic))
+                _endedUnsharedToAnnounce.Add(topic);
+        }
+
         if (!IsFallbackActive())
             _lastFailure = null;
+    }
+
+    private void AnnounceEndedUnsharedTrips()
+    {
+        List<RoutingKey> ended;
+        lock (_view.Lock)
+        {
+            ClearFailureWhenFallbackEnds();
+            ended = _endedUnsharedToAnnounce.ToList();
+            _endedUnsharedToAnnounce.Clear();
+        }
+
+        foreach (var topic in ended)
+            Announce(CircuitBreakerSpanOperation.Reset, topic);
+    }
+
+    private bool TakeAnnouncedFromView(RoutingKey topic)
+    {
+        lock (_view.Lock)
+            return _announcedUnshared.Remove(topic);
     }
 
     private void RecordTimeout()
@@ -246,13 +274,12 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     }
 
     /// <inheritdoc />
-    public void CoolDown()
-    {
-    }
+    public void CoolDown() => AnnounceEndedUnsharedTrips();
 
     /// <inheritdoc />
     public void TripTopic(RoutingKey topic)
     {
+        AnnounceEndedUnsharedTrips();
         var stamp = CurrentStamp();
         bool startWrite;
         lock (_view.Lock)
@@ -283,6 +310,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         foreach (var result in results)
         {
             RecordWriteSuccess(result.Topic);
+            var alreadyAnnounced = TakeAnnouncedFromView(result.Topic);
             if (result.LeftEnded || (result.PriorTripTime is not null && HasRunOut(result.StoredTripTime)))
             {
                 _view.DropIfNotNewerThan(result.Topic, result.StoredTripTime);
@@ -291,20 +319,22 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
             _view.Raise(result.Topic, result.StoredTripTime);
 
-            foreach (var operation in AnnouncementsFor(result))
+            foreach (var operation in AnnouncementsFor(result, alreadyAnnounced))
                 Announce(operation, result.Topic);
         }
     }
 
-    private CircuitBreakerSpanOperation[] AnnouncementsFor(TripWriteResult result)
+    private CircuitBreakerSpanOperation[] AnnouncementsFor(TripWriteResult result, bool alreadyAnnounced)
     {
         if (result.PriorTripTime is null)
-            return [CircuitBreakerSpanOperation.Trip];
+            return alreadyAnnounced ? [] : [CircuitBreakerSpanOperation.Trip];
 
         if (HasRunOut(result.PriorTripTime.Value))
-            return [CircuitBreakerSpanOperation.Reset, CircuitBreakerSpanOperation.Trip];
+            return alreadyAnnounced
+                ? [CircuitBreakerSpanOperation.Reset]
+                : [CircuitBreakerSpanOperation.Reset, CircuitBreakerSpanOperation.Trip];
 
-        return [CircuitBreakerSpanOperation.ReTrip];
+        return alreadyAnnounced ? [] : [CircuitBreakerSpanOperation.ReTrip];
     }
 
     private async Task WriteLiveAsync(IReadOnlyCollection<KeyValuePair<RoutingKey, PendingTrip>> pending, Action<Task> holdGuardUntil)
@@ -353,7 +383,12 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private void AnnounceUnshared(IEnumerable<KeyValuePair<RoutingKey, PendingTrip>> unshared)
     {
         foreach (var trip in unshared)
+        {
+            lock (_view.Lock)
+                _announcedUnshared.Add(trip.Key);
+
             Announce(trip.Value.ReplacesLiveTrip ? CircuitBreakerSpanOperation.ReTrip : CircuitBreakerSpanOperation.Trip, trip.Key);
+        }
     }
 
     private List<KeyValuePair<RoutingKey, PendingTrip>> LivePending(IReadOnlyCollection<KeyValuePair<RoutingKey, PendingTrip>> pending)
@@ -444,6 +479,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     /// <inheritdoc />
     public async Task<IReadOnlyCollection<RoutingKey>> ReadTrippedTopicsAsync(CancellationToken cancellationToken = default)
     {
+        AnnounceEndedUnsharedTrips();
         await MergeStoreIntoViewAsync(_readGuard, cancellationToken).ConfigureAwait(false);
         return TrippedTopics.ToList();
     }
@@ -543,7 +579,11 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     }
 
     /// <inheritdoc />
-    public void StartRefresh() => _ = Task.Run(RefreshAsync);
+    public void StartRefresh()
+    {
+        AnnounceEndedUnsharedTrips();
+        _ = Task.Run(RefreshAsync);
+    }
 
     private async Task RefreshAsync()
     {
@@ -594,6 +634,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         public void TripTopic(RoutingKey topic)
         {
+            breaker.AnnounceEndedUnsharedTrips();
             var stamp = breaker.CurrentStamp();
             _trips[topic] = breaker.RecordTrip(topic, stamp, _trips.TryGetValue(topic, out var earlier) ? earlier : null);
         }
