@@ -887,7 +887,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.30
   - References: ADR 0089 Phase 2 invariant: "No read waits on the store from a health signal".
 
-- [ ] **CHARACTERISE: T2.36 - A trip that races the read ending the topic is never lost (distributed)**
+- [x] **CHARACTERISE: T2.36 - A trip that races the read ending the topic is never lost (distributed)**
   - **USE COMMAND**: `/tdd:test-first when a distributed trip races the read that ends the topic should leave the topic tripped with its cooldown restarted at the trip`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_distributed_trip_races_the_ending_read_should_restart_the_cooldown_at_the_trip.cs`
