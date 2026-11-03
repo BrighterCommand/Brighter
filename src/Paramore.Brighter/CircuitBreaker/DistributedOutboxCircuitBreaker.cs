@@ -62,6 +62,8 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private readonly InFlightGuard _readGuard = new();
     private readonly InFlightGuard _refreshGuard = new();
     private readonly HashSet<RoutingKey> _unsharedTopics = new();
+    private long _readsStarted;
+    private long _newestAppliedRead;
     private bool _isReadFailing;
     private string? _lastFailure;
 
@@ -432,6 +434,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         if (!guard.TryEnter())
             return;
 
+        var readNumber = Interlocked.Increment(ref _readsStarted);
         TrippedTopicStoreRead? read;
         try
         {
@@ -441,22 +444,47 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
         catch (Exception e) when (!cancellationToken.IsCancellationRequested)
         {
-            RecordReadFailure(e);
+            if (!IsStale(readNumber))
+                RecordReadFailure(e);
             return;
         }
 
         if (read is null)
         {
-            RecordReadTimeout();
+            if (!IsStale(readNumber))
+                RecordReadTimeout();
             return;
         }
 
-        RecordReadSuccess();
-        MergeLive(read.Live);
+        var isStale = TryApply(readNumber);
+        if (!isStale)
+        {
+            RecordReadSuccess();
+            MergeLive(read.Live);
+        }
+
         foreach (var ended in read.Ended)
         {
             _view.DropIfNotNewerThan(ended.Topic, ended.TripTime);
             Announce(CircuitBreakerSpanOperation.Reset, ended.Topic);
+        }
+    }
+
+    private bool IsStale(long readNumber)
+    {
+        lock (_view.Lock)
+            return readNumber < _newestAppliedRead;
+    }
+
+    private bool TryApply(long readNumber)
+    {
+        lock (_view.Lock)
+        {
+            if (readNumber < _newestAppliedRead)
+                return true;
+
+            _newestAppliedRead = readNumber;
+            return false;
         }
     }
 
