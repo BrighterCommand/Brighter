@@ -52,8 +52,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private readonly TimeProvider _timeProvider;
     private readonly IAmABrighterTracer? _tracer;
     private readonly InstrumentationOptions _instrumentationOptions;
-    private readonly object _lock = new();
-    private readonly Dictionary<RoutingKey, DateTimeOffset> _view = new();
+    private readonly TripView _view = new();
     private readonly Dictionary<RoutingKey, DateTimeOffset> _pendingWrites = new();
     private readonly HashSet<RoutingKey> _writesInFlight = new();
 
@@ -122,17 +121,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         get
         {
             var now = _timeProvider.GetUtcNow();
-            lock (_lock)
-            {
-                var topics = new List<RoutingKey>();
-                foreach (var trip in _view)
-                {
-                    if (IsLive(now, trip.Value))
-                        topics.Add(trip.Key);
-                }
-
-                return topics;
-            }
+            return _view.LiveTopics(stamp => IsLive(now, stamp));
         }
     }
 
@@ -149,9 +138,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     {
         var stamp = CurrentStamp();
         bool startWrite;
-        lock (_lock)
+        lock (_view.Lock)
         {
-            _view[topic] = stamp;
+            _view.Record(topic, stamp);
             _pendingWrites[topic] = stamp;
             startWrite = _writesInFlight.Add(topic);
         }
@@ -172,23 +161,14 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         {
             if (result.LeftEnded || (result.PriorTripTime is not null && HasRunOut(result.StoredTripTime)))
             {
-                DropEnded(result.Topic, result.StoredTripTime);
+                _view.DropIfNotNewerThan(result.Topic, result.StoredTripTime);
                 continue;
             }
 
-            RaiseView(result);
+            _view.Raise(result.Topic, result.StoredTripTime);
 
             foreach (var operation in AnnouncementsFor(result))
                 Announce(operation, result.Topic);
-        }
-    }
-
-    private void RaiseView(TripWriteResult result)
-    {
-        lock (_lock)
-        {
-            if (!_view.TryGetValue(result.Topic, out var viewed) || viewed < result.StoredTripTime)
-                _view[result.Topic] = result.StoredTripTime;
         }
     }
 
@@ -222,7 +202,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             if (IsLive(now, trip.Value))
                 trips.Add(new TopicTrip(trip.Key, trip.Value));
             else
-                DropStale(trip.Key, trip.Value);
+                _view.DropIfExactly(trip.Key, trip.Value);
         }
 
         return trips;
@@ -231,24 +211,6 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private bool IsLive(DateTimeOffset now, DateTimeOffset stamp) => now - stamp < _tripLength;
 
     private bool HasRunOut(DateTimeOffset stamp) => !IsLive(_timeProvider.GetUtcNow(), stamp);
-
-    private void DropEnded(RoutingKey topic, DateTimeOffset storedStamp)
-    {
-        lock (_lock)
-        {
-            if (_view.TryGetValue(topic, out var viewed) && viewed <= storedStamp)
-                _view.Remove(topic);
-        }
-    }
-
-    private void DropStale(RoutingKey topic, DateTimeOffset stamp)
-    {
-        lock (_lock)
-        {
-            if (_view.TryGetValue(topic, out var viewed) && viewed == stamp)
-                _view.Remove(topic);
-        }
-    }
 
     private void Announce(CircuitBreakerSpanOperation operation, RoutingKey topic)
     {
@@ -275,7 +237,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         while (more)
         {
             DateTimeOffset stamp;
-            lock (_lock)
+            lock (_view.Lock)
             {
                 stamp = _pendingWrites[topic];
                 _pendingWrites.Remove(topic);
@@ -283,7 +245,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
             await WriteLiveAsync([new KeyValuePair<RoutingKey, DateTimeOffset>(topic, stamp)]).ConfigureAwait(false);
 
-            lock (_lock)
+            lock (_view.Lock)
             {
                 more = _pendingWrites.ContainsKey(topic);
                 if (!more)
@@ -302,7 +264,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         MergeLive(read.Live);
         foreach (var ended in read.Ended)
         {
-            DropEnded(ended.Topic, ended.TripTime);
+            _view.DropIfNotNewerThan(ended.Topic, ended.TripTime);
             Announce(CircuitBreakerSpanOperation.Reset, ended.Topic);
         }
 
@@ -311,13 +273,10 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private void MergeLive(IReadOnlyCollection<TopicTrip> live)
     {
-        lock (_lock)
+        lock (_view.Lock)
         {
             foreach (var trip in live)
-            {
-                if (!_view.TryGetValue(trip.Topic, out var viewed) || viewed < trip.TripTime)
-                    _view[trip.Topic] = trip.TripTime;
-            }
+                _view.Raise(trip.Topic, trip.TripTime);
         }
     }
 
@@ -331,11 +290,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         public void TripTopic(RoutingKey topic)
         {
             var stamp = breaker.CurrentStamp();
-            lock (breaker._lock)
-            {
-                breaker._view[topic] = stamp;
-            }
-
+            breaker._view.Record(topic, stamp);
             _trips[topic] = stamp;
         }
 
@@ -347,6 +302,61 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             var pending = _trips.ToArray();
             _trips.Clear();
             await breaker.WriteLiveAsync(pending).ConfigureAwait(false);
+        }
+    }
+
+    private sealed class TripView
+    {
+        private readonly Dictionary<RoutingKey, DateTimeOffset> _stamps = new();
+
+        public object Lock { get; } = new();
+
+        public void Record(RoutingKey topic, DateTimeOffset stamp)
+        {
+            lock (Lock)
+                _stamps[topic] = stamp;
+        }
+
+        public void Raise(RoutingKey topic, DateTimeOffset stamp)
+        {
+            lock (Lock)
+            {
+                if (!_stamps.TryGetValue(topic, out var viewed) || viewed < stamp)
+                    _stamps[topic] = stamp;
+            }
+        }
+
+        public void DropIfNotNewerThan(RoutingKey topic, DateTimeOffset stamp)
+        {
+            lock (Lock)
+            {
+                if (_stamps.TryGetValue(topic, out var viewed) && viewed <= stamp)
+                    _stamps.Remove(topic);
+            }
+        }
+
+        public void DropIfExactly(RoutingKey topic, DateTimeOffset stamp)
+        {
+            lock (Lock)
+            {
+                if (_stamps.TryGetValue(topic, out var viewed) && viewed == stamp)
+                    _stamps.Remove(topic);
+            }
+        }
+
+        public List<RoutingKey> LiveTopics(Func<DateTimeOffset, bool> isLive)
+        {
+            lock (Lock)
+            {
+                var topics = new List<RoutingKey>();
+                foreach (var trip in _stamps)
+                {
+                    if (isLive(trip.Value))
+                        topics.Add(trip.Key);
+                }
+
+                return topics;
+            }
         }
     }
 
