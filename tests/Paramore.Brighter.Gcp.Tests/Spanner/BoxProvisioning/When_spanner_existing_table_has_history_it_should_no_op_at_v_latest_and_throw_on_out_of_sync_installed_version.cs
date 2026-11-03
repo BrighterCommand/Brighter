@@ -21,13 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-// Per ADR 0057 §6 Spanner is "fresh-only" — there is no V_k chain, so the runner
-// holds V_latest as a constant. On the existing-table-with-history path:
-//   MAX(V) == V_latest  → no-op (clean return; history preserved verbatim)
-//   MAX(V)  > V_latest  → throws ConfigurationException ("migration list out of sync")
-//   MAX(V)  < V_latest  → undefined per ADR §6 ("manual recovery required");
-//                          intentionally not asserted here — see ADR for rationale.
-
 using System;
 using System.Threading.Tasks;
 using Google.Api.Gax;
@@ -39,6 +32,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
+/// <summary>
+/// A Spanner outbox whose history is at V_latest is left alone, history preserved; history above V_latest
+/// throws, because the build and the database are out of sync (ADR 0057 §6).
+/// </summary>
 [Trait("Category", "Spanner")]
 [Collection("Spanner")]
 [Trait("Category", "Spanner")]
@@ -69,14 +66,14 @@ public class SpannerOutboxNormalPathTests : IAsyncLifetime
     [Fact]
     public async Task Should_be_a_no_op_when_history_max_equals_v_latest()
     {
-        // Arrange — V_latest-shape outbox + history seeded at V_latest
+        // Arrange
         await CreateBoxAndSeedHistoryAsync(
             ExpectedMigrationVersions.OutboxLatest, SeededDescription);
 
         // Act
         await _provisioner.ProvisionAsync();
 
-        // Assert — exactly one history row, description preserved verbatim
+        // Assert
         using var connection = CreateConnection();
         await connection.OpenAsync();
 
@@ -92,7 +89,7 @@ public class SpannerOutboxNormalPathTests : IAsyncLifetime
     [Fact]
     public async Task Should_throw_configuration_exception_when_history_max_exceeds_v_latest()
     {
-        // Arrange — V_latest-shape outbox + history seeded at V=99 (out-of-sync)
+        // Arrange
         await CreateBoxAndSeedHistoryAsync(99, "speculative future migration");
 
         // Act / Assert
@@ -205,6 +202,10 @@ WHERE `BoxTableName` = @BoxTableName",
     }
 }
 
+/// <summary>
+/// A Spanner inbox whose history is at V_latest is left alone, history preserved; history above V_latest
+/// throws, because the build and the database are out of sync (ADR 0057 §6).
+/// </summary>
 [Trait("Category", "Spanner")]
 [Collection("Spanner")]
 [Trait("Category", "Spanner")]
@@ -235,14 +236,14 @@ public class SpannerInboxNormalPathTests : IAsyncLifetime
     [Fact]
     public async Task Should_be_a_no_op_when_history_max_equals_v_latest()
     {
-        // Arrange — V_latest-shape inbox + history seeded at V_latest
+        // Arrange
         await CreateBoxAndSeedHistoryAsync(
             ExpectedMigrationVersions.InboxLatest, SeededDescription);
 
         // Act
         await _provisioner.ProvisionAsync();
 
-        // Assert — exactly one history row, description preserved verbatim
+        // Assert
         using var connection = CreateConnection();
         await connection.OpenAsync();
 
@@ -258,7 +259,7 @@ public class SpannerInboxNormalPathTests : IAsyncLifetime
     [Fact]
     public async Task Should_throw_configuration_exception_when_history_max_exceeds_v_latest()
     {
-        // Arrange — V_latest-shape inbox + history seeded at V=99 (out-of-sync)
+        // Arrange
         await CreateBoxAndSeedHistoryAsync(99, "speculative future migration");
 
         // Act / Assert

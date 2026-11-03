@@ -30,6 +30,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
+/// <summary>
+/// A fresh Spanner install creates the outbox and stamps one history row at V_latest with the fresh-install
+/// description; a second run is a no-op that inserts no duplicate history row.
+/// </summary>
 [Trait("Category", "Spanner")]
 [Collection("Spanner")]
 [Trait("Category", "Spanner")]
@@ -58,10 +62,10 @@ public class SpannerOutboxFreshInstallTests : IAsyncLifetime
     [Fact]
     public async Task Should_stamp_v_latest_with_fresh_install_description_and_skip_duplicate_on_rerun()
     {
-        // Act — first provision on absent table (fresh-install path)
+        // Act
         await _provisioner.ProvisionAsync();
 
-        // Assert — single history row at V_latest with description starting with "fresh install"
+        // Assert
         using var connection = CreateConnection();
         await connection.OpenAsync();
 
@@ -70,10 +74,10 @@ public class SpannerOutboxFreshInstallTests : IAsyncLifetime
         Assert.NotNull(firstDescription);
         Assert.StartsWith("fresh install", firstDescription, StringComparison.OrdinalIgnoreCase);
 
-        // Act — second provision must be a no-op (verifies IsMigrationAppliedAsync gate / detection bypass)
+        // Act
         await _provisioner.ProvisionAsync();
 
-        // Assert — still exactly one history row at V_latest, description preserved
+        // Assert
         var (secondCount, secondDescription) = await ReadHistoryAsync(connection, _tableName);
         Assert.Equal(1, secondCount);
         Assert.Equal(firstDescription, secondDescription);
@@ -130,6 +134,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
     }
 }
 
+/// <summary>
+/// A fresh Spanner install creates the inbox and stamps one history row at V_latest with the fresh-install
+/// description; a second run is a no-op that inserts no duplicate history row.
+/// </summary>
 [Trait("Category", "Spanner")]
 [Collection("Spanner")]
 [Trait("Category", "Spanner")]
@@ -158,10 +166,10 @@ public class SpannerInboxFreshInstallTests : IAsyncLifetime
     [Fact]
     public async Task Should_stamp_v_latest_with_fresh_install_description_and_skip_duplicate_on_rerun()
     {
-        // Act — first provision on absent table (fresh-install path)
+        // Act
         await _provisioner.ProvisionAsync();
 
-        // Assert — single history row at V_latest with description starting with "fresh install"
+        // Assert
         using var connection = CreateConnection();
         await connection.OpenAsync();
 
@@ -170,10 +178,10 @@ public class SpannerInboxFreshInstallTests : IAsyncLifetime
         Assert.NotNull(firstDescription);
         Assert.StartsWith("fresh install", firstDescription, StringComparison.OrdinalIgnoreCase);
 
-        // Act — second provision must be a no-op (verifies IsMigrationAppliedAsync gate / detection bypass)
+        // Act
         await _provisioner.ProvisionAsync();
 
-        // Assert — still exactly one history row at V_latest, description preserved
+        // Assert
         var (secondCount, secondDescription) = await ReadHistoryAsync(connection, _tableName);
         Assert.Equal(1, secondCount);
         Assert.Equal(firstDescription, secondDescription);
