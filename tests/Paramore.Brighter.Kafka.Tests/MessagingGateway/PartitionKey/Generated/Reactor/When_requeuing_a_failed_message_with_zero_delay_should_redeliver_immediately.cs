@@ -9,6 +9,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Reactor;
 
+/// <summary>
+/// A zero delay is not special-cased: the message is back within 5 s, timed from Requeue returning,
+/// because the call's own duration is the cost of asking the broker, not a delay on the message.
+/// </summary>
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]
 public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediately : IDisposable
@@ -54,22 +58,16 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediately 
 
         _producer.Send(message);
 
-        // Act — receive the message and requeue it with an explicit TimeSpan.Zero
+        // Act
         var received = _channel.Receive(TimeSpan.FromMilliseconds(15000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         var requeued = _channel.Requeue(received, TimeSpan.Zero);
         Assert.True(requeued);
 
-        // The window opens when Requeue RETURNS. The call's own duration is a round trip to the
-        // broker to issue the instruction — the cost of asking, not a delay applied to the
-        // message — so charging it to the budget would measure network latency rather than the
-        // gateway's treatment of TimeSpan.Zero.
         var stopwatch = Stopwatch.StartNew();
 
-        // Assert — poll every 500 ms, giving up after 30 s. TimeSpan.Zero must not be
-        // special-cased: the message arrives on the first iteration, and the time from the
-        // Requeue call returning to receipt must be less than 5 s.
+        // Assert
         var redelivered = new Message();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
         {

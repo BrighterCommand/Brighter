@@ -11,6 +11,11 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Reactor;
 
+/// <summary>
+/// With no dead-letter queue or invalid-message channel, a rejected message is acknowledged: it
+/// never comes back, and the message behind it still arrives. Messages are identified by id, never
+/// by arrival order.
+/// </summary>
 [Trait("Category", "GcpPubSubPull")]
 [Collection("Pull")]
 public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog : IDisposable
@@ -42,7 +47,7 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
     [Fact(Skip = "Deferred: #4240 — no channels configured: acknowledge and log not yet conformant for GCP / Pull (maintainer sign-off)")]
     public void When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log()
     {
-        // Arrange — neither a dead-letter queue nor an invalid-message channel is configured
+        // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
         _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
@@ -51,10 +56,6 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        // Each message carries its own id and body. Sharing the builder's defaults would make the
-        // two the same message, and a rejected message that came back would then be
-        // indistinguishable from the other one. Which of the two the transport delivers first is
-        // not decided here — that is the transport's to choose (NFR-4).
         var firstSent = _messageBuilder.SetTopic(_publication.Topic!)
             .SetMessageId(Id.Random())
             .SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString()))
@@ -70,10 +71,7 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
         _producer.Send(firstSent);
         _producer.Send(secondSent);
 
-        // Act — reject whichever message the transport hands over first. Which of the two that is
-        // belongs to the transport, not to Brighter, so the rejected message is identified by its
-        // id rather than assumed to be the one sent first (NFR-4). The behaviour under test is the
-        // same either way.
+        // Act
         var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
@@ -82,12 +80,10 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
 
         var rejected = _channel.Reject(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Test rejection with no channels configured"));
 
-        // Assert — Reject returns true: the message is removed, not redelivered
+        // Assert
         Assert.True(rejected, "Reject should return true when no channels are configured");
 
-        // Assert — the other message arrives without blocking, and the rejected one does not come
-        // back while we wait for it. Identifying by id rather than by arrival position is what
-        // lets this hold on a transport that does not order its deliveries (NFR-4).
+        // Assert
         var receivedOther = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
@@ -98,7 +94,6 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
                 continue;
             }
 
-            // The rejected message coming back is the one outcome this test exists to forbid.
             Assert.NotEqual(rejectedMessage.Header.MessageId, next.Header.MessageId);
 
             receivedOther = next;

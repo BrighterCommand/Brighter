@@ -9,6 +9,10 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway.Reactor;
 
+/// <summary>
+/// A message requeued with a delay is not redelivered before the delay and is after it. The
+/// before-delay receive is shorter than the delay but long enough to catch an immediate redelivery.
+/// </summary>
 [Trait("Category", "PostgresSql")]
 [Collection("PostgresMessagingGateway")]
 public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelay : IDisposable
@@ -54,22 +58,18 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelay : IDi
 
         _producer.Send(message);
 
-        // Act — receive the message and requeue it with a 5 s delay
+        // Act
         var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         var requeued = _channel.Requeue(received, TimeSpan.FromSeconds(5));
         Assert.True(requeued);
 
-        // Assert — before-D arm: a single bounded receive, deliberately shorter than the 5 s delay,
-        // should yield MT_NONE. The window must be less than the delay so a correctly-delayed message
-        // is not observed here, yet long enough to catch a gateway that ignores the delay and redelivers
-        // immediately. A single receive, not a poll loop: this asserts the message is absent.
+        // Assert
         var beforeDelay = _channel.Receive(TimeSpan.FromMilliseconds(2000));
         Assert.Equal(MessageType.MT_NONE, beforeDelay.Header.MessageType);
 
-        // Assert — once the delay has elapsed: poll every 500 ms, giving up after 30 s, and
-        // wait for the message to reappear
+        // Assert
         var redelivered = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))

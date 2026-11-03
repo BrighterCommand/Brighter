@@ -61,7 +61,7 @@ public interface IAmAMessageGatewayReactorProvider
     /// Creates an synchronous channel for the specified subscription.
     /// </summary>
     /// <param name="subscription">The subscription configuration.</param>
-    /// <returns>An asynchronous channel for receiving messages.</returns>
+    /// <returns>A synchronous channel for receiving messages.</returns>
     IAmAChannelSync CreateChannel(Paramore.Brighter.MessagingGateway.Redis.RedisSubscription subscription);
 
     /// <summary>
@@ -70,7 +70,6 @@ public interface IAmAMessageGatewayReactorProvider
     /// <param name="producer">The message producer to clean up, or null.</param>
     /// <param name="channel">The channel to clean up, or null.</param>
     /// <param name="messages">The messages to clean up.</param>
-    /// <returns>A task representing the cleanup operation.</returns>
     void CleanUp(IAmAMessageProducerSync? producer, IAmAChannelSync? channel, IEnumerable<Message> messages);
 
     /// <summary>
@@ -80,11 +79,9 @@ public interface IAmAMessageGatewayReactorProvider
     /// does not configure a dead-letter routing key. Never throws; never blocks indefinitely.
     /// </summary>
     /// <remarks>
-    /// The retry belongs to the caller, not here. A test polls this in a bounded loop whose ceiling
-    /// and interval the test itself states, and an implementation that also retries internally
-    /// overruns that ceiling - leaving the caller's loop to re-test an expired stopwatch and never
-    /// run a second iteration - while making the checks that assert a message never arrives wait
-    /// out the full bound on every run. Enforced by <c>DeadLetterPollContractAudit</c>.
+    /// The retry belongs to the caller, whose bounded loop states its own ceiling: retrying here
+    /// overruns it, and makes the checks that a message never arrives wait out the full bound.
+    /// Enforced by <c>DeadLetterPollContractAudit</c>.
     /// </remarks>
     /// <param name="subscription">The subscription configuration.</param>
     /// <returns>The message from the dead letter queue, or an MT_NONE sentinel when empty or unconfigured.</returns>
@@ -97,11 +94,9 @@ public interface IAmAMessageGatewayReactorProvider
     /// does not configure an invalid-message routing key. Never throws; never blocks indefinitely.
     /// </summary>
     /// <remarks>
-    /// The retry belongs to the caller, not here. A test polls this in a bounded loop whose ceiling
-    /// and interval the test itself states, and an implementation that also retries internally
-    /// overruns that ceiling - leaving the caller's loop to re-test an expired stopwatch and never
-    /// run a second iteration - while making the checks that assert a message never arrives wait
-    /// out the full bound on every run. Enforced by <c>DeadLetterPollContractAudit</c>.
+    /// The retry belongs to the caller, whose bounded loop states its own ceiling: retrying here
+    /// overruns it, and makes the checks that a message never arrives wait out the full bound.
+    /// Enforced by <c>DeadLetterPollContractAudit</c>.
     /// </remarks>
     /// <param name="subscription">The subscription configuration.</param>
     /// <returns>The message from the invalid-message channel, or an MT_NONE sentinel when empty or unconfigured.</returns>
