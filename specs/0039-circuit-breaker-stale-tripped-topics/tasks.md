@@ -902,7 +902,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.31
   - References: ADR 0089 *How a read ends trips* (re-trip race).
 
-- [ ] **CHARACTERISE: T2.38 - A failed write on a request-only instance or a callback is logged, and the message stays**
+- [x] **CHARACTERISE: T2.38 - A failed write on a request-only instance or a callback is logged, and the message stays**
   - **USE COMMAND**: `/tdd:test-first when a request only instance cannot write a trip should log a warning, throw nothing and leave the message outstanding`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_request_only_instance_cannot_write_a_trip_should_log_a_warning_and_keep_the_message.cs`
