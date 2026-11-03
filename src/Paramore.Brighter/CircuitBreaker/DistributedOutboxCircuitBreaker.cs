@@ -57,7 +57,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private readonly IAmABrighterTracer? _tracer;
     private readonly InstrumentationOptions _instrumentationOptions;
     private readonly TripView _view = new();
-    private readonly Dictionary<RoutingKey, DateTimeOffset> _pendingWrites = new();
+    private readonly Dictionary<RoutingKey, PendingTrip> _pendingWrites = new();
     private readonly HashSet<RoutingKey> _writesInFlight = new();
     private bool _isReadInFlight;
     private bool _isUsingFallback;
@@ -129,6 +129,17 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             _isUsingFallback = true;
             _lastFailure = TimeoutFailure;
         }
+    }
+
+    private void RecordWriteFailure(Exception failure)
+    {
+        lock (_view.Lock)
+        {
+            _isUsingFallback = true;
+            _lastFailure = failure.GetType().Name;
+        }
+
+        Log.WriteFailed(s_logger, failure, failure.GetType().Name);
     }
 
     private void RecordReadFailure(Exception failure)
@@ -227,13 +238,19 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         bool startWrite;
         lock (_view.Lock)
         {
-            _view.Record(topic, stamp);
-            _pendingWrites[topic] = stamp;
+            _pendingWrites[topic] = RecordTrip(topic, stamp, _pendingWrites.TryGetValue(topic, out var earlier) ? earlier : null);
             startWrite = _writesInFlight.Add(topic);
         }
 
         if (startWrite)
             _ = Task.Run(() => WritePendingAsync(topic));
+    }
+
+    private PendingTrip RecordTrip(RoutingKey topic, DateTimeOffset stamp, PendingTrip? earlier)
+    {
+        var prior = _view.Record(topic, stamp);
+        var replacesLiveTrip = earlier?.ReplacesLiveTrip ?? (prior is not null && IsLive(_timeProvider.GetUtcNow(), prior.Value));
+        return new PendingTrip(stamp, replacesLiveTrip);
     }
 
     private DateTimeOffset CurrentStamp()
@@ -270,30 +287,48 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         return [CircuitBreakerSpanOperation.ReTrip];
     }
 
-    private async Task WriteLiveAsync(IReadOnlyCollection<KeyValuePair<RoutingKey, DateTimeOffset>> pending, Action<Task> holdGuardUntil)
+    private async Task WriteLiveAsync(IReadOnlyCollection<KeyValuePair<RoutingKey, PendingTrip>> pending, Action<Task> holdGuardUntil)
     {
-        var trips = LiveTrips(pending);
-        if (trips.Count == 0)
+        var live = LivePending(pending);
+        if (live.Count == 0)
             return;
 
-        var results = await WithinStoreTimeoutAsync(_ => _store.WriteAsync(trips), CancellationToken.None, holdGuardUntil).ConfigureAwait(false);
+        var trips = live.Select(trip => new TopicTrip(trip.Key, trip.Value.Stamp)).ToList();
+        IReadOnlyList<TripWriteResult>? results;
+        try
+        {
+            results = await WithinStoreTimeoutAsync(_ => _store.WriteAsync(trips), CancellationToken.None, holdGuardUntil).ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            RecordWriteFailure(e);
+            AnnounceUnshared(live);
+            return;
+        }
+
         if (results is not null)
             ApplyWriteResults(results);
     }
 
-    private List<TopicTrip> LiveTrips(IReadOnlyCollection<KeyValuePair<RoutingKey, DateTimeOffset>> pending)
+    private void AnnounceUnshared(IEnumerable<KeyValuePair<RoutingKey, PendingTrip>> unshared)
+    {
+        foreach (var trip in unshared)
+            Announce(trip.Value.ReplacesLiveTrip ? CircuitBreakerSpanOperation.ReTrip : CircuitBreakerSpanOperation.Trip, trip.Key);
+    }
+
+    private List<KeyValuePair<RoutingKey, PendingTrip>> LivePending(IReadOnlyCollection<KeyValuePair<RoutingKey, PendingTrip>> pending)
     {
         var now = _timeProvider.GetUtcNow();
-        var trips = new List<TopicTrip>(pending.Count);
+        var live = new List<KeyValuePair<RoutingKey, PendingTrip>>(pending.Count);
         foreach (var trip in pending)
         {
-            if (IsLive(now, trip.Value))
-                trips.Add(new TopicTrip(trip.Key, trip.Value));
+            if (IsLive(now, trip.Value.Stamp))
+                live.Add(trip);
             else
-                _view.DropIfExactly(trip.Key, trip.Value);
+                _view.DropIfExactly(trip.Key, trip.Value.Stamp);
         }
 
-        return trips;
+        return live;
     }
 
     private bool IsLive(DateTimeOffset now, DateTimeOffset stamp) => now - stamp < _tripLength;
@@ -342,17 +377,17 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private async Task<bool> WriteNextPendingAsync(RoutingKey topic)
     {
-        DateTimeOffset stamp;
+        PendingTrip pending;
         lock (_view.Lock)
         {
-            stamp = _pendingWrites[topic];
+            pending = _pendingWrites[topic];
             _pendingWrites.Remove(topic);
         }
 
         var settled = Task.CompletedTask;
         try
         {
-            await WriteLiveAsync([new KeyValuePair<RoutingKey, DateTimeOffset>(topic, stamp)], task => settled = task).ConfigureAwait(false);
+            await WriteLiveAsync([new KeyValuePair<RoutingKey, PendingTrip>(topic, pending)], task => settled = task).ConfigureAwait(false);
         }
         finally
         {
@@ -412,13 +447,12 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private sealed class TripBatch(DistributedOutboxCircuitBreaker breaker) : IAmATripBatch
     {
-        private readonly Dictionary<RoutingKey, DateTimeOffset> _trips = new();
+        private readonly Dictionary<RoutingKey, PendingTrip> _trips = new();
 
         public void TripTopic(RoutingKey topic)
         {
             var stamp = breaker.CurrentStamp();
-            breaker._view.Record(topic, stamp);
-            _trips[topic] = stamp;
+            _trips[topic] = breaker.RecordTrip(topic, stamp, _trips.TryGetValue(topic, out var earlier) ? earlier : null);
         }
 
         public async Task WriteAsync()
@@ -432,16 +466,22 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
     }
 
+    private readonly record struct PendingTrip(DateTimeOffset Stamp, bool ReplacesLiveTrip);
+
     private sealed class TripView
     {
         private readonly Dictionary<RoutingKey, DateTimeOffset> _stamps = new();
 
         public object Lock { get; } = new();
 
-        public void Record(RoutingKey topic, DateTimeOffset stamp)
+        public DateTimeOffset? Record(RoutingKey topic, DateTimeOffset stamp)
         {
             lock (Lock)
+            {
+                DateTimeOffset? prior = _stamps.TryGetValue(topic, out var viewed) ? viewed : null;
                 _stamps[topic] = stamp;
+                return prior;
+            }
         }
 
         public void Raise(RoutingKey topic, DateTimeOffset stamp)
@@ -500,6 +540,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         [LoggerMessage(LogLevel.Warning, "Reading tripped topics from the store failed with {FailureType}; using this instance's own view")]
         public static partial void ReadFailed(ILogger logger, Exception exception, string failureType);
+
+        [LoggerMessage(LogLevel.Warning, "Writing trips to the store failed with {FailureType}; the trips stay unshared on this instance")]
+        public static partial void WriteFailed(ILogger logger, Exception exception, string failureType);
 
         [LoggerMessage(LogLevel.Warning, "A store call is still running after {Seconds} seconds; no longer holding its in-flight guard")]
         public static partial void InFlightGuardReleased(ILogger logger, double seconds);
