@@ -752,7 +752,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.28
   - References: ADR 0089 *`DistributedOutboxCircuitBreaker`*, paragraph after the member table.
 
-- [ ] **TEST + IMPLEMENT: T2.29 - A failed refresh keeps the fallback view, and no trip outlives C**
+- [x] **TEST + IMPLEMENT: T2.29 - A failed refresh keeps the fallback view, and no trip outlives C**
   - **USE COMMAND**: `/tdd:test-first when every refresh fails should keep the fallback view and still drop the trip at the cooldown duration`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_every_refresh_fails_should_keep_the_fallback_view_and_drop_the_trip_at_the_cooldown.cs`
