@@ -706,7 +706,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.25
   - References: ADR 0089 *How the remaining small points are settled*: "No overlapping calls".
 
-- [ ] **TEST + IMPLEMENT: T2.27 - A failed read falls back to the instance's own view, with a Warning and no exception**
+- [x] **TEST + IMPLEMENT: T2.27 - A failed read falls back to the instance's own view, with a Warning and no exception**
   - **USE COMMAND**: `/tdd:test-first when the store throws on read should return the fallback view, log a warning and not throw`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_store_throws_on_read_should_return_the_fallback_view_and_log_a_warning.cs`
