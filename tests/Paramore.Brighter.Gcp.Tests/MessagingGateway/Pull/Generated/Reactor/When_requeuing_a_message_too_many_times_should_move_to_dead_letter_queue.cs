@@ -112,18 +112,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
 
         ConformanceDeferredPump.AssertIsTheMessageSent(message, dlqMessage);
 
-        // The pump spent the budget, and nothing else routed the message: it arrives carrying the
-        // deliveries it took to exhaust it.
-        //
-        // Why RequeueCount - 1 and not RequeueCount. The pump increments the count and only then
-        // tests it, so the delivery that exhausts the budget is the one that is never republished.
-        // Where the harness puts the message on the DLQ itself it sends that final in-memory
-        // header, and the count reads RequeueCount. Where the broker dead-letters natively - RMQ
-        // rejects onto a DLX, and the broker moves the copy it already holds - the stored copy was
-        // written by the last republish, so it reads one less. Both spent the same budget; they
-        // differ only in which copy gets recorded. RequeueCount - 1 is the strongest bound true of
-        // both, and still fails anything dead-lettered before the budget ran down.
-        var deliveriesExpected = _subscription.RequeueCount - 1;
+        var deliveriesExpected = MinimumRecordedDeliveries(_subscription.RequeueCount);
         Assert.True(dlqMessage.Header.HandledCount >= deliveriesExpected,
             $"expected at least {deliveriesExpected} deliveries before dead-lettering, "
             + $"but the dead-lettered message reports {dlqMessage.Header.HandledCount}");
@@ -136,4 +125,8 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
             Assert.Equal("DeliveryError", dlqMessage.Header.Bag[keys.RejectionReason].ToString());
         }
     }
+
+    // One less than the budget: a broker that dead-letters natively keeps the last republished copy,
+    // not the final in-memory header (ADR 0077, What the FR-23 harness can assert).
+    private static int MinimumRecordedDeliveries(int requeueCount) => requeueCount - 1;
 }
