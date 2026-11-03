@@ -45,6 +45,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private static readonly TimeSpan s_shortestPermittedStoreTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan s_longestPermittedStoreTimeout = TimeSpan.FromSeconds(60);
     private const string TimeoutFailure = "timeout";
+    private const int InFlightGuardTimeouts = 4;
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<DistributedOutboxCircuitBreaker>();
 
     private readonly IAmATrippedTopicStore _store;
@@ -58,6 +59,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private readonly TripView _view = new();
     private readonly Dictionary<RoutingKey, DateTimeOffset> _pendingWrites = new();
     private readonly HashSet<RoutingKey> _writesInFlight = new();
+    private bool _isReadInFlight;
     private bool _isUsingFallback;
     private string? _lastFailure;
 
@@ -128,12 +130,67 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
     }
 
-    private async Task<T?> WithinStoreTimeoutAsync<T>(Func<CancellationToken, Task<T>> call, CancellationToken cancellationToken) where T : class
+    private async Task SettleAsync(Task call)
+    {
+        try
+        {
+            await call.WaitAsync(TimeSpan.FromTicks(_storeTimeout.Ticks * InFlightGuardTimeouts), _timeProvider).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            Log.InFlightGuardReleased(s_logger, _storeTimeout.TotalSeconds * InFlightGuardTimeouts);
+        }
+        catch (Exception)
+        {
+            return;
+        }
+    }
+
+    private async Task ReleaseReadGuardAfterAsync(Task settled)
+    {
+        try
+        {
+            await settled.ConfigureAwait(false);
+        }
+        finally
+        {
+            lock (_view.Lock)
+                _isReadInFlight = false;
+        }
+    }
+
+    private bool TryEnterReadGuard()
+    {
+        lock (_view.Lock)
+        {
+            if (_isReadInFlight)
+                return false;
+
+            _isReadInFlight = true;
+            return true;
+        }
+    }
+
+    private static Task<T> StartCall<T>(Func<CancellationToken, Task<T>> call, CancellationToken token, Action<Task> holdGuardUntil)
+    {
+        try
+        {
+            return call(token);
+        }
+        catch
+        {
+            holdGuardUntil(Task.CompletedTask);
+            throw;
+        }
+    }
+
+    private async Task<T?> WithinStoreTimeoutAsync<T>(Func<CancellationToken, Task<T>> call, CancellationToken cancellationToken, Action<Task> holdGuardUntil) where T : class
     {
         using var timeout = _timeProvider.CreateCancellationTokenSource(_storeTimeout);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-        var task = call(linked.Token);
+        var task = StartCall(call, linked.Token, holdGuardUntil);
         _ = task.ContinueWith(abandoned => _ = abandoned.Exception, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+        holdGuardUntil(SettleAsync(task));
 
         try
         {
@@ -201,13 +258,13 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         return [CircuitBreakerSpanOperation.ReTrip];
     }
 
-    private async Task WriteLiveAsync(IReadOnlyCollection<KeyValuePair<RoutingKey, DateTimeOffset>> pending)
+    private async Task WriteLiveAsync(IReadOnlyCollection<KeyValuePair<RoutingKey, DateTimeOffset>> pending, Action<Task> holdGuardUntil)
     {
         var trips = LiveTrips(pending);
         if (trips.Count == 0)
             return;
 
-        var results = await WithinStoreTimeoutAsync(_ => _store.WriteAsync(trips), CancellationToken.None).ConfigureAwait(false);
+        var results = await WithinStoreTimeoutAsync(_ => _store.WriteAsync(trips), CancellationToken.None, holdGuardUntil).ConfigureAwait(false);
         if (results is not null)
             ApplyWriteResults(results);
     }
@@ -258,25 +315,40 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private async Task WritePendingAsync(RoutingKey topic)
     {
-        var more = true;
-        while (more)
+        try
         {
-            DateTimeOffset stamp;
-            lock (_view.Lock)
+            while (await WriteNextPendingAsync(topic).ConfigureAwait(false))
             {
-                stamp = _pendingWrites[topic];
-                _pendingWrites.Remove(topic);
-            }
-
-            await WriteLiveAsync([new KeyValuePair<RoutingKey, DateTimeOffset>(topic, stamp)]).ConfigureAwait(false);
-
-            lock (_view.Lock)
-            {
-                more = _pendingWrites.ContainsKey(topic);
-                if (!more)
-                    _writesInFlight.Remove(topic);
             }
         }
+        finally
+        {
+            lock (_view.Lock)
+                _writesInFlight.Remove(topic);
+        }
+    }
+
+    private async Task<bool> WriteNextPendingAsync(RoutingKey topic)
+    {
+        DateTimeOffset stamp;
+        lock (_view.Lock)
+        {
+            stamp = _pendingWrites[topic];
+            _pendingWrites.Remove(topic);
+        }
+
+        var settled = Task.CompletedTask;
+        try
+        {
+            await WriteLiveAsync([new KeyValuePair<RoutingKey, DateTimeOffset>(topic, stamp)], task => settled = task).ConfigureAwait(false);
+        }
+        finally
+        {
+            await settled.ConfigureAwait(false);
+        }
+
+        lock (_view.Lock)
+            return _pendingWrites.ContainsKey(topic);
     }
 
     /// <inheritdoc />
@@ -285,8 +357,12 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     /// <inheritdoc />
     public async Task<IReadOnlyCollection<RoutingKey>> ReadTrippedTopicsAsync(CancellationToken cancellationToken = default)
     {
+        if (!TryEnterReadGuard())
+            return TrippedTopics.ToList();
+
         var read = await WithinStoreTimeoutAsync(
-            token => _store.ReadAsync(_timeProvider.GetUtcNow(), _tripLength, token), cancellationToken).ConfigureAwait(false);
+            token => _store.ReadAsync(_timeProvider.GetUtcNow(), _tripLength, token), cancellationToken,
+            settled => _ = ReleaseReadGuardAfterAsync(settled)).ConfigureAwait(false);
         if (read is null)
             return TrippedTopics.ToList();
 
@@ -330,7 +406,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
             var pending = _trips.ToArray();
             _trips.Clear();
-            await breaker.WriteLiveAsync(pending).ConfigureAwait(false);
+            await breaker.WriteLiveAsync(pending, _ => { }).ConfigureAwait(false);
         }
     }
 
@@ -399,5 +475,8 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         [LoggerMessage(LogLevel.Information, "Circuit breaker reset for topic {Topic} (trip length elapsed); publish suppression lifted")]
         public static partial void Reset(ILogger logger, string topic);
+
+        [LoggerMessage(LogLevel.Warning, "A store call is still running after {Seconds} seconds; no longer holding its in-flight guard")]
+        public static partial void InFlightGuardReleased(ILogger logger, double seconds);
     }
 }
