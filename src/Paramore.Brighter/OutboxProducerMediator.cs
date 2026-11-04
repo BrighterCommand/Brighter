@@ -753,14 +753,17 @@ namespace Paramore.Brighter
                 var parentSpan = requestContext.Span;
                 var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
                     _instrumentationOptions);
+                IAmATripBatch? trips = null;
                 try
                 {
                     requestContext.Span = span;
 
                     if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
+                    var trippedTopics = await ReadTrippedTopicsAsync(cancellationToken);
+                    trips = (_outboxCircuitBreaker as IAmAnOutboxCircuitBreakerAsync)?.BeginTripBatch();
                     var messages =
                         (await _asyncOutbox.OutstandingMessagesAsync(timeSinceSent, requestContext,
-                            pageSize: amountToClear, trippedTopics: _outboxCircuitBreaker?.TrippedTopics, args: args, cancellationToken: cancellationToken)).ToArray();
+                            pageSize: amountToClear, trippedTopics: trippedTopics, args: args, cancellationToken: cancellationToken)).ToArray();
 
                     BrighterTracer.WriteOutboxEvent(BoxDbOperation.OutStandingMessages, messages, span, false, true,
                         _instrumentationOptions);
@@ -773,11 +776,11 @@ namespace Paramore.Brighter
                     // the sweep stays off a starved thread pool. A caller without a context is unaffected.
                     if (useBulk)
                     {
-                        await BulkDispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken, null);
+                        await BulkDispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken, trips);
                     }
                     else
                     {
-                        await DispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken, null);
+                        await DispatchAsync(messages, requestContext, OutboxClearSource.Sweeper, true, cancellationToken, trips);
                     }
 
                     Log.MessagesHaveBeenCleared(s_logger);
@@ -790,6 +793,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
+                    if (trips is not null) await trips.WriteAsync();
                     _tracer?.EndSpan(span);
                     _backgroundClearSemaphore.Release();
                 }
@@ -801,6 +805,14 @@ namespace Paramore.Brighter
                 requestContext.Span?.SetStatus(ActivityStatusCode.Error);
                 Log.SkippingDispatchOfMessages(s_logger);
             }
+        }
+
+        private async Task<IEnumerable<RoutingKey>?> ReadTrippedTopicsAsync(CancellationToken cancellationToken)
+        {
+            if (_outboxCircuitBreaker is IAmAnOutboxCircuitBreakerAsync asyncBreaker)
+                return await asyncBreaker.ReadTrippedTopicsAsync(cancellationToken);
+
+            return _outboxCircuitBreaker?.TrippedTopics;
         }
 
         private void CheckOutboxOutstandingLimit()
