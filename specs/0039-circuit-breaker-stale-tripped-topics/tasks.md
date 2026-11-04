@@ -920,7 +920,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2e - The mediator uses the async role
 
-- [ ] **TEST + IMPLEMENT: T2.39 - A sweep reads tripped topics asynchronously and writes one batch before it returns**
+- [x] **TEST + IMPLEMENT: T2.39 - A sweep reads tripped topics asynchronously and writes one batch before it returns**
   - **USE COMMAND**: `/tdd:test-first when a sweep runs with a breaker that implements the async role should read tripped topics asynchronously and write one trip batch before returning`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_sweep_runs_with_an_async_breaker_should_read_asynchronously_and_write_one_batch.cs`
