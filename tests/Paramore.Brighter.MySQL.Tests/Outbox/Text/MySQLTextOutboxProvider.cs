@@ -1,15 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
 using MySqlConnector;
+using Paramore.Brighter.Base.Test.Outbox;
 using Paramore.Brighter.MySql;
 using Paramore.Brighter.MySQL.Tests.Outbox.Text.Async;
+using Paramore.Brighter.MySQL.Tests.Outbox.Text.OutstandingCount;
 using Paramore.Brighter.MySQL.Tests.Outbox.Text.Sync;
 using Paramore.Brighter.Outbox.MySql;
 
 namespace Paramore.Brighter.MySQL.Tests.Outbox.Text;
 
-public class MySQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
+public class MySQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync, IAmAnOutstandingCountOutboxProvider
 {
     private readonly RelationalDatabaseConfiguration _configuration = new(Const.DefaultConnectingString,
         databaseName: "brightertests",
@@ -79,4 +82,24 @@ public class MySQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
         var outbox = new MySqlOutbox(_configuration);
         return await outbox.GetAsync(new RequestContext());
     }
+
+    public void DeleteOutstandingCountStore()
+    {
+        try
+        {
+            DeleteStore(Array.Empty<Message>());
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    public IAmAnOutboxAsync<Message, DbTransaction> CreateOutstandingCountStore()
+    {
+        CreateStore();
+        return new MySqlOutbox(_configuration);
+    }
+
+    public Task<OutstandingCountCancellationSetup<DbTransaction>> PrepareCancellationAsync(TimeSpan holdFor) =>
+        HeldMySqlOutstandingCountStore.PrepareAsync(binaryMessagePayload: false, holdFor);
 }
