@@ -968,7 +968,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:763`.
 
-- [ ] **CHARACTERISE: T2.40 - A sweep whose store read fails uses the fallback view and completes**
+- [x] **CHARACTERISE: T2.40 - A sweep whose store read fails uses the fallback view and completes**
   - **USE COMMAND**: `/tdd:test-first when the trip store cannot be read during a sweep should sweep with the fallback view and end completed`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_trip_store_cannot_be_read_during_a_sweep_should_use_the_fallback_view_and_complete.cs`
