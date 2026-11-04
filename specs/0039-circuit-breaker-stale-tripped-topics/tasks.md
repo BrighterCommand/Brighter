@@ -1115,7 +1115,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39, T2.29
   - References: ADR 0089 *Testing strategy* (counting double).
 
-- [ ] **CHARACTERISE: T2.48 - Breaker registration stays opt in**
+- [!] **CHARACTERISE: T2.48 - Breaker registration stays opt in** <!-- RALPH-FAILED: not writable in tests/Paramore.Brighter.Core.Tests/Sweeping: a real mediator is built only by AddProducers, which needs IBrighterOptions and the internal BrighterResiliencePipelineRegistry registered by BrighterHandlerBuilder; its assembly scan throws on duplicate mappers in Core.Tests and the registry is internal with no InternalsVisibleTo. Owner: move the test to tests/Paramore.Brighter.Extensions.Tests (which already resolves a real mediator, e.g. When_setting_the_options_registry_should_apply_the_pipeline_to_outbox_sends.cs) -->
   - **USE COMMAND**: `/tdd:test-first when no circuit breaker is registered and a publish fails should exclude no topic from later sweeps`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_no_circuit_breaker_is_registered_and_a_publish_fails_should_exclude_no_topic.cs`
