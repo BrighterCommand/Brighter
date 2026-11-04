@@ -1029,7 +1029,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.41
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:791`.
 
-- [ ] **TEST + IMPLEMENT: T2.43 - One write for a whole ClearOutbox call**
+- [x] **TEST + IMPLEMENT: T2.43 - One write for a whole ClearOutbox call**
   - **USE COMMAND**: `/tdd:test-first when clear outbox async dispatches many failing messages for one topic should make one store write before returning`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_clear_outbox_dispatches_many_failing_messages_should_make_one_store_write.cs`
