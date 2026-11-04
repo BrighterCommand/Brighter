@@ -938,7 +938,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.1, T2.12, T2.20
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:740-791`.
 
-- [ ] **CHARACTERISE: T2.39c - A trip lost with its process is retried by the next sweep**
+- [x] **CHARACTERISE: T2.39c - A trip lost with its process is retried by the next sweep**
   - **USE COMMAND**: `/tdd:test-first when a batch is discarded without being written should leave the store without the topic and let the next sweep trip it again`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_trip_batch_is_discarded_without_a_write_should_let_the_next_sweep_trip_it_again.cs`
