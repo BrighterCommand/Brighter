@@ -30,6 +30,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
@@ -53,12 +54,14 @@ namespace Paramore.Brighter.Outbox.Hosting
         private readonly TimeProvider _timeProvider;
         private readonly IAmABrighterSweeperMeter _meter;
         private readonly OutboxSweeperState _state;
+        private readonly IAmASharedOutboxCircuitBreaker? _sharedCircuitBreaker;
         private readonly TimeSpan _interval;
         private readonly CancellationTokenSource _stopping = new();
         private readonly AutoResetEvent _due = new(false);
         private readonly TaskCompletionSource<bool> _stopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
         private Thread? _sweepThread;
+        private TimeSpan? _lastRefreshRequest;
         private bool _disposed;
         private const string LockingResourceName = "OutboxSweeper";
 
@@ -71,6 +74,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <param name="timeProvider">The clock that schedules sweeps; defaults to <see cref="TimeProvider.System"/></param>
         /// <param name="meter">Records the sweeper's health (see ADR 0081); defaults to <see cref="NullSweeperMeter"/>, which records nothing</param>
         /// <param name="state">Holds what the sweeper is doing, for gauges and health checks to read; defaults to a new <see cref="OutboxSweeperState"/> on the sweeper's clock</param>
+        /// <param name="circuitBreaker">The outbox circuit breaker; when it is an <see cref="IAmASharedOutboxCircuitBreaker"/> the sweeper asks it to refresh its view on each tick, whatever the outcome of the lock. Defaults to none</param>
         /// <exception cref="ConfigurationException">Thrown when <see cref="TimedOutboxSweeperOptions.TimerInterval"/> is less than one second</exception>
         public TimedOutboxSweeper(
             IServiceScopeFactory serviceScopeFactory,
@@ -78,7 +82,8 @@ namespace Paramore.Brighter.Outbox.Hosting
             TimedOutboxSweeperOptions options,
             TimeProvider? timeProvider = null,
             IAmABrighterSweeperMeter? meter = null,
-            OutboxSweeperState? state = null
+            OutboxSweeperState? state = null,
+            IAmAnOutboxCircuitBreaker? circuitBreaker = null
         )
         {
             if (options.TimerInterval < 1)
@@ -91,6 +96,7 @@ namespace Paramore.Brighter.Outbox.Hosting
             _timeProvider = timeProvider ?? TimeProvider.System;
             _meter = meter ?? NullSweeperMeter.Instance;
             _state = state ?? new OutboxSweeperState(_timeProvider);
+            _sharedCircuitBreaker = circuitBreaker as IAmASharedOutboxCircuitBreaker;
             _interval = TimeSpan.FromSeconds(options.TimerInterval);
         }
 
@@ -175,6 +181,8 @@ namespace Paramore.Brighter.Outbox.Hosting
                     var started = Elapsed();
                     Record(() => _meter.RecordTickLag(started - due));
 
+                    RequestRefresh(started);
+
                     Sweep();
 
                     due = NextDue(due, started);
@@ -231,6 +239,18 @@ namespace Paramore.Brighter.Outbox.Hosting
             Record(() => _meter.RecordSweep(outcome, duration));
 
             Log.OutboxSweeperSleeping(s_logger);
+        }
+
+        private void RequestRefresh(TimeSpan now)
+        {
+            if (_sharedCircuitBreaker is null)
+                return;
+
+            if (_lastRefreshRequest is { } last && now - last < _interval / 2)
+                return;
+
+            _lastRefreshRequest = now;
+            Record(_sharedCircuitBreaker.StartRefresh);
         }
 
         private SweepOutcome SweepOnce()
