@@ -511,17 +511,26 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             return;
         }
 
-        if (TryClaim(readNumber))
-        {
-            RecordReadSuccess();
-            MergeLive(read.Live);
-            StartRecoveryWrite();
-        }
+        ApplyRead(read, readNumber);
+        EndRowsFrom(read.Ended);
+    }
 
-        foreach (var ended in read.Ended)
+    private void ApplyRead(TrippedTopicStoreRead read, long readNumber)
+    {
+        if (!TryClaim(readNumber))
+            return;
+
+        RecordReadSuccess();
+        MergeLive(read.Live);
+        StartRecoveryWrite();
+    }
+
+    private void EndRowsFrom(IReadOnlyCollection<TopicTrip> ended)
+    {
+        foreach (var trip in ended)
         {
-            _view.DropIfNotNewerThan(ended.Topic, ended.TripTime);
-            Announce(CircuitBreakerSpanOperation.Reset, ended.Topic);
+            _view.DropIfNotNewerThan(trip.Topic, trip.TripTime);
+            Announce(CircuitBreakerSpanOperation.Reset, trip.Topic);
         }
     }
 
