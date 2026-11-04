@@ -511,8 +511,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             return;
         }
 
-        var isStale = TryApply(readNumber);
-        if (!isStale)
+        if (TryClaim(readNumber))
         {
             RecordReadSuccess();
             MergeLive(read.Live);
@@ -554,20 +553,22 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private bool IsStale(long readNumber)
     {
         lock (_view.Lock)
-            return readNumber < _newestAppliedRead;
+            return IsSuperseded(readNumber);
     }
 
-    private bool TryApply(long readNumber)
+    private bool TryClaim(long readNumber)
     {
         lock (_view.Lock)
         {
-            if (readNumber < _newestAppliedRead)
-                return true;
+            if (IsSuperseded(readNumber))
+                return false;
 
             _newestAppliedRead = readNumber;
-            return false;
+            return true;
         }
     }
+
+    private bool IsSuperseded(long readNumber) => readNumber < _newestAppliedRead;
 
     private void MergeLive(IReadOnlyCollection<TopicTrip> live)
     {
