@@ -760,7 +760,7 @@ namespace Paramore.Brighter
 
                     if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
                     var trippedTopics = await ReadTrippedTopicsAsync(cancellationToken);
-                    trips = (_outboxCircuitBreaker as IAmAnOutboxCircuitBreakerAsync)?.BeginTripBatch();
+                    trips = BeginTripBatchOrNull();
                     var messages =
                         (await _asyncOutbox.OutstandingMessagesAsync(timeSinceSent, requestContext,
                             pageSize: amountToClear, trippedTopics: trippedTopics, args: args, cancellationToken: cancellationToken)).ToArray();
@@ -793,9 +793,15 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
-                    if (trips is not null) await trips.WriteAsync();
-                    _tracer?.EndSpan(span);
-                    _backgroundClearSemaphore.Release();
+                    try
+                    {
+                        await WriteTripsOrWarnAsync(trips);
+                    }
+                    finally
+                    {
+                        _tracer?.EndSpan(span);
+                        _backgroundClearSemaphore.Release();
+                    }
                 }
 
                 CheckOutstandingMessages(requestContext);
@@ -804,6 +810,33 @@ namespace Paramore.Brighter
             {
                 requestContext.Span?.SetStatus(ActivityStatusCode.Error);
                 Log.SkippingDispatchOfMessages(s_logger);
+            }
+        }
+
+        private IAmATripBatch? BeginTripBatchOrNull()
+        {
+            try
+            {
+                return (_outboxCircuitBreaker as IAmAnOutboxCircuitBreakerAsync)?.BeginTripBatch();
+            }
+            catch (Exception e)
+            {
+                Log.FailedToBeginTripBatch(s_logger, e);
+                return null;
+            }
+        }
+
+        private static async Task WriteTripsOrWarnAsync(IAmATripBatch? trips)
+        {
+            if (trips is null) return;
+
+            try
+            {
+                await trips.WriteAsync();
+            }
+            catch (Exception e)
+            {
+                Log.FailedToWriteTripBatch(s_logger, e);
             }
         }
 
@@ -1657,6 +1690,12 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Warning, "Failed to dispose owned resource {ResourceType} while disposing the mediator; continuing with the remaining resources")]
             public static partial void FailedToDisposeOwnedResource(ILogger logger, string resourceType, Exception exception);
+
+            [LoggerMessage(LogLevel.Warning, "The outbox circuit breaker failed to begin a trip batch; tripping topics directly for this sweep")]
+            public static partial void FailedToBeginTripBatch(ILogger logger, Exception exception);
+
+            [LoggerMessage(LogLevel.Warning, "The outbox circuit breaker failed to write a trip batch; the sweep result is unaffected")]
+            public static partial void FailedToWriteTripBatch(ILogger logger, Exception exception);
 
             [LoggerMessage(LogLevel.Warning, "Outbox metric recording failed; the metric has been dropped but the Outbox operation was unaffected")]
             public static partial void OutboxMetricsFault(ILogger logger, Exception ex);
