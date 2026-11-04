@@ -1150,7 +1150,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.29
   - References: `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxSweeper.cs:75-95,:164-187,:286-290`. `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/HeldDistributedLock.cs`. `src/Paramore.Brighter.Outbox.Hosting/HostedServiceCollectionExtensions.cs:54`.
 
-- [ ] **TEST + IMPLEMENT: T2.50 - An overrun timer refreshes the view while a sweep is held**
+- [x] **TEST + IMPLEMENT: T2.50 - An overrun timer refreshes the view while a sweep is held**
   - **USE COMMAND**: `/tdd:test-first when a sweep overruns the timer interval should refresh the shared breaker's view from the overrun timer`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_sweep_overruns_the_timer_interval_should_refresh_the_view_from_the_overrun_timer.cs`
