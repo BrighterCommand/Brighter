@@ -1100,7 +1100,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/SweepableOutbox.cs`. `docs/adr/0028-support-circuit-breaking-of-topics.md`.
 
-- [ ] **CHARACTERISE: T2.47 - Store reads per sweep and per refresh are a fixed number**
+- [x] **CHARACTERISE: T2.47 - Store reads per sweep and per refresh are a fixed number**
   - **USE COMMAND**: `/tdd:test-first when sweeps run with ten and with ten thousand outstanding messages should make the same fixed number of store reads and no writes`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_sweeps_run_with_many_outstanding_messages_should_make_a_fixed_number_of_store_reads.cs`
