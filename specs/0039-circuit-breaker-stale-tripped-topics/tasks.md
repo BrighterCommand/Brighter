@@ -1166,7 +1166,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.49
   - References: `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxSweeper.cs:183,:224`. `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/GatedOutboxProducerMediator.cs`.
 
-- [ ] **CHARACTERISE: T2.51 - A sweeper with an in-memory or no breaker creates no refresh timer**
+- [x] **CHARACTERISE: T2.51 - A sweeper with an in-memory or no breaker creates no refresh timer**
   - **USE COMMAND**: `/tdd:test-first when the sweeper's breaker does not share trips should create no overrun timer and request no refresh`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_sweepers_breaker_does_not_share_trips_should_create_no_overrun_timer.cs`
