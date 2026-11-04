@@ -984,7 +984,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39, T2.34
   - References: `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxSweeper.cs`. `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/SweepableOutbox.cs`.
 
-- [ ] **CHARACTERISE: T2.39a - A bulk sweep trips through the batch and writes once**
+- [x] **CHARACTERISE: T2.39a - A bulk sweep trips through the batch and writes once**
   - **USE COMMAND**: `/tdd:test-first when a bulk sweep runs with a breaker that implements the async role should trip through the batch and make one store write`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_bulk_sweep_runs_with_an_async_breaker_should_trip_through_the_batch_and_write_once.cs`
