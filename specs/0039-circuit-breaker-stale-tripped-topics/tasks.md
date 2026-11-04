@@ -1085,7 +1085,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:1257-1313`.
 
-- [ ] **CHARACTERISE: T2.46 - A tripped topic does not hold back other topics, with either breaker**
+- [x] **CHARACTERISE: T2.46 - A tripped topic does not hold back other topics, with either breaker**
   - **USE COMMAND**: `/tdd:test-first when one topic is tripped should sweep a full batch of other topics with either breaker`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_one_topic_is_tripped_should_sweep_a_full_batch_of_other_topics.cs`
