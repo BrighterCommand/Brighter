@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-11-02
-summary: "A starter installs a slip by copying the flow definition into .flow with CRs stripped and writing a tracked .flow.record holding the flow name, the SHA-256 of the LF-normalised slip and the date; RouteRecordInspector compares the two to report tamper cases a, b and c, and reads the last entry of an append-only route-changes.md. /spec:route {flow} [reason] is the only way to change or repair a route, writing in an order that leaves an interrupted run as tamper case c, bar two stated exceptions. /spec:new numbers specs by highest+1 with an atomic mkdir, and README.md carries the starter checklist."
+summary: "A starter installs a slip by copying the flow definition into .flow with CRs stripped and writing a tracked .flow.record holding the flow name, the SHA-256 of the LF-normalised slip and the date; RouteRecordInspector compares the two to report tamper cases a, b and c, and reads the last entry of an append-only route-changes.md. /spec:route {flow} [reason] is the only way to change or repair a route, writing in an order that leaves an interrupted run unchanged or as tamper case c. /spec:new numbers specs by highest+1 with an atomic mkdir, and README.md carries the starter checklist."
 tags:
   - "meta"
   - "workflow"
@@ -24,7 +24,7 @@ Implements part of [issue #4661](https://github.com/BrighterCommand/Brighter/iss
 
 ## Context
 
-ADR 0089 gives a spec a copy of its slip, `.flow`, and a resolver that follows it. It leaves three questions open. How does a slip get into a spec? How does the resolver tell a slip that was installed from one that was edited by hand? How does a spec move to another route? Its report already has the fields, `tampered` and `route_change`, and its roles table names `RouteRecordInspector`, but the logic is left to this ADR (0089 step 7). Its stop ladder holds the placeholder `{route-change command}`.
+ADR 0089 gives a spec a copy of its slip, `.flow`, and a resolver that follows it. It leaves three things open: how a slip gets into a spec, how the resolver tells an installed slip from one edited by hand, and how a spec moves to another route. Its report already has the fields, `tampered` and `route_change`, and its roles table names `RouteRecordInspector`, but the logic is left to this ADR (0089 step 7). Its stop ladder holds the placeholder `{route-change command}`.
 
 ### Terms
 
@@ -46,9 +46,10 @@ The route vocabulary is defined in [requirements § Definitions](../../specs/004
 - FR-18, apart from the check side (0089): `/spec:new` copies `feature` and writes the record; the spec numbering rule; correcting `new.md:15`; no `--flow`. AC-38, AC-40, AC-87, AC-88.
 - FR-19 and FR-26, the parts on route change and the starter checklist: the checklist in `.claude/commands/spec/README.md`, including the four items 0090 lists as (a) to (d) under FR-19. AC-41.
 - NFR-5: the three files are tracked and stageable. AC-52.
+- A narrowing of FR-17's stop for a route already on the target (and of AC-37): ladder row 5 also lets `/spec:route` run when the log's last entry names a different flow than the slip, so that a change abandoned part-way can be recorded. A route that is valid, untampered and consistent with its log still stops.
 - The `RouteRecordInspector` logic, and the values of `tampered` and `route_change` (0089 *The route report*).
 - Naming `/spec:route` in 0089's stop ladder rows 4 and 5.
-- Corrections to 0089's text, made in this ADR's commit: *Terms* (what the five closing-instruction commands are), the `tampered` row of *The route report* (adds `recorded_flow`), the `/spec:new` and route-change rows of *How each command consults the resolver* (modes and fields: `/spec:route` uses `--current`, `--definition {target}` and `--current` again, because it acts on the current spec and `--current` gives it FR-20's classification, and `/spec:switch` alone uses `--spec` to choose a directory), the next-step line row (its printers), the consequences line on second resolver runs, and step 9.3 (the whole of `requirements.md:29-33` and its `mkdir` grant).
+- Corrections to 0089's text, in these places: *Terms* (the closing-instruction carriers), *The route report* (`tampered.recorded_flow`), *How each command consults the resolver* (the route-change and `/spec:new` rows), the next-step line row, the consequences line on second resolver runs, and step 9.3 (`requirements.md:29-33` and its `mkdir` grant).
 
 **Out of scope**:
 
@@ -75,7 +76,7 @@ The route vocabulary is defined in [requirements § Definitions](../../specs/004
 | Why is this spec on `light`? | Nobody | `route_change.reason`, from `route-changes.md` |
 | How do I move a spec to another route? | Edit `.flow` | `/spec:route {flow} {reason}` |
 | How do I repair a broken copy? | Edit `.flow` | `/spec:route` with the same flow |
-| What number does a new spec get? | "001, 002, etc." (`new.md:15`), never followed | Highest four-digit number plus one, made atomic by `mkdir` |
+| What number does a new spec get? | "001, 002, etc." (`new.md:15`), never followed | Highest number plus one, at least four digits, made atomic by `mkdir` |
 | What must a new flow's starter do? | Unwritten | The README checklist |
 
 In each row, a decision about the route can be made, or undone, by editing a file with no record of who did it or why. If the slip is editable, the route is whatever the last editor left, and 0089's promise that the spec's copy is authoritative (FR-22) means nothing.
@@ -92,9 +93,9 @@ In each row, a decision about the route can be made, or undone, by editing a fil
 
 ## Decision
 
-**A starter installs a slip by copying the definition with CRs stripped and recording its SHA-256 in `.flow.record`. The resolver recomputes the hash to decide tampering. `/spec:route` is the one command that replaces a slip, and it writes in an order that keeps the history and reads as tamper case (c) when a run is interrupted, with two exceptions.**
+**A starter installs a slip by copying the definition with CRs stripped and recording its SHA-256 in `.flow.record`, and the resolver recomputes the hash to decide tampering.**
 
-A starter copies a flow definition into the spec as `.flow` and writes `.flow.record` beside it. The resolver's `RouteRecordInspector` compares the two to report whether the slip was tampered with, and reads the latest route change from `route-changes.md`. `/spec:route` checks everything first, then drops the record, logs the change, replaces the slip and writes the record last. `/spec:new` is the starter for `feature`.
+A starter copies a flow definition into the spec as `.flow` and writes `.flow.record` beside it. The resolver's `RouteRecordInspector` compares the two to report whether the slip was tampered with, and reads the latest route change from `route-changes.md`. `/spec:route` is the one command that replaces a slip. It checks everything first, then drops the record, logs the change, replaces the slip and writes the record last, so an interrupted run either changes nothing or leaves the spec reading as tamper case (c), or as legacy when it had no `.flow`. `/spec:new` is the starter for `feature`.
 
 ### The mechanism, end to end
 
@@ -104,20 +105,20 @@ A starter copies a flow definition into the spec as `.flow` and writes `.flow.re
 | --- | --- | --- | --- |
 | 1 | No target, or a target that is not a flow name (`[a-z][a-z0-9-]*`), or a `--flows-dir` value holding `$`, a backtick, `"` or `\` | Stop | Route usage |
 | 2 | A resolver run fails 0089's tooling-fault test: the `--current` run here, or the `--definition` run of row 4 | Stop | 0089's tooling-fault message |
-| 3 | `current_spec.state` is not `ok`, or the report's `spec` holds `$`, a backtick, `"` or `\` | Stop | `stop.message` for the state, which carries FR-20's recoveries (`/spec:switch`, `/spec:new`). Route usage for the characters. A `stop` whose reason is `tampered` or `invalid` does **not** stop `/spec:route`, because those are the states it repairs |
+| 3 | `current_spec.state` is not `ok`, or the report's `spec` holds `$`, a backtick, `"` or `\` | Stop | `stop.message` for the state, which carries FR-20's recoveries (`/spec:switch`, `/spec:new`). Route spec name for the characters. A `stop` whose reason is `tampered` or `invalid` does **not** stop `/spec:route`, because those are the states it repairs |
 | 4 | `--definition {flow}` reports `valid` false: a missing definition, or any R0 to R16 fault in the definition or in `approvals.md` (AC-37, AC-68) | Stop | Route target not usable |
-| 5 | In the `--current` report of row 2, `flow.name` equals the target, `valid` is true and `tampered.value` is false. A legacy spec asking for `feature` stops here (FR-17) | Stop | Already on target |
+| 5 | In the `--current` report of row 2, `flow.name` equals the target, `valid` is true, `tampered.value` is false, and `route_change` is `null` or its `to` equals the target. A legacy spec asking for `feature` stops here (FR-17), unless the log's last entry names another flow, which narrows FR-17 as *Scope* says | Stop | Already on target |
 | 6 | No reason was given, and the question asked for one is dismissed or answered empty (AC-35) | Stop | No reason |
-| 7 | Otherwise | Run the write order (*The write order*, W1 to W5) | A failed write prints Installation failed, naming what was written |
+| 7 | Otherwise | Run the write order (*The write order*, W0 to W5) | A failed step prints Installation failed, naming what was written (nothing, at W0) |
 | 8 | A post-check `--current` fails 0089's tooling-fault test | Print the tooling-fault message in place of rows 9 and 10. Undo no write | 0089's tooling-fault message |
 | 9 | The post-check reports `flow.name` equal to the target, `valid` true and `tampered.value` false | Done | Route changed, then the next-step line |
 | 10 | Otherwise | Done | Post-check |
 
 These invariants follow:
 
-- **Every check stops before the first write.** That includes the stop for a missing reason (AC-35, AC-37, AC-68). A failed write in row 7 stops with Installation failed, which names what was written.
+- **Every check stops before the first write.** That includes the stop for a missing reason. A failed step in row 7 stops with Installation failed, which names what was written.
 - **The history is written before the slip changes, and the record is written last.** The previous flow reaches the log before anything is replaced, and a matching record exists only if every earlier write happened.
-- **Every interrupted run leaves tamper case (c), or leaves the slip as it was.** The two exceptions are noted under *The write order*.
+- **A run that stops before W1 completes changes nothing. After W1, an interrupted run leaves tamper case (c) whenever the spec has a `.flow`.** A spec with none (legacy, or case (b)) reads as legacy until W3 writes one. *The write order* gives the state after each step.
 - **The resolver judges the result.** The command never decides for itself that the route changed.
 
 ### Where the pieces live
@@ -138,21 +139,23 @@ flowchart LR
         FR[".flow.record<br/>new"]
         LG["route-changes.md<br/>new"]
     end
-    RT --> FD
-    NW --> FD
-    RT --> FL
-    RT --> FR
-    RT --> LG
-    NW --> FL
-    NW --> FR
-    RR --> FL
-    RR --> FR
-    RR --> LG
+    RT -->|reads| FD
+    NW -->|reads| FD
+    RT -->|writes| FL
+    RT -->|writes| FR
+    RT -->|writes| LG
+    NW -->|writes| FL
+    NW -->|writes| FR
+    RT -->|runs| RR
+    NW -->|runs| RR
+    RR -->|reads| FL
+    RR -->|reads| FR
+    RR -->|reads| LG
     RM -.-> RT
     RM -.-> NW
 ```
 
-All three files in the spec directory are tracked (NFR-5). `/spec:route` is the only writer of `route-changes.md`. The creation commands refuse a spec name that git would ignore (*`/spec:new`*, step 3): `.gitignore` holds `*.log` (`:79`), `*.db` (`:251`), `*.user` (`:8`) and `*.sqlite` (`:255`), each of which matches a directory such as `0099-foo.log`, and the last also matches `0099-Foo.Sqlite` on a case-insensitive checkout. For every other name, `git check-ignore -v --no-index` matches none of the three files, including a name with spaces. `specs/**/.current-gear` and `specs/**/review-*.md` are the only other spec-scoped ignore rules, and neither matches.
+All three files in the spec directory are tracked (NFR-5). `/spec:route` is the only writer of `route-changes.md`. The creation commands refuse a spec name that git would ignore (*`/spec:new`*, step 3), for example one ending `.log` or `.sqlite`. For every other name, `git check-ignore -v --no-index` matches none of the three files, including a name with spaces. `specs/**/.current-gear` and `specs/**/review-*.md` are the only other spec-scoped ignore rules, and neither matches.
 
 ### Key Components
 
@@ -233,8 +236,8 @@ Reason: Scope grew; requirements are needed after all.
 ```
 
 - Heading pattern: `^## ([0-9]{4}-[0-9]{2}-[0-9]{2}): ([a-z][a-z0-9-]*) -> ([a-z][a-z0-9-]*)$`. Reason line: `^Reason: (.+)$`. CRLF is tolerated.
-- **`from`.** It is read from the `--current` report of ladder row 2: `tampered.recorded_flow` in case (b), where there is no `.flow` to read, and `flow.name` otherwise. When that is `null`, it is `route_change.to`, then `unknown`. A legacy spec therefore reads `feature`. The log entry is written before `.flow` changes, so after an interruption `flow.name` still names the slip that is on disk.
-- **Re-runs.** A re-run appends a further entry. The earlier entry keeps the true change, and `route_change` reports the latest. A re-copy of the same flow reads `light -> light`, which is what it is.
+- **`from`.** It is read from the `--current` report of ladder row 2: `tampered.recorded_flow` in case (b), where there is no `.flow` to read, and `flow.name` otherwise. When that is `null`, it is `route_change.to`, then `unknown`. A legacy spec therefore reads `feature`. The log entry is written before `.flow` changes, so after an interruption `flow.name` still names the slip that is on disk, when there is one. A case (b) spec that stops after W1 or W2 has none, reads as legacy, and so logs `feature`; its recorded flow is lost.
+- **Re-runs.** A re-run appends a further entry. The earlier entry keeps the true change, and `route_change` reports the latest. A re-copy of the same flow reads `light -> light`, which is what it is. A last entry whose `to` differs from `flow.name` is normally a change that did not finish; it can also be a `.flow` and record restored from version control while the log was not. Ladder row 5 lets `/spec:route` to the slip's own flow run in that case, so it records the abandonment as `feature -> feature`.
 - The reason is the user's text on one line, with line breaks replaced by spaces. It may not be empty.
 
 #### Installation steps (canonical text in README.md)
@@ -251,7 +254,7 @@ If any step fails, stop and print a failure template. `/spec:new` and the starte
 
 #### `/spec:route {flow} [reason] [--flows-dir {dir}]`
 
-The analogue of `/spec:gear` (`gear.md:121-128`). It acts on the current spec, and the ladder in *The mechanism, end to end* is its procedure.
+The analogue of `/spec:gear` (`gear.md:121-128`). It acts on the current spec, and the ladder in *The mechanism, end to end* is its procedure. It uses `--current` rather than `--spec` because it acts on the current spec and gets FR-20's classification from the resolver. `/spec:switch` alone uses `--spec`, to choose a directory.
 
 - **Arguments.**
   - The first word is the target flow.
@@ -264,13 +267,14 @@ The analogue of `/spec:gear` (`gear.md:121-128`). It acts on the current spec, a
 
 | # | Step | State if the run stops after this step |
 | --- | --- | --- |
-| W1 | `rm -f "{D}/.flow.record"` | case (c) if `.flow` exists; a legacy spec is unchanged; a case (b) spec looks legacy |
+| W0 | installation step 3 (`date`, read-only). Its value dates both the log heading and the record | unchanged |
+| W1 | `rm -f "{D}/.flow.record"` | case (c) if `.flow` exists; otherwise legacy-looking |
 | W2 | append the log entry with `test -f` and `cat >> "{D}/route-changes.md" <<'ROUTE_CHANGE'`, writing the `# Route changes` header first if the file is new | as W1, with the entry logged |
 | W3 | installation step 1 (the shell creates `.flow` before `tr` runs) | case (c) |
-| W4 | installation steps 2 and 3 (read-only) | case (c) |
+| W4 | installation step 2 (read-only) | case (c) |
 | W5 | installation step 4 | complete |
 
-The previous flow reaches the log at W2, before `.flow` is replaced, so no interruption loses it. Every state with a `.flow` reads as case (c). Only `/spec:route` repairs case (c), and re-running it repairs any of these states. The two exceptions are a legacy spec that stops after W2, which is still legacy but has a logged entry for a change that did not finish, and a case (b) spec that stops after W1 or W2, which then looks legacy. The requirements accept the second for "both files deleted" (Constraints). A re-run appends another entry in each.
+The previous flow reaches the log at W2, before `.flow` is replaced, so no interruption loses it. After W1, every state with a `.flow` reads as case (c). Only `/spec:route` repairs case (c), and re-running it repairs any of these states. A spec with no `.flow` that stops after W1 or W2 (legacy, or case (b)) reads as legacy, and the requirements accept that for "both files deleted" (Constraints). Its log may then name a change that did not finish, and `/spec:route` to the flow it is on records the abandonment (ladder row 5). A re-run appends another entry in each case.
 
 `/spec:route` carries no copy of 0089's closing instructions. Its post-check, ladder rows 8 to 10, is its own second report. Nothing else is deleted. Markers and artefacts stay where they are, and markers not on the new slip become stray markers (FR-17, FR-21).
 
@@ -278,8 +282,8 @@ The previous flow reaches the log at W2, before `.flow` is replaced, so no inter
 
 This lands after 0089 step 9.9, which adds the `--definition feature` check before step 1 (AC-69).
 
-1. **Name.** Take `$ARGUMENTS` whole: trimmed, wrapping quotes removed, inner spaces kept, as `show-me.md:32-35` does. If it is empty, starts with `.`, or contains `/`, `\`, `$`, a backtick or `"`, print the spec-name template and stop.
-2. **Spec numbering rule** (replaces `new.md:15`, "format: 001, 002, etc."). List the immediate subdirectories of `specs/` whose names match `^[0-9]{4}-`, and take the highest number. The new number is that plus one, zero-padded to four digits, or `0001` when there are none. Only the whole name `{NNNN}-{name}` must be unique, because numbers repeat.
+1. **Name.** Take `$ARGUMENTS` whole: trimmed, wrapping quotes removed, inner spaces kept, as `show-me.md:32-35` does. If it is empty, or contains `/`, `\`, `$`, a backtick or `"`, print the spec-name template and stop.
+2. **Spec numbering rule** (replaces `new.md:15`, "format: 001, 002, etc."). List the immediate subdirectories of `specs/` whose names match `^[0-9]{4,}-`, and take the highest number. The new number is that plus one, zero-padded to at least four digits, or `0001` when there are none. Only the whole name `{NNNN}-{name}` must be unique, because numbers repeat.
 3. **Ignore check.** Run `git check-ignore -q --no-index "specs/{NNNN}-{name}/.flow"`. Exit `0` means git would ignore the spec's files, so print the spec-ignored template and stop with nothing created. Exit `1` means it would not. Any other exit prints the start-failed template.
 4. `mkdir "specs/{NNNN}-{name}"`, with no `-p`. If it fails because the name exists, including a directory that arrived after step 2, print the spec-exists template and stop with nothing created (AC-87, AC-88). Any other failure prints the start-failed template. Every later step is skipped.
 5. Run the installation steps with `{flow}` = `feature` and `{flows-dir}` = `.claude/flows`.
@@ -304,6 +308,7 @@ The canonical text lives in `.claude/commands/spec/README.md`, beside 0089's tem
 | Template | Printed by | Text |
 | --- | --- | --- |
 | Route usage | `/spec:route` | ``/spec:route needs a target flow name and, if given, a --flows-dir without $, `, " or \. Usage: /spec:route {flow} [reason]. Nothing was changed.`` |
+| Route spec name | `/spec:route` | ``Cannot change the route of `{spec}`: its directory name holds $, `, " or \. Nothing was changed.`` |
 | Route target not usable | `/spec:route` | ``Cannot change the route to `{target}`: {violations[0].message} Nothing was changed.`` |
 | Already on target | `/spec:route` | ``Spec `{spec}` is already on flow `{target}`, and its slip is valid and not tampered. Nothing was changed.`` |
 | No reason | `/spec:route` | ``/spec:route needs a reason for the route change. Nothing was changed.`` |
@@ -312,13 +317,13 @@ The canonical text lives in `.claude/commands/spec/README.md`, beside 0089's tem
 | Installation failed | `/spec:route` | ``{command} stopped: {step} failed. Written so far: {files}. Re-run {command}.`` |
 | New spec failed | `/spec:new`, starters | ``{command} stopped: {step} failed. `specs/{dir}/` was created and holds: {files}. Delete it and run {command} {name} again.`` |
 | Start failed | `/spec:new`, starters | ``{command} stopped: {step} failed. Nothing was created.`` |
-| Spec name | `/spec:new`, starters | ``{command} needs a spec name that is not empty, does not start with ".", and has none of / \ $ ` ". Nothing was created.`` |
+| Spec name | `/spec:new`, starters | ``{command} needs a spec name that is not empty and has none of / \ $ ` ". Nothing was created.`` |
 | Spec exists | `/spec:new`, starters | ``Cannot start a spec: `specs/{dir}/` already exists. Nothing was created. Re-run {command} to take the next number.`` |
 | Spec ignored | `/spec:new`, starters | ``Cannot start a spec named `{name}`: git would ignore `specs/{dir}/.flow`. Nothing was created. Choose a name that does not match a .gitignore rule.`` |
 
 #### The starter checklist (FR-19, AC-41)
 
-This goes in `.claude/commands/spec/README.md` under *Starter commands*. Each item is answered yes or no, and each says how it is checked:
+This goes in `.claude/commands/spec/README.md` under a new *Starter commands* section, which Implementation Approach step 2 adds. Each item is answered yes or no, and each says how it is checked:
 
 - **Fixture**: the flow ships a resolver fixture test in 0092's layout.
 - **Statement**: the flow's command text carries an identical copy of the named README text.
@@ -328,7 +333,7 @@ Gates and flow approvers carry copies of 0089's route instructions and closing i
 | # | Clause | Yes when | Checked by |
 | --- | --- | --- | --- |
 | C1 | Stops on a missing or invalid definition | The starter runs `--definition {name}` first and stops when `valid` is false | Statement; Fixture (`--definition {name}` valid) |
-| C2 | Names, numbers and creates safely | The starter carries the name rule, the spec numbering rule, the ignore check, `mkdir` with no `-p`, the spec-exists, spec-ignored, start-failed and new-spec-failed templates, and writes `specs/.current-spec` last | Statement |
+| C2 | Names, numbers and creates safely | The starter carries the name rule, the spec numbering rule, the ignore check, `mkdir` with no `-p`, the spec-name, spec-exists, spec-ignored, start-failed and new-spec-failed templates, and writes `specs/.current-spec` last | Statement |
 | C3 | Installs `.flow` and the record | The starter carries the installation steps, and a fixture spec on the flow with `.flow` and `.flow.record` reports `{name}`, valid, not tampered | Statement; Fixture |
 | C4 | Provenance lines (0090 item (b)) | Every marker-writing command of the flow carries 0090's provenance commands | Statement |
 | C5 | Artefacts match the slip | Each producing command writes exactly the files its step's Artefacts cell names, and the fixtures at each step name them | Statement; Fixture |
@@ -381,27 +386,27 @@ A reason may hold quotes, `$` or backticks. A quoted here-document writes it byt
 
 #### Why `/spec:new` refuses some names
 
-A spec name reaches every shell step as part of a double-quoted path, and double quotes still expand `$`, backticks and `\`. Refusing those characters, and `"`, keeps the steps plain, where a quoting rule would have to be remembered in every starter. The same rule applies to `--flows-dir`. `/` and a leading `.` would move the directory out of `specs/` or hide it. FR-18 states none of these refusals; they are the cost of running its rule through a shell. A name that git would ignore is refused too, because an ignored `.flow` could not be committed (NFR-5), and the check asks git instead of listing today's patterns.
+A spec name reaches every shell step as part of a double-quoted path, and double quotes still expand `$`, backticks and `\`. Refusing those characters, and `"`, keeps the steps plain, where a quoting rule would have to be remembered in every starter. The same rule applies to `--flows-dir`. `/` would nest the directory under another one. FR-18 states none of these refusals; they are the cost of running its rule through a shell. A name that git would ignore is refused too, because an ignored `.flow` could not be committed (NFR-5), and the check asks git instead of listing today's patterns.
 
 ### Implementation Approach
 
 Numbered in commit order. Resolver steps are test-first, with 0092's row added before the code.
 
 1. **Behavioural, this is 0089 step 7, after 0089 step 6.** Add `RouteRecordInspector`: record parsing, normalisation, the case table, `tampered.recorded_flow`, the log reader, the stop row 4 message, and `/spec:route` in row 5. No starter writes `.flow` yet, so legacy results are unchanged.
-2. **Documentation, after 0090 step 2.** In README.md, add the installation steps, the record and log formats, the templates, the tamper recoveries, the `/spec:route` entry and the starter checklist (C4, C6, C8 and C10 point at 0090's text).
+2. **Documentation, after 0090 step 2.** In README.md, add the installation steps, the write order, the record and log formats, the templates, the tamper recoveries, the `/spec:route` entry and the new *Starter commands* section with its checklist (C4, C6, C8 and C10 point at 0090's text).
 3. **Behavioural.** Add `route.md`.
-4. **Behavioural, after 0089 step 9.9.** Change `new.md`: the name rule, the numbering rule, the corrected `:15`, the ignore check, `mkdir`, the installation steps, the post-check and the grants.
+4. **Behavioural, after 0089 step 9.9.** Change `new.md`: the name rule, the numbering rule, the corrected `:15`, the ignore check (the rules it exists for are `.gitignore:8`, `:79`, `:251` and `:255`), `mkdir`, the installation steps, the post-check and the grants.
 5. **Documentation.** The `/spec:new` and `/spec:requirements` README entries, File Structure, `.claude/commands/README.md`, and `skills_overview.md`.
 6. **Verification by hand, on a throwaway branch.**
    1. `/spec:new foo` creates `specs/{highest+1}-foo/` with `README.md`, `.flow` byte-equal to `tr -d '\r' < .claude/flows/feature.flow`, and a record. `--spec` then reports `feature`, `slip`, valid, not tampered (AC-38). `git status` lists all three files as untracked, not ignored (AC-52).
-   2. Create `specs/{next}-foo/` by hand between the listing and the `mkdir`. `/spec:new foo` stops and creates nothing (AC-88). `/spec:new 'a$b'`, `/spec:new foo.log` and `/spec:new 'a/b'` each stop and create nothing. Make step 5 fail, for example by running with `shasum` and `sha256sum` renamed on `PATH`: the new-spec-failed message names the directory, and deleting it and re-running takes the same number.
+   2. Run `/spec:new` steps 2 to 4 by hand, because nothing interrupts the command between them: after step 2, create `specs/{next}-foo/`, then run step 4's `mkdir`. It fails, and the spec-exists template applies (AC-88). `/spec:new 'a$b'`, `/spec:new foo.log` and `/spec:new 'a/b'` each stop and create nothing. Make step 5 fail by putting failing `shasum` and `sha256sum` scripts earlier on `PATH`: the new-spec-failed message names the directory, and deleting it and re-running takes the same number.
    3. Change one character of a command in `.flow`. The resolver reports case (a), and `/spec:tasks` stops naming both recoveries (AC-31). `unix2dos` on `.flow` alone is not tampered (AC-32). Delete `.flow` for case (b). Delete only the record for case (c) (AC-33).
    4. Run `/spec:route light --flows-dir {fixture}` with no reason, then dismiss the question. `git status` is unchanged (AC-35).
    5. Run `/spec:route light "R1" --flows-dir {fixture}` on a spec with `.requirements-approved`. `.flow` holds `light`, the spec is not tampered, the log has R1, the marker stays and is reported stray, and status shows R1 (AC-36). Then run `/spec:route feature "R2" --flows-dir {fixture}`. The log holds both entries in order, and status shows R2 (AC-81).
    6. `/spec:route nosuch`, `/spec:route feature` on a valid legacy spec, and `/spec:route broken` against an invalid fixture definition each stop with no file changed (AC-37, AC-68).
    7. Run `/spec:route light` on a legacy spec and on a tampered spec. Each ends with `.flow` and a record, valid and not tampered (AC-68).
    8. AC-80: a copy that names a deleted command is invalid, and `/spec:tasks`'s stop names `/spec:route feature <reason>`. After `/spec:route feature "R"`, `.flow` equals the definition and R is logged.
-   9. Run the write order by hand on a `feature` spec with a `.flow`, and stop after W1, after W2, after W3 and after W4, because `allowed-tools` grants leave no permission prompt to refuse. Each state reads as case (c). Re-run `/spec:route light` each time. After W1 the re-run writes the only log entry. After W2, W3 and W4 the log already holds `feature -> light` and a repeat entry follows. Each time the spec ends valid and not tampered.
+   9. Run the write order by hand on a `feature` spec with a `.flow`, and stop after W1, after W2, after W3 and after W4, because `allowed-tools` grants leave no permission prompt to refuse. Each state reads as case (c). Re-run `/spec:route light` each time. After W1 the log holds only the new `feature -> light`. After W2 it holds `feature -> light` twice. After W3 or W4 it gains `light -> light`, because `.flow` already holds `light`. Each time the spec ends valid and not tampered.
    10. `/spec:requirements 123` with no `.current-spec` stops, names missing, and creates no directory (AC-39).
    11. `/spec:route light` where the flows directory holds `light` and the spec has `.flow.record` but no `.flow` (case b, recorded flow `light`): it proceeds, and the log entry reads `light -> light`.
 
@@ -438,9 +443,9 @@ Numbered in commit order. Resolver steps are test-first, with 0092's row added b
 - A spec that is valid and untampered cannot pick up a revised version of its own flow's definition. `/spec:route` stops as already on target (FR-17 as written).
 - A re-run after an interruption appends a further log entry. The earlier entry keeps the true change, and `route_change` then reports the latest, which can read `light -> light`.
 - The installation steps are copied into every starter, `new.md` and `route.md`, and `route.md` adds its write order. Only 0092's comparison keeps the copies identical.
-- `/spec:new` now refuses a name that is empty, starts with `.`, contains `/`, `\`, `$`, a backtick or `"`, or that git would ignore. FR-18 states none of these. Numbers past 9999 simply take five digits.
+- `/spec:new` now refuses a name that is empty, contains `/`, `\`, `$`, a backtick or `"`, or that git would ignore. FR-18 states none of these. Numbers past 9999 take five digits, where FR-18 says four and 0089's `/spec:switch` id match would not find them.
 - `tampered` gains a third key, `recorded_flow`, in 0089's report.
-- A legacy spec whose `/spec:route` run stops after W2 still reads as legacy, but its log already shows the change. A re-run appends another entry.
+- A spec with no `.flow` whose `/spec:route` run stops after W2 reads as legacy, but its log already shows the change. `/spec:route` to the flow it is on records the abandonment (row 5), which also lets a legacy spec with such an entry run `/spec:route feature`. That narrows FR-17's stop and AC-37, and the requirements are not amended.
 - Tamper detection is advisory. Editing `.flow` and recomputing the hash defeats it (Constraints).
 
 ### Risks and Mitigations
