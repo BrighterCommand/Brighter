@@ -1015,7 +1015,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxSweeper.cs` (lock released in `finally`). `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/CountingDistributedLock.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.42 - A third-party async breaker whose batch throws is contained**
+- [x] **TEST + IMPLEMENT: T2.42 - A third-party async breaker whose batch throws is contained**
   - **USE COMMAND**: `/tdd:test-first when a third party async breaker throws from begin trip batch or write should log a warning, keep the dispatch exception and release the semaphore`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_third_party_trip_batch_throws_should_contain_it_and_release_the_semaphore.cs`
