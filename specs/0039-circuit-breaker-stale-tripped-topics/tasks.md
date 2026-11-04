@@ -953,7 +953,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: ADR 0089 step 10.
 
-- [ ] **CHARACTERISE: T2.39d - After the cooldown duration a sweep through the mediator includes the topic again**
+- [x] **CHARACTERISE: T2.39d - After the cooldown duration a sweep through the mediator includes the topic again**
   - **USE COMMAND**: `/tdd:test-first when the cooldown duration has passed a sweep through the mediator should include the tripped topic again`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_cooldown_duration_has_passed_a_sweep_should_include_the_topic_again.cs`
