@@ -999,7 +999,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:776,:1152,:1240`.
 
-- [ ] **CHARACTERISE: T2.41 - The batch is written before the lock is released, and when dispatch throws**
+- [x] **CHARACTERISE: T2.41 - The batch is written before the lock is released, and when dispatch throws**
   - **USE COMMAND**: `/tdd:test-first when a sweep trips a topic should write the trip before the sweeper releases the lock even when dispatch throws`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_a_sweep_trips_a_topic_should_write_it_before_the_lock_is_released.cs`
