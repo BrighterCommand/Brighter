@@ -1056,7 +1056,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.43, T2.42
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:447-498`.
 
-- [ ] **CHARACTERISE: T2.44 - A request-path trip waits for its write and affects another instance's sweep**
+- [x] **CHARACTERISE: T2.44 - A request-path trip waits for its write and affects another instance's sweep**
   - **USE COMMAND**: `/tdd:test-first when post async on a request only instance fails to publish should wait for the store write and another instance's sweep should exclude the topic`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_post_async_fails_to_publish_should_wait_for_the_write_and_exclude_the_topic_elsewhere.cs`
