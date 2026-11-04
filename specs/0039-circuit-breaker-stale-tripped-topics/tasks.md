@@ -1042,7 +1042,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:447-498`. `tests/Paramore.Brighter.Core.Tests/CommandProcessors/Clear/`.
 
-- [ ] **TEST + IMPLEMENT: T2.43a - A third-party async breaker whose batch throws cannot escape a ClearOutbox or Post call**
+- [!] **TEST + IMPLEMENT: T2.43a - A third-party async breaker whose batch throws cannot escape a ClearOutbox or Post call** <!-- RALPH-FAILED: all three tests passed on arrival (T2.42 and T2.43 reuse the containment helpers in ClearOutboxAsync); a green-on-arrival TEST + IMPLEMENT is a stop-and-ask. Owner: retag as CHARACTERISE with a named mutation (remove the try/catch in BeginTripBatchOrNull or WriteTripsOrWarnAsync) or drop the task -->
   - **USE COMMAND**: `/tdd:test-first when a third party async breaker throws from begin trip batch or write during clear outbox should log a warning and throw nothing out of post async`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_third_party_trip_batch_throws_during_clear_outbox_should_throw_nothing_out_of_post_async.cs`
