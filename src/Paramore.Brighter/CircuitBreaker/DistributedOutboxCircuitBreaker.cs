@@ -44,7 +44,6 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private static readonly TimeSpan s_longestPermittedDuration = TimeSpan.FromHours(24);
     private static readonly TimeSpan s_shortestPermittedStoreTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan s_longestPermittedStoreTimeout = TimeSpan.FromSeconds(60);
-    private const string TimeoutFailure = "timeout";
     private const int InFlightGuardTimeouts = 4;
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<DistributedOutboxCircuitBreaker>();
 
@@ -62,13 +61,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private readonly InFlightGuard _readGuard = new();
     private readonly InFlightGuard _refreshGuard = new();
     private readonly InFlightGuard _recoveryGuard = new();
-    private readonly HashSet<RoutingKey> _unsharedTopics = new();
-    private readonly HashSet<RoutingKey> _announcedUnshared = new();
-    private readonly HashSet<RoutingKey> _endedUnsharedToAnnounce = new();
+    private readonly FallbackState _fallback;
     private long _readsStarted;
     private long _newestAppliedRead;
-    private bool _isReadFailing;
-    private string? _lastFailure;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DistributedOutboxCircuitBreaker"/> class.
@@ -95,6 +90,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         _storeTimeout = RequireWithin(options.StoreTimeout, s_shortestPermittedStoreTimeout, s_longestPermittedStoreTimeout, nameof(options.StoreTimeout));
         _tripLength = _cooldownDuration + _clockSkewLeeway;
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _fallback = new FallbackState(_view.Lock, () => _timeProvider.GetUtcNow(), HasLiveTripAt);
         _tracer = tracer;
         _instrumentationOptions = instrumentationOptions;
     }
@@ -119,110 +115,26 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     }
 
     /// <inheritdoc />
-    public TrippedTopicStoreStatus StoreStatus
-    {
-        get
-        {
-            lock (_view.Lock)
-            {
-                ClearFailureWhenFallbackEnds();
-                return new TrippedTopicStoreStatus(IsFallbackActive(), _lastFailure);
-            }
-        }
-    }
+    public TrippedTopicStoreStatus StoreStatus => _fallback.Status();
 
-    private bool IsFallbackActive() => _isReadFailing || _unsharedTopics.Count > 0;
-
-    private void ClearFailureWhenFallbackEnds()
-    {
-        var now = _timeProvider.GetUtcNow();
-        foreach (var topic in _unsharedTopics.Where(topic => !_view.IsLive(topic, stamp => IsLive(now, stamp))).ToList())
-        {
-            _unsharedTopics.Remove(topic);
-            if (_announcedUnshared.Remove(topic))
-                _endedUnsharedToAnnounce.Add(topic);
-        }
-
-        if (!IsFallbackActive())
-            _lastFailure = null;
-    }
+    private bool HasLiveTripAt(RoutingKey topic, DateTimeOffset now) => _view.IsLive(topic, stamp => IsLive(now, stamp));
 
     private void AnnounceEndedUnsharedTrips()
     {
-        List<RoutingKey> ended;
-        lock (_view.Lock)
-        {
-            ClearFailureWhenFallbackEnds();
-            ended = _endedUnsharedToAnnounce.ToList();
-            _endedUnsharedToAnnounce.Clear();
-        }
-
-        foreach (var topic in ended)
+        foreach (var topic in _fallback.TakeEndedUnshared())
             Announce(CircuitBreakerSpanOperation.Reset, topic);
-    }
-
-    private bool TakeAnnouncedFromView(RoutingKey topic)
-    {
-        lock (_view.Lock)
-            return _announcedUnshared.Remove(topic);
-    }
-
-    private void RecordTimeout()
-    {
-        lock (_view.Lock)
-            _lastFailure = TimeoutFailure;
-    }
-
-    private void RecordReadTimeout()
-    {
-        lock (_view.Lock)
-            _isReadFailing = true;
-    }
-
-    private void RecordWriteTimeout(IEnumerable<RoutingKey> topics)
-    {
-        lock (_view.Lock)
-            _unsharedTopics.UnionWith(topics);
     }
 
     private void RecordWriteFailure(Exception failure, IEnumerable<RoutingKey> topics)
     {
-        lock (_view.Lock)
-        {
-            _unsharedTopics.UnionWith(topics);
-            _lastFailure = failure.GetType().Name;
-        }
-
+        _fallback.RecordWriteFailure(failure, topics);
         Log.WriteFailed(s_logger, failure, failure.GetType().Name);
-    }
-
-    private void RecordWriteSuccess(RoutingKey topic)
-    {
-        lock (_view.Lock)
-        {
-            _unsharedTopics.Remove(topic);
-            ClearFailureWhenFallbackEnds();
-        }
     }
 
     private void RecordReadFailure(Exception failure)
     {
-        lock (_view.Lock)
-        {
-            _isReadFailing = true;
-            _lastFailure = failure.GetType().Name;
-        }
-
+        _fallback.RecordReadFailure(failure);
         Log.ReadFailed(s_logger, failure, failure.GetType().Name);
-    }
-
-    private void RecordReadSuccess()
-    {
-        lock (_view.Lock)
-        {
-            _isReadFailing = false;
-            ClearFailureWhenFallbackEnds();
-        }
     }
 
     private async Task SettleAsync(Task call)
@@ -272,7 +184,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
         catch (Exception e) when (e is TimeoutException || (e is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
-            RecordTimeout();
+            _fallback.RecordTimeout();
             return null;
         }
     }
@@ -318,8 +230,8 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     {
         foreach (var result in results)
         {
-            RecordWriteSuccess(result.Topic);
-            var alreadyAnnounced = TakeAnnouncedFromView(result.Topic);
+            _fallback.RecordWriteSuccess(result.Topic);
+            var alreadyAnnounced = _fallback.TakeAnnouncedFromView(result.Topic);
             if (result.LeftEnded || (result.PriorTripTime is not null && HasRunOut(result.StoredTripTime)))
             {
                 _view.DropIfNotNewerThan(result.Topic, result.StoredTripTime);
@@ -370,7 +282,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
 
         if (results is null)
-            RecordWriteTimeout(trips.Select(trip => trip.Topic));
+            _fallback.RecordWriteTimeout(trips.Select(trip => trip.Topic));
         else
             ApplyWriteResults(results);
 
@@ -383,7 +295,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         lock (_view.Lock)
         {
             var carried = new List<TopicTrip>();
-            foreach (var topic in _unsharedTopics.Except(tripped))
+            foreach (var topic in _fallback.UnsharedTopicsExcluding(tripped))
             {
                 var stamp = _view.StampOf(topic);
                 if (stamp is not null && IsLive(now, stamp.Value))
@@ -398,9 +310,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     {
         foreach (var trip in unshared)
         {
-            lock (_view.Lock)
-                _announcedUnshared.Add(trip.Key);
-
+            _fallback.MarkAnnounced(trip.Key);
             Announce(trip.Value.ReplacesLiveTrip ? CircuitBreakerSpanOperation.ReTrip : CircuitBreakerSpanOperation.Trip, trip.Key);
         }
     }
@@ -521,7 +431,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         if (read is null)
         {
             if (!IsStale(readNumber))
-                RecordReadTimeout();
+                _fallback.RecordReadTimeout();
             return;
         }
 
@@ -534,7 +444,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         if (!TryClaim(readNumber))
             return;
 
-        RecordReadSuccess();
+        _fallback.RecordReadSuccess();
         MergeLive(read.Live);
         StartRecoveryWrite();
     }
@@ -550,11 +460,8 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private void StartRecoveryWrite()
     {
-        lock (_view.Lock)
-        {
-            if (_unsharedTopics.Count == 0)
-                return;
-        }
+        if (!_fallback.HasUnsharedTopics())
+            return;
 
         if (_recoveryGuard.TryEnter())
             _ = Task.Run(RecoverUnsharedAsync);
@@ -676,6 +583,131 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     private readonly record struct PendingTrip(DateTimeOffset Stamp, bool ReplacesLiveTrip);
 
     private readonly record struct StoreCall<T>(Task Settled, Task<T?> Result) where T : class;
+
+    private sealed class FallbackState(object gate, Func<DateTimeOffset> now, Func<RoutingKey, DateTimeOffset, bool> hasLiveTripAt)
+    {
+        private const string TimeoutFailure = "timeout";
+
+        private readonly HashSet<RoutingKey> _unsharedTopics = new();
+        private readonly HashSet<RoutingKey> _announcedUnshared = new();
+        private readonly HashSet<RoutingKey> _endedUnsharedToAnnounce = new();
+        private bool _isReadFailing;
+        private string? _lastFailure;
+
+        public TrippedTopicStoreStatus Status()
+        {
+            lock (gate)
+            {
+                ClearFailureWhenFallbackEnds();
+                return new TrippedTopicStoreStatus(IsFallbackActive(), _lastFailure);
+            }
+        }
+
+        public List<RoutingKey> TakeEndedUnshared()
+        {
+            lock (gate)
+            {
+                ClearFailureWhenFallbackEnds();
+                var ended = _endedUnsharedToAnnounce.ToList();
+                _endedUnsharedToAnnounce.Clear();
+                return ended;
+            }
+        }
+
+        public bool TakeAnnouncedFromView(RoutingKey topic)
+        {
+            lock (gate)
+                return _announcedUnshared.Remove(topic);
+        }
+
+        public void MarkAnnounced(RoutingKey topic)
+        {
+            lock (gate)
+                _announcedUnshared.Add(topic);
+        }
+
+        public bool HasUnsharedTopics()
+        {
+            lock (gate)
+                return _unsharedTopics.Count > 0;
+        }
+
+        public List<RoutingKey> UnsharedTopicsExcluding(IEnumerable<RoutingKey> tripped)
+        {
+            lock (gate)
+                return _unsharedTopics.Except(tripped).ToList();
+        }
+
+        public void RecordTimeout()
+        {
+            lock (gate)
+                _lastFailure = TimeoutFailure;
+        }
+
+        public void RecordReadTimeout()
+        {
+            lock (gate)
+                _isReadFailing = true;
+        }
+
+        public void RecordWriteTimeout(IEnumerable<RoutingKey> topics)
+        {
+            lock (gate)
+                _unsharedTopics.UnionWith(topics);
+        }
+
+        public void RecordWriteFailure(Exception failure, IEnumerable<RoutingKey> topics)
+        {
+            lock (gate)
+            {
+                _unsharedTopics.UnionWith(topics);
+                _lastFailure = failure.GetType().Name;
+            }
+        }
+
+        public void RecordWriteSuccess(RoutingKey topic)
+        {
+            lock (gate)
+            {
+                _unsharedTopics.Remove(topic);
+                ClearFailureWhenFallbackEnds();
+            }
+        }
+
+        public void RecordReadFailure(Exception failure)
+        {
+            lock (gate)
+            {
+                _isReadFailing = true;
+                _lastFailure = failure.GetType().Name;
+            }
+        }
+
+        public void RecordReadSuccess()
+        {
+            lock (gate)
+            {
+                _isReadFailing = false;
+                ClearFailureWhenFallbackEnds();
+            }
+        }
+
+        private bool IsFallbackActive() => _isReadFailing || _unsharedTopics.Count > 0;
+
+        private void ClearFailureWhenFallbackEnds()
+        {
+            var at = now();
+            foreach (var topic in _unsharedTopics.Where(topic => !hasLiveTripAt(topic, at)).ToList())
+            {
+                _unsharedTopics.Remove(topic);
+                if (_announcedUnshared.Remove(topic))
+                    _endedUnsharedToAnnounce.Add(topic);
+            }
+
+            if (!IsFallbackActive())
+                _lastFailure = null;
+        }
+    }
 
     private sealed class TripView
     {
