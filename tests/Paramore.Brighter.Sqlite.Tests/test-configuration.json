@@ -1,5 +1,19 @@
 {
   "Namespace": "Paramore.Brighter.Sqlite.Tests",
+  "Inboxes": {
+    "Text": {
+      "InboxProvider": "SqliteTextInboxProvider",
+      "InboxProviderAsync": "SqliteTextInboxProvider",
+      "Category": "Sqlite",
+      "CollectionName": "SqliteTextInbox"
+    },
+    "Binary": {
+      "InboxProvider": "SqliteBinaryInboxProvider",
+      "InboxProviderAsync": "SqliteBinaryInboxProvider",
+      "Category": "Sqlite",
+      "CollectionName": "SqliteBinaryInbox"
+    }
+  },
   "Outboxes": {
     "Text": {
       "Transaction": "System.Data.Common.DbTransaction",
