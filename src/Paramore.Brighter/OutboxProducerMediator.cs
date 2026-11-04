@@ -458,8 +458,10 @@ namespace Paramore.Brighter
             var parentSpan = requestContext.Span;
 
             var childSpans = new ConcurrentDictionary<string, Activity>();
+            IAmATripBatch? trips = null;
             try
             {
+                trips = BeginTripBatchOrNull();
                 // Get all the messages being cleared in a batch to keep db operations down
                 var postArray = posts as Id[] ?? posts.ToArray();
                 Message[] messages = (await _asyncOutbox!.GetAsync(postArray, requestContext)).ToArray();
@@ -483,7 +485,7 @@ namespace Paramore.Brighter
 
                     try
                     {
-                        await DispatchAsync([message], requestContext, OutboxClearSource.Explicit, continueOnCapturedContext, cancellationToken, null);
+                        await DispatchAsync([message], requestContext, OutboxClearSource.Explicit, continueOnCapturedContext, cancellationToken, trips);
                     }
                     finally
                     {
@@ -493,7 +495,14 @@ namespace Paramore.Brighter
             }
             finally
             {
-                requestContext.Span = parentSpan;
+                try
+                {
+                    await WriteTripsOrWarnAsync(trips);
+                }
+                finally
+                {
+                    requestContext.Span = parentSpan;
+                }
             }
 
             CheckOutstandingMessages(requestContext);
