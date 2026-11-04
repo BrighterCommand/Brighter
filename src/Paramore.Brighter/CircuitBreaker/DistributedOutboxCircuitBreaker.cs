@@ -241,26 +241,30 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
     }
 
-    private static Task<T> StartCall<T>(Func<CancellationToken, Task<T>> call, CancellationToken token, Action<Task> holdGuardUntil)
+    private StoreCall<T> BeginStoreCall<T>(Func<CancellationToken, Task<T>> call, CancellationToken cancellationToken) where T : class
     {
+        var timeout = _timeProvider.CreateCancellationTokenSource(_storeTimeout);
+        var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+        Task<T> task;
         try
         {
-            return call(token);
+            task = call(linked.Token);
         }
-        catch
+        catch (Exception e)
         {
-            holdGuardUntil(Task.CompletedTask);
-            throw;
+            linked.Dispose();
+            timeout.Dispose();
+            return new StoreCall<T>(Task.CompletedTask, Task.FromException<T?>(e));
         }
+
+        _ = task.ContinueWith(abandoned => _ = abandoned.Exception, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+        return new StoreCall<T>(SettleAsync(task), WithinStoreTimeoutAsync(task, timeout, linked, cancellationToken));
     }
 
-    private async Task<T?> WithinStoreTimeoutAsync<T>(Func<CancellationToken, Task<T>> call, CancellationToken cancellationToken, Action<Task> holdGuardUntil) where T : class
+    private async Task<T?> WithinStoreTimeoutAsync<T>(Task<T> task, CancellationTokenSource timeout, CancellationTokenSource linked, CancellationToken cancellationToken) where T : class
     {
-        using var timeout = _timeProvider.CreateCancellationTokenSource(_storeTimeout);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-        var task = StartCall(call, linked.Token, holdGuardUntil);
-        _ = task.ContinueWith(abandoned => _ = abandoned.Exception, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
-        holdGuardUntil(SettleAsync(task));
+        using var ownedTimeout = timeout;
+        using var ownedLinked = linked;
 
         try
         {
@@ -342,30 +346,35 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         return alreadyAnnounced ? [] : [CircuitBreakerSpanOperation.ReTrip];
     }
 
-    private async Task WriteLiveAsync(IReadOnlyCollection<KeyValuePair<RoutingKey, PendingTrip>> pending, Action<Task> holdGuardUntil)
+    private async Task<Task> WriteLiveAsync(IReadOnlyCollection<KeyValuePair<RoutingKey, PendingTrip>> pending)
     {
         var live = LivePending(pending);
         var trips = live.Select(trip => new TopicTrip(trip.Key, trip.Value.Stamp)).ToList();
         trips.AddRange(UnsharedTripsExcluding(live.Select(trip => trip.Key)));
         if (trips.Count == 0)
-            return;
+            return Task.CompletedTask;
 
+        var settled = Task.CompletedTask;
         IReadOnlyList<TripWriteResult>? results;
         try
         {
-            results = await WithinStoreTimeoutAsync(_ => _store.WriteAsync(trips), CancellationToken.None, holdGuardUntil).ConfigureAwait(false);
+            var storeCall = BeginStoreCall(_ => _store.WriteAsync(trips), CancellationToken.None);
+            settled = storeCall.Settled;
+            results = await storeCall.Result.ConfigureAwait(false);
         }
         catch (Exception e)
         {
             RecordWriteFailure(e, trips.Select(trip => trip.Topic));
             AnnounceUnshared(live);
-            return;
+            return settled;
         }
 
         if (results is null)
             RecordWriteTimeout(trips.Select(trip => trip.Topic));
         else
             ApplyWriteResults(results);
+
+        return settled;
     }
 
     private List<TopicTrip> UnsharedTripsExcluding(IEnumerable<RoutingKey> tripped)
@@ -467,7 +476,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         var settled = Task.CompletedTask;
         try
         {
-            await WriteLiveAsync([new KeyValuePair<RoutingKey, PendingTrip>(topic, pending)], task => settled = task).ConfigureAwait(false);
+            settled = await WriteLiveAsync([new KeyValuePair<RoutingKey, PendingTrip>(topic, pending)]).ConfigureAwait(false);
         }
         finally
         {
@@ -498,9 +507,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         TrippedTopicStoreRead? read;
         try
         {
-            read = await WithinStoreTimeoutAsync(
-                token => _store.ReadAsync(_timeProvider.GetUtcNow(), _tripLength, token), cancellationToken,
-                settled => _ = guard.ReleaseAfterAsync(settled)).ConfigureAwait(false);
+            var storeCall = BeginStoreCall(token => _store.ReadAsync(_timeProvider.GetUtcNow(), _tripLength, token), cancellationToken);
+            _ = guard.ReleaseAfterAsync(storeCall.Settled);
+            read = await storeCall.Result.ConfigureAwait(false);
         }
         catch (Exception e) when (!cancellationToken.IsCancellationRequested)
         {
@@ -556,7 +565,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         var settled = Task.CompletedTask;
         try
         {
-            await WriteLiveAsync([], task => settled = task).ConfigureAwait(false);
+            settled = await WriteLiveAsync([]).ConfigureAwait(false);
         }
         finally
         {
@@ -660,11 +669,13 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
             var pending = _trips.ToArray();
             _trips.Clear();
-            await breaker.WriteLiveAsync(pending, _ => { }).ConfigureAwait(false);
+            await breaker.WriteLiveAsync(pending).ConfigureAwait(false);
         }
     }
 
     private readonly record struct PendingTrip(DateTimeOffset Stamp, bool ReplacesLiveTrip);
+
+    private readonly record struct StoreCall<T>(Task Settled, Task<T?> Result) where T : class;
 
     private sealed class TripView
     {
