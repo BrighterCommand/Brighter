@@ -31,6 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// A runner handed a stale "table does not exist" state re-checks under <c>GET_LOCK</c>, finds the table
+/// another instance created, and bootstraps it instead of running V1's <c>CREATE TABLE</c>; existing
+/// rows survive (ADR 0057 §3).
+/// </summary>
 public class MySqlRunnerFreshPathRecheckTests : IAsyncLifetime
 {
     private const string MarkerMessageId = "marker-row-must-survive";
@@ -49,18 +54,13 @@ public class MySqlRunnerFreshPathRecheckTests : IAsyncLifetime
     [Fact]
     public async Task When_mysql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating()
     {
-        //Arrange — simulate the TOCTOU race: another instance created the V_latest-shape outbox
-        //table after detection ran but before this runner acquires GET_LOCK. We seed the table
-        //directly + a marker row to prove preservation, then call MigrateAsync with a stale
-        //BoxTableState that says "TableExists=false", as if detection was racing.
+        //Arrange
         await ExecuteDdl(MySqlOutboxBuilder.GetDDL(_tableName));
         await SeedMarkerRow();
 
         var staleState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        //Act — the runner must NOT throw a duplicate-CREATE-TABLE exception. The TOCTOU re-check
-        //under GET_LOCK has to see that the table exists now and route to the bootstrap path
-        //instead of executing V1's CREATE TABLE on the seeded table.
+        //Act
         var act = async () => await _runner.MigrateAsync(
             _tableName,
             schemaName: null,
@@ -69,8 +69,7 @@ public class MySqlRunnerFreshPathRecheckTests : IAsyncLifetime
 
         var ex = await Record.ExceptionAsync(act);
 
-        //Assert — no exception, ≥1 history row was inserted (proves bootstrap branch ran), and
-        //the seeded marker row survived (no DROP/recreate happened).
+        //Assert
         Assert.Null(ex);
         Assert.True(await GetHistoryRowCount() >= 1, "Bootstrap branch should have inserted at least one history row");
         Assert.Equal(1, await GetMarkerRowCount());
