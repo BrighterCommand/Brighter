@@ -1132,7 +1132,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2f - Sweeper-driven refresh
 
-- [ ] **TEST + IMPLEMENT: T2.49 - Every running sweeper refreshes the view on each tick, whatever the lock outcome**
+- [x] **TEST + IMPLEMENT: T2.49 - Every running sweeper refreshes the view on each tick, whatever the lock outcome**
   - **USE COMMAND**: `/tdd:test-first when every sweep is lock unavailable should still refresh the shared breaker's view each tick`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_every_sweep_is_lock_unavailable_should_still_refresh_the_shared_breakers_view.cs`
