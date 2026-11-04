@@ -1071,7 +1071,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.43, T2.25
   - References: `tests/Paramore.Brighter.Core.Tests/CommandProcessors/Post/`.
 
-- [ ] **CHARACTERISE: T2.45 - Messages later in a dispatch call are still attempted after a trip**
+- [x] **CHARACTERISE: T2.45 - Messages later in a dispatch call are still attempted after a trip**
   - **USE COMMAND**: `/tdd:test-first when the first message of a batch trips its topic should still attempt the later messages for that topic`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_the_first_message_trips_its_topic_should_still_attempt_later_messages_for_it.cs`
