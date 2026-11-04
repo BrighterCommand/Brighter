@@ -279,8 +279,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     /// <inheritdoc />
     public void TripTopic(RoutingKey topic)
     {
-        AnnounceEndedUnsharedTrips();
-        var stamp = CurrentStamp();
+        var stamp = StampNewTrip();
         bool startWrite;
         lock (_view.Lock)
         {
@@ -297,6 +296,12 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         var prior = _view.Record(topic, stamp);
         var replacesLiveTrip = earlier?.ReplacesLiveTrip ?? (prior is not null && IsLive(_timeProvider.GetUtcNow(), prior.Value));
         return new PendingTrip(stamp, replacesLiveTrip);
+    }
+
+    private DateTimeOffset StampNewTrip()
+    {
+        AnnounceEndedUnsharedTrips();
+        return CurrentStamp();
     }
 
     private DateTimeOffset CurrentStamp()
@@ -644,8 +649,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         public void TripTopic(RoutingKey topic)
         {
-            breaker.AnnounceEndedUnsharedTrips();
-            var stamp = breaker.CurrentStamp();
+            var stamp = breaker.StampNewTrip();
             _trips[topic] = breaker.RecordTrip(topic, stamp, _trips.TryGetValue(topic, out var earlier) ? earlier : null);
         }
 
