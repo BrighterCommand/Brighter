@@ -124,9 +124,12 @@ public sealed partial class SweeperMeter : IAmABrighterSweeperMeter
     {
         try
         {
-            if (_state is null || !_state.Read().IsActive) return 0;
+            if (_state is null) return 0;
+            var snapshot = _state.Read();
+            if (snapshot.IsStopped) return 0;
             var breaker = _findCircuitBreaker?.Invoke();
-            return breaker is null ? 0 : breaker.TrippedTopics.Count();
+            if (breaker is null) return 0;
+            return snapshot.IsActive || breaker is IAmASharedOutboxCircuitBreaker ? breaker.TrippedTopics.Count() : 0;
         }
         catch (Exception e)
         {
