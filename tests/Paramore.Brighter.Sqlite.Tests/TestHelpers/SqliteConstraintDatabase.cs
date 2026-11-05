@@ -57,7 +57,7 @@ internal sealed class SqliteConstraintDatabase : IDisposable
             {
                 ddl = inbox
                     ? ddl.Replace("CONSTRAINT PK_MessageId PRIMARY KEY", constraint)
-                    : ddl.Replace("[MessageId] TEXT NOT NULL COLLATE NOCASE",
+                    : ddl.Replace("[MessageId] TEXT NOT NULL COLLATE NOCASE PRIMARY KEY",
                         $"[MessageId] TEXT NOT NULL COLLATE NOCASE {constraint}");
             }
             else
