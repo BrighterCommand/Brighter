@@ -61,11 +61,6 @@ namespace Paramore.Brighter.Outbox.Hosting
         private readonly TaskCompletionSource<bool> _stopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
         private Thread? _sweepThread;
-        private readonly object _refreshLock = new();
-        private TimeSpan? _lastRefreshRequest;
-        private long _origin;
-        private ITimer? _overrunTimer;
-        private int _sweeping;
         private bool _disposed;
         private const string LockingResourceName = "OutboxSweeper";
 
@@ -176,10 +171,9 @@ namespace Paramore.Brighter.Outbox.Hosting
             try
             {
                 // Schedule by elapsed time, not the wall clock, so a clock that steps backwards cannot hold up a sweep
-                _origin = _timeProvider.GetTimestamp();
-                Func<TimeSpan> Elapsed = ElapsedSinceOrigin;
-                if (_sharedCircuitBreaker is not null)
-                    _overrunTimer = _timeProvider.CreateTimer(_ => RefreshWhileSweeping(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                var origin = _timeProvider.GetTimestamp();
+                TimeSpan Elapsed() => _timeProvider.GetElapsedTime(origin);
+                using var refresh = CreateRefresh(Elapsed);
 
                 var due = Elapsed();
                 while (WaitUntil(due, Elapsed))
@@ -187,16 +181,15 @@ namespace Paramore.Brighter.Outbox.Hosting
                     var started = Elapsed();
                     Record(() => _meter.RecordTickLag(started - due));
 
-                    RequestRefresh(started);
+                    refresh.RequestRefresh(started);
 
-                    Sweep();
+                    Sweep(refresh);
 
                     due = NextDue(due, started);
                 }
             }
             finally
             {
-                _overrunTimer?.Dispose();
                 _stopped.TrySetResult(true);
             }
         }
@@ -236,22 +229,16 @@ namespace Paramore.Brighter.Outbox.Hosting
             return anchor + _interval;
         }
 
-        private TimeSpan ElapsedSinceOrigin() => _timeProvider.GetElapsedTime(_origin);
+        private IAmASharedBreakerRefresh CreateRefresh(Func<TimeSpan> elapsed) =>
+            _sharedCircuitBreaker is null
+                ? NoSharedBreakerRefresh.Instance
+                : new SharedBreakerRefresh(() => Record(_sharedCircuitBreaker.StartRefresh), _interval, _timeProvider, elapsed);
 
-        private void Sweep()
+        private void Sweep(IAmASharedBreakerRefresh refresh)
         {
             _state.SweepStarted();
             var started = _timeProvider.GetTimestamp();
-            SweepOutcome outcome;
-            ArmOverrunTimer();
-            try
-            {
-                outcome = SweepOnce();
-            }
-            finally
-            {
-                DisarmOverrunTimer();
-            }
+            var outcome = SweepOnce(refresh);
             _state.SweepEnded(outcome);
             var duration = _timeProvider.GetElapsedTime(started);
             Record(() => _meter.RecordSweep(outcome, duration));
@@ -259,57 +246,10 @@ namespace Paramore.Brighter.Outbox.Hosting
             Log.OutboxSweeperSleeping(s_logger);
         }
 
-        private void RequestRefresh(TimeSpan now)
+        private SweepOutcome SweepOnce(IAmASharedBreakerRefresh refresh)
         {
-            if (_sharedCircuitBreaker is null)
-                return;
+            using var sweeping = refresh.WhileSweeping();
 
-            lock (_refreshLock)
-            {
-                if (_lastRefreshRequest is { } last && now - last < TimeSpan.FromTicks(_interval.Ticks / 2))
-                    return;
-
-                _lastRefreshRequest = now;
-            }
-
-            Record(_sharedCircuitBreaker.StartRefresh);
-        }
-
-        private void ArmOverrunTimer()
-        {
-            if (_overrunTimer is null)
-                return;
-
-            Volatile.Write(ref _sweeping, 1);
-            ChangeOverrunTimer(_interval);
-        }
-
-        private void DisarmOverrunTimer()
-        {
-            if (_overrunTimer is null)
-                return;
-
-            Volatile.Write(ref _sweeping, 0);
-            ChangeOverrunTimer(Timeout.InfiniteTimeSpan);
-        }
-
-        private void RefreshWhileSweeping()
-        {
-            if (Volatile.Read(ref _sweeping) == 0)
-                return;
-
-            RequestRefresh(ElapsedSinceOrigin());
-            ChangeOverrunTimer(_interval);
-        }
-
-        private void ChangeOverrunTimer(TimeSpan dueTime)
-        {
-            try { _overrunTimer?.Change(dueTime, Timeout.InfiniteTimeSpan); }
-            catch (ObjectDisposedException) { }
-        }
-
-        private SweepOutcome SweepOnce()
-        {
             try
             {
                 // Runs the sweep in a context on the sweeper's own thread, so its awaits resume here rather than on the pool:
