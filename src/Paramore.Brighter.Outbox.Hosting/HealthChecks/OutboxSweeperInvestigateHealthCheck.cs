@@ -54,6 +54,9 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
     /// <summary>The name of the condition reported when the tripped topics could not be read.</summary>
     public const string TrippedTopicsUnreadable = "tripped_topics_unreadable";
 
+    /// <summary>The name of the condition reported while a shared circuit breaker is using its own view because the shared store failed.</summary>
+    public const string TrippedTopicsStoreUnavailable = "tripped_topics_store_unavailable";
+
     private const int MaxNamedTopics = 10;
 
     private readonly OutboxSweeperState? _state;
@@ -108,10 +111,19 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         try
         {
             var breaker = _findCircuitBreaker?.Invoke();
-            if (breaker is null || !(snapshot.IsActive || breaker is IAmASharedOutboxCircuitBreaker)) return [];
+            if (breaker is null) return [];
 
+            var shared = breaker as IAmASharedOutboxCircuitBreaker;
+            if (shared is null && !snapshot.IsActive) return [];
+
+            var conditions = new List<RemedyCondition>();
             var names = TrippedTopicNames(breaker);
-            return names.Length > 0 ? [TrippedTopicsCondition(names)] : [];
+            if (names.Length > 0) conditions.Add(TrippedTopicsCondition(names));
+
+            var status = shared?.StoreStatus;
+            if (status is { IsUsingFallback: true }) conditions.Add(TrippedTopicsStoreUnavailableCondition(status.Value.LastFailure));
+
+            return conditions.ToArray();
         }
         catch (Exception e)
         {
@@ -165,6 +177,14 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         var values = new Dictionary<string, object> { ["exception_type"] = type };
         var description = $"The tripped topics could not be read from the circuit breaker ({type}).";
         return new RemedyCondition(TrippedTopicsUnreadable, description, values);
+    }
+
+    private static RemedyCondition TrippedTopicsStoreUnavailableCondition(string? lastFailure)
+    {
+        var type = lastFailure ?? "unknown";
+        var values = new Dictionary<string, object> { ["exception_type"] = type };
+        var description = $"The tripped topics could not be read from or written to the shared store ({type}); this instance is using its own view.";
+        return new RemedyCondition(TrippedTopicsStoreUnavailable, description, values);
     }
 
     private static partial class Log
