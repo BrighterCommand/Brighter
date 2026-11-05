@@ -50,7 +50,7 @@ internal sealed class InMemoryScheduledTimer : ITimer
             lock (_gate)
             {
                 install();
-                _timer.Change(delay, Timeout.InfiniteTimeSpan);
+                TryChange(delay, Timeout.InfiniteTimeSpan);
             }
         }
         finally
@@ -65,7 +65,7 @@ internal sealed class InMemoryScheduledTimer : ITimer
         {
             lock (_gate)
             {
-                return _timer.Change(dueTime, period);
+                return TryChange(dueTime, period);
             }
         }
         finally
@@ -77,6 +77,18 @@ internal sealed class InMemoryScheduledTimer : ITimer
     public void Dispose() => _timer.Dispose();
 
     public ValueTask DisposeAsync() => _timer.DisposeAsync();
+
+    private bool TryChange(TimeSpan dueTime, TimeSpan period)
+    {
+        try
+        {
+            return _timer.Change(dueTime, period);
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
+    }
 
     private void OnElapsed(object? state)
     {

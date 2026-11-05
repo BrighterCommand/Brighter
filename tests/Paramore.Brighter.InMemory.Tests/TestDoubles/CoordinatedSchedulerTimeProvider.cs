@@ -37,6 +37,11 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles;
 public sealed class CoordinatedSchedulerTimeProvider : TimeProvider, IDisposable
 {
     /// <summary>
+    /// Models custom timers that throw when changed after disposal.
+    /// </summary>
+    public bool ThrowOnChangeAfterDisposal { get; set; }
+
+    /// <summary>
     /// Runs timer callbacks on a dedicated worker when enabled.
     /// </summary>
     public bool CallbackOnWorker { get; set; }
@@ -99,7 +104,8 @@ public sealed class CoordinatedSchedulerTimeProvider : TimeProvider, IDisposable
             _arrivals.Wait(TimeSpan.FromSeconds(5));
         }
         Interlocked.Increment(ref _activeTimerCount);
-        return new TrackedSchedulerTimer(timer, () => Interlocked.Decrement(ref _activeTimerCount), BeforeChange);
+        return new TrackedSchedulerTimer(timer, () => Interlocked.Decrement(ref _activeTimerCount), BeforeChange,
+            ThrowOnChangeAfterDisposal);
     }
 
     /// <inheritdoc />

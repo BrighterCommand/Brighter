@@ -29,9 +29,10 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.InMemory.Tests.TestDoubles;
 
 /// <summary>
-/// Tracks timer disposal without changing the underlying virtual timer's behavior.
+/// Tracks timer disposal and optionally models a provider that throws after disposal.
 /// </summary>
-public sealed class TrackedSchedulerTimer(ITimer inner, Action onDisposed, Action<TimeSpan> beforeChange) : ITimer
+public sealed class TrackedSchedulerTimer(ITimer inner, Action onDisposed, Action<TimeSpan> beforeChange,
+    bool throwOnChangeAfterDisposal = false) : ITimer
 {
     private int _disposed;
 
@@ -39,6 +40,10 @@ public sealed class TrackedSchedulerTimer(ITimer inner, Action onDisposed, Actio
     public bool Change(TimeSpan dueTime, TimeSpan period)
     {
         beforeChange(dueTime);
+        if (throwOnChangeAfterDisposal && Volatile.Read(ref _disposed) != 0)
+        {
+            throw new ObjectDisposedException(nameof(TrackedSchedulerTimer));
+        }
         return inner.Change(dueTime, period);
     }
 

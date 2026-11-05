@@ -299,6 +299,127 @@ public class ConcurrentSchedulerReplacementTests : IDisposable
         Assert.Equal(0, _timeProvider.ActiveTimerCount);
     }
 
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    [InlineData(true, true, true)]
+    public async Task When_cancelling_during_activation_should_complete_without_dispatching(
+        bool asyncSchedule, bool requestSchedule, bool asyncCancel)
+    {
+        //Arrange
+        _timeProvider.ThrowOnChangeAfterDisposal = true;
+        using var scheduler = (InMemoryScheduler)_schedulerFactory.Create(_processor);
+        _timeProvider.PauseNextActivation();
+        var scheduling = Task.Factory.StartNew(
+            () => Schedule(scheduler, 1, TimeSpan.FromMinutes(1), asyncSchedule, requestSchedule),
+            CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
+
+        //Act
+        try
+        {
+            Assert.True(_timeProvider.WaitForActivation());
+            if (asyncCancel)
+            {
+                await scheduler.CancelAsync(FIXED_SCHEDULER_ID);
+            }
+            else
+            {
+                scheduler.Cancel(FIXED_SCHEDULER_ID);
+            }
+            Assert.Equal(0, _timeProvider.ActiveTimerCount);
+        }
+        finally
+        {
+            _timeProvider.ResumeActivation();
+            await scheduling.WaitAsync(TimeSpan.FromSeconds(30));
+        }
+
+        //Assert
+        Assert.Equal(FIXED_SCHEDULER_ID, await scheduling);
+        _timeProvider.Advance(TimeSpan.FromMinutes(2));
+        Assert.Empty(_internalBus.Stream(_routingKey));
+        Assert.False(scheduler.ReScheduler(FIXED_SCHEDULER_ID, TimeSpan.FromMinutes(1)));
+        Assert.Equal(0, _timeProvider.ActiveTimerCount);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task When_replacing_during_activation_should_complete_and_deliver_only_the_replacement(
+        bool asyncSchedule, bool requestSchedule)
+    {
+        //Arrange
+        _timeProvider.ThrowOnChangeAfterDisposal = true;
+        using var scheduler = (InMemoryScheduler)_schedulerFactory.Create(_processor);
+        _timeProvider.PauseNextActivation();
+        var scheduling = Task.Factory.StartNew(
+            () => Schedule(scheduler, 1, TimeSpan.FromMinutes(1), asyncSchedule, requestSchedule),
+            CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
+
+        //Act
+        try
+        {
+            Assert.True(_timeProvider.WaitForActivation());
+            Assert.Equal(FIXED_SCHEDULER_ID,
+                await Schedule(scheduler, 2, TimeSpan.FromMinutes(1), asyncSchedule, requestSchedule));
+            Assert.Equal(1, _timeProvider.ActiveTimerCount);
+        }
+        finally
+        {
+            _timeProvider.ResumeActivation();
+            await scheduling.WaitAsync(TimeSpan.FromSeconds(30));
+        }
+
+        //Assert
+        Assert.Equal(FIXED_SCHEDULER_ID, await scheduling);
+        _timeProvider.Advance(TimeSpan.FromMinutes(2));
+        Assert.Equal("event-2", Assert.Single(_internalBus.Stream(_routingKey)).Id.Value);
+        Assert.False(scheduler.ReScheduler(FIXED_SCHEDULER_ID, TimeSpan.FromMinutes(1)));
+        Assert.Equal(0, _timeProvider.ActiveTimerCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task When_cancelling_during_rescheduling_should_return_false_without_dispatching(bool asyncReschedule)
+    {
+        //Arrange
+        _timeProvider.ThrowOnChangeAfterDisposal = true;
+        using var scheduler = (InMemoryScheduler)_schedulerFactory.Create(_processor);
+        scheduler.Schedule(CreateMessage(1), TimeSpan.FromMinutes(1));
+        _timeProvider.PauseNextActivation();
+        var rescheduling = Task.Factory.StartNew(
+            () => asyncReschedule
+                ? scheduler.ReSchedulerAsync(FIXED_SCHEDULER_ID, TimeSpan.FromMinutes(10))
+                : Task.FromResult(scheduler.ReScheduler(FIXED_SCHEDULER_ID, TimeSpan.FromMinutes(10))),
+            CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
+
+        //Act
+        try
+        {
+            Assert.True(_timeProvider.WaitForActivation());
+            scheduler.Cancel(FIXED_SCHEDULER_ID);
+        }
+        finally
+        {
+            _timeProvider.ResumeActivation();
+            await rescheduling.WaitAsync(TimeSpan.FromSeconds(30));
+        }
+
+        //Assert
+        Assert.False(await rescheduling);
+        _timeProvider.Advance(TimeSpan.FromMinutes(11));
+        Assert.Empty(_internalBus.Stream(_routingKey));
+        Assert.Equal(0, _timeProvider.ActiveTimerCount);
+    }
+
     private Task<string> Schedule(InMemoryScheduler scheduler, int index, TimeSpan delay,
         bool asyncSchedule, bool requestSchedule)
     {
