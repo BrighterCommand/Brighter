@@ -1288,7 +1288,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.53
   - References: `src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs` (`TrippedTopicsConditionOrNone`). `src/Paramore.Brighter/Observability/SweeperMeter.cs` (`ObserveTrippedTopics`). `tests/Paramore.Brighter.Core.Tests/Sweeping/When_reading_tripped_topics_throws_should_report_tripped_topics_unreadable.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.56b - Unreadable tripped topics do not hide the store-unavailable condition**
+- [x] **TEST + IMPLEMENT: T2.56b - Unreadable tripped topics do not hide the store-unavailable condition**
   - **USE COMMAND**: `/tdd:test-first when reading tripped topics throws on a shared breaker in its fallback state should report unreadable and store unavailable`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_reading_tripped_topics_throws_on_a_shared_breaker_in_fallback_should_report_unreadable_and_store_unavailable.cs`
