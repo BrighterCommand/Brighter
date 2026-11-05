@@ -1271,7 +1271,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.55a, T2.35
   - References: `tests/Paramore.Brighter.Core.Tests/Sweeping/When_the_sweep_is_blocked_indefinitely_should_complete_both_health_checks_within_a_second.cs`.
 
-- [ ] **CHARACTERISE: T2.56a - A breaker lookup that throws on an inactive running sweeper reports tripped_topics_unreadable**
+- [x] **CHARACTERISE: T2.56a - A breaker lookup that throws on an inactive running sweeper reports tripped_topics_unreadable**
   - **USE COMMAND**: `/tdd:test-first when the breaker lookup throws on an inactive sweeper should report tripped topics unreadable`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_breaker_lookup_throws_on_an_inactive_sweeper_should_report_tripped_topics_unreadable.cs`
