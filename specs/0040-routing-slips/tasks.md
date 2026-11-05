@@ -92,7 +92,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 
 *Dependencies: none.*
 
-- [ ] **PROJECT: T0.1 — Record baselines before any change**
+- [x] **PROJECT: T0.1 — Record baselines before any change**
   - Do:
     - Record `BASE=$(git merge-base HEAD origin/master)` and `PRE=$(git rev-parse HEAD)` in `specs/0040-routing-slips/baselines.md` (untracked; name it in `PROMPT.md`). `BASE` can always be recomputed with `git merge-base HEAD origin/master`, and `PRE` is not needed to rebuild a baseline: the files this spec edits are unchanged at that merge base.
     - Confirm that `dotnet --version` is 10.x.
