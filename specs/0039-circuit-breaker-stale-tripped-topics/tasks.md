@@ -1257,7 +1257,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.55
   - References: `src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs:104-117`.
 
-- [ ] **CHARACTERISE: T2.56 - Health signals follow the fallback view and never block**
+- [x] **CHARACTERISE: T2.56 - Health signals follow the fallback view and never block**
   - **USE COMMAND**: `/tdd:test-first when the trip store blocks indefinitely should observe the gauge and run the check within a second from the fallback view`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_trip_store_blocks_indefinitely_should_complete_the_gauge_and_check_within_a_second.cs`
