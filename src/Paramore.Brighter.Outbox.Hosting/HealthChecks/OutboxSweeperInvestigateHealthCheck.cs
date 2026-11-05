@@ -103,11 +103,14 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
 
     private RemedyCondition[] TrippedTopicsConditionOrNone(OutboxSweeperSnapshot snapshot)
     {
-        if (!snapshot.IsActive) return [];
+        if (snapshot.IsStopped) return [];
 
         try
         {
-            var names = TrippedTopicNames();
+            var breaker = _findCircuitBreaker?.Invoke();
+            if (breaker is null || !(snapshot.IsActive || breaker is IAmASharedOutboxCircuitBreaker)) return [];
+
+            var names = TrippedTopicNames(breaker);
             return names.Length > 0 ? [TrippedTopicsCondition(names)] : [];
         }
         catch (Exception e)
@@ -125,13 +128,8 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         return new HealthCheckResult(HealthStatus.Degraded, RemedyCheckConvention.Describe(conditions), null, data);
     }
 
-    private string[] TrippedTopicNames()
-    {
-        var tripped = _findCircuitBreaker?.Invoke()?.TrippedTopics;
-        if (tripped is null) return Array.Empty<string>();
-
-        return tripped.Select(topic => topic.Value).OrderBy(name => name, StringComparer.Ordinal).ToArray();
-    }
+    private static string[] TrippedTopicNames(IAmAnOutboxCircuitBreaker breaker) =>
+        breaker.TrippedTopics.Select(topic => topic.Value).OrderBy(name => name, StringComparer.Ordinal).ToArray();
 
     private RemedyCondition FailedSweepsCondition(int failed)
     {
