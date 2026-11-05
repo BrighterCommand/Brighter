@@ -883,15 +883,14 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
 
                 // Spin off requests to scan each segment
                 var tasks = new List<Task<int>>();
-                var segmentMaxCounts = GetSegmentPageSizes(maxCount);
                 for (var segmentNumber = 0; segmentNumber < _configuration.ScanConcurrency; segmentNumber++)
                 {
-                    tasks.Add(ScanOutstandingIndexSegmentForCount(olderThan, segmentMaxCounts[segmentNumber], segmentNumber, cancellationToken));
+                    tasks.Add(ScanOutstandingIndexSegmentForCount(olderThan, maxCount, segmentNumber, cancellationToken));
                 }
 
                 await Task.WhenAll(tasks);
 
-                var totalCount = tasks.Sum(t => t.Result);
+                var totalCount = Math.Min(tasks.Sum(t => t.Result), maxCount);
                 span?.AddTag("db.response.returned_rows", totalCount);
                 return totalCount;
             }
@@ -907,6 +906,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             CancellationToken cancellationToken)
         {
             var segmentCount = 0;
+            if (maxCount <= 0)
+            {
+                return segmentCount;
+            }
+
             Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
             do
             {
