@@ -123,10 +123,9 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         var breaker = _findCircuitBreaker?.Invoke();
         if (breaker is null) return [];
 
-        var shared = breaker as IAmASharedOutboxCircuitBreaker;
-        if (shared is null && !snapshot.IsActive) return [];
+        if (!snapshot.ReadsTrippedTopicsFrom(breaker)) return [];
 
-        return [..TrippedTopicsConditionOrUnreadable(breaker), ..StoreUnavailableConditionOrNone(shared)];
+        return [..TrippedTopicsConditionOrUnreadable(breaker), ..StoreUnavailableConditionOrNone(breaker as IAmASharedOutboxCircuitBreaker)];
     }
 
     private static RemedyCondition[] TrippedTopicsConditionOrUnreadable(IAmAnOutboxCircuitBreaker breaker)
