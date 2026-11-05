@@ -106,7 +106,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 
 *0092 step 1. Comes before 0090 step 1. Depends on T0.1.*
 
-- [ ] **TEST + IMPLEMENT: T1.1 — `spec_text_tests.cs` fails, naming the block, when a registered text block is missing from its canonical file or a required copy is absent**
+- [x] **TEST + IMPLEMENT: T1.1 — `spec_text_tests.cs` fails, naming the block, when a registered text block is missing from its canonical file or a required copy is absent**
   - **USE COMMAND**: `/tdd:test-first when the spec text test script finds a registered routing-text block missing from its canonical file or from a required copy it should print a FAIL line naming the block and file and exit 1`
   - Test file: `.claude/commands/spec/spec_text_tests.cs` (new).
   - Test should verify:
