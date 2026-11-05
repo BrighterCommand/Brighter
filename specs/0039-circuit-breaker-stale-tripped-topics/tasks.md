@@ -1182,7 +1182,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2g - Health signals for a shared breaker
 
-- [ ] **TEST + IMPLEMENT: T2.52 - The tripped-topics gauge reports the shared view on every running sweeper**
+- [x] **TEST + IMPLEMENT: T2.52 - The tripped-topics gauge reports the shared view on every running sweeper**
   - **USE COMMAND**: `/tdd:test-first when the breaker shares trips should report the tripped topics gauge on an inactive running sweeper`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability/Metrics"
   - Test file: `When_the_breaker_shares_trips_should_report_the_tripped_topics_gauge_on_an_inactive_sweeper.cs`
