@@ -117,11 +117,8 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
             if (shared is null && !snapshot.IsActive) return [];
 
             var conditions = new List<RemedyCondition>();
-            var names = TrippedTopicNames(breaker);
-            if (names.Length > 0) conditions.Add(TrippedTopicsCondition(names));
-
-            var status = shared?.StoreStatus;
-            if (status is { IsUsingFallback: true }) conditions.Add(TrippedTopicsStoreUnavailableCondition(status.Value.LastFailure));
+            conditions.AddRange(TrippedTopicsConditionOrUnreadable(breaker));
+            conditions.AddRange(StoreUnavailableConditionOrNone(shared));
 
             return conditions.ToArray();
         }
@@ -130,6 +127,26 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
             Log.TrippedTopicsUnreadable(s_logger, e);
             return [TrippedTopicsUnreadableCondition(e)];
         }
+    }
+
+    private static RemedyCondition[] TrippedTopicsConditionOrUnreadable(IAmAnOutboxCircuitBreaker breaker)
+    {
+        try
+        {
+            var names = TrippedTopicNames(breaker);
+            return names.Length > 0 ? [TrippedTopicsCondition(names)] : [];
+        }
+        catch (Exception e)
+        {
+            Log.TrippedTopicsUnreadable(s_logger, e);
+            return [TrippedTopicsUnreadableCondition(e)];
+        }
+    }
+
+    private static RemedyCondition[] StoreUnavailableConditionOrNone(IAmASharedOutboxCircuitBreaker? shared)
+    {
+        var status = shared?.StoreStatus;
+        return status is { IsUsingFallback: true } ? [TrippedTopicsStoreUnavailableCondition(status.Value.LastFailure)] : [];
     }
 
     private static HealthCheckResult Healthy(string description) => HealthCheckResult.Healthy(description, RemedyCheckConvention.Data(RemedyKind.Investigate));
