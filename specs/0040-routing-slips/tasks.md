@@ -8,7 +8,7 @@
 
 This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agent_instructions/testing.md`, and it applies to no other spec.
 
-- **C# scripts and fixtures stay test-first.** That covers `resolve_route.cs`, `show_me_facts.cs`, `resolve_route_tests.cs`, `spec_text_tests.cs`, and the fixture tree under `.claude/test-fixtures/routing/`. Each task states one of two routes:
+- **C# scripts and fixtures stay test-first.** That covers `resolve_route.cs`, `show_me_facts.cs`, `resolve_route_tests.cs`, `spec_text_tests.cs`, and the fixture tree under `.claude/test-fixtures/routing/`. Each task states one or both of two routes, one per part (new test code, and data rows):
   - **`/tdd:test-first <behaviour>`**, when the task writes new test code (harness, generated cases, checks).
   - **RED-first row**, when the test is data: an expectation file under `.claude/test-fixtures/routing/expect/`, or a registry row in `spec_text_tests.cs`. You write the row, run the script, and see it fail for the stated reason before you write any code.
 - **Command, skill and README markdown are behavioural-text or structural tasks, not `/tdd:test-first` tasks.** That covers `.claude/commands/**/*.md`, the READMEs and `.agent_instructions/*.md`. Verification is one of three things, which each task names:
@@ -21,7 +21,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - The full regression suite (S1).
   - The two-commit shape: a `feat:`/`test:` commit, then a separate `docs:` commit that ticks the box. Where 0092 step 9 requires a registry row in "the commit just before" a copy, a task has three commits: `test:` (red row), `feat:` (copy), `docs:` (tick).
   - The gear defaults to `review-before`. This list does not encode the gear. Shift it only with `/spec:gear`, which can be scoped to one of the `## Phase N — …` headings below. Keep those headings stable.
-- **Characterisation.** Sometimes a new row or check passes the first time it runs. When that happens, see it fail under the **named mutation** given in the task, applied to production code (never the test), and then revert. Never commit the mutation (testing.md *Characterisation*). The four-tag rule keeps the tag at `TEST + IMPLEMENT`. A **Characterise** bullet carries testing.md's `CHARACTERISE` label and names the mutation.
+- **Characterisation.** Sometimes a new row or check passes the first time it runs. When that happens, see it fail under the **named mutation** given in the task, applied to production code (never the test), and then revert. Exceptions: a check whose subject is a tracked non-code file it inspects (T1.3's `.gitignore`, T8.8's `.claude/flows/`, T9.1's fixtures), where the mutation changes that file in the working tree and it is restored and confirmed unmodified; and T10.3, whose RED is a named macOS hand step. Never commit the mutation (testing.md *Characterisation*). The four-tag rule keeps the tag at `TEST + IMPLEMENT`. A **Characterise** bullet carries testing.md's `CHARACTERISE` label and names the mutation.
 
 ### Tags
 
@@ -40,7 +40,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 - **S4 — Line citations.** ADR line numbers refer to files as they are before this spec. Once an earlier task has edited a file, find the cited text by its content, not its number. This matters most in `approve.md` and `.claude/commands/spec/README.md`.
 - **S5 — Restart after a command edit.** Restart the Claude Code session after editing a command file and before any hand step that runs that command.
 - **S6 — Fixture-only commits.** The `light` and `bugfix` commits (T7.1, T7.2) touch only `.claude/test-fixtures/routing/`. `git diff --stat HEAD~1 -- .claude/commands/ bugfixes/` must be empty. If a row fails, follow the T7 contingency: fix the resolver first, in its own commit, then make the fixture commit again.
-- **S7 — Scratch branches.** Scratch and throwaway branches are never pushed or merged, and are deleted after use. Notes go in the session scratchpad and are never committed.
+- **S7 — Scratch branches.** Scratch and throwaway branches are never pushed or merged, and are deleted after use. Notes that only one task needs go in the session scratchpad. Notes a later session needs (T0.1's `BASE` and `PRE`, T13.5's baseline) go in `specs/0040-routing-slips/baselines.md`, which is untracked, is never staged, and is named in `PROMPT.md`. Neither is ever committed.
 - **S8 — Partial matcher.** An array expectation must match in length (0092 *Expectations*). Each `violations` expectation therefore lists every violation its fixture raises, in rule order.
 
 ## Open items needing a ruling (before the phase named)
@@ -94,7 +94,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 
 - [ ] **PROJECT: T0.1 — Record baselines before any change**
   - Do:
-    - Record `BASE=$(git merge-base HEAD origin/master)` and `PRE=$(git rev-parse HEAD)` in the scratchpad.
+    - Record `BASE=$(git merge-base HEAD origin/master)` and `PRE=$(git rev-parse HEAD)` in `specs/0040-routing-slips/baselines.md` (untracked; name it in `PROMPT.md`). `BASE` can always be recomputed with `git merge-base HEAD origin/master`, and `PRE` is not needed to rebuild a baseline: the files this spec edits are unchanged at that merge base.
     - Confirm that `dotnet --version` is 10.x.
     - Confirm that `.claude/flows/` and `.claude/test-fixtures/routing/` do not exist.
     - Confirm that `specs/.current-spec` names `0040-routing-slips`.
@@ -264,9 +264,9 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 
 ## Phase 5 — Definitions and validity rules
 
-*0092 step 3 with 0089 step 4, one rule at a time. Each rule's fixture is `flows-rules/{rule}.flow` with expectation `expect/definition-{rule}.json` (`run: ["--definition", "{stem}"]`, `flows: "flows-rules"`), added red before the code (RED-first row). Each expectation asserts `valid: false` and the full `violations` list (S8): `rule`, `code`, `step`, and the message from 0089's rule table. Depends on Phase 4.*
+*0092 step 3 with 0089 step 4, one rule at a time. Each rule's fixture is `flows-rules/{rule}.flow` with expectation `expect/definition-{rule}.json` (`run: ["--definition", "{stem}"]`, `flows: "flows-rules"`), added red before the code (RED-first row). Each expectation (except the valid-definition rows) asserts `valid: false` and the full `violations` list (S8): `rule`, `code`, `step`, and the message from 0089's rule table. Depends on Phase 4.*
 
-- [ ] **TEST + IMPLEMENT: T5.1 — A valid definition is reported in flow form, with its source, presence and no violations, against both the shipped and the primary fixture directories**
+- [ ] **TEST + IMPLEMENT: T5.1 — A valid definition is reported in flow form, with its source, presence and no violations, against the primary fixture directory**
   - **USE COMMAND**: none — RED-first rows: `expect/definition-feature.json` (`flows: "flows"`).
   - Fixture (new):
     - `.claude/test-fixtures/routing/flows/feature.flow`, a copy of the shipped file.
@@ -275,9 +275,8 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Add `SlipReader`'s accepting path. Read the file as bytes and decode with a decoder that keeps a BOM. Convert CRLF to LF. Ignore trailing spaces and tabs.
-    - Add `ApprovalTableReader` and `CommandCatalogue`. The catalogue resolves `/{family}:{name}` by ordinal comparison against a directory listing, so `/spec:readme` does not match `README.md`.
     - Build the flow-form report from `schema_version`, `mode`, `flow`, `valid`, `violations` and `stop`. `stop` stays `null` until T8.2.
-  - Traces to: 0089 step 4, *The slip format*, *The approval table*, *Key Components*; 0092 step 3; FR-1, FR-2, FR-6 (flow query); NFR-2. Depends on: T4.2.
+  - Traces to: 0089 step 4, *The slip format*, *Key Components*; 0092 step 3; FR-1, FR-2, FR-6 (flow query); NFR-2. Depends on: T4.2.
 
 - [ ] **TEST + IMPLEMENT: T5.2 — R0: malformed syntax, a missing definition and a bad flow name are each violation R0, and R0 suppresses the other slip rules**
   - **USE COMMAND**: none — RED-first rows: `definition-r00-malformed`, `definition-nosuch`, `definition-bad-name`.
@@ -319,7 +318,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Fixture: `flows-rules/r04-unknown-command.flow`, whose `design` step names `/spec:designx`.
   - Test should verify: R4, `Step design names a command that does not exist, /spec:designx.`
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
-  - Implementation should: check every producer and marker-writer through `CommandCatalogue`, comparing the full command text with space runs collapsed.
+  - Implementation should: add `CommandCatalogue`, which resolves `/{family}:{name}` by ordinal comparison against a directory listing, so `/spec:readme` does not match `README.md`. Check every producer and marker-writer through it, comparing the full command text with space runs collapsed.
   - Traces to: FR-3, FR-24 (nonexistent command); AC-3. Depends on: T5.5.
 
 - [ ] **TEST + IMPLEMENT: T5.7 — R5: one producer named by two steps is invalid**
@@ -392,8 +391,10 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
     - R12 (a) names the step and the table.
     - R12 (b) names the kind.
     - `flows-invalid` lists R4, R12 (b) and R12 (c), in that order (rule id, then slip order).
+    - `definition-feature-shipped` (no `flows` key): the shipped `feature.flow` and `approvals.md` are valid, with R12 (c) resolving the four `/adr:*` commands.
+  - **Characterise** `definition-feature-shipped` (a green control row): named mutation: make R12 (c) reject every command; the row must FAIL. Revert.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
-  - Implementation should: add R12 (a), (b) and (c), and evaluate (b) and (c) even when R0 fires.
+  - Implementation should: add `ApprovalTableReader`, then R12 (a), (b) and (c), and evaluate (b) and (c) even when R0 fires.
   - Traces to: FR-3, FR-29; AC-74 (definition side); FR-24 (two entries). Depends on: T5.13.
 
 - [ ] **TEST + IMPLEMENT: T5.15 — R13: the last step must be kind `tasks`, with artefact `tasks.md` and marker `.tasks-approved`**
@@ -430,7 +431,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 
 ## Phase 6 — One-spec resolution
 
-*0092 step 4 with 0089 step 5. Each case is a tracked directory under `.claude/test-fixtures/routing/specs/{case}/`, holding a `README.md` that names its purpose. Each expectation is `expect/{case}.json` (or `expect/{case}-{flows}.json` (`{flows}` without its `flows-` prefix) when the same case runs against more than one flows directory, as for `spike-step-spike-entry`; `shipped-legacy-nothing` is the shipped-table row of `legacy-nothing`) with `run: ["--spec", "{case}"]`, added red before the code. Records follow S3. **T6.6, T6.8 and T6.9 carry the O-1 fixtures.** Depends on Phase 5.*
+*0092 step 4 with 0089 step 5. Each case is a tracked directory under `.claude/test-fixtures/routing/specs/{case}/`, holding a `README.md` that names its purpose. Each expectation is `expect/{case}.json` (or `expect/{case}-{flows}.json` (`{flows}` without its `flows-` prefix) when the same case runs against more than one flows directory, as for `spike-step-spike-entry`; `shipped-legacy-nothing` is the shipped-table row of `legacy-nothing`) with `run: ["--spec", "{case}"]`, added red before the code (except characterised control rows). Records follow S3. **T6.6, T6.8 and T6.9 carry the O-1 fixtures.** Depends on Phase 5.*
 
 - [ ] **TEST + IMPLEMENT: T6.1 — A legacy spec with nothing resolves to `feature` from the default source, with every route field FR-6 lists; an unknown `--spec` exits `1`**
   - **USE COMMAND**: none — RED-first rows `legacy-nothing` (`flows: "flows"`), `shipped-legacy-nothing` (no `flows` key), and `spec-unknown` (`run: ["--spec", "no-such-case"]`, `exit: 1`).
@@ -449,20 +450,21 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should:
     - Add `--spec`. Spec directories are the immediate non-dot subdirectories, matched by ordinal comparison. Strip a trailing `/` from the root.
     - Add `SpecStateReader`: markers by `File.Exists`, and `.adr-list` present only when it holds a non-blank line.
-    - Add `RouteResolver`: next-step ladder row 3 only, preconditions and their messages, `known_kinds`, `approve_steps` and `approval_subflow`. Rows 2, 4, 1 and 5 arrive in T6.3, T6.4, T6.5 and T6.6.
+    - Add `RouteResolver`: next-step ladder row 3 only, preconditions and their messages (including the hand-off precondition's list of unapproved steps and its AC-65 message), `known_kinds`, `approve_steps` and `approval_subflow`. Rows 2, 4, 1 and 5 arrive in T6.3, T6.4, T6.5 and T6.6.
     - Add a `RouteRecordInspector` stub returning `{false, null, null}` and `null`, as 0089 step 7 says until 0091.
   - Traces to: 0089 step 5, *The route report*, *The next-step ladder*; FR-4, FR-5, FR-6, FR-8, FR-11, FR-29; AC-11 (resolver side), AC-75. Depends on: T5.18.
 
 - [ ] **TEST + IMPLEMENT: T6.2 — A marker counts as approved whatever it holds, and preconditions and the hand-off list the unapproved steps in slip order**
-  - **USE COMMAND**: none — RED-first rows `legacy-requirements-approved` and `legacy-design-approved`.
+  - **USE COMMAND**: none — rows `legacy-requirements-approved` and `legacy-design-approved`, which pass on landing because T6.1 already reads markers by existence. **Characterise** them (see below).
   - Fixture:
     - `legacy-requirements-approved/`: `requirements.md` and an empty `.requirements-approved`.
     - `legacy-design-approved/`: also `.adr-list` naming an ADR, and a free-text `.design-approved`.
   - Test should verify:
     - The first case: `next.commands` is `["/spec:design"]` (AC-20, resolver side), and `hand_off.precondition.unapproved` is `[design, tasks]` in that order, with 0089's message (AC-65).
     - The second case: `requirements` and `design` are both approved (AC-5), the `tasks` precondition holds, and `next` is `["/spec:tasks"]`.
+  - **Characterise**: named mutation: in `SpecStateReader`, treat a zero-byte marker as not approved. `legacy-requirements-approved` must FAIL (AC-5). Revert. T6.1 owns the hand-off message (AC-65); this task adds no code.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
-  - Implementation should: never read a marker's content.
+  - Implementation should: none, because a marker's content is never read.
   - Traces to: FR-5, FR-8, FR-9, FR-11; AC-5, AC-20, AC-65. Depends on: T6.1.
 
 - [ ] **TEST + IMPLEMENT: T6.3 — With every step approved, the next step is the hand-off, with the unattended driver and no detour on `feature`**
@@ -521,7 +523,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Traces to: FR-3, FR-10, FR-11, FR-21, FR-29; AC-54, AC-30 (logic). Depends on: T6.5.
 
 - [ ] **TEST + IMPLEMENT: T6.7 — Faults in the approval table make a spec's slip invalid, and give `approval_subflow: null` to the steps of the faulty kind**
-  - **USE COMMAND**: none — RED-first rows `spike-step` (`flows`), `spike-step-spike-entry` (`flows: "flows-spike-entry"`) and `legacy-nothing-duplicate-entry` (`flows: "flows-duplicate-entry"`).
+  - **USE COMMAND**: none — RED-first rows `spike-step` (`flows`) and `legacy-nothing-duplicate-entry` (`flows: "flows-duplicate-entry"`), plus the green control row `spike-step-spike-entry` (`flows: "flows-spike-entry"`). **Characterise** the control: named mutation: make R12 (a) ignore the table's entries; the control row must FAIL. Revert.
   - Fixture: `spike-step/`, a hand-written slip with a `spike`-kind step, then `tasks`, and its record. The slip content is extended in T6.8 per O-1.
   - Test should verify:
     - On `flows`: R12 (a) names step `spike` and the missing entry, and that step has `approval_subflow: null` (AC-74).
@@ -574,7 +576,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 ## Phase 7 — Fixture-only flow experiments
 
 *0092 step 5. Each task is one fixture-only commit. **Contingency for both tasks:**
-- If any row fails, stop. Do not change the fixtures to make them pass.
+- If any row fails, first check the expectation itself (for example a missing `flows: "flows"` key); an expectation written wrongly is fixed before the fixture commit and is not a resolver fault. If a correctly written row still fails, stop. Do not change the fixtures to make them pass.
 - Add a new `TEST + IMPLEMENT` task before this one. Its RED is the failing row, run against the uncommitted fixture. It fixes `resolve_route.cs` in its own `feat:` commit.
 - Then make the fixture commit again on top.
 - Record in the commit message and in the PR that the FR-25 or FR-28 experiment needed a resolver edit.
@@ -589,7 +591,7 @@ Depends on Phase 6.*
   - Fixture (new):
     - `flows/light.flow`: FR-2's slip plus `detour: /refactor:smells @ hand-off -> hand-off`.
     - Cases with `.flow` and record (S3): `light-nothing`; `light-adr-list` (`.adr-list` naming `0092-routing-fixtures-and-test-scripts.md`); `light-design-approved` (plus `.design-approved`); `light-done` (plus `tasks.md` all checked, `.tasks-approved`).
-    - Expectations: one per case, plus `definition-light`.
+    - Expectations: one per case, plus `definition-light`, each with `flows: "flows"` (without it the harness uses the shipped directory, which has no `light` definition).
   - Test should verify:
     - `light-nothing`: flow `light`; steps `[design, tasks]`; next `/spec:design`; `design` precondition holds; `known_kinds.requirements` null (AC-12, resolver side); `approve_steps` `[design, tasks]` (AC-23, AC-66, resolver side).
     - `light-adr-list`: next is `/spec:review design`, then `/spec:approve design`, with `next.kind` `design` (AC-18, resolver side).
@@ -606,10 +608,11 @@ Depends on Phase 6.*
     - Revert.
   - Fixture (new):
     - `flows/bugfix.flow`: FR-28's table.
-    - A `| diagnosis | (empty) |` row in `flows/approvals.md` and in `flows-spike-entry/approvals.md`.
+    - A `| diagnosis | (empty) |` row in `flows/approvals.md` and in `flows-spike-entry/approvals.md` (the latter kept in step with the primary).
     - Cases: `bugfix-nothing`, `bugfix-diagnosed` (`bugfix.md`), `bugfix-leftover-tasks` (`bugfix.md`, `tasks.md`), `bugfix-confirmed` (`bugfix.md`, `.confirm-approved`), `bugfix-tasks-written` (also `tasks.md`), `bugfix-tasks-approved-only` (`bugfix.md`, `tasks.md`, `.tasks-approved`), and `bugfix-done` (both markers, `tasks.md` all checked).
     - `legacy-stray-ignored`: all three `feature` markers, plus `.code-approved` and `.confirm-approved`.
-    - Expectations: one per case, plus `definition-bugfix`.
+    - Expectations: one per case, plus `definition-bugfix`, each with `flows: "flows"`.
+    - Each `bugfix-*` case holds a `.flow` copied from `flows/bugfix.flow` and a record (S3). `legacy-stray-ignored` holds no `.flow`.
   - Test should verify:
     - `definition-bugfix` and `bugfix-nothing`: valid; `diagnosis` is flow-specific with `approval_subflow: []` (AC-78); `gates` is `[{"/bugfix:confirm", approves: "diagnosis", produces: "tasks", also_approves_produced: true}]` (AC-55); `known_kinds` has `requirements` and `design` null and `tasks` = `{step: "tasks", producer: "/bugfix:confirm", …}` (AC-61); `approve_steps` is `[]`, so `/spec:approve tasks` meets another marker-writer (AC-58); next is `/bugfix:triage`.
     - `bugfix-diagnosed`: next is `["/bugfix:confirm"]` (AC-59); the `tasks` precondition fails naming `diagnosis` (AC-56, before).
@@ -702,7 +705,7 @@ Depends on Phase 6.*
 - [ ] **TEST + IMPLEMENT: T8.8 — The shipped flow directory holds `feature.flow` and `approvals.md`, and no `light` or `bugfix` definition**
   - **USE COMMAND**: `/tdd:test-first when the shipped .claude/flows directory is listed it should hold feature.flow and approvals.md and no light.flow or bugfix.flow`
   - Test file: `resolve_route_tests.cs`, AC-1 check.
-  - **Characterise**: named mutation: copy `light.flow` from the fixture `flows/` into `.claude/flows/`. The check must FAIL. Delete the copy, and confirm a clean `git status`.
+  - **Characterise**: named mutation: copy `light.flow` from the fixture `flows/` into `.claude/flows/`. The check must FAIL. Delete the copy, and confirm `git status` shows nothing under `.claude/` (the untracked `specs/0040-routing-slips/baselines.md` is expected).
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should: allow other shipped flows.
   - Traces to: FR-1; AC-1; 0092 *Repository checks*. Depends on: T8.7.
@@ -750,7 +753,7 @@ Depends on Phase 6.*
   - Traces to: FR-16 (b); AC-33. Depends on: T9.3.
 
 - [ ] **TEST + IMPLEMENT: T9.5 — Tamper case (c): a `.flow` with no record, or with an unreadable record, is tampered; a legacy spec is not**
-  - **USE COMMAND**: none — RED-first row `tamper-c-no-record` (fixture: `tamper-c-no-record/` holds a `.flow` copied from the fixture `feature.flow` and no record), plus generated `gen-unreadable-record` (`sha256: nothex`), added test-first in the harness.
+  - **USE COMMAND**: `/tdd:test-first when a spec's .flow has an unreadable creation record the resolver should report tampered case c` for the generated `gen-unreadable-record` (`sha256: nothex`) in the harness. RED-first row for the tracked expectation `tamper-c-no-record` (fixture: `tamper-c-no-record/` holds a `.flow` copied from the fixture `feature.flow` and no record).
   - Test should verify: `{true, "c", null}` for both cases. The `legacy-*` rows still report `{false, null, null}` (AC-33).
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should: treat an unreadable record as case (c), not as a fault.
@@ -765,7 +768,7 @@ Depends on Phase 6.*
   - Traces to: FR-16 (last sentence), FR-22; AC-34. Depends on: T9.5.
 
 - [ ] **TEST + IMPLEMENT: T9.7 — A tampered slip stops with the case's recoveries ahead of any invalid stop, and the invalid stop now names `/spec:route`**
-  - **USE COMMAND**: none — RED-first rows: extend `tamper-b-record-only`, `tamper-c-no-record` and `copy-invalid`; add a `gen-bom` `stop` assertion.
+  - **USE COMMAND**: `/tdd:test-first when a tampered spec also has an R0 violation the resolver should stop as tampered with the case's recoveries` for the generated `gen-bom` `stop` assertion in the harness. RED-first rows for the tracked expectations: extend `tamper-b-record-only`, `tamper-c-no-record` and `copy-invalid`.
   - Test should verify:
     - `stop.reason` is `tampered`, with 0091's message for each of (a), (b) and (c), including `git restore --source=HEAD -- "{spec}/.flow"` for (a) and (b).
     - `gen-bom`, which has R0 and is also tampered, stops as `tampered`.
@@ -775,7 +778,7 @@ Depends on Phase 6.*
   - Traces to: 0091 *The tampered stop*; FR-16, FR-7, FR-17 (recovery); AC-31 and AC-80 (resolver side). Depends on: T9.6.
 
 - [ ] **TEST + IMPLEMENT: T9.8 — The latest route change is read from the last entry of `route-changes.md`, and a missing or malformed log gives `null`**
-  - **USE COMMAND**: none — RED-first row `route-changed-light`, plus generated `gen-log-two` and `gen-log-malformed` (test-first in the harness).
+  - **USE COMMAND**: `/tdd:test-first when a spec's route-changes log has two entries or a malformed entry the resolver should report the last entry or null` for the generated `gen-log-two` and `gen-log-malformed` in the harness. RED-first row for the tracked expectation `route-changed-light` (`flows: "flows"`).
   - Fixture: `route-changed-light/`.
     - A `light` slip and its record.
     - `route-changes.md` with one entry, `feature -> light`.
@@ -790,7 +793,7 @@ Depends on Phase 6.*
   - Traces to: 0091 *The route-change log*; FR-17, FR-15, FR-21; AC-30, AC-36, AC-81, AC-90. Depends on: T9.7.
 
 - [ ] **TEST + IMPLEMENT: T9.9 — An `--all` summary line carries `tampered` and a route change with its reason cut to 60 characters, and stays within 650 characters for the worst tracked case**
-  - **USE COMMAND**: none — RED-first: extend the T8.6 line-limit run over `{fixture root}/specs` to assert `tamper-a-route-changed`'s line contents.
+  - **USE COMMAND**: `/tdd:test-first when the all-mode summary line for the tamper-a-route-changed case is measured it should carry tampered without the recorded flow and a route change reason cut to 60 characters within 650 characters` (extends the T8.6 line-limit run over `{fixture root}/specs` in the harness).
   - Test should verify:
     - `tampered {value, case}` without `recorded_flow`.
     - `route_change.reason` is the first 60 characters followed by `…`.
@@ -808,7 +811,7 @@ Depends on Phase 6.*
   - **USE COMMAND**: `/tdd:test-first when an expectation names a show_me case the harness should run show_me_facts partial-match the ledger and delete or restore it without failing the read-only hash check`
   - Test file: `resolve_route_tests.cs`. Fixture: `expect/show-me-runner.json` (new): `"show_me": "legacy-all-approved"`, `"ledger": {"schema_version": 1}`.
   - Test should verify:
-    - Today the row FAILs, because the harness has no show-me runner.
+    - Today the row FAILs, first because `show_me` and `ledger` are unknown top-level keys (T4.1), then, once they are accepted, because the harness has no show-me runner.
     - After the change it passes, and the ledger file `show_me_facts.cs` writes is deleted or restored as `show_me_facts_tests.cs` does.
     - A ledger written under the fixture root does not fail the read-only hash check (NFR-3, 0092 *Repository checks*).
     - A `ledger` key that does not match is a FAIL.
@@ -827,7 +830,7 @@ Depends on Phase 6.*
   - Traces to: 0089 step 8, *`show_me_facts.cs` and the route probe*; FR-23; NFR-6; AC-46. Depends on: T10.0.
 
 - [ ] **TEST + IMPLEMENT: T10.2 — For a slip with no `requirements`-kind step, show-me does not read `requirements.md`, never reports `declared_total` 0, and gives the route as its null reason**
-  - **USE COMMAND**: none — RED-first rows `show-me-light-done` and `show-me-bugfix-done`.
+  - **USE COMMAND**: none — RED-first rows `show-me-light-done` and `show-me-bugfix-done`, each with `flows: "flows"` (the shipped directory has neither definition).
   - Test should verify:
     - `route.has_requirements_step` is false.
     - `requirements` is `{present: false, bytes: null, windows: null}`.
@@ -837,11 +840,11 @@ Depends on Phase 6.*
   - Traces to: FR-23, FR-10; AC-45, AC-62. Depends on: T10.1.
 
 - [ ] **TEST + IMPLEMENT: T10.3 — A resolver failure inside show-me is a tooling fault that writes no ledger**
-  - **USE COMMAND**: none — RED-first row `show-me-case-mismatch` (`"show_me": "Light-Done"`, `exit: 1`, no ledger).
+  - **USE COMMAND**: none — no expectation row, because the fault depends on a case-insensitive file system. On a case-sensitive one `show_me_facts.cs`'s completeness gate (`:75-79`) exits `GateNotPassedExitCode` before the resolver runs. Named hand step, on macOS: run `dotnet run .claude/commands/spec/show_me_facts.cs -- .claude/test-fixtures/routing/specs/Light-Done --flows-dir .claude/test-fixtures/routing/flows` before the change and record the result. That is the RED: before the change it must not exit `ToolingFaultExitCode` with no ledger written (it falls through to the `git` and `gh` calls or writes a ledger). If it already does, characterise: named mutation: make `RouteProbe` ignore a non-zero resolver exit, and the step must then fail. After the change it must exit `ToolingFaultExitCode` and write no ledger.
   - Test should verify: the resolver exits `1` on the case-mismatched leaf; `show_me_facts.cs` exits `ToolingFaultExitCode`, and no ledger is written.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should: treat a non-zero exit, a missing record line or a line that does not parse as a fault, before any `git` or `gh` call.
-  - Traces to: 0089 *route probe* error conditions. *(This expectation is not in 0092's case list — see the scope-creep check.)* Depends on: T10.2.
+  - Traces to: 0089 *route probe* error conditions. *(This check is not in 0092's case list — see the scope-creep check.)* Depends on: T10.2.
 
 - [ ] **TEST + IMPLEMENT: T10.4 — `/spec:show-me` writes the route line in row 8 and `not available: not on this spec's route` in Inputs-used row 1 when the route has no requirements step**
   - Verification:
@@ -1007,7 +1010,7 @@ Depends on Phase 11.*
     - On a throwaway branch from `HEAD` (S7), build 0090 step 7's scenario: a `feature` spec with two `Proposed` ADRs, one recording "Supersedes" an `Accepted` ADR.
     - Run today's `/spec:approve design`, and record items 1–6: statuses, `Superseded by` link, index diff, marker, report text, and `/spec:approve design {number}`.
     - Also note item 7's behaviour (`chmod a-w` on the superseded ADR) as an uncompared baseline.
-    - Save the notes in the scratchpad. Delete the branch.
+    - Save the notes in `specs/0040-routing-slips/baselines.md` (untracked, never staged). Delete the branch.
   - Acceptance: the notes exist. This runs before T13.6, so the file is the original one, which also satisfies "before 0090 step 3".
   - Traces to: 0090 step 7 (baseline); AC-24, AC-77. Depends on: T13.4.
 
@@ -1089,7 +1092,7 @@ Depends on Phase 11.*
   - Verify after: S1 green, including the provenance pattern. Behaviour: T17.1 (items 8–10 for provenance).
   - Traces to: 0090 steps 3 and 4, *The provenance line*; FR-12, FR-13, FR-29; AC-24, AC-25, AC-26, AC-27, AC-76, AC-77 (verified in T17.1). Depends on: T13.11.
 
-- [ ] **PROJECT: T14.3 — Verify that `/spec:approve` holds no ADR-specific instruction**
+- [ ] **PROJECT: T14.2 — Verify that `/spec:approve` holds no ADR-specific instruction**
   - Do: run `grep -n -e write_adr_metadata -e supersede -e deprecate -e generate_adr_index -e index.md -e Accepted -e '\.adr-list' -e 'ADRs approved' .claude/commands/spec/approve.md`. It must match nothing (AC-79).
   - Traces to: 0090 step 6; FR-12, FR-29; AC-79. Depends on: T14.1.
 
@@ -1107,7 +1110,7 @@ Depends on Phase 11.*
     - Carry no closing instructions.
     - Set `allowed-tools` exactly as 0091 lists them.
   - Verify after: S1 green. Hand: T17.2 items 4–9 and 11.
-  - Traces to: 0091 step 3, *`/spec:route`*, *The write order*; FR-17, FR-16 (repair), NFR-5; AC-35, AC-36, AC-37, AC-68, AC-80, AC-81. Depends on: T14.3.
+  - Traces to: 0091 step 3, *`/spec:route`*, *The write order*; FR-17, FR-16 (repair), NFR-5; AC-35, AC-36, AC-37, AC-68, AC-80, AC-81. Depends on: T14.2.
 
 - [ ] **TEST + IMPLEMENT: T15.2 — `/spec:new {name}` numbers the spec highest+1, refuses unsafe or ignored names, creates it atomically, installs the `feature` slip and record, and verifies the result**
   - Verification rows (RED-first): `new.md` must carry `installation-steps`, and its second-stage templates: *Next-step line*, *New spec failed*, *Start failed*, *Spec name*, *Spec exists*, *Spec ignored* and *Post-check*.
@@ -1171,7 +1174,7 @@ Depends on Phase 11.*
 
 - [ ] **PROJECT: T17.1 — Confirm that a `feature` design approval ends as it did before the extraction, and that provenance, failure and re-run behave as 0090 states**
   - Do: on a throwaway branch with T13.5's scenario, run 0090 step 7 items 1–11:
-    - Compare items 1–6 with the T13.5 baseline.
+    - Compare items 1–6 with the T13.5 baseline in `baselines.md`. If it is missing, rebuild it on a throwaway branch from `$(git merge-base HEAD origin/master):.claude/commands/spec/approve.md`.
     - Item 7: `chmod a-w` stops the approval naming `/adr:retire-superseded`, with no marker. A re-run after `chmod u+w` completes with one provenance line.
     - Item 8: with `GIT_DIR` set to a directory that does not exist, the line records `sha=unavailable`.
     - Item 9: `/spec:approve tasks` adds one line naming `tasks`, `tasks.md` and the sha.
@@ -1233,7 +1236,7 @@ Depends on Phase 11.*
 | 6 | T4.1 | 0092 s2 (before 0089 s3) | `test:` (red) |
 | 7 | T4.2 | 0089 s3 | `feat:` |
 | 8 | T5.1–T5.18 | 0092 s3 rides 0089 s4, one rule at a time | `feat:` per rule (expectation and code together) |
-| 9 | T6.1–T6.10 | 0092 s4 rides 0089 s5 (O-1) | `feat:` per task; T6.10 `test:` |
+| 9 | T6.1–T6.10 | 0092 s4 rides 0089 s5 (O-1) | `feat:` per task (T6.2 `test:` only, as it changes no code); T6.10 `test:` |
 | 10 | T7.1, T7.2 | 0092 s5 (fixture-only) | `test:` ×2, with empty diff over `.claude/commands/` (and `bugfixes/`) |
 | 11 | T8.1–T8.8 | 0092 s6 rides 0089 s6 | `feat:`/`test:` per task |
 | 12 | T9.1–T9.9 | 0092 s7 rides 0091 s1 (= 0089 s7) | `feat:`/`test:` per task |
@@ -1250,7 +1253,7 @@ Depends on Phase 11.*
 | 23 | T13.10 | 0092 s9 rows, then 0089 s9.9 | `test:` + `feat:` |
 | 24 | T13.11 | 0089 s10 | tick only |
 | 25 | T14.1 | 0092 s9 rows, then 0090 s3 and s4 merged (after 0089 s9.6) | `test:` + `feat:` |
-| 26 | T14.3 | 0090 s6 | tick only |
+| 26 | T14.2 | 0090 s6 | tick only |
 | 27 | T15.1, T15.2 | 0092 s9 rows, then 0091 s3, s4 (s4 after 0089 s9.9) | `test:` + `feat:` each |
 | 28 | T16.1–T16.4 | 0089 s11, 0090 s5, 0091 s5, 0092 s10 (documentation) | `docs:` ×4 |
 | 29 | T17.1–T17.4 | 0090 s7, 0091 s6, 0092 s10 (hand), final | tick only |
@@ -1272,7 +1275,7 @@ Depends on Phase 11.*
 | FR-9 | T6.2, T6.3, T7.1, T7.2, T13.7, T13.8 |
 | FR-10 | T6.6, T10.2, T13.1, T13.3, T13.4, T13.7–T13.9 |
 | FR-11 | T6.1–T6.4, T6.6, T6.9, T11.1, T12.1, T12.2, T13.1–T13.6, T13.9 |
-| FR-12 | T6.1 (`approve_steps`), T7.2, T13.6, T14.1, T14.3 |
+| FR-12 | T6.1 (`approve_steps`), T7.2, T13.6, T14.1, T14.2 |
 | FR-13 | T11.2, T14.1, T17.1 |
 | FR-14 | T13.1, T7.1, T7.2 (resolver side) |
 | FR-15 | T8.4, T8.5, T9.8, T9.9, T12.1, T12.2 |
@@ -1359,7 +1362,7 @@ Depends on Phase 11.*
 | AC-75 | T6.1 |
 | AC-76, AC-77 | T14.1, T17.1 |
 | AC-78 | T7.2 |
-| AC-79 | T14.3 |
+| AC-79 | T14.2 |
 | AC-80, AC-81 | T9.7, T9.8, T15.1, T17.2 |
 | AC-82 | T8.1, T13.9 |
 | AC-83 | T7.2, T13.7 |
@@ -1409,7 +1412,7 @@ Depends on Phase 11.*
 | Four `/adr:*` commands and the selection rule | T2.1–T2.5, T3.1 |
 | Templates | T2.1, T11.2, T14.1 |
 | Documentation touch-ups | T16.2 |
-| `approve.md` holds no kind-specific text | T14.3 |
+| `approve.md` holds no kind-specific text | T14.2 |
 | *A second sub-flow* (`change`) | Illustrative only. No task, by design |
 
 **ADR 0091**
@@ -1456,11 +1459,12 @@ Depends on Phase 11.*
     - `spike-step`'s slip gains a gate and a detour.
     - `flows-edited/` moves forward from 0092 step 7.
     - The expectations `legacy-all-approved-edited` and `spike-step-spike-entry` are new.
-    - `spike-gate-also` and `spike-gate-also-approved` (T6.8), `legacy-tasks-approved-only` (T6.4, AC-13), `definition-r10-exemption` (T5.12) and `show-me-runner` (T10.0) are new cases.
+    - `spike-gate-also` and `spike-gate-also-approved` (T6.8), `legacy-tasks-approved-only` (T6.4, AC-13), `definition-r10-exemption` (T5.12), `definition-feature-shipped` (T5.14) and `show-me-runner` (T10.0) are new cases.
 
     These trace to FR-6, FR-21, FR-27, FR-30 and 0089 step 5.
+  - **T10.0:** the runner passes `--flows-dir` only when the expectation has a `flows` key (0092 *Expectations* says it always does), because `show_me_facts.cs` rejects the option until T10.1. This departure is recorded here.
   - **T8.5:** an explicit shared-violations assertion, tracing to 0089 *The route report* and FR-15.
-  - **T10.3:** the `show-me-case-mismatch` expectation, tracing to 0089's RouteProbe error conditions.
-  - **T2.2, T2.3, T2.4, T2.5, T10.4, T12.1, T12.2, T13.7:** small direct-run hand steps. Each is verification only and adds no artefact.
+  - **T10.3:** a macOS-only hand step for a resolver failure inside show-me, tracing to 0089's RouteProbe error conditions.
+  - **T2.2, T2.3, T2.4, T2.5, T10.3, T10.4, T12.1, T12.2, T13.7:** small direct-run hand steps. Each is verification only and adds no artefact.
   - **T0.1 and T13.5:** baselines, tracing to AC-6, AC-46 and 0090 step 7.
 - **Not scheduled, by instruction:** no release-notes task, no `CLAUDE.md` edit, no amendment to `requirements.md` (O-4), and no gear encoded.
