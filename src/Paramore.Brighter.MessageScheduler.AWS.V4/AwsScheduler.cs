@@ -54,7 +54,8 @@ public class AwsScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return await ScheduleAsync(message, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+        var at = timeProvider.GetUtcNow().Add(delay);
+        return await ScheduleAsync(message, getOrCreateMessageSchedulerId(message), at, true, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -72,6 +73,13 @@ public class AwsScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
+        return await ScheduleCoreAsync(request, type, at, requestContext, true, cancellationToken);
+    }
+
+    private async Task<string> ScheduleCoreAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext, bool async, CancellationToken cancellationToken)
+        where TRequest : class, IRequest
+    {
         var id = getOrCreateRequestSchedulerId(request);
         var message = new Message
         {
@@ -81,14 +89,14 @@ public class AwsScheduler(
             Body = new MessageBody(JsonSerializer.Serialize(new FireAwsScheduler
             {
                 SchedulerType = type,
-                Async = true,
+                Async = async,
                 RequestType = typeof(TRequest).FullName!,
                 RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
                 RequestContextData = ScheduledRequestContext.Serialize(requestContext)
             }))
         };
 
-        return await ScheduleAsync(message, id, at, true, cancellationToken);
+        return await ScheduleAsync(message, id, at, async, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -106,7 +114,7 @@ public class AwsScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), requestContext, cancellationToken);
+        return await ScheduleCoreAsync(request, type, timeProvider.GetUtcNow().Add(delay), requestContext, true, cancellationToken);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)" />
@@ -118,6 +126,12 @@ public class AwsScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
+        return await ReSchedulerCoreAsync(schedulerId, at, cancellationToken);
+    }
+
+    private async Task<bool> ReSchedulerCoreAsync(string schedulerId, DateTimeOffset at,
+        CancellationToken cancellationToken)
+    {
         try
         {
             using var client = factory.CreateSchedulerClient();
@@ -155,7 +169,7 @@ public class AwsScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return await ReSchedulerAsync(schedulerId, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+        return await ReSchedulerCoreAsync(schedulerId, timeProvider.GetUtcNow().Add(delay), cancellationToken);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.CancelAsync"/>
@@ -490,12 +504,28 @@ public class AwsScheduler(
 
     /// <inheritdoc />
     public string Schedule(Message message, DateTimeOffset at)
-        => BrighterAsyncContext.Run(async () =>
+    {
+        if (at < timeProvider.GetUtcNow())
+        {
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
+        }
+
+        return BrighterAsyncContext.Run(async () =>
             await ScheduleAsync(message, getOrCreateMessageSchedulerId(message), at, false));
+    }
 
     /// <inheritdoc />
     public string Schedule(Message message, TimeSpan delay)
-        => Schedule(message, timeProvider.GetUtcNow().Add(delay));
+    {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
+        }
+
+        var at = timeProvider.GetUtcNow().Add(delay);
+        return BrighterAsyncContext.Run(() =>
+            ScheduleAsync(message, getOrCreateMessageSchedulerId(message), at, false));
+    }
 
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at)
@@ -507,24 +537,12 @@ public class AwsScheduler(
         IRequestContext? requestContext)
         where TRequest : class, IRequest
     {
-        var id = getOrCreateRequestSchedulerId(request);
-
-        var message = new Message
+        if (at < timeProvider.GetUtcNow())
         {
-            Header =
-                new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_COMMAND,
-                    subject: nameof(FireAwsScheduler)),
-            Body = new MessageBody(JsonSerializer.Serialize(new FireAwsScheduler
-            {
-                SchedulerType = type,
-                Async = false,
-                RequestType = typeof(TRequest).FullName!,
-                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
-                RequestContextData = ScheduledRequestContext.Serialize(requestContext)
-            }))
-        };
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
+        }
 
-        return BrighterAsyncContext.Run(() => ScheduleAsync(message, id, at, false));
+        return BrighterAsyncContext.Run(() => ScheduleCoreAsync(request, type, at, requestContext, false, CancellationToken.None));
     }
 
     /// <inheritdoc />
@@ -536,7 +554,15 @@ public class AwsScheduler(
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
         IRequestContext? requestContext)
         where TRequest : class, IRequest
-        => Schedule(request, type, timeProvider.GetUtcNow().Add(delay), requestContext);
+    {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
+        }
+
+        var at = timeProvider.GetUtcNow().Add(delay);
+        return BrighterAsyncContext.Run(() => ScheduleCoreAsync(request, type, at, requestContext, false, CancellationToken.None));
+    }
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>
     public bool ReScheduler(string schedulerId, DateTimeOffset at)
@@ -544,7 +570,15 @@ public class AwsScheduler(
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.TimeSpan)"/>
     public bool ReScheduler(string schedulerId, TimeSpan delay)
-        => ReScheduler(schedulerId, timeProvider.GetUtcNow().Add(delay));
+    {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
+        }
+
+        var at = timeProvider.GetUtcNow().Add(delay);
+        return BrighterAsyncContext.Run(() => ReSchedulerCoreAsync(schedulerId, at, CancellationToken.None));
+    }
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.Cancel" />
     public void Cancel(string id)
