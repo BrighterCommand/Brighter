@@ -1226,7 +1226,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.53
   - References: `tests/Paramore.Brighter.Core.Tests/Sweeping/When_the_sweeper_is_not_active_should_not_report_tripped_topics.cs`, `When_a_third_party_circuit_breaker_reports_tripped_topics_should_report_them.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.55 - The investigate check reports the store-unavailable condition with exception_type**
+- [x] **TEST + IMPLEMENT: T2.55 - The investigate check reports the store-unavailable condition with exception_type**
   - **USE COMMAND**: `/tdd:test-first when the shared breaker is using its fallback view should report tripped topics store unavailable with the exception type`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_shared_breaker_is_using_its_fallback_view_should_report_store_unavailable.cs`
