@@ -151,8 +151,7 @@ public class InMemoryScheduler(
 
         if (_timers.TryGetValue(schedulerId, out var entry))
         {
-            entry.Timer.Change(delay, TimeSpan.Zero);
-            return true;
+            return entry.Timer.Change(delay, Timeout.InfiniteTimeSpan);
         }
 
         return false;
@@ -262,55 +261,62 @@ public class InMemoryScheduler(
 
     private string ScheduleTimer(string id, object state, TimeSpan delay)
     {
-        if (onConflict == OnSchedulerConflict.Throw)
+        var generation = Interlocked.Increment(ref _generation);
+        var timer = new InMemoryScheduledTimer(timeProvider, Execute, (state, generation));
+        var replacement = (Timer: timer, Generation: generation);
+
+        try
         {
-            // We create the timer before TryAdd to avoid a TOCTOU race between ContainsKey and AddOrUpdate.
-            // If TryAdd fails (key already exists), we pay the cost of disposing the unused timer — an
-            // acceptable trade-off to guarantee that a concurrent duplicate is never silently overwritten.
-            var gen = Interlocked.Increment(ref _generation);
-            var timer = timeProvider.CreateTimer(Execute, (state, gen), delay, TimeSpan.Zero);
-            if (!_timers.TryAdd(id, (timer, gen)))
-            {
-                timer.Dispose();
-                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
-            }
+            timer.Start(() => InstallTimer(id, replacement), delay);
         }
-        else
+        catch
         {
-            // Each timer gets a unique generation so that Execute's cleanup can distinguish
-            // "our" timer from a replacement that was scheduled concurrently via AddOrUpdate.
-            _timers.AddOrUpdate(
-                id,
-                _ =>
-                {
-                    var gen = Interlocked.Increment(ref _generation);
-                    return (timeProvider.CreateTimer(Execute, (state, gen), delay, TimeSpan.Zero), gen);
-                },
-                (_, existing) =>
-                {
-                    existing.Timer.Dispose();
-                    var gen = Interlocked.Increment(ref _generation);
-                    return (timeProvider.CreateTimer(Execute, (state, gen), delay, TimeSpan.Zero), gen);
-                });
+            CleanupTimer(id, generation);
+            timer.Dispose();
+            throw;
         }
 
         return id;
     }
 
+    private void InstallTimer(string id, (ITimer Timer, long Generation) replacement)
+    {
+        while (true)
+        {
+            if (_timers.TryGetValue(id, out var existing))
+            {
+                if (onConflict == OnSchedulerConflict.Throw)
+                {
+                    throw new InvalidOperationException($"scheduler with '{id}' id already exists");
+                }
+
+                if (_timers.TryUpdate(id, replacement, existing))
+                {
+                    existing.Timer.Dispose();
+                    return;
+                }
+            }
+            else if (_timers.TryAdd(id, replacement))
+            {
+                return;
+            }
+        }
+    }
+
     private void Execute(object? state)
     {
-        // Unwrap the (innerState, generation) envelope added by ScheduleTimer.
         var envelope = ((object, long))state!;
         var innerState = envelope.Item1;
         var generation = envelope.Item2;
 
-        // .NET Standard doesn't support if(state is (IAmACommandProcessor, FireSchedulerMessage))
         var fireMessage = innerState as (IAmACommandProcessor, FireSchedulerMessage)?;
         if (fireMessage != null)
         {
             var (processor, message) = (fireMessage.Value.Item1, fireMessage.Value.Item2);
-            BrighterAsyncContext.Run(() => processor.SendAsync(message));
-            CleanupTimer(message.Id.Value, generation);
+            if (CleanupTimer(message.Id.Value, generation))
+            {
+                BrighterAsyncContext.Run(() => processor.SendAsync(message));
+            }
             return;
         }
 
@@ -318,22 +324,17 @@ public class InMemoryScheduler(
         if (fireRequest != null)
         {
             var (processor, request) = (fireRequest.Value.Item1, fireRequest.Value.Item2);
-            BrighterAsyncContext.Run(() => processor.SendAsync(request));
-            CleanupTimer(request.Id.Value, generation);
+            if (CleanupTimer(request.Id.Value, generation))
+            {
+                BrighterAsyncContext.Run(() => processor.SendAsync(request));
+            }
             return;
         }
 
         s_logger.LogError("Invalid input during executing scheduler {Data}", state);
     }
 
-    /// <summary>
-    /// Removes a fired timer from the dictionary only if the entry still belongs to this
-    /// generation.  Uses <see cref="ICollection{T}.Remove(T)"/> on the
-    /// <see cref="ConcurrentDictionary{TKey,TValue}"/> which is an atomic
-    /// compare-and-remove (key + value must both match).  This prevents the race where
-    /// a concurrently-scheduled replacement timer is accidentally removed and disposed.
-    /// </summary>
-    private void CleanupTimer(string id, long generation)
+    private bool CleanupTimer(string id, long generation)
     {
         if (_timers.TryGetValue(id, out var entry) && entry.Generation == generation)
         {
@@ -341,8 +342,11 @@ public class InMemoryScheduler(
             if (((ICollection<KeyValuePair<string, (ITimer Timer, long Generation)>>)_timers).Remove(kvp))
             {
                 entry.Timer.Dispose();
+                return true;
             }
         }
+
+        return false;
     }
 
     /// <summary>
