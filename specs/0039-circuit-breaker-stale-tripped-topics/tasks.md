@@ -1211,7 +1211,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.52
   - References: `src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs:104-117`.
 
-- [ ] **CHARACTERISE: T2.54 - Gating is unchanged for in-memory and third-party breakers**
+- [x] **CHARACTERISE: T2.54 - Gating is unchanged for in-memory and third-party breakers**
   - **USE COMMAND**: `/tdd:test-first when an in memory breaker has a trip on an inactive sweeper should report zero and healthy as before`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_an_in_memory_breaker_has_a_trip_on_an_inactive_sweeper_should_report_zero_and_healthy.cs`
