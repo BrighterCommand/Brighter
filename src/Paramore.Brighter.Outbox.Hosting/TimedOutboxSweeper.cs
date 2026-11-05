@@ -266,7 +266,7 @@ namespace Paramore.Brighter.Outbox.Hosting
 
             lock (_refreshLock)
             {
-                if (_lastRefreshRequest is { } last && now - last < _interval / 2)
+                if (_lastRefreshRequest is { } last && now - last < TimeSpan.FromTicks(_interval.Ticks / 2))
                     return;
 
                 _lastRefreshRequest = now;
