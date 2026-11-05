@@ -258,22 +258,32 @@ for the routine case, not a gag order.
    - Is there duplicated knowledge?
    - Is intention revealed clearly?
 
-2. **Apply "Tidy First" Principles**:
+2. **Check the Comments This Task Added**:
+   - Apply [documentation.md § Comments in Code](../../../.agent_instructions/documentation.md#comments-in-code)
+     to every comment the task added: nothing inside method bodies beyond `//Arrange` `//Act`
+     `//Assert`; no task, spec, PR or issue references ("Task 3.2", "#4207"); no RED/GREEN or
+     "previously" history; no XML docs on non-public members.
+   - `dotnet run .claude/commands/refactor/comment_census.cs -- HEAD` sizes them; a non-zero `refs`
+     column means a reference crept in.
+   - A comment that labels a block or explains a literal becomes an extraction or a named constant
+     here, in REFACTOR, with the tests still green.
+
+3. **Apply "Tidy First" Principles**:
    - Separate structural changes from behavioral changes
    - Make structural improvements (renaming, extracting methods, moving code)
    - Don't change behavior during refactoring
 
-3. **Make Refactoring Changes**: Use Edit tool to improve the design
+4. **Make Refactoring Changes**: Use Edit tool to improve the design
    - Keep methods small and focused on single responsibility
    - Extract methods if more than one level of indentation
    - Use expressive types instead of primitives
    - Distribute behavior appropriately
 
-4. **Run All Tests After Each Refactoring**: Verify no behavioral changes
+5. **Run All Tests After Each Refactoring**: Verify no behavioral changes
    - Tests should still pass
    - If a test breaks, the refactoring changed behavior (rollback)
 
-5. **Show Refactoring to User**:
+6. **Show Refactoring to User**:
    - Explain what was refactored and why
    - Show the improved design
    - Confirm all tests still pass
@@ -327,6 +337,11 @@ terminal while you were working, and a downshift must take effect at the very ne
 
   For a long unattended run over many tasks, `/spec:ralph-implement` is the better driver — it is
   the same `tasks.md`, with a run bound, a kill-switch and per-task sub-agents.
+
+**In either gear, when no unchecked tasks remain**, size the comments the whole branch added before
+handing back — `dotnet run .claude/commands/refactor/comment_census.cs -- $(git merge-base HEAD master)`
+— and, if the `refs` column is non-zero or comments sit in method bodies, recommend
+`/refactor:tidy-comments` (no arguments) before the PR. Report it; do not run it on the user's behalf.
 
 ## Important Reminders
 

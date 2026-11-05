@@ -93,11 +93,46 @@ public class Scheduler<TData>
     /// <param name="job">The job that we want a runner to execute</param>
     /// <param name="cancellationToken">A cancellation token to end the ongoing operation</param>
     /// <exception cref="InvalidOperationException">Thrown when the job has not been initialized.</exception>
+    /// <exception cref="AggregateException">Thrown when enqueueing fails and saving the restored deadline also fails.</exception>
+    /// <remarks>
+    /// Clears and saves the existing deadline before handing the job to a runner. If enqueueing fails,
+    /// restores the previous deadline and attempts to save it even when the caller has cancelled.
+    /// </remarks>
     public async Task ScheduleAsync(Job<TData> job,CancellationToken cancellationToken = default(CancellationToken))
     {
-        await _channel.EnqueueJobAsync(job, cancellationToken);
-        job.DueTime = null; // Clear any due time after queuing
-        await _stateStore.SaveJobAsync(job, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var previousDueTime = job.DueTime;
+        job.DueTime = null;
+        try
+        {
+            await _stateStore.SaveJobAsync(job, cancellationToken);
+        }
+        catch
+        {
+            job.DueTime = previousDueTime;
+            throw;
+        }
+
+        try
+        {
+            await _channel.EnqueueJobAsync(job, cancellationToken);
+        }
+        catch (Exception enqueueException)
+        {
+            job.DueTime = previousDueTime;
+            try
+            {
+                await _stateStore.SaveJobAsync(job, CancellationToken.None);
+            }
+            catch (Exception restoreException)
+            {
+                throw new AggregateException("Failed to enqueue the job and restore its scheduled deadline.",
+                    enqueueException, restoreException);
+            }
+
+            throw;
+        }
     }
     
     /// <summary>

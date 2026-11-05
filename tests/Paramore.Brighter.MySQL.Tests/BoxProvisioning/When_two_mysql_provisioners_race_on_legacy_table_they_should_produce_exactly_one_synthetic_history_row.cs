@@ -31,6 +31,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
+/// <summary>
+/// Two MySQL provisioners racing on a legacy table without history write exactly one synthetic bootstrap
+/// row and one applied row per later version, and preserve existing rows.
+/// </summary>
 public class MySqlLegacyTableRaceTests : IAsyncLifetime
 {
     private const int OutboxSeedVersion = 3;
@@ -44,7 +48,7 @@ public class MySqlLegacyTableRaceTests : IAsyncLifetime
     [Fact]
     public async Task When_two_outbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v3()
     {
-        //Arrange — seed an outbox at V3 (no history row) plus a marker row to prove preservation.
+        //Arrange
         MySqlOutboxLegacySeeder.SeedAtV(OutboxSeedVersion, _connectionString, _outboxTableName);
         await SeedOutboxMarkerRow();
 
@@ -62,10 +66,10 @@ public class MySqlLegacyTableRaceTests : IAsyncLifetime
             config,
             new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
-        //Act — race two provisioners against the same legacy table.
+        //Act
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
 
-        //Assert — history has exactly one synthetic V3 + one applied per V4..V7 (no duplicates).
+        //Assert
         var rowsByVersion = await GetHistoryRowsByVersion(_outboxTableName);
         Assert.Equal(ExpectedMigrationVersions.OutboxLatest - OutboxSeedVersion + 1, rowsByVersion.Count);
 
@@ -81,7 +85,6 @@ public class MySqlLegacyTableRaceTests : IAsyncLifetime
                 $"(description was: '{appliedDescription}')");
         }
 
-        //Assert — table ends at V7 with seeded marker preserved.
         Assert.Contains("DataRef", await GetTableColumns(_outboxTableName));
         Assert.Equal(1, await GetOutboxMarkerRowCount());
     }
@@ -89,7 +92,7 @@ public class MySqlLegacyTableRaceTests : IAsyncLifetime
     [Fact]
     public async Task When_two_inbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v1()
     {
-        //Arrange — seed a V1 inbox (no ContextKey, no history) plus a marker command row.
+        //Arrange
         MySqlInboxLegacySeeder.SeedAtV1(_connectionString, _inboxTableName);
         await SeedInboxMarkerRow();
 
@@ -107,10 +110,10 @@ public class MySqlLegacyTableRaceTests : IAsyncLifetime
             config,
             new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
-        //Act — race two provisioners against the same legacy table.
+        //Act
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
 
-        //Assert — exactly one synthetic V1 + one applied V2 (no duplicates).
+        //Assert
         var rowsByVersion = await GetHistoryRowsByVersion(_inboxTableName);
         Assert.Equal(ExpectedMigrationVersions.InboxLatest, rowsByVersion.Count);
 
@@ -123,7 +126,6 @@ public class MySqlLegacyTableRaceTests : IAsyncLifetime
             $"V2 should be an applied migration row, not a synthetic bootstrap row " +
             $"(description was: '{appliedDescription}')");
 
-        //Assert — table ends at V2 with seeded marker preserved (ContextKey NULL on existing row).
         Assert.Contains("ContextKey", await GetTableColumns(_inboxTableName));
         Assert.True(await InboxMarkerRowExistsWithNullContextKey());
     }
