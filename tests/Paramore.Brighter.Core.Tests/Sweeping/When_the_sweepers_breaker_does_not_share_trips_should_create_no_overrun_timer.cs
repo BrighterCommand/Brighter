@@ -29,8 +29,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
-using Paramore.Brighter.Observability;
-using Paramore.Brighter.Outbox.Hosting;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
@@ -48,13 +46,7 @@ public class SweeperInMemoryBreakerOverrunTimerTests
         var breaker = new InMemoryOutboxCircuitBreaker(new OutboxCircuitBreakerOptions());
         using var outbox = new SweepableOutbox(breaker);
         using var measurements = new RecordedSweeperMeasurements();
-        var sweeper = new TimedOutboxSweeper(
-            outbox.ScopeFactory,
-            new HeldDistributedLock(),
-            new TimedOutboxSweeperOptions { TimerInterval = 10, MinimumMessageAge = TimeSpan.Zero },
-            timeProvider: clock,
-            meter: new SweeperMeter(measurements.MeterFactory),
-            circuitBreaker: breaker);
+        var sweeper = HeldLockSweeper.Create(outbox, measurements, clock, timerInterval: 10, circuitBreaker: breaker);
 
         // Act
         await sweeper.StartAsync(CancellationToken.None);

@@ -30,8 +30,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
-using Paramore.Brighter.Observability;
-using Paramore.Brighter.Outbox.Hosting;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping;
@@ -54,13 +52,7 @@ public class SweeperRefreshOnLockUnavailableTests
         var written = SpinWait.SpinUntil(() => store.ReadAsync(clock.GetUtcNow(), s_options.CooldownDuration).GetAwaiter().GetResult().Live.Count > 0, s_timeout);
         using var outbox = new SweepableOutbox(instanceB);
         using var measurements = new RecordedSweeperMeasurements();
-        var sweeper = new TimedOutboxSweeper(
-            outbox.ScopeFactory,
-            new HeldDistributedLock(),
-            new TimedOutboxSweeperOptions { TimerInterval = 5, MinimumMessageAge = TimeSpan.Zero },
-            timeProvider: clock,
-            meter: new SweeperMeter(measurements.MeterFactory),
-            circuitBreaker: instanceB);
+        var sweeper = HeldLockSweeper.Create(outbox, measurements, clock, timerInterval: 5, circuitBreaker: instanceB);
 
         // Act
         await sweeper.StartAsync(CancellationToken.None);
