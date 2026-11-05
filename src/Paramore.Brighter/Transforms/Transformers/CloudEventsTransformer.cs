@@ -212,7 +212,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
             else if (cloudEvents.Data.HasValue)
             {
                 body = cloudEvents.Data.Value.ValueKind == JsonValueKind.String
-                    && cloudEvents.DataContentType is not null
+                    && !IsJsonContentType(header.ContentType)
                     ? new MessageBody(cloudEvents.Data.Value.GetString() ?? string.Empty, bodyContentType)
                     : new MessageBody(cloudEvents.Data.Value.GetRawText(), bodyContentType);
             }

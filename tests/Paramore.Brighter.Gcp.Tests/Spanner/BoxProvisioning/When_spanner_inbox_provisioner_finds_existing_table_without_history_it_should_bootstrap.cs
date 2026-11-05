@@ -37,7 +37,7 @@ public class When_spanner_inbox_provisioner_finds_existing_table_without_history
     [Fact]
     public async Task Should_bootstrap_with_synthetic_history()
     {
-        // Arrange — create inbox table directly (simulating pre-migration install)
+        // Arrange
         using (var setupConn = CreateConnection())
         {
             await setupConn.OpenAsync();

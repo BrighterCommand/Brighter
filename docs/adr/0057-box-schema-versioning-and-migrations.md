@@ -295,7 +295,7 @@ SQLite's `BEGIN IMMEDIATE` is the key choice for the SQLite runner: unlike `BEGI
 
 **Table-name trust boundary**: Table names are supplied via `IAmARelationalDatabaseConfiguration.OutBoxTableName` / `InBoxTableName` / `SchemaName`. These are **application-configured code values**, not user input. They are nevertheless interpolated into DDL strings via `string.Format`. The existing ADR 0053 treats this as a configured-trust-source boundary; spec 0027 inherits the same assumption. Operators who inject attacker-controlled values into configuration have bigger problems than schema migrations.
 
-**Rationale for MySQL's portable path**: `ADD COLUMN IF NOT EXISTS` arrived in MySQL 8.0.29 (2022). Brighter supports older deployments via Aurora and forks. The `information_schema` + prepared-statement pattern works back to MySQL 5.7 and is dialect-neutral enough to reuse across the 2 migrations needed.
+**Rationale for MySQL's portable path**: `ADD COLUMN IF NOT EXISTS` arrived in MySQL 8.0.29 (2022). Brighter supports older deployments via Aurora and forks. The `information_schema` + prepared-statement pattern works back to MySQL 5.7 and is dialect-neutral enough to reuse across the 2 migrations needed. MySQL also has no `CREATE INDEX IF NOT EXISTS`, so a migration that adds an index (the outbox's `idx_CausationId`) probes `information_schema.statistics` with the same prepared-statement pattern; index names are scoped to their table, so the bare name cannot collide across boxes.
 
 **Rationale for SQLite's `IdempotencyCheckSql` approach**: SQLite's `ALTER TABLE ADD COLUMN` has no `IF NOT EXISTS` form and no equivalent single-statement primitive. Embedding a `SELECT COUNT(*) ... ; conditional ALTER` in `UpScript` would require either runner-side SQL parsing or a multi-statement execution convention that other backends don't need. A nullable `IdempotencyCheckSql` interface member is the cleanest accommodation: SQLite migrations set it, everyone else leaves it null, runner branches on presence.
 
@@ -366,9 +366,9 @@ The abstraction approach is heavier than any of these but produces no test-only 
 Spanner has zero known production deployments (confirmed in spec 0023 review; reaffirmed in spec 0027 requirements A-2). Writing a migration chain for Spanner is work that benefits no one today.
 
 `SpannerBoxMigrationRunner` implements a minimal strategy:
-- **Fresh install** (`!TableExists`): execute current builder DDL via `CreateDdlCommand` (with gRPC status-code error handling from spec 0023's R4 fix); insert history row at `V_latest` (outbox: V7, inbox: V2)
+- **Fresh install** (`!TableExists`): execute current builder DDL via `CreateDdlCommand` (with gRPC status-code error handling from spec 0023's R4 fix); insert history row at `V_latest` (`VLatestOutbox` / `VLatestInbox`, which track the relational catalogs). Spanner cannot declare a secondary index inside `CREATE TABLE`, so the outbox's `CausationId` index is a separate `CREATE INDEX IF NOT EXISTS` batched with the table DDL
 - **Existing table without history** (would be bootstrap elsewhere): **apply the same discriminator gate as §2** — query `information_schema.columns` for `HeaderBag` (outbox) or `CommandBody` (inbox). If absent: throw `ConfigurationException("Spanner table exists but is not a Brighter box; check configured table name")`. If present: insert history row at `V_latest` with description `"bootstrap: spanner-assumed-current (no known legacy installations, A-2)"`. Trusts A-2 assumption for version identification but not for table identity
-- **Existing table with history**: no-op if `MAX(V) == V_latest`; throw `ConfigurationException("Spanner migration list out of sync with installed version")` if the installed version exceeds `V_latest` (indicates a build-time mismatch)
+- **Existing table with history**: no-op if `MAX(V) == V_latest`; throw `ConfigurationException("Spanner migration list out of sync with installed version")` for any other installed version. Above `V_latest` indicates a build-time mismatch; below it, Spanner cannot migrate in place, so the message tells the operator to verify the table matches the builder and insert a synthetic history row at `V_latest`
 
 **Spanner concurrency for the history INSERT** (addressing spec 0023 R4): the runner calls `IsMigrationAppliedAsync` immediately before the INSERT and skips if already applied. This is the same pattern as the other backends' normal-path defence-in-depth. For Spanner the check is the primary protection since there is no advisory lock. The check and the INSERT are still a race between replicas — the history row is stamped with a commit timestamp, so a winner's row may not yet be visible to a loser's read — so the INSERT also tolerates `AlreadyExists` on the `(BoxTableName, MigrationVersion)` primary key.
 
@@ -458,6 +458,7 @@ No `IAmABoxMigration` list is exposed by Spanner. The provisioner holds its own 
     Assert.Equal(expected, covered, CaseSensitiveOrCaseInsensitiveComparer(backend));
     ```
   - `housekeeping(box, backend)` is a static lookup populated from the two housekeeping tables in §1.
+  - Spanner has no catalog (§6), so its drift test compares the Spanner builders with the MySQL catalog's `V_latest` columns: both quote identifiers with backticks. Spanner adds no housekeeping columns, because its builders declare the primary key after the column list.
   - Test runs against the Text DDL variant by default; Binary and JSON variants are asserted separately (they share column names with Text — only `Body`/`CommandBody` type differs).
   - Runs in every backend's unit-test project (no Docker required — operates on DDL strings only).
 
