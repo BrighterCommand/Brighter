@@ -1,0 +1,399 @@
+---
+id: 0092-routing-fixtures-and-test-scripts
+title: "Routing Fixtures and Test Scripts"
+status: Proposed
+author:
+  - "Ian Cooper"
+created: 2026-11-04
+summary: "Two framework-free .NET file-based test scripts guard spec 0040. resolve_route_tests.cs runs the route resolver (and show_me_facts.cs's route probe) against a tracked fixture tree under .claude/test-fixtures/routing/ (a primary flows directory with light, bugfix and a feature copy, extra flows directories for conflicting tables, rule fixtures, and spec case directories whose expectations are JSON data files) plus edge cases it generates in a temp directory (CRLF, BOM, trailing whitespace, unreadable records, logs, .current-spec states), and checks every existing spec, --all size limits and NFR-4 timing. spec_text_tests.cs compares every canonical README text with its marked copies in command files, pins the gate ladder and provenance pattern, and runs the git ignore check. No fixture gate or sub-flow command is shipped."
+tags:
+  - "meta"
+  - "workflow"
+  - "testing"
+---
+
+# 92. Routing Fixtures and Test Scripts
+
+Date: 2026-11-04
+
+## Status
+
+Proposed
+
+Implements part of [issue #4661](https://github.com/BrighterCommand/Brighter/issues/4661). Supersedes no prior ADR. This decision is about the project's own agent tooling, not its runtime. [ADR 0089](0089-slips-resolver-and-routing.md) (Accepted), [ADR 0090](0090-approval-sub-flows.md) (Proposed) and [ADR 0091](0091-slip-creation-tamper-detection-and-route-change.md) (Proposed) are its siblings. *Where this ADR sits* says what each ADR decides.
+
+## Context
+
+0089, 0090 and 0091 put the routing logic in one resolver. They also leave three kinds of text copied into many command files: instructions, templates and shell steps. Each ADR names what a test must prove and leaves the tests to this ADR. Its inputs are 0089's *How each command consults the resolver* and the `--all` size rule (*The route report*), 0090's *What 0092 needs from this ADR*, and 0091's *What 0092 needs from this ADR*. Requirements FR-24 to FR-26 and FR-28 say what the fixtures cover. FR-24 leaves the names and layout to this ADR.
+
+### Terms
+
+These words have the meanings given in [requirements § Definitions](../../specs/0040-routing-slips/requirements.md#definitions): **flow**, **flow definition**, **slip**, **gate**, **approval table**, **intent marker**, **stray marker**, **ignored marker**, **legacy spec** and **primary fixture directory** (FR-6). These are defined in [0089 § Terms](0089-slips-resolver-and-routing.md#terms): **route report**, **record line**, **route instructions** and **closing instructions**. **Message template** is the term of 0089 *How each command consults the resolver*. **Creation record** is a requirements term. 0090 defines **sub-flow instructions** and **provenance commands**. 0091 defines **installation steps** and **route-change log**. This ADR introduces these words:
+
+- **Fixture root**: `.claude/test-fixtures/routing/`.
+- **Case**: a tracked spec directory under `{fixture root}/specs/`.
+- **Expectation**: one JSON file under `{fixture root}/expect/` that names one resolver or show-me run and the parts of its output to assert (*Expectations*).
+- **Generated case**: a spec directory that `resolve_route_tests.cs` writes into a temporary directory at run time and deletes afterwards.
+- **Text block**: a canonical text in a README, or a copy of it in a command file, wrapped in block markers (*Text blocks*).
+
+### Scope
+
+**Parent requirement**: [specs/0040-routing-slips/requirements.md](../../specs/0040-routing-slips/requirements.md)
+
+**In scope**:
+
+- FR-24 and AC-47: the resolver test script, the fixture layout, every fixture class, and the existing-specs check (AC-4).
+- FR-25 and FR-28, test side: the `light` and `bugfix` fixture definitions and their cases (AC-8, AC-12, AC-15, AC-21, AC-54 to AC-62, AC-73, AC-78, AC-84, AC-89). AC-1, AC-48 and AC-63 are checked through the layout.
+- FR-23, test side: show-me's route probe on finished `light` and `bugfix` cases (AC-45, AC-62, ledger side). AC-46 and NFR-6: `show_me_facts_tests.cs` and `.claude/test-fixtures/show-me/` are not edited.
+- FR-26, the parts 0089 hands here: how to run the tests, and FR-28's four migration differences (AC-64).
+- NFR-4 (AC-51), 0089's `--all` size assertions, NFR-1 and NFR-3 (AC-7).
+- The text comparisons that 0089, 0090 and 0091 hand forward, the gate ladder's five rows, the provenance pattern, and 0091's ignore check.
+- Not shipping a fixture gate or a fixture sub-flow command (0090 leaves that choice here).
+- Corrections to the siblings' text, in these places: 0089 step 11.1 (the canonical route instructions, closing instructions and message templates move before step 9.1, because no copy may land before its canonical block) and 0090 step 2 (the part that writes `.claude/commands/adr/README.md` moves into step 1, which writes the first `/adr:*` copies). The 0092 row of *Where this ADR sits* in 0089, 0090 and 0091 also names the text-comparison script.
+
+**Out of scope**:
+
+- Command prose that no resolver run reaches is verified by hand in the sibling ADRs' verification steps: 0090 step 7 and 0091 step 6. That includes `/spec:route`'s ladder and `/spec:new`'s naming. Show-me's reconciliation line and its Inputs-used row (AC-45, command side) are verified by hand in this ADR's last step.
+- Every format, rule, field and message the tests assert. Those belong to the sibling ADRs, and this ADR does not restate them.
+
+### Where this ADR sits
+
+| ADR | Decides |
+| --- | --- |
+| 0089 | The slip and approval-table formats, the route resolver and its report, and how commands consult it |
+| 0090 | How a command runs a sub-flow (approval is the first trigger), the provenance line, the gate run contract, the `/adr:*` commands that carry the `design` sub-flow, and the README's notes on running a sub-flow and on the provenance line |
+| 0091 | How a slip is installed and frozen at creation (`/spec:new`'s copy and record, numbering, the starter contract), how tampering is detected, how a route is changed, and the README's notes on the route-change command and the starter checklist |
+| **0092** *(this one)* | The resolver's and show-me's fixture tests, the text-comparison script, the fixture flow-definition directories, and the README's notes on running the tests and on a `/bugfix:*` migration |
+
+*"A spec's route is data it carries; commands ask the resolver, not themselves, where it is going."*
+
+### Copies and routes drift with nothing to catch them
+
+The resolver decides every route, but a command is prose. Eight commands carry the same route instructions, five carry the same closing instructions, and dozens carry the same message templates. Nothing but a person reading both files notices when one copy changes and another does not. The resolver itself has the opposite problem: it is code, but its answers are only as trustworthy as the fixtures that show it routing a legacy spec, a tampered slip and a flow nobody has written yet. This ADR makes both kinds of drift fail a script.
+
+### The forces
+
+- **Only executable logic can be tested** (Constraints). The resolver can be run. A command's prose can only be compared with its canonical copy.
+- **`* text=auto` (`.gitattributes:2`)** stops a committed file from staying CRLF. Editors and hooks also strip BOMs and trailing whitespace.
+- **A file-based app is one file.** Two scripts cannot share helper source without a project file (0089, *Why `show_me_facts.cs` runs `resolve_route.cs`*).
+- **Adding a flow must not touch `.claude/commands/`** (AC-48, AC-63). The test scripts live there, as siblings of `show_me_facts_tests.cs`.
+- **Legacy specs move.** A spec without `.flow` that is still in progress, such as 0039 or 0040 itself, gains markers. A pinned table of next steps would go stale.
+
+## Decision
+
+**Two framework-free scripts: one runs the resolver against tracked fixtures and generated edge cases, the other compares canonical texts with their marked copies. Every expectation about a flow's cases is a data file, so a flow adds fixtures and edits no script.**
+
+### The mechanism, end to end
+
+```mermaid
+flowchart LR
+    FT["fixture tree<br/>flows, specs, expect"]
+    GC["generated cases<br/>temp directory"]
+    RT["resolve_route_tests.cs"]
+    ST["spec_text_tests.cs"]
+    RR["resolve_route.cs"]
+    SM["show_me_facts.cs"]
+    CF["README canonical blocks<br/>and command-file copies"]
+    GIT["git check-ignore"]
+    FT --> RT
+    GC --> RT
+    RT -->|"runs, compares the report"| RR
+    RT -->|"runs for show-me expectations"| SM
+    SM -->|"child process"| RR
+    CF --> ST
+    ST --> GIT
+```
+
+1. `resolve_route_tests.cs` first proves the resolver runs at all. It then runs the resolver (or, for a show-me expectation, `show_me_facts.cs`) for each expectation file, twice, and compares the named parts of the report with the expectation. It adds the generated cases, the existing-specs check, the size checks and the read-only check.
+2. `spec_text_tests.cs` reads every canonical block in a README and every marked copy in a command file, and fails when a copy differs. It also pins the gate ladder and the provenance pattern and runs the ignore check.
+3. Each script prints one `FAIL` line per failed assertion and exits `1` if any failed.
+4. A new flow adds fixture files and expectation files, and neither script changes.
+
+### Where the pieces live
+
+**Not touched**: `show_me_facts_tests.cs` and `.claude/test-fixtures/show-me/` (NFR-6), `.gitattributes`, and `.claude/flows/`, which keeps only `feature.flow` and `approvals.md` (AC-1).
+
+| Piece | Location |
+| --- | --- |
+| Resolver test script | `.claude/commands/spec/resolve_route_tests.cs` |
+| Text-comparison script | `.claude/commands/spec/spec_text_tests.cs` |
+| Fixture tree | `.claude/test-fixtures/routing/` (below) |
+| Canonical texts | `.claude/commands/spec/README.md` and `.claude/commands/adr/README.md` |
+
+### Key Components
+
+#### The two scripts
+
+Both are .NET file-based apps in `.claude/commands/spec/`, run from the repository root with no arguments:
+
+```bash
+dotnet run .claude/commands/spec/resolve_route_tests.cs
+dotnet run .claude/commands/spec/spec_text_tests.cs
+```
+
+Each prints one `FAIL {check}: {message}` line per failed assertion and ends with `{n} check(s) passed.` or `{f} failed assertion(s) across {n} check(s).`. Each exits `0` only when nothing failed, otherwise `1` (AC-47). Neither runs in CI, as with `show_me_facts_tests.cs` (`README.md:750`).
+
+| Script | Checks | Needs the resolver |
+| --- | --- | --- |
+| `resolve_route_tests.cs` | Every expectation; the generated cases; record integrity; the existing-specs check; `--all` size and NFR-4 timing; determinism and read-only checks; AC-1 | Yes |
+| `spec_text_tests.cs` | Every text block; the tooling-fault message copies; the gate ladder rows; the provenance pattern; the ignore check | No |
+
+#### The fixture tree
+
+```
+.claude/test-fixtures/routing/
+  flows/                  primary: feature.flow (copy), light.flow, bugfix.flow, approvals.md
+  flows-edited/           feature.flow with a hand-off detour added; approvals.md as primary
+  flows-invalid/          feature.flow naming /spec:designx (R4); approvals.md with a duplicate
+                          tasks row (R12 b) and a missing command (R12 c)
+  flows-duplicate-entry/  feature.flow (copy); approvals.md with two tasks rows (R12 b)
+  flows-spike-entry/      approvals.md: primary's rows plus `| spike | (empty) |`
+  flows-rules/            one definition per rule (r00-malformed.flow … r16-name-mismatch.flow,
+                          r15-detour-command.flow, r15-detour-return.flow); approvals.md
+  specs/                  cases (below); each holds a README.md naming its purpose
+  expect/                 {name}.json, one per expectation
+```
+
+- **Primary `approvals.md`** has entries for `requirements` and `tasks` (`(empty)`), `design` (the shipped row), `diagnosis` and `evaluation` (`(empty)`). It has no `spike` entry, so it is the missing-entry table of AC-74, and `flows-spike-entry/` is the identical table that has one.
+- **`light.flow`** is FR-2's slip with `detour: /refactor:smells @ hand-off -> hand-off`. **`bugfix.flow`** is FR-28's table. Neither is in `.claude/flows/`.
+- **Rule fixtures run in flow form** (`--definition {stem} --flows-dir …/flows-rules`), because 0089 step 4 builds `--definition` before `--spec` exists. Each file declares its own stem except `r16-name-mismatch.flow`. No spec case resolves against `flows-rules/`, so its markers never affect any case's intent-marker set.
+- **No fixture gate or sub-flow command is shipped.** Every command a fixture names already exists: `/spec:*`, `/bugfix:triage`, `/bugfix:confirm`, `/refactor:smells` and 0090's `/adr:*`. The misspelt `/spec:designx` is the deliberately missing one. Gate and sub-flow contracts are covered by resolver states and text blocks.
+
+Cases (tracked). Each case with a `.flow` holds a `.flow.record` written with the installation steps, apart from the tamper cases. A case whose flow has no definition in the flows directory (`unknown-flow`, `spike-step`, `evaluation-ready`, and `copy-invalid`, whose copy differs from every definition) has a hand-written CR-free `.flow`, and its record is written with installation steps 2 to 4 over that file:
+
+| Group | Cases |
+| --- | --- |
+| Legacy `feature` | `legacy-nothing`, `legacy-requirements-approved` (empty marker), `legacy-design-approved` (free-text marker), `legacy-all-approved` (`tasks.md` all checked), `legacy-out-of-order` (`requirements.md`, `.design-approved`), `legacy-stray-ignored` (all three markers, `.code-approved`, `.confirm-approved`; added with `bugfix`) |
+| `feature` with a slip | `feature-slip` (with `.requirements-approved`), `copy-invalid` (copy names `/spec:designx`, AC-70), `unknown-flow` (`# flow: retired`, AC-44) |
+| `light` | `light-nothing`, `light-adr-list`, `light-design-approved`, `light-done` (`tasks.md` all checked) |
+| `bugfix` | `bugfix-nothing`, `bugfix-diagnosed`, `bugfix-leftover-tasks`, `bugfix-confirmed`, `bugfix-tasks-written`, `bugfix-tasks-approved-only`, `bugfix-done` (`tasks.md` all checked) |
+| Other kinds | `evaluation-ready` (AC-54: `/refactor:smells` produces `evaluation.md`, `/spec:approve evaluation` approves it), `spike-step` (kind `spike`) |
+| Route records | `route-changed-light` (`light` slip and record, one log entry `feature -> light`, `.requirements-approved`, `.adr-list`, `.design-approved`: AC-36 and AC-90, read side), `tamper-b-record-only` (record `flow: light`, no `.flow`), `tamper-c-no-record`, `tamper-a-route-changed` (nothing approved, so its line stays short; a record that does not match its `.flow`, and a log whose last entry has a 200-character reason: 0091's `--all` line with `tampered` and a route change) |
+
+#### Expectations
+
+An expectation is one file, `expect/{name}.json`:
+
+```json
+{ "run": ["--spec", "bugfix-confirmed"], "flows": "flows", "exit": 0,
+  "report": { "next": { "commands": ["/bugfix:confirm"] },
+              "steps": [ { "name": "diagnosis", "approved": true },
+                         { "name": "tasks", "artefacts_present": false,
+                           "precondition": { "holds": true } } ] } }
+```
+
+- `run` holds the mode arguments. The specs root is always `{fixture root}/specs`.
+- Because `dotnet run` exits `1` on a missing script or a compile error, the harness first runs `--definition feature` against `.claude/flows` and requires a `route-report:` line. If that fails it prints one FAIL, `the resolver did not run`, and skips every expectation. An expectation that expects exit `1` also requires empty standard output and no `route-report:` line, which a missing script does not distinguish on its own; the pre-check is what shows the script runs.
+- `flows` names a directory under the fixture root. If it is absent, the shipped `.claude/flows` is used, which is how a shipped flow's own cases name it (0091 checklist C3, C9).
+- `report` is **partial**: an object matches when every expected key is present and matches; an array matches when it has the same length and matches element by element; a scalar matches when it is equal. When the run exits non-zero there is no `report`.
+- A show-me expectation uses `"show_me": "{case}"` and a partial `"ledger"`. The harness runs `show_me_facts.cs` with `--flows-dir`, then deletes or restores the ledger, as `show_me_facts_tests.cs` does.
+- The harness runs every expectation twice and requires byte-identical standard output (AC-7, NFR-1).
+
+**Adding a flow's cases adds files under the fixture root and edits neither script.** That is what keeps AC-48's and AC-63's diff over `.claude/commands/` empty. It also answers what 0091's checklist C9 means by "a resolver fixture test in 0092's layout".
+
+#### Generated cases
+
+`resolve_route_tests.cs` builds these under `Directory.CreateTempSubdirectory()` and deletes them in a `finally`. Most start as a copy of `feature-slip`. Their records, if any, are written by the harness. Any record the harness writes holds the SHA-256 of the LF content, computed with `SHA256` from the base class library.
+
+| Case | Change | Asserted |
+| --- | --- | --- |
+| `gen-crlf` | `.flow` rewritten with CRLF, the copied record kept | not tampered, valid (AC-32) |
+| `gen-bom` | UTF-8 BOM prefixed | case (a); R0 on line 1 |
+| `gen-trailing-space` | one trailing space on a table row | case (a); valid |
+| `gen-one-char` | one character of a command changed | case (a), `recorded_flow` `feature` |
+| `gen-unreadable-record` | `sha256: nothex` | case (c) |
+| `gen-name with spaces` | the directory name has spaces | valid, not tampered, `--spec` and `spec` exact |
+| `gen-log-two` | log with two entries | `route_change` is the second |
+| `gen-log-malformed` | log whose last heading is malformed | `route_change` `null` (`feature-slip` covers an absent log) |
+| `.current-spec` roots | missing; zero bytes; whitespace only; `0099-gone`; a valid name | `current-spec-missing`, `-empty`, `-empty`, `-stale`, `ok` |
+| no command tree | resolver started, by absolute script path, with a temporary working directory | exit `1`, empty standard output, no record line |
+
+CRLF, the BOM and trailing whitespace are generated because a tracked file would not keep them (`* text=auto`, editors, hooks). The one-character change and the unreadable record are generated so that **every tracked record matches its `.flow`** except in the named tamper cases (`tamper-a-route-changed` and `tamper-b-record-only`; `tamper-c-no-record` has no record). A **record integrity check** asserts that invariant. It reads every tracked `.flow.record`, compares it with the SHA-256 of the case's CRLF-normalised `.flow` and with line 1's flow name, and on a mismatch prints a FAIL telling the author to re-run the installation steps.
+
+#### Repository checks in `resolve_route_tests.cs`
+
+- **Existing specs (AC-4).** The harness runs `--all` once over `specs/` with the shipped flows. For every directory with no `.flow`, its line must report `feature` from `default`, valid, with no `tampered`, no `stray_markers` and no `violations` key. Its `next` must equal what a small **feature oracle** in the harness gives. The oracle takes the first step whose marker is missing. If none is missing the result is the hand-off. Otherwise it is the producer when the artefact is missing (`.adr-list` counts only with a non-blank line), or `/spec:review {kind}` then the marker-writer when the artefact is present. `0036-universal-transport-conformance-tests`, `0031-test_naming_conventions` and `0028-box-provisioning-rdd-role-interfaces` are also pinned to the hand-off by name, so an oracle bug cannot hide them.
+- **NFR-4 (AC-51).** That run is the second of two back to back. The first warms the build cache, because NFR-4 counts from "once the resolver has been built". It should take under 10 seconds. The first run's standard output must be byte-identical to the second's, which is how a warning printed only on a recompile is caught (0089). A slower run prints a `WARN` line with the duration and does not fail the script, because wall-clock time varies with the machine. The size limits below do fail.
+- **Size (0089).** In the same output, every `route-report:` summary line, prefix included and newline excluded, is at most 650 characters (the `route-current:` line is not a summary line, as 0089 words the limit), and the whole standard output is under 24,000. Both are asserted again over `specs/` with `--flows-dir {fixture root}/flows-invalid`. The line limit alone is asserted over `{fixture root}/specs` with `--flows-dir {fixture root}/flows`, which holds `tamper-a-route-changed`; that root is relative to the repository, as `specs/` is. The generated roots are in the system temporary directory, so their absolute paths are not real spec paths, and no size limit applies to them. The FAIL message gives the measured size and says the remedy (paging, retiring finished specs) is undecided (0089).
+- **Read-only (NFR-3).** The harness hashes every file under the fixture root, `specs/`, and each generated root before and after the runs against it (show-me ledgers excluded) and requires them to be equal.
+- **AC-1.** `.claude/flows/` holds exactly `feature.flow` and `approvals.md`.
+- **Matcher self-test.** Before any expectation runs, the partial matcher is given a known mismatch. If it reports none, the run fails, so the matcher is shown able to fail.
+
+#### Text blocks
+
+Each canonical text and each copy is wrapped in HTML-comment markers, after the `show-me:risk-step` precedent (`show-me.md:437`, `:504`):
+
+```
+<!-- routing-text:{id}:begin -->
+…
+<!-- routing-text:{id}:end -->
+```
+
+The text between the markers, with CRLF read as LF and nothing else normalised, must be identical to the canonical block. Templates sit in tables, so the canonical block for templates wraps the README's `| Template | Printed by | Text |` tables. Each command's `templates` block is a `| Template | Text |` table, and the test compares each Text cell with the canonical cell of the same Template name. Cells are split on `|` outside code spans, where a code span runs between backtick runs of equal length, as CommonMark defines it. Some template texts hold a lone backtick inside a double-backtick span (0091's *Route usage* and *Spec name*), so a parser that toggles on each backtick would merge cells. The parser self-test runs on those two rows.
+
+`spec_text_tests.cs` holds a **registry**: each block id, its canonical file, and the files that must carry it. It also checks:
+
+- each canonical block appears exactly once in its canonical file;
+- each file that must carry a block has it exactly once, and each `templates` block holds exactly the templates the registry expects for that file;
+- any other file under `.claude/commands/` that carries a block marker is compared too. This means a future flow's gate or starter is checked without a registry edit (0091 checklist C6, C7).
+
+| Block id | Canonical file | Required copies |
+| --- | --- | --- |
+| `route-instructions` | `spec/README.md` | `spec/requirements.md`, `design.md`, `tasks.md`, `approve.md`, `review.md`, `implement.md`, `ralph-implement.md`; `adr/adr.md` |
+| `closing-instructions` | `spec/README.md` | `spec/requirements.md`, `design.md`, `tasks.md`, `approve.md`; `adr/adr.md` |
+| `installation-steps` | `spec/README.md` | `spec/new.md`, `spec/route.md` |
+| `write-order` | `spec/README.md` | `spec/route.md` |
+| `sub-flow-instructions`, `provenance-commands` | `spec/README.md` | `spec/approve.md` |
+| `adr-selection-rule` | `adr/README.md` | `adr/accept.md`, `adr/retire-superseded.md`, `adr/report-approval.md` |
+| `gate-run-contract` | `spec/README.md` | none (no gate ships) |
+| `templates` | `spec/README.md`, `adr/README.md` | per template, below |
+
+Template copies required, resolving the "Printed by" cells of 0089, 0090 and 0091 to files:
+
+| Templates | Files |
+| --- | --- |
+| Next-step line | `requirements.md`, `design.md`, `tasks.md`, `approve.md`, `review.md`, `status.md`, `switch.md`, `new.md`, `route.md`, `adr.md` |
+| Not on the route; Another producer | `requirements.md`, `design.md`, `tasks.md` |
+| Step not on the slip; Another marker-writer; Artefacts missing; No usable entry; Sub-flow failed, questions; Sub-flow failed, actions; Step approved | `approve.md` |
+| Phase not on the route; Step with no review criteria; No requirements step | `review.md` |
+| No design step | `adr.md` |
+| Ambiguous spec id; No spec matches | `switch.md` (`show-me.md` is not compared, as 0089 says) |
+| Flow not usable; New spec failed; Start failed; Spec name; Spec exists; Spec ignored | `new.md` |
+| Route usage; Route spec name; Route target not usable; Already on target; No reason; Route changed; Installation failed | `route.md` |
+| Post-check | `route.md`, `new.md` |
+| Supersession question | `adr/retire-superseded.md` |
+| Report | `adr/report-approval.md` |
+| Gate templates (four) | none (no gate ships) |
+
+Further checks in `spec_text_tests.cs`:
+
+- **Tooling-fault message.** The harness takes the quoted sentence out of the canonical route instructions and requires it, verbatim, in `status.md`, `switch.md`, `new.md` and `route.md`. These commands use the message without carrying the paragraph (0089, 0091).
+- **Gate ladder.** The canonical `gate-run-contract` block's ladder has exactly five rows. Their Starting-state cells must equal 0090's, which the test pins. The resolver states for the five rows are expectations (*Coverage*).
+- **Provenance pattern.** 0090's pattern is pinned in the test. Every `approved: ` line in the canonical `provenance-commands` block must match it. The `echo` line, with sample values substituted, must give a matching line. Lines with a 39-digit sha, an uppercase sha, an empty `artefacts=`, or a trailing space must not match.
+- **Ignore check (0091).** `git check-ignore -q --no-index` exits `1` for `specs/9999-check ignore probe/.flow`, `.flow.record` and `route-changes.md`, and exits `0` for `specs/9999-probe.log/.flow`.
+
+#### Harness, and duplication between the scripts
+
+Each script is one file with its rows or registry at the top and its helpers in a marked `// Harness` region at the bottom. Neither calls the other. Three small helpers appear in both and are deliberately duplicated: a process runner that builds arguments with `ArgumentList`, a CRLF-to-LF reader, and the FAIL/summary reporter. Sharing them would need a project file, which 0089 and ADR 0072 rule out. They are under a hundred lines and change rarely. The hash and the oracle are only in `resolve_route_tests.cs`, and the block extractor and table parser are only in `spec_text_tests.cs`.
+
+#### Coverage
+
+| Requirement item | Where it is tested (R = `resolve_route_tests.cs`, T = `spec_text_tests.cs`) |
+| --- | --- |
+| FR-24: sibling script, no framework, pass count, FAIL lines, non-zero exit | R and T (*The two scripts*); a broken expectation, by hand (step 10, item 1) |
+| AC-75 (shipped table: empty `requirements` and `tasks` sub-flows, the four `design` commands in order) | R `shipped-legacy-nothing` (no `flows` key; asserts `steps[].approval_subflow`) |
+| AC-65 (`/spec:implement` fails naming `design` then `tasks`) | R `legacy-requirements-approved`, `hand_off.precondition` |
+| FR-24: legacy at each stage, empty and free-text markers (AC-5) | R `legacy-nothing`, `legacy-requirements-approved`, `legacy-design-approved`, `legacy-all-approved` |
+| FR-24: `feature` with `.flow` and record | R `feature-slip` |
+| FR-24: `light` cases; `bugfix` cases; another flow-specific kind | rows FR-25 and FR-28 below; R `evaluation-ready` (AC-54) |
+| FR-24: unknown flow name; nonexistent command | R `unknown-flow` (AC-44); `r04-unknown-command`, `copy-invalid` (AC-3, AC-70) |
+| FR-24: zero steps; duplicate steps; last step not `tasks` | R `r01-no-steps`, `r02-duplicate-step`, `r13-last-not-tasks` (AC-3); also `r03`, `r05`, `r14`, `r16` (AC-3), `r06`, `r07`, `r08`, `r09` (AC-53), `r00-malformed` |
+| FR-24: stray marker; ignored `.code-approved` | R `legacy-stray-ignored` (added with `bugfix`, step 5), `route-changed-light`; existing 0028 |
+| FR-24: self-approval; step after hand-off | R `r10-self-approval` (AC-72), `r11-step-after-hand-off` |
+| FR-24: kind with no entry; two entries for one kind | R `spike-step` on `flows` and on `flows-spike-entry` (AC-74); `legacy-nothing` on `flows-duplicate-entry`; R12 (c) on `flows-invalid` |
+| FR-24: bad detour command or return point | R `r15-detour-command`, `r15-detour-return` (AC-85) |
+| FR-24: whitespace-only `.current-spec` | R generated `.current-spec` roots |
+| FR-24: out-of-order approval | R `legacy-out-of-order` (AC-43), `bugfix-tasks-approved-only` |
+| FR-24: each gate state (FR-27); 0090's five ladder rows | R row 1 `bugfix-diagnosed` (AC-56, AC-59), row 2 `bugfix-leftover-tasks` (AC-89), row 3 `bugfix-confirmed` (AC-57), row 4 `bugfix-tasks-written` (AC-73), row 5 `bugfix-tasks-approved-only` and `bugfix-done`; T gate ladder |
+| FR-24: tamper (a), (b), (c); CRLF only; directory name with a space | R `gen-one-char`, `gen-trailing-space`, `gen-bom`; `tamper-b-record-only`; `tamper-c-no-record`, `gen-unreadable-record`; `gen-crlf`; `gen-name with spaces` and existing `0021-Expose Unacceptable Message Window` |
+| FR-24: every existing spec, with 0036, 0031 and 0028 | R existing-specs check (AC-4) |
+| FR-25: status; design; approve; tasks; review | R `light-nothing`; `light-nothing` (AC-12); `light-design-approved` (AC-21); `light-design-approved`; `light-adr-list` (AC-18, resolver side) |
+| FR-25: implement/ralph; show-me; detours | R `light-done` (AC-15), `light-design-approved` (AC-8); `show-me-light-done` (AC-45); `light-done` (AC-84) |
+| FR-25: no file under `.claude/commands/` changes | the `light` fixture commit (step 5, AC-48) |
+| FR-28: valid, commands resolve, `diagnosis` flow-specific, empty entry | R `definition-bugfix`, `bugfix-nothing` (AC-78) |
+| FR-28: status, nothing present; `bugfix.md` present | R `bugfix-nothing`; `bugfix-diagnosed` (AC-59) |
+| FR-28: gate reported; the three interrupted states | R `bugfix-nothing` `gates` (AC-55); ladder rows 2 to 4 above |
+| FR-28: not on the route, other producer and marker-writer; no `requirements` or `design` step | R `bugfix-nothing` `known_kinds`, `approve_steps` (AC-58, AC-61) |
+| FR-28: implement/ralph; show-me | R `bugfix-done`, `bugfix-tasks-approved-only` (AC-60); `show-me-bugfix-done` (AC-62) |
+| FR-28: no file under `.claude/commands/` or `bugfixes/` changes | the `bugfix` fixture commit (step 5, AC-63) |
+| 0091: legacy; `feature` edited, not tampered; logs | R `legacy-*`; `feature-slip` on `flows-edited` (AC-34); `gen-log-two`, `gen-log-malformed`, `feature-slip` |
+| 0091: records hash the LF content; `--all` line with tamper and change | R integrity check and generator; `tamper-a-route-changed` under the size check |
+| 0091: installation steps, write order, templates; ignore check | T blocks; T ignore check |
+| 0089: route (8), closing (5), every template copy; `--all` size; NFR-4 | T blocks and tooling-fault message; R size (fails); R timing (AC-51: R prints a WARN, a person reads it) |
+| 0090: sub-flow instructions, provenance commands, approver and `/adr:*` templates, ADR selection rule; pattern | T blocks; T provenance pattern |
+| NFR-1, NFR-3 (AC-7) | R double runs and before/after hashes |
+| NFR-6, AC-46 | `show_me_facts_tests.cs` unedited and passing (step 10, item 2) |
+
+### Technology Choices
+
+- **JSON expectations.** The scripts live in `.claude/commands/spec/`, so rows written in code would put a flow's cases under `.claude/commands/` (AC-48, AC-63). Data files keep them out.
+- **Block markers.** The siblings say "identical copy" without saying how a copy is found. Marker comments follow show-me's precedent and let a future flow's copies be found without a registry edit.
+- **Generated edge cases.** *Generated cases* says why.
+- **Duplicated helpers.** *Harness, and duplication between the scripts* says why.
+
+### Implementation Approach
+
+Numbered in commit order. Each resolver behaviour gets its expectation first. The expectation fails, and the sibling ADR's code commit makes it pass. No copy lands before its canonical block. A fixture commit never touches `.claude/commands/`.
+
+1. **Before 0090 step 1.** Add `spec_text_tests.cs` with its harness, block extractor, table parser (and its self-test), the ignore check, and the registry entries for `adr-selection-rule` and the `/adr:*` templates. The registry entries fail until 0090 step 1 lands the canonical text in `.claude/commands/adr/README.md` with the first copies (the correction to 0090 step 2 in *Scope*). The ignore check tests rules `.gitignore` already holds, so it is a guard that passes on landing.
+2. **Before 0089 step 3.** Add `resolve_route_tests.cs` with its harness, the `the resolver did not run` pre-check, the matcher self-test, the read-only check, and a bad-mode expectation (exit `1`, empty standard output). The pre-check and the bad-mode expectation fail until 0089 step 3 lands.
+3. **With 0089 step 4, one rule at a time.** Add `flows-rules/{rule}.flow` and its `definition-{rule}` expectation before the rule's code. Add the primary `flows/` with `feature.flow` and `approvals.md`, with `definition-feature`, `definition-nosuch` and `definition-bad-name`, then `flows-duplicate-entry/`, `flows-invalid/` and `flows-spike-entry/`.
+4. **With 0089 step 5.** Add the legacy cases except `legacy-stray-ignored`, `feature-slip`, `copy-invalid`, `unknown-flow`, `evaluation-ready` and `spike-step`, the unknown-`--spec` expectation, and `shipped-legacy-nothing`, before `--spec` code. Add the existing-specs check in `--spec` form for 0036, 0031 and 0028.
+5. **Fixture-only commits, after step 4 (0089 step 5) passes.** Add `light.flow` and the `light` cases and expectations in one commit. Add `bugfix.flow`, the `diagnosis` entry, the `bugfix` cases and `legacy-stray-ignored` in another. `git diff --stat HEAD~1 -- .claude/commands/ bugfixes/` is empty for each (AC-48, AC-63). If a row fails, adding the flow needed a resolver edit and the experiment of FR-25 or FR-28 has failed. Fix the resolver in an earlier commit and re-make the fixture commit on top of it, so the fixture commit is green with an empty diff.
+6. **With 0089 step 6.** Add the generated `.current-spec` roots and the no-command-tree case. Move the existing-specs check onto `--all` over every spec. Add the size, timing and AC-1 checks.
+7. **With 0091 step 1 (0089 step 7).** Add `tamper-a-route-changed`, `tamper-b-record-only`, `tamper-c-no-record`, `route-changed-light`, the remaining `gen-*` cases and the record integrity check before `RouteRecordInspector`.
+8. **With 0089 step 8.** Add `show-me-light-done`, `show-me-bugfix-done`, and a `show-me-legacy-all-approved` expectation (`has_requirements_step` true).
+9. **The remaining text registry, before each copy.** Each registry row, and each file's expected template set, is added in the commit just before that file's copy lands, so no commit has a registry row for a file that does not yet exist. The canonical route instructions, closing instructions and message templates move from 0089 step 11.1 to just before step 9.1, and the rows for 0089's copies follow 0089 steps 9.1 to 9.9. The approver templates follow 0090 steps 3 and 4, and `route.md`'s and `new.md`'s templates follow 0091 steps 3 and 4. The sub-flow instructions and provenance commands are already canonical after 0090 step 2, so their entries precede 0090 steps 3 and 4. The installation steps and write order are canonical after 0091 step 2, so their entries precede 0091 steps 3 and 4. The gate ladder check and the provenance-pattern check land with 0090 step 2. The provenance check first requires the `provenance-commands` block to exist, so that it cannot pass over zero lines.
+10. **Documentation and verification.** In `.claude/commands/spec/README.md` *Supporting scripts*, describe both scripts, how to run them, the fixture tree, and how a flow adds cases and expectations. Add a section recording FR-28's four migration differences as decisions for a later migration (AC-64). Then, by hand:
+    1. Change one value in an expectation. The script prints a FAIL line and exits `1`. Revert (AC-47).
+    2. `dotnet run .claude/commands/spec/show_me_facts_tests.cs` passes, and `git diff --exit-code {merge-base} -- .claude/commands/spec/show_me_facts_tests.cs .claude/test-fixtures/show-me/` is clean (AC-46).
+    3. Both scripts pass on a CRLF checkout (`core.autocrlf=true`).
+    4. On a scratch branch, copy `light-done` into `specs/9999-light-done/`, run `dotnet run .claude/commands/spec/show_me_facts.cs -- specs/9999-light-done --flows-dir .claude/test-fixtures/routing/flows`, and apply `show-me.md`'s row 8 and Inputs-used row 1 to that ledger by hand: row 8 prints the route line within FR-23's constraints, and row 1 reads `not available: not on this spec's route` (AC-45, command side). `/spec:show-me` itself cannot be pointed at a fixture directory, since only `show_me_facts.cs` takes `--flows-dir`. Delete the scratch branch.
+
+## Consequences
+
+### Positive
+
+- Every routing answer that 0089 to 0091 move into code is pinned by a fixture, and adding a flow's cases needs no script edit (FR-19 C9, AC-48, AC-63).
+- Every marked copy is checked against one canonical text, including marked copies that future flows carry.
+- Generated cases test exactly the bytes that git and editors would alter, and the tracked tree has one rule: every record matches.
+- The existing-specs check follows legacy specs as their markers change, which keeps the Constraints' guard on `feature.flow` edits.
+
+### Negative
+
+- Command files and READMEs gain HTML-comment block markers. Agents read them as part of the file, so they are noise to the command's reader.
+- Text comparison is exact. A reflowed line or a changed space fails the test until canonical and copy agree. That is intended, and it makes cosmetic edits slower.
+- The feature oracle re-implements three rows of 0089's next-step ladder. The three pinned specs and the `legacy-*` expectations cross-check it.
+- Expectation files are verbose JSON, and a partial match asserts only what the author wrote down. Review has to check that each expectation pins the fields its requirement names.
+- The resolver runs about 150 times (each expectation twice, plus generated cases). At 0089's measured warm start of about 0.2 s that is an estimate of under a minute, plus the show-me runs; the first real run will say.
+- A copy that never gets markers is not compared. Checklist items C6 and C7 depend on the author adding them, and only review catches an omission.
+- Adding a flow to the primary `flows/` can change other cases' expectations: `bugfix.flow` makes `.confirm-approved` an intent marker, so `legacy-stray-ignored` reports it stray. A flow's commit carries those expectation edits with it.
+
+### Risks and Mitigations
+
+- **Risk: the `--all` budget fails as `specs/` grows** (estimate about 21,000 of 24,000). Mitigation: the FAIL line gives the measured size. The remedy is undecided (0089), and until it is chosen `route unavailable` keeps `/spec:status` usable.
+- **Risk: the NFR-4 timing varies on a slow or busy machine.** Mitigation: it times a warm second run and only warns, printing the duration so a one-off can be told apart from a trend. AC-51 is therefore checked by a human reading the WARN, not by the exit status.
+- **Risk: a fixture record goes stale when someone edits a case's `.flow`.** Mitigation: the integrity check names the case and the fix before any expectation misreads it as tampering.
+- **Risk: a copy loses its markers and stops being compared.** Mitigation: required copies are listed in the registry, so a missing block is a FAIL, not a skip.
+
+## Alternatives Considered
+
+### Alternative 1: One test script
+
+One script would mix fast text checks with the slow resolver runs, so a README edit would wait minutes. It would also need the resolver built before any text check could run. Two scripts match the two kinds of evidence.
+
+### Alternative 2: Track every fixture, CRLF cases marked `-text`
+
+A `-text` attribute keeps CRLF but not a BOM or trailing whitespace through editors and hooks. It also adds `.gitattributes` exceptions, and the tracked tree would hold deliberate mismatches, which weakens the integrity check.
+
+### Alternative 3: Generate every fixture at run time
+
+The cases would then exist only as code. They could not be read, `ls`-ed or run by hand with the resolver, and adding a flow's cases would mean editing the script, which breaks AC-48 and AC-63.
+
+### Alternative 4: Ship a fixture gate and a fixture sub-flow command
+
+They would put test-only commands in `.claude/commands/`, visible to every user as skills, to prove contracts that are prose. A prose contract can be checked by text comparison and by resolver states, not by running a command.
+
+### Alternative 5: Expectations in code
+
+Rows in the script, in the style of `show_me_facts_tests.cs`, give type checking. But every new flow would then edit a file under `.claude/commands/`, which AC-48 and AC-63 forbid.
+
+## References
+
+- Parent requirement: [specs/0040-routing-slips/requirements.md](../../specs/0040-routing-slips/requirements.md)
+- Issue: [#4661](https://github.com/BrighterCommand/Brighter/issues/4661)
+- [ADR 0089](0089-slips-resolver-and-routing.md): the report, rules R0–R16, modes and `--flows-dir`, the `--all` size rule, the texts to compare, and steps 3 to 11
+- [ADR 0090](0090-approval-sub-flows.md): *What 0092 needs from this ADR*, the gate run contract, the provenance pattern and the template tables
+- [ADR 0091](0091-slip-creation-tamper-detection-and-route-change.md): *What 0092 needs from this ADR*, the inspector table, the installation steps and write order, the checklist items C3, C6, C7 and C9
+- [ADR 0072](0072-show-me-command-resolution-and-output.md): the file-based app and test-script conventions
+- `.claude/commands/spec/show_me_facts_tests.cs`, `.claude/test-fixtures/show-me/`, `.claude/commands/spec/README.md:704-747`, `.gitattributes:2`

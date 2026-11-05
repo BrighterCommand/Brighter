@@ -64,7 +64,7 @@ The route vocabulary is defined in [requirements § Definitions](../../specs/004
 | 0089 | The slip and approval-table formats, the route resolver and its report, and how commands consult it |
 | 0090 | How a command runs a sub-flow (approval is the first trigger), the provenance line, the gate run contract, the `/adr:*` commands that carry the `design` sub-flow, and the README's notes on running a sub-flow and on the provenance line |
 | **0091** *(this one)* | How a slip is installed and frozen at creation (`/spec:new`'s copy and record, numbering, the starter contract), how tampering is detected, how a route is changed, and the README's notes on the route-change command and the starter checklist |
-| 0092 | The resolver's and show-me's fixture tests, the fixture flow-definition directories, and the README's notes on running the tests and on a `/bugfix:*` migration |
+| 0092 | The resolver's and show-me's fixture tests, the text-comparison script, the fixture flow-definition directories, and the README's notes on running the tests and on a `/bugfix:*` migration |
 
 *"A spec's route is data it carries; commands ask the resolver, not themselves, where it is going."*
 

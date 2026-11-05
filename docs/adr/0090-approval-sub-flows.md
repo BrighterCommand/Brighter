@@ -90,7 +90,7 @@ These words keep the meaning that [requirements § Definitions](../../specs/0040
 | 0089 | The slip and approval-table formats, the route resolver and its report, and how commands consult it |
 | **0090** *(this one)* | How a command runs a sub-flow (approval is the first trigger), the provenance line, the gate run contract, the `/adr:*` commands that carry the `design` sub-flow, and the README's notes on running a sub-flow and on the provenance line |
 | 0091 | How a slip is installed and frozen at creation (`/spec:new`'s copy and record, numbering, the starter contract), how tampering is detected, how a route is changed, and the README's notes on the route-change command and the starter checklist |
-| 0092 | The resolver's and show-me's fixture tests, the fixture flow-definition directories, and the README's notes on running the tests and on a `/bugfix:*` migration |
+| 0092 | The resolver's and show-me's fixture tests, the text-comparison script, the fixture flow-definition directories, and the README's notes on running the tests and on a `/bugfix:*` migration |
 
 *"A spec's route is data it carries; commands ask the resolver, not themselves, where it is going."*
 
@@ -474,7 +474,7 @@ Fixed fields separated by single spaces read with `grep` and `awk`, and no field
 Numbered in commit order. A step that changes what a command does is behavioural, even when a valid approval ends with the same files. Line numbers of `approve.md` are those of today's file, before 0089 step 9.6.
 
 1. **Behavioural, prerequisite for 0089 step 1.** Add the four `/adr:*` commands, each with Arguments, Questions and Actions sections and its template copies. Their text comes from `approve.md:38-46` (accept), `:48-54` (retire), `:56-57` and `:102-112` (index) and `:60-61` (report). Their `allowed-tools` are: accept `Read, Glob, Bash(grep:*), Skill`; retire `Read, Glob, Bash(grep:*), AskUserQuestion, Skill`; regenerate `Bash(awk:*)`; report `Read, Glob, Bash(grep:*)`. 0089 step 2 then names them in `approvals.md`.
-2. **Documentation.** Add the canonical sub-flow instructions, protocol lines, templates, gate run contract and provenance-line notes to `.claude/commands/spec/README.md`. Add the ADR selection rule and `/adr:*` templates to `.claude/commands/adr/README.md`.
+2. **Documentation.** Add the canonical sub-flow instructions, protocol lines, templates, gate run contract and provenance-line notes to `.claude/commands/spec/README.md`. The ADR selection rule and `/adr:*` templates in `.claude/commands/adr/README.md` are written in step 1, with the first `/adr:*` copies (0092 step 1).
 3. **Behavioural, after 0089 step 9.6.** In `approve.md`, replace the per-ADR status work and the supersession work (`:34-58`) and the report (`:60-61`) with the sub-flow instructions, and remove the index regeneration (`:102-112`) and the `:130` note. This adds the two-pass protocol, the questions-before-writes rule, the stricter ADR selection and the frontmatter checks, so the approval can now stop where it did not before. Keep `touch` for the marker in this commit, so a valid approval ends with the files it ends with today.
 4. **Behavioural.** Replace the `touch` at `approve.md:59` with the provenance commands, and add the two `allowed-tools` entries at `approve.md:2`. Change `argument-hint` at `approve.md:4` to `<step> [selector]`.
 5. **Documentation.** Update `adr_frontmatter.md:78-79` and `:159`, `adr/README.md:51-52`, `:64-66` and `:182-194`, `write_adr_metadata.md:116`, and `spec/README.md:233`, `:244-260` and `:817-819`.

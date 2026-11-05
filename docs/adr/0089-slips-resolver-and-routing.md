@@ -98,7 +98,7 @@ The Decision also depends on these words, which this ADR introduces:
 | **0089** *(this one)* | The slip and approval-table formats, the route resolver and its report, and how commands consult it |
 | 0090 | How a command runs a sub-flow (approval is the first trigger), the provenance line, the gate run contract, the `/adr:*` commands that carry the `design` sub-flow, and the README's notes on running a sub-flow and on the provenance line |
 | 0091 | How a slip is installed and frozen at creation (`/spec:new`'s copy and record, numbering, the starter contract), how tampering is detected, how a route is changed, and the README's notes on the route-change command and the starter checklist |
-| 0092 | The resolver's and show-me's fixture tests, the fixture flow-definition directories, and the README's notes on running the tests and on a `/bugfix:*` migration |
+| 0092 | The resolver's and show-me's fixture tests, the text-comparison script, the fixture flow-definition directories, and the README's notes on running the tests and on a `/bugfix:*` migration |
 
 *"A spec's route is data it carries; commands ask the resolver, not themselves, where it is going."*
 
@@ -705,7 +705,7 @@ Numbered in commit order. Structural steps add files that nothing yet reads. Eac
    9. `new.md`: add the `--definition feature` check before step 1 (`new.md:15`) with its flow-not-usable template copy, and the resolver's `allowed-tools` entry at `new.md:2`. This commit lands before 0091's changes to the same file, which add the copy, the creation record and the numbering rule.
 10. **Verification.** `grep -l -e '.requirements-approved' -e '.design-approved' .claude/commands/spec/*.md .claude/commands/adr/adr.md` matches only `README.md` (AC-9). 0092's test script compares the route instructions in each of the seven route-following `/spec:*` commands (`requirements`, `design`, `tasks`, `approve`, `review`, `implement` and `ralph-implement`) and `/adr:adr`, the closing instructions in the five writing commands, and every message template copy in each command that prints one (including `/spec:status`, `/spec:switch` and `/spec:new`), with the README's canonical text.
 11. **Documentation.** In `.claude/commands/spec/README.md`, one commit:
-    1. Extend *Supporting scripts* with the resolver's invocation, its modes and the canonical route instructions, closing instructions and message templates, next to `show_me_facts.cs` (`README.md:704-747`).
+    1. Extend *Supporting scripts* with the resolver's invocation and its modes, next to `show_me_facts.cs` (`README.md:704-747`). The canonical route instructions, closing instructions and message templates are written before step 9.1 (0092 step 9), so that no copy lands before its canonical block.
     2. Add a section on the route model: flows, flow definitions and `.flow`, `feature` as the default, the legacy rule, intent, stray and ignored markers, known and flow-specific kinds, gates, and the approval table, including how a flow adds an entry.
     3. Label the Workflow diagram (`README.md:15`) as the `feature` flow.
     4. Restate the marker lists at `README.md:403-405` and `:609-612` as slip-based preconditions. Drop the ADR-status line at `:612`, because `/spec:ralph-implement` does not check ADR status.
