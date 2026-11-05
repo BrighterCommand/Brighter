@@ -1197,7 +1197,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.49
   - References: `src/Paramore.Brighter/Observability/SweeperMeter.cs:123-130`. `tests/Paramore.Brighter.Core.Tests/Observability/Metrics/When_the_sweeper_is_not_active_should_report_zero_tripped_topics.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.53 - The investigate check reports shared trips on every running sweeper**
+- [x] **TEST + IMPLEMENT: T2.53 - The investigate check reports shared trips on every running sweeper**
   - **USE COMMAND**: `/tdd:test-first when the breaker shares trips should report the tripped topics condition on an inactive running sweeper`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_breaker_shares_trips_should_report_tripped_topics_on_an_inactive_sweeper.cs`
