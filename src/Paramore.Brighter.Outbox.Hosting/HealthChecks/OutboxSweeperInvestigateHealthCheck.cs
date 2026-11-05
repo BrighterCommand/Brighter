@@ -48,7 +48,7 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
     /// <summary>The name of the condition reported while consecutive sweeps have failed.</summary>
     public const string ConsecutiveFailedSweeps = "consecutive_failed_sweeps";
 
-    /// <summary>The name of the condition reported while an active sweeper has circuit-broken topics.</summary>
+    /// <summary>The name of the condition reported while the sweeper has circuit-broken topics: on the active sweeper, or on any running sweeper when the circuit breaker shares its trips.</summary>
     public const string TrippedTopics = "tripped_topics";
 
     /// <summary>The name of the condition reported when the tripped topics could not be read.</summary>
@@ -96,7 +96,7 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         if (snapshot.ConsecutiveFailedSweeps >= _failureThreshold)
             conditions.Add(FailedSweepsCondition(snapshot.ConsecutiveFailedSweeps));
 
-        conditions.AddRange(TrippedTopicsConditionOrNone(snapshot));
+        conditions.AddRange(CircuitBreakerConditions(snapshot));
 
         if (conditions.Count == 0)
             return Task.FromResult(Healthy($"No outbox sweeper condition needs investigation: fewer than {_failureThreshold} consecutive failed sweeps."));
@@ -104,29 +104,29 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         return Task.FromResult(Degraded(conditions));
     }
 
-    private RemedyCondition[] TrippedTopicsConditionOrNone(OutboxSweeperSnapshot snapshot)
+    private RemedyCondition[] CircuitBreakerConditions(OutboxSweeperSnapshot snapshot)
     {
         if (snapshot.IsStopped) return [];
 
         try
         {
-            var breaker = _findCircuitBreaker?.Invoke();
-            if (breaker is null) return [];
-
-            var shared = breaker as IAmASharedOutboxCircuitBreaker;
-            if (shared is null && !snapshot.IsActive) return [];
-
-            var conditions = new List<RemedyCondition>();
-            conditions.AddRange(TrippedTopicsConditionOrUnreadable(breaker));
-            conditions.AddRange(StoreUnavailableConditionOrNone(shared));
-
-            return conditions.ToArray();
+            return ConditionsOfTheBreakerInUse(snapshot);
         }
         catch (Exception e)
         {
-            Log.TrippedTopicsUnreadable(s_logger, e);
-            return [TrippedTopicsUnreadableCondition(e)];
+            return Unreadable(e);
         }
+    }
+
+    private RemedyCondition[] ConditionsOfTheBreakerInUse(OutboxSweeperSnapshot snapshot)
+    {
+        var breaker = _findCircuitBreaker?.Invoke();
+        if (breaker is null) return [];
+
+        var shared = breaker as IAmASharedOutboxCircuitBreaker;
+        if (shared is null && !snapshot.IsActive) return [];
+
+        return [..TrippedTopicsConditionOrUnreadable(breaker), ..StoreUnavailableConditionOrNone(shared)];
     }
 
     private static RemedyCondition[] TrippedTopicsConditionOrUnreadable(IAmAnOutboxCircuitBreaker breaker)
@@ -138,9 +138,14 @@ public partial class OutboxSweeperInvestigateHealthCheck : IHealthCheck
         }
         catch (Exception e)
         {
-            Log.TrippedTopicsUnreadable(s_logger, e);
-            return [TrippedTopicsUnreadableCondition(e)];
+            return Unreadable(e);
         }
+    }
+
+    private static RemedyCondition[] Unreadable(Exception e)
+    {
+        Log.TrippedTopicsUnreadable(s_logger, e);
+        return [TrippedTopicsUnreadableCondition(e)];
     }
 
     private static RemedyCondition[] StoreUnavailableConditionOrNone(IAmASharedOutboxCircuitBreaker? shared)
