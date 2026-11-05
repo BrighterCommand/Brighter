@@ -1242,7 +1242,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.53, T2.30a
   - References: `src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs:49-55`. `docs/adr/0088-shared-remedy-check-data-and-condition.md`.
 
-- [ ] **CHARACTERISE: T2.55a - The store-unavailable condition clears with the fallback state and is not reported before a read fails**
+- [x] **CHARACTERISE: T2.55a - The store-unavailable condition clears with the fallback state and is not reported before a read fails**
   - **USE COMMAND**: `/tdd:test-first when the fallback state ends should stop reporting the store unavailable condition and not report it before any read has failed`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
   - Test file: `When_the_fallback_state_ends_should_stop_reporting_store_unavailable.cs`
