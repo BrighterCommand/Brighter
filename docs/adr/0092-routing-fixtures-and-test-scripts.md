@@ -1,7 +1,7 @@
 ---
 id: 0092-routing-fixtures-and-test-scripts
 title: "Routing Fixtures and Test Scripts"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-11-04
@@ -18,9 +18,9 @@ Date: 2026-11-04
 
 ## Status
 
-Proposed
+Accepted
 
-Implements part of [issue #4661](https://github.com/BrighterCommand/Brighter/issues/4661). Supersedes no prior ADR. This decision is about the project's own agent tooling, not its runtime. [ADR 0089](0089-slips-resolver-and-routing.md) (Accepted), [ADR 0090](0090-approval-sub-flows.md) (Proposed) and [ADR 0091](0091-slip-creation-tamper-detection-and-route-change.md) (Proposed) are its siblings. *Where this ADR sits* says what each ADR decides.
+Implements part of [issue #4661](https://github.com/BrighterCommand/Brighter/issues/4661). Supersedes no prior ADR. This decision is about the project's own agent tooling, not its runtime. [ADR 0089](0089-slips-resolver-and-routing.md), [ADR 0090](0090-approval-sub-flows.md) and [ADR 0091](0091-slip-creation-tamper-detection-and-route-change.md) are its siblings. *Where this ADR sits* says what each ADR decides.
 
 ## Context
 

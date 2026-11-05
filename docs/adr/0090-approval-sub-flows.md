@@ -1,7 +1,7 @@
 ---
 id: 0090-approval-sub-flows
 title: "Approval Sub-flows, Provenance Lines and the Gate Run Contract"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-10-31
@@ -17,7 +17,7 @@ Date: 2026-10-31
 
 ## Status
 
-Proposed
+Accepted
 
 Implements part of [issue #4661](https://github.com/BrighterCommand/Brighter/issues/4661). Supersedes no prior ADR. This decision is about the project's own agent tooling, not its runtime. [ADR 0089](0089-slips-resolver-and-routing.md) is its accepted sibling.
 

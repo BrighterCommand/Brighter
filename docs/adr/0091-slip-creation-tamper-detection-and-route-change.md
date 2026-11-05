@@ -1,7 +1,7 @@
 ---
 id: 0091-slip-creation-tamper-detection-and-route-change
 title: "Slip Creation, Tamper Detection and Route Change"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-11-02
@@ -18,9 +18,9 @@ Date: 2026-11-02
 
 ## Status
 
-Proposed
+Accepted
 
-Implements part of [issue #4661](https://github.com/BrighterCommand/Brighter/issues/4661). Supersedes no prior ADR. This decision is about the project's own agent tooling, not its runtime. [ADR 0089](0089-slips-resolver-and-routing.md) (Accepted) and [ADR 0090](0090-approval-sub-flows.md) (Proposed) are its siblings.
+Implements part of [issue #4661](https://github.com/BrighterCommand/Brighter/issues/4661). Supersedes no prior ADR. This decision is about the project's own agent tooling, not its runtime. [ADR 0089](0089-slips-resolver-and-routing.md) and [ADR 0090](0090-approval-sub-flows.md) are its siblings.
 
 ## Context
 
