@@ -30,7 +30,7 @@ Phase 2 (starts only after T1.15 has merged)
   -> 2c T2.9..T2.24 incl. T2.16a (breaker view, coalesced writes, announcements, elapsed time)
   -> 2d T2.25..T2.38 (T2.37 retired) incl. T2.28a, T2.30a, T2.30b (timeouts, fallback, recovery, failure telemetry)
   -> 2e T2.39..T2.48 incl. T2.39a, T2.39c, T2.39d, T2.43a (mediator uses async role)
-  -> 2f T2.49..T2.51 (sweeper refresh) -> 2g T2.52..T2.56 (health signals)
+  -> 2f T2.49..T2.51 (sweeper refresh) -> 2g T2.52..T2.56 incl. T2.55a, T2.56a, T2.56b (health signals)
   -> 2h T2.57..T2.60 (SQL stores incl. T2.57a/b..T2.59a/b and T2.60a-c, real DBs) -> 2i T2.61..T2.65 (provisioning)
   -> 2j T2.66..T2.67 (real-DB acceptance) -> 2k T2.68..T2.69 (dependency guard, verification)
   -> 2l T2.70..T2.72 (ADR notes, release notes, Docs list)
@@ -1271,6 +1271,38 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.55a, T2.35
   - References: `tests/Paramore.Brighter.Core.Tests/Sweeping/When_the_sweep_is_blocked_indefinitely_should_complete_both_health_checks_within_a_second.cs`.
 
+- [ ] **CHARACTERISE: T2.56a - A breaker lookup that throws on an inactive running sweeper reports tripped_topics_unreadable**
+  - **USE COMMAND**: `/tdd:test-first when the breaker lookup throws on an inactive sweeper should report tripped topics unreadable`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
+  - Test file: `When_the_breaker_lookup_throws_on_an_inactive_sweeper_should_report_tripped_topics_unreadable.cs`
+  - Test should verify:
+    - The sweeper is running and inactive (last sweep `lock_unavailable`) and the breaker lookup delegate throws `InvalidOperationException`: the check is Degraded with `tripped_topics_unreadable`, remedy kind investigate, and the failure is logged at Error.
+    - The same inactive sweeper's gauge, with a lookup that throws: it records 0 and logs the gauge fault once.
+    - The sweeper is stopped and the lookup delegate throws: the check is Healthy, and a delegate that counts its calls shows the lookup is never called.
+  - 🔁 RED mutation (inactive bullets): return no tripped-topics condition for an inactive sweeper before calling the lookup (the pre-T2.53 `IsActive` gate), in the check and in `SweeperMeter.ObserveTrippedTopics`. The test must fail on the "check is Degraded" assertion and on the "logs the gauge fault" assertion. Revert.
+  - 🔁 RED mutation (stopped bullet): remove the check's `if (snapshot.IsStopped) return [];` early return. Assert the call count before the status, so the test fails on "the lookup is never called". Revert.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - Nothing. T2.52 and T2.53 call the lookup on any running sweeper, because the ladder needs to know whether the breaker shares trips. Owner decision (2026-11-05): a lookup that throws on an inactive sweeper is reported as on the active one.
+  - Covers: FR-8.3 (the owner-decision exception for the lookup). ADR 0089 *Health signals* and its *Amends* notes for ADRs 0085 and 0086.
+  - Depends on: T2.53
+  - References: `src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs` (`TrippedTopicsConditionOrNone`). `src/Paramore.Brighter/Observability/SweeperMeter.cs` (`ObserveTrippedTopics`). `tests/Paramore.Brighter.Core.Tests/Sweeping/When_reading_tripped_topics_throws_should_report_tripped_topics_unreadable.cs`.
+
+- [ ] **TEST + IMPLEMENT: T2.56b - Unreadable tripped topics do not hide the store-unavailable condition**
+  - **USE COMMAND**: `/tdd:test-first when reading tripped topics throws on a shared breaker in its fallback state should report unreadable and store unavailable`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
+  - Test file: `When_reading_tripped_topics_throws_on_a_shared_breaker_in_fallback_should_report_unreadable_and_store_unavailable.cs`
+  - Test should verify:
+    - RED: a shared breaker whose `TrippedTopics` throws and whose `StoreStatus` is `(IsUsingFallback: true, LastFailure: "timeout")`, on a running sweeper with three failed sweeps: the check is Degraded with `consecutive_failed_sweeps`, `tripped_topics_unreadable`, then `tripped_topics_store_unavailable` (`exception_type` = `timeout`), in that order.
+    - Guard, expected green on arrival: the same breaker with `IsUsingFallback: false` reports `tripped_topics_unreadable` only.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - Add `ThrowingSharedOutboxCircuitBreaker` in `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles` (one class per file): implements `IAmAnOutboxCircuitBreaker` and `IAmASharedOutboxCircuitBreaker`, `TrippedTopics` throws, `StoreStatus` returns the status it is given.
+    - In `TrippedTopicsConditionOrNone`, read the topic names and `StoreStatus` separately, so a throw from `TrippedTopics` adds `tripped_topics_unreadable` and the store condition is still evaluated. A throw from the lookup still reports `tripped_topics_unreadable` alone.
+  - Covers: FR-8.4, AC-28. ADR 0089 *health conditions* ("reports every condition that applies", in the order `consecutive_failed_sweeps`, `tripped_topics` or `tripped_topics_unreadable`, then `tripped_topics_store_unavailable`).
+  - Depends on: T2.55, T2.56a
+  - References: `src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs` (`TrippedTopicsConditionOrNone`). `tests/Paramore.Brighter.Core.Tests/Sweeping/TestDoubles/ThrowingOutboxCircuitBreaker.cs`.
+
 ### Phase 2h - SQL trip stores on real databases
 
 - [ ] **TEST + IMPLEMENT: T2.57 - The MsSql trip store passes the write contract against SQL Server**
@@ -1621,8 +1653,8 @@ Phase 2 (starts only after T1.15 has merged)
   - Add or extend a short amendment note in the Status section of each ADR that points to ADR 0089 and names the parts that change:
     - `docs/adr/0028-support-circuit-breaking-of-topics.md`: extend the T1.14a note to all three replaced decisions.
     - `docs/adr/0058-outbox-circuit-breaker-trip-logging.md`: extend the T1.14a note with the distributed announcer rules and the `circuit_breaker.cooldown_duration` span attribute.
-    - `docs/adr/0085-track-outbox-sweeper-state-and-publish-gauges.md`: no `IsActive` gating for shared breakers. Not `0085-gcp-purge-server-boundary.md`.
-    - `docs/adr/0086-sweeper-remedy-health-checks.md`: the new `tripped_topics` applies-when rule and `tripped_topics_store_unavailable`.
+    - `docs/adr/0085-track-outbox-sweeper-state-and-publish-gauges.md`: no `IsActive` gating for shared breakers, and the breaker lookup runs on every running sweeper (a throwing lookup records 0 and logs the fault on an inactive sweeper too). Not `0085-gcp-purge-server-boundary.md`.
+    - `docs/adr/0086-sweeper-remedy-health-checks.md`: the new `tripped_topics` applies-when rule, `tripped_topics_store_unavailable`, and the breaker lookup on every running sweeper (a throwing lookup reports `tripped_topics_unreadable` on an inactive sweeper too).
   - Update frontmatter with `/adr:write_adr_metadata` where relevant.
   - Confirm that ADR 0089 is Accepted and that ADR 0088 needs no amendment.
   - Covers: FR-9.1, AC-34 (ADR part). OQ-11. ADR step 16. Amendments to 0028/0058/0085/0086.
@@ -1706,8 +1738,8 @@ Phase 2 (starts only after T1.15 has merged)
 | FR-8 | T2.52 |
 | FR-8.1 | T2.52 |
 | FR-8.2 | T2.53 |
-| FR-8.3 | T2.54 |
-| FR-8.4 | T2.30, T2.30a, T2.30b, T2.55, T2.55a |
+| FR-8.3 | T2.54, T2.56a |
+| FR-8.4 | T2.30, T2.30a, T2.30b, T2.55, T2.55a, T2.56b |
 | FR-8.5 | T2.56 |
 | FR-8.6 | T1.7, T2.16, T2.16a, T2.17, T2.33 |
 | FR-8.7 | T2.72 |
@@ -1751,7 +1783,7 @@ Phase 2 (starts only after T1.15 has merged)
 | AC-25 | T2.48 |
 | AC-26 | T2.52, T2.53 |
 | AC-27 | T2.54 |
-| AC-28 | T2.55 |
+| AC-28 | T2.55, T2.56b |
 | AC-29 | T2.35, T2.56 |
 | AC-30 | T2.10, T2.11, T2.39 |
 | AC-31 | T1.15, T2.69 |
@@ -1815,15 +1847,15 @@ Every requirement and acceptance criterion maps to at least one task.
 | Step 9 | T2.25-T2.36, T2.38 (T2.28a, T2.30a, T2.30b included), T2.39c (AC-43) |
 | Step 10 | T2.39-T2.48, T2.39a, T2.39c, T2.39d, T2.43a |
 | Step 11 | T2.49-T2.51 |
-| Step 12 | T2.52-T2.56 (T2.55a included) |
+| Step 12 | T2.52-T2.56 (T2.55a, T2.56a, T2.56b included) |
 | Step 13 | T2.57-T2.59b |
 | Step 14 | T2.61-T2.65 |
 | Step 15 | T2.57-T2.60c, T2.63-T2.67 |
 | Step 16 | T1.14a, T2.70, T2.71, T2.72 |
 | Amend ADR 0028 | T1.14a, T2.70 (notes); behaviour in T1.4, T2.20 |
 | Amend ADR 0058 | T1.7, T1.14a, T2.17, T2.33, T2.70 |
-| Amend ADR 0085 | T2.49, T2.52, T2.70 |
-| Amend ADR 0086 | T2.53, T2.55, T2.70 |
+| Amend ADR 0085 | T2.49, T2.52, T2.56a, T2.70 |
+| Amend ADR 0086 | T2.53, T2.55, T2.56a, T2.70 |
 | ADR 0088 not amended | T2.55, T2.70 (confirmation) |
 | Risks and Mitigations table | T2.26 (cancellation), T2.60, T2.60a-T2.60c (deadlock), T2.67 (double insert), T2.31 (stale refresh), T2.50 (late timer), T2.63 (DDL drift), T2.72 (singleton, NTP) |
 
