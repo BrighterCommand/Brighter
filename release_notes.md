@@ -2,6 +2,19 @@
 
 ## Master
 
+### SQS requeue delay validation and FIFO ordering (#4691)
+
+The AWS SDK V3 and V4 SQS consumers now throw `ArgumentOutOfRangeException` for requeue
+delays below zero or above 12 hours when a receipt handle is present. Previously these
+values could be rounded into range, or rejected by AWS with `Requeue` returning false.
+This applies to both `Requeue` and `RequeueAsync`. Null still means zero, and valid delays
+retain their existing rounding to whole seconds. AWS may still reject a delay within
+this range if it exceeds the message's remaining visibility allowance; broker failures
+continue to return false.
+
+FIFO regression tests cover `DeferMessageAction` through Reactor and Proactor for both
+SDK versions. Deferral changes the existing message's visibility timeout, keeping later
+messages in its group behind it until the head is redelivered and acknowledged.
 ### SQLite outbox message-ID uniqueness (#4676)
 
 New text and binary SQLite outbox tables enforce case-insensitive `MessageId` uniqueness.
