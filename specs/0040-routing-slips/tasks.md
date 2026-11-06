@@ -122,7 +122,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Commit: `test:`. The run is expected to stay red until T2.1–T2.5.
   - Traces to: 0092 step 1, *Text blocks*, *The two scripts*, *Harness*; FR-24 (no framework, FAIL lines, non-zero exit); 0090 *What 0092 needs*. Depends on: T0.1.
 
-- [ ] **TEST + IMPLEMENT: T1.2 — The template-table parser splits cells on `|` only outside CommonMark code spans, and the `/adr:*` template rows are registered**
+- [x] **TEST + IMPLEMENT: T1.2 — The template-table parser splits cells on `|` only outside CommonMark code spans, and the `/adr:*` template rows are registered**
   - **USE COMMAND**: `/tdd:test-first when a template text cell holds a lone backtick inside a double-backtick code span the table parser should keep it as one cell`
   - Test file: `.claude/commands/spec/spec_text_tests.cs`.
   - Test should verify:
