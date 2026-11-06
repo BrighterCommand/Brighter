@@ -136,7 +136,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
     - Parse a canonical file's `| Template | Printed by | Text |` tables and each copy's `| Template | Text |` table.
   - Traces to: 0092 step 1, *Text blocks*; 0090 *Message templates*. Depends on: T1.1.
 
-- [ ] **TEST + IMPLEMENT: T1.3 — The ignore check proves git would track a spec's `.flow`, `.flow.record` and `route-changes.md`, and would ignore them for a `.log` name**
+- [x] **TEST + IMPLEMENT: T1.3 — The ignore check proves git would track a spec's `.flow`, `.flow.record` and `route-changes.md`, and would ignore them for a `.log` name**
   - **USE COMMAND**: `/tdd:test-first when git check-ignore --no-index is asked about a spec's routing files it should exit 1 for each including a directory name with a space and exit 0 for a name ending .log`
   - Test file: `.claude/commands/spec/spec_text_tests.cs`.
   - Test should verify:
