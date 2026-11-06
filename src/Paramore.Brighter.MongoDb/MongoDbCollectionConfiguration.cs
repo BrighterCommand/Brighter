@@ -39,5 +39,13 @@ public class MongoDbCollectionConfiguration
     /// If set, a TTL index will be configured on a specified field (e.g., `TimeStamp`)
     /// to automatically remove documents after this duration. A null value indicates no TTL is configured at this level.
     /// </summary>
+    /// <remarks>
+    /// When set, the TTL index is ensured on first collection access in every resolution mode,
+    /// including for existing collections. The database user must have permission to create indexes.
+    /// An identical index is reused. Conflicting index options or insufficient permissions cause
+    /// collection access to fail; Brighter does not replace or modify an existing index.
+    /// With <see cref="OnResolvingACollection.Assume"/>, creating the index can implicitly create
+    /// a missing collection. <see cref="OnResolvingACollection.Validate"/> still requires the collection to exist.
+    /// </remarks>
     public TimeSpan? TimeToLive { get; set; }
 }

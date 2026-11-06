@@ -44,7 +44,11 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// <para>
 /// SQLite outbox V1, like every relational outbox's, is the pre-<c>Dispatched</c> baseline.
 /// V8 adds <c>CausationId</c> plus a replay index on it.
-/// The accumulated <c>LogicalColumns</c> across V1..V8 equals the live builder's column set
+/// V9 enforces case-insensitive MessageId uniqueness without changing the column set.
+/// Its index check also participates in version detection for tables without migration history.
+/// Existing duplicates cause the migration to fail and roll back without deleting messages;
+/// resolve those duplicates before retrying provisioning.
+/// The accumulated <c>LogicalColumns</c> across V1..V9 equals the live builder's column set
 /// — verified by the drift test in <c>tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning</c>.
 /// </para>
 /// </remarks>
@@ -92,7 +96,7 @@ public class SqliteOutboxMigrationCatalog : IAmABoxMigrationCatalog
     /// Returns all migrations for the SQLite outbox, ordered by version.
     /// </summary>
     /// <param name="configuration">The relational database configuration.</param>
-    /// <returns>An ordered list of migrations from V1 to V8.</returns>
+    /// <returns>An ordered list of migrations from V1 to V9.</returns>
     public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
     {
         var table = configuration.OutBoxTableName;
@@ -163,7 +167,15 @@ public class SqliteOutboxMigrationCatalog : IAmABoxMigrationCatalog
                 UpScript: AddColumns(table, "CausationId") + Environment.NewLine + AddCausationIndex(table),
                 LogicalColumns: Cumulative(8),
                 SourceReference: "#2541",
-                IdempotencyCheckSql: ColumnExistsCheck(table, "CausationId"))
+                IdempotencyCheckSql: ColumnExistsCheck(table, "CausationId")),
+
+            new BoxMigration(
+                Version: 9,
+                Description: "Enforce case-insensitive MessageId uniqueness; resolve existing duplicates before retrying",
+                UpScript: $"CREATE UNIQUE INDEX [idx_{table}_MessageId] ON [{table}] ([MessageId] COLLATE NOCASE);",
+                LogicalColumns: Cumulative(9),
+                SourceReference: "#4676",
+                IdempotencyCheckSql: MessageIdUniquenessCheck(table))
         ];
     }
 
@@ -193,4 +205,15 @@ public class SqliteOutboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static string ColumnExistsCheck(string table, string column) =>
         $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name='{column}';";
+
+    private static string MessageIdUniquenessCheck(string table) =>
+        $"""
+        SELECT COUNT(*) FROM pragma_index_list('{table}') AS indexes
+        WHERE indexes.[unique] = 1 AND indexes.partial = 0
+          AND (SELECT COUNT(*) FROM pragma_index_xinfo(indexes.name) WHERE [key] = 1) = 1
+          AND EXISTS (
+              SELECT 1 FROM pragma_index_xinfo(indexes.name)
+              WHERE [key] = 1 AND name = 'MessageId' COLLATE NOCASE AND coll = 'NOCASE' COLLATE NOCASE
+          );
+        """;
 }

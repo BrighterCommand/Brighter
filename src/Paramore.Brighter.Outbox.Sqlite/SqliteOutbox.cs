@@ -27,6 +27,8 @@ using System;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -41,6 +43,8 @@ public class SqliteOutbox : RelationDatabaseOutbox
 {
     private const int SQLITE_DUPLICATE_KEY_ERROR = 1555;
     private const int SQLITE_UNIQUE_KEY_ERROR = 2067;
+    private readonly object _abandonedReadsLock = new();
+    private Task _abandonedReads = Task.CompletedTask;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SqliteOutbox" /> class.
@@ -94,5 +98,75 @@ public class SqliteOutbox : RelationDatabaseOutbox
         var reader = (SqliteDataReader)dr;
         var dataTime = reader.GetDateTimeOffset(ordinal);
         return dataTime; 
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Microsoft.Data.Sqlite runs a step that is blocked on a lock synchronously, so the token cannot interrupt it.
+    /// The read runs on its own thread and the caller stops waiting for it once the token is cancelled. That
+    /// thread stays busy until the read ends. A read blocked on a lock with no command timeout ends only when
+    /// the lock is released.
+    /// While a read whose caller stopped waiting has not ended, a later read with a token that can be cancelled
+    /// waits for it before it starts, and ends with <see cref="OperationCanceledException"/> without reading if its
+    /// own token is cancelled first.
+    /// </remarks>
+    protected override async Task<T> ReadFromStoreAsync<T>(
+        Func<DbConnection, DbCommand> commandFunc,
+        Func<DbDataReader, Task<T>> resultFunc,
+        CancellationToken cancellationToken)
+    {
+        if (!cancellationToken.CanBeCanceled)
+        {
+            return await base.ReadFromStoreAsync(commandFunc, resultFunc, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+        }
+
+        if (!await EndsBeforeCancellationAsync(AbandonedReads, cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
+
+        var read = Task.Run(() => base.ReadFromStoreAsync(commandFunc, resultFunc, cancellationToken), CancellationToken.None);
+        if (await EndsBeforeCancellationAsync(read, cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+        {
+            return await read.ConfigureAwait(ContinueOnCapturedContext);
+        }
+
+        Abandon(read);
+        throw new OperationCanceledException(cancellationToken);
+    }
+
+    private Task AbandonedReads
+    {
+        get
+        {
+            lock (_abandonedReadsLock)
+            {
+                return _abandonedReads;
+            }
+        }
+    }
+
+    private void Abandon(Task read)
+    {
+        var observed = read.ContinueWith(abandoned => abandoned.Exception, TaskScheduler.Default);
+        lock (_abandonedReadsLock)
+        {
+            _abandonedReads = _abandonedReads.IsCompleted ? observed : Task.WhenAll(_abandonedReads, observed);
+        }
+    }
+
+    private async Task<bool> EndsBeforeCancellationAsync(Task task, CancellationToken cancellationToken)
+    {
+        if (task.IsCompleted)
+        {
+            return true;
+        }
+
+        var cancelled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using (cancellationToken.Register(() => cancelled.TrySetResult(true)))
+        {
+            return await Task.WhenAny(task, cancelled.Task).ConfigureAwait(ContinueOnCapturedContext) == task;
+        }
     }
 }
