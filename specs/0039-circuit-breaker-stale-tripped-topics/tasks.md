@@ -1305,7 +1305,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2h - SQL trip stores on real databases
 
-- [ ] **TEST + IMPLEMENT: T2.57 - The MsSql trip store passes the write contract against SQL Server**
+- [x] **TEST + IMPLEMENT: T2.57 - The MsSql trip store passes the write contract against SQL Server**
   - **USE COMMAND**: `/tdd:test-first when the mssql trip store runs the write contract against a real database should pass every write contract case`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
   - Test file: `When_the_mssql_trip_store_runs_the_write_contract_should_pass.cs`
