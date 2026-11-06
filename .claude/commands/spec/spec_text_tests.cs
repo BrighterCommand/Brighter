@@ -22,10 +22,21 @@ var registry = new List<RoutingTextBlock>
         ])
 };
 
+var templateRegistry = new List<TemplateExpectation>
+{
+    new(".claude/commands/adr/README.md", ".claude/commands/adr/retire-superseded.md", ["Supersession question"]),
+    new(".claude/commands/adr/README.md", ".claude/commands/adr/report-approval.md", ["Report"])
+};
+
 var reporter = new Reporter();
+
+CheckParserSelfTest(reporter);
 
 foreach (var block in registry)
     CheckBlock(block, repositoryRoot, reporter);
+
+foreach (var expectation in templateRegistry)
+    CheckTemplates(expectation, repositoryRoot, reporter);
 
 return reporter.Summary();
 
@@ -96,9 +107,171 @@ List<string> ReadBlocks(string root, string file, string id)
     return blocks;
 }
 
+void CheckParserSelfTest(Reporter report)
+{
+    var rows = new (string Row, string[] Cells)[]
+    {
+        (
+            """| Route usage | `/spec:route` | ``/spec:route needs a target flow name and, if given, a --flows-dir without $, `, " or \. Usage: /spec:route {flow} [reason]. Nothing was changed.`` |""",
+            [
+                "Route usage",
+                "`/spec:route`",
+                """``/spec:route needs a target flow name and, if given, a --flows-dir without $, `, " or \. Usage: /spec:route {flow} [reason]. Nothing was changed.``"""
+            ]),
+        (
+            """| Spec name | `/spec:new`, starters | ``{command} needs a spec name that is not empty and has none of / \ $ ` ". Nothing was created.`` |""",
+            [
+                "Spec name",
+                "`/spec:new`, starters",
+                """``{command} needs a spec name that is not empty and has none of / \ $ ` ". Nothing was created.``"""
+            ])
+    };
+
+    foreach (var (row, expected) in rows)
+    {
+        report.Checked();
+        var actual = SplitCells(row);
+        if (!actual.SequenceEqual(expected))
+            report.Fail("table parser self-test", $"expected {expected.Length} cells for \"{expected[0]}\", got {actual.Count}: [{string.Join(" | ", actual)}]");
+    }
+}
+
+void CheckTemplates(TemplateExpectation expectation, string root, Reporter report)
+{
+    const string id = "templates";
+    var check = $"{id} in {expectation.File}";
+    report.Checked();
+
+    var canonical = ReadBlocks(root, expectation.CanonicalFile, id);
+    if (canonical.Count != 1)
+    {
+        report.Fail(check, canonical.Count == 0
+            ? $"canonical templates block missing from {expectation.CanonicalFile}"
+            : $"canonical templates block not unique in {expectation.CanonicalFile} ({canonical.Count} found)");
+        return;
+    }
+
+    var copies = ReadBlocks(root, expectation.File, id);
+    if (copies.Count != 1)
+    {
+        report.Fail(check, copies.Count == 0
+            ? $"templates block missing from {expectation.File}"
+            : $"templates block duplicated in {expectation.File} ({copies.Count} found)");
+        return;
+    }
+
+    CompareTemplates(expectation, ReadTemplates(canonical[0]), ReadTemplates(copies[0]), check, report);
+}
+
+void CompareTemplates(
+    TemplateExpectation expectation,
+    Dictionary<string, string> canonical,
+    Dictionary<string, string> copy,
+    string check,
+    Reporter report)
+{
+    foreach (var name in expectation.Names)
+    {
+        if (!canonical.TryGetValue(name, out var canonicalText))
+            report.Fail(check, $"template \"{name}\" missing from {expectation.CanonicalFile}");
+        else if (!copy.TryGetValue(name, out var copyText))
+            report.Fail(check, $"template \"{name}\" missing from {expectation.File}");
+        else if (copyText != canonicalText)
+            report.Fail(check, $"template \"{name}\" in {expectation.File} differs from {expectation.CanonicalFile}");
+    }
+
+    foreach (var name in copy.Keys.Except(expectation.Names))
+        report.Fail(check, $"unexpected template \"{name}\" in {expectation.File}");
+}
+
+Dictionary<string, string> ReadTemplates(string block)
+{
+    var templates = new Dictionary<string, string>();
+    foreach (var line in block.Split('\n').Select(l => l.Trim()).Where(l => l.StartsWith('|')))
+    {
+        var cells = SplitCells(line);
+        if (cells.Count >= 2 && cells[0] != "Template" && !cells[0].StartsWith("---"))
+            templates[cells[0]] = cells[^1];
+    }
+
+    return templates;
+}
+
+List<string> SplitCells(string row)
+{
+    var cells = new List<string>();
+    var cell = new StringBuilder();
+    var spanLength = 0;
+    for (var i = 0; i < row.Length; i++)
+    {
+        if (row[i] == '`')
+        {
+            var run = BacktickRunLength(row, i);
+            spanLength = NextSpanLength(row, i, run, spanLength);
+            cell.Append(row, i, run);
+            i += run - 1;
+        }
+        else if (row[i] == '|' && spanLength == 0)
+        {
+            cells.Add(cell.ToString().Trim());
+            cell.Clear();
+        }
+        else
+        {
+            cell.Append(row[i]);
+        }
+    }
+
+    cells.Add(cell.ToString().Trim());
+    return TrimEdgeCells(cells);
+}
+
+int BacktickRunLength(string text, int start)
+{
+    var end = start;
+    while (end < text.Length && text[end] == '`')
+        end++;
+    return end - start;
+}
+
+int NextSpanLength(string text, int runStart, int run, int spanLength)
+{
+    if (spanLength == run)
+        return 0;
+    if (spanLength == 0 && HasClosingRun(text, runStart + run, run))
+        return run;
+    return spanLength;
+}
+
+bool HasClosingRun(string text, int from, int run)
+{
+    for (var i = from; i < text.Length; i++)
+    {
+        if (text[i] != '`')
+            continue;
+        var length = BacktickRunLength(text, i);
+        if (length == run)
+            return true;
+        i += length - 1;
+    }
+
+    return false;
+}
+
+List<string> TrimEdgeCells(List<string> cells)
+{
+    if (cells.Count > 0 && cells[0].Length == 0)
+        cells.RemoveAt(0);
+    if (cells.Count > 0 && cells[^1].Length == 0)
+        cells.RemoveAt(cells.Count - 1);
+    return cells;
+}
+
 // Harness
 
 internal sealed record RoutingTextBlock(string Id, string CanonicalFile, IReadOnlyList<string> RequiredCopies);
+
+internal sealed record TemplateExpectation(string CanonicalFile, string File, IReadOnlyList<string> Names);
 
 internal sealed class Reporter
 {
