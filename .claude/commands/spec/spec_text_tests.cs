@@ -32,6 +32,8 @@ var reporter = new Reporter();
 
 CheckParserSelfTest(reporter);
 
+CheckIgnoreRules(repositoryRoot, reporter);
+
 foreach (var block in registry)
     CheckBlock(block, repositoryRoot, reporter);
 
@@ -105,6 +107,27 @@ List<string> ReadBlocks(string root, string file, string id)
     }
 
     return blocks;
+}
+
+void CheckIgnoreRules(string root, Reporter report)
+{
+    const int Ignored = 0;
+    const int NotIgnored = 1;
+    var probes = new (string Path, int ExpectedExit)[]
+    {
+        ("specs/9999-check ignore probe/.flow", NotIgnored),
+        ("specs/9999-check ignore probe/.flow.record", NotIgnored),
+        ("specs/9999-check ignore probe/route-changes.md", NotIgnored),
+        ("specs/9999-probe.log/.flow", Ignored)
+    };
+
+    foreach (var (path, expectedExit) in probes)
+    {
+        report.Checked();
+        var exit = RunGit(root, "check-ignore", "-q", "--no-index", path);
+        if (exit != expectedExit)
+            report.Fail("ignore check", $"git check-ignore -q --no-index \"{path}\" exited {exit}, expected {expectedExit}");
+    }
 }
 
 void CheckParserSelfTest(Reporter report)
@@ -268,6 +291,24 @@ List<string> TrimEdgeCells(List<string> cells)
 }
 
 // Harness
+
+int RunGit(string workingDirectory, params string[] arguments)
+{
+    var start = new ProcessStartInfo("git")
+    {
+        WorkingDirectory = workingDirectory,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true
+    };
+    foreach (var argument in arguments)
+        start.ArgumentList.Add(argument);
+
+    using var process = Process.Start(start)!;
+    process.StandardOutput.ReadToEnd();
+    process.StandardError.ReadToEnd();
+    process.WaitForExit();
+    return process.ExitCode;
+}
 
 internal sealed record RoutingTextBlock(string Id, string CanonicalFile, IReadOnlyList<string> RequiredCopies);
 
