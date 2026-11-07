@@ -212,7 +212,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 
 *0089 steps 1–2. Step 1's prerequisite (0090 step 1) is met by Phase 2.*
 
-- [ ] **STRUCTURAL: T3.1 — Add `.claude/flows/feature.flow` and `.claude/flows/approvals.md`**
+- [x] **STRUCTURAL: T3.1 — Add `.claude/flows/feature.flow` and `.claude/flows/approvals.md`**
   - Do:
     - `feature.flow` is exactly 0089's *slip format* block: FR-4's table, `hand-off: /spec:implement`, and no detours.
     - `approvals.md` has the header `# approvals`, then `| requirements | (empty) |`, `| design | /adr:accept, /adr:retire-superseded, /adr:regenerate-index, /adr:report-approval |` and `| tasks | (empty) |`.
