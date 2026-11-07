@@ -305,7 +305,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add R2.
   - Traces to: FR-3; AC-3; FR-24. Depends on: T5.3.
 
-- [ ] **TEST + IMPLEMENT: T5.5 — R3: two steps naming one marker is invalid**
+- [x] **TEST + IMPLEMENT: T5.5 — R3: two steps naming one marker is invalid**
   - **USE COMMAND**: none — RED-first row `definition-r03-duplicate-marker`.
   - Fixture: `flows-rules/r03-duplicate-marker.flow`.
   - Test should verify: R3 `duplicate-marker`, `Marker {marker} is named by more than one step ({steps}).`
