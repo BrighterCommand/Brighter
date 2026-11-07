@@ -1416,7 +1416,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.8, T2.5, T2.2
   - References: `src/Paramore.Brighter.Outbox.MySql/MySqlOutboxBuilder.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.59a - The MySql trip store marks ended rows and gives each to one caller**
+- [x] **TEST + IMPLEMENT: T2.59a - The MySql trip store marks ended rows and gives each to one caller**
   - **USE COMMAND**: `/tdd:test-first when the mysql trip store ends trips against a real database should mark ended rows for exactly one caller and never delete one`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
   - Test files: `When_readers_race_over_an_ended_row_should_return_it_to_exactly_one.cs`, `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs` and `When_a_read_ends_a_trip_should_mark_the_row_and_never_delete_it.cs`
