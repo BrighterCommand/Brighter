@@ -1,11 +1,11 @@
 #nullable enable
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
 const int SuccessExitCode = 0;
 const int UsageErrorExitCode = 1;
-const int SchemaVersion = 1;
 
 // The read-only route resolver (spec 0040, ADR 0089). Run from the repository root:
 // dotnet run .claude/commands/spec/resolve_route.cs -- {specs-root} {mode} [--flows-dir {dir}]
@@ -19,11 +19,7 @@ if (invocation is null)
 
 if (invocation.Mode == RouteMode.Definition)
 {
-    ReportWriter.Write(new JsonObject
-    {
-        ["schema_version"] = SchemaVersion,
-        ["mode"] = "definition"
-    });
+    ReportWriter.Write(DefinitionReport.For(invocation));
 }
 
 return SuccessExitCode;
@@ -89,6 +85,49 @@ internal sealed record Invocation(string SpecsRoot, RouteMode Mode, string? Targ
 
         flowsDirectory = options[1];
         return true;
+    }
+}
+
+internal static class ReportSchema
+{
+    public const int Version = 1;
+}
+
+internal static class SlipReader
+{
+    private static readonly UTF8Encoding KeepsByteOrderMark = new(false);
+
+    public static IReadOnlyList<string> ReadLines(string path) =>
+        KeepsByteOrderMark.GetString(File.ReadAllBytes(path))
+            .Replace("\r\n", "\n")
+            .Split('\n')
+            .Select(line => line.TrimEnd(' ', '\t'))
+            .ToList();
+}
+
+internal static class DefinitionReport
+{
+    private const string FlowExtension = ".flow";
+
+    public static JsonObject For(Invocation invocation)
+    {
+        var name = invocation.Target!;
+        var path = Path.Combine(invocation.FlowsDirectory!, name + FlowExtension);
+        var lines = SlipReader.ReadLines(path);
+        return new JsonObject
+        {
+            ["schema_version"] = ReportSchema.Version,
+            ["mode"] = "definition",
+            ["flow"] = new JsonObject
+            {
+                ["name"] = name,
+                ["source"] = "definition",
+                ["definition_present"] = lines.Count > 0
+            },
+            ["valid"] = true,
+            ["violations"] = new JsonArray(),
+            ["stop"] = null
+        };
     }
 }
 
