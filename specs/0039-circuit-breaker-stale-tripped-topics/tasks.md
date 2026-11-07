@@ -15,6 +15,7 @@ Conventions:
 - Production code in a `TEST + IMPLEMENT` task is limited to what that task's test requires. Behaviour that a later test specifies is added by that later task, not early.
 - One deliberate exception to the rule above: a multi-topic store write applies its topics in ordinal topic order (T2.57-T2.59a, the SQL stores; the in-memory store of T2.8 holds one lock and needs no order), because the ADR forbids any other order (deadlock avoidance) and no single-write contract test can fail on it. T2.60 pins that order for the SQL stores with a named 🔁 RED mutation and the real-database deadlock tests.
 - STRUCTURAL tasks: the named suites must be green before and after.
+- `tasks.md` is amended during implementation when a refactoring or a review shows the task list is wrong; the owner approves each amendment (2026-11-07, after the Phase 2h smells review), and the commit that makes it says so.
 - Commit shape for a behavioural task: a `feat:` (or `test:`) commit for the code, then a separate `docs:` commit that ticks the box in this file.
 - Production SQL stores are tested only against real databases (MsSql, PostgreSql, MySql). Each store has its own test files with the assertions written out, one file per case, and no abstract test class shares them: the in-memory store's are in `Core.Tests` (Phase 2b), and each SQL test project repeats the same cases against its database, using a setup-only base class that creates and drops the trip table.
 
@@ -31,7 +32,7 @@ Phase 2 (starts only after T1.15 has merged)
   -> 2d T2.25..T2.38 (T2.37 retired) incl. T2.28a, T2.30a, T2.30b (timeouts, fallback, recovery, failure telemetry)
   -> 2e T2.39..T2.48 incl. T2.39a, T2.39c, T2.39d, T2.43a (mediator uses async role)
   -> 2f T2.49..T2.51 (sweeper refresh) -> 2g T2.52..T2.56 incl. T2.55a, T2.56a, T2.56b (health signals)
-  -> 2h T2.57..T2.60 (SQL stores incl. T2.57a/b..T2.59a/b and T2.60a-c, real DBs) -> 2i T2.61..T2.65 (provisioning)
+  -> 2h T2.57..T2.60 (SQL stores incl. T2.57a/b..T2.59a/b, the shared base T2.59c..T2.59e and T2.60a-c, real DBs) -> 2i T2.61..T2.65 (provisioning)
   -> 2j T2.66..T2.67 (real-DB acceptance) -> 2k T2.68..T2.69 (dependency guard, verification)
   -> 2l T2.70..T2.72 (ADR notes, release notes, Docs list)
 ```
@@ -1446,6 +1447,38 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.59a
   - References: `src/Paramore.Brighter.Outbox.MySql/MySqlOutboxBuilder.cs`. ADR 0089 *The trip table and the SQL stores*.
 
+- [ ] **DOC: T2.59c - Amend ADR 0089 for the shared base class `RelationDatabaseTrippedTopicStore`**
+  - Amend ADR 0089 (*Key Components*, *The roles, and what each is responsible for*, *Where the pieces live*, *Where each type is touched* and the FR-7.4 line of *Scope*) to say that the three SQL trip stores derive from a public abstract class `RelationDatabaseTrippedTopicStore` in `Paramore.Brighter`, modelled on `RelationDatabaseOutbox`. Add an amendment note to its Status section, as ADRs 0028, 0085 and 0086 do for this spec.
+    - **The base holds** what the three stores repeat: the constructor arguments (connection provider, table name, optional command timeout), the rule that a write names each topic once and applies topics in ordinal order, the command timeout rounded up to whole seconds with a minimum of one, command and parameter creation, row-to-`TopicTrip`/`TripWriteResult` mapping, and (from T2.60a) the retry-once-on-deadlock template `RunWithDeadlockRetryAsync` with a protected virtual `IsDeadlock(Exception)` that returns false.
+    - **Each derived store keeps** its dialect: the SQL text and quoting, `GetDDL`, `GetPurgeSql`, the shape of its write and read (one batch on MsSql, one `INSERT ... RETURNING` on PostgreSql, an upsert plus `SELECT` and a `REPEATABLE READ` read on MySql), its `IsDeadlock` predicate, and connection and transaction handling, because core targets `netstandard2.0` and cannot assume async disposal.
+    - The stores' public constructors, `GetDDL` and `GetPurgeSql` do not change. The base class is new public API in an unreleased package, additive, and needs no `InternalsVisibleTo`.
+  - Covers: FR-7.4, NFR-7, NFR-9 (one retry template). ADR step 13.
+  - Depends on: T2.59b
+  - References: `docs/adr/0089-distributed-outbox-circuit-breaker.md`. `src/Paramore.Brighter/RelationDatabaseOutbox.cs` (the pattern).
+
+- [ ] **STRUCTURAL: T2.59d - Extract `RelationDatabaseTrippedTopicStore` from the three SQL trip stores**
+  - **USE COMMAND**: `/refactor:tidy-first extract a RelationDatabaseTrippedTopicStore base class in core, following RelationDatabaseOutbox, and derive MsSqlTrippedTopicStore, PostgreSqlTrippedTopicStore and MySqlTrippedTopicStore from it to remove Duplicated Code`
+  - Change:
+    - Add `public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore` in `src/Paramore.Brighter/CircuitBreaker/`, with the responsibilities T2.59c lists, as protected members. Each store's public constructor, `GetDDL` and `GetPurgeSql` keep their signatures.
+    - Move `InOrdinalTopicOrder`, `WholeSecondsAtLeastOne`, `CreateCommand`, `AddParameter` and the row mapping out of the three stores into the base. Leave each store's SQL, quoting, and write and read shape where they are.
+    - Do not add the deadlock retry here (T2.60a adds it) and change no SQL.
+    - The base compiles for `netstandard2.0`: no `await using`, `DisposeAsync` or `BeginTransactionAsync` in core. A store that wants them keeps that code.
+  - Green before and after: every `*TrippedTopicStore*` test in `Paramore.Brighter.MSSQL.Tests` (net10.0 and net9.0), `Paramore.Brighter.PostgresSQL.Tests` and `Paramore.Brighter.MySQL.Tests`, and `Paramore.Brighter.Core.Tests/CircuitBreaker`. Build `Paramore.Brighter`, `Outbox.MsSql`, `Outbox.PostgreSql` and `Outbox.MySql` for every target framework.
+  - Covers: ADR step 13. Smells review of 2026-11-07, finding 1.
+  - Depends on: T2.59c
+  - References: `src/Paramore.Brighter.Outbox.MsSql/MsSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.MySql/MySqlTrippedTopicStore.cs`. `src/Paramore.Brighter/RelationDatabaseOutbox.cs`.
+
+- [ ] **STRUCTURAL: T2.59e - Share the SQL trip store tests' setup and recording doubles through `Base.Test`**
+  - **USE COMMAND**: `/refactor:tidy-first move the Recording test doubles into Paramore.Brighter.Base.Test and give the three trip store test setup bases a shared RelationDatabaseTrippedTopicStoreTestBase, following RelationDatabaseOutboxTest`
+  - Change:
+    - Move `RecordedCommand`, `RecordingConnectionProvider`, `RecordingDbCommand` and `RecordingDbConnection` from the three `TestDoubles` folders into one set in `tests/Paramore.Brighter.Base.Test/CircuitBreaker/`. Delete the copies.
+    - Add `RelationDatabaseTrippedTopicStoreTestBase` there: the table name, the `IAsyncLifetime` that runs the DDL and drops the table, and the `Store` property, with abstract members for the connection provider, the DDL, the drop statement and the store's construction. Each project's `…TrippedTopicStoreTestBase` shrinks to those four members.
+    - The test cases stay one per file in each project with their assertions written out. Only setup and doubles are shared.
+  - Green before and after: every `*TrippedTopicStore*` test in the three SQL test projects.
+  - Covers: smells review of 2026-11-07, findings 1 and 3.
+  - Depends on: T2.59d
+  - References: `tests/Paramore.Brighter.Base.Test/Outbox/RelationDatabaseOutboxTest.cs` (the pattern). The three `TestDoubles` folders and `*TrippedTopicStoreTestBase.cs` files.
+
 - [ ] **TEST + IMPLEMENT: T2.60a - The MsSql trip store retries a deadlock once against SQL Server**
   - **USE COMMAND**: `/tdd:test-first when the mssql trip store write is chosen as a deadlock victim on a real database should retry once and succeed`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
@@ -1459,10 +1492,10 @@ Phase 2 (starts only after T1.15 has merged)
     - Only the retry-once case is tested. A second deadlock cannot be provoked on demand on a real database, so that the helper retries exactly once and never loops is checked in review, not by a test.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Wrap the store's write and read transactions in a retry-once on SQL Server error 1205. Use no test-only seam and no `InternalsVisibleTo`; the test drives a real database.
+    - Add `RunWithDeadlockRetryAsync` to `RelationDatabaseTrippedTopicStore`, which retries its operation once and never loops, with a protected virtual `IsDeadlock(Exception)` that returns false. Wrap the write and the read of every store in it. `MsSqlTrippedTopicStore` overrides `IsDeadlock` for SQL Server error 1205, so only MsSql retries until T2.60b and T2.60c. Use no test-only seam and no `InternalsVisibleTo`; the test drives a real database.
   - Covers: NFR-9. ADR risk "Two instances' batches deadlock".
-  - Depends on: T2.57b
-  - References: `src/Paramore.Brighter.Outbox.MsSql/`. ADR 0089 *Risks and Mitigations*.
+  - Depends on: T2.57b, T2.59e
+  - References: `src/Paramore.Brighter/CircuitBreaker/RelationDatabaseTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.MsSql/`. ADR 0089 *Risks and Mitigations*.
 
 - [ ] **TEST + IMPLEMENT: T2.60b - The PostgreSql trip store retries a deadlock once against PostgreSQL**
   - **USE COMMAND**: `/tdd:test-first when the postgresql trip store write is chosen as a deadlock victim on a real database should retry once and succeed`
@@ -1476,9 +1509,9 @@ Phase 2 (starts only after T1.15 has merged)
     - Only the retry-once case is tested. A second deadlock cannot be provoked on demand on a real database, so that the helper retries exactly once and never loops is checked in review, not by a test.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Wrap the store's write and read transactions in a retry-once on SQLSTATE 40P01. Use no test-only seam and no `InternalsVisibleTo`; the test drives a real database.
+    - Override `IsDeadlock` in `PostgreSqlTrippedTopicStore` for SQLSTATE 40P01. The retry template and the wrapping of the write and read are the base class's, from T2.60a. Use no test-only seam and no `InternalsVisibleTo`; the test drives a real database.
   - Covers: NFR-9. ADR risk "Two instances' batches deadlock".
-  - Depends on: T2.58b
+  - Depends on: T2.58b, T2.60a
   - References: `src/Paramore.Brighter.Outbox.PostgreSql/`. ADR 0089 *Risks and Mitigations*.
 
 - [ ] **TEST + IMPLEMENT: T2.60c - The MySql trip store retries a deadlock once against MySQL**
@@ -1493,9 +1526,9 @@ Phase 2 (starts only after T1.15 has merged)
     - Only the retry-once case is tested. A second deadlock cannot be provoked on demand on a real database, so that the helper retries exactly once and never loops is checked in review, not by a test.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Wrap the store's write and read transactions in a retry-once on ER_LOCK_DEADLOCK (1213). Use no test-only seam and no `InternalsVisibleTo`; the test drives a real database.
+    - Override `IsDeadlock` in `MySqlTrippedTopicStore` for ER_LOCK_DEADLOCK (1213). The retry template and the wrapping of the write and read are the base class's, from T2.60a. Use no test-only seam and no `InternalsVisibleTo`; the test drives a real database.
   - Covers: NFR-9. ADR risk "Two instances' batches deadlock".
-  - Depends on: T2.59b
+  - Depends on: T2.59b, T2.60a
   - References: `src/Paramore.Brighter.Outbox.MySql/`. ADR 0089 *Risks and Mitigations*.
 
 - [ ] **CHARACTERISE: T2.60 - Overlapping batch writes and reads do not deadlock on any backend**
@@ -1848,7 +1881,7 @@ Every requirement and acceptance criterion maps to at least one task.
 | Step 10 | T2.39-T2.48, T2.39a, T2.39c, T2.39d, T2.43a |
 | Step 11 | T2.49-T2.51 |
 | Step 12 | T2.52-T2.56 (T2.55a, T2.56a, T2.56b included) |
-| Step 13 | T2.57-T2.59b |
+| Step 13 | T2.57-T2.59e |
 | Step 14 | T2.61-T2.65 |
 | Step 15 | T2.57-T2.60c, T2.63-T2.67 |
 | Step 16 | T1.14a, T2.70, T2.71, T2.72 |
@@ -1868,6 +1901,7 @@ AC-12 to AC-15 and AC-19 part 1 are verified at breaker level (T2.20-T2.23, T2.2
 No task lacks a trace to a requirement or an ADR decision. Several tasks trace to the ADR rather than to a single FR, and are kept on purpose:
 
 - **T2.2** (test project package references for T2.66 and T2.67): the SQL test projects need them to assert the breaker's telemetry.
+- **T2.59c-T2.59e**: the shared `RelationDatabaseTrippedTopicStore` and test setup, found by the Phase 2h smells review. They carry no new requirement; they remove the duplication across the three SQL stores and put the deadlock retry in one place (T2.60a).
 - **T2.26, T2.28a, T2.31, T2.60, T2.60a-T2.60c**: risk mitigations named in ADR 0089 *Risks and Mitigations* and *How the remaining small points are settled*.
 - **T2.17**: the `circuit_breaker.cooldown_duration` span attribute is an ADR 0058 extension that ADR 0089 decides. It is not in the requirements.
 
