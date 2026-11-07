@@ -1352,7 +1352,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.57a
   - References: `src/Paramore.Brighter.Outbox.MsSql/SqlOutboxBuilder.cs` (`GetDDL` pattern). `tests/Paramore.Brighter.MSSQL.Tests/MsSqlTestHelper.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.58 - The PostgreSql trip store passes the write cases against PostgreSQL**
+- [x] **TEST + IMPLEMENT: T2.58 - The PostgreSql trip store passes the write cases against PostgreSQL**
   - **USE COMMAND**: `/tdd:test-first when the postgresql trip store is written to against a real database should keep the later stamp, read microsecond stamps back equal and reject a repeated topic`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
   - Test files: `When_a_trip_is_written_should_keep_the_later_stamp_and_return_the_prior.cs`, `When_a_microsecond_stamp_is_written_should_read_back_equal.cs` and `When_a_write_repeats_a_topic_should_reject_it_and_change_nothing.cs`, plus a setup-only base class `PostgreSqlTrippedTopicStoreTestBase.cs` that creates the table from `GetDDL` and drops it after each test
