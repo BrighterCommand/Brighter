@@ -397,7 +397,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add `ApprovalTableReader`, then R12 (a), (b) and (c), and evaluate (b) and (c) even when R0 fires.
   - Traces to: FR-3, FR-29; AC-74 (definition side); FR-24 (two entries). Depends on: T5.13.
 
-- [ ] **TEST + IMPLEMENT: T5.15 — R13: the last step must be kind `tasks`, with artefact `tasks.md` and marker `.tasks-approved`**
+- [x] **TEST + IMPLEMENT: T5.15 — R13: the last step must be kind `tasks`, with artefact `tasks.md` and marker `.tasks-approved`**
   - **USE COMMAND**: none — RED-first row `definition-r13-last-not-tasks`.
   - Fixture: `flows-rules/r13-last-not-tasks.flow`.
   - Test should verify: R13 with 0089's message.
