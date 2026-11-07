@@ -353,7 +353,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add R8.
   - Traces to: FR-3; AC-53. Depends on: T5.9.
 
-- [ ] **TEST + IMPLEMENT: T5.11 — R9: a command that approves step N and produces a step other than N+1 is invalid**
+- [x] **TEST + IMPLEMENT: T5.11 — R9: a command that approves step N and produces a step other than N+1 is invalid**
   - **USE COMMAND**: none — RED-first row `definition-r09-gate-not-adjacent`.
   - Fixture: `flows-rules/r09-gate-not-adjacent.flow`, with the marker-writer of step 1 named as the producer of step 3 (AC-53).
   - Test should verify: R9, `{command} approves step {n} but produces step {m}, which does not immediately follow it.`
