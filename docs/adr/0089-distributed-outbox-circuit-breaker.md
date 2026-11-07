@@ -23,6 +23,8 @@ Accepted
 
 This ADR amends ADR 0028 (`0028-support-circuit-breaking-of-topics.md`), ADR 0085 (`0085-track-outbox-sweeper-state-and-publish-gauges.md`) and ADR 0086 (`0086-sweeper-remedy-health-checks.md`). It also amends ADR 0058 (`0058-outbox-circuit-breaker-trip-logging.md`): the Reset log names its cause, and the distributed breaker has its own announcer rules and span tag. *Scope* lists exactly which parts change.
 
+Amended 2026-11-07, during Phase 2 implementation: the three SQL trip stores derive from a public abstract class, `RelationDatabaseTrippedTopicStore`, in `Paramore.Brighter`, modelled on `RelationDatabaseOutbox`. A smells review of the first three stores found the same rules written out three times. See *The shared base class for the SQL stores*. No decision above changes: the roles, the table, the SQL operations and the constructors are as written.
+
 ## Context
 
 The outbox sweeper leaves a circuit-broken topic out of its sweeps until the topic's cooldown ends. Today the cooldown is a count of sweeps, kept in each process, and it advances only on a sweep that obtained the distributed lock. An instance that stops obtaining the lock keeps its trips for ever, and when it next obtains the lock it holds back messages for a topic whose broker recovered long ago. No other instance can see or end those trips, and the health signals hide them rather than end them.
@@ -62,7 +64,7 @@ The requirements' *Definitions* section defines **instance**, **deployment**, **
 - **FR-5, FR-5.1, FR-5.3 to FR-5.8**: a store failure or timeout leaves the breaker on its fallback view. The view is bounded by the trip length, and the fallback state follows the read-failed and unshared rules exactly.
 - **FR-6, FR-6.1, FR-6.2**: unchanged per-topic exclusion through `OutstandingMessagesAsync`.
 - **FR-7.1, FR-7.3**: Brighter still registers no breaker. The user registers the distributed breaker as a singleton.
-- **FR-7.4, NFR-7**: `InMemoryTrippedTopicStore` in core. `MsSqlTrippedTopicStore`, `PostgreSqlTrippedTopicStore` and `MySqlTrippedTopicStore` in the existing Outbox packages, with provisioning in the existing BoxProvisioning packages.
+- **FR-7.4, NFR-7**: `InMemoryTrippedTopicStore` in core. `MsSqlTrippedTopicStore`, `PostgreSqlTrippedTopicStore` and `MySqlTrippedTopicStore` in the existing Outbox packages, deriving from `RelationDatabaseTrippedTopicStore` in core, with provisioning in the existing BoxProvisioning packages.
 - **NFR-6 (C half)**: stamps are instance time taken when the trip occurs. Every judgement that a trip has ended uses the trip length.
 - **FR-8.6 (distributed)**: the announcer rules in *How a write is announced* and *How a read ends trips*. The counter's attribute set does not change.
 - **FR-8.1, FR-8.2, FR-8.5, FR-8.7**: a breaker that implements `IAmASharedOutboxCircuitBreaker` is reported on every running sweeper from its view, without `IsActive` gating.
@@ -272,6 +274,7 @@ flowchart LR
         Async["IAmAnOutboxCircuitBreakerAsync and IAmATripBatch (new)"]
         Shared["IAmASharedOutboxCircuitBreaker (new)"]
         StoreRole["IAmATrippedTopicStore (new)"]
+        RelStore["RelationDatabaseTrippedTopicStore (new, abstract)"]
         InMem["InMemoryOutboxCircuitBreaker (time bound, Phase 1)"]
         Dist["DistributedOutboxCircuitBreaker (new)"]
         MemStore["InMemoryTrippedTopicStore (new)"]
@@ -286,6 +289,7 @@ flowchart LR
         Dist --> StoreRole
         Dist --> Opts
         MemStore --> StoreRole
+        RelStore --> StoreRole
         Mediator --> IFace
         Mediator --> Async
         Meter --> Shared
@@ -307,7 +311,7 @@ flowchart LR
     end
     Sweeper --> Shared
     Check --> Shared
-    SqlStores --> StoreRole
+    SqlStores --> RelStore
     TripProv --> BoxTypeNode
     Catalogs --> SqlStores
     AddExt --> TripProv
@@ -329,7 +333,8 @@ Every dependency points into core, or from a BoxProvisioning backend package int
 | Declares that trips are shared, and reports on the store | `IAmASharedOutboxCircuitBreaker` (core, new role) | Starts a refresh without blocking; reports the fallback state and the latest failure | doing, knowing | `TimedOutboxSweeper`, `SweeperMeter`, `OutboxSweeperInvestigateHealthCheck` |
 | Stores trips durably for a deployment | `IAmATrippedTopicStore` (core, new role) | Upserts the later stamp and returns the prior; marks ended rows and returns exactly those; reads unmarked rows | knowing, doing | the database |
 | Stores trips in memory, for tests | `InMemoryTrippedTopicStore` (core, new) | The store contract under one lock | knowing, doing | none |
-| Stores trips in one SQL dialect | `MsSqlTrippedTopicStore`, `PostgreSqlTrippedTopicStore`, `MySqlTrippedTopicStore` (Outbox packages, new) | The store contract in that dialect; publishes its DDL | doing | `IAmARelationalDbConnectionProvider` |
+| Holds what the SQL stores share | `RelationDatabaseTrippedTopicStore` (core, new, abstract) | Rejects a write that names a topic twice and orders topics ordinally; rounds the command timeout up to whole seconds; creates commands and parameters; maps rows to `TopicTrip` and `TripWriteResult`; retries once on a deadlock the derived store recognises | knowing, doing | `IAmARelationalDbConnectionProvider` |
+| Stores trips in one SQL dialect | `MsSqlTrippedTopicStore`, `PostgreSqlTrippedTopicStore`, `MySqlTrippedTopicStore` (Outbox packages, new) | The store contract in that dialect: its SQL and quoting, its write and read shape, its deadlock predicate and its connection and transaction handling; publishes its DDL and purge SQL | doing | `RelationDatabaseTrippedTopicStore`, `IAmARelationalDbConnectionProvider` |
 | Provisions the trip table | `TrippedTopicsProvisioner` (BoxProvisioning, new) | Runs the backend's migration runner for the trip table | doing | `IAmABoxMigrationRunner` |
 | Knows the trip table's migrations | `{Backend}TrippedTopicsMigrationCatalog` (BoxProvisioning backends, new) | Returns the V1 migration and the fresh-install DDL | knowing | the backend's store `GetDDL` |
 | Starts refreshes on its schedule | `TimedOutboxSweeper` (Outbox.Hosting, changed) | Requests a refresh on each tick and while a sweep overruns | doing | `IAmASharedOutboxCircuitBreaker`, `TimeProvider` |
@@ -476,6 +481,20 @@ The topic length and the collation match the outbox's `Topic` column in each dia
 
 SQL Server and PostgreSQL evaluate every right-hand side of `SET` against the old row. MySQL evaluates assignments left to right, so `PriorTripTime` is assigned first, `EndedAt` second and `TripTime` last, and each assignment reads only columns that are not yet assigned, so every one sees the old row. The `VALUES()` form works on every MySQL 8.0 release and on MariaDB. MySQL deprecates it from 8.0.20, and a later store version can move to the row alias. SQL Server has no `GREATEST` before 2022, so the store uses `CASE`. `Live` is whatever the final `SELECT` returns for unmarked rows, that is rows with a NULL `EndedAt`. The batch does not remove an `Ended` topic from `Live` by name, so a row that another instance revived between the two statements stays live. The MySQL store sets `REPEATABLE READ` for the read transaction so that the locking `SELECT` and the `UPDATE` see the same rows. Writing topics in ordinal order gives every instance the same lock order, which prevents deadlocks between overlapping batches. Each store publishes `public static string GetDDL(string tableName, string? schemaName = null)`, as the outbox builders do (`SqlOutboxBuilder.GetDDL`), for users who do not use box provisioning. Each store also publishes `GetPurgeSql(string tableName, string? schemaName = null)`, a parameterised `DELETE` of the rows whose `EndedAt` is earlier than the UTC timestamp bound to the parameter `@EndedBefore`. The operator picks the retention by choosing that timestamp, so the method takes no retention argument, and it deletes only marked rows, never an unmarked one. Brighter never runs it. An operator runs it under an account with `DELETE` permission, so the application account needs only `SELECT`, `INSERT` and `UPDATE`.
 
+#### The shared base class for the SQL stores
+
+`RelationDatabaseTrippedTopicStore` is a public abstract class in `Paramore.Brighter.CircuitBreaker` that implements `IAmATrippedTopicStore`. It follows `RelationDatabaseOutbox`: core holds what the dialects share, protected, and each Outbox package derives a store that supplies its dialect. The base is public because the stores live in other assemblies and `InternalsVisibleTo` is not used. Its members are `protected`, so the public surface that Brighter's users depend on is the type itself and the stores' constructors, `GetDDL` and `GetPurgeSql`, which do not change. The type is new and unreleased, so adding it is source compatible.
+
+| The base holds | Each derived store holds |
+| --- | --- |
+| The constructor's connection provider, table name and optional command timeout | Its SQL text and identifier quoting |
+| The rule that a write names each topic once (`ArgumentException`) and applies topics in ordinal order | The shape of its write and read: one batch on MsSql, one `INSERT ... RETURNING` on PostgreSql, an upsert plus a `SELECT` and a `REPEATABLE READ` read on MySql |
+| The command timeout rounded up to whole seconds, minimum one, applied to every command | Its `IsDeadlock` predicate: SQL Server 1205, PostgreSQL SQLSTATE 40P01, MySQL ER_LOCK_DEADLOCK 1213 |
+| Command and parameter creation, and mapping rows to `TopicTrip` and `TripWriteResult` | Connection and transaction handling |
+| `RunWithDeadlockRetryAsync`, which runs an operation, retries it once when `IsDeadlock` says its failure was a deadlock, and never loops. `IsDeadlock` is protected virtual and returns false | Its `GetDDL` and `GetPurgeSql` |
+
+Connection and transaction handling stays in the derived stores because `Paramore.Brighter` and `Paramore.Brighter.Outbox.MsSql` target `netstandard2.0`, which has no `await using`, `DisposeAsync` or `BeginTransactionAsync`. The PostgreSql and MySql stores can use them, and the MsSql store cannot, so the base assumes none of them. The retry is written once, so the deadlock tests per backend (T2.60a to T2.60c) check the predicate and the retry against a real database and the second-deadlock case is checked in review once, not three times. The base does not depend on a dialect, so no test reaches it other than through a derived store.
+
 #### Provisioning the trip table
 
 `BoxType` gains a third value, `TrippedTopics`, appended so that existing values keep their numbers. `BoxProvisioningHostedService.OrderingOrdinal` orders it after outboxes and before inboxes. `TrippedTopicsProvisioner` implements `IAmABoxProvisioner` directly, as the Spanner provisioners do. It guards the identifiers and calls the backend's existing runner. The runner re-detects table state under its advisory lock and records history keyed by the trip table's name, so the provisioner needs no detection of its own and no payload validation. Each relational backend package adds a catalog, an `Add{Backend}TrippedTopics(this BoxProvisioningOptions, IAmARelationalDatabaseConfiguration, string tableName = "BrighterTrippedTopics")` extension, and a case in its detection helper's `DiscriminatorFor`, spelled `TripTime` for MsSql and MySql and `trip_time` for PostgreSql. The bootstrap path needs that case for a trip table that someone created by hand from `GetDDL`.
@@ -521,11 +540,12 @@ The sweeper, the meter and the check find the same instance through `IAmAnOutbox
 | Paramore.Brighter | `CircuitBreakerSpanInfo`, `BrighterSemanticConventions`, `BrighterTracer` | An optional `CooldownDuration` property and the `circuit_breaker.cooldown_duration` attribute that `CreateCircuitBreakerSpan` sets when it is present | 2 |
 | Paramore.Brighter | `IAmAnOutboxCircuitBreakerAsync`, `IAmATripBatch`, `IAmASharedOutboxCircuitBreaker`, `TrippedTopicStoreStatus` | New, in `Paramore.Brighter.CircuitBreaker` | 2 |
 | Paramore.Brighter | `IAmATrippedTopicStore`, `TopicTrip`, `TripWriteResult`, `TrippedTopicStoreRead`, `InMemoryTrippedTopicStore`, `DistributedOutboxCircuitBreaker` | New, in `Paramore.Brighter.CircuitBreaker` | 2 |
+| Paramore.Brighter | `RelationDatabaseTrippedTopicStore` | New, abstract, in `Paramore.Brighter.CircuitBreaker` | 2 |
 | Paramore.Brighter | `OutboxProducerMediator` | Uses a trip batch per dispatch call and the async read, when the breaker implements the async role | 2 |
 | Paramore.Brighter | `SweeperMeter` | No `IsActive` gating for a shared breaker | 2 |
 | Paramore.Brighter.Outbox.Hosting | `TimedOutboxSweeper` | Optional `IAmAnOutboxCircuitBreaker?` constructor parameter; refresh requests; overrun timer | 2 |
 | Paramore.Brighter.Outbox.Hosting | `OutboxSweeperInvestigateHealthCheck` | Shared-breaker rule; `TrippedTopicsStoreUnavailable` condition | 2 |
-| Paramore.Brighter.Outbox.MsSql, .PostgreSql, .MySql | `{Backend}TrippedTopicStore` | New | 2 |
+| Paramore.Brighter.Outbox.MsSql, .PostgreSql, .MySql | `{Backend}TrippedTopicStore` | New, deriving from `RelationDatabaseTrippedTopicStore` | 2 |
 | Paramore.Brighter.BoxProvisioning | `BoxType`, `BoxProvisioningHostedService` | `TrippedTopics` value and its ordering | 2 |
 | Paramore.Brighter.BoxProvisioning | `TrippedTopicsProvisioner` | New | 2 |
 | Paramore.Brighter.BoxProvisioning.MsSql, .PostgreSql, .MySql | `{Backend}TrippedTopicsMigrationCatalog`, `Add{Backend}TrippedTopics`, `{Backend}BoxDetectionHelper.DiscriminatorFor` | New, new, one case | 2 |
@@ -655,7 +675,7 @@ Phase 1 ends here. It changes no interface, no package graph and no health signa
 10. **Behavioural: the mediator uses the async role.** In `BackgroundDispatchUsingAsync` (`:740-790`), keep `CoolDown()` at `:749`. Replace the `TrippedTopics` argument at `:763` with `await ReadTrippedTopicsAsync` when the breaker implements the async role. Create a batch around the dispatch and call `WriteAsync` first in the `finally` at `:791`. The mediator wraps `BeginTripBatch` and `WriteAsync` in a try/catch that logs a Warning (if `BeginTripBatch` throws, the call trips through the sync `TripTopic`), and releases the semaphore in a nested `finally`, so a third-party `BeginTripBatch` or `WriteAsync` that throws neither replaces the dispatch exception nor skips the release (NFR-9). In `ClearOutboxAsync` (`:447-498`), create one batch around the whole loop and write it in the outer `finally`. The confirmation callbacks at `:946` and `:1040` keep the sync `TripTopic`. Tests cover AC-8, AC-9, AC-24 (distributed), AC-39 and AC-41.
 11. **Behavioural: the sweeper starts refreshes.** In `src/Paramore.Brighter.Outbox.Hosting/TimedOutboxSweeper.cs`, add a trailing `IAmAnOutboxCircuitBreaker? circuitBreaker = null` parameter to the constructor (`:75-95`). In `SweepUntilStopped` (`:164-187`), request a refresh before `Sweep()` at `:178`, and create the overrun timer once with an infinite due time. Arm it at the start of `Sweep()` (`:224`) and disarm it in a `finally`. Dispose it in the loop's `finally` (`:183`). Guard every request as `Record` does (`:286-290`). Tests cover AC-16, including the held sweep, and that an in-memory breaker creates no timer.
 12. **Behavioural: health signals.** Change `SweeperMeter.ObserveTrippedTopics` (`src/Paramore.Brighter/Observability/SweeperMeter.cs:123-130`) and `OutboxSweeperInvestigateHealthCheck.TrippedTopicsConditionOrNone` (`src/Paramore.Brighter.Outbox.Hosting/HealthChecks/OutboxSweeperInvestigateHealthCheck.cs:104-117`) to the ladder. Add the `TrippedTopicsStoreUnavailable` constant beside `:49-55`. Tests cover AC-26 to AC-29, and all existing `Sweeping/` and `Observability/Metrics/` tests stay green (AC-27, AC-31).
-13. **Behavioural: SQL stores.** Add `MsSqlTrippedTopicStore` in `src/Paramore.Brighter.Outbox.MsSql/`, `PostgreSqlTrippedTopicStore` in `src/Paramore.Brighter.Outbox.PostgreSql/` and `MySqlTrippedTopicStore` in `src/Paramore.Brighter.Outbox.MySql/`, each with `GetDDL` and the constructor in *Constructing and registering the pieces*, over the package's existing connection provider.
+13. **Behavioural: SQL stores.** Add `RelationDatabaseTrippedTopicStore` in `src/Paramore.Brighter/CircuitBreaker/` once the first three stores show what they share (T2.59d). Add `MsSqlTrippedTopicStore` in `src/Paramore.Brighter.Outbox.MsSql/`, `PostgreSqlTrippedTopicStore` in `src/Paramore.Brighter.Outbox.PostgreSql/` and `MySqlTrippedTopicStore` in `src/Paramore.Brighter.Outbox.MySql/`, each with `GetDDL` and the constructor in *Constructing and registering the pieces*, over the package's existing connection provider.
 14. **Behavioural: provisioning.** Append `TrippedTopics` to `src/Paramore.Brighter.BoxProvisioning/BoxType.cs:29-41` and order it in `BoxProvisioningHostedService.cs:111-118`. Add `TrippedTopicsProvisioner`. In each relational backend package, add the catalog that calls the store's `GetDDL` (as `MsSqlOutboxMigrationCatalog.cs:97` calls `SqlOutboxBuilder.GetDDL`), the `Add{Backend}TrippedTopics` extension beside `AddMsSqlOutbox` (`MsSqlBoxProvisioningExtensions.cs:17`), and the case in `DiscriminatorFor` (for example `MsSqlBoxDetectionHelper.cs:199-204`), named `TripTime` for MsSql and MySql and `trip_time` for PostgreSql (`PostgreSqlBoxDetectionHelper.cs:245-247` uses lower-case names).
 15. **Behavioural: real-database tests.** Run the step 7 contract suite against each store, plus AC-33, in `tests/Paramore.Brighter.MSSQL.Tests`, `tests/Paramore.Brighter.PostgresSQL.Tests` and `tests/Paramore.Brighter.MySQL.Tests`. Add provisioning tests for fresh install, re-run and hand-created tables.
 16. **Docs.** Add an amendment note to the Status sections of ADRs 0028, 0058, 0085 and 0086 that points here. Complete the FR-9.2 release notes. List the BrighterCommand/Docs changes in the pull request (FR-9.3, AC-35): the circuit-breaker page with registration as a singleton and the clock assumption, the Telemetry page with `max` rather than `sum`, and the health-check page with the new condition.
@@ -697,7 +717,7 @@ Core behaviour is proved in `tests/Paramore.Brighter.Core.Tests` with `FakeTimeP
 | Risk | Mitigation |
 | --- | --- |
 | A store that ignores cancellation holds a sweep beyond `StoreTimeout`, or piles up abandoned calls against the outbox's connection pool | The breaker stops waiting through `WaitAsync` on its `TimeProvider`, observes the abandoned task, holds its in-flight guards until that task completes or four times `StoreTimeout` has passed, and every SQL store takes a command timeout, rounded up to whole seconds, that the user sets to the value of `StoreTimeout` |
-| Two instances' batches deadlock on overlapping topics, or a read deadlocks with a write | Every store writes topics in ordinal order inside one transaction. A store retries once on a deadlock error (SQL Server 1205, PostgreSQL SQLSTATE 40P01, MySQL ER_LOCK_DEADLOCK). A second failure is a store failure, and the instance falls back |
+| Two instances' batches deadlock on overlapping topics, or a read deadlocks with a write | Every store writes topics in ordinal order inside one transaction. A store retries once on a deadlock error (SQL Server 1205, PostgreSQL SQLSTATE 40P01, MySQL ER_LOCK_DEADLOCK), through the one retry template in `RelationDatabaseTrippedTopicStore`. A second failure is a store failure, and the instance falls back |
 | Two first trips both insert and both announce a Trip | MsSql takes a key-range lock (`SERIALIZABLE`). PostgreSql and MySql use a native upsert on the primary key. AC-11 runs against each real database |
 | A slow refresh overwrites a newer sweep read in the view, or drops a trip this instance has just written | Reads carry a sequence number. An older result keeps only its `Ended` rows. A written trip stays in the merge until a later read has been applied |
 | A clock steps backwards and lengthens distributed trips | Documented: hosts must run NTP. The in-memory breaker uses a monotonic clock |
