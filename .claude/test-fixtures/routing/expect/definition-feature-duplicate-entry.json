@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "feature"],
+  "flows": "flows-duplicate-entry",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "feature", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R12",
+        "code": "approval-entry",
+        "step": null,
+        "message": ".claude/test-fixtures/routing/flows-duplicate-entry/approvals.md has more than one entry for kind tasks."
+      }
+    ]
+  }
+}

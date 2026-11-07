@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r12-approval-entry"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r12-approval-entry", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R12",
+        "code": "approval-entry",
+        "step": "spike",
+        "message": "Step spike is of kind spike, which has no entry in .claude/test-fixtures/routing/flows-rules/approvals.md."
+      }
+    ]
+  }
+}

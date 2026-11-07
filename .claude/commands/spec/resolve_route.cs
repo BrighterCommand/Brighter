@@ -302,12 +302,152 @@ internal static class CommandCatalogue
         list(directory).Select(entry => Path.GetFileName(entry));
 }
 
+internal sealed record ApprovalEntry(string Kind, IReadOnlyList<string> Commands);
+
+internal sealed record ApprovalTable(string Path, IReadOnlyList<ApprovalEntry> Entries, string? Fault);
+
+internal static class ApprovalTableReader
+{
+    private const string Title = "# approvals";
+    private const string EmptySubFlow = "(empty)";
+    private const string Name = "[a-z][a-z0-9-]*";
+    private const string BareCommand = "/[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*";
+    private const string CommandSeparator = ", ";
+    private const int ColumnCount = 2;
+
+    private static readonly string[] HeaderCells = ["Kind", "Approval sub-flow"];
+    private static readonly Regex DelimiterCell = new("^:?-{3,}:?$");
+    private static readonly Regex KindCell = new($"^{Name}$");
+    private static readonly Regex SubFlowCell = new($"^{BareCommand}(?:, {BareCommand})*$");
+
+    private sealed record NumberedLine(int Number, string Text);
+
+    public static ApprovalTable Read(string path) =>
+        File.Exists(path) ? Parse(path, SlipReader.ReadLines(path)) : Faulted(path, "the file is missing");
+
+    private static ApprovalTable Parse(string path, IReadOnlyList<string> lines)
+    {
+        if (lines[0] != Title)
+        {
+            return Faulted(path, $"line 1 must be '{Title}'");
+        }
+
+        var body = lines
+            .Select((text, index) => new NumberedLine(index + 1, text))
+            .Skip(1)
+            .SkipWhile(line => line.Text.Length == 0)
+            .ToList();
+        return ParseBody(path, body);
+    }
+
+    private static ApprovalTable ParseBody(string path, IReadOnlyList<NumberedLine> body)
+    {
+        if (body.Count == 0 || !IsHeader(body[0].Text))
+        {
+            return Faulted(path, $"line {LineNumber(body)}: the header row is missing or wrong");
+        }
+
+        if (body.Count < 2 || !IsDelimiter(body[1].Text))
+        {
+            return Faulted(path, $"line {LineNumber(body.Skip(1).ToList())}: the delimiter row is missing or not valid");
+        }
+
+        var rows = body.Skip(2).TakeWhile(line => line.Text.Length > 0).ToList();
+        var stray = body.Skip(2 + rows.Count).FirstOrDefault(line => line.Text.Length > 0);
+        return stray is null ? ParseRows(path, rows) : Faulted(path, $"line {stray.Number}: unexpected text after the table");
+    }
+
+    private static int LineNumber(IReadOnlyList<NumberedLine> body) => body.Count == 0 ? 0 : body[0].Number;
+
+    private static ApprovalTable ParseRows(string path, IReadOnlyList<NumberedLine> rows)
+    {
+        var entries = new List<ApprovalEntry>();
+        foreach (var row in rows)
+        {
+            var entry = ParseRow(row.Text);
+            if (entry is null)
+            {
+                return Faulted(path, $"line {row.Number}: the approval row is not valid");
+            }
+
+            entries.Add(entry);
+        }
+
+        return new ApprovalTable(path, entries, null);
+    }
+
+    private static ApprovalEntry? ParseRow(string line) =>
+        Cells(line) is { Length: ColumnCount } cells && KindCell.IsMatch(cells[0]) && IsSubFlow(cells[1])
+            ? new ApprovalEntry(cells[0], Commands(cells[1]))
+            : null;
+
+    private static bool IsSubFlow(string cell) => cell == EmptySubFlow || SubFlowCell.IsMatch(cell);
+
+    private static IReadOnlyList<string> Commands(string cell) =>
+        cell == EmptySubFlow ? [] : cell.Split(CommandSeparator);
+
+    private static bool IsHeader(string line) => Cells(line) is { } cells && cells.SequenceEqual(HeaderCells);
+
+    private static bool IsDelimiter(string line) =>
+        Cells(line) is { Length: ColumnCount } cells && cells.All(DelimiterCell.IsMatch);
+
+    private static string[]? Cells(string line) =>
+        line.StartsWith('|') && line.EndsWith('|') && line.Length > 1
+            ? line[1..^1].Split('|').Select(cell => cell.Trim()).ToArray()
+            : null;
+
+    private static ApprovalTable Faulted(string path, string what) => new(path, [], what);
+}
+
 internal static class SlipValidator
 {
-    public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines) =>
+    public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines, ApprovalTable table) =>
+        [.. SlipRules(name, lines, table), .. TableRules(table)];
+
+    public static IReadOnlyList<Violation> ValidateTable(ApprovalTable table) => TableRules(table);
+
+    private static IReadOnlyList<Violation> SlipRules(string name, IReadOnlyList<string> lines, ApprovalTable table) =>
         SlipSyntax.StepCount(lines) == 0
             ? [NoSteps(name)]
-            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines)), .. SelfApproval(SlipSyntax.StepGateCommands(lines)), .. StepsAfterHandOff(SlipSyntax.LinesAfterHandOff(lines))];
+            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines)), .. SelfApproval(SlipSyntax.StepGateCommands(lines)), .. StepsAfterHandOff(SlipSyntax.LinesAfterHandOff(lines)), .. KindsWithoutEntry(SlipSyntax.StepKinds(lines), table)];
+
+    private static IReadOnlyList<Violation> TableRules(ApprovalTable table) =>
+        [.. DuplicateEntries(table), .. UnresolvedCommands(table)];
+
+    private static IReadOnlyList<Violation> KindsWithoutEntry(IReadOnlyList<(string Step, string Kind)> stepKinds, ApprovalTable table) =>
+        table.Fault is not null
+            ? []
+            : stepKinds
+                .Where(stepKind => stepKind.Kind.Length > 0 && table.Entries.All(entry => entry.Kind != stepKind.Kind))
+                .Select(stepKind => KindWithoutEntry(stepKind.Step, stepKind.Kind, table.Path))
+                .ToList();
+
+    private static Violation KindWithoutEntry(string step, string kind, string table) =>
+        new("R12", "approval-entry", step, "kind without entry",
+            $"Step {step} is of kind {kind}, which has no entry in {table}.");
+
+    private static IReadOnlyList<Violation> DuplicateEntries(ApprovalTable table) =>
+        table.Entries
+            .GroupBy(entry => entry.Kind)
+            .Where(group => group.Count() > 1)
+            .Select(group => DuplicateEntry(group.Key, table.Path))
+            .ToList();
+
+    private static Violation DuplicateEntry(string kind, string table) =>
+        new("R12", "approval-entry", null, "duplicate entry", $"{table} has more than one entry for kind {kind}.");
+
+    private static IReadOnlyList<Violation> UnresolvedCommands(ApprovalTable table) =>
+        table.Fault is not null
+            ? [UnresolvedCommand(table.Path, table.Fault)]
+            : table.Entries
+                .SelectMany(entry => entry.Commands)
+                .Where(command => !CommandCatalogue.Resolves(command))
+                .Select(command => UnresolvedCommand(table.Path, command))
+                .ToList();
+
+    private static Violation UnresolvedCommand(string table, string what) =>
+        new("R12", "approval-entry", null, "unreadable table or unknown command",
+            $"{table} is unreadable or names a command that does not exist: {what}.");
 
     private static IReadOnlyList<Violation> StepsAfterHandOff(IReadOnlyList<int> lineNumbers) =>
         lineNumbers.Select(StepAfterHandOff).ToList();
@@ -435,6 +575,7 @@ internal static class SlipValidator
 internal static class DefinitionReport
 {
     private const string FlowExtension = ".flow";
+    private const string ApprovalTableFile = "approvals.md";
     private const string MalformedRule = "R0";
     private const string MalformedCode = "malformed";
 
@@ -446,15 +587,17 @@ internal static class DefinitionReport
             return Build(name, false, [Malformed("bad name", $"{name} is not a valid flow name.")]);
         }
 
-        var path = $"{invocation.FlowsDirectory!.TrimEnd('/')}/{name}{FlowExtension}";
+        var directory = invocation.FlowsDirectory!.TrimEnd('/');
+        var path = $"{directory}/{name}{FlowExtension}";
         if (!File.Exists(path))
         {
             return Build(name, false, [Malformed("definition missing", $"Flow {name} has no definition at {path}.")]);
         }
 
+        var table = ApprovalTableReader.Read($"{directory}/{ApprovalTableFile}");
         var lines = SlipReader.ReadLines(path);
         var fault = SlipSyntax.FirstFault(lines);
-        return Build(name, true, fault is null ? SlipValidator.Validate(name, lines) : [FaultViolation(path, fault)]);
+        return Build(name, true, fault is null ? SlipValidator.Validate(name, lines, table) : [FaultViolation(path, fault), .. SlipValidator.ValidateTable(table)]);
     }
 
     private static Violation FaultViolation(string path, SyntaxFault fault) =>
