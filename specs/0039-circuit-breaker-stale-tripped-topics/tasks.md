@@ -16,7 +16,7 @@ Conventions:
 - One deliberate exception to the rule above: a multi-topic store write applies its topics in ordinal topic order (T2.57-T2.59a, the SQL stores; the in-memory store of T2.8 holds one lock and needs no order), because the ADR forbids any other order (deadlock avoidance) and no single-write contract test can fail on it. T2.60 pins that order for the SQL stores with a named 🔁 RED mutation and the real-database deadlock tests.
 - STRUCTURAL tasks: the named suites must be green before and after.
 - Commit shape for a behavioural task: a `feat:` (or `test:`) commit for the code, then a separate `docs:` commit that ticks the box in this file.
-- Production SQL stores are tested only against real databases (MsSql, PostgreSql, MySql). Those tests reuse the core store contract suite from Phase 2b.
+- Production SQL stores are tested only against real databases (MsSql, PostgreSql, MySql). Each store has its own test files with the assertions written out, one file per case, and no abstract test class shares them: the in-memory store's are in `Core.Tests` (Phase 2b), and each SQL test project repeats the same cases against its database, using a setup-only base class that creates and drops the trip table.
 
 ## Dependency and phase overview
 
@@ -300,13 +300,13 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2b - Options and the trip-store contract
 
-- [x] **PROJECT: T2.2 - Make the store contract suite reusable by core and by the SQL test projects**
-  - Put the abstract store contract suites in `tests/Paramore.Brighter.Base.Test/CircuitBreaker/`, following the pattern of `Outbox/OutboxTest.cs`. There are two: `TrippedTopicStoreWriteContractTest` (T2.4, T2.5, T2.8) and `TrippedTopicStoreEndedContractTest` (T2.6, T2.7). Each store has one concrete runner per suite. Add a `ProjectReference` from `Paramore.Brighter.Core.Tests` to `Paramore.Brighter.Base.Test`. The MSSQL, PostgresSQL and MySQL test projects already reference Base.Test.
+- [x] **PROJECT: T2.2 - Give the SQL test projects what the trip store tests need**
+  - Each store's tests are plain test files, one case per file with its assertions written out. The in-memory store's are in `tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed`, and T2.57-T2.59b repeat the same cases in the MSSQL, PostgresSQL and MySQL test projects. There is no abstract contract class (owner decision, 2026-11-07: obvious tests over shared ones). Each SQL test project has a setup-only base class, added by its first store task, that creates the trip table from `GetDDL` and drops it after each test.
   - Add what T2.66 and T2.67 need and these projects lack, with versions in `Directory.Packages.props`: `Microsoft.Extensions.TimeProvider.Testing` to `Paramore.Brighter.MSSQL.Tests` and `Paramore.Brighter.MySQL.Tests` (PostgresSQL.Tests has it), and the OpenTelemetry packages the telemetry assertions use (`OpenTelemetry`, `OpenTelemetry.Exporter.InMemory`) to `Paramore.Brighter.MySQL.Tests`. Add the same two OpenTelemetry packages to `Paramore.Brighter.MSSQL.Tests` and `Paramore.Brighter.PostgresSQL.Tests` if they are missing.
-  - Build the test solution to confirm the new reference causes no type or package conflicts.
-  - Covers: ADR step 7 ("write this contract suite so that the SQL stores can reuse it"), ADR step 15.
+  - Build the test solution to confirm the new package references cause no conflicts.
+  - Covers: ADR step 7 (the SQL stores run the same cases as the in-memory store), ADR step 15.
   - Depends on: T2.1
-  - References: `tests/Paramore.Brighter.Base.Test/Paramore.Brighter.Base.Test.csproj`. `tests/Paramore.Brighter.Base.Test/Outbox/OutboxTest.cs`. `tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj`.
+  - References: `tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj`.
 
 - [x] **TEST + IMPLEMENT: T2.3 - The options expose the distributed defaults: C = 50 s, leeway zero, store timeout 2 s**
   - **USE COMMAND**: `/tdd:test-first when outbox circuit breaker options are created should default cooldown duration to fifty seconds, clock skew leeway to zero and store timeout to two seconds`
@@ -324,8 +324,8 @@ Phase 2 (starts only after T1.15 has merged)
 
 - [x] **TEST + IMPLEMENT: T2.4 - The trip store keeps the later stamp and returns the prior one**
   - **USE COMMAND**: `/tdd:test-first when a trip is written to the store should keep the later stamp and return the prior stamp`
-  - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker" (abstract contract) with a concrete `InMemoryTrippedTopicStore` runner in "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
-  - Test file: `TrippedTopicStoreWriteContractTest.cs` (method `When_a_trip_is_written_should_keep_the_later_stamp_and_return_the_prior`), runner `When_the_in_memory_trip_store_runs_the_write_contract_should_pass.cs`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test file: `When_a_trip_is_written_should_keep_the_later_stamp_and_return_the_prior.cs`
   - Test should verify:
     - First write: `PriorTripTime` is null, `StoredTripTime` equals the written stamp, `LeftEnded` is false.
     - A later write returns the old stamp as prior and stores the later stamp.
@@ -340,22 +340,22 @@ Phase 2 (starts only after T1.15 has merged)
 
 - [x] **CHARACTERISE: T2.5 - A microsecond-truncated stamp reads back equal**
   - **USE COMMAND**: `/tdd:test-first when a stamp truncated to whole microseconds is written should read back equal`
-  - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker"
-  - Test file: `TrippedTopicStoreWriteContractTest.cs` (method `When_a_microsecond_stamp_is_written_should_read_back_equal`)
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test file: `When_a_microsecond_stamp_is_written_should_read_back_equal.cs`
   - Test should verify:
     - A stamp with sub-microsecond ticks, truncated as the breaker takes it, comes back from `ReadAsync` and `WriteAsync` exactly equal (`TripTime`, `StoredTripTime`).
   - 🔁 RED mutation: round the stamp to whole milliseconds in `InMemoryTrippedTopicStore.WriteAsync`. The test must fail on the equality assertion. Revert.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Nothing. The in-memory store stores the value unchanged, so this test only pins the contract the SQL stores must meet (T2.57-T2.59b). The shared stamp-truncation helper is added by T2.10.
+    - Nothing. The in-memory store stores the value unchanged, so this test only pins the behaviour the SQL stores must meet (T2.57-T2.59b). The shared stamp-truncation helper is added by T2.10.
   - Covers: NFR-6 (stamp stored unchanged). ADR *Terms*: Stamp. ADR step 7.
   - Depends on: T2.4
   - References: ADR 0089 *Terms*.
 
 - [x] **TEST + IMPLEMENT: T2.6 - A read marks ended rows and gives each one to exactly one caller, never deleting**
   - **USE COMMAND**: `/tdd:test-first when many readers read an ended row concurrently should return it as ended to exactly one caller`
-  - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker"
-  - Test file: `TrippedTopicStoreEndedContractTest.cs` (method `When_readers_race_over_an_ended_row_should_return_it_to_exactly_one`), runner `When_the_in_memory_trip_store_runs_the_ended_contract_should_pass.cs`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test file: `When_readers_race_over_an_ended_row_should_return_it_to_exactly_one.cs`
   - Test should verify:
     - Over 1,000 repetitions of parallel `ReadAsync(now, tripLength)`, a row stamped at or before `now - tripLength` appears in `Ended` for exactly one caller and in no caller's `Live`.
     - A row stamped after the cutoff stays in `Live`.
@@ -368,8 +368,8 @@ Phase 2 (starts only after T1.15 has merged)
 
 - [x] **TEST + IMPLEMENT: T2.7 - A write over an ended row revives it only with a later stamp**
   - **USE COMMAND**: `/tdd:test-first when a trip is written over an ended row should revive it only with a later stamp and otherwise leave it ended`
-  - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker"
-  - Test file: `TrippedTopicStoreEndedContractTest.cs` (method `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp`), run by the runner T2.6 created
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test file: `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs`
   - Test should verify:
     - A row marked ended by `ReadAsync` (T2.6), then written with an equal or earlier stamp: `LeftEnded` is true, prior is null, and the row is not in `Live`.
     - Written with a later stamp: `LeftEnded` is false, prior is null, and the row is in `Live` with the new stamp, so the marked row was never deleted.
@@ -382,8 +382,8 @@ Phase 2 (starts only after T1.15 has merged)
 
 - [x] **TEST + IMPLEMENT: T2.8 - A store write rejects duplicate topics and is all-or-nothing**
   - **USE COMMAND**: `/tdd:test-first when a write contains the same topic twice should reject it with argument exception and change nothing`
-  - Test location: "tests/Paramore.Brighter.Base.Test/CircuitBreaker"
-  - Test file: `TrippedTopicStoreWriteContractTest.cs` (method `When_a_write_repeats_a_topic_should_reject_it_and_change_nothing`)
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test file: `When_a_write_repeats_a_topic_should_reject_it_and_change_nothing.cs`
   - Test should verify:
     - `WriteAsync([orders, invoices, orders])` throws `ArgumentException`, and no topic is stored.
     - A valid multi-topic write returns one result per topic.
@@ -1305,12 +1305,12 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2h - SQL trip stores on real databases
 
-- [x] **TEST + IMPLEMENT: T2.57 - The MsSql trip store passes the write contract against SQL Server**
-  - **USE COMMAND**: `/tdd:test-first when the mssql trip store runs the write contract against a real database should pass every write contract case`
+- [x] **TEST + IMPLEMENT: T2.57 - The MsSql trip store passes the write cases against SQL Server**
+  - **USE COMMAND**: `/tdd:test-first when the mssql trip store is written to against a real database should keep the later stamp, read microsecond stamps back equal and reject a repeated topic`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
-  - Test file: `When_the_mssql_trip_store_runs_the_write_contract_should_pass.cs`
+  - Test files: `When_a_trip_is_written_should_keep_the_later_stamp_and_return_the_prior.cs`, `When_a_microsecond_stamp_is_written_should_read_back_equal.cs` and `When_a_write_repeats_a_topic_should_reject_it_and_change_nothing.cs`, plus a setup-only base class `MsSqlTrippedTopicStoreTestBase.cs` that creates the table from `GetDDL` and drops it after each test
   - Test should verify:
-    - Every `TrippedTopicStoreWriteContractTest` case (T2.4, T2.5, T2.8) passes on a real SQL Server.
+    - The three cases of T2.4, T2.5 and T2.8, each its own test file, pass on a real SQL Server.
     - `GetDDL(table, schema)` creates the table and the secondary index, and the test creates its table from it.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
@@ -1323,12 +1323,12 @@ Phase 2 (starts only after T1.15 has merged)
   - References: `src/Paramore.Brighter.Outbox.MsSql/SqlOutboxBuilder.cs` (`GetDDL` pattern). `tests/Paramore.Brighter.MSSQL.Tests/MsSqlTestHelper.cs`. ADR 0089 *The trip table and the SQL stores*.
 
 - [ ] **TEST + IMPLEMENT: T2.57a - The MsSql trip store marks ended rows and gives each to one caller**
-  - **USE COMMAND**: `/tdd:test-first when the mssql trip store runs the ended contract against a real database should mark ended rows for exactly one caller`
+  - **USE COMMAND**: `/tdd:test-first when the mssql trip store ends trips against a real database should mark ended rows for exactly one caller and never delete one`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
-  - Test file: `When_the_mssql_trip_store_runs_the_ended_contract_should_pass.cs`
+  - Test files: `When_readers_race_over_an_ended_row_should_return_it_to_exactly_one.cs`, `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs` and `When_a_read_ends_a_trip_should_mark_the_row_and_never_delete_it.cs`
   - Test should verify:
-    - Every `TrippedTopicStoreEndedContractTest` case (T2.6, T2.7) passes on a real SQL Server: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
-    - The store never deletes a row.
+    - The two cases of T2.6 and T2.7, each its own test file, pass on a real SQL Server: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
+    - A read that ends a trip marks the row and never deletes it: afterwards the table still holds the row with the ended marker set (its own test).
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - `UPDATE ... SET EndedAt = @now OUTPUT INSERTED.Topic, INSERTED.TripTime WHERE EndedAt IS NULL AND TripTime <= @cutoff`, then the unmarked `SELECT`, in one batch.
@@ -1352,12 +1352,12 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.57a
   - References: `src/Paramore.Brighter.Outbox.MsSql/SqlOutboxBuilder.cs` (`GetDDL` pattern). `tests/Paramore.Brighter.MSSQL.Tests/MsSqlTestHelper.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.58 - The PostgreSql trip store passes the write contract against PostgreSQL**
-  - **USE COMMAND**: `/tdd:test-first when the postgresql trip store runs the write contract against a real database should pass every write contract case`
+- [ ] **TEST + IMPLEMENT: T2.58 - The PostgreSql trip store passes the write cases against PostgreSQL**
+  - **USE COMMAND**: `/tdd:test-first when the postgresql trip store is written to against a real database should keep the later stamp, read microsecond stamps back equal and reject a repeated topic`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
-  - Test file: `When_the_postgresql_trip_store_runs_the_write_contract_should_pass.cs`
+  - Test files: `When_a_trip_is_written_should_keep_the_later_stamp_and_return_the_prior.cs`, `When_a_microsecond_stamp_is_written_should_read_back_equal.cs` and `When_a_write_repeats_a_topic_should_reject_it_and_change_nothing.cs`, plus a setup-only base class `PostgreSqlTrippedTopicStoreTestBase.cs` that creates the table from `GetDDL` and drops it after each test
   - Test should verify:
-    - Every `TrippedTopicStoreWriteContractTest` case (T2.4, T2.5, T2.8) passes on a real PostgreSQL, with lower-case column names.
+    - The three cases of T2.4, T2.5 and T2.8, each its own test file, pass on a real PostgreSQL, with lower-case column names.
     - `GetDDL(table, schema)` creates the table and the secondary index, and the test creates its table from it.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
@@ -1370,12 +1370,12 @@ Phase 2 (starts only after T1.15 has merged)
   - References: `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlOutboxBuilder.cs`. `tests/Paramore.Brighter.PostgresSQL.Tests/PostgresSqlTestHelper.cs`. ADR 0089 *The trip table and the SQL stores*.
 
 - [ ] **TEST + IMPLEMENT: T2.58a - The PostgreSql trip store marks ended rows and gives each to one caller**
-  - **USE COMMAND**: `/tdd:test-first when the postgresql trip store runs the ended contract against a real database should mark ended rows for exactly one caller`
+  - **USE COMMAND**: `/tdd:test-first when the postgresql trip store ends trips against a real database should mark ended rows for exactly one caller and never delete one`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
-  - Test file: `When_the_postgresql_trip_store_runs_the_ended_contract_should_pass.cs`
+  - Test files: `When_readers_race_over_an_ended_row_should_return_it_to_exactly_one.cs`, `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs` and `When_a_read_ends_a_trip_should_mark_the_row_and_never_delete_it.cs`
   - Test should verify:
-    - Every `TrippedTopicStoreEndedContractTest` case (T2.6, T2.7) passes on a real PostgreSQL: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
-    - The store never deletes a row.
+    - The two cases of T2.6 and T2.7, each its own test file, pass on a real PostgreSQL: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
+    - A read that ends a trip marks the row and never deletes it: afterwards the table still holds the row with the ended marker set (its own test).
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - `UPDATE ... SET ended_at = @now WHERE ended_at IS NULL AND trip_time <= @cutoff RETURNING ...`, then the unmarked `SELECT`, in one batch.
@@ -1399,12 +1399,12 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.58a
   - References: `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlOutboxBuilder.cs`. `tests/Paramore.Brighter.PostgresSQL.Tests/PostgresSqlTestHelper.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.59 - The MySql trip store passes the write contract against MySQL**
-  - **USE COMMAND**: `/tdd:test-first when the mysql trip store runs the write contract against a real database should pass every write contract case`
+- [ ] **TEST + IMPLEMENT: T2.59 - The MySql trip store passes the write cases against MySQL**
+  - **USE COMMAND**: `/tdd:test-first when the mysql trip store is written to against a real database should keep the later stamp, read microsecond stamps back equal and reject a repeated topic`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
-  - Test file: `When_the_mysql_trip_store_runs_the_write_contract_should_pass.cs`
+  - Test files: `When_a_trip_is_written_should_keep_the_later_stamp_and_return_the_prior.cs`, `When_a_microsecond_stamp_is_written_should_read_back_equal.cs` and `When_a_write_repeats_a_topic_should_reject_it_and_change_nothing.cs`, plus a setup-only base class `MySqlTrippedTopicStoreTestBase.cs` that creates the table from `GetDDL` and drops it after each test
   - Test should verify:
-    - Every `TrippedTopicStoreWriteContractTest` case (T2.4, T2.5, T2.8) passes on a real MySQL, with `DATETIME(6)` UTC stamps round-tripping exactly.
+    - The three cases of T2.4, T2.5 and T2.8, each its own test file, pass on a real MySQL, with `DATETIME(6)` UTC stamps round-tripping exactly.
     - `GetDDL(table, schema)` creates the table and the secondary index, and the test creates its table from it.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
@@ -1417,12 +1417,12 @@ Phase 2 (starts only after T1.15 has merged)
   - References: `src/Paramore.Brighter.Outbox.MySql/MySqlOutboxBuilder.cs`. ADR 0089 *The trip table and the SQL stores*.
 
 - [ ] **TEST + IMPLEMENT: T2.59a - The MySql trip store marks ended rows and gives each to one caller**
-  - **USE COMMAND**: `/tdd:test-first when the mysql trip store runs the ended contract against a real database should mark ended rows for exactly one caller`
+  - **USE COMMAND**: `/tdd:test-first when the mysql trip store ends trips against a real database should mark ended rows for exactly one caller and never delete one`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
-  - Test file: `When_the_mysql_trip_store_runs_the_ended_contract_should_pass.cs`
+  - Test files: `When_readers_race_over_an_ended_row_should_return_it_to_exactly_one.cs`, `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs` and `When_a_read_ends_a_trip_should_mark_the_row_and_never_delete_it.cs`
   - Test should verify:
-    - Every `TrippedTopicStoreEndedContractTest` case (T2.6, T2.7) passes on a real MySQL: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
-    - The store never deletes a row.
+    - The two cases of T2.6 and T2.7, each its own test file, pass on a real MySQL: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
+    - A read that ends a trip marks the row and never deletes it: afterwards the table still holds the row with the ended marker set (its own test).
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Run the read as an explicit `REPEATABLE READ` transaction: `SELECT ... FOR UPDATE`, the marking `UPDATE` with the same predicate, then the unmarked `SELECT`.
@@ -1867,7 +1867,7 @@ AC-12 to AC-15 and AC-19 part 1 are verified at breaker level (T2.20-T2.23, T2.2
 
 No task lacks a trace to a requirement or an ADR decision. Several tasks trace to the ADR rather than to a single FR, and are kept on purpose:
 
-- **T2.2** (Core.Tests references Base.Test): needed for ADR step 7's reusable contract suite. It follows the existing `Paramore.Brighter.Base.Test/Outbox/OutboxTest.cs` pattern.
+- **T2.2** (test project package references for T2.66 and T2.67): the SQL test projects need them to assert the breaker's telemetry.
 - **T2.26, T2.28a, T2.31, T2.60, T2.60a-T2.60c**: risk mitigations named in ADR 0089 *Risks and Mitigations* and *How the remaining small points are settled*.
 - **T2.17**: the `circuit_breaker.cooldown_duration` span attribute is an ADR 0058 extension that ADR 0089 decides. It is not in the requirements.
 
