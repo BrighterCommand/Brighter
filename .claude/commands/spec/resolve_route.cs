@@ -162,6 +162,9 @@ internal static class SlipSyntax
     public static IReadOnlyList<(string Step, string Command)> StepCommands(IReadOnlyList<string> lines) =>
         StepRows(lines).SelectMany(cells => new[] { (cells[0], cells[2]), (cells[0], cells[5]) }).ToList();
 
+    public static IReadOnlyList<(string Step, string Producer)> StepProducers(IReadOnlyList<string> lines) =>
+        StepRows(lines).Select(cells => (cells[0], cells[2])).ToList();
+
     private static IEnumerable<string[]> StepRows(IReadOnlyList<string> lines) =>
         lines
             .TakeWhile(line => !line.StartsWith(HandOffName + ":"))
@@ -288,7 +291,18 @@ internal static class SlipValidator
     public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines) =>
         SlipSyntax.StepCount(lines) == 0
             ? [NoSteps(name)]
-            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines))];
+            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines))];
+
+    private static IReadOnlyList<Violation> SharedProducers(IReadOnlyList<(string Step, string Producer)> stepProducers) =>
+        stepProducers
+            .GroupBy(stepProducer => CommandCatalogue.Collapse(stepProducer.Producer))
+            .Where(group => group.Count() > 1)
+            .Select(group => SharedProducer(group.Key, group.Select(stepProducer => stepProducer.Step)))
+            .ToList();
+
+    private static Violation SharedProducer(string command, IEnumerable<string> steps) =>
+        new("R5", "shared-producer", null, "shared producer",
+            $"{command} is the producer of more than one step ({string.Join(", ", steps)}).");
 
     private static IReadOnlyList<Violation> UnknownCommands(IReadOnlyList<(string Step, string Command)> stepCommands) =>
         stepCommands
