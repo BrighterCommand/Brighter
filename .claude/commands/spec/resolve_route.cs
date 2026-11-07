@@ -300,7 +300,24 @@ internal static class SlipValidator
     public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines) =>
         SlipSyntax.StepCount(lines) == 0
             ? [NoSteps(name)]
-            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines))];
+            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines)), .. SelfApproval(SlipSyntax.StepGateCommands(lines))];
+
+    private static IReadOnlyList<Violation> SelfApproval(IReadOnlyList<(string Step, string Producer, string MarkerWriter)> steps) =>
+        steps
+            .Select((step, index) => (Step: step, Index: index))
+            .Where(row => IsSelfApproved(row.Step) && !ApprovesStepBefore(steps, row.Index))
+            .Select(row => SelfApprovalViolation(row.Step.Step, CommandCatalogue.Collapse(row.Step.Producer)))
+            .ToList();
+
+    private static bool IsSelfApproved((string Step, string Producer, string MarkerWriter) step) =>
+        CommandCatalogue.Collapse(step.Producer) == CommandCatalogue.Collapse(step.MarkerWriter);
+
+    private static bool ApprovesStepBefore(IReadOnlyList<(string Step, string Producer, string MarkerWriter)> steps, int index) =>
+        index > 0 && CommandCatalogue.Collapse(steps[index - 1].MarkerWriter) == CommandCatalogue.Collapse(steps[index].Producer);
+
+    private static Violation SelfApprovalViolation(string step, string command) =>
+        new("R10", "self-approval", step, "self approval",
+            $"Step {step} is produced and approved by {command} with no gate before it.");
 
     private static IReadOnlyList<Violation> GateNotAdjacent(IReadOnlyList<(string Step, string Producer, string MarkerWriter)> steps) =>
         steps
