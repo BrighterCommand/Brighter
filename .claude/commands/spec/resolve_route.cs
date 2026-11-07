@@ -150,8 +150,15 @@ internal static class SlipSyntax
 
     public static bool IsFlowName(string name) => StepCell.IsMatch(name);
 
-    public static int StepCount(IReadOnlyList<string> lines) =>
-        lines.Count(line => line.StartsWith('|')) - TableHeadingRowCount;
+    public static int StepCount(IReadOnlyList<string> lines) => StepRows(lines).Count();
+
+    public static IReadOnlyList<int> LinesAfterHandOff(IReadOnlyList<string> lines) =>
+        lines
+            .Select((line, index) => (Line: line, Number: index + 1))
+            .SkipWhile(row => !row.Line.StartsWith(HandOffName + ":"))
+            .Where(row => row.Line.StartsWith('|'))
+            .Select(row => row.Number)
+            .ToList();
 
     public static IReadOnlyList<string> StepNames(IReadOnlyList<string> lines) =>
         StepRows(lines).Select(cells => cells[0]).ToList();
@@ -300,7 +307,13 @@ internal static class SlipValidator
     public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines) =>
         SlipSyntax.StepCount(lines) == 0
             ? [NoSteps(name)]
-            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines)), .. SelfApproval(SlipSyntax.StepGateCommands(lines))];
+            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines)), .. SelfApproval(SlipSyntax.StepGateCommands(lines)), .. StepsAfterHandOff(SlipSyntax.LinesAfterHandOff(lines))];
+
+    private static IReadOnlyList<Violation> StepsAfterHandOff(IReadOnlyList<int> lineNumbers) =>
+        lineNumbers.Select(StepAfterHandOff).ToList();
+
+    private static Violation StepAfterHandOff(int lineNumber) =>
+        new("R11", "step-after-hand-off", null, "step after hand-off", $"A step follows the hand-off at line {lineNumber}.");
 
     private static IReadOnlyList<Violation> SelfApproval(IReadOnlyList<(string Step, string Producer, string MarkerWriter)> steps) =>
         steps
