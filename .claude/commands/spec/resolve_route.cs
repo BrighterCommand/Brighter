@@ -160,6 +160,9 @@ internal static class SlipSyntax
             .Select(row => row.Number)
             .ToList();
 
+    public static string? HandOffCommand(IReadOnlyList<string> lines) =>
+        lines.FirstOrDefault(line => HandOffLine.IsMatch(line))?[(HandOffName.Length + 2)..];
+
     public static IReadOnlyList<string> StepNames(IReadOnlyList<string> lines) =>
         StepRows(lines).Select(cells => cells[0]).ToList();
 
@@ -412,10 +415,17 @@ internal static class SlipValidator
     private static IReadOnlyList<Violation> SlipRules(string name, IReadOnlyList<string> lines, ApprovalTable table) =>
         SlipSyntax.StepCount(lines) == 0
             ? [NoSteps(name)]
-            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines)), .. SelfApproval(SlipSyntax.StepGateCommands(lines)), .. StepsAfterHandOff(SlipSyntax.LinesAfterHandOff(lines)), .. KindsWithoutEntry(SlipSyntax.StepKinds(lines), table), .. LastStepNotTasks(SlipSyntax.LastStep(lines))];
+            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines)), .. SelfApproval(SlipSyntax.StepGateCommands(lines)), .. StepsAfterHandOff(SlipSyntax.LinesAfterHandOff(lines)), .. KindsWithoutEntry(SlipSyntax.StepKinds(lines), table), .. LastStepNotTasks(SlipSyntax.LastStep(lines)), .. HandOffNotImplement(SlipSyntax.HandOffCommand(lines))];
 
     private static IReadOnlyList<Violation> TableRules(ApprovalTable table) =>
         [.. DuplicateEntries(table), .. UnresolvedCommands(table)];
+
+    private static IReadOnlyList<Violation> HandOffNotImplement(string? command) =>
+        command is not null && command != "/spec:implement" ? [HandOffNotImplementViolation(command)] : [];
+
+    private static Violation HandOffNotImplementViolation(string command) =>
+        new("R14", "hand-off-not-implement", null, "hand-off not implement",
+            $"The hand-off is {command}, not /spec:implement.");
 
     private static IReadOnlyList<Violation> LastStepNotTasks((string Step, string Kind, string Artefacts, string Marker)? last) =>
         last is { } step && !IsTasksStep(step) ? [LastStepNotTasksViolation(step.Step)] : [];
