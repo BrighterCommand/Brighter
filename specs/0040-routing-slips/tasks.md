@@ -196,7 +196,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
     - `allowed-tools: Bash(awk:*)`.
   - Traces to: 0090 step 1; FR-29. Depends on: T2.1.
 
-- [ ] **TEST + IMPLEMENT: T2.5 — `/adr:report-approval` prints the four report lines and the commit reminder, and writes nothing**
+- [x] **TEST + IMPLEMENT: T2.5 — `/adr:report-approval` prints the four report lines and the commit reminder, and writes nothing**
   - Verification rows (RED-first): the `adr-selection-rule` copy and the *Report* template copy in `adr/report-approval.md`.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
