@@ -247,7 +247,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
     - Duplicate the three harness helpers from `spec_text_tests.cs` rather than sharing them (0092 *Harness*).
   - Traces to: 0092 step 2, *Expectations*, *Repository checks* (matcher self-test, read-only); FR-24; NFR-1, NFR-3; AC-7, AC-47. Depends on: T3.1.
 
-- [ ] **TEST + IMPLEMENT: T4.2 — `resolve_route.cs` parses its argument grammar, exits `1` with empty stdout on a usage error, and prints one `route-report:` record line for `--definition`**
+- [x] **TEST + IMPLEMENT: T4.2 — `resolve_route.cs` parses its argument grammar, exits `1` with empty stdout on a usage error, and prints one `route-report:` record line for `--definition`**
   - **USE COMMAND**: none. This is the RED-first route: T4.1's pre-check and `bad-mode.json` are already failing.
   - Test file: `resolve_route_tests.cs` (unchanged); `expect/bad-mode.json`.
   - Test should verify: the pre-check passes, with record lines only (S2); `bad-mode` passes; the two-run determinism holds.
