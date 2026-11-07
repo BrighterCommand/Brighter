@@ -168,6 +168,9 @@ internal static class SlipSyntax
     public static IReadOnlyList<(string Step, string Kind, string Artefacts)> StepKindArtefacts(IReadOnlyList<string> lines) =>
         StepRows(lines).Select(cells => (cells[0], cells[1], cells[3])).ToList();
 
+    public static IReadOnlyList<(string Step, string Producer, string MarkerWriter)> StepGateCommands(IReadOnlyList<string> lines) =>
+        StepRows(lines).Select(cells => (cells[0], cells[2], cells[5])).ToList();
+
     public static IReadOnlyList<(string Step, string Kind)> StepKinds(IReadOnlyList<string> lines) =>
         StepRows(lines).Select(cells => (cells[0], cells[1])).ToList();
 
@@ -297,7 +300,20 @@ internal static class SlipValidator
     public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines) =>
         SlipSyntax.StepCount(lines) == 0
             ? [NoSteps(name)]
-            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines))];
+            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines))];
+
+    private static IReadOnlyList<Violation> GateNotAdjacent(IReadOnlyList<(string Step, string Producer, string MarkerWriter)> steps) =>
+        steps
+            .SelectMany((approved, index) => steps
+                .Select((produced, producedIndex) => (Approved: approved, Produced: produced, ApprovedIndex: index, ProducedIndex: producedIndex)))
+            .Where(pair => pair.ProducedIndex != pair.ApprovedIndex && pair.ProducedIndex != pair.ApprovedIndex + 1)
+            .Where(pair => CommandCatalogue.Collapse(pair.Approved.MarkerWriter) == CommandCatalogue.Collapse(pair.Produced.Producer))
+            .Select(pair => GateNotAdjacentViolation(CommandCatalogue.Collapse(pair.Approved.MarkerWriter), pair.Approved.Step, pair.Produced.Step))
+            .ToList();
+
+    private static Violation GateNotAdjacentViolation(string command, string approvedStep, string producedStep) =>
+        new("R9", "gate-not-adjacent", producedStep, "gate not adjacent",
+            $"{command} approves step {approvedStep} but produces step {producedStep}, which does not immediately follow it.");
 
     private static IReadOnlyList<Violation> DuplicateKnownKinds(IReadOnlyList<(string Step, string Kind)> stepKinds) =>
         stepKinds
