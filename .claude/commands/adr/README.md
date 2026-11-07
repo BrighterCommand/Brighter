@@ -193,6 +193,36 @@ To change status from "Proposed" to "Accepted":
 
 This updates the Status field in the ADR from "Proposed" to "Accepted".
 
+## Approval sub-flow commands
+
+The `design` row of `.claude/flows/approvals.md` names four commands, which `/spec:approve` runs in order when it approves a `design` step. Each takes the spec directory, the step's kind and the step's artefacts, and has `## Arguments`, `## Questions` and `## Actions` sections.
+
+- **`/adr:accept`** — checks each selected ADR's frontmatter in its Questions pass, then sets its status to `Accepted` through `write_adr_metadata` in its Actions pass and prints `approved-artefacts:`.
+- **`/adr:retire-superseded`** — asks, only when the answer is not obvious, whether an approved ADR supersedes or deprecates an earlier one, then retires the targets through `write_adr_metadata`.
+- **`/adr:regenerate-index`** — regenerates `docs/adr/index.md` with the awk command above.
+- **`/adr:report-approval`** — prints which ADRs were approved, superseded and deprecated.
+
+### ADR selection rule
+
+`/adr:accept`, `/adr:retire-superseded` and `/adr:report-approval` choose their ADRs by one rule. Each carries an identical copy of it.
+
+<!-- routing-text:adr-selection-rule:begin -->
+1. Read `{spec}/.adr-list`. Each non-blank line, trimmed, names one ADR. A leading `docs/adr/` is removed, because both forms occur in existing specs. The path is `docs/adr/{name}`.
+2. With no `--select`, select every ADR. With one, select the line whose stem equals the word. Failing that, select the lines whose name starts with `{word}-`.
+3. Fail on an empty list, more than one `--select`, no match, more than one match, or a selected file that does not exist.
+<!-- routing-text:adr-selection-rule:end -->
+
+### Message templates
+
+Each `/adr:*` command that prints one of these carries an identical copy of its row.
+
+<!-- routing-text:templates:begin -->
+| Template | Printed by | Text |
+| --- | --- | --- |
+| Supersession question | `/adr:retire-superseded` | ``Does `{adr}` supersede or retire an earlier ADR?`` Options `No`, then `Supersedes {stem}` for each of the first three ADRs its text names that exist, are not `{adr}` and are not already `Superseded` by a different ADR. The tool's free-text answer is read as one or more of `supersede {stem}` or `deprecate {stem}`, separated by commas |
+| Report | `/adr:report-approval` | ``ADRs approved: {selected stems joined with ", "}.`` then ``ADRs superseded: {old} by {new}, ….`` or ``ADRs superseded: none.``, then ``ADRs deprecated: {old}, ….`` or ``ADRs deprecated: none.``, then ``Commit the approved ADRs and the regenerated docs/adr/index.md to git.`` |
+<!-- routing-text:templates:end -->
+
 ## File Locations
 
 ```
