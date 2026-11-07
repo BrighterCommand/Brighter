@@ -186,7 +186,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Verify after: S1 shows this file's rows green. Hand step now: run `/adr:retire-superseded questions "specs/0040-routing-slips" design .adr-list` and check it prints the supersession question or a `none` answer line per ADR and writes nothing. Full behaviour is verified by T17.1 items 2, 7 and 11.
   - Traces to: 0090 step 1, *The `design` sub-flow commands*; FR-29 (questions before writes, idempotence). Depends on: T2.1.
 
-- [ ] **TEST + IMPLEMENT: T2.4 — `/adr:regenerate-index` rebuilds `docs/adr/index.md` byte-identically, with or without sub-flow arguments**
+- [x] **TEST + IMPLEMENT: T2.4 — `/adr:regenerate-index` rebuilds `docs/adr/index.md` byte-identically, with or without sub-flow arguments**
   - Verification: there is no registered block. Named hand step: first hand-edit one line of `docs/adr/index.md` in the working tree, then run `/adr:regenerate-index` with no arguments, then `git diff --exit-code docs/adr/index.md` (clean). The command must have repaired the edit. If the diff is not clean, run `git restore docs/adr/index.md` and treat the step as failed.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
