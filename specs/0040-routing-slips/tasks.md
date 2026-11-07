@@ -174,7 +174,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
     - Hand step: run `/adr:accept actions "specs/0040-routing-slips" design .adr-list` on the current branch. ADRs 0089–0092 are already `Accepted`, so `git status` stays unchanged (idempotence); this part passes for a no-op. The check that can fail is the output: it must end with `approved-artefacts:` listing all four, then `sub-flow-done: /adr:accept actions`. Then, on a throwaway branch (S7): copy one ADR under a new number, set it to `Proposed` in both places, write a temporary `.adr-list` naming it, run the command, check the status changed in both places, and delete the branch.
   - Traces to: 0090 step 1, *Failure and re-runs*, *Arguments and answers*, *The protocol lines*; FR-29. Depends on: T2.1.
 
-- [ ] **TEST + IMPLEMENT: T2.3 — `/adr:retire-superseded` asks the supersession question in its questions pass, only when the answer is not obvious, and supersedes or deprecates in its actions pass**
+- [x] **TEST + IMPLEMENT: T2.3 — `/adr:retire-superseded` asks the supersession question in its questions pass, only when the answer is not obvious, and supersedes or deprecates in its actions pass**
   - Verification rows (RED-first, failing since T1.1 and T1.2): the `adr-selection-rule` copy and the *Supersession question* template copy in `adr/retire-superseded.md`.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
