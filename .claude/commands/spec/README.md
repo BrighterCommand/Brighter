@@ -266,9 +266,12 @@ Approve a specification phase or specific ADR.
 - Creates `.tasks-approved` marker
 - Allows progression to implementation with either driver (`/spec:implement` or
   `/spec:ralph-implement`)
-- Freezes the **content** of `tasks.md`. Checkbox state (`[ ]` → `[x]`/`[!]`) is progress
-  bookkeeping and both drivers write it; rewording, adding, removing or reordering tasks after
-  this point needs a fresh review
+- Freezes the **content** of `tasks.md` against unreviewed change. Checkbox state (`[ ]` →
+  `[x]`/`[!]`) is progress bookkeeping and both drivers write it. Rewording, adding, removing or
+  reordering tasks after this point needs the owner's approval of that specific amendment, which
+  is expected when implementation, a refactoring or a review (such as `/refactor:smells`) shows
+  the list is wrong. The amending commit says the owner approved it, and `.tasks-approved` stays.
+  A large rework still warrants `/spec:review tasks`. An unattended run never amends the list
 
 ---
 

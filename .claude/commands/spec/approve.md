@@ -88,9 +88,12 @@ Parse $ARGUMENTS to extract phase and optional ADR number:
    - Follow TDD: write tests first, then code
    - The gate is armed by default; `/spec:gear` shifts it, scoped to this spec and optionally to
      one section of `tasks.md`
-4. Note that `.tasks-approved` freezes the **content** of `tasks.md`. Checkbox state (`[ ]` →
-   `[x]`/`[!]`) is progress bookkeeping and both drivers write it; rewording, adding, removing or
-   reordering tasks after this point needs a fresh review.
+4. Note that `.tasks-approved` freezes the **content** of `tasks.md` against unreviewed change.
+   Checkbox state (`[ ]` → `[x]`/`[!]`) is progress bookkeeping and both drivers write it.
+   Rewording, adding, removing or reordering tasks after this point needs the owner's approval of
+   that specific amendment, expected when implementation, a refactoring or a review shows the list
+   is wrong; the amending commit says so and `.tasks-approved` stays. A large rework still
+   warrants a fresh `/spec:review tasks`.
 
 ### Invalid Phase
 

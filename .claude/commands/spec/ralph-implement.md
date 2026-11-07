@@ -444,8 +444,10 @@ there, rely on `RED_EVIDENCE`'s "reverted; re-run green" and the full-suite run,
 
 > **On editing an approved `tasks.md`.** `.tasks-approved` freezes the *content* of the task list —
 > what the tasks are. Checkbox state (`[ ]` → `[x]` / `[!]`) is progress bookkeeping, not content,
-> and both `/spec:implement` and this loop write it. Never reword, add, remove or reorder a task
-> here; if a task is wrong, mark it `- [!]` and let the user decide.
+> and both `/spec:implement` and this loop write it. This loop never rewords, adds, removes or
+> reorders a task, because nobody is present to approve the change; if a task is wrong, mark it
+> `- [!]` and let the user decide. (The owner may amend the list in an interactive session, for
+> example after a refactoring or smells review, and the loop then runs the amended list.)
 >
 > **Never stage `.current-gear`** — it is gitignored working state, not part of the change.
 
