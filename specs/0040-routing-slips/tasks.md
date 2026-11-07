@@ -313,7 +313,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add R3.
   - Traces to: FR-3; AC-3. Depends on: T5.4.
 
-- [ ] **TEST + IMPLEMENT: T5.6 — R4: a producer or marker-writer that does not resolve under `.claude/commands/` is invalid**
+- [x] **TEST + IMPLEMENT: T5.6 — R4: a producer or marker-writer that does not resolve under `.claude/commands/` is invalid**
   - **USE COMMAND**: none — RED-first row `definition-r04-unknown-command`.
   - Fixture: `flows-rules/r04-unknown-command.flow`, whose `design` step names `/spec:designx`.
   - Test should verify: R4, `Step design names a command that does not exist, /spec:designx.`
