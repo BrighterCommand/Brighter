@@ -154,12 +154,17 @@ internal static class SlipSyntax
         lines.Count(line => line.StartsWith('|')) - TableHeadingRowCount;
 
     public static IReadOnlyList<string> StepNames(IReadOnlyList<string> lines) =>
+        StepRows(lines).Select(cells => cells[0]).ToList();
+
+    public static IReadOnlyList<(string Step, string Marker)> StepMarkers(IReadOnlyList<string> lines) =>
+        StepRows(lines).Select(cells => (cells[0], cells[4])).ToList();
+
+    private static IEnumerable<string[]> StepRows(IReadOnlyList<string> lines) =>
         lines
             .TakeWhile(line => !line.StartsWith(HandOffName + ":"))
             .Where(line => line.StartsWith('|'))
             .Skip(TableHeadingRowCount)
-            .Select(line => Cells(line)![0])
-            .ToList();
+            .Select(line => Cells(line)!);
 
     public static SyntaxFault? FirstFault(IReadOnlyList<string> lines)
     {
@@ -254,7 +259,9 @@ internal static class SlipSyntax
 internal static class SlipValidator
 {
     public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines) =>
-        SlipSyntax.StepCount(lines) == 0 ? [NoSteps(name)] : DuplicateSteps(SlipSyntax.StepNames(lines));
+        SlipSyntax.StepCount(lines) == 0
+            ? [NoSteps(name)]
+            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines))];
 
     private static IReadOnlyList<Violation> DuplicateSteps(IReadOnlyList<string> stepNames) =>
         stepNames
@@ -262,6 +269,17 @@ internal static class SlipValidator
             .Where(group => group.Count() > 1)
             .Select(group => DuplicateStep(group.Key))
             .ToList();
+
+    private static IReadOnlyList<Violation> DuplicateMarkers(IReadOnlyList<(string Step, string Marker)> stepMarkers) =>
+        stepMarkers
+            .GroupBy(stepMarker => stepMarker.Marker)
+            .Where(group => group.Count() > 1)
+            .Select(group => DuplicateMarker(group.Key, group.Select(stepMarker => stepMarker.Step)))
+            .ToList();
+
+    private static Violation DuplicateMarker(string marker, IEnumerable<string> steps) =>
+        new("R3", "duplicate-marker", null, "duplicate marker",
+            $"Marker {marker} is named by more than one step ({string.Join(", ", steps)}).");
 
     private static Violation DuplicateStep(string step) =>
         new("R2", "duplicate-step", step, "duplicate step", $"Step {step} appears more than once.");
