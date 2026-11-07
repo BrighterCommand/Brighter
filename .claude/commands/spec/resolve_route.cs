@@ -125,6 +125,7 @@ internal static class SlipSyntax
     private const string Name = "[a-z][a-z0-9-]*";
     private const string Command = "/[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*(?: [^ @]+)*";
     private const string HandOffName = "hand-off";
+    private const string FlowLinePrefix = "# flow: ";
     private const string DetourPrefix = "detour: ";
     private const string AttachSeparator = " @ ";
     private const string ReturnSeparator = " -> ";
@@ -152,6 +153,8 @@ internal static class SlipSyntax
     }
 
     public static bool IsFlowName(string name) => StepCell.IsMatch(name);
+
+    public static string DeclaredName(IReadOnlyList<string> lines) => lines[0][FlowLinePrefix.Length..];
 
     public static int StepCount(IReadOnlyList<string> lines) => StepRows(lines).Count();
 
@@ -427,8 +430,8 @@ internal static class ApprovalTableReader
 
 internal static class SlipValidator
 {
-    public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines, ApprovalTable table) =>
-        [.. SlipRules(name, lines, table), .. TableRules(table)];
+    public static IReadOnlyList<Violation> Validate(string name, string path, IReadOnlyList<string> lines, ApprovalTable table) =>
+        [.. SlipRules(name, lines, table), .. NameMismatch(name, path, SlipSyntax.DeclaredName(lines)), .. TableRules(table)];
 
     public static IReadOnlyList<Violation> ValidateTable(ApprovalTable table) => TableRules(table);
 
@@ -436,6 +439,12 @@ internal static class SlipValidator
         SlipSyntax.StepCount(lines) == 0
             ? [NoSteps(name)]
             : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines)), .. SelfApproval(SlipSyntax.StepGateCommands(lines)), .. StepsAfterHandOff(SlipSyntax.LinesAfterHandOff(lines)), .. KindsWithoutEntry(SlipSyntax.StepKinds(lines), table), .. LastStepNotTasks(SlipSyntax.LastStep(lines)), .. HandOffNotImplement(SlipSyntax.HandOffCommand(lines)), .. BadDetours(SlipSyntax.Detours(lines), SlipSyntax.StepNames(lines))];
+
+    private static IReadOnlyList<Violation> NameMismatch(string stem, string path, string declared) =>
+        declared == stem ? [] : [NameMismatchViolation(path, declared)];
+
+    private static Violation NameMismatchViolation(string path, string declared) =>
+        new("R16", "name-mismatch", null, "name mismatch", $"{path} declares flow {declared}, which differs from its filename.");
 
     private static IReadOnlyList<Violation> TableRules(ApprovalTable table) =>
         [.. DuplicateEntries(table), .. UnresolvedCommands(table)];
@@ -668,7 +677,7 @@ internal static class DefinitionReport
         var table = ApprovalTableReader.Read($"{directory}/{ApprovalTableFile}");
         var lines = SlipReader.ReadLines(path);
         var fault = SlipSyntax.FirstFault(lines);
-        return Build(name, true, fault is null ? SlipValidator.Validate(name, lines, table) : [FaultViolation(path, fault), .. SlipValidator.ValidateTable(table)]);
+        return Build(name, true, fault is null ? SlipValidator.Validate(name, path, lines, table) : [FaultViolation(path, fault), .. SlipValidator.ValidateTable(table)]);
     }
 
     private static Violation FaultViolation(string path, SyntaxFault fault) =>
