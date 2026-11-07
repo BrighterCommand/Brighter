@@ -297,7 +297,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add R1 to `SlipValidator`.
   - Traces to: FR-3; AC-3; FR-24 (zero steps). Depends on: T5.2.
 
-- [ ] **TEST + IMPLEMENT: T5.4 — R2: duplicate step names are invalid, naming the step**
+- [x] **TEST + IMPLEMENT: T5.4 — R2: duplicate step names are invalid, naming the step**
   - **USE COMMAND**: none — RED-first row `definition-r02-duplicate-step`.
   - Fixture: `flows-rules/r02-duplicate-step.flow`.
   - Test should verify: R2 `duplicate-step` names the duplicated step, plus any further rule the fixture raises (S8).
