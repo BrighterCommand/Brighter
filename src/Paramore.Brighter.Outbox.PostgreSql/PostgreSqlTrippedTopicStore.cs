@@ -48,6 +48,7 @@ public class PostgreSqlTrippedTopicStore : IAmATrippedTopicStore
 
     private readonly IAmARelationalDbConnectionProvider _connectionProvider;
     private readonly string _qualifiedTable;
+    private readonly int? _commandTimeoutSeconds;
 
     /// <summary>
     /// Creates a store over the trip table.
@@ -55,14 +56,32 @@ public class PostgreSqlTrippedTopicStore : IAmATrippedTopicStore
     /// <param name="connectionProvider">Provides the connection to the database that holds the trip table.</param>
     /// <param name="tableName">The name of the trip table.</param>
     /// <param name="schemaName">The schema of the trip table, or null for the connection's default schema.</param>
+    /// <param name="commandTimeout">
+    /// How long a command may run, rounded up to whole seconds with a minimum of one. Null leaves the driver's default.
+    /// </param>
     public PostgreSqlTrippedTopicStore(
         IAmARelationalDbConnectionProvider connectionProvider,
         string tableName = DEFAULT_TABLE_NAME,
-        string? schemaName = null)
+        string? schemaName = null,
+        TimeSpan? commandTimeout = null)
     {
         _connectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
         _qualifiedTable = QualifiedTable(tableName, schemaName);
+        _commandTimeoutSeconds = commandTimeout is null ? null : WholeSecondsAtLeastOne(commandTimeout.Value);
     }
+
+    /// <summary>
+    /// Gets the SQL that deletes the ended rows older than a cutoff, for an operator to run under an account that may delete.
+    /// </summary>
+    /// <remarks>
+    /// Brighter never runs this. Bind the parameter <c>@EndedBefore</c> to a UTC timestamp: only rows marked ended before it
+    /// are deleted, and an unmarked row is never deleted.
+    /// </remarks>
+    /// <param name="tableName">The name of the trip table.</param>
+    /// <param name="schemaName">The schema of the trip table, or null for the connection's default schema.</param>
+    /// <returns>The parameterised DELETE.</returns>
+    public static string GetPurgeSql(string tableName, string? schemaName = null) =>
+        $"DELETE FROM {QualifiedTable(tableName, schemaName)} WHERE ended_at IS NOT NULL AND ended_at < @EndedBefore;";
 
     /// <summary>
     /// Gets the SQL that creates the trip table and the secondary index that serves the read's ranged update.
@@ -92,7 +111,7 @@ public class PostgreSqlTrippedTopicStore : IAmATrippedTopicStore
         CancellationToken cancellationToken = default)
     {
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
-        await using var command = connection.CreateCommand();
+        await using var command = CreateCommand(connection);
         command.CommandText = $"""
             UPDATE {_qualifiedTable} SET ended_at = @now
             WHERE ended_at IS NULL AND trip_time <= @cutoff
@@ -118,7 +137,7 @@ public class PostgreSqlTrippedTopicStore : IAmATrippedTopicStore
         var inOrdinalTopicOrder = InOrdinalTopicOrder(trips);
 
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
-        await using var command = connection.CreateCommand();
+        await using var command = CreateCommand(connection);
         command.CommandText = UpsertStatement(inOrdinalTopicOrder.Count);
         for (var i = 0; i < inOrdinalTopicOrder.Count; i++)
         {
@@ -133,6 +152,15 @@ public class PostgreSqlTrippedTopicStore : IAmATrippedTopicStore
 
         return results;
     }
+
+    private DbCommand CreateCommand(DbConnection connection)
+    {
+        var command = connection.CreateCommand();
+        if (_commandTimeoutSeconds is { } seconds) command.CommandTimeout = seconds;
+        return command;
+    }
+
+    private static int WholeSecondsAtLeastOne(TimeSpan timeout) => Math.Max(1, (int)Math.Ceiling(timeout.TotalSeconds));
 
     private string UpsertStatement(int count)
     {
