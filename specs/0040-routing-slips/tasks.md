@@ -321,7 +321,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add `CommandCatalogue`, which resolves `/{family}:{name}` by ordinal comparison against a directory listing, so `/spec:readme` does not match `README.md`. Check every producer and marker-writer through it, comparing the full command text with space runs collapsed.
   - Traces to: FR-3, FR-24 (nonexistent command); AC-3. Depends on: T5.5.
 
-- [ ] **TEST + IMPLEMENT: T5.7 — R5: one producer named by two steps is invalid**
+- [x] **TEST + IMPLEMENT: T5.7 — R5: one producer named by two steps is invalid**
   - **USE COMMAND**: none — RED-first row `definition-r05-shared-producer`.
   - Fixture: `flows-rules/r05-shared-producer.flow`.
   - Test should verify: R5 `shared-producer`, naming the command and both steps.
