@@ -47,6 +47,7 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
 
     private readonly IAmARelationalDbConnectionProvider _connectionProvider;
     private readonly string _qualifiedTable;
+    private readonly int? _commandTimeoutSeconds;
 
     /// <summary>
     /// Creates a store over the trip table.
@@ -54,14 +55,32 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
     /// <param name="connectionProvider">Provides the connection to the database that holds the trip table.</param>
     /// <param name="tableName">The name of the trip table.</param>
     /// <param name="schemaName">The schema of the trip table, or null for the connection's default schema.</param>
+    /// <param name="commandTimeout">
+    /// How long a command may run, rounded up to whole seconds with a minimum of one. Null leaves the driver's default.
+    /// </param>
     public MySqlTrippedTopicStore(
         IAmARelationalDbConnectionProvider connectionProvider,
         string tableName = DEFAULT_TABLE_NAME,
-        string? schemaName = null)
+        string? schemaName = null,
+        TimeSpan? commandTimeout = null)
     {
         _connectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
         _qualifiedTable = QualifiedTable(tableName, schemaName);
+        _commandTimeoutSeconds = commandTimeout is null ? null : WholeSecondsAtLeastOne(commandTimeout.Value);
     }
+
+    /// <summary>
+    /// Gets the SQL that deletes the ended rows older than a cutoff, for an operator to run under an account that may delete.
+    /// </summary>
+    /// <remarks>
+    /// Brighter never runs this. Bind the parameter <c>@EndedBefore</c> to a UTC timestamp: only rows marked ended before it
+    /// are deleted, and an unmarked row is never deleted.
+    /// </remarks>
+    /// <param name="tableName">The name of the trip table.</param>
+    /// <param name="schemaName">The schema of the trip table, or null for the connection's default schema.</param>
+    /// <returns>The parameterised DELETE.</returns>
+    public static string GetPurgeSql(string tableName, string? schemaName = null) =>
+        $"DELETE FROM {QualifiedTable(tableName, schemaName)} WHERE `EndedAt` IS NOT NULL AND `EndedAt` < @EndedBefore;";
 
     /// <summary>
     /// Gets the SQL that creates the trip table and the secondary index that serves the read's ranged update.
@@ -119,7 +138,7 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
-        await using (var upsert = connection.CreateCommand())
+        await using (var upsert = CreateCommand(connection))
         {
             upsert.Transaction = transaction;
             upsert.CommandText = UpsertStatement(inOrdinalTopicOrder.Count);
@@ -132,14 +151,14 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
         return results;
     }
 
-    private static async Task<List<TopicTrip>> ReadTripsAsync(
+    private async Task<List<TopicTrip>> ReadTripsAsync(
         DbConnection connection,
         DbTransaction transaction,
         string sql,
         (string Name, DateTime Value)[] parameters,
         CancellationToken cancellationToken)
     {
-        await using var command = connection.CreateCommand();
+        await using var command = CreateCommand(connection);
         command.Transaction = transaction;
         command.CommandText = sql;
         foreach (var (name, value) in parameters) AddParameter(command, name, DbType.DateTime, value);
@@ -158,7 +177,7 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
         DateTime cutoff,
         CancellationToken cancellationToken)
     {
-        await using var command = connection.CreateCommand();
+        await using var command = CreateCommand(connection);
         command.Transaction = transaction;
         command.CommandText =
             $"UPDATE {_qualifiedTable} SET `EndedAt` = @now WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff";
@@ -167,13 +186,22 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    private DbCommand CreateCommand(DbConnection connection)
+    {
+        var command = connection.CreateCommand();
+        if (_commandTimeoutSeconds is { } seconds) command.CommandTimeout = seconds;
+        return command;
+    }
+
+    private static int WholeSecondsAtLeastOne(TimeSpan timeout) => Math.Max(1, (int)Math.Ceiling(timeout.TotalSeconds));
+
     private async Task<List<TripWriteResult>> ReadWrittenRowsAsync(
         DbConnection connection,
         DbTransaction transaction,
         List<TopicTrip> written,
         CancellationToken cancellationToken)
     {
-        await using var select = connection.CreateCommand();
+        await using var select = CreateCommand(connection);
         select.Transaction = transaction;
         var topicParameters = string.Join(", ", Enumerable.Range(0, written.Count).Select(i => $"@topic{i}"));
         select.CommandText =
