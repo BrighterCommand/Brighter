@@ -13,6 +13,12 @@
         "code": "duplicate-marker",
         "step": null,
         "message": "Marker .design-approved is named by more than one step (design, tasks)."
+      },
+      {
+        "rule": "R13",
+        "code": "last-step-not-tasks",
+        "step": "tasks",
+        "message": "The last step, tasks, is not the tasks step (kind tasks, tasks.md, .tasks-approved)."
       }
     ]
   }

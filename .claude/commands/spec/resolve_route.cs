@@ -181,6 +181,9 @@ internal static class SlipSyntax
     public static IReadOnlyList<(string Step, string Kind)> StepKinds(IReadOnlyList<string> lines) =>
         StepRows(lines).Select(cells => (cells[0], cells[1])).ToList();
 
+    public static (string Step, string Kind, string Artefacts, string Marker)? LastStep(IReadOnlyList<string> lines) =>
+        StepRows(lines).LastOrDefault() is { } cells ? (cells[0], cells[1], cells[3], cells[4]) : null;
+
     private static IEnumerable<string[]> StepRows(IReadOnlyList<string> lines) =>
         lines
             .TakeWhile(line => !line.StartsWith(HandOffName + ":"))
@@ -409,10 +412,20 @@ internal static class SlipValidator
     private static IReadOnlyList<Violation> SlipRules(string name, IReadOnlyList<string> lines, ApprovalTable table) =>
         SlipSyntax.StepCount(lines) == 0
             ? [NoSteps(name)]
-            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines)), .. SelfApproval(SlipSyntax.StepGateCommands(lines)), .. StepsAfterHandOff(SlipSyntax.LinesAfterHandOff(lines)), .. KindsWithoutEntry(SlipSyntax.StepKinds(lines), table)];
+            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines)), .. SelfApproval(SlipSyntax.StepGateCommands(lines)), .. StepsAfterHandOff(SlipSyntax.LinesAfterHandOff(lines)), .. KindsWithoutEntry(SlipSyntax.StepKinds(lines), table), .. LastStepNotTasks(SlipSyntax.LastStep(lines))];
 
     private static IReadOnlyList<Violation> TableRules(ApprovalTable table) =>
         [.. DuplicateEntries(table), .. UnresolvedCommands(table)];
+
+    private static IReadOnlyList<Violation> LastStepNotTasks((string Step, string Kind, string Artefacts, string Marker)? last) =>
+        last is { } step && !IsTasksStep(step) ? [LastStepNotTasksViolation(step.Step)] : [];
+
+    private static bool IsTasksStep((string Step, string Kind, string Artefacts, string Marker) step) =>
+        step.Kind == "tasks" && step.Artefacts == "tasks.md" && step.Marker == ".tasks-approved";
+
+    private static Violation LastStepNotTasksViolation(string step) =>
+        new("R13", "last-step-not-tasks", step, "last step not tasks",
+            $"The last step, {step}, is not the tasks step (kind tasks, tasks.md, .tasks-approved).");
 
     private static IReadOnlyList<Violation> KindsWithoutEntry(IReadOnlyList<(string Step, string Kind)> stepKinds, ApprovalTable table) =>
         table.Fault is not null
