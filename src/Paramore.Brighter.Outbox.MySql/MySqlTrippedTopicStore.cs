@@ -1,0 +1,211 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+
+#endregion
+
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Paramore.Brighter.CircuitBreaker;
+
+namespace Paramore.Brighter.Outbox.MySql;
+
+/// <summary>
+/// Shares tripped topics between instances through a table in the outbox's MySQL database.
+/// </summary>
+/// <remarks>
+/// The store keeps one row per topic, keeps the later of the stored and written stamps, and marks a row ended rather than
+/// deleting it, so the application's database user needs no <c>DELETE</c> permission. Stamps are stored as UTC.
+/// </remarks>
+public class MySqlTrippedTopicStore : IAmATrippedTopicStore
+{
+    private const string DEFAULT_TABLE_NAME = "BrighterTrippedTopics";
+
+    private readonly IAmARelationalDbConnectionProvider _connectionProvider;
+    private readonly string _qualifiedTable;
+
+    /// <summary>
+    /// Creates a store over the trip table.
+    /// </summary>
+    /// <param name="connectionProvider">Provides the connection to the database that holds the trip table.</param>
+    /// <param name="tableName">The name of the trip table.</param>
+    /// <param name="schemaName">The schema of the trip table, or null for the connection's default schema.</param>
+    public MySqlTrippedTopicStore(
+        IAmARelationalDbConnectionProvider connectionProvider,
+        string tableName = DEFAULT_TABLE_NAME,
+        string? schemaName = null)
+    {
+        _connectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
+        _qualifiedTable = QualifiedTable(tableName, schemaName);
+    }
+
+    /// <summary>
+    /// Gets the SQL that creates the trip table and the secondary index that serves the read's ranged update.
+    /// </summary>
+    /// <param name="tableName">The name of the trip table.</param>
+    /// <param name="schemaName">The schema of the trip table, or null for the connection's default schema.</param>
+    /// <returns>The DDL, safe to run more than once.</returns>
+    public static string GetDDL(string tableName, string? schemaName = null)
+    {
+        var qualifiedTable = QualifiedTable(tableName, schemaName);
+
+        return $"""
+                CREATE TABLE IF NOT EXISTS {qualifiedTable} (
+                    `Topic` VARCHAR(255) NOT NULL,
+                    `TripTime` DATETIME(6) NOT NULL,
+                    `PriorTripTime` DATETIME(6) NULL,
+                    `EndedAt` DATETIME(6) NULL,
+                    PRIMARY KEY (`Topic`),
+                    INDEX `idx_{tableName}_EndedAt_TripTime` (`EndedAt`, `TripTime`)
+                ) ENGINE = InnoDB;
+                """;
+    }
+
+    /// <inheritdoc />
+    public async Task<TrippedTopicStoreRead> ReadAsync(
+        DateTimeOffset now,
+        TimeSpan tripLength,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT `Topic`, `TripTime` FROM {_qualifiedTable} WHERE `EndedAt` IS NULL";
+
+        var live = new List<TopicTrip>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            live.Add(new TopicTrip(new RoutingKey(reader.GetString(0)), ReadUtc(reader, 1)));
+
+        return new TrippedTopicStoreRead(live, []);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<TripWriteResult>> WriteAsync(
+        IReadOnlyList<TopicTrip> trips,
+        CancellationToken cancellationToken = default)
+    {
+        var inOrdinalTopicOrder = InOrdinalTopicOrder(trips);
+
+        await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+        await using (var upsert = connection.CreateCommand())
+        {
+            upsert.Transaction = transaction;
+            upsert.CommandText = UpsertStatement(inOrdinalTopicOrder.Count);
+            AddTripParameters(upsert, inOrdinalTopicOrder);
+            await upsert.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        var results = await ReadWrittenRowsAsync(connection, transaction, inOrdinalTopicOrder, cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return results;
+    }
+
+    private async Task<List<TripWriteResult>> ReadWrittenRowsAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        List<TopicTrip> written,
+        CancellationToken cancellationToken)
+    {
+        await using var select = connection.CreateCommand();
+        select.Transaction = transaction;
+        var topicParameters = string.Join(", ", Enumerable.Range(0, written.Count).Select(i => $"@topic{i}"));
+        select.CommandText =
+            $"SELECT `Topic`, `PriorTripTime`, `TripTime`, `EndedAt` FROM {_qualifiedTable} WHERE `Topic` IN ({topicParameters})";
+        for (var i = 0; i < written.Count; i++)
+            AddParameter(select, $"@topic{i}", DbType.String, written[i].Topic.Value);
+
+        var results = new List<TripWriteResult>(written.Count);
+        await using var reader = await select.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            results.Add(ToResult(reader));
+        return results;
+    }
+
+    private string UpsertStatement(int count)
+    {
+        var values = string.Join(", ", Enumerable.Range(0, count).Select(i => $"(@topic{i}, @t{i})"));
+
+        return $"""
+                INSERT INTO {_qualifiedTable} (`Topic`, `TripTime`)
+                VALUES {values}
+                ON DUPLICATE KEY UPDATE
+                    `PriorTripTime` = IF(`EndedAt` IS NULL, `TripTime`, NULL),
+                    `EndedAt` = IF(`EndedAt` IS NOT NULL AND VALUES(`TripTime`) <= `TripTime`, `EndedAt`, NULL),
+                    `TripTime` = GREATEST(`TripTime`, VALUES(`TripTime`));
+                """;
+    }
+
+    private static void AddTripParameters(DbCommand command, List<TopicTrip> trips)
+    {
+        for (var i = 0; i < trips.Count; i++)
+        {
+            AddParameter(command, $"@topic{i}", DbType.String, trips[i].Topic.Value);
+            AddParameter(command, $"@t{i}", DbType.DateTime, trips[i].TripTime.UtcDateTime);
+        }
+    }
+
+    private static List<TopicTrip> InOrdinalTopicOrder(IReadOnlyList<TopicTrip> trips)
+    {
+        var distinctTopics = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var trip in trips)
+        {
+            if (!distinctTopics.Add(trip.Topic.Value))
+                throw new ArgumentException($"The topic {trip.Topic.Value} appears more than once in the write", nameof(trips));
+        }
+
+        return trips.OrderBy(trip => trip.Topic.Value, StringComparer.Ordinal).ToList();
+    }
+
+    private static TripWriteResult ToResult(DbDataReader reader) =>
+        new(
+            new RoutingKey(reader.GetString(0)),
+            reader.IsDBNull(1) ? null : ReadUtc(reader, 1),
+            ReadUtc(reader, 2),
+            !reader.IsDBNull(3));
+
+    private static DateTimeOffset ReadUtc(DbDataReader reader, int ordinal) =>
+        new(DateTime.SpecifyKind(reader.GetDateTime(ordinal), DateTimeKind.Utc));
+
+    private static void AddParameter(DbCommand command, string name, DbType type, object value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.DbType = type;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
+    }
+
+    private static string QualifiedTable(string tableName, string? schemaName)
+    {
+        if (string.IsNullOrWhiteSpace(tableName))
+            throw new ArgumentException("You must provide a table name for the trip table", nameof(tableName));
+
+        return schemaName is null ? $"`{tableName}`" : $"`{schemaName}`.`{tableName}`";
+    }
+}
