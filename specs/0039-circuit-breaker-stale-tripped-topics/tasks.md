@@ -1447,7 +1447,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.59a
   - References: `src/Paramore.Brighter.Outbox.MySql/MySqlOutboxBuilder.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **DOC: T2.59c - Amend ADR 0089 for the shared base class `RelationDatabaseTrippedTopicStore`**
+- [x] **DOC: T2.59c - Amend ADR 0089 for the shared base class `RelationDatabaseTrippedTopicStore`**
   - Amend ADR 0089 (*Key Components*, *The roles, and what each is responsible for*, *Where the pieces live*, *Where each type is touched* and the FR-7.4 line of *Scope*) to say that the three SQL trip stores derive from a public abstract class `RelationDatabaseTrippedTopicStore` in `Paramore.Brighter`, modelled on `RelationDatabaseOutbox`. Add an amendment note to its Status section, as ADRs 0028, 0085 and 0086 do for this spec.
     - **The base holds** what the three stores repeat: the constructor arguments (connection provider, table name, optional command timeout), the rule that a write names each topic once and applies topics in ordinal order, the command timeout rounded up to whole seconds with a minimum of one, command and parameter creation, row-to-`TopicTrip`/`TripWriteResult` mapping, and (from T2.60a) the retry-once-on-deadlock template `RunWithDeadlockRetryAsync` with a protected virtual `IsDeadlock(Exception)` that returns false.
     - **Each derived store keeps** its dialect: the SQL text and quoting, `GetDDL`, `GetPurgeSql`, the shape of its write and read (one batch on MsSql, one `INSERT ... RETURNING` on PostgreSql, an upsert plus `SELECT` and a `REPEATABLE READ` read on MySql), its `IsDeadlock` predicate, and connection and transaction handling, because core targets `netstandard2.0` and cannot assume async disposal.
