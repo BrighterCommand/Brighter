@@ -974,12 +974,53 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     /// <inheritdoc/>
     public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
     {
-        return OutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, args).Count();
+        var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Mongodb, Configuration.DatabaseName,
+                BoxDbOperation.OutStandingMessages, CollectionConfiguration.Name),
+            requestContext?.Span,
+            options: Configuration.InstrumentationOptions);
+        try
+        {
+            var count = Collection.CountDocuments(CreateOutstandingCountFilter(dispatchedSince, args),
+                new CountOptions { Limit = maxCount == 0 ? null : maxCount });
+            span?.AddTag("db.response.returned_rows", 1);
+            return checked((int)count);
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
     }
 
     /// <inheritdoc/>
     public async Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
-        return (await OutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, args, cancellationToken)).Count();
+        var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Mongodb, Configuration.DatabaseName,
+                BoxDbOperation.OutStandingMessages, CollectionConfiguration.Name),
+            requestContext?.Span,
+            options: Configuration.InstrumentationOptions);
+        try
+        {
+            var count = await Collection.CountDocumentsAsync(CreateOutstandingCountFilter(dispatchedSince, args),
+                new CountOptions { Limit = maxCount == 0 ? null : maxCount }, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            span?.AddTag("db.response.returned_rows", 1);
+            return checked((int)count);
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
+    }
+
+    private FilterDefinition<OutboxMessage> CreateOutstandingCountFilter(TimeSpan dispatchedSince, Dictionary<string, object>? args)
+    {
+        var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
+        var filter = Builders<OutboxMessage>.Filter.Eq(x => x.Dispatched, null);
+        filter &= Builders<OutboxMessage>.Filter.Lt(x => x.TimeStamp, olderThan);
+        if (args != null && args.TryGetValue("Topic", out var topic))
+            filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
+        return filter;
     }
 }
