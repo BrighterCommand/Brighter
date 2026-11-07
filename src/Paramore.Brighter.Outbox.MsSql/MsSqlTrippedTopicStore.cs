@@ -96,14 +96,21 @@ public class MsSqlTrippedTopicStore : IAmATrippedTopicStore
     {
         using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT [Topic], [TripTime] FROM {_qualifiedTable} WHERE [EndedAt] IS NULL";
+        command.CommandText = $"""
+            UPDATE {_qualifiedTable} SET [EndedAt] = @now
+            OUTPUT INSERTED.[Topic], INSERTED.[TripTime]
+            WHERE [EndedAt] IS NULL AND [TripTime] <= @cutoff;
+            SELECT [Topic], [TripTime] FROM {_qualifiedTable} WHERE [EndedAt] IS NULL;
+            """;
+        AddParameter(command, "@now", DbType.DateTimeOffset, now);
+        AddParameter(command, "@cutoff", DbType.DateTimeOffset, now - tripLength);
 
-        var live = new List<TopicTrip>();
         using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-            live.Add(new TopicTrip(new RoutingKey(reader.GetString(0)), reader.GetFieldValue<DateTimeOffset>(1)));
+        var ended = await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
+        await reader.NextResultAsync(cancellationToken).ConfigureAwait(false);
+        var live = await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
 
-        return new TrippedTopicStoreRead(live, []);
+        return new TrippedTopicStoreRead(live, ended);
     }
 
     /// <inheritdoc />
@@ -170,6 +177,14 @@ public class MsSqlTrippedTopicStore : IAmATrippedTopicStore
         }
 
         return trips.OrderBy(trip => trip.Topic.Value, StringComparer.Ordinal).ToList();
+    }
+
+    private static async Task<List<TopicTrip>> ReadTripsAsync(DbDataReader reader, CancellationToken cancellationToken)
+    {
+        var trips = new List<TopicTrip>();
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            trips.Add(new TopicTrip(new RoutingKey(reader.GetString(0)), reader.GetFieldValue<DateTimeOffset>(1)));
+        return trips;
     }
 
     private static TripWriteResult ToResult(DbDataReader reader) =>
