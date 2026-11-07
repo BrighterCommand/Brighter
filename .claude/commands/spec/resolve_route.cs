@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 const int SuccessExitCode = 0;
 const int UsageErrorExitCode = 1;
@@ -105,30 +106,183 @@ internal static class SlipReader
             .ToList();
 }
 
+internal sealed record Violation(string Rule, string Code, string? Step, string Detail, string Message)
+{
+    public JsonObject ToJson() => new()
+    {
+        ["rule"] = Rule,
+        ["code"] = Code,
+        ["step"] = Step,
+        ["detail"] = Detail,
+        ["message"] = Message
+    };
+}
+
+internal sealed record SyntaxFault(int Line, string What);
+
+internal static class SlipSyntax
+{
+    private const string Name = "[a-z][a-z0-9-]*";
+    private const string Command = "/[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*(?: [^ @]+)*";
+    private const string HandOffName = "hand-off";
+    private const int ColumnCount = 6;
+
+    private static readonly string[] HeaderCells = ["Step", "Kind", "Producer", "Artefacts", "Marker", "Marker-writer"];
+    private static readonly Regex FlowLine = new($"^# flow: {Name}$");
+    private static readonly Regex DelimiterCell = new("^:?-{3,}:?$");
+    private static readonly Regex StepCell = new($"^{Name}$");
+    private static readonly Regex KindCell = new($"^(?:{Name})?$");
+    private static readonly Regex CommandCell = new($"^{Command}$");
+    private static readonly Regex ArtefactsCell = new("^[A-Za-z0-9._-]+(?:, [A-Za-z0-9._-]+)*$");
+    private static readonly Regex MarkerCell = new("^\\.[a-z0-9-]+-approved$");
+    private static readonly Regex HandOffLine = new($"^{HandOffName}: {Command}$");
+    private static readonly Regex DetourLine = new($"^detour: {Command} @ (?:{Name}|{HandOffName}) -> (?:{Name}|{HandOffName})$");
+
+    private enum Position
+    {
+        BeforeHeader,
+        BeforeDelimiter,
+        InTable,
+        AfterTable,
+        AfterHandOff
+    }
+
+    public static bool IsFlowName(string name) => StepCell.IsMatch(name);
+
+    public static SyntaxFault? FirstFault(IReadOnlyList<string> lines)
+    {
+        if (!FlowLine.IsMatch(lines[0]))
+        {
+            return new SyntaxFault(1, "line 1 must be '# flow: {name}'");
+        }
+
+        var position = Position.BeforeHeader;
+        for (var index = 1; index < lines.Count; index++)
+        {
+            var (next, what) = Advance(position, lines[index]);
+            if (what is not null)
+            {
+                return new SyntaxFault(index + 1, what);
+            }
+
+            position = next;
+        }
+
+        return position == Position.AfterHandOff ? null : new SyntaxFault(lines.Count, "the hand-off line is missing");
+    }
+
+    private static (Position Next, string? What) Advance(Position position, string line)
+    {
+        if (line.Length == 0)
+        {
+            return BlankLine(position);
+        }
+
+        return position switch
+        {
+            Position.BeforeHeader => CheckHeader(line),
+            Position.BeforeDelimiter => CheckDelimiter(line),
+            Position.InTable => line.StartsWith('|') ? CheckRow(line, Position.InTable) : CheckHandOff(line),
+            Position.AfterTable => line.StartsWith('|') ? Fault("a table row follows a blank line") : CheckHandOff(line),
+            _ => CheckAfterHandOff(line)
+        };
+    }
+
+    private static (Position Next, string? What) BlankLine(Position position) => position switch
+    {
+        Position.BeforeDelimiter => Fault("the delimiter row is missing"),
+        Position.InTable => (Position.AfterTable, null),
+        _ => (position, null)
+    };
+
+    private static (Position Next, string? What) CheckHeader(string line) =>
+        Cells(line) is { } cells && cells.SequenceEqual(HeaderCells)
+            ? (Position.BeforeDelimiter, null)
+            : Fault("the step table header is missing or wrong");
+
+    private static (Position Next, string? What) CheckDelimiter(string line) =>
+        Cells(line) is { Length: ColumnCount } cells && cells.All(DelimiterCell.IsMatch)
+            ? (Position.InTable, null)
+            : Fault("the delimiter row is not valid");
+
+    private static (Position Next, string? What) CheckRow(string line, Position next) =>
+        Cells(line) is { Length: ColumnCount } cells && RowCellsAreValid(cells)
+            ? (next, null)
+            : Fault("the step row is not valid");
+
+    private static bool RowCellsAreValid(string[] cells) =>
+        StepCell.IsMatch(cells[0]) && cells[0] != HandOffName
+        && KindCell.IsMatch(cells[1])
+        && CommandCell.IsMatch(cells[2])
+        && ArtefactsCell.IsMatch(cells[3])
+        && MarkerCell.IsMatch(cells[4])
+        && CommandCell.IsMatch(cells[5]);
+
+    private static (Position Next, string? What) CheckHandOff(string line) =>
+        HandOffLine.IsMatch(line) ? (Position.AfterHandOff, null) : Fault("unexpected text");
+
+    private static (Position Next, string? What) CheckAfterHandOff(string line)
+    {
+        if (line.StartsWith('|'))
+        {
+            return CheckRow(line, Position.AfterHandOff);
+        }
+
+        return DetourLine.IsMatch(line) ? (Position.AfterHandOff, null) : Fault("unexpected text");
+    }
+
+    private static string[]? Cells(string line) =>
+        line.StartsWith('|') && line.EndsWith('|') && line.Length > 1
+            ? line[1..^1].Split('|').Select(cell => cell.Trim()).ToArray()
+            : null;
+
+    private static (Position Next, string? What) Fault(string what) => (default, what);
+}
+
 internal static class DefinitionReport
 {
     private const string FlowExtension = ".flow";
+    private const string MalformedRule = "R0";
+    private const string MalformedCode = "malformed";
 
     public static JsonObject For(Invocation invocation)
     {
         var name = invocation.Target!;
-        var path = Path.Combine(invocation.FlowsDirectory!, name + FlowExtension);
-        var lines = SlipReader.ReadLines(path);
-        return new JsonObject
+        if (!SlipSyntax.IsFlowName(name))
         {
-            ["schema_version"] = ReportSchema.Version,
-            ["mode"] = "definition",
-            ["flow"] = new JsonObject
-            {
-                ["name"] = name,
-                ["source"] = "definition",
-                ["definition_present"] = lines.Count > 0
-            },
-            ["valid"] = true,
-            ["violations"] = new JsonArray(),
-            ["stop"] = null
-        };
+            return Build(name, false, [Malformed("bad name", $"{name} is not a valid flow name.")]);
+        }
+
+        var path = $"{invocation.FlowsDirectory!.TrimEnd('/')}/{name}{FlowExtension}";
+        if (!File.Exists(path))
+        {
+            return Build(name, false, [Malformed("definition missing", $"Flow {name} has no definition at {path}.")]);
+        }
+
+        var fault = SlipSyntax.FirstFault(SlipReader.ReadLines(path));
+        return Build(name, true, fault is null ? [] : [FaultViolation(path, fault)]);
     }
+
+    private static Violation FaultViolation(string path, SyntaxFault fault) =>
+        Malformed(fault.What, $"{path} line {fault.Line} is not valid slip syntax: {fault.What}.");
+
+    private static Violation Malformed(string detail, string message) =>
+        new(MalformedRule, MalformedCode, null, detail, message);
+
+    private static JsonObject Build(string name, bool present, IReadOnlyList<Violation> violations) => new()
+    {
+        ["schema_version"] = ReportSchema.Version,
+        ["mode"] = "definition",
+        ["flow"] = new JsonObject
+        {
+            ["name"] = name,
+            ["source"] = "definition",
+            ["definition_present"] = present
+        },
+        ["valid"] = violations.Count == 0,
+        ["violations"] = new JsonArray(violations.Select(violation => (JsonNode)violation.ToJson()).ToArray()),
+        ["stop"] = null
+    };
 }
 
 internal static class ReportWriter
