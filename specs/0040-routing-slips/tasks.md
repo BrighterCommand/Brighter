@@ -289,7 +289,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: apply every grammar rule from 0089's *slip format* list (1–8), including backticked commands, a detour before the hand-off, and a table row after a blank line.
   - Traces to: 0089 R0, *The validity rules* (R0 short-circuit); FR-3; AC-3 (support). Depends on: T5.1.
 
-- [ ] **TEST + IMPLEMENT: T5.3 — R1: a slip with no steps is invalid**
+- [x] **TEST + IMPLEMENT: T5.3 — R1: a slip with no steps is invalid**
   - **USE COMMAND**: none — RED-first row `definition-r01-no-steps`.
   - Fixture: `flows-rules/r01-no-steps.flow`, with a header row, a delimiter row and no data rows.
   - Test should verify: R1 `no-steps`, `Flow r01-no-steps has no steps.`, and `step: null`.
