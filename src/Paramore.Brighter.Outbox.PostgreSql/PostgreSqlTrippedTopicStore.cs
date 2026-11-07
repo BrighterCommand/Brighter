@@ -93,14 +93,21 @@ public class PostgreSqlTrippedTopicStore : IAmATrippedTopicStore
     {
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT topic, trip_time FROM {_qualifiedTable} WHERE ended_at IS NULL";
+        command.CommandText = $"""
+            UPDATE {_qualifiedTable} SET ended_at = @now
+            WHERE ended_at IS NULL AND trip_time <= @cutoff
+            RETURNING topic, trip_time;
+            SELECT topic, trip_time FROM {_qualifiedTable} WHERE ended_at IS NULL;
+            """;
+        AddParameter(command, "@now", DbType.DateTimeOffset, now.ToUniversalTime());
+        AddParameter(command, "@cutoff", DbType.DateTimeOffset, (now - tripLength).ToUniversalTime());
 
-        var live = new List<TopicTrip>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-            live.Add(new TopicTrip(new RoutingKey(reader.GetString(0)), reader.GetFieldValue<DateTimeOffset>(1)));
+        var ended = await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
+        await reader.NextResultAsync(cancellationToken).ConfigureAwait(false);
+        var live = await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
 
-        return new TrippedTopicStoreRead(live, []);
+        return new TrippedTopicStoreRead(live, ended);
     }
 
     /// <inheritdoc />
@@ -152,6 +159,14 @@ public class PostgreSqlTrippedTopicStore : IAmATrippedTopicStore
         }
 
         return trips.OrderBy(trip => trip.Topic.Value, StringComparer.Ordinal).ToList();
+    }
+
+    private static async Task<List<TopicTrip>> ReadTripsAsync(DbDataReader reader, CancellationToken cancellationToken)
+    {
+        var trips = new List<TopicTrip>();
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            trips.Add(new TopicTrip(new RoutingKey(reader.GetString(0)), reader.GetFieldValue<DateTimeOffset>(1)));
+        return trips;
     }
 
     private static TripWriteResult ToResult(DbDataReader reader) =>
