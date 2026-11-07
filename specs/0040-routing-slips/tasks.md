@@ -151,7 +151,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 
 *0090 step 1. This is the prerequisite for 0089 step 1. Depends on Phase 1. No copy lands before its canonical block.*
 
-- [ ] **DOC: T2.1 — Write the canonical ADR selection rule and the `/adr:*` templates in `.claude/commands/adr/README.md`**
+- [x] **DOC: T2.1 — Write the canonical ADR selection rule and the `/adr:*` templates in `.claude/commands/adr/README.md`**
   - Do:
     - Add `<!-- routing-text:adr-selection-rule:begin/end -->` around 0090's three-step rule.
     - Add a `templates` block holding the `| Template | Printed by | Text |` rows *Supersession question* and *Report*, word for word from 0090 *Message templates*.
