@@ -125,6 +125,9 @@ internal static class SlipSyntax
     private const string Name = "[a-z][a-z0-9-]*";
     private const string Command = "/[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*(?: [^ @]+)*";
     private const string HandOffName = "hand-off";
+    private const string DetourPrefix = "detour: ";
+    private const string AttachSeparator = " @ ";
+    private const string ReturnSeparator = " -> ";
     private const int ColumnCount = 6;
     private const int TableHeadingRowCount = 2;
 
@@ -162,6 +165,23 @@ internal static class SlipSyntax
 
     public static string? HandOffCommand(IReadOnlyList<string> lines) =>
         lines.FirstOrDefault(line => HandOffLine.IsMatch(line))?[(HandOffName.Length + 2)..];
+
+    public static IReadOnlyList<(int Line, string Command, string AttachedTo, string ReturnPoint)> Detours(IReadOnlyList<string> lines) =>
+        lines
+            .Select((line, index) => (Line: line, Number: index + 1))
+            .Where(row => DetourLine.IsMatch(row.Line))
+            .Select(row => DetourParts(row.Number, row.Line[DetourPrefix.Length..]))
+            .ToList();
+
+    private static (int Line, string Command, string AttachedTo, string ReturnPoint) DetourParts(int number, string text)
+    {
+        var attachSplit = text.LastIndexOf(AttachSeparator, StringComparison.Ordinal);
+        var returnSplit = text.LastIndexOf(ReturnSeparator, StringComparison.Ordinal);
+        return (number,
+            text[..attachSplit],
+            text[(attachSplit + AttachSeparator.Length)..returnSplit],
+            text[(returnSplit + ReturnSeparator.Length)..]);
+    }
 
     public static IReadOnlyList<string> StepNames(IReadOnlyList<string> lines) =>
         StepRows(lines).Select(cells => cells[0]).ToList();
@@ -415,10 +435,38 @@ internal static class SlipValidator
     private static IReadOnlyList<Violation> SlipRules(string name, IReadOnlyList<string> lines, ApprovalTable table) =>
         SlipSyntax.StepCount(lines) == 0
             ? [NoSteps(name)]
-            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines)), .. SelfApproval(SlipSyntax.StepGateCommands(lines)), .. StepsAfterHandOff(SlipSyntax.LinesAfterHandOff(lines)), .. KindsWithoutEntry(SlipSyntax.StepKinds(lines), table), .. LastStepNotTasks(SlipSyntax.LastStep(lines)), .. HandOffNotImplement(SlipSyntax.HandOffCommand(lines))];
+            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines)), .. GateNotAdjacent(SlipSyntax.StepGateCommands(lines)), .. SelfApproval(SlipSyntax.StepGateCommands(lines)), .. StepsAfterHandOff(SlipSyntax.LinesAfterHandOff(lines)), .. KindsWithoutEntry(SlipSyntax.StepKinds(lines), table), .. LastStepNotTasks(SlipSyntax.LastStep(lines)), .. HandOffNotImplement(SlipSyntax.HandOffCommand(lines)), .. BadDetours(SlipSyntax.Detours(lines), SlipSyntax.StepNames(lines))];
 
     private static IReadOnlyList<Violation> TableRules(ApprovalTable table) =>
         [.. DuplicateEntries(table), .. UnresolvedCommands(table)];
+
+    private static IReadOnlyList<Violation> BadDetours(IReadOnlyList<(int Line, string Command, string AttachedTo, string ReturnPoint)> detours, IReadOnlyList<string> stepNames) =>
+        detours.SelectMany(detour => UnknownDetourParts(detour, stepNames)).ToList();
+
+    private static IEnumerable<Violation> UnknownDetourParts((int Line, string Command, string AttachedTo, string ReturnPoint) detour, IReadOnlyList<string> stepNames)
+    {
+        var command = CommandCatalogue.Collapse(detour.Command);
+        if (!CommandCatalogue.Resolves(command))
+        {
+            yield return BadDetour(command, detour.Line, "command");
+        }
+
+        if (!IsStepOrHandOff(detour.AttachedTo, stepNames))
+        {
+            yield return BadDetour(command, detour.Line, "attach point");
+        }
+
+        if (!IsStepOrHandOff(detour.ReturnPoint, stepNames))
+        {
+            yield return BadDetour(command, detour.Line, "return point");
+        }
+    }
+
+    private static bool IsStepOrHandOff(string name, IReadOnlyList<string> stepNames) =>
+        name == "hand-off" || stepNames.Contains(name);
+
+    private static Violation BadDetour(string command, int line, string part) =>
+        new("R15", "bad-detour", null, "bad detour", $"Detour {command} at line {line}: {part} is unknown.");
 
     private static IReadOnlyList<Violation> HandOffNotImplement(string? command) =>
         command is not null && command != "/spec:implement" ? [HandOffNotImplementViolation(command)] : [];
