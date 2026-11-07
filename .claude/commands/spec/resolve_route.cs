@@ -126,6 +126,7 @@ internal static class SlipSyntax
     private const string Command = "/[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*(?: [^ @]+)*";
     private const string HandOffName = "hand-off";
     private const int ColumnCount = 6;
+    private const int TableHeadingRowCount = 2;
 
     private static readonly string[] HeaderCells = ["Step", "Kind", "Producer", "Artefacts", "Marker", "Marker-writer"];
     private static readonly Regex FlowLine = new($"^# flow: {Name}$");
@@ -148,6 +149,9 @@ internal static class SlipSyntax
     }
 
     public static bool IsFlowName(string name) => StepCell.IsMatch(name);
+
+    public static int StepCount(IReadOnlyList<string> lines) =>
+        lines.Count(line => line.StartsWith('|')) - TableHeadingRowCount;
 
     public static SyntaxFault? FirstFault(IReadOnlyList<string> lines)
     {
@@ -239,6 +243,15 @@ internal static class SlipSyntax
     private static (Position Next, string? What) Fault(string what) => (default, what);
 }
 
+internal static class SlipValidator
+{
+    public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines) =>
+        SlipSyntax.StepCount(lines) == 0 ? [NoSteps(name)] : [];
+
+    private static Violation NoSteps(string name) =>
+        new("R1", "no-steps", null, "no steps", $"Flow {name} has no steps.");
+}
+
 internal static class DefinitionReport
 {
     private const string FlowExtension = ".flow";
@@ -259,8 +272,9 @@ internal static class DefinitionReport
             return Build(name, false, [Malformed("definition missing", $"Flow {name} has no definition at {path}.")]);
         }
 
-        var fault = SlipSyntax.FirstFault(SlipReader.ReadLines(path));
-        return Build(name, true, fault is null ? [] : [FaultViolation(path, fault)]);
+        var lines = SlipReader.ReadLines(path);
+        var fault = SlipSyntax.FirstFault(lines);
+        return Build(name, true, fault is null ? SlipValidator.Validate(name, lines) : [FaultViolation(path, fault)]);
     }
 
     private static Violation FaultViolation(string path, SyntaxFault fault) =>
