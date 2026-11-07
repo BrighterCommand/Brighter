@@ -297,7 +297,19 @@ internal static class SlipValidator
     public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines) =>
         SlipSyntax.StepCount(lines) == 0
             ? [NoSteps(name)]
-            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines))];
+            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines)), .. DuplicateKnownKinds(SlipSyntax.StepKinds(lines))];
+
+    private static IReadOnlyList<Violation> DuplicateKnownKinds(IReadOnlyList<(string Step, string Kind)> stepKinds) =>
+        stepKinds
+            .Where(stepKind => KnownKindArtefactNames.ContainsKey(stepKind.Kind))
+            .GroupBy(stepKind => stepKind.Kind)
+            .Where(group => group.Count() > 1)
+            .Select(group => DuplicateKnownKind(group.Key, group.Select(stepKind => stepKind.Step)))
+            .ToList();
+
+    private static Violation DuplicateKnownKind(string kind, IEnumerable<string> steps) =>
+        new("R8", "duplicate-known-kind", null, "duplicate known kind",
+            $"More than one step is of kind {kind} ({string.Join(", ", steps)}).");
 
     private static readonly Dictionary<string, string> KnownKindArtefactNames = new()
     {
