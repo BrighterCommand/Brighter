@@ -361,7 +361,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add R9.
   - Traces to: FR-3, FR-27 (structural); AC-53. Depends on: T5.10.
 
-- [ ] **TEST + IMPLEMENT: T5.12 — R10: a step that produces and approves itself with no gate is invalid**
+- [x] **TEST + IMPLEMENT: T5.12 — R10: a step that produces and approves itself with no gate is invalid**
   - **USE COMMAND**: none — RED-first rows `definition-r10-self-approval` and `definition-r10-exemption`.
   - Fixture:
     - `flows-rules/r10-self-approval.flow`, whose first step names one command as both producer and marker-writer (AC-72).
