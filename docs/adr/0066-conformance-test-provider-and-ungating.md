@@ -267,6 +267,16 @@ recorded in the ledger like any other — `Fixed` if the gateway is taught to st
 `Deferred -> #NNNN` with sign-off. Returning `null` would instead surface as a `NullReferenceException`
 inside the test body, which reads as a broken test rather than a non-conforming transport.
 
+**Amended: a transport that dead-letters natively conforms on routing alone.** A gateway that
+dead-letters through a native broker mechanism (RabbitMQ's DLX) moves the untouched original message,
+so it cannot stamp Brighter metadata without giving up native dead-lettering for a Brighter-managed
+re-publish. Requiring the metadata would force every such transport onto that path, so FR-8 is
+relaxed for them. A provider declares native dead-lettering by returning `string.Empty` for **every**
+key. `RejectionMetadataKeys.StampsRejectionMetadata` is then `false`, and the reject behaviours
+assert arrival at the dead-letter or invalid destination unconditionally but skip the metadata
+sub-assertions. A transport that stamps metadata is unaffected, since the guard is always `true` for
+it. An empty key alongside non-empty ones still fails FR-8 as described above.
+
 #### Why there is no scheduler member
 
 A scheduler-carrying provider member would let a generated test prove a delayed requeue was
@@ -352,6 +362,23 @@ tests under OOS-2**, not in the universal suite.
   `MessagingGatewayGenerator` gains it.
 - *(No scheduler spy or scheduler-carrying member — withdrawn with FR-3; see "Why there is no
   scheduler member".)*
+- `Shared/ConformanceDeferredPump.cs.liquid` — a command whose handler always defers, and a real
+  `Reactor` or `Proactor` built over the channel under test. The delivery budget FR-23 asserts is
+  enforced by the pump and nothing else: it calls `UpdateHandledCount`, tests
+  `HandledCountReached(RequeueCount)`, and rejects with `DeliveryError` when the budget is spent. A
+  test that calls `Requeue` on a channel directly never reaches that code, so the harness drives the
+  production pump rather than standing in for it. A harness that re-implements the rule under test
+  keeps reporting conformance after the product's own copy has changed or broken.
+- `Shared/ConformanceHarnessMessageScheduler.cs.liquid` — a wall-clock scheduler for transports that
+  honour a delay by delegating to the scheduler seam (a producer's `SendWithDelay`, a consumer
+  factory's scheduler). The suite tests the *gateway's* delay-delegation contract, not Brighter's
+  scheduler implementations, which have their own tests, so the harness re-publishes the message
+  once the delay elapses rather than wiring an `InMemoryScheduler` (see "Recorded for the OOS-2
+  follow-up" below). Only the republish delegate varies by transport; timers, identity,
+  cancellation and disposal are shared and proved once, without a broker. A failed republish is
+  logged, not thrown. Unlogged, it would look exactly like a transport that ignored the delay:
+  the after-delay arm times out with no message and no exception, and the ledger's delayed-send and
+  delayed-requeue verdicts are read from those results.
 - Every hand-written per-transport provider implementation that satisfies these interfaces — the
   twenty `*MessageGatewayProvider.cs` files wired today, e.g.
   `tests/Paramore.Brighter.PostgresSQL.Tests/MessagingGateway/PostgresMessageGatewayProvider.cs`,
