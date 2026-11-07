@@ -421,7 +421,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: parse `detour:` lines in file order, and add R15.
   - Traces to: FR-3, FR-30; AC-85. Depends on: T5.16.
 
-- [ ] **TEST + IMPLEMENT: T5.18 — R16: a definition whose declared name differs from its filename stem is invalid**
+- [x] **TEST + IMPLEMENT: T5.18 — R16: a definition whose declared name differs from its filename stem is invalid**
   - **USE COMMAND**: none — RED-first row `definition-r16-name-mismatch`.
   - Fixture: `flows-rules/r16-name-mismatch.flow`, which declares another name. It is the only rule fixture that does not declare its own stem.
   - Test should verify: R16, `{file} declares flow {name}, which differs from its filename.`
