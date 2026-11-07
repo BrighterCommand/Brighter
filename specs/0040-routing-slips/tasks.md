@@ -380,7 +380,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add R11.
   - Traces to: FR-3; FR-24. Depends on: T5.12.
 
-- [ ] **TEST + IMPLEMENT: T5.14 — R12: a kind with no entry, a duplicate entry, or an unreadable or unresolvable table makes every slip resolved against it invalid, with violations in rule-then-slip order**
+- [x] **TEST + IMPLEMENT: T5.14 — R12: a kind with no entry, a duplicate entry, or an unreadable or unresolvable table makes every slip resolved against it invalid, with violations in rule-then-slip order**
   - **USE COMMAND**: none — RED-first rows `definition-r12-approval-entry` (`flows-rules`), `definition-feature-duplicate-entry` (`flows: "flows-duplicate-entry"`) and `definition-feature-invalid` (`flows: "flows-invalid"`).
   - Fixture (new):
     - `flows-rules/r12-approval-entry.flow`, with a step of a kind that `flows-rules/approvals.md` lacks.
