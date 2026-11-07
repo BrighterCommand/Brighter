@@ -159,6 +159,9 @@ internal static class SlipSyntax
     public static IReadOnlyList<(string Step, string Marker)> StepMarkers(IReadOnlyList<string> lines) =>
         StepRows(lines).Select(cells => (cells[0], cells[4])).ToList();
 
+    public static IReadOnlyList<(string Step, string Command)> StepCommands(IReadOnlyList<string> lines) =>
+        StepRows(lines).SelectMany(cells => new[] { (cells[0], cells[2]), (cells[0], cells[5]) }).ToList();
+
     private static IEnumerable<string[]> StepRows(IReadOnlyList<string> lines) =>
         lines
             .TakeWhile(line => !line.StartsWith(HandOffName + ":"))
@@ -256,12 +259,47 @@ internal static class SlipSyntax
     private static (Position Next, string? What) Fault(string what) => (default, what);
 }
 
+internal static class CommandCatalogue
+{
+    private const string CommandsDirectory = ".claude/commands";
+    private const string CommandExtension = ".md";
+
+    private static readonly Regex SpaceRun = new(" +");
+
+    public static string Collapse(string command) => SpaceRun.Replace(command, " ");
+
+    public static bool Resolves(string command)
+    {
+        var firstToken = Collapse(command).Split(' ')[0];
+        var parts = firstToken.TrimStart('/').Split(':');
+        return parts.Length == 2 && FamilyHasCommand(parts[0], parts[1]);
+    }
+
+    private static bool FamilyHasCommand(string family, string name) =>
+        ListDirectory(CommandsDirectory, Directory.GetDirectories).Contains(family, StringComparer.Ordinal)
+        && ListDirectory($"{CommandsDirectory}/{family}", Directory.GetFiles).Contains(name + CommandExtension, StringComparer.Ordinal);
+
+    private static IEnumerable<string> ListDirectory(string directory, Func<string, string[]> list) =>
+        list(directory).Select(entry => Path.GetFileName(entry));
+}
+
 internal static class SlipValidator
 {
     public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines) =>
         SlipSyntax.StepCount(lines) == 0
             ? [NoSteps(name)]
-            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines))];
+            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines))];
+
+    private static IReadOnlyList<Violation> UnknownCommands(IReadOnlyList<(string Step, string Command)> stepCommands) =>
+        stepCommands
+            .Select(stepCommand => (stepCommand.Step, Command: CommandCatalogue.Collapse(stepCommand.Command)))
+            .Where(stepCommand => !CommandCatalogue.Resolves(stepCommand.Command))
+            .Select(stepCommand => UnknownCommand(stepCommand.Step, stepCommand.Command))
+            .ToList();
+
+    private static Violation UnknownCommand(string step, string command) =>
+        new("R4", "unknown-command", step, "unknown command",
+            $"Step {step} names a command that does not exist, {command}.");
 
     private static IReadOnlyList<Violation> DuplicateSteps(IReadOnlyList<string> stepNames) =>
         stepNames
