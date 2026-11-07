@@ -329,7 +329,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add R5.
   - Traces to: FR-3; AC-3. Depends on: T5.6.
 
-- [ ] **TEST + IMPLEMENT: T5.8 — R6: a step with an empty Kind cell is invalid**
+- [x] **TEST + IMPLEMENT: T5.8 — R6: a step with an empty Kind cell is invalid**
   - **USE COMMAND**: none — RED-first row `definition-r06-missing-kind`.
   - Fixture: `flows-rules/r06-missing-kind.flow`.
   - Test should verify: R6 `missing-kind`, `Step {step} declares no artefact kind.` (not R0).
