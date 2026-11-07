@@ -92,15 +92,21 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
         CancellationToken cancellationToken = default)
     {
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
-        await using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT `Topic`, `TripTime` FROM {_qualifiedTable} WHERE `EndedAt` IS NULL";
+        await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false);
 
-        var live = new List<TopicTrip>();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-            live.Add(new TopicTrip(new RoutingKey(reader.GetString(0)), ReadUtc(reader, 1)));
+        var cutoff = (now - tripLength).UtcDateTime;
+        var ended = await ReadTripsAsync(
+            connection, transaction,
+            $"SELECT `Topic`, `TripTime` FROM {_qualifiedTable} WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff FOR UPDATE",
+            [("@cutoff", cutoff)], cancellationToken).ConfigureAwait(false);
+        await MarkEndedAsync(connection, transaction, now.UtcDateTime, cutoff, cancellationToken).ConfigureAwait(false);
+        var live = await ReadTripsAsync(
+            connection, transaction,
+            $"SELECT `Topic`, `TripTime` FROM {_qualifiedTable} WHERE `EndedAt` IS NULL",
+            [], cancellationToken).ConfigureAwait(false);
 
-        return new TrippedTopicStoreRead(live, []);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return new TrippedTopicStoreRead(live, ended);
     }
 
     /// <inheritdoc />
@@ -124,6 +130,41 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
         var results = await ReadWrittenRowsAsync(connection, transaction, inOrdinalTopicOrder, cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return results;
+    }
+
+    private static async Task<List<TopicTrip>> ReadTripsAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        string sql,
+        (string Name, DateTime Value)[] parameters,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = sql;
+        foreach (var (name, value) in parameters) AddParameter(command, name, DbType.DateTime, value);
+
+        var trips = new List<TopicTrip>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            trips.Add(new TopicTrip(new RoutingKey(reader.GetString(0)), ReadUtc(reader, 1)));
+        return trips;
+    }
+
+    private async Task MarkEndedAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        DateTime now,
+        DateTime cutoff,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText =
+            $"UPDATE {_qualifiedTable} SET `EndedAt` = @now WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff";
+        AddParameter(command, "@now", DbType.DateTime, now);
+        AddParameter(command, "@cutoff", DbType.DateTime, cutoff);
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<List<TripWriteResult>> ReadWrittenRowsAsync(
