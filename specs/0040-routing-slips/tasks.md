@@ -278,7 +278,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
     - Build the flow-form report from `schema_version`, `mode`, `flow`, `valid`, `violations` and `stop`. `stop` stays `null` until T8.2.
   - Traces to: 0089 step 4, *The slip format*, *Key Components*; 0092 step 3; FR-1, FR-2, FR-6 (flow query); NFR-2. Depends on: T4.2.
 
-- [ ] **TEST + IMPLEMENT: T5.2 — R0: malformed syntax, a missing definition and a bad flow name are each violation R0, and R0 suppresses the other slip rules**
+- [x] **TEST + IMPLEMENT: T5.2 — R0: malformed syntax, a missing definition and a bad flow name are each violation R0, and R0 suppresses the other slip rules**
   - **USE COMMAND**: none — RED-first rows: `definition-r00-malformed`, `definition-nosuch`, `definition-bad-name`.
   - Fixture: `flows-rules/r00-malformed.flow`, with a prose line after the table. Also add `flows-rules/approvals.md`, holding entries for the three known kinds only.
   - Test should verify:
