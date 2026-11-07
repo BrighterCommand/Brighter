@@ -372,7 +372,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add R10. It is satisfied only when the command is also the previous step's marker-writer.
   - Traces to: FR-3, FR-27; AC-72; FR-24. Depends on: T5.11.
 
-- [ ] **TEST + IMPLEMENT: T5.13 — R11: a table row after the hand-off is invalid, and does not join `steps`**
+- [x] **TEST + IMPLEMENT: T5.13 — R11: a table row after the hand-off is invalid, and does not join `steps`**
   - **USE COMMAND**: none — RED-first row `definition-r11-step-after-hand-off`.
   - Fixture: `flows-rules/r11-step-after-hand-off.flow`.
   - Test should verify: R11 only, `A step follows the hand-off at line {n}.` The late row does not feed R2, R5 or R13.
