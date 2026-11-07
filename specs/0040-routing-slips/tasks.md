@@ -159,7 +159,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Verification: `spec_text_tests.cs` no longer reports a missing canonical block. It still reports the missing copies, which T2.2–T2.5 add.
   - Traces to: 0090 step 1 (README part), *The `design` sub-flow commands*; 0092 step 1. Depends on: T1.2.
 
-- [ ] **TEST + IMPLEMENT: T2.2 — `/adr:accept` accepts each selected ADR in its actions pass and prints `approved-artefacts:`; its questions pass checks frontmatter and writes nothing**
+- [x] **TEST + IMPLEMENT: T2.2 — `/adr:accept` accepts each selected ADR in its actions pass and prints `approved-artefacts:`; its questions pass checks frontmatter and writes nothing**
   - Verification row (RED-first, already failing from T1.1): the `adr-selection-rule` copy in `adr/accept.md` is missing. No `/tdd:test-first` applies, because this is command text (spec-0040 rule).
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
