@@ -345,7 +345,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add R7.
   - Traces to: FR-3; AC-53. Depends on: T5.8.
 
-- [ ] **TEST + IMPLEMENT: T5.10 — R8: two steps of one known kind are invalid**
+- [x] **TEST + IMPLEMENT: T5.10 — R8: two steps of one known kind are invalid**
   - **USE COMMAND**: none — RED-first row `definition-r08-duplicate-known-kind`.
   - Fixture: `flows-rules/r08-duplicate-known-kind.flow`, with two `requirements` steps.
   - Test should verify: R8, `More than one step is of kind requirements ({steps}).`
