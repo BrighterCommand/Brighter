@@ -1456,6 +1456,21 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.59b
   - References: `docs/adr/0089-distributed-outbox-circuit-breaker.md`. `src/Paramore.Brighter/RelationDatabaseOutbox.cs` (the pattern).
 
+- [ ] **TEST + IMPLEMENT: T2.59c1 - The SQL trip stores default a null command timeout to 2 seconds**
+  - **USE COMMAND**: `/tdd:test-first when a sql trip store is built with no command timeout should run its commands with the default store timeout of 2 seconds`
+  - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker" and "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
+  - Test files: one per project, `When_the_{backend}_trip_store_has_no_command_timeout_should_default_it_to_two_seconds.cs`, using the project's recording connection provider
+  - Test should verify:
+    - A store built with `commandTimeout` null runs every command it issues with a `CommandTimeout` of 2 seconds, observed through the recording connection provider.
+    - A store built with an explicit `commandTimeout` is unchanged: it still rounds up to whole seconds with a minimum of 1.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - In each of the three stores, use `commandTimeout ?? TimeSpan.FromSeconds(2)` before the whole-second rounding, so a command always carries a timeout. Change no SQL. Done before T2.59d so the extraction moves no behaviour.
+  - Covers: FR-7.4, NFR-3 (command timeout). ADR 0089 *Key Components* (the store constructor row: `commandTimeout` defaults to 2 seconds, the default `StoreTimeout`).
+  - Depends on: T2.59c
+  - Added 2026-11-07 with the owner's approval of this amendment, after the Phase 2h smells review found ADR 0089 and the three stores disagree.
+  - References: `src/Paramore.Brighter.Outbox.MsSql/MsSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.MySql/MySqlTrippedTopicStore.cs`.
+
 - [ ] **STRUCTURAL: T2.59d - Extract `RelationDatabaseTrippedTopicStore` from the three SQL trip stores**
   - **USE COMMAND**: `/refactor:tidy-first extract a RelationDatabaseTrippedTopicStore base class in core, following RelationDatabaseOutbox, and derive MsSqlTrippedTopicStore, PostgreSqlTrippedTopicStore and MySqlTrippedTopicStore from it to remove Duplicated Code`
   - Change:
@@ -1465,7 +1480,7 @@ Phase 2 (starts only after T1.15 has merged)
     - The base compiles for `netstandard2.0`: no `await using`, `DisposeAsync` or `BeginTransactionAsync` in core. A store that wants them keeps that code.
   - Green before and after: every `*TrippedTopicStore*` test in `Paramore.Brighter.MSSQL.Tests` (net10.0 and net9.0), `Paramore.Brighter.PostgresSQL.Tests` and `Paramore.Brighter.MySQL.Tests`, and `Paramore.Brighter.Core.Tests/CircuitBreaker`. Build `Paramore.Brighter`, `Outbox.MsSql`, `Outbox.PostgreSql` and `Outbox.MySql` for every target framework.
   - Covers: ADR step 13. Smells review of 2026-11-07, finding 1.
-  - Depends on: T2.59c
+  - Depends on: T2.59c1
   - References: `src/Paramore.Brighter.Outbox.MsSql/MsSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.MySql/MySqlTrippedTopicStore.cs`. `src/Paramore.Brighter/RelationDatabaseOutbox.cs`.
 
 - [ ] **STRUCTURAL: T2.59e - Share the SQL trip store tests' setup and recording doubles through `Base.Test`**
