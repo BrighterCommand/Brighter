@@ -405,7 +405,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add R13.
   - Traces to: FR-3; AC-3; FR-24. Depends on: T5.14.
 
-- [ ] **TEST + IMPLEMENT: T5.16 — R14: a hand-off other than `/spec:implement` is invalid**
+- [x] **TEST + IMPLEMENT: T5.16 — R14: a hand-off other than `/spec:implement` is invalid**
   - **USE COMMAND**: none — RED-first row `definition-r14-hand-off-not-implement`.
   - Fixture: `flows-rules/r14-hand-off-not-implement.flow`.
   - Test should verify: R14, `The hand-off is {command}, not /spec:implement.`
