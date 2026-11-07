@@ -153,6 +153,14 @@ internal static class SlipSyntax
     public static int StepCount(IReadOnlyList<string> lines) =>
         lines.Count(line => line.StartsWith('|')) - TableHeadingRowCount;
 
+    public static IReadOnlyList<string> StepNames(IReadOnlyList<string> lines) =>
+        lines
+            .TakeWhile(line => !line.StartsWith(HandOffName + ":"))
+            .Where(line => line.StartsWith('|'))
+            .Skip(TableHeadingRowCount)
+            .Select(line => Cells(line)![0])
+            .ToList();
+
     public static SyntaxFault? FirstFault(IReadOnlyList<string> lines)
     {
         if (!FlowLine.IsMatch(lines[0]))
@@ -246,7 +254,17 @@ internal static class SlipSyntax
 internal static class SlipValidator
 {
     public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines) =>
-        SlipSyntax.StepCount(lines) == 0 ? [NoSteps(name)] : [];
+        SlipSyntax.StepCount(lines) == 0 ? [NoSteps(name)] : DuplicateSteps(SlipSyntax.StepNames(lines));
+
+    private static IReadOnlyList<Violation> DuplicateSteps(IReadOnlyList<string> stepNames) =>
+        stepNames
+            .GroupBy(step => step)
+            .Where(group => group.Count() > 1)
+            .Select(group => DuplicateStep(group.Key))
+            .ToList();
+
+    private static Violation DuplicateStep(string step) =>
+        new("R2", "duplicate-step", step, "duplicate step", $"Step {step} appears more than once.");
 
     private static Violation NoSteps(string name) =>
         new("R1", "no-steps", null, "no steps", $"Flow {name} has no steps.");
