@@ -165,6 +165,9 @@ internal static class SlipSyntax
     public static IReadOnlyList<(string Step, string Producer)> StepProducers(IReadOnlyList<string> lines) =>
         StepRows(lines).Select(cells => (cells[0], cells[2])).ToList();
 
+    public static IReadOnlyList<(string Step, string Kind, string Artefacts)> StepKindArtefacts(IReadOnlyList<string> lines) =>
+        StepRows(lines).Select(cells => (cells[0], cells[1], cells[3])).ToList();
+
     public static IReadOnlyList<(string Step, string Kind)> StepKinds(IReadOnlyList<string> lines) =>
         StepRows(lines).Select(cells => (cells[0], cells[1])).ToList();
 
@@ -294,7 +297,26 @@ internal static class SlipValidator
     public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines) =>
         SlipSyntax.StepCount(lines) == 0
             ? [NoSteps(name)]
-            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines))];
+            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines)), .. KnownKindArtefacts(SlipSyntax.StepKindArtefacts(lines))];
+
+    private static readonly Dictionary<string, string> KnownKindArtefactNames = new()
+    {
+        ["requirements"] = "requirements.md",
+        ["design"] = ".adr-list",
+        ["tasks"] = "tasks.md",
+    };
+
+    private static IReadOnlyList<Violation> KnownKindArtefacts(IReadOnlyList<(string Step, string Kind, string Artefacts)> stepKindArtefacts) =>
+        stepKindArtefacts
+            .Where(row => KnownKindArtefactNames.TryGetValue(row.Kind, out var artefact) && !NamesArtefact(row.Artefacts, artefact))
+            .Select(row => KnownKindArtefact(row.Step, row.Kind, KnownKindArtefactNames[row.Kind]))
+            .ToList();
+
+    private static bool NamesArtefact(string artefacts, string artefact) =>
+        artefacts.Split(", ").Contains(artefact, StringComparer.Ordinal);
+
+    private static Violation KnownKindArtefact(string step, string kind, string artefact) =>
+        new("R7", "known-kind-artefact", step, "known-kind artefact", $"Step {step} is of kind {kind} but does not name {artefact}.");
 
     private static IReadOnlyList<Violation> MissingKinds(IReadOnlyList<(string Step, string Kind)> stepKinds) =>
         stepKinds

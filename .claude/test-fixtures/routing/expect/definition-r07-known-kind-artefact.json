@@ -1,0 +1,19 @@
+{
+  "run": ["--definition", "r07-known-kind-artefact"],
+  "flows": "flows-rules",
+  "exit": 0,
+  "report": {
+    "schema_version": 1,
+    "mode": "definition",
+    "flow": { "name": "r07-known-kind-artefact", "source": "definition", "definition_present": true },
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R7",
+        "code": "known-kind-artefact",
+        "step": "tasks",
+        "message": "Step tasks is of kind tasks but does not name tasks.md."
+      }
+    ]
+  }
+}
