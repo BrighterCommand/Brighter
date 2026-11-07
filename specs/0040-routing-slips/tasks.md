@@ -227,7 +227,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 
 *0092 step 2, then 0089 step 3. Depends on T3.1.*
 
-- [ ] **TEST + IMPLEMENT: T4.1 — `resolve_route_tests.cs` pre-checks that the resolver runs, proves its matcher can fail, runs every expectation twice, and checks that nothing it reads was written**
+- [x] **TEST + IMPLEMENT: T4.1 — `resolve_route_tests.cs` pre-checks that the resolver runs, proves its matcher can fail, runs every expectation twice, and checks that nothing it reads was written**
   - **USE COMMAND**: `/tdd:test-first when the route resolver test script runs and the resolver does not exist it should print FAIL the resolver did not run, skip every expectation and exit 1`
   - Test file: `.claude/commands/spec/resolve_route_tests.cs` (new). Fixture: `.claude/test-fixtures/routing/expect/bad-mode.json` (new): `run: ["--bogus"]`, `exit: 1`.
   - Test should verify:
