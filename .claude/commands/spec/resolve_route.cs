@@ -165,6 +165,9 @@ internal static class SlipSyntax
     public static IReadOnlyList<(string Step, string Producer)> StepProducers(IReadOnlyList<string> lines) =>
         StepRows(lines).Select(cells => (cells[0], cells[2])).ToList();
 
+    public static IReadOnlyList<(string Step, string Kind)> StepKinds(IReadOnlyList<string> lines) =>
+        StepRows(lines).Select(cells => (cells[0], cells[1])).ToList();
+
     private static IEnumerable<string[]> StepRows(IReadOnlyList<string> lines) =>
         lines
             .TakeWhile(line => !line.StartsWith(HandOffName + ":"))
@@ -291,7 +294,16 @@ internal static class SlipValidator
     public static IReadOnlyList<Violation> Validate(string name, IReadOnlyList<string> lines) =>
         SlipSyntax.StepCount(lines) == 0
             ? [NoSteps(name)]
-            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines))];
+            : [.. DuplicateSteps(SlipSyntax.StepNames(lines)), .. DuplicateMarkers(SlipSyntax.StepMarkers(lines)), .. UnknownCommands(SlipSyntax.StepCommands(lines)), .. SharedProducers(SlipSyntax.StepProducers(lines)), .. MissingKinds(SlipSyntax.StepKinds(lines))];
+
+    private static IReadOnlyList<Violation> MissingKinds(IReadOnlyList<(string Step, string Kind)> stepKinds) =>
+        stepKinds
+            .Where(stepKind => stepKind.Kind.Length == 0)
+            .Select(stepKind => MissingKind(stepKind.Step))
+            .ToList();
+
+    private static Violation MissingKind(string step) =>
+        new("R6", "missing-kind", step, "missing kind", $"Step {step} declares no artefact kind.");
 
     private static IReadOnlyList<Violation> SharedProducers(IReadOnlyList<(string Step, string Producer)> stepProducers) =>
         stepProducers
