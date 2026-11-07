@@ -583,6 +583,27 @@ them changes a decision above.
   templates) and exclude the meta-test/audit sources (e.g. pipe through `grep -vE '/ConformanceAudit/'`),
   or the invariant can never be satisfied while the guarding test exists.
 
+### Conventions the canonical templates follow
+
+The canonical behaviours share a handful of shapes, each chosen so that a transport's legitimate
+latitude cannot fail a test and a genuine non-conformance cannot pass one:
+
+- **Arrivals are polled, absences are not.** An arrival is awaited in a bounded loop, receiving at a
+  500 ms interval up to a 30 s ceiling for a channel and 60 s for a rejection destination (NFR-2),
+  and returning as soon as the message arrives. A claim that a message does *not* arrive is a single
+  bounded receive: a loop could only wait out its ceiling.
+- **The before-`D` receive is shorter than `D`,** so a correctly delayed message is not seen, yet long
+  enough to catch a gateway that delivers immediately.
+- **A zero-delay requeue is timed from `Requeue` returning.** The call's own duration is the cost of
+  asking the broker, not a delay applied to the message; counting it would measure network latency
+  rather than the gateway's treatment of `TimeSpan.Zero`.
+- **Multi-message arms never assume order** (NFR-4). Ordering is the transport's to choose, so each
+  message gets its own id and body — two drawn from the builder's defaults would be indistinguishable —
+  and each arm identifies what it receives by id and asserts over the set of ids observed. A
+  redelivery is proved by an id seen a second time after the release, and each message is
+  acknowledged as it arrives, so a transport that blocks a message group while one is in flight still
+  makes progress.
+
 ## Consequences
 
 ### Positive
