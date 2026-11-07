@@ -1336,10 +1336,10 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.57, T2.6, T2.7
   - References: `src/Paramore.Brighter.Outbox.MsSql/SqlOutboxBuilder.cs` (`GetDDL` pattern). `tests/Paramore.Brighter.MSSQL.Tests/MsSqlTestHelper.cs`. ADR 0089 *The trip table and the SQL stores*.
 
-- [ ] **TEST + IMPLEMENT: T2.57b - The MsSql trip store purges only old ended rows and rounds its command timeout**
+- [x] **TEST + IMPLEMENT: T2.57b - The MsSql trip store purges only old ended rows and rounds its command timeout**
   - **USE COMMAND**: `/tdd:test-first when the mssql trip store is configured should round its command timeout up to whole seconds and offer a purge that deletes only old ended rows`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
-  - Test file: `When_the_mssql_trip_store_is_configured_should_round_the_command_timeout_and_offer_a_purge.cs`
+  - Test files: `When_the_mssql_trip_store_has_a_command_timeout_should_round_it_up_to_whole_seconds_with_a_minimum_of_one.cs`, `When_the_mssql_purge_runs_should_delete_only_marked_rows_older_than_the_cutoff.cs` and `When_the_mssql_trip_store_runs_should_issue_no_delete_command.cs` (a characterisation test, green on arrival; 🔁 RED mutation: add a `DELETE` to the store's read, and it must fail on the no-`DELETE` assertion), plus the recording test doubles `RecordingConnectionProvider`, `RecordingDbConnection`, `RecordingDbCommand` and `RecordedCommand` in the project's `TestDoubles`
   - Test should verify:
     - `commandTimeout` is rounded up to whole seconds with a minimum of 1, observed on the executed command through a recording connection provider (a test double this task adds that wraps `DbConnection` and `DbCommand` and records `CommandTimeout`).
     - `GetPurgeSql` returns a parameterised `DELETE` with the parameter `@EndedBefore`. Run on a real SQL Server under a connection that may delete, with a bound cutoff, it removes only marked rows whose `EndedAt` is earlier than the cutoff, and never an unmarked row.
@@ -1386,7 +1386,7 @@ Phase 2 (starts only after T1.15 has merged)
 - [ ] **TEST + IMPLEMENT: T2.58b - The PostgreSql trip store purges only old ended rows and rounds its command timeout**
   - **USE COMMAND**: `/tdd:test-first when the postgresql trip store is configured should round its command timeout up to whole seconds and offer a purge that deletes only old ended rows`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
-  - Test file: `When_the_postgresql_trip_store_is_configured_should_round_the_command_timeout_and_offer_a_purge.cs`
+  - Test files: `When_the_postgresql_trip_store_has_a_command_timeout_should_round_it_up_to_whole_seconds_with_a_minimum_of_one.cs`, `When_the_postgresql_purge_runs_should_delete_only_marked_rows_older_than_the_cutoff.cs` and `When_the_postgresql_trip_store_runs_should_issue_no_delete_command.cs` (a characterisation test, green on arrival; 🔁 RED mutation: add a `DELETE` to the store's read, and it must fail on the no-`DELETE` assertion), plus the recording test doubles `RecordingConnectionProvider`, `RecordingDbConnection`, `RecordingDbCommand` and `RecordedCommand` in the project's `TestDoubles`
   - Test should verify:
     - `commandTimeout` is rounded up to whole seconds with a minimum of 1, observed on the executed command through a recording connection provider (a test double this task adds that wraps `DbConnection` and `DbCommand` and records `CommandTimeout`).
     - `GetPurgeSql` returns a parameterised `DELETE` with the parameter `@EndedBefore`. Run on a real PostgreSQL under a connection that may delete, with a bound cutoff, it removes only marked rows whose `EndedAt` is earlier than the cutoff, and never an unmarked row.
@@ -1433,7 +1433,7 @@ Phase 2 (starts only after T1.15 has merged)
 - [ ] **TEST + IMPLEMENT: T2.59b - The MySql trip store purges only old ended rows and rounds its command timeout**
   - **USE COMMAND**: `/tdd:test-first when the mysql trip store is configured should round its command timeout up to whole seconds and offer a purge that deletes only old ended rows`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
-  - Test file: `When_the_mysql_trip_store_is_configured_should_round_the_command_timeout_and_offer_a_purge.cs`
+  - Test files: `When_the_mysql_trip_store_has_a_command_timeout_should_round_it_up_to_whole_seconds_with_a_minimum_of_one.cs`, `When_the_mysql_purge_runs_should_delete_only_marked_rows_older_than_the_cutoff.cs` and `When_the_mysql_trip_store_runs_should_issue_no_delete_command.cs` (a characterisation test, green on arrival; 🔁 RED mutation: add a `DELETE` to the store's read, and it must fail on the no-`DELETE` assertion), plus the recording test doubles `RecordingConnectionProvider`, `RecordingDbConnection`, `RecordingDbCommand` and `RecordedCommand` in the project's `TestDoubles`
   - Test should verify:
     - `commandTimeout` is rounded up to whole seconds with a minimum of 1, observed on the executed command through a recording connection provider (a test double this task adds that wraps `DbConnection` and `DbCommand` and records `CommandTimeout`).
     - `GetPurgeSql` returns a parameterised `DELETE` with the parameter `@EndedBefore`. Run on a real MySQL under a connection that may delete, with a bound cutoff, it removes only marked rows whose `EndedAt` is earlier than the cutoff, and never an unmarked row.
