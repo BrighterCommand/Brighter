@@ -413,7 +413,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add R14.
   - Traces to: FR-3; AC-3. Depends on: T5.15.
 
-- [ ] **TEST + IMPLEMENT: T5.17 — R15: a detour with an unknown command, or with an unknown attach point or return point, is invalid, naming the detour**
+- [x] **TEST + IMPLEMENT: T5.17 — R15: a detour with an unknown command, or with an unknown attach point or return point, is invalid, naming the detour**
   - **USE COMMAND**: none — RED-first rows `definition-r15-detour-command` and `definition-r15-detour-return`.
   - Fixture: `flows-rules/r15-detour-command.flow` and `r15-detour-return.flow`.
   - Test should verify: R15, `Detour {command} at line {n}: {which part} is unknown.`
