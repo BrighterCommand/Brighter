@@ -266,7 +266,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 
 *0092 step 3 with 0089 step 4, one rule at a time. Each rule's fixture is `flows-rules/{rule}.flow` with expectation `expect/definition-{rule}.json` (`run: ["--definition", "{stem}"]`, `flows: "flows-rules"`), added red before the code (RED-first row). Each expectation (except the valid-definition rows) asserts `valid: false` and the full `violations` list (S8): `rule`, `code`, `step`, and the message from 0089's rule table. Depends on Phase 4.*
 
-- [ ] **TEST + IMPLEMENT: T5.1 — A valid definition is reported in flow form, with its source, presence and no violations, against the primary fixture directory**
+- [x] **TEST + IMPLEMENT: T5.1 — A valid definition is reported in flow form, with its source, presence and no violations, against the primary fixture directory**
   - **USE COMMAND**: none — RED-first rows: `expect/definition-feature.json` (`flows: "flows"`).
   - Fixture (new):
     - `.claude/test-fixtures/routing/flows/feature.flow`, a copy of the shipped file.
