@@ -337,7 +337,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add R6.
   - Traces to: FR-3; AC-53. Depends on: T5.7.
 
-- [ ] **TEST + IMPLEMENT: T5.9 — R7: a known-kind step must name its kind's artefact**
+- [x] **TEST + IMPLEMENT: T5.9 — R7: a known-kind step must name its kind's artefact**
   - **USE COMMAND**: none — RED-first row `definition-r07-known-kind-artefact`.
   - Fixture: `flows-rules/r07-known-kind-artefact.flow`, a `tasks`-kind step whose artefact is not `tasks.md` (AC-53). This also raises R13, so the expectation lists R7 then R13 (S8).
   - Test should verify: R7, `Step {step} is of kind tasks but does not name tasks.md.`
