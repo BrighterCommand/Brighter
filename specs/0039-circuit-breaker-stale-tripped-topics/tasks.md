@@ -1483,7 +1483,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.59c1
   - References: `src/Paramore.Brighter.Outbox.MsSql/MsSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.MySql/MySqlTrippedTopicStore.cs`. `src/Paramore.Brighter/RelationDatabaseOutbox.cs`.
 
-- [ ] **STRUCTURAL: T2.59e - Share the SQL trip store tests' setup and recording doubles through `Base.Test`**
+- [x] **STRUCTURAL: T2.59e - Share the SQL trip store tests' setup and recording doubles through `Base.Test`**
   - **USE COMMAND**: `/refactor:tidy-first move the Recording test doubles into Paramore.Brighter.Base.Test and give the three trip store test setup bases a shared RelationDatabaseTrippedTopicStoreTestBase, following RelationDatabaseOutboxTest`
   - Change:
     - Move `RecordedCommand`, `RecordingConnectionProvider`, `RecordingDbCommand` and `RecordingDbConnection` from the three `TestDoubles` folders into one set in `tests/Paramore.Brighter.Base.Test/CircuitBreaker/`. Delete the copies.
