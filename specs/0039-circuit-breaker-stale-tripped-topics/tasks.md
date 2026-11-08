@@ -1456,7 +1456,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.59b
   - References: `docs/adr/0089-distributed-outbox-circuit-breaker.md`. `src/Paramore.Brighter/RelationDatabaseOutbox.cs` (the pattern).
 
-- [ ] **TEST + IMPLEMENT: T2.59c1 - The SQL trip stores default a null command timeout to 2 seconds**
+- [x] **TEST + IMPLEMENT: T2.59c1 - The SQL trip stores default a null command timeout to 2 seconds**
   - **USE COMMAND**: `/tdd:test-first when a sql trip store is built with no command timeout should run its commands with the default store timeout of 2 seconds`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker" and "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
   - Test files: one per project, `When_the_{backend}_trip_store_has_no_command_timeout_should_default_it_to_two_seconds.cs`, using the project's recording connection provider
