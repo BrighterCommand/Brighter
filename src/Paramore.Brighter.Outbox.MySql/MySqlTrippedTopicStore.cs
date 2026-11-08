@@ -41,15 +41,9 @@ namespace Paramore.Brighter.Outbox.MySql;
 /// The store keeps one row per topic, keeps the later of the stored and written stamps, and marks a row ended rather than
 /// deleting it, so the application's database user needs no <c>DELETE</c> permission. Stamps are stored as UTC.
 /// </remarks>
-public class MySqlTrippedTopicStore : IAmATrippedTopicStore
+public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 {
     private const string DEFAULT_TABLE_NAME = "BrighterTrippedTopics";
-
-    private readonly IAmARelationalDbConnectionProvider _connectionProvider;
-    private readonly string _qualifiedTable;
-    private static readonly TimeSpan s_defaultCommandTimeout = TimeSpan.FromSeconds(2);
-
-    private readonly int _commandTimeoutSeconds;
 
     /// <summary>
     /// Creates a store over the trip table.
@@ -65,10 +59,8 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
         string tableName = DEFAULT_TABLE_NAME,
         string? schemaName = null,
         TimeSpan? commandTimeout = null)
+        : base(connectionProvider, QualifiedTable(tableName, schemaName), commandTimeout)
     {
-        _connectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
-        _qualifiedTable = QualifiedTable(tableName, schemaName);
-        _commandTimeoutSeconds = WholeSecondsAtLeastOne(commandTimeout ?? s_defaultCommandTimeout);
     }
 
     /// <summary>
@@ -107,23 +99,23 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
     }
 
     /// <inheritdoc />
-    public async Task<TrippedTopicStoreRead> ReadAsync(
+    public override async Task<TrippedTopicStoreRead> ReadAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
         CancellationToken cancellationToken = default)
     {
-        await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false);
 
         var cutoff = (now - tripLength).UtcDateTime;
-        var ended = await ReadTripsAsync(
+        var ended = await QueryTripsAsync(
             connection, transaction,
-            $"SELECT `Topic`, `TripTime` FROM {_qualifiedTable} WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff FOR UPDATE",
+            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff FOR UPDATE",
             [("@cutoff", cutoff)], cancellationToken).ConfigureAwait(false);
         await MarkEndedAsync(connection, transaction, now.UtcDateTime, cutoff, cancellationToken).ConfigureAwait(false);
-        var live = await ReadTripsAsync(
+        var live = await QueryTripsAsync(
             connection, transaction,
-            $"SELECT `Topic`, `TripTime` FROM {_qualifiedTable} WHERE `EndedAt` IS NULL",
+            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `EndedAt` IS NULL",
             [], cancellationToken).ConfigureAwait(false);
 
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -131,13 +123,13 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<TripWriteResult>> WriteAsync(
+    public override async Task<IReadOnlyList<TripWriteResult>> WriteAsync(
         IReadOnlyList<TopicTrip> trips,
         CancellationToken cancellationToken = default)
     {
         var inOrdinalTopicOrder = InOrdinalTopicOrder(trips);
 
-        await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
         await using (var upsert = CreateCommand(connection))
@@ -153,7 +145,7 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
         return results;
     }
 
-    private async Task<List<TopicTrip>> ReadTripsAsync(
+    private async Task<List<TopicTrip>> QueryTripsAsync(
         DbConnection connection,
         DbTransaction transaction,
         string sql,
@@ -165,11 +157,8 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
         command.CommandText = sql;
         foreach (var (name, value) in parameters) AddParameter(command, name, DbType.DateTime, value);
 
-        var trips = new List<TopicTrip>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-            trips.Add(new TopicTrip(new RoutingKey(reader.GetString(0)), ReadUtc(reader, 1)));
-        return trips;
+        return await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task MarkEndedAsync(
@@ -182,20 +171,11 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
         await using var command = CreateCommand(connection);
         command.Transaction = transaction;
         command.CommandText =
-            $"UPDATE {_qualifiedTable} SET `EndedAt` = @now WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff";
+            $"UPDATE {QualifiedTableName} SET `EndedAt` = @now WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff";
         AddParameter(command, "@now", DbType.DateTime, now);
         AddParameter(command, "@cutoff", DbType.DateTime, cutoff);
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
-
-    private DbCommand CreateCommand(DbConnection connection)
-    {
-        var command = connection.CreateCommand();
-        command.CommandTimeout = _commandTimeoutSeconds;
-        return command;
-    }
-
-    private static int WholeSecondsAtLeastOne(TimeSpan timeout) => Math.Max(1, (int)Math.Ceiling(timeout.TotalSeconds));
 
     private async Task<List<TripWriteResult>> ReadWrittenRowsAsync(
         DbConnection connection,
@@ -207,7 +187,7 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
         select.Transaction = transaction;
         var topicParameters = string.Join(", ", Enumerable.Range(0, written.Count).Select(i => $"@topic{i}"));
         select.CommandText =
-            $"SELECT `Topic`, `PriorTripTime`, `TripTime`, `EndedAt` FROM {_qualifiedTable} WHERE `Topic` IN ({topicParameters})";
+            $"SELECT `Topic`, `PriorTripTime`, `TripTime`, `EndedAt` FROM {QualifiedTableName} WHERE `Topic` IN ({topicParameters})";
         for (var i = 0; i < written.Count; i++)
             AddParameter(select, $"@topic{i}", DbType.String, written[i].Topic.Value);
 
@@ -223,7 +203,7 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
         var values = string.Join(", ", Enumerable.Range(0, count).Select(i => $"(@topic{i}, @t{i})"));
 
         return $"""
-                INSERT INTO {_qualifiedTable} (`Topic`, `TripTime`)
+                INSERT INTO {QualifiedTableName} (`Topic`, `TripTime`)
                 VALUES {values}
                 ON DUPLICATE KEY UPDATE
                     `PriorTripTime` = IF(`EndedAt` IS NULL, `TripTime`, NULL),
@@ -241,36 +221,9 @@ public class MySqlTrippedTopicStore : IAmATrippedTopicStore
         }
     }
 
-    private static List<TopicTrip> InOrdinalTopicOrder(IReadOnlyList<TopicTrip> trips)
-    {
-        var distinctTopics = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var trip in trips)
-        {
-            if (!distinctTopics.Add(trip.Topic.Value))
-                throw new ArgumentException($"The topic {trip.Topic.Value} appears more than once in the write", nameof(trips));
-        }
-
-        return trips.OrderBy(trip => trip.Topic.Value, StringComparer.Ordinal).ToList();
-    }
-
-    private static TripWriteResult ToResult(DbDataReader reader) =>
-        new(
-            new RoutingKey(reader.GetString(0)),
-            reader.IsDBNull(1) ? null : ReadUtc(reader, 1),
-            ReadUtc(reader, 2),
-            !reader.IsDBNull(3));
-
-    private static DateTimeOffset ReadUtc(DbDataReader reader, int ordinal) =>
+    /// <inheritdoc />
+    protected override DateTimeOffset ReadStamp(DbDataReader reader, int ordinal) =>
         new(DateTime.SpecifyKind(reader.GetDateTime(ordinal), DateTimeKind.Utc));
-
-    private static void AddParameter(DbCommand command, string name, DbType type, object value)
-    {
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = name;
-        parameter.DbType = type;
-        parameter.Value = value;
-        command.Parameters.Add(parameter);
-    }
 
     private static string QualifiedTable(string tableName, string? schemaName)
     {

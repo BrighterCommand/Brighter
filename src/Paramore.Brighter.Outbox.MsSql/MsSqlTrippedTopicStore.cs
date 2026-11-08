@@ -41,15 +41,9 @@ namespace Paramore.Brighter.Outbox.MsSql;
 /// The store keeps one row per topic, keeps the later of the stored and written stamps, and marks a row ended rather than
 /// deleting it, so the application's database user needs no <c>DELETE</c> permission.
 /// </remarks>
-public class MsSqlTrippedTopicStore : IAmATrippedTopicStore
+public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 {
     private const string DEFAULT_TABLE_NAME = "BrighterTrippedTopics";
-
-    private readonly IAmARelationalDbConnectionProvider _connectionProvider;
-    private readonly string _qualifiedTable;
-    private static readonly TimeSpan s_defaultCommandTimeout = TimeSpan.FromSeconds(2);
-
-    private readonly int _commandTimeoutSeconds;
 
     /// <summary>
     /// Creates a store over the trip table.
@@ -65,10 +59,8 @@ public class MsSqlTrippedTopicStore : IAmATrippedTopicStore
         string tableName = DEFAULT_TABLE_NAME,
         string? schemaName = null,
         TimeSpan? commandTimeout = null)
+        : base(connectionProvider, QualifiedTable(tableName, schemaName), commandTimeout)
     {
-        _connectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
-        _qualifiedTable = QualifiedTable(tableName, schemaName);
-        _commandTimeoutSeconds = WholeSecondsAtLeastOne(commandTimeout ?? s_defaultCommandTimeout);
     }
 
     /// <summary>
@@ -110,18 +102,18 @@ public class MsSqlTrippedTopicStore : IAmATrippedTopicStore
     }
 
     /// <inheritdoc />
-    public async Task<TrippedTopicStoreRead> ReadAsync(
+    public override async Task<TrippedTopicStoreRead> ReadAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
         CancellationToken cancellationToken = default)
     {
-        using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         using var command = CreateCommand(connection);
         command.CommandText = $"""
-            UPDATE {_qualifiedTable} SET [EndedAt] = @now
+            UPDATE {QualifiedTableName} SET [EndedAt] = @now
             OUTPUT INSERTED.[Topic], INSERTED.[TripTime]
             WHERE [EndedAt] IS NULL AND [TripTime] <= @cutoff;
-            SELECT [Topic], [TripTime] FROM {_qualifiedTable} WHERE [EndedAt] IS NULL;
+            SELECT [Topic], [TripTime] FROM {QualifiedTableName} WHERE [EndedAt] IS NULL;
             """;
         AddParameter(command, "@now", DbType.DateTimeOffset, now);
         AddParameter(command, "@cutoff", DbType.DateTimeOffset, now - tripLength);
@@ -135,13 +127,13 @@ public class MsSqlTrippedTopicStore : IAmATrippedTopicStore
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<TripWriteResult>> WriteAsync(
+    public override async Task<IReadOnlyList<TripWriteResult>> WriteAsync(
         IReadOnlyList<TopicTrip> trips,
         CancellationToken cancellationToken = default)
     {
         var inOrdinalTopicOrder = InOrdinalTopicOrder(trips);
 
-        using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         using var transaction = connection.BeginTransaction();
         using var command = CreateCommand(connection);
         command.Transaction = transaction;
@@ -166,71 +158,26 @@ public class MsSqlTrippedTopicStore : IAmATrippedTopicStore
         return results;
     }
 
-    private DbCommand CreateCommand(DbConnection connection)
-    {
-        var command = connection.CreateCommand();
-        command.CommandTimeout = _commandTimeoutSeconds;
-        return command;
-    }
-
-    private static int WholeSecondsAtLeastOne(TimeSpan timeout) => Math.Max(1, (int)Math.Ceiling(timeout.TotalSeconds));
-
     private string UpsertBatch(int count)
     {
         var batch = new StringBuilder();
         for (var i = 0; i < count; i++)
         {
             batch.AppendLine($"""
-                UPDATE {_qualifiedTable} WITH (UPDLOCK, SERIALIZABLE)
+                UPDATE {QualifiedTableName} WITH (UPDLOCK, SERIALIZABLE)
                 SET [PriorTripTime] = CASE WHEN [EndedAt] IS NULL THEN [TripTime] END,
                     [EndedAt] = CASE WHEN [EndedAt] IS NOT NULL AND @t{i} <= [TripTime] THEN [EndedAt] END,
                     [TripTime] = CASE WHEN @t{i} > [TripTime] THEN @t{i} ELSE [TripTime] END
                 OUTPUT INSERTED.[Topic], INSERTED.[PriorTripTime], INSERTED.[TripTime], INSERTED.[EndedAt]
                 WHERE [Topic] = @topic{i};
                 IF @@ROWCOUNT = 0
-                    INSERT INTO {_qualifiedTable} ([Topic], [TripTime], [PriorTripTime], [EndedAt])
+                    INSERT INTO {QualifiedTableName} ([Topic], [TripTime], [PriorTripTime], [EndedAt])
                     OUTPUT INSERTED.[Topic], INSERTED.[PriorTripTime], INSERTED.[TripTime], INSERTED.[EndedAt]
                     VALUES (@topic{i}, @t{i}, NULL, NULL);
                 """);
         }
 
         return batch.ToString();
-    }
-
-    private static List<TopicTrip> InOrdinalTopicOrder(IReadOnlyList<TopicTrip> trips)
-    {
-        var distinctTopics = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var trip in trips)
-        {
-            if (!distinctTopics.Add(trip.Topic.Value))
-                throw new ArgumentException($"The topic {trip.Topic.Value} appears more than once in the write", nameof(trips));
-        }
-
-        return trips.OrderBy(trip => trip.Topic.Value, StringComparer.Ordinal).ToList();
-    }
-
-    private static async Task<List<TopicTrip>> ReadTripsAsync(DbDataReader reader, CancellationToken cancellationToken)
-    {
-        var trips = new List<TopicTrip>();
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-            trips.Add(new TopicTrip(new RoutingKey(reader.GetString(0)), reader.GetFieldValue<DateTimeOffset>(1)));
-        return trips;
-    }
-
-    private static TripWriteResult ToResult(DbDataReader reader) =>
-        new(
-            new RoutingKey(reader.GetString(0)),
-            reader.IsDBNull(1) ? null : reader.GetFieldValue<DateTimeOffset>(1),
-            reader.GetFieldValue<DateTimeOffset>(2),
-            !reader.IsDBNull(3));
-
-    private static void AddParameter(DbCommand command, string name, DbType type, object value)
-    {
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = name;
-        parameter.DbType = type;
-        parameter.Value = value;
-        command.Parameters.Add(parameter);
     }
 
     private static string QualifiedTable(string tableName, string? schemaName)

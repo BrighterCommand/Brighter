@@ -42,15 +42,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql;
 /// The store keeps one row per topic, keeps the later of the stored and written stamps, and marks a row ended rather than
 /// deleting it, so the application's database user needs no <c>DELETE</c> permission.
 /// </remarks>
-public class PostgreSqlTrippedTopicStore : IAmATrippedTopicStore
+public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 {
     private const string DEFAULT_TABLE_NAME = "BrighterTrippedTopics";
-
-    private readonly IAmARelationalDbConnectionProvider _connectionProvider;
-    private readonly string _qualifiedTable;
-    private static readonly TimeSpan s_defaultCommandTimeout = TimeSpan.FromSeconds(2);
-
-    private readonly int _commandTimeoutSeconds;
 
     /// <summary>
     /// Creates a store over the trip table.
@@ -66,10 +60,8 @@ public class PostgreSqlTrippedTopicStore : IAmATrippedTopicStore
         string tableName = DEFAULT_TABLE_NAME,
         string? schemaName = null,
         TimeSpan? commandTimeout = null)
+        : base(connectionProvider, QualifiedTable(tableName, schemaName), commandTimeout)
     {
-        _connectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
-        _qualifiedTable = QualifiedTable(tableName, schemaName);
-        _commandTimeoutSeconds = WholeSecondsAtLeastOne(commandTimeout ?? s_defaultCommandTimeout);
     }
 
     /// <summary>
@@ -107,18 +99,18 @@ public class PostgreSqlTrippedTopicStore : IAmATrippedTopicStore
     }
 
     /// <inheritdoc />
-    public async Task<TrippedTopicStoreRead> ReadAsync(
+    public override async Task<TrippedTopicStoreRead> ReadAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
         CancellationToken cancellationToken = default)
     {
-        await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var command = CreateCommand(connection);
         command.CommandText = $"""
-            UPDATE {_qualifiedTable} SET ended_at = @now
+            UPDATE {QualifiedTableName} SET ended_at = @now
             WHERE ended_at IS NULL AND trip_time <= @cutoff
             RETURNING topic, trip_time;
-            SELECT topic, trip_time FROM {_qualifiedTable} WHERE ended_at IS NULL;
+            SELECT topic, trip_time FROM {QualifiedTableName} WHERE ended_at IS NULL;
             """;
         AddParameter(command, "@now", DbType.DateTimeOffset, now.ToUniversalTime());
         AddParameter(command, "@cutoff", DbType.DateTimeOffset, (now - tripLength).ToUniversalTime());
@@ -132,13 +124,13 @@ public class PostgreSqlTrippedTopicStore : IAmATrippedTopicStore
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<TripWriteResult>> WriteAsync(
+    public override async Task<IReadOnlyList<TripWriteResult>> WriteAsync(
         IReadOnlyList<TopicTrip> trips,
         CancellationToken cancellationToken = default)
     {
         var inOrdinalTopicOrder = InOrdinalTopicOrder(trips);
 
-        await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var command = CreateCommand(connection);
         command.CommandText = UpsertStatement(inOrdinalTopicOrder.Count);
         for (var i = 0; i < inOrdinalTopicOrder.Count; i++)
@@ -155,21 +147,12 @@ public class PostgreSqlTrippedTopicStore : IAmATrippedTopicStore
         return results;
     }
 
-    private DbCommand CreateCommand(DbConnection connection)
-    {
-        var command = connection.CreateCommand();
-        command.CommandTimeout = _commandTimeoutSeconds;
-        return command;
-    }
-
-    private static int WholeSecondsAtLeastOne(TimeSpan timeout) => Math.Max(1, (int)Math.Ceiling(timeout.TotalSeconds));
-
     private string UpsertStatement(int count)
     {
         var values = string.Join(", ", Enumerable.Range(0, count).Select(i => $"(@topic{i}, @t{i})"));
 
         return $"""
-                INSERT INTO {_qualifiedTable} AS t (topic, trip_time)
+                INSERT INTO {QualifiedTableName} AS t (topic, trip_time)
                 VALUES {values}
                 ON CONFLICT (topic) DO UPDATE SET
                     prior_trip_time = CASE WHEN t.ended_at IS NULL THEN t.trip_time END,
@@ -177,42 +160,6 @@ public class PostgreSqlTrippedTopicStore : IAmATrippedTopicStore
                     trip_time = GREATEST(t.trip_time, EXCLUDED.trip_time)
                 RETURNING t.topic, t.prior_trip_time, t.trip_time, t.ended_at;
                 """;
-    }
-
-    private static List<TopicTrip> InOrdinalTopicOrder(IReadOnlyList<TopicTrip> trips)
-    {
-        var distinctTopics = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var trip in trips)
-        {
-            if (!distinctTopics.Add(trip.Topic.Value))
-                throw new ArgumentException($"The topic {trip.Topic.Value} appears more than once in the write", nameof(trips));
-        }
-
-        return trips.OrderBy(trip => trip.Topic.Value, StringComparer.Ordinal).ToList();
-    }
-
-    private static async Task<List<TopicTrip>> ReadTripsAsync(DbDataReader reader, CancellationToken cancellationToken)
-    {
-        var trips = new List<TopicTrip>();
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-            trips.Add(new TopicTrip(new RoutingKey(reader.GetString(0)), reader.GetFieldValue<DateTimeOffset>(1)));
-        return trips;
-    }
-
-    private static TripWriteResult ToResult(DbDataReader reader) =>
-        new(
-            new RoutingKey(reader.GetString(0)),
-            reader.IsDBNull(1) ? null : reader.GetFieldValue<DateTimeOffset>(1),
-            reader.GetFieldValue<DateTimeOffset>(2),
-            !reader.IsDBNull(3));
-
-    private static void AddParameter(DbCommand command, string name, DbType type, object value)
-    {
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = name;
-        parameter.DbType = type;
-        parameter.Value = value;
-        command.Parameters.Add(parameter);
     }
 
     private static string QualifiedTable(string tableName, string? schemaName)
