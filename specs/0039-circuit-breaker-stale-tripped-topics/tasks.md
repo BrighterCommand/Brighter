@@ -1471,7 +1471,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Added 2026-11-07 with the owner's approval of this amendment, after the Phase 2h smells review found ADR 0089 and the three stores disagree.
   - References: `src/Paramore.Brighter.Outbox.MsSql/MsSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.MySql/MySqlTrippedTopicStore.cs`.
 
-- [ ] **STRUCTURAL: T2.59d - Extract `RelationDatabaseTrippedTopicStore` from the three SQL trip stores**
+- [x] **STRUCTURAL: T2.59d - Extract `RelationDatabaseTrippedTopicStore` from the three SQL trip stores**
   - **USE COMMAND**: `/refactor:tidy-first extract a RelationDatabaseTrippedTopicStore base class in core, following RelationDatabaseOutbox, and derive MsSqlTrippedTopicStore, PostgreSqlTrippedTopicStore and MySqlTrippedTopicStore from it to remove Duplicated Code`
   - Change:
     - Add `public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore` in `src/Paramore.Brighter/CircuitBreaker/`, with the responsibilities T2.59c lists, as protected members. Each store's public constructor, `GetDDL` and `GetPurgeSql` keep their signatures.
