@@ -35,15 +35,14 @@ public abstract class OutstandingCountCancellationOutboxBaseTests<TTransaction>
         // Arrange
         var setup = await PrepareStoreAsync(s_holdFor);
         using var cancellation = new CancellationTokenSource();
-        Task<int> count = null;
+        Task count = null;
         try
         {
             // Act
             if (!setup.StoreHeld)
                 cancellation.Cancel();
 
-            count = Task.Run(() => setup.Outbox.GetOutstandingMessageCountAsync(
-                TimeSpan.FromMinutes(5), new RequestContext(), 100, null, cancellation.Token));
+            count = Task.Run(() => CountAsync(setup.Outbox, cancellation.Token));
 
             if (setup.StoreHeld)
             {
@@ -76,4 +75,13 @@ public abstract class OutstandingCountCancellationOutboxBaseTests<TTransaction>
                 await Task.WhenAny(count, Task.Delay(s_mustEndWithin + s_margin));
         }
     }
+
+    /// <summary>
+    /// Starts the count whose cancellation is being tested. Derived tests can select another count capability.
+    /// </summary>
+    /// <param name="outbox">The outbox over the prepared store.</param>
+    /// <param name="cancellationToken">The token cancelled by the test.</param>
+    /// <returns>The count operation.</returns>
+    protected virtual Task CountAsync(IAmAnOutboxAsync<Message, TTransaction> outbox, CancellationToken cancellationToken) =>
+        outbox.GetOutstandingMessageCountAsync(TimeSpan.FromMinutes(5), new RequestContext(), 100, null, cancellationToken);
 }
