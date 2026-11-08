@@ -47,7 +47,9 @@ public class MsSqlTrippedTopicStore : IAmATrippedTopicStore
 
     private readonly IAmARelationalDbConnectionProvider _connectionProvider;
     private readonly string _qualifiedTable;
-    private readonly int? _commandTimeoutSeconds;
+    private static readonly TimeSpan s_defaultCommandTimeout = TimeSpan.FromSeconds(2);
+
+    private readonly int _commandTimeoutSeconds;
 
     /// <summary>
     /// Creates a store over the trip table.
@@ -56,7 +58,7 @@ public class MsSqlTrippedTopicStore : IAmATrippedTopicStore
     /// <param name="tableName">The name of the trip table.</param>
     /// <param name="schemaName">The schema of the trip table, or null for the connection's default schema.</param>
     /// <param name="commandTimeout">
-    /// How long a command may run, rounded up to whole seconds with a minimum of one. Null leaves the driver's default.
+    /// How long a command may run, rounded up to whole seconds with a minimum of one. Null means 2 seconds, the default store timeout.
     /// </param>
     public MsSqlTrippedTopicStore(
         IAmARelationalDbConnectionProvider connectionProvider,
@@ -66,7 +68,7 @@ public class MsSqlTrippedTopicStore : IAmATrippedTopicStore
     {
         _connectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
         _qualifiedTable = QualifiedTable(tableName, schemaName);
-        _commandTimeoutSeconds = commandTimeout is null ? null : WholeSecondsAtLeastOne(commandTimeout.Value);
+        _commandTimeoutSeconds = WholeSecondsAtLeastOne(commandTimeout ?? s_defaultCommandTimeout);
     }
 
     /// <summary>
@@ -167,7 +169,7 @@ public class MsSqlTrippedTopicStore : IAmATrippedTopicStore
     private DbCommand CreateCommand(DbConnection connection)
     {
         var command = connection.CreateCommand();
-        if (_commandTimeoutSeconds is { } seconds) command.CommandTimeout = seconds;
+        command.CommandTimeout = _commandTimeoutSeconds;
         return command;
     }
 
