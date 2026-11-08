@@ -1494,7 +1494,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.59d
   - References: `tests/Paramore.Brighter.Base.Test/Outbox/RelationDatabaseOutboxTest.cs` (the pattern). The three `TestDoubles` folders and `*TrippedTopicStoreTestBase.cs` files.
 
-- [ ] **TEST + IMPLEMENT: T2.60a - The MsSql trip store retries a deadlock once against SQL Server**
+- [x] **TEST + IMPLEMENT: T2.60a - The MsSql trip store retries a deadlock once against SQL Server**
   - **USE COMMAND**: `/tdd:test-first when the mssql trip store write is chosen as a deadlock victim on a real database should retry once and succeed`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
   - Test file: `When_the_mssql_trip_store_is_chosen_as_a_deadlock_victim_should_retry_once_and_succeed.cs`
