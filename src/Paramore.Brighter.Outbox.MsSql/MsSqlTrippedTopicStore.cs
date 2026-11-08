@@ -30,6 +30,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
 using Paramore.Brighter.CircuitBreaker;
 
 namespace Paramore.Brighter.Outbox.MsSql;
@@ -102,10 +103,19 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     }
 
     /// <inheritdoc />
-    public override async Task<TrippedTopicStoreRead> ReadAsync(
+    protected override bool IsDeadlock(Exception exception) => exception is SqlException { Number: 1205 };
+
+    /// <inheritdoc />
+    public override Task<TrippedTopicStoreRead> ReadAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        RunWithDeadlockRetryAsync(() => ReadOnceAsync(now, tripLength, cancellationToken));
+
+    private async Task<TrippedTopicStoreRead> ReadOnceAsync(
+        DateTimeOffset now,
+        TimeSpan tripLength,
+        CancellationToken cancellationToken)
     {
         using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         using var command = CreateCommand(connection);
@@ -127,9 +137,14 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     }
 
     /// <inheritdoc />
-    public override async Task<IReadOnlyList<TripWriteResult>> WriteAsync(
+    public override Task<IReadOnlyList<TripWriteResult>> WriteAsync(
         IReadOnlyList<TopicTrip> trips,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        RunWithDeadlockRetryAsync(() => WriteOnceAsync(trips, cancellationToken));
+
+    private async Task<IReadOnlyList<TripWriteResult>> WriteOnceAsync(
+        IReadOnlyList<TopicTrip> trips,
+        CancellationToken cancellationToken)
     {
         var inOrdinalTopicOrder = InOrdinalTopicOrder(trips);
 

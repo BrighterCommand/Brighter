@@ -86,6 +86,34 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Runs an operation and, when it fails with a deadlock, runs it once more.
+    /// </summary>
+    /// <remarks>
+    /// The operation runs at most twice. A second failure, of any kind, reaches the caller.
+    /// </remarks>
+    /// <typeparam name="T">The type the operation returns.</typeparam>
+    /// <param name="operation">The operation, which must be safe to run again.</param>
+    /// <returns>What the operation returns.</returns>
+    protected async Task<T> RunWithDeadlockRetryAsync<T>(Func<Task<T>> operation)
+    {
+        try
+        {
+            return await operation().ConfigureAwait(false);
+        }
+        catch (Exception exception) when (IsDeadlock(exception))
+        {
+            return await operation().ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Says whether a failure is the database choosing the operation as a deadlock victim.
+    /// </summary>
+    /// <param name="exception">The failure.</param>
+    /// <returns>True when the operation should be run again. The base returns false.</returns>
+    protected virtual bool IsDeadlock(Exception exception) => false;
+
+    /// <summary>
     /// Creates a command on the connection with the store's command timeout.
     /// </summary>
     /// <param name="connection">The connection to create the command on.</param>

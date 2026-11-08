@@ -99,10 +99,16 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     }
 
     /// <inheritdoc />
-    public override async Task<TrippedTopicStoreRead> ReadAsync(
+    public override Task<TrippedTopicStoreRead> ReadAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        RunWithDeadlockRetryAsync(() => ReadOnceAsync(now, tripLength, cancellationToken));
+
+    private async Task<TrippedTopicStoreRead> ReadOnceAsync(
+        DateTimeOffset now,
+        TimeSpan tripLength,
+        CancellationToken cancellationToken)
     {
         await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var command = CreateCommand(connection);
@@ -124,9 +130,14 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     }
 
     /// <inheritdoc />
-    public override async Task<IReadOnlyList<TripWriteResult>> WriteAsync(
+    public override Task<IReadOnlyList<TripWriteResult>> WriteAsync(
         IReadOnlyList<TopicTrip> trips,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        RunWithDeadlockRetryAsync(() => WriteOnceAsync(trips, cancellationToken));
+
+    private async Task<IReadOnlyList<TripWriteResult>> WriteOnceAsync(
+        IReadOnlyList<TopicTrip> trips,
+        CancellationToken cancellationToken)
     {
         var inOrdinalTopicOrder = InOrdinalTopicOrder(trips);
 
