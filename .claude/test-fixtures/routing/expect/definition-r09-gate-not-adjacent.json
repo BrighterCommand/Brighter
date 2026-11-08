@@ -11,7 +11,7 @@
       {
         "rule": "R9",
         "code": "gate-not-adjacent",
-        "step": "tasks",
+        "step": null,
         "message": "/spec:approve requirements approves step requirements but produces step tasks, which does not immediately follow it."
       }
     ]

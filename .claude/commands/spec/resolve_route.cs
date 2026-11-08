@@ -562,7 +562,7 @@ internal static class SlipValidator
             .ToList();
 
     private static Violation GateNotAdjacentViolation(string command, string approvedStep, string producedStep) =>
-        new("R9", "gate-not-adjacent", producedStep, "gate not adjacent",
+        new("R9", "gate-not-adjacent", null, "gate not adjacent",
             $"{command} approves step {approvedStep} but produces step {producedStep}, which does not immediately follow it.");
 
     private static IReadOnlyList<Violation> DuplicateKnownKinds(IReadOnlyList<(string Step, string Kind)> stepKinds) =>

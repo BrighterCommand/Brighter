@@ -264,7 +264,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 
 ## Phase 5 — Definitions and validity rules
 
-*0092 step 3 with 0089 step 4, one rule at a time. Each rule's fixture is `flows-rules/{rule}.flow` with expectation `expect/definition-{rule}.json` (`run: ["--definition", "{stem}"]`, `flows: "flows-rules"`), added red before the code (RED-first row). Each expectation (except the valid-definition rows) asserts `valid: false` and the full `violations` list (S8): `rule`, `code`, `step`, and the message from 0089's rule table. Depends on Phase 4.*
+*A task that adds a rule may append that rule's violation to earlier expectations that it also trips (S8); that is not a failure of the earlier task. A violation that names several steps has `step: null` (0089, *The validity rules*). 0092 step 3 with 0089 step 4, one rule at a time. Each rule's fixture is `flows-rules/{rule}.flow` with expectation `expect/definition-{rule}.json` (`run: ["--definition", "{stem}"]`, `flows: "flows-rules"`), added red before the code (RED-first row). Each expectation (except the valid-definition rows) asserts `valid: false` and the full `violations` list (S8): `rule`, `code`, `step`, and the message from 0089's rule table. Depends on Phase 4.*
 
 - [x] **TEST + IMPLEMENT: T5.1 — A valid definition is reported in flow form, with its source, presence and no violations, against the primary fixture directory**
   - **USE COMMAND**: none — RED-first rows: `expect/definition-feature.json` (`flows: "flows"`).
@@ -431,7 +431,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 
 ## Phase 6 — One-spec resolution
 
-*0092 step 4 with 0089 step 5. Each case is a tracked directory under `.claude/test-fixtures/routing/specs/{case}/`, holding a `README.md` that names its purpose. Each expectation is `expect/{case}.json` (or `expect/{case}-{flows}.json` (`{flows}` without its `flows-` prefix) when the same case runs against more than one flows directory, as for `spike-step-spike-entry`; `shipped-legacy-nothing` is the shipped-table row of `legacy-nothing`) with `run: ["--spec", "{case}"]`, added red before the code (except characterised control rows). Records follow S3. **T6.6, T6.8 and T6.9 carry the O-1 fixtures.** Depends on Phase 5.*
+*Shared rule from Phase 5: a task that adds a rule or ladder row may append its effect to earlier expectations. T6.1 also adds a row for R16 on a legacy spec: `legacy-nothing` against a flows directory whose `feature.flow` declares another name. 0092 step 4 with 0089 step 5. Each case is a tracked directory under `.claude/test-fixtures/routing/specs/{case}/`, holding a `README.md` that names its purpose. Each expectation is `expect/{case}.json` (or `expect/{case}-{flows}.json` (`{flows}` without its `flows-` prefix) when the same case runs against more than one flows directory, as for `spike-step-spike-entry`; `shipped-legacy-nothing` is the shipped-table row of `legacy-nothing`) with `run: ["--spec", "{case}"]`, added red before the code (except characterised control rows). Records follow S3. **T6.6, T6.8 and T6.9 carry the O-1 fixtures.** Depends on Phase 5.*
 
 - [ ] **TEST + IMPLEMENT: T6.1 — A legacy spec with nothing resolves to `feature` from the default source, with every route field FR-6 lists; an unknown `--spec` exits `1`**
   - **USE COMMAND**: none — RED-first rows `legacy-nothing` (`flows: "flows"`), `shipped-legacy-nothing` (no `flows` key), and `spec-unknown` (`run: ["--spec", "no-such-case"]`, `exit: 1`).

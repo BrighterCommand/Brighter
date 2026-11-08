@@ -418,6 +418,8 @@ The resolver reports every violation, not only the first. When R0 fires, the sli
 | R15 | `bad-detour` | A detour's command resolves, and its attach point and return point are steps or `hand-off` | `Detour {command} at line {n}: {which part} is unknown.` |
 | R16 | `name-mismatch` | A definition's name equals its filename stem. Applies to definitions, and to `feature.flow` when a legacy spec resolves against it | `{file} declares flow {name}, which differs from its filename.` |
 
+A violation's `step` holds the offending step when the rule names exactly one. When a rule names several steps (R3, R5, R8, R9), `step` is `null` and the message lists them.
+
 R9 and R10 divide the gate rules between them. R9 judges a command that serves two different steps. R10 alone judges a step whose producer is also its own marker-writer. The `bugfix` slip (FR-28) passes both rules:
 
 - `/bugfix:confirm` is the marker-writer of `diagnosis` (step 1) and the producer of `tasks` (step 2). Step 2 immediately follows step 1, so R9 holds.
