@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Outbox.MySql;
-using Paramore.Brighter.MySQL.Tests.TestDoubles;
+using Paramore.Brighter.Base.Test.CircuitBreaker;
 using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.CircuitBreaker;

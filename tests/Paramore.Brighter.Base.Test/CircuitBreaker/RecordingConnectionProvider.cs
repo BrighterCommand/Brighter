@@ -3,7 +3,7 @@ using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
+namespace Paramore.Brighter.Base.Test.CircuitBreaker;
 
 public class RecordingConnectionProvider(IAmARelationalDbConnectionProvider inner) : IAmARelationalDbConnectionProvider
 {

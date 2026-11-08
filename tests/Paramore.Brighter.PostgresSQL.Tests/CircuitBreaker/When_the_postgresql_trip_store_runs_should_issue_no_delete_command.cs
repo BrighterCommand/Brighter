@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Outbox.PostgreSql;
-using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
+using Paramore.Brighter.Base.Test.CircuitBreaker;
 using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.CircuitBreaker;

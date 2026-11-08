@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.MySQL.Tests.TestDoubles;
+namespace Paramore.Brighter.Base.Test.CircuitBreaker;
 
 public class RecordingDbCommand(DbCommand inner, DbConnection connection, List<RecordedCommand> executed) : DbCommand
 {

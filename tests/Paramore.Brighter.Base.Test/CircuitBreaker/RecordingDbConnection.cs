@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.MSSQL.Tests.TestDoubles;
+namespace Paramore.Brighter.Base.Test.CircuitBreaker;
 
 public class RecordingDbConnection(DbConnection inner, List<RecordedCommand> executed) : DbConnection
 {

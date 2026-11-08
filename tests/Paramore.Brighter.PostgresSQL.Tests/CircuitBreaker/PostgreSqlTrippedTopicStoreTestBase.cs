@@ -1,19 +1,15 @@
-using System;
-using System.Threading.Tasks;
+using Paramore.Brighter.Base.Test.CircuitBreaker;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Paramore.Brighter.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.CircuitBreaker;
 
-public abstract class PostgreSqlTrippedTopicStoreTestBase : IAsyncLifetime
+public abstract class PostgreSqlTrippedTopicStoreTestBase : RelationDatabaseTrippedTopicStoreTestBase
 {
-    private IAmATrippedTopicStore? _store;
-
-    protected string TableName { get; } = $"trips_{Guid.NewGuid():N}";
-    protected PostgreSqlConnectionProvider ConnectionProvider { get; }
-    protected IAmATrippedTopicStore Store => _store!;
+    protected override PostgreSqlConnectionProvider ConnectionProvider { get; }
+    protected override string CreateTableSql => PostgreSqlTrippedTopicStore.GetDDL(TableName);
+    protected override string DropTableSql => $"DROP TABLE IF EXISTS {PgIdentifier.Quote(TableName)}";
 
     protected PostgreSqlTrippedTopicStoreTestBase()
     {
@@ -22,21 +18,5 @@ public abstract class PostgreSqlTrippedTopicStoreTestBase : IAsyncLifetime
             new RelationalDatabaseConfiguration(PostgreSqlSettings.TestsBrighterConnectionString));
     }
 
-    public async Task InitializeAsync()
-    {
-        await using var connection = await ConnectionProvider.GetConnectionAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = PostgreSqlTrippedTopicStore.GetDDL(TableName);
-        await command.ExecuteNonQueryAsync();
-
-        _store = new PostgreSqlTrippedTopicStore(ConnectionProvider, TableName);
-    }
-
-    public async Task DisposeAsync()
-    {
-        await using var connection = await ConnectionProvider.GetConnectionAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = $"DROP TABLE IF EXISTS {PgIdentifier.Quote(TableName)}";
-        await command.ExecuteNonQueryAsync();
-    }
+    protected override IAmATrippedTopicStore CreateStore() => new PostgreSqlTrippedTopicStore(ConnectionProvider, TableName);
 }
