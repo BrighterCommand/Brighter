@@ -53,6 +53,29 @@ public class InMemoryTrippedTopicStore : IAmATrippedTopicStore
     }
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    {
+        lock (_lock)
+        {
+            IReadOnlyList<TopicTrip> ended = MarkEnded(now, now - tripLength);
+            return Task.FromResult(ended);
+        }
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    {
+        var cutoff = now - tripLength;
+        lock (_lock)
+        {
+            IReadOnlyList<TopicTrip> live = _trips.Where(trip => trip.Value.EndedAt is null && trip.Value.TripTime > cutoff)
+                .Select(trip => new TopicTrip(trip.Key, trip.Value.TripTime))
+                .ToList();
+            return Task.FromResult(live);
+        }
+    }
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
     {
         RejectRepeatedTopics(trips);

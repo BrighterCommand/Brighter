@@ -107,6 +107,20 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         AddParameter(command, name, DbType.DateTimeOffset, stamp.ToUniversalTime());
 
     /// <inheritdoc />
+    protected override Task<IReadOnlyList<TopicTrip>> EndExpiredOnceAsync(
+        DateTimeOffset now,
+        TimeSpan tripLength,
+        CancellationToken cancellationToken) =>
+        throw new NotImplementedException();
+
+    /// <inheritdoc />
+    protected override Task<IReadOnlyList<TopicTrip>> ReadLiveOnceAsync(
+        DateTimeOffset now,
+        TimeSpan tripLength,
+        CancellationToken cancellationToken) =>
+        throw new NotImplementedException();
+
+    /// <inheritdoc />
     protected override async Task<TrippedTopicStoreRead> ReadOnceAsync(
         DateTimeOffset now,
         TimeSpan tripLength,

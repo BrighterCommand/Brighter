@@ -51,6 +51,12 @@ public class IndividuallyHeldReadsTrippedTopicStore(IAmATrippedTopicStore inner)
         return slot.Result.Task;
     }
 
+    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+        => inner.EndExpiredAsync(now, tripLength, cancellationToken);
+
+    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+        => inner.ReadLiveAsync(now, tripLength, cancellationToken);
+
     public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
         => inner.WriteAsync(trips, cancellationToken);
 

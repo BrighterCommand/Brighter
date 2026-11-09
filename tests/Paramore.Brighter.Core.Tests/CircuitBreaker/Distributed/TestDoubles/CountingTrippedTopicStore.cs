@@ -22,6 +22,12 @@ public class CountingTrippedTopicStore : IAmATrippedTopicStore
         return Task.FromResult(new TrippedTopicStoreRead([], []));
     }
 
+    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<TopicTrip>>([]);
+
+    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<TopicTrip>>([]);
+
     public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
     {
         _recorder.Record(trips);

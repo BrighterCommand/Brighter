@@ -107,6 +107,20 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     protected override bool IsDeadlock(Exception exception) => exception is SqlException { Number: DEADLOCK_VICTIM_ERROR_NUMBER };
 
     /// <inheritdoc />
+    protected override Task<IReadOnlyList<TopicTrip>> EndExpiredOnceAsync(
+        DateTimeOffset now,
+        TimeSpan tripLength,
+        CancellationToken cancellationToken) =>
+        throw new NotImplementedException();
+
+    /// <inheritdoc />
+    protected override Task<IReadOnlyList<TopicTrip>> ReadLiveOnceAsync(
+        DateTimeOffset now,
+        TimeSpan tripLength,
+        CancellationToken cancellationToken) =>
+        throw new NotImplementedException();
+
+    /// <inheritdoc />
     protected override async Task<TrippedTopicStoreRead> ReadOnceAsync(
         DateTimeOffset now,
         TimeSpan tripLength,

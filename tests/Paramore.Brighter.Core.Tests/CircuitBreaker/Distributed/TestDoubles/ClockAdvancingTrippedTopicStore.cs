@@ -37,6 +37,12 @@ public class ClockAdvancingTrippedTopicStore(InMemoryTrippedTopicStore inner, Fa
     public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default) =>
         inner.ReadAsync(now, tripLength, cancellationToken);
 
+    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+        => inner.EndExpiredAsync(now, tripLength, cancellationToken);
+
+    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+        => inner.ReadLiveAsync(now, tripLength, cancellationToken);
+
     public async Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
     {
         var results = await inner.WriteAsync(trips, cancellationToken);

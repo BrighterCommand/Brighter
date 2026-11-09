@@ -41,6 +41,12 @@ public sealed class AsynchronouslyWritingTrippedTopicStore(IAmATrippedTopicStore
         => inner.ReadAsync(now, tripLength, cancellationToken);
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+        => inner.EndExpiredAsync(now, tripLength, cancellationToken);
+
+    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+        => inner.ReadLiveAsync(now, tripLength, cancellationToken);
+
     public async Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
     {
         var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
