@@ -810,12 +810,14 @@ internal static class RouteResolver
             ["gates"] = new JsonArray(),
             ["stray_markers"] = new JsonArray(),
             ["out_of_order"] = new JsonArray(),
-            ["next"] = NextJson(unapproved[0]),
+            ["next"] = unapproved.Count == 0 ? HandOffNextJson(SlipSyntax.HandOffCommand(lines)) : NextJson(unapproved[0]),
             ["hand_off"] = HandOffJson(SlipSyntax.HandOffCommand(lines), unapproved),
             ["approve_steps"] = new JsonArray(steps.Where(step => step.MarkerWriter == ApproveCommand(step.Name)).Select(step => (JsonNode)step.Name).ToArray()),
             ["stop"] = null
         };
     }
+
+    private const string UnattendedDriver = "/spec:ralph-implement";
 
     private static string ApproveCommand(string step) => $"/spec:approve {step}";
 
@@ -874,6 +876,15 @@ internal static class RouteResolver
         ["kind"] = step.Kind,
         ["commands"] = new JsonArray((JsonNode)step.Producer),
         ["unattended_driver"] = null,
+        ["detours"] = new JsonArray()
+    };
+
+    private static JsonObject HandOffNextJson(string? handOff) => new()
+    {
+        ["step"] = null,
+        ["kind"] = null,
+        ["commands"] = new JsonArray((JsonNode?)handOff),
+        ["unattended_driver"] = UnattendedDriver,
         ["detours"] = new JsonArray()
     };
 
