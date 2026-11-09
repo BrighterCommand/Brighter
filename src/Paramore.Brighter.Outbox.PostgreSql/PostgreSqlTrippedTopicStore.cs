@@ -30,6 +30,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Npgsql;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.PostgreSql;
 
@@ -97,6 +98,9 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
                 CREATE INDEX IF NOT EXISTS idx_{PgIdentifier.Normalize(tableName)}_ended_at_trip_time ON {qualifiedTable} (ended_at, trip_time);
                 """;
     }
+
+    /// <inheritdoc />
+    protected override bool IsDeadlock(Exception exception) => exception is PostgresException { SqlState: PostgresErrorCodes.DeadlockDetected };
 
     /// <inheritdoc />
     public override Task<TrippedTopicStoreRead> ReadAsync(
