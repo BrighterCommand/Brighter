@@ -24,7 +24,7 @@ public class MsSqlTrippedTopicStoreReadDeadlockTests : MsSqlTrippedTopicStoreTes
 
         var recordingProvider = new RecordingConnectionProvider(ConnectionProvider);
         var store = new MsSqlTrippedTopicStore(recordingProvider, TableName, commandTimeout: TimeSpan.FromSeconds(30));
-        await using var holder = await DeadlockPriorityRowHolder.HoldAsync(ConnectionProvider, TableName, last.Value);
+        await using var holder = await MsSqlDeadlockRowHolder.HoldAsync(ConnectionProvider, TableName, last.Value);
 
         // Act
         var read = store.ReadAsync(s_firstStamp.AddHours(1), TimeSpan.FromMinutes(1));

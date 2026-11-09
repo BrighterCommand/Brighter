@@ -24,7 +24,7 @@ public class MySqlTrippedTopicStoreWriteDeadlockTests : MySqlTrippedTopicStoreTe
 
         var recordingProvider = new RecordingConnectionProvider(ConnectionProvider);
         var store = new MySqlTrippedTopicStore(recordingProvider, TableName, commandTimeout: TimeSpan.FromSeconds(30));
-        await using var holder = await DeadlockRowHolder.HoldAsync(ConnectionProvider, TableName, last.Value);
+        await using var holder = await MySqlDeadlockRowHolder.HoldAsync(ConnectionProvider, TableName, last.Value);
 
         // Act
         var write = store.WriteAsync([new TopicTrip(first, laterStamp), new TopicTrip(last, laterStamp)]);

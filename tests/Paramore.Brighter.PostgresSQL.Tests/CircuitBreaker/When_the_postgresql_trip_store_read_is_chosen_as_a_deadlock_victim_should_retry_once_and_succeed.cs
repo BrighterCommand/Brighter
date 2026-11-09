@@ -25,7 +25,7 @@ public class PostgreSqlTrippedTopicStoreReadDeadlockTests : PostgreSqlTrippedTop
 
         var recordingProvider = new RecordingConnectionProvider(ConnectionProvider);
         var store = new PostgreSqlTrippedTopicStore(recordingProvider, TableName, commandTimeout: TimeSpan.FromSeconds(30));
-        await using var holder = await DeadlockRowHolder.HoldAsync(ConnectionProvider, PgIdentifier.Quote(TableName), last.Value);
+        await using var holder = await PostgreSqlDeadlockRowHolder.HoldAsync(ConnectionProvider, PgIdentifier.Quote(TableName), last.Value);
 
         // Act
         var read = store.ReadAsync(s_firstStamp.AddHours(1), TimeSpan.FromMinutes(1));
