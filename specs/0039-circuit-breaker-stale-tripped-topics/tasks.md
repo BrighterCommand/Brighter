@@ -1552,7 +1552,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Covers: FR-4.4 (wording), ADR 0089 *How a read ends trips*, *`IAmATrippedTopicStore`*, *The trip table and the SQL stores*, alternative 16.
   - References: `docs/adr/0089-distributed-outbox-circuit-breaker.md`.
 
-- [ ] **DOC: T2.60e - Reword FR-4.4 in the requirements for the split read**
+- [x] **DOC: T2.60e - Reword FR-4.4 in the requirements for the split read**
   - In `requirements.md`, FR-4.4 and any sentence that says "one read operation" marks rows, say that the operation that marks ended entries is separate from the read of live entries, which changes nothing. No requirement changes: one announcer per Reset, mark and never delete, and `UPDATE` without `DELETE` permission all stand.
   - Covers: FR-4.4.
   - Depends on: T2.60d
