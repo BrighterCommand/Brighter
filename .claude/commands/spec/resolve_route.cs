@@ -694,9 +694,13 @@ internal static class DefinitionReport
 
         var table = ApprovalTableReader.Read($"{directory}/{ApprovalTableFile}");
         var lines = SlipReader.ReadLines(path);
-        var fault = SlipSyntax.FirstFault(lines);
-        return Build(name, true, fault is null ? SlipValidator.Validate(name, path, lines, table) : [FaultViolation(path, fault), .. SlipValidator.ValidateTable(table)]);
+        return Build(name, true, Violations(name, path, lines, table));
     }
+
+    public static IReadOnlyList<Violation> Violations(string name, string path, IReadOnlyList<string> lines, ApprovalTable table) =>
+        SlipSyntax.FirstFault(lines) is { } fault
+            ? [FaultViolation(path, fault), .. SlipValidator.ValidateTable(table)]
+            : SlipValidator.Validate(name, path, lines, table);
 
     private static Violation FaultViolation(string path, SyntaxFault fault) =>
         Malformed(fault.What, $"{path} line {fault.Line} is not valid slip syntax: {fault.What}.");
@@ -765,10 +769,12 @@ internal static class SpecReport
         }
 
         var flowsDirectory = (invocation.FlowsDirectory ?? DefaultFlowsDirectory).TrimEnd('/');
-        var lines = SlipReader.ReadLines($"{flowsDirectory}/{LegacyFlow}.flow");
+        var flowPath = $"{flowsDirectory}/{LegacyFlow}.flow";
+        var lines = SlipReader.ReadLines(flowPath);
         var table = ApprovalTableReader.Read($"{flowsDirectory}/{ApprovalTableFile}");
         var specPath = $"{invocation.SpecsRoot}/{directoryName}";
-        return RouteResolver.Resolve(specPath, LegacyFlow, "default", lines, table, new SpecStateReader(specPath));
+        var violations = DefinitionReport.Violations(LegacyFlow, flowPath, lines, table);
+        return RouteResolver.Resolve(specPath, LegacyFlow, "default", lines, violations, table, new SpecStateReader(specPath));
     }
 
     public static IReadOnlyList<string> Kinds => KnownKinds;
@@ -784,7 +790,7 @@ internal static class SpecReport
 
 internal static class RouteResolver
 {
-    public static JsonObject Resolve(string specPath, string flowName, string source, IReadOnlyList<string> lines, ApprovalTable table, SpecStateReader state)
+    public static JsonObject Resolve(string specPath, string flowName, string source, IReadOnlyList<string> lines, IReadOnlyList<Violation> violations, ApprovalTable table, SpecStateReader state)
     {
         var steps = SlipSyntax.Steps(lines);
         var approved = steps.Select(state.Approved).ToList();
@@ -795,8 +801,8 @@ internal static class RouteResolver
             ["mode"] = "spec",
             ["spec"] = specPath,
             ["flow"] = new JsonObject { ["name"] = flowName, ["source"] = source, ["definition_present"] = true },
-            ["valid"] = true,
-            ["violations"] = new JsonArray(),
+            ["valid"] = violations.Count == 0,
+            ["violations"] = new JsonArray(violations.Select(violation => (JsonNode)violation.ToJson()).ToArray()),
             ["tampered"] = RouteRecordInspector.Tampered(),
             ["route_change"] = RouteRecordInspector.RouteChange(),
             ["steps"] = new JsonArray(steps.Select((step, index) => (JsonNode)StepJson(steps, index, approved, table, state)).ToArray()),
