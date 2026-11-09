@@ -1512,7 +1512,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.57b, T2.59e
   - References: `src/Paramore.Brighter/CircuitBreaker/RelationDatabaseTrippedTopicStore.cs`, `src/Paramore.Brighter.Outbox.MsSql/`. ADR 0089 *Risks and Mitigations*.
 
-- [ ] **TEST + IMPLEMENT: T2.60b - The PostgreSql trip store retries a deadlock once against PostgreSQL**
+- [x] **TEST + IMPLEMENT: T2.60b - The PostgreSql trip store retries a deadlock once against PostgreSQL**
   - **USE COMMAND**: `/tdd:test-first when the postgresql trip store write is chosen as a deadlock victim on a real database should retry once and succeed`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
   - Test file: `When_the_postgresql_trip_store_is_chosen_as_a_deadlock_victim_should_retry_once_and_succeed.cs`
