@@ -119,8 +119,8 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
             WHERE [EndedAt] IS NULL AND [TripTime] <= @cutoff;
             SELECT [Topic], [TripTime] FROM {QualifiedTableName} WHERE [EndedAt] IS NULL;
             """;
-        AddParameter(command, "@now", DbType.DateTimeOffset, now);
-        AddParameter(command, "@cutoff", DbType.DateTimeOffset, now - tripLength);
+        AddStampParameter(command, "@now", now);
+        AddStampParameter(command, "@cutoff", now - tripLength);
 
         using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         var ended = await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
@@ -142,11 +142,7 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         using var command = CreateCommand(connection);
         command.Transaction = transaction;
         command.CommandText = UpsertBatch(inOrdinalTopicOrder.Count);
-        for (var i = 0; i < inOrdinalTopicOrder.Count; i++)
-        {
-            AddParameter(command, $"@topic{i}", DbType.String, inOrdinalTopicOrder[i].Topic.Value);
-            AddParameter(command, $"@t{i}", DbType.DateTimeOffset, inOrdinalTopicOrder[i].TripTime);
-        }
+        AddTripParameters(command, inOrdinalTopicOrder);
 
         var results = new List<TripWriteResult>(inOrdinalTopicOrder.Count);
         using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
@@ -170,14 +166,14 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
             batch.AppendLine($"""
                 UPDATE {QualifiedTableName} WITH (UPDLOCK, SERIALIZABLE)
                 SET [PriorTripTime] = CASE WHEN [EndedAt] IS NULL THEN [TripTime] END,
-                    [EndedAt] = CASE WHEN [EndedAt] IS NOT NULL AND @t{i} <= [TripTime] THEN [EndedAt] END,
-                    [TripTime] = CASE WHEN @t{i} > [TripTime] THEN @t{i} ELSE [TripTime] END
+                    [EndedAt] = CASE WHEN [EndedAt] IS NOT NULL AND {StampParameter(i)} <= [TripTime] THEN [EndedAt] END,
+                    [TripTime] = CASE WHEN {StampParameter(i)} > [TripTime] THEN {StampParameter(i)} ELSE [TripTime] END
                 OUTPUT INSERTED.[Topic], INSERTED.[PriorTripTime], INSERTED.[TripTime], INSERTED.[EndedAt]
-                WHERE [Topic] = @topic{i};
+                WHERE [Topic] = {TopicParameter(i)};
                 IF @@ROWCOUNT = 0
                     INSERT INTO {QualifiedTableName} ([Topic], [TripTime], [PriorTripTime], [EndedAt])
                     OUTPUT INSERTED.[Topic], INSERTED.[PriorTripTime], INSERTED.[TripTime], INSERTED.[EndedAt]
-                    VALUES (@topic{i}, @t{i}, NULL, NULL);
+                    VALUES ({TopicParameter(i)}, {StampParameter(i)}, NULL, NULL);
                 """);
         }
 

@@ -172,6 +172,46 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
     }
 
     /// <summary>
+    /// Adds the topic and stamp parameters of each trip, named by <see cref="TopicParameter"/> and <see cref="StampParameter"/>.
+    /// </summary>
+    /// <param name="command">The command to add the parameters to.</param>
+    /// <param name="trips">The trips, in the order the command's SQL numbers them.</param>
+    protected void AddTripParameters(DbCommand command, IReadOnlyList<TopicTrip> trips)
+    {
+        for (var i = 0; i < trips.Count; i++)
+        {
+            AddParameter(command, TopicParameter(i), DbType.String, trips[i].Topic.Value);
+            AddStampParameter(command, StampParameter(i), trips[i].TripTime);
+        }
+    }
+
+    /// <summary>
+    /// Adds a parameter holding a stamp, in the form the dialect stores it.
+    /// </summary>
+    /// <remarks>
+    /// The base adds the stamp as a <see cref="DateTimeOffset"/>. A derived store overrides this when its database needs another form, such as UTC.
+    /// </remarks>
+    /// <param name="command">The command to add the parameter to.</param>
+    /// <param name="name">The parameter's name.</param>
+    /// <param name="stamp">The stamp.</param>
+    protected virtual void AddStampParameter(DbCommand command, string name, DateTimeOffset stamp) =>
+        AddParameter(command, name, DbType.DateTimeOffset, stamp);
+
+    /// <summary>
+    /// Gets the name of the parameter holding the topic of the trip at an index.
+    /// </summary>
+    /// <param name="index">The trip's position in the write.</param>
+    /// <returns>The parameter name.</returns>
+    protected static string TopicParameter(int index) => $"@topic{index}";
+
+    /// <summary>
+    /// Gets the name of the parameter holding the stamp of the trip at an index.
+    /// </summary>
+    /// <param name="index">The trip's position in the write.</param>
+    /// <returns>The parameter name.</returns>
+    protected static string StampParameter(int index) => $"@t{index}";
+
+    /// <summary>
     /// Checks that a write names each topic once, and orders its trips by topic, ordinally.
     /// </summary>
     /// <remarks>

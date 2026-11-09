@@ -189,11 +189,11 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     {
         await using var select = CreateCommand(connection);
         select.Transaction = transaction;
-        var topicParameters = string.Join(", ", Enumerable.Range(0, written.Count).Select(i => $"@topic{i}"));
+        var topicParameters = string.Join(", ", Enumerable.Range(0, written.Count).Select(TopicParameter));
         select.CommandText =
             $"SELECT `Topic`, `PriorTripTime`, `TripTime`, `EndedAt` FROM {QualifiedTableName} WHERE `Topic` IN ({topicParameters})";
         for (var i = 0; i < written.Count; i++)
-            AddParameter(select, $"@topic{i}", DbType.String, written[i].Topic.Value);
+            AddParameter(select, TopicParameter(i), DbType.String, written[i].Topic.Value);
 
         var results = new List<TripWriteResult>(written.Count);
         await using var reader = await select.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -204,7 +204,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
     private string UpsertStatement(int count)
     {
-        var values = string.Join(", ", Enumerable.Range(0, count).Select(i => $"(@topic{i}, @t{i})"));
+        var values = string.Join(", ", Enumerable.Range(0, count).Select(i => $"({TopicParameter(i)}, {StampParameter(i)})"));
 
         return $"""
                 INSERT INTO {QualifiedTableName} (`Topic`, `TripTime`)
@@ -216,14 +216,9 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
                 """;
     }
 
-    private static void AddTripParameters(DbCommand command, List<TopicTrip> trips)
-    {
-        for (var i = 0; i < trips.Count; i++)
-        {
-            AddParameter(command, $"@topic{i}", DbType.String, trips[i].Topic.Value);
-            AddParameter(command, $"@t{i}", DbType.DateTime, trips[i].TripTime.UtcDateTime);
-        }
-    }
+    /// <inheritdoc />
+    protected override void AddStampParameter(DbCommand command, string name, DateTimeOffset stamp) =>
+        AddParameter(command, name, DbType.DateTime, stamp.UtcDateTime);
 
     /// <inheritdoc />
     protected override DateTimeOffset ReadStamp(DbDataReader reader, int ordinal) =>

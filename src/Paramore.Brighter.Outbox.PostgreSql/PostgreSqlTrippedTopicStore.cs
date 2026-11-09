@@ -103,6 +103,10 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     protected override bool IsDeadlock(Exception exception) => exception is PostgresException { SqlState: PostgresErrorCodes.DeadlockDetected };
 
     /// <inheritdoc />
+    protected override void AddStampParameter(DbCommand command, string name, DateTimeOffset stamp) =>
+        AddParameter(command, name, DbType.DateTimeOffset, stamp.ToUniversalTime());
+
+    /// <inheritdoc />
     protected override async Task<TrippedTopicStoreRead> ReadOnceAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
@@ -116,8 +120,8 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
             RETURNING topic, trip_time;
             SELECT topic, trip_time FROM {QualifiedTableName} WHERE ended_at IS NULL;
             """;
-        AddParameter(command, "@now", DbType.DateTimeOffset, now.ToUniversalTime());
-        AddParameter(command, "@cutoff", DbType.DateTimeOffset, (now - tripLength).ToUniversalTime());
+        AddStampParameter(command, "@now", now);
+        AddStampParameter(command, "@cutoff", now - tripLength);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         var ended = await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
@@ -137,11 +141,7 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var command = CreateCommand(connection);
         command.CommandText = UpsertStatement(inOrdinalTopicOrder.Count);
-        for (var i = 0; i < inOrdinalTopicOrder.Count; i++)
-        {
-            AddParameter(command, $"@topic{i}", DbType.String, inOrdinalTopicOrder[i].Topic.Value);
-            AddParameter(command, $"@t{i}", DbType.DateTimeOffset, inOrdinalTopicOrder[i].TripTime.ToUniversalTime());
-        }
+        AddTripParameters(command, inOrdinalTopicOrder);
 
         var results = new List<TripWriteResult>(inOrdinalTopicOrder.Count);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -153,7 +153,7 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
     private string UpsertStatement(int count)
     {
-        var values = string.Join(", ", Enumerable.Range(0, count).Select(i => $"(@topic{i}, @t{i})"));
+        var values = string.Join(", ", Enumerable.Range(0, count).Select(i => $"({TopicParameter(i)}, {StampParameter(i)})"));
 
         return $"""
                 INSERT INTO {QualifiedTableName} AS t (topic, trip_time)
