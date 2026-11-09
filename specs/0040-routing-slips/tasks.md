@@ -467,7 +467,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: none, because a marker's content is never read.
   - Traces to: FR-5, FR-8, FR-9, FR-11; AC-5, AC-20, AC-65. Depends on: T6.1.
 
-- [ ] **TEST + IMPLEMENT: T6.3 — With every step approved, the next step is the hand-off, with the unattended driver and no detour on `feature`**
+- [x] **TEST + IMPLEMENT: T6.3 — With every step approved, the next step is the hand-off, with the unattended driver and no detour on `feature`**
   - **USE COMMAND**: none — RED-first row `legacy-all-approved`.
   - Fixture: `legacy-all-approved/`, with all three artefacts, all three markers, and `tasks.md` all checked.
   - Test should verify: `next` is `{step: null, kind: null, commands: ["/spec:implement"], unattended_driver: "/spec:ralph-implement", detours: []}`, and `hand_off.precondition.holds` is true (AC-84, `feature` half; FR-11).
