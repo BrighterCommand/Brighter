@@ -809,8 +809,8 @@ internal static class RouteResolver
             ["known_kinds"] = KnownKindsJson(steps),
             ["gates"] = new JsonArray(),
             ["stray_markers"] = new JsonArray(),
-            ["out_of_order"] = new JsonArray(),
-            ["next"] = unapproved.Count == 0 ? HandOffNextJson(SlipSyntax.HandOffCommand(lines)) : NextJson(unapproved[0]),
+            ["out_of_order"] = OutOfOrderJson(steps, approved),
+            ["next"] = unapproved.Count == 0 ? HandOffNextJson(SlipSyntax.HandOffCommand(lines)) : NextJson(unapproved[0], state),
             ["hand_off"] = HandOffJson(SlipSyntax.HandOffCommand(lines), unapproved),
             ["approve_steps"] = new JsonArray(steps.Where(step => step.MarkerWriter == ApproveCommand(step.Name)).Select(step => (JsonNode)step.Name).ToArray()),
             ["stop"] = null
@@ -870,11 +870,25 @@ internal static class RouteResolver
         return kinds;
     }
 
-    private static JsonObject NextJson(SlipStep step) => new()
+    private static JsonArray OutOfOrderJson(IReadOnlyList<SlipStep> steps, IReadOnlyList<bool> approved) =>
+        new(steps
+            .Select((step, index) => (Step: step, Index: index))
+            .Where(row => approved[row.Index] && Enumerable.Range(0, row.Index).Any(earlier => !approved[earlier]))
+            .Select(row => (JsonNode)new JsonObject
+            {
+                ["approved"] = row.Step.Name,
+                ["earlier_unapproved"] = new JsonArray(Enumerable.Range(0, row.Index).Where(earlier => !approved[earlier]).Select(earlier => (JsonNode)steps[earlier].Name).ToArray())
+            })
+            .ToArray());
+
+    private static string[] NextCommands(SlipStep step, SpecStateReader state) =>
+        state.ArtefactsPresent(step) ? [$"/spec:review {step.Kind}", step.MarkerWriter] : [step.Producer];
+
+    private static JsonObject NextJson(SlipStep step, SpecStateReader state) => new()
     {
         ["step"] = step.Name,
         ["kind"] = step.Kind,
-        ["commands"] = new JsonArray((JsonNode)step.Producer),
+        ["commands"] = new JsonArray(NextCommands(step, state).Select(command => (JsonNode)command).ToArray()),
         ["unattended_driver"] = null,
         ["detours"] = new JsonArray()
     };
