@@ -45,6 +45,7 @@ namespace Paramore.Brighter.Outbox.MsSql;
 public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 {
     private const string DEFAULT_TABLE_NAME = "BrighterTrippedTopics";
+    private const int DEADLOCK_VICTIM_ERROR_NUMBER = 1205;
 
     /// <summary>
     /// Creates a store over the trip table.
@@ -103,7 +104,7 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     }
 
     /// <inheritdoc />
-    protected override bool IsDeadlock(Exception exception) => exception is SqlException { Number: 1205 };
+    protected override bool IsDeadlock(Exception exception) => exception is SqlException { Number: DEADLOCK_VICTIM_ERROR_NUMBER };
 
     /// <inheritdoc />
     protected override async Task<TrippedTopicStoreRead> ReadOnceAsync(
