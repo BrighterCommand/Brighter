@@ -1558,7 +1558,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.60d
   - References: `specs/0039-circuit-breaker-stale-tripped-topics/requirements.md`.
 
-- [ ] **TEST + IMPLEMENT: T2.60f - The store contract gains `EndExpiredAsync` and `ReadLiveAsync`, in core and the in-memory store**
+- [x] **TEST + IMPLEMENT: T2.60f - The store contract gains `EndExpiredAsync` and `ReadLiveAsync`, in core and the in-memory store**
   - **USE COMMAND**: `/tdd:test-first when the in-memory trip store ends expired trips and reads live trips should return each ended row to exactly one caller and change nothing on a live read`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test files, one case each: `When_trips_have_run_out_should_end_each_row_and_return_it_to_exactly_one_caller.cs` (over 1,000 repetitions of parallel `EndExpiredAsync(now, tripLength)`), `When_a_live_read_runs_should_change_nothing.cs` (repeated `ReadLiveAsync` returns the same rows, and a later `EndExpiredAsync` still returns each expired row), `When_a_row_has_run_out_but_is_not_ended_should_not_be_live.cs`
