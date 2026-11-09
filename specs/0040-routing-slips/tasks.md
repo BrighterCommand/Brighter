@@ -454,7 +454,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
     - Add a `RouteRecordInspector` stub returning `{false, null, null}` and `null`, as 0089 step 7 says until 0091.
   - Traces to: 0089 step 5, *The route report*, *The next-step ladder*; FR-4, FR-5, FR-6, FR-8, FR-11, FR-29; AC-11 (resolver side), AC-75. Depends on: T5.18.
 
-- [ ] **TEST + IMPLEMENT: T6.2 — A marker counts as approved whatever it holds, and preconditions and the hand-off list the unapproved steps in slip order**
+- [x] **TEST + IMPLEMENT: T6.2 — A marker counts as approved whatever it holds, and preconditions and the hand-off list the unapproved steps in slip order**
   - **USE COMMAND**: none — rows `legacy-requirements-approved` and `legacy-design-approved`, which pass on landing because T6.1 already reads markers by existence. **Characterise** them (see below).
   - Fixture:
     - `legacy-requirements-approved/`: `requirements.md` and an empty `.requirements-approved`.
