@@ -30,6 +30,7 @@ using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MySqlConnector;
 using Paramore.Brighter.CircuitBreaker;
 
 namespace Paramore.Brighter.Outbox.MySql;
@@ -97,6 +98,9 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
                 ) ENGINE = InnoDB;
                 """;
     }
+
+    /// <inheritdoc />
+    protected override bool IsDeadlock(Exception exception) => exception is MySqlException { ErrorCode: MySqlErrorCode.LockDeadlock };
 
     /// <inheritdoc />
     public override Task<TrippedTopicStoreRead> ReadAsync(
