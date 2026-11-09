@@ -6,6 +6,8 @@ namespace Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
 
 public sealed class DeadlockRowHolder : IAsyncDisposable
 {
+    private static readonly TimeSpan s_storeWaitsLongest = TimeSpan.FromMilliseconds(200);
+
     private readonly string _quotedTable;
     private readonly DbConnection _connection;
     private readonly DbTransaction _transaction;
@@ -38,7 +40,12 @@ public sealed class DeadlockRowHolder : IAsyncDisposable
             await ScalarAsync("SELECT pg_stat_clear_snapshot()");
             var blocked = Convert.ToInt64(await ScalarAsync(
                 $"SELECT count(*) FROM pg_stat_activity WHERE {_processId} = ANY(pg_blocking_pids(pid))"));
-            if (blocked > 0) return;
+            if (blocked > 0)
+            {
+                await Task.Delay(s_storeWaitsLongest);
+                return;
+            }
+
             await Task.Delay(20);
         }
 
