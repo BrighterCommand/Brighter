@@ -103,13 +103,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     protected override bool IsDeadlock(Exception exception) => exception is MySqlException { ErrorCode: MySqlErrorCode.LockDeadlock };
 
     /// <inheritdoc />
-    public override Task<TrippedTopicStoreRead> ReadAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
-        CancellationToken cancellationToken = default) =>
-        RunWithDeadlockRetryAsync(() => ReadOnceAsync(now, tripLength, cancellationToken));
-
-    private async Task<TrippedTopicStoreRead> ReadOnceAsync(
+    protected override async Task<TrippedTopicStoreRead> ReadOnceAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
         CancellationToken cancellationToken)
@@ -133,12 +127,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     }
 
     /// <inheritdoc />
-    public override Task<IReadOnlyList<TripWriteResult>> WriteAsync(
-        IReadOnlyList<TopicTrip> trips,
-        CancellationToken cancellationToken = default) =>
-        RunWithDeadlockRetryAsync(() => WriteOnceAsync(trips, cancellationToken));
-
-    private async Task<IReadOnlyList<TripWriteResult>> WriteOnceAsync(
+    protected override async Task<IReadOnlyList<TripWriteResult>> WriteOnceAsync(
         IReadOnlyList<TopicTrip> trips,
         CancellationToken cancellationToken)
     {

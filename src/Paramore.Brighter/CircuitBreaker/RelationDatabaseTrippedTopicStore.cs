@@ -75,15 +75,45 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
     protected string QualifiedTableName { get; }
 
     /// <inheritdoc />
-    public abstract Task<TrippedTopicStoreRead> ReadAsync(
+    /// <remarks>
+    /// Runs <see cref="ReadOnceAsync"/>, and runs it once more if the database chose it as a deadlock victim.
+    /// </remarks>
+    public Task<TrippedTopicStoreRead> ReadAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default) =>
+        RunWithDeadlockRetryAsync(() => ReadOnceAsync(now, tripLength, cancellationToken));
 
     /// <inheritdoc />
-    public abstract Task<IReadOnlyList<TripWriteResult>> WriteAsync(
+    /// <remarks>
+    /// Runs <see cref="WriteOnceAsync"/>, and runs it once more if the database chose it as a deadlock victim.
+    /// </remarks>
+    public Task<IReadOnlyList<TripWriteResult>> WriteAsync(
         IReadOnlyList<TopicTrip> trips,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default) =>
+        RunWithDeadlockRetryAsync(() => WriteOnceAsync(trips, cancellationToken));
+
+    /// <summary>
+    /// Reads the trips once, in the store's dialect. The base retries it after a deadlock.
+    /// </summary>
+    /// <param name="now">The time of the read.</param>
+    /// <param name="tripLength">How long a trip lasts.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The live and the ended trips.</returns>
+    protected abstract Task<TrippedTopicStoreRead> ReadOnceAsync(
+        DateTimeOffset now,
+        TimeSpan tripLength,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Writes the trips once, in the store's dialect. The base retries it after a deadlock.
+    /// </summary>
+    /// <param name="trips">The trips to write.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>What the store holds for each trip after the write.</returns>
+    protected abstract Task<IReadOnlyList<TripWriteResult>> WriteOnceAsync(
+        IReadOnlyList<TopicTrip> trips,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Runs an operation and, when it fails with a deadlock, runs it once more.
@@ -94,7 +124,7 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
     /// <typeparam name="T">The type the operation returns.</typeparam>
     /// <param name="operation">The operation, which must be safe to run again.</param>
     /// <returns>What the operation returns.</returns>
-    protected async Task<T> RunWithDeadlockRetryAsync<T>(Func<Task<T>> operation)
+    private async Task<T> RunWithDeadlockRetryAsync<T>(Func<Task<T>> operation)
     {
         try
         {
