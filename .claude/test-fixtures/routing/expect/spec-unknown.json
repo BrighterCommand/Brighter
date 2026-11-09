@@ -1,0 +1,7 @@
+{
+  "run": [
+    "--spec",
+    "no-such-case"
+  ],
+  "exit": 1
+}

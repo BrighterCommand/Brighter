@@ -23,6 +23,17 @@ if (invocation.Mode == RouteMode.Definition)
     ReportWriter.Write(DefinitionReport.For(invocation));
 }
 
+if (invocation.Mode == RouteMode.Spec)
+{
+    var report = SpecReport.For(invocation);
+    if (report is null)
+    {
+        return UsageErrorExitCode;
+    }
+
+    ReportWriter.Write(report);
+}
+
 return SuccessExitCode;
 
 internal enum RouteMode
@@ -120,6 +131,8 @@ internal sealed record Violation(string Rule, string Code, string? Step, string 
 
 internal sealed record SyntaxFault(int Line, string What);
 
+internal sealed record SlipStep(string Name, string Kind, string Producer, IReadOnlyList<string> Artefacts, string Marker, string MarkerWriter);
+
 internal static class SlipSyntax
 {
     private const string Name = "[a-z][a-z0-9-]*";
@@ -153,6 +166,11 @@ internal static class SlipSyntax
     }
 
     public static bool IsFlowName(string name) => StepCell.IsMatch(name);
+
+    public static IReadOnlyList<SlipStep> Steps(IReadOnlyList<string> lines) =>
+        StepRows(lines)
+            .Select(cells => new SlipStep(cells[0], cells[1], CommandCatalogue.Collapse(cells[2]), cells[3].Split(", "), cells[4], CommandCatalogue.Collapse(cells[5])))
+            .ToList();
 
     public static string DeclaredName(IReadOnlyList<string> lines) => lines[0][FlowLinePrefix.Length..];
 
@@ -700,6 +718,169 @@ internal static class DefinitionReport
         ["violations"] = new JsonArray(violations.Select(violation => (JsonNode)violation.ToJson()).ToArray()),
         ["stop"] = null
     };
+}
+
+internal sealed class SpecStateReader(string specDirectory)
+{
+    private const string AdrList = ".adr-list";
+
+    public bool ArtefactsPresent(SlipStep step) => step.Artefacts.All(IsPresent);
+
+    public bool Approved(SlipStep step) => File.Exists(Path.Combine(specDirectory, step.Marker));
+
+    private bool IsPresent(string artefact)
+    {
+        var path = Path.Combine(specDirectory, artefact);
+        return artefact == AdrList
+            ? File.Exists(path) && File.ReadLines(path).Any(line => line.Trim().Length > 0)
+            : File.Exists(path);
+    }
+}
+
+internal static class RouteRecordInspector
+{
+    public static JsonObject Tampered() => new()
+    {
+        ["value"] = false,
+        ["case"] = null,
+        ["recorded_flow"] = null
+    };
+
+    public static JsonNode? RouteChange() => null;
+}
+
+internal static class SpecReport
+{
+    private const string DefaultFlowsDirectory = ".claude/flows";
+    private const string LegacyFlow = "feature";
+    private const string ApprovalTableFile = "approvals.md";
+    private static readonly string[] KnownKinds = ["requirements", "design", "tasks"];
+
+    public static JsonObject? For(Invocation invocation)
+    {
+        var directoryName = FindSpecDirectory(invocation.SpecsRoot, invocation.Target!);
+        if (directoryName is null)
+        {
+            return null;
+        }
+
+        var flowsDirectory = (invocation.FlowsDirectory ?? DefaultFlowsDirectory).TrimEnd('/');
+        var lines = SlipReader.ReadLines($"{flowsDirectory}/{LegacyFlow}.flow");
+        var table = ApprovalTableReader.Read($"{flowsDirectory}/{ApprovalTableFile}");
+        var specPath = $"{invocation.SpecsRoot}/{directoryName}";
+        return RouteResolver.Resolve(specPath, LegacyFlow, "default", lines, table, new SpecStateReader(specPath));
+    }
+
+    public static IReadOnlyList<string> Kinds => KnownKinds;
+
+    private static string? FindSpecDirectory(string specsRoot, string target) =>
+        Directory.Exists(specsRoot)
+            ? Directory.GetDirectories(specsRoot)
+                .Select(directory => Path.GetFileName(directory))
+                .Where(name => !name.StartsWith('.'))
+                .FirstOrDefault(name => string.Equals(name, target, StringComparison.Ordinal))
+            : null;
+}
+
+internal static class RouteResolver
+{
+    public static JsonObject Resolve(string specPath, string flowName, string source, IReadOnlyList<string> lines, ApprovalTable table, SpecStateReader state)
+    {
+        var steps = SlipSyntax.Steps(lines);
+        var approved = steps.Select(state.Approved).ToList();
+        var unapproved = steps.Where((_, index) => !approved[index]).ToList();
+        return new JsonObject
+        {
+            ["schema_version"] = ReportSchema.Version,
+            ["mode"] = "spec",
+            ["spec"] = specPath,
+            ["flow"] = new JsonObject { ["name"] = flowName, ["source"] = source, ["definition_present"] = true },
+            ["valid"] = true,
+            ["violations"] = new JsonArray(),
+            ["tampered"] = RouteRecordInspector.Tampered(),
+            ["route_change"] = RouteRecordInspector.RouteChange(),
+            ["steps"] = new JsonArray(steps.Select((step, index) => (JsonNode)StepJson(steps, index, approved, table, state)).ToArray()),
+            ["known_kinds"] = KnownKindsJson(steps),
+            ["gates"] = new JsonArray(),
+            ["stray_markers"] = new JsonArray(),
+            ["out_of_order"] = new JsonArray(),
+            ["next"] = NextJson(unapproved[0]),
+            ["hand_off"] = HandOffJson(SlipSyntax.HandOffCommand(lines), unapproved),
+            ["approve_steps"] = new JsonArray(steps.Where(step => step.MarkerWriter == ApproveCommand(step.Name)).Select(step => (JsonNode)step.Name).ToArray()),
+            ["stop"] = null
+        };
+    }
+
+    private static string ApproveCommand(string step) => $"/spec:approve {step}";
+
+    private static JsonObject StepJson(IReadOnlyList<SlipStep> steps, int index, IReadOnlyList<bool> approved, ApprovalTable table, SpecStateReader state)
+    {
+        var step = steps[index];
+        return new JsonObject
+        {
+            ["name"] = step.Name,
+            ["kind"] = step.Kind,
+            ["known_kind"] = SpecReport.Kinds.Contains(step.Kind),
+            ["producer"] = step.Producer,
+            ["artefacts"] = new JsonArray(step.Artefacts.Select(artefact => (JsonNode)artefact).ToArray()),
+            ["artefacts_present"] = state.ArtefactsPresent(step),
+            ["marker"] = step.Marker,
+            ["marker_writer"] = step.MarkerWriter,
+            ["approved"] = approved[index],
+            ["approval_subflow"] = ApprovalSubFlow(table, step.Kind),
+            ["gate"] = null,
+            ["precondition"] = index == 0 || approved[index - 1] ? Precondition(true, [], null) : StepPrecondition(step, steps[index - 1])
+        };
+    }
+
+    private static JsonNode? ApprovalSubFlow(ApprovalTable table, string kind) =>
+        table.Fault is null && table.Entries.FirstOrDefault(entry => entry.Kind == kind) is { } entry
+            ? new JsonArray(entry.Commands.Select(command => (JsonNode)command).ToArray())
+            : null;
+
+    private static JsonObject StepPrecondition(SlipStep step, SlipStep previous) =>
+        Precondition(false, [previous],
+            $"`{step.Producer}` needs step `{previous.Name}` approved — run `{previous.MarkerWriter}`.");
+
+    private static JsonObject Precondition(bool holds, IEnumerable<SlipStep> unapproved, string? message) => new()
+    {
+        ["holds"] = holds,
+        ["unapproved"] = new JsonArray(unapproved.Select(step => (JsonNode)new JsonObject { ["step"] = step.Name, ["marker_writer"] = step.MarkerWriter }).ToArray()),
+        ["message"] = message
+    };
+
+    private static JsonObject KnownKindsJson(IReadOnlyList<SlipStep> steps)
+    {
+        var kinds = new JsonObject();
+        foreach (var kind in SpecReport.Kinds)
+        {
+            kinds[kind] = steps.FirstOrDefault(step => step.Kind == kind) is { } step
+                ? new JsonObject { ["step"] = step.Name, ["producer"] = step.Producer, ["marker_writer"] = step.MarkerWriter }
+                : null;
+        }
+
+        return kinds;
+    }
+
+    private static JsonObject NextJson(SlipStep step) => new()
+    {
+        ["step"] = step.Name,
+        ["kind"] = step.Kind,
+        ["commands"] = new JsonArray((JsonNode)step.Producer),
+        ["unattended_driver"] = null,
+        ["detours"] = new JsonArray()
+    };
+
+    private static JsonObject HandOffJson(string? command, IReadOnlyList<SlipStep> unapproved) => new()
+    {
+        ["command"] = command,
+        ["precondition"] = Precondition(unapproved.Count == 0, unapproved, HandOffMessage(unapproved))
+    };
+
+    private static string? HandOffMessage(IReadOnlyList<SlipStep> unapproved) =>
+        unapproved.Count == 0
+            ? null
+            : $"Implementation needs every step approved — unapproved: {string.Join(", ", unapproved.Select(step => $"`{step.Name}` (run `{step.MarkerWriter}`)"))}.";
 }
 
 internal static class ReportWriter
