@@ -475,7 +475,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: add ladder row 2.
   - Traces to: FR-9, FR-11, FR-30; AC-84. Depends on: T6.2.
 
-- [ ] **TEST + IMPLEMENT: T6.4 — An out-of-order approval is reported, and next, the preconditions and the hand-off each use only their own rule**
+- [x] **TEST + IMPLEMENT: T6.4 — An out-of-order approval is reported, and next, the preconditions and the hand-off each use only their own rule**
   - **USE COMMAND**: none — RED-first rows `legacy-out-of-order` and `legacy-tasks-approved-only`.
   - Fixture:
     - `legacy-out-of-order/`, holding `requirements.md` and `.design-approved`.
