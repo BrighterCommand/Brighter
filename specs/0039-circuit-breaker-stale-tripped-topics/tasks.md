@@ -1529,7 +1529,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.58b, T2.60a
   - References: `src/Paramore.Brighter.Outbox.PostgreSql/`. ADR 0089 *Risks and Mitigations*.
 
-- [ ] **TEST + IMPLEMENT: T2.60c - The MySql trip store retries a deadlock once against MySQL**
+- [x] **TEST + IMPLEMENT: T2.60c - The MySql trip store retries a deadlock once against MySQL**
   - **USE COMMAND**: `/tdd:test-first when the mysql trip store write is chosen as a deadlock victim on a real database should retry once and succeed`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
   - Test file: `When_the_mysql_trip_store_is_chosen_as_a_deadlock_victim_should_retry_once_and_succeed.cs`
