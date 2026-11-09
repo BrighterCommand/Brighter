@@ -32,7 +32,7 @@ Phase 2 (starts only after T1.15 has merged)
   -> 2d T2.25..T2.38 (T2.37 retired) incl. T2.28a, T2.30a, T2.30b (timeouts, fallback, recovery, failure telemetry)
   -> 2e T2.39..T2.48 incl. T2.39a, T2.39c, T2.39d, T2.43a (mediator uses async role)
   -> 2f T2.49..T2.51 (sweeper refresh) -> 2g T2.52..T2.56 incl. T2.55a, T2.56a, T2.56b (health signals)
-  -> 2h T2.57..T2.60 (SQL stores incl. T2.57a/b..T2.59a/b, the shared base T2.59c..T2.59e and T2.60a-c, real DBs) -> 2i T2.61..T2.65 (provisioning)
+  -> 2h T2.57..T2.60 (SQL stores incl. T2.57a/b..T2.59a/b, the shared base T2.59c..T2.59e and T2.60a-c, real DBs; T2.60d-k split the read into EndExpiredAsync and ReadLiveAsync, before T2.60) -> 2i T2.61..T2.65 (provisioning)
   -> 2j T2.66..T2.67 (real-DB acceptance) -> 2k T2.68..T2.69 (dependency guard, verification)
   -> 2l T2.70..T2.72 (ADR notes, release notes, Docs list)
 ```
@@ -1546,19 +1546,111 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.59b, T2.60a
   - References: `src/Paramore.Brighter.Outbox.MySql/`. ADR 0089 *Risks and Mitigations*.
 
+- [x] **DOC: T2.60d - Amend ADR 0089 to split the store read into `EndExpiredAsync` and `ReadLiveAsync`**
+  - Done 2026-11-09 with the owner's approval of the amendment to the approved design, found by the Phase 2h review: `ReadOnceAsync` updates rows, so a "read" hides its side effect from its callers (command-query separation).
+  - ADR 0089 now says: `IAmATrippedTopicStore` has `EndExpiredAsync(now, tripLength)`, the one atomic claim, which marks expired unmarked rows ended and returns exactly those to one caller, and `ReadLiveAsync(now, tripLength)`, which returns the unmarked rows stamped after `now - tripLength` and changes nothing. `TrippedTopicStoreRead` is gone. A read is the two calls, `EndExpiredAsync` first, under one `StoreTimeout`, so a sweep's worst case does not change. The breaker announces the rows `EndExpiredAsync` returned even when `ReadLiveAsync` then fails. `ReadLiveAsync` needs `SELECT` only. Alternative 16 records the first design and why it was replaced.
+  - Covers: FR-4.4 (wording), ADR 0089 *How a read ends trips*, *`IAmATrippedTopicStore`*, *The trip table and the SQL stores*, alternative 16.
+  - References: `docs/adr/0089-distributed-outbox-circuit-breaker.md`.
+
+- [ ] **DOC: T2.60e - Reword FR-4.4 in the requirements for the split read**
+  - In `requirements.md`, FR-4.4 and any sentence that says "one read operation" marks rows, say that the operation that marks ended entries is separate from the read of live entries, which changes nothing. No requirement changes: one announcer per Reset, mark and never delete, and `UPDATE` without `DELETE` permission all stand.
+  - Covers: FR-4.4.
+  - Depends on: T2.60d
+  - References: `specs/0039-circuit-breaker-stale-tripped-topics/requirements.md`.
+
+- [ ] **TEST + IMPLEMENT: T2.60f - The store contract gains `EndExpiredAsync` and `ReadLiveAsync`, in core and the in-memory store**
+  - **USE COMMAND**: `/tdd:test-first when the in-memory trip store ends expired trips and reads live trips should return each ended row to exactly one caller and change nothing on a live read`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test files, one case each: `When_trips_have_run_out_should_end_each_row_and_return_it_to_exactly_one_caller.cs` (over 1,000 repetitions of parallel `EndExpiredAsync(now, tripLength)`), `When_a_live_read_runs_should_change_nothing.cs` (repeated `ReadLiveAsync` returns the same rows, and a later `EndExpiredAsync` still returns each expired row), `When_a_row_has_run_out_but_is_not_ended_should_not_be_live.cs`
+  - Test should verify:
+    - `EndExpiredAsync` marks each unmarked row stamped at or before `now - tripLength` ended with `EndedAt = now` and returns it to exactly one caller. It returns nothing for a row that is already ended or still live.
+    - `ReadLiveAsync` returns only unmarked rows stamped after `now - tripLength`, and changes nothing.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - Add both members to `IAmATrippedTopicStore` beside `ReadAsync`, which stays until T2.60k. Implement them in `InMemoryTrippedTopicStore` under its one lock.
+    - In `RelationDatabaseTrippedTopicStore`, add public `EndExpiredAsync` and `ReadLiveAsync` that run protected abstract `EndExpiredOnceAsync` and `ReadLiveOnceAsync` through the deadlock retry, as `ReadAsync` does. Each SQL store implements them as `throw new NotImplementedException()` until T2.60g, T2.60h and T2.60i replace them.
+    - Every test double that implements `IAmATrippedTopicStore` (the `*TrippedTopicStore.cs` files under `Core.Tests` `TestDoubles`) gains both members, forwarding to its inner store, so the project still builds.
+  - Covers: FR-4.4, NFR-5. ADR 0089 *`IAmATrippedTopicStore`*.
+  - Depends on: T2.60d
+  - References: `src/Paramore.Brighter/CircuitBreaker/IAmATrippedTopicStore.cs`, `InMemoryTrippedTopicStore.cs`, `RelationDatabaseTrippedTopicStore.cs`.
+
+- [ ] **TEST + IMPLEMENT: T2.60g - The MsSql trip store ends expired trips and reads live trips against SQL Server**
+  - **USE COMMAND**: `/tdd:test-first when the mssql trip store ends expired trips and reads live trips against a real database should return each ended row to exactly one caller, never delete, and change nothing on a live read`
+  - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
+  - Test files, one case each: `When_readers_race_over_an_expired_row_should_end_it_for_exactly_one_caller.cs` (1,000 parallel repetitions), `When_a_live_read_runs_should_change_nothing_and_not_return_an_expired_row.cs`, `When_the_mssql_trip_store_end_expired_is_chosen_as_a_deadlock_victim_should_retry_once_and_succeed.cs`
+  - Test should verify:
+    - The cases of T2.60f against a real SQL Server, and that a command issued by either call carries the store's command timeout.
+    - An `EndExpiredAsync` deadlocked with a held row is retried once and succeeds (the existing read-deadlock test of T2.60a, aimed at the new call).
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - `EndExpiredOnceAsync`: one `UPDATE ... SET EndedAt = @now OUTPUT INSERTED.Topic, INSERTED.TripTime WHERE EndedAt IS NULL AND TripTime <= @cutoff`. `ReadLiveOnceAsync`: `SELECT Topic, TripTime ... WHERE EndedAt IS NULL AND TripTime > @cutoff`.
+  - Covers: FR-4.4, NFR-5, NFR-9. ADR 0089 *The trip table and the SQL stores*.
+  - Depends on: T2.60f, T2.60a
+  - References: `src/Paramore.Brighter.Outbox.MsSql/MsSqlTrippedTopicStore.cs`.
+
+- [ ] **TEST + IMPLEMENT: T2.60h - The PostgreSql trip store ends expired trips and reads live trips against PostgreSQL**
+  - **USE COMMAND**: `/tdd:test-first when the postgresql trip store ends expired trips and reads live trips against a real database should return each ended row to exactly one caller, never delete, and change nothing on a live read`
+  - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
+  - Test files: the three cases of T2.60g, named for PostgreSQL.
+  - Test should verify: the same as T2.60g on a real PostgreSQL.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - `EndExpiredOnceAsync`: one `UPDATE ... SET ended_at = @now WHERE ended_at IS NULL AND trip_time <= @cutoff RETURNING topic, trip_time`. `ReadLiveOnceAsync`: `SELECT topic, trip_time ... WHERE ended_at IS NULL AND trip_time > @cutoff`.
+  - Covers: FR-4.4, NFR-5, NFR-9. ADR 0089 *The trip table and the SQL stores*.
+  - Depends on: T2.60f, T2.60b
+  - References: `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlTrippedTopicStore.cs`.
+
+- [ ] **TEST + IMPLEMENT: T2.60i - The MySql trip store ends expired trips and reads live trips against MySQL**
+  - **USE COMMAND**: `/tdd:test-first when the mysql trip store ends expired trips and reads live trips against a real database should return each ended row to exactly one caller, never delete, and change nothing on a live read`
+  - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
+  - Test files: the three cases of T2.60g, named for MySQL.
+  - Test should verify: the same as T2.60g on a real MySQL.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - `EndExpiredOnceAsync`: one transaction at `REPEATABLE READ`, set explicitly: `SELECT ... WHERE EndedAt IS NULL AND TripTime <= @cutoff FOR UPDATE`, then the `UPDATE` with the same predicate. `ReadLiveOnceAsync`: `SELECT Topic, TripTime ... WHERE EndedAt IS NULL AND TripTime > @cutoff`, with no transaction.
+  - Covers: FR-4.4, NFR-5, NFR-9. ADR 0089 *The trip table and the SQL stores*.
+  - Depends on: T2.60f, T2.60c
+  - References: `src/Paramore.Brighter.Outbox.MySql/MySqlTrippedTopicStore.cs`.
+
+- [ ] **TEST + IMPLEMENT: T2.60j - The distributed breaker ends expired trips then reads live trips under one store timeout**
+  - **USE COMMAND**: `/tdd:test-first when the distributed breaker reads the store should end expired trips then read live trips under one store timeout and announce the ended rows even when the live read fails`
+  - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
+  - Test files, one case each: `When_the_live_read_fails_after_trips_were_ended_should_still_announce_the_resets_and_enter_fallback.cs`, `When_ending_expired_trips_fails_should_not_read_live_trips_and_enter_fallback.cs`, `When_the_two_read_calls_together_take_longer_than_one_store_timeout_should_abandon_the_read_at_the_timeout.cs`
+  - Test should verify:
+    - A read calls `EndExpiredAsync`, then `ReadLiveAsync`, with one token and one wait for `StoreTimeout` around both.
+    - When `EndExpiredAsync` returned rows and `ReadLiveAsync` then fails or times out, each returned row still announces its Reset and leaves the view, and the breaker records the read failure.
+    - When `EndExpiredAsync` fails, `ReadLiveAsync` is not called and the breaker records the failure.
+    - Every existing breaker test about reads still passes with its double aimed at the calls the breaker now makes.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - In `MergeStoreIntoViewAsync`, make the one store call the pair of calls. Keep the read's sequence number, the stale-read rule and `EndRowsFrom` for the rows `EndExpiredAsync` returned.
+  - Covers: FR-4.4, NFR-3. ADR 0089 *How a read ends trips*, *Refresh on every running sweeper*.
+  - Depends on: T2.60f
+  - References: `src/Paramore.Brighter/CircuitBreaker/DistributedOutboxCircuitBreaker.cs`.
+
+- [ ] **STRUCTURAL: T2.60k - Remove `ReadAsync` and `TrippedTopicStoreRead` now that nothing calls them**
+  - **USE COMMAND**: `/refactor:tidy-first remove ReadAsync and TrippedTopicStoreRead from IAmATrippedTopicStore, the in-memory store, RelationDatabaseTrippedTopicStore and the three SQL trip stores, and aim the tests and test doubles that used them at EndExpiredAsync and ReadLiveAsync`
+  - Change:
+    - Delete `ReadAsync`, `TrippedTopicStoreRead` and each store's `ReadOnceAsync`. Aim every test, helper and double that called `ReadAsync` at `ReadLiveAsync`, or at `EndExpiredAsync` where the test is about ending. That covers the T2.6 and T2.7 contract tests, the three SQL test bases' read-back, the three read-deadlock tests of T2.60a to T2.60c, and the failure and hang injection in the `Core.Tests` doubles.
+    - Change no behaviour.
+  - Green before and after: every `*TrippedTopicStore*` test in the three SQL test projects and `Paramore.Brighter.Core.Tests/CircuitBreaker` and `Sweeping`. Build `Paramore.Brighter` and the three `Outbox.*` projects for every target framework.
+  - Covers: ADR 0089 alternative 16.
+  - Depends on: T2.60g, T2.60h, T2.60i, T2.60j
+  - References: `src/Paramore.Brighter/CircuitBreaker/`, the three `*TrippedTopicStore.cs` files, `tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed/TestDoubles/`.
+
 - [ ] **CHARACTERISE: T2.60 - Overlapping batch writes and reads do not deadlock on any backend**
   - **USE COMMAND**: `/tdd:test-first when overlapping trip batches and reads run concurrently against the database should complete without a deadlock failure`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
   - Test file: `When_overlapping_trip_batches_run_concurrently_should_not_deadlock.cs` (one per backend)
   - Test should verify:
-    - Parallel batches over overlapping topic sets, submitted in different orders, plus concurrent reads, repeated many times, all complete.
+    - Parallel batches over overlapping topic sets, submitted in different orders, plus concurrent `EndExpiredAsync` and `ReadLiveAsync` calls, repeated many times, all complete.
     - The stored stamps equal the latest written per topic.
   - 🔁 RED mutation: write topics in the order the batch supplies them, with no ordinal sort, and make the deadlock retry call the operation only once, so the retry from T2.60a-T2.60c cannot absorb the deadlock, in one store (MsSql first, then the others). The test submits overlapping topic sets in different orders for a fixed 200 repetitions and must fail on the "all complete" assertion. Revert.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Nothing. T2.57-T2.59a write topics in ordinal order inside one transaction. This test pins it on each real database.
   - Covers: NFR-5, NFR-9. ADR risk "Two instances' batches deadlock".
-  - Depends on: T2.60a, T2.60b, T2.60c, T2.57a, T2.58a, T2.59a
+  - Depends on: T2.60a, T2.60b, T2.60c, T2.60k, T2.57a, T2.58a, T2.59a
   - References: ADR 0089 *Risks and Mitigations*.
 
 ### Phase 2i - Provisioning the trip table
@@ -1868,6 +1960,7 @@ Every requirement and acceptance criterion maps to at least one task.
 | `DistributedOutboxCircuitBreaker` members, lock off I/O, not `IDisposable`, span `CooldownDuration` attribute | T2.9, T2.10, T2.33, T2.17 |
 | Timeout through `CreateCancellationTokenSource` and `WaitAsync`; abandoned task observed | T2.25, T2.26 |
 | Trip table schema, SQL operations, ordinal order, deadlock retry, `GetDDL`, `GetPurgeSql`, no `DELETE` | T2.57-T2.59b, T2.60, T2.60a-T2.60c |
+| Split read (`EndExpiredAsync`, `ReadLiveAsync`), one `StoreTimeout`, ended rows announced when the live read fails, alternative 16 | T2.60d-T2.60k |
 | Provisioning (`BoxType.TrippedTopics`, ordering, `TrippedTopicsProvisioner`, catalogs, extensions, `DiscriminatorFor`) | T2.61-T2.65 |
 | Constructing and registering (no extension; same table name; `commandTimeout` = `StoreTimeout`) | T2.48, T2.57b, T2.72 |
 | OQ-1 store | T2.57-T2.59b, T2.61 |
