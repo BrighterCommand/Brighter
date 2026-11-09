@@ -433,7 +433,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 
 *Shared rule from Phase 5: a task that adds a rule or ladder row may append its effect to earlier expectations. T6.1 also adds a row for R16 on a legacy spec: `legacy-nothing` against a flows directory whose `feature.flow` declares another name. 0092 step 4 with 0089 step 5. Each case is a tracked directory under `.claude/test-fixtures/routing/specs/{case}/`, holding a `README.md` that names its purpose. Each expectation is `expect/{case}.json` (or `expect/{case}-{flows}.json` (`{flows}` without its `flows-` prefix) when the same case runs against more than one flows directory, as for `spike-step-spike-entry`; `shipped-legacy-nothing` is the shipped-table row of `legacy-nothing`) with `run: ["--spec", "{case}"]`, added red before the code (except characterised control rows). Records follow S3. **T6.6, T6.8 and T6.9 carry the O-1 fixtures.** Depends on Phase 5.*
 
-- [ ] **TEST + IMPLEMENT: T6.1 — A legacy spec with nothing resolves to `feature` from the default source, with every route field FR-6 lists; an unknown `--spec` exits `1`**
+- [x] **TEST + IMPLEMENT: T6.1 — A legacy spec with nothing resolves to `feature` from the default source, with every route field FR-6 lists; an unknown `--spec` exits `1`**
   - **USE COMMAND**: none — RED-first rows `legacy-nothing` (`flows: "flows"`), `shipped-legacy-nothing` (no `flows` key), and `spec-unknown` (`run: ["--spec", "no-such-case"]`, `exit: 1`).
   - Fixture: `specs/legacy-nothing/`, holding `README.md` only.
   - Test should verify:
