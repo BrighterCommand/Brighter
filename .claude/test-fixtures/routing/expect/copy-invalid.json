@@ -1,0 +1,26 @@
+{
+  "run": [
+    "--spec",
+    "copy-invalid"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": false,
+    "violations": [
+      {
+        "rule": "R4",
+        "code": "unknown-command",
+        "step": "design",
+        "message": "Step design names a command that does not exist, /spec:designx."
+      }
+    ],
+    "next": {
+      "step": null,
+      "kind": null,
+      "commands": [],
+      "unattended_driver": null,
+      "detours": []
+    }
+  }
+}

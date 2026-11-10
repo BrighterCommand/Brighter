@@ -757,6 +757,7 @@ internal static class SpecReport
 {
     private const string DefaultFlowsDirectory = ".claude/flows";
     private const string LegacyFlow = "feature";
+    private const string SlipFile = ".flow";
     private const string ApprovalTableFile = "approvals.md";
     private static readonly string[] KnownKinds = ["requirements", "design", "tasks"];
 
@@ -769,12 +770,29 @@ internal static class SpecReport
         }
 
         var flowsDirectory = (invocation.FlowsDirectory ?? DefaultFlowsDirectory).TrimEnd('/');
-        var flowPath = $"{flowsDirectory}/{LegacyFlow}.flow";
-        var lines = SlipReader.ReadLines(flowPath);
         var table = ApprovalTableReader.Read($"{flowsDirectory}/{ApprovalTableFile}");
         var specPath = $"{invocation.SpecsRoot}/{directoryName}";
+        var slipPath = $"{specPath}/{SlipFile}";
+        return File.Exists(slipPath)
+            ? ResolveSlip(specPath, slipPath, flowsDirectory, table)
+            : ResolveLegacy(specPath, flowsDirectory, table);
+    }
+
+    private static JsonObject ResolveSlip(string specPath, string slipPath, string flowsDirectory, ApprovalTable table)
+    {
+        var lines = SlipReader.ReadLines(slipPath);
+        var name = SlipSyntax.DeclaredName(lines);
+        var definitionPresent = File.Exists($"{flowsDirectory}/{name}.flow");
+        var violations = DefinitionReport.Violations(name, slipPath, lines, table);
+        return RouteResolver.Resolve(specPath, new FlowIdentity(name, "slip", definitionPresent), lines, violations, table, new SpecStateReader(specPath));
+    }
+
+    private static JsonObject ResolveLegacy(string specPath, string flowsDirectory, ApprovalTable table)
+    {
+        var flowPath = $"{flowsDirectory}/{LegacyFlow}.flow";
+        var lines = SlipReader.ReadLines(flowPath);
         var violations = DefinitionReport.Violations(LegacyFlow, flowPath, lines, table);
-        return RouteResolver.Resolve(specPath, LegacyFlow, "default", lines, violations, table, new SpecStateReader(specPath));
+        return RouteResolver.Resolve(specPath, new FlowIdentity(LegacyFlow, "default", true), lines, violations, table, new SpecStateReader(specPath));
     }
 
     public static IReadOnlyList<string> Kinds => KnownKinds;
@@ -788,9 +806,11 @@ internal static class SpecReport
             : null;
 }
 
+internal sealed record FlowIdentity(string Name, string Source, bool DefinitionPresent);
+
 internal static class RouteResolver
 {
-    public static JsonObject Resolve(string specPath, string flowName, string source, IReadOnlyList<string> lines, IReadOnlyList<Violation> violations, ApprovalTable table, SpecStateReader state)
+    public static JsonObject Resolve(string specPath, FlowIdentity flow, IReadOnlyList<string> lines, IReadOnlyList<Violation> violations, ApprovalTable table, SpecStateReader state)
     {
         var steps = SlipSyntax.Steps(lines);
         var approved = steps.Select(state.Approved).ToList();
@@ -800,7 +820,7 @@ internal static class RouteResolver
             ["schema_version"] = ReportSchema.Version,
             ["mode"] = "spec",
             ["spec"] = specPath,
-            ["flow"] = new JsonObject { ["name"] = flowName, ["source"] = source, ["definition_present"] = true },
+            ["flow"] = new JsonObject { ["name"] = flow.Name, ["source"] = flow.Source, ["definition_present"] = flow.DefinitionPresent },
             ["valid"] = violations.Count == 0,
             ["violations"] = new JsonArray(violations.Select(violation => (JsonNode)violation.ToJson()).ToArray()),
             ["tampered"] = RouteRecordInspector.Tampered(),
@@ -810,7 +830,7 @@ internal static class RouteResolver
             ["gates"] = new JsonArray(),
             ["stray_markers"] = new JsonArray(),
             ["out_of_order"] = OutOfOrderJson(steps, approved),
-            ["next"] = unapproved.Count == 0 ? HandOffNextJson(SlipSyntax.HandOffCommand(lines)) : NextJson(unapproved[0], state),
+            ["next"] = violations.Count > 0 ? InvalidNextJson() : unapproved.Count == 0 ? HandOffNextJson(SlipSyntax.HandOffCommand(lines)) : NextJson(unapproved[0], state),
             ["hand_off"] = HandOffJson(SlipSyntax.HandOffCommand(lines), unapproved),
             ["approve_steps"] = new JsonArray(steps.Where(step => step.MarkerWriter == ApproveCommand(step.Name)).Select(step => (JsonNode)step.Name).ToArray()),
             ["stop"] = null
@@ -889,6 +909,15 @@ internal static class RouteResolver
         ["step"] = step.Name,
         ["kind"] = step.Kind,
         ["commands"] = new JsonArray(NextCommands(step, state).Select(command => (JsonNode)command).ToArray()),
+        ["unattended_driver"] = null,
+        ["detours"] = new JsonArray()
+    };
+
+    private static JsonObject InvalidNextJson() => new()
+    {
+        ["step"] = null,
+        ["kind"] = null,
+        ["commands"] = new JsonArray(),
         ["unattended_driver"] = null,
         ["detours"] = new JsonArray()
     };
