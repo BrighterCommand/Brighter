@@ -1669,7 +1669,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2i - Provisioning the trip table
 
-- [ ] **TEST + IMPLEMENT: T2.61 - BoxType gains TrippedTopics, ordered after outboxes and before inboxes**
+- [x] **TEST + IMPLEMENT: T2.61 - BoxType gains TrippedTopics, ordered after outboxes and before inboxes**
   - **USE COMMAND**: `/tdd:test-first when box provisioning runs a trip table provisioner should run it after outboxes and before inboxes`
   - Test location: "tests/Paramore.Brighter.Core.Tests/BoxProvisioning"
   - Test file: `When_box_provisioning_hosted_service_starts_it_should_provision_tripped_topics_after_outbox_before_inbox.cs`
