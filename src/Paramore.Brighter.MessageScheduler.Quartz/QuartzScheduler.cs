@@ -29,6 +29,11 @@ public class QuartzScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
+        return ScheduleCore(message, at);
+    }
+
+    private string ScheduleCore(Message message, DateTimeOffset at)
+    {
         var id = getOrCreateMessageSchedulerId(message);
         var job = JobBuilder.Create<QuartzBrighterJob>()
             .WithIdentity(id, group!)
@@ -54,7 +59,7 @@ public class QuartzScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return Schedule(message, timeProvider.GetUtcNow().Add(delay));
+        return ScheduleCore(message, timeProvider.GetUtcNow().Add(delay));
     }
 
     /// <inheritdoc />
@@ -72,6 +77,13 @@ public class QuartzScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), "Invalid at, it should be in the future");
         }
 
+        return ScheduleCore(request, type, at, requestContext);
+    }
+
+    private string ScheduleCore<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext)
+        where TRequest : class, IRequest
+    {
         var id = getOrCreateRequestSchedulerId(request);
         var job = JobBuilder.Create<QuartzBrighterJob>()
             .WithIdentity(id, group!)
@@ -112,7 +124,7 @@ public class QuartzScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return Schedule(request, type, timeProvider.GetUtcNow().Add(delay), requestContext);
+        return ScheduleCore(request, type, timeProvider.GetUtcNow().Add(delay), requestContext);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>
@@ -127,7 +139,8 @@ public class QuartzScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), "Invalid delay, it can't be negative");
         }
 
-        return ReScheduler(schedulerId, timeProvider.GetUtcNow().Add(delay));
+        var at = timeProvider.GetUtcNow().Add(delay);
+        return BrighterAsyncContext.Run(() => ReSchedulerCoreAsync(schedulerId, at, CancellationToken.None));
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.Cancel"/>
@@ -143,6 +156,12 @@ public class QuartzScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), "Invalid at, it should be in the future");
         }
 
+        return await ScheduleCoreAsync(message, at, cancellationToken);
+    }
+
+    private async Task<string> ScheduleCoreAsync(Message message, DateTimeOffset at,
+        CancellationToken cancellationToken)
+    {
         var id = getOrCreateMessageSchedulerId(message);
         var job = JobBuilder.Create<QuartzBrighterJob>()
             .WithIdentity(id, group!)
@@ -169,9 +188,10 @@ public class QuartzScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return await ScheduleAsync(message, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+        return await ScheduleCoreAsync(message, timeProvider.GetUtcNow().Add(delay), cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
         => ScheduleAsync(request, type, at, null, cancellationToken);
@@ -186,6 +206,13 @@ public class QuartzScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
+        return await ScheduleCoreAsync(request, type, at, requestContext, cancellationToken);
+    }
+
+    private async Task<string> ScheduleCoreAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext, CancellationToken cancellationToken)
+        where TRequest : class, IRequest
+    {
         var id = getOrCreateRequestSchedulerId(request);
         var job = JobBuilder.Create<QuartzBrighterJob>()
             .WithIdentity(id, group!)
@@ -226,7 +253,7 @@ public class QuartzScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), requestContext, cancellationToken);
+        return await ScheduleCoreAsync(request, type, timeProvider.GetUtcNow().Add(delay), requestContext, cancellationToken);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)"/>
@@ -238,6 +265,12 @@ public class QuartzScheduler(
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
+        return await ReSchedulerCoreAsync(schedulerId, at, cancellationToken);
+    }
+
+    private async Task<bool> ReSchedulerCoreAsync(string schedulerId, DateTimeOffset at,
+        CancellationToken cancellationToken)
+    {
         var date = await scheduler.RescheduleJob(new TriggerKey(schedulerId + "-trigger", group!), TriggerBuilder
             .Create()
             .WithIdentity(schedulerId + "-trigger", group!)
@@ -256,7 +289,7 @@ public class QuartzScheduler(
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return await ReSchedulerAsync(schedulerId, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+        return await ReSchedulerCoreAsync(schedulerId, timeProvider.GetUtcNow().Add(delay), cancellationToken);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.CancelAsync"/>

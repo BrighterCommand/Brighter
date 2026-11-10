@@ -5,6 +5,8 @@
     "OutboxProvider": "Paramore.Brighter.DynamoDB.V4.Tests.Outbox.DynamoDBOutboxProvider",
     "Category": "DynamoDB",
     "CollectionName": "DynamoDBOutbox",
-    "ReadConsistencyTimeoutInMilliseconds": 30000
+    "ReadConsistencyTimeoutInMilliseconds": 30000,
+    "OutstandingCountReadConsistencyTimeoutInMilliseconds": 10000,
+    "OutstandingCountBelowScanConcurrency": true
   }
 }

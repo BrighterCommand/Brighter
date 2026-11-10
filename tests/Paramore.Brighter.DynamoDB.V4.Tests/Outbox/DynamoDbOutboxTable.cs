@@ -29,20 +29,7 @@ public static class DynamoDbOutboxTable
                 return s_tableName;
             }
 
-            var request = new DynamoDbTableFactory()
-                .GenerateCreateTableRequest<MessageItem>(
-                    new DynamoDbCreateProvisionedThroughput(new ProvisionedThroughput
-                    {
-                        ReadCapacityUnits = 10, WriteCapacityUnits = 10
-                    },
-                    new Dictionary<string, ProvisionedThroughput>
-                    {
-                        ["Outstanding"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
-                        ["OutstandingAllTopics"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
-                        ["Delivered"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
-                        ["DeliveredAllTopics"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
-                        ["Causation"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10}
-                    }));
+            var request = BuildCreateTableRequest();
 
             tableName = request.TableName;
             var builder = new DynamoDbTableBuilder(dynamoDbClient);
@@ -62,5 +49,45 @@ public static class DynamoDbOutboxTable
         {
             s_semaphoreSlim.Release();
         }
+    }
+
+    /// <summary>
+    /// Creates a table of its own for one case of the overall outstanding count, so the case counts only what it adds.
+    /// </summary>
+    public static async Task<string> CreateTableAsync(AmazonDynamoDBClient dynamoDbClient)
+    {
+        var request = BuildCreateTableRequest();
+        request.TableName = $"{request.TableName}_{Uuid.New():N}";
+
+        var builder = new DynamoDbTableBuilder(dynamoDbClient);
+        await builder.Build(request);
+        await builder.EnsureTablesReady([request.TableName], TableStatus.ACTIVE);
+
+        return request.TableName;
+    }
+
+    public static async Task DeleteTableAsync(AmazonDynamoDBClient dynamoDbClient, string tableName)
+    {
+        var builder = new DynamoDbTableBuilder(dynamoDbClient);
+        await builder.Delete([tableName]);
+        await builder.EnsureTablesDeleted([tableName]);
+    }
+
+    private static CreateTableRequest BuildCreateTableRequest()
+    {
+        return new DynamoDbTableFactory()
+            .GenerateCreateTableRequest<MessageItem>(
+                new DynamoDbCreateProvisionedThroughput(new ProvisionedThroughput
+                {
+                    ReadCapacityUnits = 10, WriteCapacityUnits = 10
+                },
+                new Dictionary<string, ProvisionedThroughput>
+                {
+                    ["Outstanding"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
+                    ["OutstandingAllTopics"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
+                    ["Delivered"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
+                    ["DeliveredAllTopics"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
+                    ["Causation"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10}
+                }));
     }
 }
