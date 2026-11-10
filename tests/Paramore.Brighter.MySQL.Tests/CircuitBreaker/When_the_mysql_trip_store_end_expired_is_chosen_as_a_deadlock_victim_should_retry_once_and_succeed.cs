@@ -34,7 +34,7 @@ public class MySqlTrippedTopicStoreEndExpiredDeadlockTests : MySqlTrippedTopicSt
         var ended = await endExpired;
 
         // Assert
-        Assert.Equal(2, recordingProvider.ExecutedCommands.Count(command => command.CommandText.EndsWith("FOR UPDATE")));
+        Assert.Equal(2, recordingProvider.ExecutedCommands.Count(command => command.CommandText.StartsWith("SELECT") && !command.CommandText.EndsWith("FOR UPDATE")));
         Assert.Equal([first, last], ended.Select(trip => trip.Topic).OrderBy(topic => topic.Value));
     }
 }

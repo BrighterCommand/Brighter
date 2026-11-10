@@ -112,11 +112,21 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false);
 
         var cutoff = (now - tripLength).UtcDateTime;
-        var ended = await QueryTripsAsync(
+        var candidates = await QueryTripsAsync(
             connection, transaction,
-            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff FOR UPDATE",
+            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff",
             [("@cutoff", cutoff)], cancellationToken).ConfigureAwait(false);
-        await MarkEndedAsync(connection, transaction, now.UtcDateTime, cutoff, cancellationToken).ConfigureAwait(false);
+
+        var ended = new List<TopicTrip>();
+        foreach (var candidate in candidates.OrderBy(trip => trip.Topic.Value, StringComparer.Ordinal))
+        {
+            var locked = await LockIfStillExpiredAsync(connection, transaction, candidate.Topic, cutoff, cancellationToken).ConfigureAwait(false);
+            if (locked is null)
+                continue;
+
+            await MarkEndedAsync(connection, transaction, candidate.Topic, now.UtcDateTime, cancellationToken).ConfigureAwait(false);
+            ended.Add(locked.Value);
+        }
 
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return ended;
@@ -174,19 +184,37 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         return await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task MarkEndedAsync(
+    private async Task<TopicTrip?> LockIfStillExpiredAsync(
         DbConnection connection,
         DbTransaction transaction,
-        DateTime now,
+        RoutingKey topic,
         DateTime cutoff,
         CancellationToken cancellationToken)
     {
         await using var command = CreateCommand(connection);
         command.Transaction = transaction;
         command.CommandText =
-            $"UPDATE {QualifiedTableName} SET `EndedAt` = @now WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff";
-        AddParameter(command, "@now", DbType.DateTime, now);
+            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `Topic` = @topic AND `EndedAt` IS NULL AND `TripTime` <= @cutoff FOR UPDATE";
+        AddParameter(command, "@topic", DbType.String, topic.Value);
         AddParameter(command, "@cutoff", DbType.DateTime, cutoff);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        var locked = await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
+        return locked.Count == 0 ? null : locked[0];
+    }
+
+    private async Task MarkEndedAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        RoutingKey topic,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        await using var command = CreateCommand(connection);
+        command.Transaction = transaction;
+        command.CommandText = $"UPDATE {QualifiedTableName} SET `EndedAt` = @now WHERE `Topic` = @topic";
+        AddParameter(command, "@now", DbType.DateTime, now);
+        AddParameter(command, "@topic", DbType.String, topic.Value);
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
