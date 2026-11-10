@@ -31,35 +31,51 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox;
 public class PostgreSqlBulkDuplicatePreservationTests
 {
     [Theory]
-    [InlineData(false, false, false, false)]
-    [InlineData(false, false, false, true)]
-    [InlineData(false, false, true, false)]
-    [InlineData(false, false, true, true)]
-    [InlineData(false, true, false, false)]
-    [InlineData(false, true, false, true)]
-    [InlineData(false, true, true, false)]
-    [InlineData(false, true, true, true)]
-    [InlineData(true, false, false, false)]
-    [InlineData(true, false, false, true)]
-    [InlineData(true, false, true, false)]
-    [InlineData(true, false, true, true)]
-    [InlineData(true, true, false, false)]
-    [InlineData(true, true, false, true)]
-    [InlineData(true, true, true, false)]
-    [InlineData(true, true, true, true)]
+    [InlineData(false, false, false, false, false)]
+    [InlineData(false, false, false, false, true)]
+    [InlineData(false, false, false, true, false)]
+    [InlineData(false, false, false, true, true)]
+    [InlineData(false, false, true, false, false)]
+    [InlineData(false, false, true, false, true)]
+    [InlineData(false, false, true, true, false)]
+    [InlineData(false, false, true, true, true)]
+    [InlineData(false, true, false, false, false)]
+    [InlineData(false, true, false, false, true)]
+    [InlineData(false, true, false, true, false)]
+    [InlineData(false, true, false, true, true)]
+    [InlineData(false, true, true, false, false)]
+    [InlineData(false, true, true, false, true)]
+    [InlineData(false, true, true, true, false)]
+    [InlineData(false, true, true, true, true)]
+    [InlineData(true, false, false, false, false)]
+    [InlineData(true, false, false, false, true)]
+    [InlineData(true, false, false, true, false)]
+    [InlineData(true, false, false, true, true)]
+    [InlineData(true, false, true, false, false)]
+    [InlineData(true, false, true, false, true)]
+    [InlineData(true, false, true, true, false)]
+    [InlineData(true, false, true, true, true)]
+    [InlineData(true, true, false, false, false)]
+    [InlineData(true, true, false, false, true)]
+    [InlineData(true, true, false, true, false)]
+    [InlineData(true, true, false, true, true)]
+    [InlineData(true, true, true, false, false)]
+    [InlineData(true, true, true, false, true)]
+    [InlineData(true, true, true, true, false)]
+    [InlineData(true, true, true, true, true)]
     public async Task When_a_postgres_outbox_batch_contains_duplicate_ids_should_preserve_all_new_messages(
-        bool useAsync, bool binaryPayload, bool hasCausation, bool alreadyStored)
+        bool useAsync, bool binaryPayload, bool hasCausation, bool alreadyStored, bool hasDataRef)
     {
         //Arrange
-        using var store = new PostgreSqlOutboxTestStore(binaryPayload, hasCausation);
+        using var store = new PostgreSqlOutboxTestStore(binaryPayload, hasCausation, hasDataRef);
         var outbox = new PostgreSqlOutbox(store.Configuration);
         var originalContext = new RequestContext();
         originalContext.Bag[RequestContextBagNames.CausationId] = "original-causation";
         var batchContext = new RequestContext();
         batchContext.Bag[RequestContextBagNames.CausationId] = "batch-causation";
-        var original = PostgreSqlOutboxTestStore.MessageWith(Id.Random(), "original body");
-        var duplicate = PostgreSqlOutboxTestStore.MessageWith(original.Id, "replacement body");
-        var before = PostgreSqlOutboxTestStore.MessageWith(Id.Random(), "before duplicate");
+        var original = PostgreSqlOutboxTestStore.MessageWith(Id.Random(), "original body", dataRef: "claim://original");
+        var duplicate = PostgreSqlOutboxTestStore.MessageWith(original.Id, "replacement body", dataRef: "claim://replacement");
+        var before = PostgreSqlOutboxTestStore.MessageWith(Id.Random(), "before duplicate", dataRef: "claim://before");
         var after = PostgreSqlOutboxTestStore.MessageWith(Id.Random(), "after duplicate");
         if (alreadyStored)
         {
@@ -95,6 +111,9 @@ public class PostgreSqlBulkDuplicatePreservationTests
         Assert.Equal(after.Body.Value, storedAfter.Body.Value);
         Assert.Equal(original.Id, storedOriginal.Id);
         Assert.Equal(original.Body.Value, storedOriginal.Body.Value);
+        Assert.Equal(hasDataRef ? before.Header.DataRef : null, storedBefore.Header.DataRef);
+        Assert.Null(storedAfter.Header.DataRef);
+        Assert.Equal(hasDataRef ? original.Header.DataRef : null, storedOriginal.Header.DataRef);
         Assert.Equal(3L, store.Count());
         if (hasCausation)
         {

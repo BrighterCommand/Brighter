@@ -48,14 +48,15 @@
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
             ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\", \"dataref\") " +
             "VALUES (@MessageId,@MessageType,@Topic,@Timestamp,@CorrelationId,@ReplyTo,@ContentType,@PartitionKey,@HeaderBag,@Body" +
-            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId, @DataRef)";
+            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId, @DataRef) " +
+            "ON CONFLICT (\"messageid\") DO NOTHING";
 
         /// <inheritdoc />
         public string BulkAddDataRefCommand { get; } =
             "INSERT INTO {0} " +
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
             ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\", \"dataref\") " +
-            "VALUES {1}";
+            "VALUES {1} ON CONFLICT (\"messageid\") DO NOTHING";
 
         /// <inheritdoc />
         public string AddDataRefCausationCommand { get; } =
@@ -63,14 +64,15 @@
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
             ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\", \"dataref\",\"causationid\") " +
             "VALUES (@MessageId,@MessageType,@Topic,@Timestamp,@CorrelationId,@ReplyTo,@ContentType,@PartitionKey,@HeaderBag,@Body" +
-            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId, @DataRef,@CausationId)";
+            ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId, @DataRef,@CausationId) " +
+            "ON CONFLICT (\"messageid\") DO NOTHING";
 
         /// <inheritdoc />
         public string BulkAddDataRefCausationCommand { get; } =
             "INSERT INTO {0} " +
             "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
             ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\", \"dataref\",\"causationid\") " +
-            "VALUES {1}";
+            "VALUES {1} ON CONFLICT (\"messageid\") DO NOTHING";
 
         /// <inheritdoc />
         public string DataRefColumnExistsCommand { get; } = "SELECT 1 FROM pg_attribute WHERE attrelid = to_regclass('{0}') AND attname = 'dataref' AND NOT attisdropped";

@@ -32,27 +32,43 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox;
 public class PostgreSqlOutboxUniqueConstraintFailureTests
 {
     [Theory]
-    [InlineData(false, false, false, false)]
-    [InlineData(false, false, false, true)]
-    [InlineData(false, false, true, false)]
-    [InlineData(false, false, true, true)]
-    [InlineData(false, true, false, false)]
-    [InlineData(false, true, false, true)]
-    [InlineData(false, true, true, false)]
-    [InlineData(false, true, true, true)]
-    [InlineData(true, false, false, false)]
-    [InlineData(true, false, false, true)]
-    [InlineData(true, false, true, false)]
-    [InlineData(true, false, true, true)]
-    [InlineData(true, true, false, false)]
-    [InlineData(true, true, false, true)]
-    [InlineData(true, true, true, false)]
-    [InlineData(true, true, true, true)]
+    [InlineData(false, false, false, false, false)]
+    [InlineData(false, false, false, false, true)]
+    [InlineData(false, false, false, true, false)]
+    [InlineData(false, false, false, true, true)]
+    [InlineData(false, false, true, false, false)]
+    [InlineData(false, false, true, false, true)]
+    [InlineData(false, false, true, true, false)]
+    [InlineData(false, false, true, true, true)]
+    [InlineData(false, true, false, false, false)]
+    [InlineData(false, true, false, false, true)]
+    [InlineData(false, true, false, true, false)]
+    [InlineData(false, true, false, true, true)]
+    [InlineData(false, true, true, false, false)]
+    [InlineData(false, true, true, false, true)]
+    [InlineData(false, true, true, true, false)]
+    [InlineData(false, true, true, true, true)]
+    [InlineData(true, false, false, false, false)]
+    [InlineData(true, false, false, false, true)]
+    [InlineData(true, false, false, true, false)]
+    [InlineData(true, false, false, true, true)]
+    [InlineData(true, false, true, false, false)]
+    [InlineData(true, false, true, false, true)]
+    [InlineData(true, false, true, true, false)]
+    [InlineData(true, false, true, true, true)]
+    [InlineData(true, true, false, false, false)]
+    [InlineData(true, true, false, false, true)]
+    [InlineData(true, true, false, true, false)]
+    [InlineData(true, true, false, true, true)]
+    [InlineData(true, true, true, false, false)]
+    [InlineData(true, true, true, false, true)]
+    [InlineData(true, true, true, true, false)]
+    [InlineData(true, true, true, true, true)]
     public async Task When_a_postgres_outbox_write_violates_another_unique_constraint_should_report_failure(
-        bool useAsync, bool binaryPayload, bool hasCausation, bool useBatch)
+        bool useAsync, bool binaryPayload, bool hasCausation, bool useBatch, bool hasDataRef)
     {
         //Arrange
-        using var store = new PostgreSqlOutboxTestStore(binaryPayload, hasCausation);
+        using var store = new PostgreSqlOutboxTestStore(binaryPayload, hasCausation, hasDataRef);
         store.Execute($"ALTER TABLE \"{store.TableName}\" ADD CONSTRAINT unique_topic UNIQUE (topic)");
         var outbox = new PostgreSqlOutbox(store.Configuration);
         var context = new RequestContext();

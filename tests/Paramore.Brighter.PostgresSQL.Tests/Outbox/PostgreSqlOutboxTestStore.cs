@@ -35,7 +35,7 @@ internal sealed class PostgreSqlOutboxTestStore : IDisposable
 
     public RelationalDatabaseConfiguration Configuration { get; }
 
-    public PostgreSqlOutboxTestStore(bool binaryPayload, bool hasCausation)
+    public PostgreSqlOutboxTestStore(bool binaryPayload, bool hasCausation, bool hasDataRef)
     {
         Configuration = new RelationalDatabaseConfiguration(
             Const.ConnectionString,
@@ -43,6 +43,8 @@ internal sealed class PostgreSqlOutboxTestStore : IDisposable
             outBoxTableName: TableName,
             binaryMessagePayload: binaryPayload);
         Execute(PostgreSqlOutboxBuilder.GetDDL(TableName, binaryPayload));
+        if (!hasDataRef)
+            Execute($"ALTER TABLE \"{TableName}\" DROP COLUMN dataref");
         if (!hasCausation)
             Execute($"ALTER TABLE \"{TableName}\" DROP COLUMN causationid");
     }
@@ -75,8 +77,8 @@ internal sealed class PostgreSqlOutboxTestStore : IDisposable
         return command.ExecuteScalar() as string;
     }
 
-    public static Message MessageWith(Id id, string body, string topic = "bulk-topic")
-        => new(new MessageHeader(id, new RoutingKey(topic), MessageType.MT_DOCUMENT),
+    public static Message MessageWith(Id id, string body, string topic = "bulk-topic", string? dataRef = null)
+        => new(new MessageHeader(id, new RoutingKey(topic), MessageType.MT_DOCUMENT) { DataRef = dataRef },
             new MessageBody(body));
 
     public void Dispose() => Execute($"DROP TABLE IF EXISTS \"{TableName}\"");

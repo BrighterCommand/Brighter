@@ -33,32 +33,48 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox;
 public class PostgreSqlOutboxDuplicateTransactionTests
 {
     [Theory]
-    [InlineData(false, false, false, false)]
-    [InlineData(false, false, false, true)]
-    [InlineData(false, false, true, false)]
-    [InlineData(false, false, true, true)]
-    [InlineData(false, true, false, false)]
-    [InlineData(false, true, false, true)]
-    [InlineData(false, true, true, false)]
-    [InlineData(false, true, true, true)]
-    [InlineData(true, false, false, false)]
-    [InlineData(true, false, false, true)]
-    [InlineData(true, false, true, false)]
-    [InlineData(true, false, true, true)]
-    [InlineData(true, true, false, false)]
-    [InlineData(true, true, false, true)]
-    [InlineData(true, true, true, false)]
-    [InlineData(true, true, true, true)]
+    [InlineData(false, false, false, false, false)]
+    [InlineData(false, false, false, false, true)]
+    [InlineData(false, false, false, true, false)]
+    [InlineData(false, false, false, true, true)]
+    [InlineData(false, false, true, false, false)]
+    [InlineData(false, false, true, false, true)]
+    [InlineData(false, false, true, true, false)]
+    [InlineData(false, false, true, true, true)]
+    [InlineData(false, true, false, false, false)]
+    [InlineData(false, true, false, false, true)]
+    [InlineData(false, true, false, true, false)]
+    [InlineData(false, true, false, true, true)]
+    [InlineData(false, true, true, false, false)]
+    [InlineData(false, true, true, false, true)]
+    [InlineData(false, true, true, true, false)]
+    [InlineData(false, true, true, true, true)]
+    [InlineData(true, false, false, false, false)]
+    [InlineData(true, false, false, false, true)]
+    [InlineData(true, false, false, true, false)]
+    [InlineData(true, false, false, true, true)]
+    [InlineData(true, false, true, false, false)]
+    [InlineData(true, false, true, false, true)]
+    [InlineData(true, false, true, true, false)]
+    [InlineData(true, false, true, true, true)]
+    [InlineData(true, true, false, false, false)]
+    [InlineData(true, true, false, false, true)]
+    [InlineData(true, true, false, true, false)]
+    [InlineData(true, true, false, true, true)]
+    [InlineData(true, true, true, false, false)]
+    [InlineData(true, true, true, false, true)]
+    [InlineData(true, true, true, true, false)]
+    [InlineData(true, true, true, true, true)]
     public async Task When_a_postgres_outbox_duplicate_is_ignored_should_keep_the_transaction_usable(
-        bool useAsync, bool binaryPayload, bool hasCausation, bool useBatch)
+        bool useAsync, bool binaryPayload, bool hasCausation, bool useBatch, bool hasDataRef)
     {
         //Arrange
-        using var store = new PostgreSqlOutboxTestStore(binaryPayload, hasCausation);
+        using var store = new PostgreSqlOutboxTestStore(binaryPayload, hasCausation, hasDataRef);
         var outbox = new PostgreSqlOutbox(store.Configuration);
         var context = new RequestContext();
-        var original = PostgreSqlOutboxTestStore.MessageWith(Id.Random(), "original body");
+        var original = PostgreSqlOutboxTestStore.MessageWith(Id.Random(), "original body", dataRef: "claim://original");
         var duplicate = PostgreSqlOutboxTestStore.MessageWith(original.Id, "replacement body");
-        var fresh = PostgreSqlOutboxTestStore.MessageWith(Id.Random(), "new body");
+        var fresh = PostgreSqlOutboxTestStore.MessageWith(Id.Random(), "new body", dataRef: "claim://fresh");
         outbox.Add(original, context);
         var transaction = new PostgreSqlTransactionProvider(store.Configuration);
         try
@@ -95,7 +111,11 @@ public class PostgreSqlOutboxDuplicateTransactionTests
 
         //Assert
         Assert.Equal(2L, store.Count());
-        Assert.Equal(original.Body.Value, outbox.Get(original.Id, context).Body.Value);
-        Assert.Equal(fresh.Body.Value, outbox.Get(fresh.Id, context).Body.Value);
+        var storedOriginal = outbox.Get(original.Id, context);
+        var storedFresh = outbox.Get(fresh.Id, context);
+        Assert.Equal(original.Body.Value, storedOriginal.Body.Value);
+        Assert.Equal(fresh.Body.Value, storedFresh.Body.Value);
+        Assert.Equal(hasDataRef ? original.Header.DataRef : null, storedOriginal.Header.DataRef);
+        Assert.Equal(hasDataRef ? fresh.Header.DataRef : null, storedFresh.Header.DataRef);
     }
 }
