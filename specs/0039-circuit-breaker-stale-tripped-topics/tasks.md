@@ -1697,7 +1697,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.61
   - References: `src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerOutboxProvisioner.cs`. `docs/adr/0058-box-provisioning-rdd-role-interfaces.md`. `tests/Paramore.Brighter.Core.Tests/BoxProvisioning/TestDoubles/`.
 
-- [ ] **TEST + IMPLEMENT: T2.63 - MsSql trip-table provisioning: fresh install, re-run and hand-created table**
+- [x] **TEST + IMPLEMENT: T2.63 - MsSql trip-table provisioning: fresh install, re-run and hand-created table**
   - **USE COMMAND**: `/tdd:test-first when the mssql trip table provisioner runs on a fresh database should create the trip table and be idempotent on re-run`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning"
   - Test file: `When_mssql_tripped_topics_provisioner_runs_on_fresh_database_it_should_create_the_trip_table.cs`
