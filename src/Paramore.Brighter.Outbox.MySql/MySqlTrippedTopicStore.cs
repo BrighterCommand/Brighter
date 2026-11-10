@@ -103,18 +103,37 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     protected override bool IsDeadlock(Exception exception) => exception is MySqlException { ErrorCode: MySqlErrorCode.LockDeadlock };
 
     /// <inheritdoc />
-    protected override Task<IReadOnlyList<TopicTrip>> EndExpiredOnceAsync(
+    protected override async Task<IReadOnlyList<TopicTrip>> EndExpiredOnceAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
-        CancellationToken cancellationToken) =>
-        throw new NotImplementedException();
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false);
+
+        var cutoff = (now - tripLength).UtcDateTime;
+        var ended = await QueryTripsAsync(
+            connection, transaction,
+            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff FOR UPDATE",
+            [("@cutoff", cutoff)], cancellationToken).ConfigureAwait(false);
+        await MarkEndedAsync(connection, transaction, now.UtcDateTime, cutoff, cancellationToken).ConfigureAwait(false);
+
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return ended;
+    }
 
     /// <inheritdoc />
-    protected override Task<IReadOnlyList<TopicTrip>> ReadLiveOnceAsync(
+    protected override async Task<IReadOnlyList<TopicTrip>> ReadLiveOnceAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
-        CancellationToken cancellationToken) =>
-        throw new NotImplementedException();
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        return await QueryTripsAsync(
+            connection, null,
+            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `EndedAt` IS NULL AND `TripTime` > @cutoff",
+            [("@cutoff", (now - tripLength).UtcDateTime)], cancellationToken).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
     protected override async Task<TrippedTopicStoreRead> ReadOnceAsync(
@@ -165,7 +184,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
     private async Task<List<TopicTrip>> QueryTripsAsync(
         DbConnection connection,
-        DbTransaction transaction,
+        DbTransaction? transaction,
         string sql,
         (string Name, DateTime Value)[] parameters,
         CancellationToken cancellationToken)
