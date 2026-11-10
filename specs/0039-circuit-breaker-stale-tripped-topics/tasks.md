@@ -1588,7 +1588,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.60f, T2.60a
   - References: `src/Paramore.Brighter.Outbox.MsSql/MsSqlTrippedTopicStore.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.60h - The PostgreSql trip store ends expired trips and reads live trips against PostgreSQL**
+- [x] **TEST + IMPLEMENT: T2.60h - The PostgreSql trip store ends expired trips and reads live trips against PostgreSQL**
   - **USE COMMAND**: `/tdd:test-first when the postgresql trip store ends expired trips and reads live trips against a real database should return each ended row to exactly one caller, never delete, and change nothing on a live read`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
   - Test files: the three cases of T2.60g, named for PostgreSQL.
