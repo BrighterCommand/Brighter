@@ -1653,7 +1653,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.60a, T2.60b, T2.60c, T2.60k, T2.57a, T2.58a, T2.59a
   - References: ADR 0089 *Risks and Mitigations*.
 
-- [ ] **TEST + IMPLEMENT: T2.60k1 - MySql EndExpiredAsync locks by primary key so overlapping batches and ends do not deadlock**
+- [x] **TEST + IMPLEMENT: T2.60k1 - MySql EndExpiredAsync locks by primary key so overlapping batches and ends do not deadlock**
   - *Added 2026-11-10 with the owner's approval, from the MySql run of T2.60: the overlap test was red on arrival, with `Deadlock found when trying to get lock` reaching the caller after the one retry, on every run. Writers alone and writers with `ReadLiveAsync` pass; writers with `EndExpiredAsync` always deadlock. The cause is the `REPEATABLE READ` `SELECT ... WHERE EndedAt IS NULL AND TripTime <= @cutoff FOR UPDATE`, which takes gap locks over the `(EndedAt, TripTime)` index range that the writers' inserts need. The old combined read had the same shape; the existing tests deadlock only against a held row. `READ COMMITTED` was tried and rejected: it does not remove the deadlock and breaks the race tests.*
   - **USE COMMAND**: `/tdd:test-first when overlapping trip batches and ends run concurrently against MySQL should complete without a deadlock failure`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
