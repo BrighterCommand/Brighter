@@ -489,7 +489,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: compute `out_of_order`, and add next-step ladder row 4 (`/spec:review {kind}`, then the marker-writer).
   - Traces to: FR-21, FR-11, FR-8; AC-13, AC-22, AC-43. Depends on: T6.3.
 
-- [ ] **TEST + IMPLEMENT: T6.5 — A spec's own `.flow` is followed: valid when it matches, invalid when it names a since-deleted command, and followed with a notice when its flow has no definition**
+- [x] **TEST + IMPLEMENT: T6.5 — A spec's own `.flow` is followed: valid when it matches, invalid when it names a since-deleted command, and followed with a notice when its flow has no definition**
   - **USE COMMAND**: none — RED-first rows `feature-slip`, `copy-invalid` and `unknown-flow`, each with `flows: "flows"`.
   - Fixture:
     - `feature-slip/`: a `.flow` copied from the fixture `feature.flow`, a record (S3), and `.requirements-approved`.
