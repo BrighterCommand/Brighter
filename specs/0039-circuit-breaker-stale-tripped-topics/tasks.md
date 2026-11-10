@@ -1683,7 +1683,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.1
   - References: `src/Paramore.Brighter.BoxProvisioning/BoxType.cs:29-41`. `src/Paramore.Brighter.BoxProvisioning/BoxProvisioningHostedService.cs:111-118`. `tests/Paramore.Brighter.Core.Tests/BoxProvisioning/When_box_provisioning_hosted_service_starts_it_should_provision_outbox_before_inbox.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.62 - TrippedTopicsProvisioner runs the backend migration runner for the trip table**
+- [x] **TEST + IMPLEMENT: T2.62 - TrippedTopicsProvisioner runs the backend migration runner for the trip table**
   - **USE COMMAND**: `/tdd:test-first when the tripped topics provisioner runs should guard the identifiers and run the backend migration runner for the trip table`
   - Test location: "tests/Paramore.Brighter.Core.Tests/BoxProvisioning"
   - Test file: `When_the_tripped_topics_provisioner_runs_it_should_invoke_the_migration_runner_for_the_trip_table.cs`
