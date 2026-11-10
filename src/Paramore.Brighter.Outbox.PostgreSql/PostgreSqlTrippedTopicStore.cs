@@ -107,18 +107,39 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         AddParameter(command, name, DbType.DateTimeOffset, stamp.ToUniversalTime());
 
     /// <inheritdoc />
-    protected override Task<IReadOnlyList<TopicTrip>> EndExpiredOnceAsync(
+    protected override async Task<IReadOnlyList<TopicTrip>> EndExpiredOnceAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
-        CancellationToken cancellationToken) =>
-        throw new NotImplementedException();
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = CreateCommand(connection);
+        command.CommandText = $"""
+            UPDATE {QualifiedTableName} SET ended_at = @now
+            WHERE ended_at IS NULL AND trip_time <= @cutoff
+            RETURNING topic, trip_time;
+            """;
+        AddStampParameter(command, "@now", now);
+        AddStampParameter(command, "@cutoff", now - tripLength);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        return await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
-    protected override Task<IReadOnlyList<TopicTrip>> ReadLiveOnceAsync(
+    protected override async Task<IReadOnlyList<TopicTrip>> ReadLiveOnceAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
-        CancellationToken cancellationToken) =>
-        throw new NotImplementedException();
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = CreateCommand(connection);
+        command.CommandText = $"SELECT topic, trip_time FROM {QualifiedTableName} WHERE ended_at IS NULL AND trip_time > @cutoff;";
+        AddStampParameter(command, "@cutoff", now - tripLength);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        return await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
     protected override async Task<TrippedTopicStoreRead> ReadOnceAsync(
