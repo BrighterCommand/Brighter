@@ -1574,7 +1574,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.60d
   - References: `src/Paramore.Brighter/CircuitBreaker/IAmATrippedTopicStore.cs`, `InMemoryTrippedTopicStore.cs`, `RelationDatabaseTrippedTopicStore.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.60g - The MsSql trip store ends expired trips and reads live trips against SQL Server**
+- [x] **TEST + IMPLEMENT: T2.60g - The MsSql trip store ends expired trips and reads live trips against SQL Server**
   - **USE COMMAND**: `/tdd:test-first when the mssql trip store ends expired trips and reads live trips against a real database should return each ended row to exactly one caller, never delete, and change nothing on a live read`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
   - Test files, one case each: `When_readers_race_over_an_expired_row_should_end_it_for_exactly_one_caller.cs` (1,000 parallel repetitions), `When_a_live_read_runs_should_change_nothing_and_not_return_an_expired_row.cs`, `When_the_mssql_trip_store_end_expired_is_chosen_as_a_deadlock_victim_should_retry_once_and_succeed.cs`
