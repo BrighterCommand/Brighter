@@ -1729,7 +1729,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.62, T2.58
   - References: `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlBoxDetectionHelper.cs:245-247`, `PostgreSqlOutboxMigrationCatalog.cs`, `PostgreSqlBoxProvisioningExtensions.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.65 - MySql trip-table provisioning: fresh install, re-run and hand-created table**
+- [x] **TEST + IMPLEMENT: T2.65 - MySql trip-table provisioning: fresh install, re-run and hand-created table**
   - **USE COMMAND**: `/tdd:test-first when the mysql trip table provisioner runs on a fresh database should create the trip table and be idempotent on re-run`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning"
   - Test file: `When_mysql_tripped_topics_provisioner_runs_on_fresh_database_it_should_create_the_trip_table.cs`
