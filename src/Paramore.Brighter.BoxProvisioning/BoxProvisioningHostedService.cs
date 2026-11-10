@@ -111,7 +111,8 @@ public class BoxProvisioningHostedService : IHostedService
     private static int OrderingOrdinal(BoxType type) => type switch
     {
         BoxType.Outbox => 0,
-        BoxType.Inbox => 1,
+        BoxType.TrippedTopics => 1,
+        BoxType.Inbox => 2,
         _ => throw new ArgumentOutOfRangeException(
             nameof(type), type,
             $"BoxProvisioningHostedService does not know how to order BoxType.{type} — add it to the switch in OrderingOrdinal")
