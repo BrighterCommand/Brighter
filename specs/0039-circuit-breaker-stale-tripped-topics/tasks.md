@@ -1628,7 +1628,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.60f
   - References: `src/Paramore.Brighter/CircuitBreaker/DistributedOutboxCircuitBreaker.cs`.
 
-- [ ] **STRUCTURAL: T2.60k - Remove `ReadAsync` and `TrippedTopicStoreRead` now that nothing calls them**
+- [x] **STRUCTURAL: T2.60k - Remove `ReadAsync` and `TrippedTopicStoreRead` now that nothing calls them**
   - **USE COMMAND**: `/refactor:tidy-first remove ReadAsync and TrippedTopicStoreRead from IAmATrippedTopicStore, the in-memory store, RelationDatabaseTrippedTopicStore and the three SQL trip stores, and aim the tests and test doubles that used them at EndExpiredAsync and ReadLiveAsync`
   - Change:
     - Delete `ReadAsync`, `TrippedTopicStoreRead` and each store's `ReadOnceAsync`. Aim every test, helper and double that called `ReadAsync` at `ReadLiveAsync`, or at `EndExpiredAsync` where the test is about ending. That covers the T2.6 and T2.7 contract tests, the three SQL test bases' read-back, the three read-deadlock tests of T2.60a to T2.60c, and the failure and hang injection in the `Core.Tests` doubles.
