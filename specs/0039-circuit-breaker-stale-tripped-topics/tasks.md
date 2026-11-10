@@ -1600,7 +1600,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.60f, T2.60b
   - References: `src/Paramore.Brighter.Outbox.PostgreSql/PostgreSqlTrippedTopicStore.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.60i - The MySql trip store ends expired trips and reads live trips against MySQL**
+- [x] **TEST + IMPLEMENT: T2.60i - The MySql trip store ends expired trips and reads live trips against MySQL**
   - **USE COMMAND**: `/tdd:test-first when the mysql trip store ends expired trips and reads live trips against a real database should return each ended row to exactly one caller, never delete, and change nothing on a live read`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
   - Test files: the three cases of T2.60g, named for MySQL.
