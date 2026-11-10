@@ -143,6 +143,38 @@ public static class MsSqlBoxProvisioningExtensions
         return options;
     }
 
+    /// <summary>
+    /// Register provisioning of the MSSQL tripped topics table that distributed circuit-breaker
+    /// instances share. Pass the same table name to <c>MsSqlTrippedTopicStore</c>.
+    /// </summary>
+    /// <param name="options">The box provisioning options.</param>
+    /// <param name="configuration">Supplies the connection string, and the schema when <paramref name="schemaName"/> is null.</param>
+    /// <param name="tableName">The trip table name.</param>
+    /// <param name="schemaName">The schema holding the trip table, or null to use the configuration's schema.</param>
+    public static BoxProvisioningOptions AddMsSqlTrippedTopics(
+        this BoxProvisioningOptions options,
+        IAmARelationalDatabaseConfiguration configuration,
+        string tableName = "BrighterTrippedTopics",
+        string? schemaName = null)
+    {
+        options.Add(services =>
+        {
+            RegisterSharedRoleImpls(services);
+            services.AddSingleton<IAmABoxProvisioner>(sp =>
+            {
+                var effectiveSchema = schemaName ?? configuration.SchemaName;
+                var catalog = new MsSqlTrippedTopicsMigrationCatalog(tableName, effectiveSchema);
+                var runner = new MsSqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
+                return new TrippedTopicsProvisioner(
+                    tableName,
+                    effectiveSchema is null ? null : new SchemaName(effectiveSchema),
+                    runner);
+            });
+        });
+        return options;
+    }
+
     // Shared by the outbox and inbox registrations; TryAdd makes calling both safe.
     private static void RegisterSharedRoleImpls(IServiceCollection services)
     {
