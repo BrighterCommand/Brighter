@@ -37,7 +37,7 @@ public class ThrowingOnReadTrippedTopicStore : IAmATrippedTopicStore
         => throw new InvalidOperationException("The store cannot be read");
 
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<TopicTrip>>([]);
+        => throw new InvalidOperationException("The store cannot be read");
 
     public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<TopicTrip>>([]);

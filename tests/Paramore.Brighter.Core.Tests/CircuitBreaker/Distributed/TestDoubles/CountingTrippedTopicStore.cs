@@ -23,7 +23,10 @@ public class CountingTrippedTopicStore : IAmATrippedTopicStore
     }
 
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<TopicTrip>>([]);
+    {
+        Interlocked.Increment(ref _reads);
+        return Task.FromResult<IReadOnlyList<TopicTrip>>([]);
+    }
 
     public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<TopicTrip>>([]);

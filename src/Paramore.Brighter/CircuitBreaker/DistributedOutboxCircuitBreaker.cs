@@ -414,38 +414,48 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             return;
 
         var readNumber = Interlocked.Increment(ref _readsStarted);
-        TrippedTopicStoreRead? read;
+        var ended = new EndedRows();
+        IReadOnlyList<TopicTrip>? live;
         try
         {
-            var storeCall = BeginStoreCall(token => _store.ReadAsync(_timeProvider.GetUtcNow(), _tripLength, token), cancellationToken);
+            var storeCall = BeginStoreCall(token => EndExpiredThenReadLiveAsync(ended, token), cancellationToken);
             _ = guard.ReleaseAfterAsync(storeCall.Settled);
-            read = await storeCall.Result.ConfigureAwait(false);
+            live = await storeCall.Result.ConfigureAwait(false);
         }
         catch (Exception e) when (!cancellationToken.IsCancellationRequested)
         {
             if (!IsStale(readNumber))
                 RecordReadFailure(e);
+            EndRowsFrom(ended.Rows);
             return;
         }
 
-        if (read is null)
+        if (live is null)
         {
             if (!IsStale(readNumber))
                 _fallback.RecordReadTimeout();
+            EndRowsFrom(ended.Rows);
             return;
         }
 
-        ApplyRead(read, readNumber);
-        EndRowsFrom(read.Ended);
+        ApplyRead(live, readNumber);
+        EndRowsFrom(ended.Rows);
     }
 
-    private void ApplyRead(TrippedTopicStoreRead read, long readNumber)
+    private async Task<IReadOnlyList<TopicTrip>> EndExpiredThenReadLiveAsync(EndedRows ended, CancellationToken token)
+    {
+        var now = _timeProvider.GetUtcNow();
+        ended.Rows = await _store.EndExpiredAsync(now, _tripLength, token).ConfigureAwait(false);
+        return await _store.ReadLiveAsync(now, _tripLength, token).ConfigureAwait(false);
+    }
+
+    private void ApplyRead(IReadOnlyCollection<TopicTrip> live, long readNumber)
     {
         if (!TryClaim(readNumber))
             return;
 
         _fallback.RecordReadSuccess();
-        MergeLive(read.Live);
+        MergeLive(live);
         StartRecoveryWrite();
     }
 
@@ -581,6 +591,11 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
     }
 
     private readonly record struct PendingTrip(DateTimeOffset Stamp, bool ReplacesLiveTrip);
+
+    private sealed class EndedRows
+    {
+        public volatile IReadOnlyList<TopicTrip> Rows = [];
+    }
 
     private readonly record struct StoreCall<T>(Task Settled, Task<T?> Result) where T : class;
 

@@ -36,6 +36,7 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 public class IndividuallyHeldReadsTrippedTopicStore(IAmATrippedTopicStore inner) : IAmATrippedTopicStore
 {
     private readonly ConcurrentDictionary<int, ReadSlot> _slots = new();
+    private readonly AsyncLocal<ReadSlot?> _slotOfThisRead = new();
     private int _readCount;
 
     public Task ReadStarted(int readNumber) => SlotFor(readNumber).Started.Task;
@@ -52,10 +53,18 @@ public class IndividuallyHeldReadsTrippedTopicStore(IAmATrippedTopicStore inner)
     }
 
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => inner.EndExpiredAsync(now, tripLength, cancellationToken);
+    {
+        var slot = SlotFor(Interlocked.Increment(ref _readCount));
+        _slotOfThisRead.Value = slot;
+        slot.Started.TrySetResult(true);
+        return EndedOfAsync(slot);
+    }
 
-    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => inner.ReadLiveAsync(now, tripLength, cancellationToken);
+    public async Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+        => (await _slotOfThisRead.Value!.Result.Task.ConfigureAwait(false)).Live;
+
+    private static async Task<IReadOnlyList<TopicTrip>> EndedOfAsync(ReadSlot slot)
+        => (await slot.Result.Task.ConfigureAwait(false)).Ended;
 
     public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
         => inner.WriteAsync(trips, cancellationToken);

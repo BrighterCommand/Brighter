@@ -37,7 +37,7 @@ public class NeverCompletingTrippedTopicStore : IAmATrippedTopicStore
         => new TaskCompletionSource<TrippedTopicStoreRead>().Task;
 
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<TopicTrip>>([]);
+        => new TaskCompletionSource<IReadOnlyList<TopicTrip>>().Task;
 
     public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<TopicTrip>>([]);
