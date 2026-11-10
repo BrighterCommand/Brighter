@@ -1715,7 +1715,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.62, T2.57
   - References: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlOutboxMigrationCatalog.cs:97`, `MsSqlBoxProvisioningExtensions.cs:17`, `MsSqlBoxDetectionHelper.cs:199-204`. `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/When_mssql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.64 - PostgreSql trip-table provisioning: fresh install, re-run and hand-created table**
+- [x] **TEST + IMPLEMENT: T2.64 - PostgreSql trip-table provisioning: fresh install, re-run and hand-created table**
   - **USE COMMAND**: `/tdd:test-first when the postgresql trip table provisioner runs on a fresh database should create the trip table and be idempotent on re-run`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning"
   - Test file: `When_postgresql_tripped_topics_provisioner_runs_on_fresh_database_it_should_create_the_trip_table.cs`
