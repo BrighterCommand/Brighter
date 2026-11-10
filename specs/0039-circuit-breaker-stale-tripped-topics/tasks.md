@@ -1638,10 +1638,10 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.60g, T2.60h, T2.60i, T2.60j
   - References: `src/Paramore.Brighter/CircuitBreaker/`, the three `*TrippedTopicStore.cs` files, `tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed/TestDoubles/`.
 
-- [ ] **CHARACTERISE: T2.60 - Overlapping batch writes and reads do not deadlock on any backend**
+- [x] **CHARACTERISE: T2.60 - Overlapping batch writes and reads do not deadlock on MsSql and PostgreSql**
   - **USE COMMAND**: `/tdd:test-first when overlapping trip batches and reads run concurrently against the database should complete without a deadlock failure`
-  - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
-  - Test file: `When_overlapping_trip_batches_run_concurrently_should_not_deadlock.cs` (one per backend)
+  - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
+  - Test file: `When_overlapping_trip_batches_run_concurrently_should_not_deadlock.cs` (one per backend; the MySql one is written by T2.60k1, because it was red on arrival: see the owner-approved amendment under T2.60k1)
   - Test should verify:
     - Parallel batches over overlapping topic sets, submitted in different orders, plus concurrent `EndExpiredAsync` and `ReadLiveAsync` calls, repeated many times, all complete.
     - The stored stamps equal the latest written per topic.
@@ -1652,6 +1652,20 @@ Phase 2 (starts only after T1.15 has merged)
   - Covers: NFR-5, NFR-9. ADR risk "Two instances' batches deadlock".
   - Depends on: T2.60a, T2.60b, T2.60c, T2.60k, T2.57a, T2.58a, T2.59a
   - References: ADR 0089 *Risks and Mitigations*.
+
+- [ ] **TEST + IMPLEMENT: T2.60k1 - MySql EndExpiredAsync locks by primary key so overlapping batches and ends do not deadlock**
+  - *Added 2026-11-10 with the owner's approval, from the MySql run of T2.60: the overlap test was red on arrival, with `Deadlock found when trying to get lock` reaching the caller after the one retry, on every run. Writers alone and writers with `ReadLiveAsync` pass; writers with `EndExpiredAsync` always deadlock. The cause is the `REPEATABLE READ` `SELECT ... WHERE EndedAt IS NULL AND TripTime <= @cutoff FOR UPDATE`, which takes gap locks over the `(EndedAt, TripTime)` index range that the writers' inserts need. The old combined read had the same shape; the existing tests deadlock only against a held row. `READ COMMITTED` was tried and rejected: it does not remove the deadlock and breaks the race tests.*
+  - **USE COMMAND**: `/tdd:test-first when overlapping trip batches and ends run concurrently against MySQL should complete without a deadlock failure`
+  - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
+  - Test file: `When_overlapping_trip_batches_run_concurrently_should_not_deadlock.cs`, the MySql version of the T2.60 test: 200 repetitions of four parallel batches over six topics in alternating orders, with concurrent `EndExpiredAsync` and `ReadLiveAsync`, then each topic holds the latest written stamp.
+  - Test should verify: every call completes with no deadlock failure, and the stored stamps equal the latest written per topic. The test is red before the change and stays as the pinning test after it.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - Keep the explicit `REPEATABLE READ` transaction in `EndExpiredOnceAsync`. A plain `SELECT` finds the candidate topics (`WHERE EndedAt IS NULL AND TripTime <= @cutoff`). Then lock them by primary key in ordinal topic order, the order writers use: `SELECT ... WHERE Topic IN (...) AND EndedAt IS NULL AND TripTime <= @cutoff ORDER BY Topic FOR UPDATE`, which re-checks the predicate under the lock, and `UPDATE` exactly the rows that query returned, by `Topic`. Return those rows. Exactly-once holds because the re-check runs under the row lock.
+    - Reword the MySql cell of the *End expired* row in ADR 0089 *The trip table and the SQL stores* to match.
+  - Covers: NFR-5, NFR-9, FR-4.4. ADR risk "Two instances' batches deadlock".
+  - Depends on: T2.60, T2.60g, T2.60i, T2.60k
+  - References: `src/Paramore.Brighter.Outbox.MySql/MySqlTrippedTopicStore.cs`, `docs/adr/0089-*.md`.
 
 ### Phase 2i - Provisioning the trip table
 
