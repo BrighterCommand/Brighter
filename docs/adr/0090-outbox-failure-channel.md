@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Guilherme Appel"
 created: 2026-11-05
-summary: "UseOutboxFailureChannel or a trailing constructor argument gives OutboxProducerMediator an opt-in OutboxFailureChannel, which receives one OutboxFailureNotification per failed send, failed confirmation or failed mark-dispatched. Raising never waits on a reader or changes an outcome, and the bounded buffer drops the oldest notification and keeps an exact dropped count."
+summary: "UseOutboxFailureChannel or a trailing constructor argument gives OutboxProducerMediator an opt-in OutboxFailureChannel, which receives one OutboxFailureNotification per failed send, failed confirmation or failed mark-dispatched and, as an option, one per message a sweep sends through a producer that does not confirm publication. Raising never waits on a reader or changes an outcome, and the bounded buffer drops the oldest notification and keeps an exact dropped count."
 tags:
   - "outbox"
   - "error-handling"
@@ -48,7 +48,8 @@ The requirements of spec 0040 define *clear*, *attempt*, *raise*, *kind*, *capac
 - FR-13: the mediator closes the failure channel after it has closed its producers.
 - FR-14, NFR-8: each failure channel accepts one mediator, and no listed interface changes.
 - NFR-9, NFR-10: the failure channel takes its clock from the mediator, its drop warning names only the dropped count, and its guards log the exception type only.
-- Q-1 and Q-5: this ADR answers both. P-1 to P-5 are confirmed, with detail added under Technology Choices. Q-3, Q-4 and Q-7 stay as the requirements leave them: OOS-9, OOS-8 and FR-5.
+- FR-16, D-11, D-12, P-6: an option of the same step, and of the failure channel's constructor, makes a sweep raise `SentBySweep` for each message it sends through a non-confirming producer, at the sites listed in Implementation Approach. Confirming producers raise none (OOS-16).
+- Q-1 and Q-5: this ADR answers both. P-1 to P-6 are confirmed, with detail added under Technology Choices. Q-3, Q-4 and Q-7 stay as the requirements leave them: OOS-9, OOS-8 and FR-5.
 
 **Out of scope**:
 
@@ -70,6 +71,8 @@ The requirements of spec 0040 define *clear*, *attempt*, *raise*, *kind*, *capac
 
 Three consequences follow. A subscriber cannot tell a message that is too large from a broker outage, because the exception goes no further than the log. A sweeper retries in silence, so the first sign is often the age of the message. Without a sweeper, the message may wait until someone looks.
 
+A failure notification alone leaves one more gap, which the author of issue #4489 raised in a comment on PR #4725 on 2026-11-10. A subscriber that compensated, for example by marking an order failed, is not told when a later sweep sends the message after all. `Get` does not say whether a message was dispatched, so checking means paging through the outstanding or dispatched messages.
+
 The mechanism is one private pair of helpers. `ExecuteWithResiliencePipeline` and its async twin catch every exception, log it and return a bool. The same helpers also write to the outbox and send a `Call`, where that behaviour must stay as it is.
 
 ### The forces
@@ -84,7 +87,7 @@ The mechanism is one private pair of helpers. `ExecuteWithResiliencePipeline` an
 
 ## Decision
 
-**Each mediator can be given one `OutboxFailureChannel`, an object created before the mediator, and raises one `OutboxFailureNotification` into it at each failure site without blocking.**
+**Each mediator can be given one `OutboxFailureChannel`, an object created before the mediator, and raises one `OutboxFailureNotification` into it at each failure site without blocking. As an option, a sweep also raises one for each message it sends through a producer that does not confirm publication.**
 
 The failure channel is a separate object because a subscriber must reach it before the mediator exists. That route adds nothing to the mediator's interfaces. No failure channel exists when the feature is off, so a forgotten step surfaces where the subscriber asks for the failure channel. It never looks like a normal end of the stream. The mediator reports what it observes and changes no outcome.
 
@@ -127,6 +130,8 @@ Four rules hold:
 
 When the buffer is full, the oldest notification goes and the dropped count rises by 1. After close, a raise is discarded and the dropped count rises by 1, with no log entry. A raise that reaches the bounded channel therefore ends in one of three states: delivered, still buffered, or counted as dropped.
 
+With the sweep-send option on, a sweep through a producer that does not confirm publication also raises `SentBySweep` for each message it sends, right after the send returns and before the mark. It follows the first two rules. The other two concern confirmations, which never raise it.
+
 ### Where the pieces live
 
 ```mermaid
@@ -163,19 +168,19 @@ The dependencies point inward to the core. The mediator knows the failure channe
 
 | Role | Type | Responsibilities | Responsibility classifier | Collaborators |
 | --- | --- | --- | --- | --- |
-| Reports one failed clear of one message | `OutboxFailureNotification` (core) | Holds id, topic, kind, exception and time | **knowing** | `OutboxFailureKind` |
-| Names what failed | `OutboxFailureKind` (core) | Distinguishes the three kinds | **knowing** | None |
+| Reports one failed clear of one message, or one sweep send | `OutboxFailureNotification` (core) | Holds id, topic, kind, exception and time | **knowing** | `OutboxFailureKind` |
+| Names what failed, or that a sweep sent | `OutboxFailureKind` (core) | Distinguishes the three failure kinds and the sweep send | **knowing** | None |
 | Lets a subscriber read failures | `IAmAnOutboxFailureChannel` (core) | Yields notifications, reports the end, reports the dropped count | **doing**, **knowing** | `OutboxFailureNotification` |
-| Holds notifications between raising and reading | `OutboxFailureChannel` (core) | Bounds the buffer, counts drops, limits the drop warning, accepts one mediator, closes | **doing**, **knowing**, **deciding** | Bounded channel, `TimeProvider`, logger |
-| Observes failures and decides their kind | `OutboxProducerMediator` (core) | Raises at each site, attaches the failure channel, closes it after the producers | **deciding**, **doing** | `OutboxFailureChannel` |
-| Turns the feature on in a container | `UseOutboxFailureChannel` (DI) | Validates capacity, registers a failure channel per container | **doing** | `OutboxFailureChannel`, `IBrighterBuilder` |
+| Holds notifications between raising and reading | `OutboxFailureChannel` (core) | Bounds the buffer, counts drops, limits the drop warning, accepts one mediator, closes, holds whether sweep sends are included | **doing**, **knowing**, **deciding** | Bounded channel, `TimeProvider`, logger |
+| Observes failures and sweep sends, and decides their kind | `OutboxProducerMediator` (core) | Raises at each site, attaches the failure channel, closes it after the producers | **deciding**, **doing** | `OutboxFailureChannel` |
+| Turns the feature on in a container | `UseOutboxFailureChannel` (DI) | Validates capacity, registers a failure channel per container, passes the sweep-send option | **doing** | `OutboxFailureChannel`, `IBrighterBuilder` |
 
 The mediator alone knows what failed and which kind that is. The failure channel alone knows what happens to a notification afterwards.
 
 #### `OutboxFailureNotification` and `OutboxFailureKind`
 
 ```csharp
-public enum OutboxFailureKind { SendFailed, ConfirmationFailed, MarkDispatchedFailed }
+public enum OutboxFailureKind { SendFailed, ConfirmationFailed, MarkDispatchedFailed, SentBySweep }
 
 public sealed record OutboxFailureNotification(
     Id MessageId,
@@ -189,8 +194,8 @@ public sealed record OutboxFailureNotification(
 | --- | --- | --- | --- |
 | `MessageId` | None | The message, or `Id.Empty` when a confirmation carries no id | None |
 | `Topic` | None | The wire topic, or `RoutingKey.Empty` when a confirmation carries none | None |
-| `Kind` | None | The kind of failure | None |
-| `Exception` | None | The exception object, or null for `ConfirmationFailed` | None |
+| `Kind` | None | The kind of failure, or `SentBySweep` | None |
+| `Exception` | None | The exception object, or null for `ConfirmationFailed` and `SentBySweep` | None |
 | `OccurredAt` | None | The time of the raise, from the mediator's `TimeProvider` | None |
 
 The record has a public constructor, so an application can build one to test its subscriber.
@@ -219,8 +224,9 @@ public sealed class OutboxFailureChannel : IAmAnOutboxFailureChannel, IDisposabl
 {
     public const int DEFAULT_CAPACITY = 1024;
     public const int MAX_CAPACITY = 1048576;
-    public OutboxFailureChannel(int capacity = DEFAULT_CAPACITY);
+    public OutboxFailureChannel(int capacity = DEFAULT_CAPACITY, bool includeSweepSends = false);
     public int Capacity { get; }
+    public bool IncludesSweepSends { get; }
     public void Dispose();
     internal void Attach(TimeProvider timeProvider);
     internal void Raise(Id messageId, RoutingKey? topic, OutboxFailureKind kind, Exception? exception);
@@ -230,7 +236,8 @@ public sealed class OutboxFailureChannel : IAmAnOutboxFailureChannel, IDisposabl
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| Constructor | Capacity | A failure channel with an empty buffer | `ConfigurationException` naming `capacity` and the value, outside 1 to `MAX_CAPACITY` |
+| Constructor | Capacity, and whether sweep sends are included | A failure channel with an empty buffer | `ConfigurationException` naming `capacity` and the value, outside 1 to `MAX_CAPACITY` |
+| `IncludesSweepSends` | None | The constructor's `includeSweepSends`. The mediator reads it at each sweep-send site | None |
 | `Dispose` | None | Calls `Close`, for the failure channel's owner | None |
 | `Attach` | The mediator's clock | Stores the clock. A stored clock marks the failure channel as claimed | `ConfigurationException` if a mediator already holds the failure channel |
 | `Raise` | The fields, with a null topic read as `RoutingKey.Empty` | Written, or counted as dropped | None. Every exception is caught, and logged where the logger allows |
@@ -243,14 +250,15 @@ public sealed class OutboxFailureChannel : IAmAnOutboxFailureChannel, IDisposabl
 ```csharp
 public static IBrighterBuilder UseOutboxFailureChannel(
     this IBrighterBuilder brighterBuilder,
-    int capacity = OutboxFailureChannel.DEFAULT_CAPACITY);
+    int capacity = OutboxFailureChannel.DEFAULT_CAPACITY,
+    bool includeSweepSends = false);
 ```
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| The step | Builder, capacity | The builder. Registers `IAmAnOutboxFailureChannel` as a singleton created by a factory, whose instance is an `OutboxFailureChannel`. It does not register the class, so the container tracks the object once | `ArgumentNullException` for the builder. `ConfigurationException` for the capacity, before anything is registered, because the step first builds and disposes a failure channel of that capacity |
+| The step | Builder, capacity, whether sweep sends are included | The builder. Registers `IAmAnOutboxFailureChannel` as a singleton created by a factory, whose instance is an `OutboxFailureChannel`. It does not register the class, so the container tracks the object once | `ArgumentNullException` for the builder. `ConfigurationException` for the capacity, before anything is registered, because the step first builds and disposes a failure channel of that capacity |
 
-When the step runs twice, the capacity of the first call is kept, as `UseOutboxStaleMessageMonitor` does.
+When the step runs twice, the capacity and the sweep-send option of the first call are kept, as `UseOutboxStaleMessageMonitor` does.
 
 #### Where each type is touched
 
@@ -342,9 +350,19 @@ The bounded channel is created with `AllowSynchronousContinuations = false`, so 
 
 The mediator closes the failure channel after its existing guarded `CloseAll`, so confirmations reported during producer disposal are still accepted. A close is `TryComplete`, which cannot throw and can repeat. A raise that loses the race with a close is counted, and one that wins is buffered. Neither `Close` nor `Dispose` waits for any reader.
 
+#### Why a sweep send notifies, and why it is an option
+
+A subscriber that compensated for a failure needs to hear when a sweep sends the message after all. The mediator knows, at the send, that the clear came from a sweep: `BackgroundDispatchUsingAsync`, which `ClearOutstandingFromOutboxAsync` calls, passes `OutboxClearSource.Sweeper` to `BulkDispatchAsync` and `DispatchAsync` (`OutboxProducerMediator.cs:776`, `:780`). So the raise needs no list of ids and no new state, as the author of the issue noted.
+
+The raise comes inside the check `producer is not ISupportPublishConfirmation && sent` that leads to the mark, when the send returns without an exception (D-12). It is raised in the sweep's own async flow before `MarkDispatched`, so a `MarkDispatchedFailed` for the same id from that sweep always comes after it. A confirming producer gets no `SentBySweep`. Its confirmation can arrive before the send returns, as `InMemoryMessageProducer` raises it inline by default (`InMemoryMessageProducer.cs:190-194`, `:228-235`, `:250-261`), or on another thread, before or after the send returns, as Kafka (`KafkaMessageProducer.cs:458-475`) and RabbitMQ do. A subscriber could then see `ConfirmationFailed` first and undo a compensation for a message the broker refused. Waiting for the confirmation instead needs to know which clear sent its message. The doc comment on `OutboxClearSource.Unknown` mentions a map of pending clears, but no such map exists at commit 14850234f, and adding one is the in-flight state D-10 rejects. A `SentBySweep` is not final: a `SendFailed` for the same id can still follow from a `Post`, an explicit clear or another instance that sends the same message.
+
+`SentBySweep` does not mean the message failed before (D-11). An application that deposits and never clears, and lets the sweeper dispatch through a non-confirming producer, gets one per message, up to about 20 a second per sweeping instance at the sweeper's defaults. With drop-oldest, a buffer that nobody reads would then lose failures to those notifications, and the drop warning would fire for messages that were sent. So the option is off by default and set in the same step, and with it off NFR-3 holds with no exception (P-6).
+
+The option lives on the failure channel, and not on the mediator, so the mediator's constructor gains no second parameter. `OutboxFailureChannel` holds it and the mediator reads `IncludesSweepSends` at each sweep-send site. A mediator with no failure channel, or with the option off, builds no arguments at those sites.
+
 #### Public names
 
-`OutboxFailureChannel`, `IAmAnOutboxFailureChannel`, `OutboxFailureNotification`, `OutboxFailureKind` and `UseOutboxFailureChannel` answer Q-5. "Channel" is the word issue #4489 uses. In Brighter that word usually means a consumer's channel to a broker, so the type names carry the `Outbox` qualifier, as `IAmAJobChannel` carries `Job`. The alternative was a word of its own, such as "feed". "Feed" cannot read as a consumer's channel, but no type in `src/` uses it. The three kinds keep their working names, which say what failed.
+`OutboxFailureChannel`, `IAmAnOutboxFailureChannel`, `OutboxFailureNotification`, `OutboxFailureKind` and `UseOutboxFailureChannel` answer Q-5. `SentBySweep` is the one kind that is not a failure. The names keep "Failure" because the failures are the channel's purpose and the sweep send is there for a subscriber that acted on a failure. A neutral family was the other choice, such as `OutboxDispatchNotification`, which would hide that most notifications report a failure. "Channel" is the word issue #4489 uses. In Brighter that word usually means a consumer's channel to a broker, so the type names carry the `Outbox` qualifier, as `IAmAJobChannel` carries `Job`. Another option was a word of its own, such as "feed". "Feed" cannot read as a consumer's channel, but no type in `src/` uses it. The three failure kinds keep their working names, which say what failed.
 
 #### How the proposals resolve
 
@@ -355,7 +373,8 @@ The mediator closes the failure channel after its existing guarded `CloseAll`, s
 | P-3 | Confirmed: drop the oldest |
 | P-4 | Confirmed: at most one `Warning` per 60 seconds of `TimeProvider` time |
 | P-5 | Confirmed. A second reader competes and is not rejected. Fan-out is the application's |
-| D-1, D-3 to D-10 | Stand as the requirements state them |
+| P-6 | Confirmed: `includeSweepSends` on the step and on the failure channel's constructor, false by default |
+| D-1, D-3 to D-12 | Stand as the requirements state them |
 | D-2 | Settled by the helper pair above |
 
 ### Implementation Approach
@@ -363,14 +382,14 @@ The mediator closes the failure channel after its existing guarded `CloseAll`, s
 Code locations are at commit 14850234f. A bare `:NNN` is in `src/Paramore.Brighter/OutboxProducerMediator.cs`, except in step 6, which names its own file. Each behavioural step starts with its failing tests, as `CONTRIBUTING.md` asks, and this ADR precedes the code.
 
 1. Structural. Move the bodies of `:1475-1498` and `:1500-1540` into the two `TryExecute` helpers, returning the exception or null. Leave the bool helpers as wrappers. The async wrapper awaits with `ConfigureAwait(continueOnCapturedContext)`. No behaviour changes, and the existing suite stays green.
-2. Add `OutboxFailureKind`, `OutboxFailureNotification`, `IAmAnOutboxFailureChannel` and `OutboxFailureChannel`, with capacity validation, reads and close.
+2. Add `OutboxFailureKind`, `OutboxFailureNotification`, `IAmAnOutboxFailureChannel` and `OutboxFailureChannel`, with capacity validation, `IncludesSweepSends`, reads and close.
 3. Add `failureChannel` after `outboxMeter` at `:156`, and a field beside `:93`. At `:205`, create the request context first, then call `Attach`, then `ConfigureCallbacks`. A rejected second mediator then leaves no callback on a shared producer. Call `Close` in a `finally` on the `try` at `:231-232`, before the owned factories are disposed. `ControlBusSenderFactory.cs:62` and `ControlBusReceiverBuilder.cs:177` bind optional arguments and need no change.
-4. Raise at the send sites below, then at the mark-dispatched sites, then at the confirmation sites, each as its own commit.
+4. Raise at the send sites below, then at the mark-dispatched sites, then at the confirmation sites, then at the sweep-send sites, each as its own commit.
 5. Add the `itemDropped` count and the rate-limited `Warning` to the failure channel, with its own `LoggerMessage` entries. The guards use their own `LoggerMessage` at `Error`, with the exception type and no message. The failure channel's logger comes from `ApplicationLogging.CreateLogger<OutboxFailureChannel>()`, as `OutboxMeter` and `InMemoryOutboxCircuitBreaker` use their own type.
-6. Add `UseOutboxFailureChannel` to `src/Paramore.Brighter.Extensions.DependencyInjection/ServiceCollectionExtensions.cs` beside `:583`. Add a private `FailureChannel(serviceProvider)` beside `:1016`. It calls `GetService<IAmAnOutboxFailureChannel>()` and returns null when nothing is registered, so a mediator with the feature off is built as it is today. An `OutboxFailureChannel` comes back as that type, and any other implementation throws `ConfigurationException`, naming the registered type. Pass it after `OutboxMeter(serviceProvider)` at `:852`.
+6. Add `UseOutboxFailureChannel`, with `includeSweepSends` passed to the failure channel's constructor, to `src/Paramore.Brighter.Extensions.DependencyInjection/ServiceCollectionExtensions.cs` beside `:583`. Add a private `FailureChannel(serviceProvider)` beside `:1016`. It calls `GetService<IAmAnOutboxFailureChannel>()` and returns null when nothing is registered, so a mediator with the feature off is built as it is today. An `OutboxFailureChannel` comes back as that type, and any other implementation throws `ConfigurationException`, naming the registered type. Pass it after `OutboxMeter(serviceProvider)` at `:852`.
 7. Add the XML documentation and the `release_notes.md` entry.
 
-Every failure site, with its place in the code:
+Every raise site, with its place in the code:
 
 | Site | Kind | Today | Where the raise sits |
 | --- | --- | --- | --- |
@@ -387,6 +406,8 @@ Every failure site, with its place in the code:
 | Sync callback, failure, `:1034-1041` | `ConfirmationFailed` | Logs at `:1036`, trips at `:1040` | First statement of the `else`, before `:1036` |
 | Sync callback, mark, `:1029-1031` | `MarkDispatchedFailed` | Result discarded | Directly after the helper returns, as the last statement of the `try` |
 | Sync callback, catch, `:1043` | `MarkDispatchedFailed` | Logs at `:1051` | First statement of the catch, only when `result.Success`, before `:1051` |
+| `DispatchAsync`, send, `:1285-1292`, from a sweep | `SentBySweep` | Checks at `:1294` and marks at `:1297` when the producer does not confirm; otherwise leaves the message to its confirmation | First statement inside the check at `:1294`, before the mark at `:1297`, when `clearSource` is `Sweeper` and `IncludesSweepSends` is true |
+| `BulkDispatchAsync`, send, `:1201-1208` | `SentBySweep`, per id | Checks at `:1210` and marks at `:1215` when the producer does not confirm; otherwise leaves the batch to its confirmations | First statement inside the check at `:1210`, before the mark at `:1215`, when `clearSource` is `Sweeper` and `IncludesSweepSends` is true. One raise per `batch.Ids()`, with `batch.RoutingKey`. Only a sweep reaches this method today, and the source check keeps the site correct if that changes |
 
 Reading the table:
 
@@ -394,15 +415,17 @@ Reading the table:
 - A failed confirmation reaches a catch only with `result.Success` false, so the catch raises nothing more. A successful confirmation that raised at a mark site has no statement left in the `try`. `Raise` does not throw, so that confirmation cannot reach the catch either.
 - The pipeline lookup at `:1477` and `:1506` sits outside the helper's `try`. On a confirmation, a missing pipeline therefore reaches the catch and raises once, with the `KeyNotFoundException` that AC-13 names. At a send site the exception reaches the caller, as it does today, and nothing raises.
 - `CallViaExternalBus` at `:363` and the outbox writes at `:293`, `:338`, `:650` and `:681` keep the bool helpers and raise nothing.
+- A `SentBySweep` raise sits inside the non-confirming check, before the mark, so a `MarkDispatchedFailed` for the same id from that sweep comes after it, and a confirming producer never reaches it. An explicit clear passes `OutboxClearSource.Explicit` (`:417`, `:486`), so it never raises `SentBySweep`.
 
-The batch raise lives in one small mediator method with its own guard. Enumerating a third-party `batch.Ids()` can throw before the failure channel's guard applies. That guard also logs the exception type only. Every site first checks whether it has a failure channel, so a mediator with none builds no arguments.
+Both batch raises, `SendFailed` and `SentBySweep`, go through one small mediator method with its own guard. Enumerating a third-party `batch.Ids()` can throw before the failure channel's guard applies. That guard also logs the exception type only. Every site first checks whether it has a failure channel, so a mediator with none builds no arguments.
 
 The tests use the doubles of the requirements' setup section. `FakeTimeProvider` drives time, and the `CapturingLogger` family in `tests/Paramore.Brighter.Core.Tests/Observability/StaleMessages/TestDoubles` captures log entries. The process-wide `ApplicationLogging.LoggerFactory` means that tests which capture logs share one xUnit collection, as the stale-message tests do. No test needs a broker.
 
 | Test group | Project | Criteria | How it shows the behaviour |
 | --- | --- | --- | --- |
 | Off, and capacity | Core, and `Paramore.Brighter.Extensions.AspNetCore.Tests` for the DI forms | AC-1, AC-2, AC-3 | On the DI path, `GetService` returns null with the feature off. The step throws for 0 |
-| Each site raises once | Core | AC-4 to AC-13, AC-18, AC-19 | One test per row of the site table, sync and async, reading the fields of the notification |
+| Each site raises once | Core | AC-4 to AC-13, AC-18, AC-19, AC-41, AC-42 | One test per row of the site table, sync and async, reading the fields of the notification. AC-42 reads the order of a sweep send and the `MarkDispatchedFailed` that follows it, and that a confirming producer raises only its `ConfirmationFailed` |
+| Sweep sends only when asked | Core, and `Paramore.Brighter.Extensions.AspNetCore.Tests` for the DI form | AC-41, AC-43, AC-44 | Explicit clears, `Call` and confirmations raise no `SentBySweep`. With the option off, a sweep that sends raises nothing. On the DI path, the option set in the step makes a sweep raise one `SentBySweep` per message |
 | Nothing else raises | Core | AC-14 to AC-17 | The FR-4 cases, with the existing exceptions asserted as well |
 | Behaviour unchanged | Core | AC-20, AC-21 | The same script runs with a failure channel and with none, using counting doubles, and compares the captured log entries. A throwing breaker covers each `TripTopic` site |
 | Delivery and order | Core | AC-22, AC-25, AC-26, AC-27, AC-38 | Real readers with bounded waits |
@@ -425,7 +448,7 @@ Further tests pin decisions of this ADR:
 - With the mediator resolved before the interface and a producer that raises from `Dispose`, the notification is delivered, and the container disposes the failure channel once.
 - A registered implementation other than `OutboxFailureChannel` makes the mediator's build throw `ConfigurationException`.
 - An invalid capacity registers nothing.
-- A second call of the step keeps the first capacity.
+- A second call of the step keeps the first capacity and the first sweep-send option.
 
 ## Consequences
 
@@ -434,7 +457,8 @@ Further tests pin decisions of this ADR:
 - An application learns of a failed send, a failed confirmation or a failed `MarkDispatched` soon after it happens. The notification carries the id, topic, kind and exception (FR-3, FR-5).
 - A forgotten step surfaces where the subscriber asks for the failure channel. The replacement of an application's configuration cannot turn the feature off (FR-1, FR-15).
 - A subscriber can start at any time before or after the mediator exists, and a slow one costs only drops (FR-11).
-- With the feature off there is no buffer and no allocation, and with it on, a successful clear raises nothing (NFR-3, NFR-4).
+- With the option on and a producer that does not confirm publication, a subscriber that compensated for a failure learns when a sweep sends the message after all, with no list of ids kept by Brighter (FR-16).
+- With the feature off there is no buffer and no allocation, and with it on, a successful clear raises nothing, apart from a sweep through a non-confirming producer with the sweep-send option on (NFR-3, NFR-4).
 - The dropped count accounts for every raise that reached the bounded channel and was not delivered or buffered (FR-9, FR-13, NFR-6).
 
 ### Negative
@@ -443,7 +467,7 @@ Further tests pin decisions of this ADR:
 - A failure channel keeps exceptions, and on Kafka's sync path an exception can hold a body, so capacity bounds notifications and not bytes (NFR-5).
 - The mediator closes a failure channel that it did not create. It does not dispose it, which ADR 0069-factory-registry-ownership-and-disposal-cascade keeps for the owner. It only ends the writing side through an internal `Close`, because it is the only writer. The container or the application still disposes the failure channel. The mediator already closes the producers of a registry it did not create in the same way (`OutboxProducerMediator.cs:231`).
 - A trailing optional parameter is source-compatible, as in ADR 0084-outbox-metrics, but binary-breaking: an assembly compiled against the old constructor must be rebuilt. The release note says so, as it does for `InMemoryOutboxCircuitBreaker` and `TimedOutboxSweeper`.
-- The first call's capacity is kept when the step runs twice, so a second value is ignored in silence. This matches the existing `UseOutboxStaleMessageMonitor`.
+- The first call's capacity and sweep-send option are kept when the step runs twice, so a second value is ignored in silence. This matches the existing `UseOutboxStaleMessageMonitor`.
 - On stores that throw for a missing row, each successful `Call` on a confirming producer raises a false `MarkDispatchedFailed` (D-10).
 - The bounded channel takes a short lock on each raise. The lock holds no subscriber code, but raising is not lock-free.
 - `OutboxFailureChannel` reads close to `ChannelFailureException` and `IHaveAChannelFailureCount`, which are about consumers. The XML documentation states the difference.
@@ -451,6 +475,10 @@ Further tests pin decisions of this ADR:
 - A hosted reader should pass its stopping token. A host stops its hosted services before it disposes the container. A loop that waits for the end of the stream therefore holds up shutdown until the host's timeout. A reader that does pass the token has gone before the mediator closes. Whatever the buffer holds then stays unread, as does a confirmation accepted during shutdown, and the dropped count includes neither. A reader that wants that backlog can read once more with a short timeout token.
 - If a later constructor step throws after `Attach`, the failure channel stays claimed, and a retried resolve reports the second-mediator error.
 - The container registers only the interface. `GetService<OutboxFailureChannel>()` returns null, `Capacity` is reachable only on the direct path or through a cast, and the mediator's build casts what it resolves. An application's own implementation of the interface, registered beside a real mediator, makes that build throw `ConfigurationException`.
+- `SentBySweep` means the send returned, and it does not mean the message failed before. A `MarkDispatchedFailed` or a `SendFailed` for the same id can still follow. A subscriber matches ids against its own records (D-11, D-12).
+- A confirming producer, such as Kafka or RabbitMQ, raises no `SentBySweep`, so on those transports a subscriber that compensated is still not told when a sweep sends the message (OOS-16).
+- With the option on, an application that dispatches through the sweeper and a non-confirming producer gets one `SentBySweep` per message, and those take capacity from the failures and count in the dropped count. With no reader, a healthy sweep fills the default 1,024 in no less than about 50 seconds, when every sweep finds a full batch.
+- A sweep send notifies only on the instance that ran the sweep. A subscriber that compensated on another instance hears nothing there (FR-14), so each instance reads its own channel and acts on records shared across instances.
 - An exception that escapes a `BackgroundService` reader stops the host by default. It does not reach the publishing path, but the reader's code decides whether the application keeps running.
 
 ### Risks and Mitigations
@@ -516,6 +544,30 @@ A subscriber or a test could then resolve `OutboxFailureChannel` and read `Capac
 
 The failure channel could take an optional `TimeProvider`, as `InMemoryOutboxCircuitBreaker` does, and `Attach` would only claim it. A stored clock would then no longer also mean "claimed". A test on the direct path would pass its clock twice, and a notification's time could differ from the mediator's, against NFR-9.
 
+### Sweep sends always on with the feature
+
+One setting fewer, and a subscriber never misses a sweep send for want of a flag. An application that dispatches through the sweeper would then fill the buffer with sends, push failures out under drop-oldest and log drop warnings for messages that were sent (P-6).
+
+### Sweep sends in a later change
+
+This change would carry only the failures that issue #4489 asked for, and the sweep send would follow in a change of its own. The new kind is additive. The option is not: adding `includeSweepSends` later changes the signatures of the `OutboxFailureChannel` constructor and of `UseOutboxFailureChannel`, a second binary break, or it needs an overload of each. Until then, a subscriber that compensated is not told when a sweep sends the message (FR-16).
+
+### `SentBySweep` for confirming producers too
+
+Kafka and RabbitMQ users would also hear about sweep sends. Their confirmation can arrive before or after the send returns, so a `ConfirmationFailed` and a `SentBySweep` for the same id would come in either order, and with `InMemoryMessageProducer`'s default always failure first. A subscriber that follows the latest notification would undo a compensation for a message the broker refused. A signal that misleads on exactly the transports that confirm is worse than none, so they are left out (D-12, OOS-16).
+
+### A channel of its own for sweep sends
+
+Sweep sends could not push failures out, and each would have its own dropped count. The cost is a second type, step and reader, and a subscriber loses the order between a failure of an earlier clear and the sweep send of the same id, which is the order it needs to undo a compensation.
+
+### `SentBySweep` after the mark or the confirmation
+
+The notification would then mean "sent and recorded". For a non-confirming producer this only moves the raise past the mark. For a confirming producer the mediator would have to record which ids a sweep sent until their confirmations arrive, with a bound and eviction, the state D-10 rejects (D-12).
+
+### `SentBySweep` only for ids that failed before
+
+The subscriber would hear only about messages it may have compensated for. The mediator would need a set of failed ids with no bound, lost on restart and blind to a failure on another instance, the cost D-7 rejects (D-11).
+
 ### Rejecting a second reader, or built-in fan-out
 
 Rejection would make "one reader" explicit, but it needs state to tell a restarted loop from a second reader. FR-11 expects a loop that ended to count as absent. Fan-out needs a buffer and a dropped count per reader, and an application can build it on one reader.
@@ -530,7 +582,8 @@ Rejection would make "one reader" explicit, but it needs state to tell a restart
   - [0085-outbox-stale-message-telemetry](0085-outbox-stale-message-telemetry.md) remains the way to learn of a message whose notification was lost.
   - [0086-outbox-per-topic-stale-count](0086-outbox-per-topic-stale-count.md) gives that count per topic.
   - [0081-timed-outbox-sweeper-health-metrics](0081-timed-outbox-sweeper-health-metrics.md) and [0086-sweeper-remedy-health-checks](0086-sweeper-remedy-health-checks.md) report a sweep that fails as a whole.
-  - [0089-distributed-outbox-circuit-breaker](0089-distributed-outbox-circuit-breaker.md) depends on the `TripTopic` calls, which keep their sites and their effect.
+  - [0089-distributed-outbox-circuit-breaker](0089-distributed-outbox-circuit-breaker.md) depends on the `TripTopic` calls, which keep their sites and their effect. Its phase 2, which issue #4628 tracks, gives `DispatchAsync` and `BulkDispatchAsync` a trailing `IAmATripBatch? trips` parameter and routes their trips through it (its step 6). The send and sweep-send sites of this ADR are in the same methods, so their line numbers will move, and each raise still comes before the trip.
 - External references:
   - Issue #4489 and PR #4598, the telemetry half of that issue.
+  - PR #4725, where the author of issue #4489 raised the sweep send on 2026-11-10.
   - [`Channel.CreateBounded`](https://learn.microsoft.com/dotnet/api/system.threading.channels.channel.createbounded) and [`BoundedChannelFullMode`](https://learn.microsoft.com/dotnet/api/system.threading.channels.boundedchannelfullmode).
