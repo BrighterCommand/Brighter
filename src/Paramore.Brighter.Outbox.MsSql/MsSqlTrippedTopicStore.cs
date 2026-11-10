@@ -107,18 +107,39 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     protected override bool IsDeadlock(Exception exception) => exception is SqlException { Number: DEADLOCK_VICTIM_ERROR_NUMBER };
 
     /// <inheritdoc />
-    protected override Task<IReadOnlyList<TopicTrip>> EndExpiredOnceAsync(
+    protected override async Task<IReadOnlyList<TopicTrip>> EndExpiredOnceAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
-        CancellationToken cancellationToken) =>
-        throw new NotImplementedException();
+        CancellationToken cancellationToken)
+    {
+        using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using var command = CreateCommand(connection);
+        command.CommandText = $"""
+            UPDATE {QualifiedTableName} SET [EndedAt] = @now
+            OUTPUT INSERTED.[Topic], INSERTED.[TripTime]
+            WHERE [EndedAt] IS NULL AND [TripTime] <= @cutoff;
+            """;
+        AddStampParameter(command, "@now", now);
+        AddStampParameter(command, "@cutoff", now - tripLength);
+
+        using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        return await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
-    protected override Task<IReadOnlyList<TopicTrip>> ReadLiveOnceAsync(
+    protected override async Task<IReadOnlyList<TopicTrip>> ReadLiveOnceAsync(
         DateTimeOffset now,
         TimeSpan tripLength,
-        CancellationToken cancellationToken) =>
-        throw new NotImplementedException();
+        CancellationToken cancellationToken)
+    {
+        using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using var command = CreateCommand(connection);
+        command.CommandText = $"SELECT [Topic], [TripTime] FROM {QualifiedTableName} WHERE [EndedAt] IS NULL AND [TripTime] > @cutoff;";
+        AddStampParameter(command, "@cutoff", now - tripLength);
+
+        using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        return await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
     protected override async Task<TrippedTopicStoreRead> ReadOnceAsync(
