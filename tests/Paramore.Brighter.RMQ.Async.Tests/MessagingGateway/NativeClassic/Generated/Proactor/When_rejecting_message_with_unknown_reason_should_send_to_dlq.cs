@@ -10,6 +10,10 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.NativeClassic.Proactor;
 
+/// <summary>
+/// A rejection with an unrecognised reason goes to the dead-letter queue and not the invalid-message
+/// channel; the absence is checked with one bounded receive, since a poll could only wait out its ceiling.
+/// </summary>
 [Trait("Category", "RMQNativeDelay")]
 [Collection("RMQNativeDelay")]
 public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncLifetime
@@ -44,7 +48,7 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
     [Fact]
     public async Task When_rejecting_message_with_unknown_reason_should_send_to_dlq_async()
     {
-        // Arrange — both a dead-letter queue and an invalid-message channel are configured
+        // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
         _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
@@ -66,10 +70,10 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
 
         var rejected = await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.None, "Test unknown rejection reason"));
 
-        // Assert — RejectAsync returns true when the copy was routed
+        // Assert
         Assert.True(rejected, "RejectAsync should return true when the message was routed");
 
-        // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
+        // Assert
         var dlqMessage = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(60))
@@ -85,8 +89,6 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
         Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
 
-        // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
-        // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
         if (keys.StampsRejectionMetadata)
         {
@@ -96,8 +98,7 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
             Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
         }
 
-        // Assert — nothing reached the invalid-message channel. A single receive rather than a
-        // poll loop: the claim is that no message arrives, so polling would wait out the ceiling.
+        // Assert
         var invalidMessage = await _messageGatewayProvider.GetMessageFromInvalidChannelAsync(_subscription);
         Assert.Equal(MessageType.MT_NONE, invalidMessage.Header.MessageType);
     }

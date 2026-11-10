@@ -67,7 +67,7 @@ public class WhenRequeuingAFailedMessageShouldBeRedeliveredAsync : IAsyncLifetim
         var requeued = await _channel.RequeueAsync(received);
         Assert.True(requeued);
 
-        // Assert — the requeued message is redelivered: poll every 500 ms, give up after 30 s
+        // Assert
         var redelivered = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
