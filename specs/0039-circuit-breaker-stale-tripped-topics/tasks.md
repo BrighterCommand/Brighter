@@ -1612,7 +1612,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.60f, T2.60c
   - References: `src/Paramore.Brighter.Outbox.MySql/MySqlTrippedTopicStore.cs`.
 
-- [ ] **TEST + IMPLEMENT: T2.60j - The distributed breaker ends expired trips then reads live trips under one store timeout**
+- [x] **TEST + IMPLEMENT: T2.60j - The distributed breaker ends expired trips then reads live trips under one store timeout**
   - **USE COMMAND**: `/tdd:test-first when the distributed breaker reads the store should end expired trips then read live trips under one store timeout and announce the ended rows even when the live read fails`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test files, one case each: `When_the_live_read_fails_after_trips_were_ended_should_still_announce_the_resets_and_enter_fallback.cs`, `When_ending_expired_trips_fails_should_not_read_live_trips_and_enter_fallback.cs`, `When_the_two_read_calls_together_take_longer_than_one_store_timeout_should_abandon_the_read_at_the_timeout.cs`
