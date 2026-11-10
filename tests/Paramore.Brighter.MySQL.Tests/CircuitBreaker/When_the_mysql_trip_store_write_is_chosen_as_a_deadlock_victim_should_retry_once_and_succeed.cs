@@ -32,12 +32,12 @@ public class MySqlTrippedTopicStoreWriteDeadlockTests : MySqlTrippedTopicStoreTe
         await holder.TouchAsync(first.Value);
         await holder.CommitAsync();
         var results = await write;
-        var read = await Store.ReadAsync(laterStamp.AddSeconds(1), TimeSpan.FromHours(1));
+        var live = await Store.ReadLiveAsync(laterStamp.AddSeconds(1), TimeSpan.FromHours(1));
 
         // Assert
         Assert.Equal(2, results.Count);
         Assert.Equal(2, recordingProvider.ExecutedCommands.Count(command => command.CommandText.Contains("ON DUPLICATE KEY UPDATE")));
-        Assert.Equal(laterStamp, Assert.Single(read.Live, trip => trip.Topic == first).TripTime);
-        Assert.Equal(laterStamp, Assert.Single(read.Live, trip => trip.Topic == last).TripTime);
+        Assert.Equal(laterStamp, Assert.Single(live, trip => trip.Topic == first).TripTime);
+        Assert.Equal(laterStamp, Assert.Single(live, trip => trip.Topic == last).TripTime);
     }
 }

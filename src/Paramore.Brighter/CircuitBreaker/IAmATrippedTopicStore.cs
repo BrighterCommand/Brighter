@@ -36,15 +36,6 @@ namespace Paramore.Brighter.CircuitBreaker;
 public interface IAmATrippedTopicStore
 {
     /// <summary>
-    /// Reads the trips that are still live.
-    /// </summary>
-    /// <param name="now">The reader's clock.</param>
-    /// <param name="tripLength">How long a trip lasts.</param>
-    /// <param name="cancellationToken">A token that cancels the read.</param>
-    /// <returns>The live trips.</returns>
-    Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Marks the trips that have run out as ended and returns them.
     /// </summary>
     /// <remarks>

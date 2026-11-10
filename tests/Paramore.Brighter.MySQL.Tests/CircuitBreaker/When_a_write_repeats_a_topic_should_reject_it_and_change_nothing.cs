@@ -21,11 +21,11 @@ public class MySqlTrippedTopicStoreDuplicateTopicWriteTests : MySqlTrippedTopicS
         var repeatsATopic = async () => await Store.WriteAsync(
             [new TopicTrip(orders, stamp), new TopicTrip(invoices, stamp), new TopicTrip(orders, stamp)]);
         await Assert.ThrowsAsync<ArgumentException>(repeatsATopic);
-        var afterRejectedWrite = await Store.ReadAsync(stamp.AddSeconds(1), TimeSpan.FromHours(1));
+        var afterRejectedWrite = await Store.ReadLiveAsync(stamp.AddSeconds(1), TimeSpan.FromHours(1));
         var results = await Store.WriteAsync([new TopicTrip(orders, stamp), new TopicTrip(invoices, stamp)]);
 
         // Assert
-        Assert.DoesNotContain(afterRejectedWrite.Live, trip => trip.Topic == orders || trip.Topic == invoices);
+        Assert.DoesNotContain(afterRejectedWrite, trip => trip.Topic == orders || trip.Topic == invoices);
         Assert.Equal(2, results.Count);
         Assert.Contains(results, result => result.Topic == orders);
         Assert.Contains(results, result => result.Topic == invoices);

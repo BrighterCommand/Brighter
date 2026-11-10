@@ -33,9 +33,6 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
 public class NeverCompletingTrippedTopicStore : IAmATrippedTopicStore
 {
-    public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => new TaskCompletionSource<TrippedTopicStoreRead>().Task;
-
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => new TaskCompletionSource<IReadOnlyList<TopicTrip>>().Task;
 

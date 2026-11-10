@@ -142,31 +142,6 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     }
 
     /// <inheritdoc />
-    protected override async Task<TrippedTopicStoreRead> ReadOnceAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
-        CancellationToken cancellationToken)
-    {
-        using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
-        using var command = CreateCommand(connection);
-        command.CommandText = $"""
-            UPDATE {QualifiedTableName} SET [EndedAt] = @now
-            OUTPUT INSERTED.[Topic], INSERTED.[TripTime]
-            WHERE [EndedAt] IS NULL AND [TripTime] <= @cutoff;
-            SELECT [Topic], [TripTime] FROM {QualifiedTableName} WHERE [EndedAt] IS NULL;
-            """;
-        AddStampParameter(command, "@now", now);
-        AddStampParameter(command, "@cutoff", now - tripLength);
-
-        using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        var ended = await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
-        await reader.NextResultAsync(cancellationToken).ConfigureAwait(false);
-        var live = await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
-
-        return new TrippedTopicStoreRead(live, ended);
-    }
-
-    /// <inheritdoc />
     protected override async Task<IReadOnlyList<TripWriteResult>> WriteOnceAsync(
         IReadOnlyList<TopicTrip> trips,
         CancellationToken cancellationToken)

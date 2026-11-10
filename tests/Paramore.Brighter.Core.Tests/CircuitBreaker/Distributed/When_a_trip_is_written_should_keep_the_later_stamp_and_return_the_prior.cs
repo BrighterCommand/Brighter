@@ -24,7 +24,7 @@ public class InMemoryTrippedTopicStoreKeepsLaterStampTests
         var first = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, firstStamp)]));
         var later = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, laterStamp)]));
         var earlier = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, earlierStamp)]));
-        var read = await Store.ReadAsync(laterStamp.AddSeconds(1), TimeSpan.FromHours(1));
+        var live = await Store.ReadLiveAsync(laterStamp.AddSeconds(1), TimeSpan.FromHours(1));
 
         // Assert
         Assert.Null(first.PriorTripTime);
@@ -37,7 +37,7 @@ public class InMemoryTrippedTopicStoreKeepsLaterStampTests
         Assert.Equal(laterStamp, earlier.PriorTripTime);
         Assert.Equal(laterStamp, earlier.StoredTripTime);
 
-        var live = Assert.Single(read.Live, trip => trip.Topic == topic);
-        Assert.Equal(laterStamp, live.TripTime);
+        var liveTrip = Assert.Single(live, trip => trip.Topic == topic);
+        Assert.Equal(laterStamp, liveTrip.TripTime);
     }
 }

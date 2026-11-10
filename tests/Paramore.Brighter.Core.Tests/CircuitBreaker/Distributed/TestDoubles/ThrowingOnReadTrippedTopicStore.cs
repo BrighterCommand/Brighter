@@ -33,9 +33,6 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
 public class ThrowingOnReadTrippedTopicStore : IAmATrippedTopicStore
 {
-    public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => throw new InvalidOperationException("The store cannot be read");
-
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => throw new InvalidOperationException("The store cannot be read");
 

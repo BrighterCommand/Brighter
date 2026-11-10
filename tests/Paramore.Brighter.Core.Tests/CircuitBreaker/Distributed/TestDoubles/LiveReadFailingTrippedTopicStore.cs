@@ -8,9 +8,6 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
 public sealed class LiveReadFailingTrippedTopicStore(IAmATrippedTopicStore inner) : IAmATrippedTopicStore
 {
-    public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => inner.ReadAsync(now, tripLength, cancellationToken);
-
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => inner.EndExpiredAsync(now, tripLength, cancellationToken);
 

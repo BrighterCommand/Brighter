@@ -138,7 +138,7 @@ public class SweeperStoreReadFailureTests
     }
 
     private static bool IsShared(InMemoryTrippedTopicStore store, FakeTimeProvider clock)
-        => store.ReadAsync(clock.GetUtcNow(), s_options.CooldownDuration).GetAwaiter().GetResult().Live.Count > 0;
+        => store.ReadLiveAsync(clock.GetUtcNow(), s_options.CooldownDuration).GetAwaiter().GetResult().Count > 0;
 
     private static TimedOutboxSweeper NewSweeper(TwoTopicSweepableOutbox outbox, RecordedSweeperMeasurements measurements, FakeTimeProvider clock)
         => new(

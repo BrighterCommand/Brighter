@@ -70,7 +70,7 @@ public class When_a_slow_refresh_completes_after_a_newer_read_should_discard_its
         await _store.ReadStarted(1);
     }
 
-    private async Task CompleteNewerSweepReadAsync(TrippedTopicStoreRead read)
+    private async Task CompleteNewerSweepReadAsync(HeldRead read)
     {
         var sweep = _breaker.ReadTrippedTopicsAsync();
         await _store.ReadStarted(2);
@@ -85,10 +85,10 @@ public class When_a_slow_refresh_completes_after_a_newer_read_should_discard_its
         using var context = TestCorrelator.CreateContext();
         var now = _clock.GetUtcNow();
         await StartSlowRefreshAsync();
-        await CompleteNewerSweepReadAsync(new TrippedTopicStoreRead([new TopicTrip(_orders, now)], []));
+        await CompleteNewerSweepReadAsync(new HeldRead([new TopicTrip(_orders, now)], []));
 
         // Act
-        _store.CompleteRead(1, new TrippedTopicStoreRead([new TopicTrip(_billing, now)], [new TopicTrip(_shipping, now.AddSeconds(-60))]));
+        _store.CompleteRead(1, new HeldRead([new TopicTrip(_billing, now)], [new TopicTrip(_shipping, now.AddSeconds(-60))]));
         await BecomesTrueAsync(() => ResetCountFor("shipping") > 0);
         await Task.Delay(100);
 
@@ -107,7 +107,7 @@ public class When_a_slow_refresh_completes_after_a_newer_read_should_discard_its
         await batch.WriteAsync();
 
         // Act
-        _store.CompleteRead(1, new TrippedTopicStoreRead([], [new TopicTrip(_orders, _clock.GetUtcNow().AddSeconds(-1))]));
+        _store.CompleteRead(1, new HeldRead([], [new TopicTrip(_orders, _clock.GetUtcNow().AddSeconds(-1))]));
         await Task.Delay(200);
 
         // Assert
@@ -119,7 +119,7 @@ public class When_a_slow_refresh_completes_after_a_newer_read_should_discard_its
     {
         // Arrange
         await StartSlowRefreshAsync();
-        await CompleteNewerSweepReadAsync(new TrippedTopicStoreRead([], []));
+        await CompleteNewerSweepReadAsync(new HeldRead([], []));
 
         // Act
         _store.FailRead(1, new InvalidOperationException("The store cannot be read"));

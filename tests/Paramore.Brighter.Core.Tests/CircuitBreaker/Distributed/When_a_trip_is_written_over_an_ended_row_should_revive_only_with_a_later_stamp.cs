@@ -20,26 +20,26 @@ public class InMemoryTrippedTopicStoreReviveEndedRowTests
         var endedStamp = s_now - s_tripLength;
         var laterStamp = endedStamp + TimeSpan.FromSeconds(10);
         await Store.WriteAsync([new TopicTrip(topic, endedStamp)]);
-        var marked = await Store.ReadAsync(s_now, s_tripLength);
-        Assert.Contains(marked.Ended, trip => trip.Topic == topic);
+        var marked = await Store.EndExpiredAsync(s_now, s_tripLength);
+        Assert.Contains(marked, trip => trip.Topic == topic);
 
         // Act
         var equal = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, endedStamp)]));
         var earlier = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, endedStamp - TimeSpan.FromSeconds(10))]));
-        var afterEqualAndEarlier = await Store.ReadAsync(s_now, s_tripLength);
+        var afterEqualAndEarlier = await Store.ReadLiveAsync(s_now, s_tripLength);
         var later = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, laterStamp)]));
-        var afterLater = await Store.ReadAsync(s_now, s_tripLength);
+        var afterLater = await Store.ReadLiveAsync(s_now, s_tripLength);
 
         // Assert
         Assert.True(equal.LeftEnded);
         Assert.Null(equal.PriorTripTime);
         Assert.True(earlier.LeftEnded);
         Assert.Null(earlier.PriorTripTime);
-        Assert.DoesNotContain(afterEqualAndEarlier.Live, trip => trip.Topic == topic);
+        Assert.DoesNotContain(afterEqualAndEarlier, trip => trip.Topic == topic);
 
         Assert.False(later.LeftEnded);
         Assert.Null(later.PriorTripTime);
-        var revived = Assert.Single(afterLater.Live, trip => trip.Topic == topic);
+        var revived = Assert.Single(afterLater, trip => trip.Topic == topic);
         Assert.Equal(laterStamp, revived.TripTime);
     }
 }

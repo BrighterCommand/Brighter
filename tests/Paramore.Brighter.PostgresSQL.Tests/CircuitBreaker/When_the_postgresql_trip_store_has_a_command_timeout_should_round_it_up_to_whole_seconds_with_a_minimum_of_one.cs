@@ -28,7 +28,7 @@ public class PostgreSqlTrippedTopicStoreCommandTimeoutTests : PostgreSqlTrippedT
 
         // Act
         await store.WriteAsync([new TopicTrip(topic, s_now)]);
-        await store.ReadAsync(s_now, s_tripLength);
+        await store.ReadLiveAsync(s_now, s_tripLength);
 
         // Assert
         Assert.Equal(2, recordingProvider.ExecutedCommands.Count);

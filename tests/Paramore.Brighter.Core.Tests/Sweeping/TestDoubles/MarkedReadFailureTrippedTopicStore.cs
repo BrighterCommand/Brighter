@@ -41,10 +41,6 @@ public class MarkedReadFailureTrippedTopicStore(IAmATrippedTopicStore inner, str
     public bool FailReads { get; set; }
 
     /// <inheritdoc />
-    public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => FailReads ? throw new InvalidOperationException(marker) : inner.ReadAsync(now, tripLength, cancellationToken);
-
-    /// <inheritdoc />
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => FailReads ? throw new InvalidOperationException(marker) : inner.EndExpiredAsync(now, tripLength, cancellationToken);
 

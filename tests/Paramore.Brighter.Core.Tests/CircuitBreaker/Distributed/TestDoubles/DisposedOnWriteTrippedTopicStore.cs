@@ -37,9 +37,6 @@ public class DisposedOnWriteTrippedTopicStore : IAmATrippedTopicStore
 
     public int WriteCount => Volatile.Read(ref _writeCount);
 
-    public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => Task.FromResult(new TrippedTopicStoreRead([], []));
-
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<TopicTrip>>([]);
 

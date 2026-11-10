@@ -76,16 +76,6 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
 
     /// <inheritdoc />
     /// <remarks>
-    /// Runs <see cref="ReadOnceAsync"/>, and runs it once more if the database chose it as a deadlock victim.
-    /// </remarks>
-    public Task<TrippedTopicStoreRead> ReadAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
-        CancellationToken cancellationToken = default) =>
-        RunWithDeadlockRetryAsync(() => ReadOnceAsync(now, tripLength, cancellationToken));
-
-    /// <inheritdoc />
-    /// <remarks>
     /// Runs <see cref="EndExpiredOnceAsync"/>, and runs it once more if the database chose it as a deadlock victim.
     /// </remarks>
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(
@@ -112,18 +102,6 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
         IReadOnlyList<TopicTrip> trips,
         CancellationToken cancellationToken = default) =>
         RunWithDeadlockRetryAsync(() => WriteOnceAsync(trips, cancellationToken));
-
-    /// <summary>
-    /// Reads the trips once, in the store's dialect. The base retries it after a deadlock.
-    /// </summary>
-    /// <param name="now">The time of the read.</param>
-    /// <param name="tripLength">How long a trip lasts.</param>
-    /// <param name="cancellationToken">Cancels the read.</param>
-    /// <returns>The live and the ended trips.</returns>
-    protected abstract Task<TrippedTopicStoreRead> ReadOnceAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
-        CancellationToken cancellationToken);
 
     /// <summary>
     /// Marks the trips that have run out as ended and returns them, once, in the store's dialect. The base retries it after a deadlock.

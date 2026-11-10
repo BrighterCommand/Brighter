@@ -41,16 +41,9 @@ public class IndividuallyHeldReadsTrippedTopicStore(IAmATrippedTopicStore inner)
 
     public Task ReadStarted(int readNumber) => SlotFor(readNumber).Started.Task;
 
-    public void CompleteRead(int readNumber, TrippedTopicStoreRead read) => SlotFor(readNumber).Result.TrySetResult(read);
+    public void CompleteRead(int readNumber, HeldRead read) => SlotFor(readNumber).Result.TrySetResult(read);
 
     public void FailRead(int readNumber, Exception failure) => SlotFor(readNumber).Result.TrySetException(failure);
-
-    public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-    {
-        var slot = SlotFor(Interlocked.Increment(ref _readCount));
-        slot.Started.TrySetResult(true);
-        return slot.Result.Task;
-    }
 
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
     {
@@ -75,6 +68,6 @@ public class IndividuallyHeldReadsTrippedTopicStore(IAmATrippedTopicStore inner)
     {
         public TaskCompletionSource<bool> Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public TaskCompletionSource<TrippedTopicStoreRead> Result { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<HeldRead> Result { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 }

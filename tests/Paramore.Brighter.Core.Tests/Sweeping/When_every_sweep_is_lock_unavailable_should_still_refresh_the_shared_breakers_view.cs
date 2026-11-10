@@ -49,7 +49,7 @@ public class SweeperRefreshOnLockUnavailableTests
         var instanceB = new DistributedOutboxCircuitBreaker(store, s_options, timeProvider: clock);
         var orders = new RoutingKey("orders");
         instanceA.TripTopic(orders);
-        var written = SpinWait.SpinUntil(() => store.ReadAsync(clock.GetUtcNow(), s_options.CooldownDuration).GetAwaiter().GetResult().Live.Count > 0, s_timeout);
+        var written = SpinWait.SpinUntil(() => store.ReadLiveAsync(clock.GetUtcNow(), s_options.CooldownDuration).GetAwaiter().GetResult().Count > 0, s_timeout);
         using var outbox = new SweepableOutbox(instanceB);
         using var measurements = new RecordedSweeperMeasurements();
         var sweeper = HeldLockSweeper.Create(outbox, measurements, clock, timerInterval: 5, circuitBreaker: instanceB);

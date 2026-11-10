@@ -29,14 +29,15 @@ public class InMemoryTrippedTopicStoreEndedRowRaceTests
             await Store.WriteAsync([new TopicTrip(expiredTopic, expiredStamp), new TopicTrip(liveTopic, liveStamp)]);
 
             // Act
-            var reads = await Task.WhenAll(Enumerable.Range(0, READERS)
-                .Select(_ => Task.Run(() => Store.ReadAsync(s_now, s_tripLength))));
+            var ended = await Task.WhenAll(Enumerable.Range(0, READERS)
+                .Select(_ => Task.Run(() => Store.EndExpiredAsync(s_now, s_tripLength))));
+            var live = await Store.ReadLiveAsync(s_now, s_tripLength);
 
             // Assert
-            Assert.Equal(1, reads.Count(read => read.Ended.Any(trip => trip.Topic == expiredTopic)));
-            Assert.All(reads, read => Assert.DoesNotContain(read.Live, trip => trip.Topic == expiredTopic));
-            Assert.All(reads, read => Assert.DoesNotContain(read.Ended, trip => trip.Topic == liveTopic));
-            Assert.All(reads, read => Assert.Contains(read.Live, trip => trip.Topic == liveTopic));
+            Assert.Equal(1, ended.Count(trips => trips.Any(trip => trip.Topic == expiredTopic)));
+            Assert.DoesNotContain(live, trip => trip.Topic == expiredTopic);
+            Assert.All(ended, trips => Assert.DoesNotContain(trips, trip => trip.Topic == liveTopic));
+            Assert.Contains(live, trip => trip.Topic == liveTopic);
         }
     }
 }

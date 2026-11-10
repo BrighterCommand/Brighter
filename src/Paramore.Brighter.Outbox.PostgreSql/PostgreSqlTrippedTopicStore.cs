@@ -142,31 +142,6 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     }
 
     /// <inheritdoc />
-    protected override async Task<TrippedTopicStoreRead> ReadOnceAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
-        CancellationToken cancellationToken)
-    {
-        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
-        await using var command = CreateCommand(connection);
-        command.CommandText = $"""
-            UPDATE {QualifiedTableName} SET ended_at = @now
-            WHERE ended_at IS NULL AND trip_time <= @cutoff
-            RETURNING topic, trip_time;
-            SELECT topic, trip_time FROM {QualifiedTableName} WHERE ended_at IS NULL;
-            """;
-        AddStampParameter(command, "@now", now);
-        AddStampParameter(command, "@cutoff", now - tripLength);
-
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        var ended = await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
-        await reader.NextResultAsync(cancellationToken).ConfigureAwait(false);
-        var live = await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
-
-        return new TrippedTopicStoreRead(live, ended);
-    }
-
-    /// <inheritdoc />
     protected override async Task<IReadOnlyList<TripWriteResult>> WriteOnceAsync(
         IReadOnlyList<TopicTrip> trips,
         CancellationToken cancellationToken)

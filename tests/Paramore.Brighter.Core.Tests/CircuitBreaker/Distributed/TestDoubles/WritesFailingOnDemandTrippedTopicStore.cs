@@ -35,9 +35,6 @@ public class WritesFailingOnDemandTrippedTopicStore(IAmATrippedTopicStore inner)
 {
     public bool FailWrites { get; set; }
 
-    public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => inner.ReadAsync(now, tripLength, cancellationToken);
-
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => inner.EndExpiredAsync(now, tripLength, cancellationToken);
 

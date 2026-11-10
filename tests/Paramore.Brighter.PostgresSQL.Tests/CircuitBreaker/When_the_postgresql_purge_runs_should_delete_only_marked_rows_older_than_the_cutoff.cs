@@ -26,9 +26,9 @@ public class PostgreSqlTrippedTopicStorePurgeTests : PostgreSqlTrippedTopicStore
         var cutoff = s_midday.AddMinutes(15);
 
         await Store.WriteAsync([new TopicTrip(endedLongAgo, longAgo)]);
-        await Store.ReadAsync(longAgo.AddMinutes(1), s_tripLength);
+        await Store.EndExpiredAsync(longAgo.AddMinutes(1), s_tripLength);
         await Store.WriteAsync([new TopicTrip(endedRecently, recently)]);
-        await Store.ReadAsync(recently.AddMinutes(1), s_tripLength);
+        await Store.EndExpiredAsync(recently.AddMinutes(1), s_tripLength);
         await Store.WriteAsync([new TopicTrip(neverEnded, longAgo.AddHours(-1))]);
 
         // Act

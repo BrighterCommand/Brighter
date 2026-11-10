@@ -37,10 +37,6 @@ namespace Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 public sealed class AsynchronouslyWritingTrippedTopicStore(IAmATrippedTopicStore inner) : IAmATrippedTopicStore
 {
     /// <inheritdoc />
-    public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => inner.ReadAsync(now, tripLength, cancellationToken);
-
-    /// <inheritdoc />
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => inner.EndExpiredAsync(now, tripLength, cancellationToken);
 

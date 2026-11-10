@@ -83,8 +83,8 @@ public class OutOfOrderStampedWriteTests
         // Assert
         scenario.ClockA.SetUtcNow(s_start + TimeSpan.FromSeconds(79.9));
         scenario.ClockB.SetUtcNow(s_start + TimeSpan.FromSeconds(79.9));
-        var stored = await scenario.Store.ReadAsync(s_start + TimeSpan.FromSeconds(79.9), s_cooldown);
-        Assert.Equal([new TopicTrip(_orders, s_start + TimeSpan.FromSeconds(30))], stored.Live);
+        var stored = await scenario.Store.ReadLiveAsync(s_start + TimeSpan.FromSeconds(79.9), s_cooldown);
+        Assert.Equal([new TopicTrip(_orders, s_start + TimeSpan.FromSeconds(30))], stored);
         Assert.Equal([_orders], scenario.BreakerA.TrippedTopics);
         Assert.Equal([_orders], scenario.BreakerB.TrippedTopics);
 

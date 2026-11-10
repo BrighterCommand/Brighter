@@ -73,19 +73,21 @@ public class ConcurrentFirstTripAnnouncementTests
             await Task.WhenAll(Task.Run(() => batchA.WriteAsync()), Task.Run(() => batchB.WriteAsync()));
         }
 
-        var beforeEnd = await store.ReadAsync(later + s_cooldown - TimeSpan.FromSeconds(0.1), s_cooldown);
-        var atEnd = await store.ReadAsync(later + s_cooldown, s_cooldown);
+        var liveBeforeEnd = await store.ReadLiveAsync(later + s_cooldown - TimeSpan.FromSeconds(0.1), s_cooldown);
+        var endedBeforeEnd = await store.EndExpiredAsync(later + s_cooldown - TimeSpan.FromSeconds(0.1), s_cooldown);
+        var endedAtEnd = await store.EndExpiredAsync(later + s_cooldown, s_cooldown);
+        var liveAtEnd = await store.ReadLiveAsync(later + s_cooldown, s_cooldown);
         provider.ForceFlush();
         string[] spanNames;
         lock (activities)
             spanNames = activities.Select(a => a.DisplayName).ToArray();
 
         // Assert
-        Assert.Equal(topics.Select(t => t.Value).Order(), beforeEnd.Live.Select(t => t.Topic.Value).Order());
-        Assert.All(beforeEnd.Live, trip => Assert.Equal(later, trip.TripTime));
-        Assert.Empty(beforeEnd.Ended);
-        Assert.Empty(atEnd.Live);
-        Assert.Equal(Repetitions, atEnd.Ended.Count);
+        Assert.Equal(topics.Select(t => t.Value).Order(), liveBeforeEnd.Select(t => t.Topic.Value).Order());
+        Assert.All(liveBeforeEnd, trip => Assert.Equal(later, trip.TripTime));
+        Assert.Empty(endedBeforeEnd);
+        Assert.Empty(liveAtEnd);
+        Assert.Equal(Repetitions, endedAtEnd.Count);
         foreach (var topic in topics)
         {
             Assert.Equal(1, spanNames.Count(n => n == $"{topic} {CircuitBreakerSpanOperation.Trip.ToSpanName()}"));

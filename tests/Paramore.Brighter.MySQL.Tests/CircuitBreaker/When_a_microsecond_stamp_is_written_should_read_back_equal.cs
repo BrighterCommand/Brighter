@@ -21,11 +21,11 @@ public class MySqlTrippedTopicStoreMicrosecondStampTests : MySqlTrippedTopicStor
 
         // Act
         var written = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, microsecondStamp)]));
-        var read = await Store.ReadAsync(microsecondStamp.AddSeconds(1), TimeSpan.FromHours(1));
+        var liveTrips = await Store.ReadLiveAsync(microsecondStamp.AddSeconds(1), TimeSpan.FromHours(1));
 
         // Assert
         Assert.Equal(microsecondStamp, written.StoredTripTime);
-        var live = Assert.Single(read.Live, trip => trip.Topic == topic);
+        var live = Assert.Single(liveTrips, trip => trip.Topic == topic);
         Assert.Equal(microsecondStamp, live.TripTime);
     }
 }

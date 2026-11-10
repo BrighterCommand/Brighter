@@ -35,9 +35,6 @@ public class ReadsFailingOnDemandTrippedTopicStore(IAmATrippedTopicStore inner) 
 {
     public bool FailReads { get; set; }
 
-    public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => FailReads ? throw new InvalidOperationException("The store cannot be read") : inner.ReadAsync(now, tripLength, cancellationToken);
-
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => FailReads ? throw new InvalidOperationException("The store cannot be read") : inner.EndExpiredAsync(now, tripLength, cancellationToken);
 

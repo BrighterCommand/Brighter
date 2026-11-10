@@ -40,12 +40,6 @@ public class AbandonedCallCountingTrippedTopicStore : IAmATrippedTopicStore
 
     public int WriteCount => Volatile.Read(ref _writeCount);
 
-    public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-    {
-        Interlocked.Increment(ref _readCount);
-        return new TaskCompletionSource<TrippedTopicStoreRead>().Task;
-    }
-
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _readCount);

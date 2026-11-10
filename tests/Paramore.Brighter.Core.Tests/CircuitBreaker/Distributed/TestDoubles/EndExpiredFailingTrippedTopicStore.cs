@@ -12,9 +12,6 @@ public sealed class EndExpiredFailingTrippedTopicStore(IAmATrippedTopicStore inn
 
     public int LiveReadCount => Volatile.Read(ref _liveReadCount);
 
-    public Task<TrippedTopicStoreRead> ReadAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => inner.ReadAsync(now, tripLength, cancellationToken);
-
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => throw new InvalidOperationException("The expired trips cannot be ended");
 

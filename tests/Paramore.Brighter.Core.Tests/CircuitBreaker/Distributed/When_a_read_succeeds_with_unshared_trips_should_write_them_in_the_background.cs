@@ -45,8 +45,8 @@ public class When_a_read_succeeds_with_unshared_trips_should_write_them_in_the_b
 
     private async Task<IOrderedEnumerable<string>> TopicsSharedAsync()
     {
-        var read = await _shared.ReadAsync(_clock.GetUtcNow(), s_options.CooldownDuration);
-        return read.Live.Select(trip => trip.Topic.Value).OrderBy(topic => topic);
+        var live = await _shared.ReadLiveAsync(_clock.GetUtcNow(), s_options.CooldownDuration);
+        return live.Select(trip => trip.Topic.Value).OrderBy(topic => topic);
     }
 
     private async Task WaitUntilAsync(Func<bool> condition)

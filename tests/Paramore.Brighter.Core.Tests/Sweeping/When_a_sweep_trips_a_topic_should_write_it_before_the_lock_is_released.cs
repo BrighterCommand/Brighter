@@ -104,7 +104,7 @@ public class SweepTripWriteTests
     }
 
     private static async Task<bool> StoreHoldsAsync(InMemoryTrippedTopicStore store, FakeTimeProvider clock)
-        => (await store.ReadAsync(clock.GetUtcNow(), s_options.CooldownDuration)).Live.Count > 0;
+        => (await store.ReadLiveAsync(clock.GetUtcNow(), s_options.CooldownDuration)).Count > 0;
 
     private static TimedOutboxSweeper NewSweeper(DispatchFailingOutbox outbox, IDistributedLock sweepLock, FakeTimeProvider clock)
         => new(

@@ -136,30 +136,6 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     }
 
     /// <inheritdoc />
-    protected override async Task<TrippedTopicStoreRead> ReadOnceAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
-        CancellationToken cancellationToken)
-    {
-        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
-        await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false);
-
-        var cutoff = (now - tripLength).UtcDateTime;
-        var ended = await QueryTripsAsync(
-            connection, transaction,
-            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff FOR UPDATE",
-            [("@cutoff", cutoff)], cancellationToken).ConfigureAwait(false);
-        await MarkEndedAsync(connection, transaction, now.UtcDateTime, cutoff, cancellationToken).ConfigureAwait(false);
-        var live = await QueryTripsAsync(
-            connection, transaction,
-            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `EndedAt` IS NULL",
-            [], cancellationToken).ConfigureAwait(false);
-
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-        return new TrippedTopicStoreRead(live, ended);
-    }
-
-    /// <inheritdoc />
     protected override async Task<IReadOnlyList<TripWriteResult>> WriteOnceAsync(
         IReadOnlyList<TopicTrip> trips,
         CancellationToken cancellationToken)
