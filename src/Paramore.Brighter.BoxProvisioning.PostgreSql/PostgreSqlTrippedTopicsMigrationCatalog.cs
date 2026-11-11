@@ -27,20 +27,15 @@ using Paramore.Brighter.Outbox.PostgreSql;
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
 /// <summary>
-/// Defines the migration history for the PostgreSQL tripped topics table. The chain is the single
-/// version that creates the table, using the DDL of <see cref="PostgreSqlTrippedTopicStore.GetDDL"/>
-/// so that the store and the provisioner cannot drift apart. The table name and schema belong to
-/// the catalog, because <see cref="IAmARelationalDatabaseConfiguration"/> has no trip table property.
+/// Defines the migration history for the PostgreSql tripped topics table, using the DDL of
+/// <see cref="PostgreSqlTrippedTopicStore.GetDDL"/> so that the store and the provisioner cannot drift apart.
 /// </summary>
 /// <remarks>
 /// <see cref="IAmABoxMigration.LogicalColumns"/> are lowercase, the case PostgreSQL folds column names to.
 /// </remarks>
-public class PostgreSqlTrippedTopicsMigrationCatalog : IAmABoxMigrationCatalog
+public class PostgreSqlTrippedTopicsMigrationCatalog : TrippedTopicsMigrationCatalog
 {
     private static readonly string[] s_columns = ["topic", "trip_time", "prior_trip_time", "ended_at"];
-
-    private readonly string _tableName;
-    private readonly string? _schemaName;
 
     /// <summary>
     /// Initialises a catalog for one trip table.
@@ -48,36 +43,14 @@ public class PostgreSqlTrippedTopicsMigrationCatalog : IAmABoxMigrationCatalog
     /// <param name="tableName">The trip table name; must be a safe SQL identifier.</param>
     /// <param name="schemaName">The schema holding the table, or null for the search path's default.</param>
     public PostgreSqlTrippedTopicsMigrationCatalog(string tableName, string? schemaName = null)
+        : base(tableName, schemaName)
     {
-        _tableName = tableName;
-        _schemaName = schemaName;
     }
 
     /// <inheritdoc />
-    public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
-    {
-        AssertSafeIdentifiers();
-        return PostgreSqlTrippedTopicStore.GetDDL(_tableName, _schemaName);
-    }
+    protected override IReadOnlyCollection<string> Columns => s_columns;
 
     /// <inheritdoc />
-    public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
-    {
-        AssertSafeIdentifiers();
-        return
-        [
-            new BoxMigration(
-                Version: 1,
-                Description: "Create tripped topics table",
-                UpScript: PostgreSqlTrippedTopicStore.GetDDL(_tableName, _schemaName),
-                LogicalColumns: s_columns)
-        ];
-    }
-
-    private void AssertSafeIdentifiers()
-    {
-        Identifiers.AssertSafe(_tableName, "tableName");
-        if (_schemaName is not null)
-            Identifiers.AssertSafe(_schemaName, "schemaName");
-    }
+    protected override string CreateTableDdl(string tableName, string? schemaName) =>
+        PostgreSqlTrippedTopicStore.GetDDL(tableName, schemaName);
 }

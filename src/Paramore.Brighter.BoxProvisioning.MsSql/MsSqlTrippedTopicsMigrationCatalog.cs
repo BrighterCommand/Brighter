@@ -27,17 +27,12 @@ using Paramore.Brighter.Outbox.MsSql;
 namespace Paramore.Brighter.BoxProvisioning.MsSql;
 
 /// <summary>
-/// Defines the migration history for the MSSQL tripped topics table. The chain is the single
-/// version that creates the table, using the DDL of <see cref="MsSqlTrippedTopicStore.GetDDL"/>
-/// so that the store and the provisioner cannot drift apart. The table name and schema belong to
-/// the catalog, because <see cref="IAmARelationalDatabaseConfiguration"/> has no trip table property.
+/// Defines the migration history for the MSSQL tripped topics table, using the DDL of
+/// <see cref="MsSqlTrippedTopicStore.GetDDL"/> so that the store and the provisioner cannot drift apart.
 /// </summary>
-public class MsSqlTrippedTopicsMigrationCatalog : IAmABoxMigrationCatalog
+public class MsSqlTrippedTopicsMigrationCatalog : TrippedTopicsMigrationCatalog
 {
     private static readonly string[] s_columns = ["Topic", "TripTime", "PriorTripTime", "EndedAt"];
-
-    private readonly string _tableName;
-    private readonly string? _schemaName;
 
     /// <summary>
     /// Initialises a catalog for one trip table.
@@ -45,36 +40,14 @@ public class MsSqlTrippedTopicsMigrationCatalog : IAmABoxMigrationCatalog
     /// <param name="tableName">The trip table name; must be a safe SQL identifier.</param>
     /// <param name="schemaName">The schema holding the table, or null for the login's default schema.</param>
     public MsSqlTrippedTopicsMigrationCatalog(string tableName, string? schemaName = null)
+        : base(tableName, schemaName)
     {
-        _tableName = tableName;
-        _schemaName = schemaName;
     }
 
     /// <inheritdoc />
-    public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
-    {
-        AssertSafeIdentifiers();
-        return MsSqlTrippedTopicStore.GetDDL(_tableName, _schemaName);
-    }
+    protected override IReadOnlyCollection<string> Columns => s_columns;
 
     /// <inheritdoc />
-    public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
-    {
-        AssertSafeIdentifiers();
-        return
-        [
-            new BoxMigration(
-                Version: 1,
-                Description: "Create tripped topics table",
-                UpScript: MsSqlTrippedTopicStore.GetDDL(_tableName, _schemaName),
-                LogicalColumns: s_columns)
-        ];
-    }
-
-    private void AssertSafeIdentifiers()
-    {
-        Identifiers.AssertSafe(_tableName, "tableName");
-        if (_schemaName is not null)
-            Identifiers.AssertSafe(_schemaName, "schemaName");
-    }
+    protected override string CreateTableDdl(string tableName, string? schemaName) =>
+        MsSqlTrippedTopicStore.GetDDL(tableName, schemaName);
 }

@@ -28,21 +28,16 @@ using Paramore.Brighter.Outbox.MySql;
 namespace Paramore.Brighter.BoxProvisioning.MySql;
 
 /// <summary>
-/// Defines the migration history for the MySQL tripped topics table. The chain is the single
-/// version that creates the table, using the DDL of <see cref="MySqlTrippedTopicStore.GetDDL"/>
-/// so that the store and the provisioner cannot drift apart. The table name and schema belong to
-/// the catalog, because <see cref="IAmARelationalDatabaseConfiguration"/> has no trip table property.
+/// Defines the migration history for the MySql tripped topics table, using the DDL of
+/// <see cref="MySqlTrippedTopicStore.GetDDL"/> so that the store and the provisioner cannot drift apart.
 /// </summary>
 /// <remarks>
 /// <see cref="IAmABoxMigration.LogicalColumns"/> are PascalCase and detection compares them with
 /// <see cref="StringComparer.OrdinalIgnoreCase"/>, as MySQL column lookup is case-insensitive.
 /// </remarks>
-public class MySqlTrippedTopicsMigrationCatalog : IAmABoxMigrationCatalog
+public class MySqlTrippedTopicsMigrationCatalog : TrippedTopicsMigrationCatalog
 {
     private static readonly string[] s_columns = ["Topic", "TripTime", "PriorTripTime", "EndedAt"];
-
-    private readonly string _tableName;
-    private readonly string? _schemaName;
 
     /// <summary>
     /// Initialises a catalog for one trip table.
@@ -50,36 +45,14 @@ public class MySqlTrippedTopicsMigrationCatalog : IAmABoxMigrationCatalog
     /// <param name="tableName">The trip table name; must be a safe SQL identifier.</param>
     /// <param name="schemaName">The schema (database) holding the table, or null for the connection's database.</param>
     public MySqlTrippedTopicsMigrationCatalog(string tableName, string? schemaName = null)
+        : base(tableName, schemaName)
     {
-        _tableName = tableName;
-        _schemaName = schemaName;
     }
 
     /// <inheritdoc />
-    public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
-    {
-        AssertSafeIdentifiers();
-        return MySqlTrippedTopicStore.GetDDL(_tableName, _schemaName);
-    }
+    protected override IReadOnlyCollection<string> Columns => s_columns;
 
     /// <inheritdoc />
-    public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
-    {
-        AssertSafeIdentifiers();
-        return
-        [
-            new BoxMigration(
-                Version: 1,
-                Description: "Create tripped topics table",
-                UpScript: MySqlTrippedTopicStore.GetDDL(_tableName, _schemaName),
-                LogicalColumns: s_columns)
-        ];
-    }
-
-    private void AssertSafeIdentifiers()
-    {
-        Identifiers.AssertSafe(_tableName, "tableName");
-        if (_schemaName is not null)
-            Identifiers.AssertSafe(_schemaName, "schemaName");
-    }
+    protected override string CreateTableDdl(string tableName, string? schemaName) =>
+        MySqlTrippedTopicStore.GetDDL(tableName, schemaName);
 }
