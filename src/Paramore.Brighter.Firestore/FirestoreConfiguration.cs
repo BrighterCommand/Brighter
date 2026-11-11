@@ -12,6 +12,9 @@ namespace Paramore.Brighter.Firestore;
 /// </summary>
 public class FirestoreConfiguration(string projectId, string database)
 {
+    private static readonly TimeSpan s_maxOutstandingCountTimeout = TimeSpan.FromSeconds(int.MaxValue / 1000);
+    private TimeSpan? _outstandingCountTimeout;
+
     /// <summary>
     /// Gets the Google Cloud Project ID.
     /// </summary>
@@ -65,6 +68,30 @@ public class FirestoreConfiguration(string projectId, string database)
     /// customization of the client.
     /// </summary>
     public Action<FirestoreClientBuilder>? Configure { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long the outbox's outstanding message count may run before it gives up.
+    /// </summary>
+    /// <value>The timeout, or <c>null</c> for the default of 15 seconds.</value>
+    /// <remarks>
+    /// The timeout is the deadline of the count's call, so when it passes the count throws an
+    /// <see cref="Grpc.Core.RpcException"/> with <see cref="Grpc.Core.StatusCode.DeadlineExceeded"/>.
+    /// For the count, this deadline replaces any expiration set for <c>RunAggregationQuery</c> through
+    /// <see cref="Configure"/>. Only the count uses it; reading the outstanding messages is not bounded by it.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is not greater than zero or is more than 2147483 seconds.</exception>
+    public TimeSpan? OutstandingCountTimeout
+    {
+        get => _outstandingCountTimeout;
+        set
+        {
+            if (value <= TimeSpan.Zero || value > s_maxOutstandingCountTimeout)
+                throw new ArgumentOutOfRangeException(nameof(OutstandingCountTimeout), value,
+                    $"The outstanding count timeout must be greater than zero and no more than {s_maxOutstandingCountTimeout.TotalSeconds} seconds.");
+
+            _outstandingCountTimeout = value;
+        }
+    }
     
     /// <summary>
     /// Gets the full path to the default Firestore collection.

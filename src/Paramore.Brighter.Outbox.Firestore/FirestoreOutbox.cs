@@ -36,6 +36,8 @@ namespace Paramore.Brighter.Outbox.Firestore;
 /// </remarks>
 public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, IAmAnOutboxAsync<Message, FirestoreTransaction>, IAmACausationTrackingOutbox
 {
+    private static readonly TimeSpan s_defaultOutstandingCountTimeout = TimeSpan.FromSeconds(15);
+
     private readonly IAmAFirestoreConnectionProvider _connectionProvider;
     private readonly FirestoreConfiguration _configuration;
     private readonly FirestoreCollection _outboxCollection;
@@ -448,7 +450,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
            };
         
            var client = _connectionProvider.GetFirestoreClient();
-           var response = client.RunAggregationQuery(request);
+           var response = client.RunAggregationQuery(request, CallSettings.FromExpiration(OutstandingCountExpiration()));
            return BrighterAsyncContext.Run(async () =>
            {
                await foreach (var resp in response.GetResponseStream())
@@ -1264,7 +1266,8 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
            };
         
            var client = await _connectionProvider.GetFirestoreClientAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-           var response = client.RunAggregationQuery(request, CallSettings.FromCancellationToken(cancellationToken));
+           var response = client.RunAggregationQuery(request,
+               CallSettings.FromCancellationToken(cancellationToken).WithExpiration(OutstandingCountExpiration()));
            await foreach (var resp in response.GetResponseStream().WithCancellation(cancellationToken))
            {
                if (resp.Result.AggregateFields.TryGetValue("total_count", out var value))
@@ -1281,6 +1284,9 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
            Tracer?.EndSpan(span);
        }
     }
+
+    private Expiration OutstandingCountExpiration()
+        => Expiration.FromTimeout(_configuration.OutstandingCountTimeout ?? s_defaultOutstandingCountTimeout);
 
     private static Expiration? ToExpiration(int outboxTimeout)
         => outboxTimeout == -1 ? null : Expiration.FromTimeout(TimeSpan.FromMilliseconds(outboxTimeout));
