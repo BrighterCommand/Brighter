@@ -161,16 +161,11 @@ public static class MsSqlBoxProvisioningExtensions
         {
             RegisterSharedRoleImpls(services);
             services.AddSingleton<IAmABoxProvisioner>(sp =>
-            {
-                var effectiveSchema = schemaName ?? configuration.SchemaName;
-                var catalog = new MsSqlTrippedTopicsMigrationCatalog(tableName, effectiveSchema);
-                var runner = new MsSqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
-                return new TrippedTopicsProvisioner(
-                    tableName,
-                    effectiveSchema is null ? null : new SchemaName(effectiveSchema),
-                    runner);
-            });
+                TrippedTopicsProvisioner.Create(tableName, schemaName, configuration, effectiveSchema =>
+                    new MsSqlBoxMigrationRunner(
+                        new MsSqlTrippedTopicsMigrationCatalog(tableName, effectiveSchema),
+                        configuration, options.MigrationLockTimeout,
+                        tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope)));
         });
         return options;
     }

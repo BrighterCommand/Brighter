@@ -161,16 +161,11 @@ public static class PostgreSqlBoxProvisioningExtensions
         {
             RegisterSharedRoleImpls(services);
             services.AddSingleton<IAmABoxProvisioner>(sp =>
-            {
-                var effectiveSchema = schemaName ?? configuration.SchemaName;
-                var catalog = new PostgreSqlTrippedTopicsMigrationCatalog(tableName, effectiveSchema);
-                var runner = new PostgreSqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
-                return new TrippedTopicsProvisioner(
-                    tableName,
-                    effectiveSchema is null ? null : new SchemaName(effectiveSchema),
-                    runner);
-            });
+                TrippedTopicsProvisioner.Create(tableName, schemaName, configuration, effectiveSchema =>
+                    new PostgreSqlBoxMigrationRunner(
+                        new PostgreSqlTrippedTopicsMigrationCatalog(tableName, effectiveSchema),
+                        configuration, options.MigrationLockTimeout,
+                        tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope)));
         });
         return options;
     }

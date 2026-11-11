@@ -184,16 +184,11 @@ public static class MySqlBoxProvisioningExtensions
         {
             RegisterSharedRoleImpls(services);
             services.AddSingleton<IAmABoxProvisioner>(sp =>
-            {
-                var effectiveSchema = schemaName ?? configuration.SchemaName;
-                var catalog = new MySqlTrippedTopicsMigrationCatalog(tableName, effectiveSchema);
-                var runner = new MySqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
-                return new TrippedTopicsProvisioner(
-                    tableName,
-                    effectiveSchema is null ? null : new SchemaName(effectiveSchema),
-                    runner);
-            });
+                TrippedTopicsProvisioner.Create(tableName, schemaName, configuration, effectiveSchema =>
+                    new MySqlBoxMigrationRunner(
+                        new MySqlTrippedTopicsMigrationCatalog(tableName, effectiveSchema),
+                        configuration, options.MigrationLockTimeout,
+                        tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope)));
         });
         return options;
     }

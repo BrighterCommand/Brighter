@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -50,6 +51,26 @@ public class TrippedTopicsProvisioner : IAmABoxProvisioner
         BoxTableName = tableName;
         _schemaName = schemaName;
         _migrationRunner = migrationRunner;
+    }
+
+    /// <summary>
+    /// Creates a provisioner for one trip table, resolving the schema the backend registrations share.
+    /// </summary>
+    /// <param name="tableName">The trip table name; must be a safe SQL identifier.</param>
+    /// <param name="schemaName">The schema holding the trip table, or null to use the configuration's schema.</param>
+    /// <param name="configuration">Supplies the schema when <paramref name="schemaName"/> is null.</param>
+    /// <param name="runnerFor">Builds the backend's migration runner, bound to the trip table's catalog, for the resolved schema.</param>
+    public static TrippedTopicsProvisioner Create(
+        string tableName,
+        string? schemaName,
+        IAmARelationalDatabaseConfiguration configuration,
+        Func<string?, IAmABoxMigrationRunner> runnerFor)
+    {
+        var effectiveSchema = schemaName ?? configuration.SchemaName;
+        return new TrippedTopicsProvisioner(
+            tableName,
+            effectiveSchema is null ? null : new SchemaName(effectiveSchema),
+            runnerFor(effectiveSchema));
     }
 
     /// <inheritdoc />
