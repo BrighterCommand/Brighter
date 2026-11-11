@@ -23,9 +23,11 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Time.Testing;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
@@ -69,6 +71,36 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
 
     public static IEnumerable<object[]> CreationModes()
         => ResolutionModes().Where(row => (OnResolvingACollection)row[1] != OnResolvingACollection.Validate);
+
+    [Theory]
+    [MemberData(nameof(ResolutionModes))]
+    public async Task When_writing_a_document_with_ttl_should_index_a_bson_date(
+        string provider, OnResolvingACollection mode)
+    {
+        //Arrange
+        await _database.CreateCollectionAsync(COLLECTION_NAME);
+        var configuration = CreateConfiguration(mode, TimeSpan.FromHours(1));
+        var write = CreateWriter(provider, configuration);
+        var expectedTimestamp = new DateTimeOffset(2100, 1, 2, 3, 4, 5, TimeSpan.FromHours(5.5)).AddTicks(1234);
+        configuration.TimeProvider = new FakeTimeProvider(expectedTimestamp);
+
+        //Act
+        await write();
+
+        //Assert
+        using var cursor = await Documents.Indexes.ListAsync();
+        var ttlIndex = Assert.Single(await cursor.ToListAsync(), index => index.Contains("expireAfterSeconds"));
+        var indexedField = Assert.Single(ttlIndex["key"].AsBsonDocument.Elements).Name;
+        BsonValue indexedValue = await Documents.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
+        foreach (var field in indexedField.Split('.'))
+        {
+            indexedValue = Assert.IsType<BsonDocument>(indexedValue)[field];
+        }
+
+        var timestamp = Assert.IsType<BsonDateTime>(indexedValue);
+        Assert.Equal(new BsonDateTime(expectedTimestamp.UtcDateTime), timestamp);
+        Assert.Equal(3600L, ttlIndex["expireAfterSeconds"].ToInt64());
+    }
 
     [Theory]
     [MemberData(nameof(ResolutionModes))]
@@ -149,7 +181,7 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
         //Arrange
         await _database.CreateCollectionAsync(COLLECTION_NAME);
         await Documents.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
-            Builders<BsonDocument>.IndexKeys.Ascending("TimeStamp"),
+            Builders<BsonDocument>.IndexKeys.Ascending("TimeStamp.DateTime"),
             new CreateIndexOptions { Name = INDEX_NAME, ExpireAfter = TimeSpan.FromHours(2) }));
         var write = CreateWriter(provider, CreateConfiguration(mode, TimeSpan.FromHours(1)));
 
@@ -314,6 +346,120 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
         }
     }
 
+    [Theory]
+    [InlineData(OnResolvingACollection.Assume)]
+    [InlineData(OnResolvingACollection.Validate)]
+    [InlineData(OnResolvingACollection.CreateIfNotExists)]
+    public async Task When_a_timestamp_is_stored_as_a_bson_date_should_index_the_mapped_field(
+        OnResolvingACollection mode)
+    {
+        //Arrange
+        await _database.CreateCollectionAsync(COLLECTION_NAME);
+        var store = new MongoDbDateTtlStore(CreateConfiguration(mode, TimeSpan.FromHours(1)));
+        var timestamp = new DateTimeOffset(2100, 1, 2, 3, 4, 5, TimeSpan.FromHours(5.5));
+
+        //Act
+        store.Add(new MongoDbDateTtlDocument { TimeStamp = timestamp });
+
+        //Assert
+        await AssertTtlIndexAsync();
+        using var cursor = await Documents.Indexes.ListAsync();
+        var ttlIndex = Assert.Single(await cursor.ToListAsync(), index => index.Contains("expireAfterSeconds"));
+        Assert.Equal(new BsonDocument("created_at", 1), ttlIndex["key"]);
+        var document = await Documents.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
+        Assert.Equal(new BsonDateTime(timestamp.UtcDateTime), document["created_at"]);
+    }
+
+    [Theory]
+    [MemberData(nameof(ResolutionModes))]
+    public async Task When_the_legacy_ttl_index_is_recreated_should_resume_writes_without_changing_existing_documents(
+        string provider, OnResolvingACollection mode)
+    {
+        //Arrange
+        await _database.CreateCollectionAsync(COLLECTION_NAME);
+        var configuration = CreateConfiguration(mode, null);
+        await CreateWriter(provider, configuration)();
+        var original = await Documents.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
+        await Documents.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
+            Builders<BsonDocument>.IndexKeys.Ascending("TimeStamp"),
+            new CreateIndexOptions { Name = INDEX_NAME, ExpireAfter = TimeSpan.FromHours(1) }));
+        configuration.Outbox!.TimeToLive = TimeSpan.FromHours(1);
+        var write = CreateWriter(provider, configuration);
+
+        //Act + Assert
+        await Assert.ThrowsAsync<MongoCommandException>(write);
+        await Assert.ThrowsAsync<MongoCommandException>(write);
+        Assert.Equal(original, await Documents.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync());
+        using (var cursor = await Documents.Indexes.ListAsync())
+        {
+            var index = Assert.Single(await cursor.ToListAsync(), item => item["name"] == INDEX_NAME);
+            Assert.Equal(new BsonDocument("TimeStamp", 1), index["key"]);
+            Assert.Equal(3600L, index["expireAfterSeconds"].ToInt64());
+        }
+
+        await Documents.Indexes.DropOneAsync(INDEX_NAME);
+        await write();
+        await AssertTtlIndexAsync();
+        Assert.Equal(2L, await Documents.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty));
+        Assert.Equal(original, await Documents.Find(new BsonDocument("_id", original["_id"])).SingleAsync());
+    }
+
+    [Fact]
+    public async Task When_the_ttl_monitor_runs_should_remove_expired_documents_and_allow_lock_reacquisition()
+    {
+        //Arrange
+        var configurations = new List<(string Provider, MongoDbConfiguration Configuration, BsonValue ExpiredId, BsonValue RetainedId)>();
+        var now = DateTimeOffset.UtcNow;
+        foreach (var provider in Providers().Select(row => (string)row[0]))
+        {
+            var configuration = CreateConfiguration(OnResolvingACollection.CreateIfNotExists, null);
+            configuration.Outbox!.Name = provider;
+            var clock = new FakeTimeProvider(now - TimeSpan.FromHours(2));
+            configuration.TimeProvider = clock;
+            var write = CreateWriter(provider, configuration);
+            var documents = _database.GetCollection<BsonDocument>(provider);
+            await write();
+            var expiredId = (await documents.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync())["_id"];
+            clock.Advance(TimeSpan.FromHours(2));
+            await write();
+            var retainedId = (await documents.Find(new BsonDocument("_id", new BsonDocument("$ne", expiredId))).SingleAsync())["_id"];
+            configurations.Add((provider, configuration, expiredId, retainedId));
+        }
+
+        //Act
+        foreach (var entry in configurations)
+        {
+            entry.Configuration.Outbox!.TimeToLive = TimeSpan.FromHours(1);
+            await CreateWriter(entry.Provider, entry.Configuration)();
+        }
+        var timer = Stopwatch.StartNew();
+        while (timer.Elapsed < TimeSpan.FromSeconds(90))
+        {
+            var expiredCounts = await Task.WhenAll(configurations.Select(entry =>
+                _database.GetCollection<BsonDocument>(entry.Provider)
+                    .CountDocumentsAsync(new BsonDocument("_id", entry.ExpiredId))));
+            if (expiredCounts.All(count => count == 0))
+            {
+                break;
+            }
+            await Task.Delay(TimeSpan.FromMilliseconds(250));
+        }
+
+        //Assert
+        foreach (var entry in configurations)
+        {
+            var documents = _database.GetCollection<BsonDocument>(entry.Provider);
+            Assert.Equal(0L, await documents.CountDocumentsAsync(new BsonDocument("_id", entry.ExpiredId)));
+            Assert.Equal(1L, await documents.CountDocumentsAsync(new BsonDocument("_id", entry.RetainedId)));
+            if (entry.Provider == "Locking")
+            {
+                var locking = new MongoDbLockingProvider(entry.Configuration);
+                Assert.Null(await locking.ObtainLockAsync(entry.RetainedId.AsString, CancellationToken.None));
+                Assert.NotNull(await locking.ObtainLockAsync(entry.ExpiredId.AsString, CancellationToken.None));
+            }
+        }
+    }
+
     private IMongoCollection<BsonDocument> Documents => _database.GetCollection<BsonDocument>(COLLECTION_NAME);
 
     private MongoDbConfiguration CreateConfiguration(OnResolvingACollection mode, TimeSpan? ttl)
@@ -340,12 +486,12 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
                 var outbox = new MongoDbOutbox(configuration);
                 return () =>
                 {
-                    outbox.Add(CreateMessage(), null);
+                    outbox.Add(CreateMessage(configuration.TimeProvider.GetUtcNow()), null);
                     return Task.CompletedTask;
                 };
             case "OutboxAsync":
                 var asyncOutbox = new MongoDbOutbox(configuration);
-                return () => asyncOutbox.AddAsync(CreateMessage(), null);
+                return () => asyncOutbox.AddAsync(CreateMessage(configuration.TimeProvider.GetUtcNow()), null);
             case "InboxSync":
                 var inbox = new MongoDbInbox(configuration);
                 return () =>
@@ -365,8 +511,8 @@ public class MongoDbCollectionTtlIndexTests : IDisposable
         }
     }
 
-    private static Message CreateMessage()
-        => new(new MessageHeader(Id.Random(), new RoutingKey("ttl-topic"), MessageType.MT_EVENT),
+    private static Message CreateMessage(DateTimeOffset timestamp)
+        => new(new MessageHeader(Id.Random(), new RoutingKey("ttl-topic"), MessageType.MT_EVENT, timeStamp: timestamp),
             new MessageBody("payload"));
 
     private async Task AssertTtlIndexAsync()
