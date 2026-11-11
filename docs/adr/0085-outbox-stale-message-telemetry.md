@@ -1007,7 +1007,7 @@ The overall count of every other outbox stays unchanged.
 | An operator sums a gauge across instances and overcounts (A-6) | The gauge kind is not added up by default. The documentation says to use max, per topic for the per-topic gauge. Every instance reports the same attribute set |
 | Clock skew between instances shifts every age (A-2) | A and every A_p are expected to be minutes and skew to be seconds. The documentation states the assumption |
 | A very small I sends many queries to the store | At most one call of each count is ever in progress. The documentation explains the cost of a short I |
-| A T longer than DynamoDB's own 500 ms operation timeout, or than the `OutstandingCountTimeout` set on a relational outbox's configuration, means the outbox fails first (A-7, A-9) | The failure is recorded as `failed` and logged with the exception. The documentation names the interaction |
+| A T longer than DynamoDB's own 500 ms operation timeout, or than the `OutstandingCountTimeout` set on a relational, MongoDb or Firestore outbox's configuration, means the outbox fails first (A-7, A-9) | The failure is recorded as `failed` and logged with the exception. The documentation names the interaction |
 | An outbox returns more than C, as Firestore can | The monitor caps each value at C, so a value equal to C still means "C or more" |
 | A result arrives at almost the same moment as the deadline | The loop decides an ended call by the end timestamp its task recorded, not by when the loop reads it. The outcome therefore does not depend on which task `Task.WhenAny` returned |
 | An abandoned call faults later and raises an unobserved task exception | A continuation on each count's task observes its exception |
