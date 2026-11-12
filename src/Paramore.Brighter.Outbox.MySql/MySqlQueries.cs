@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.Outbox.MySql
 {
-    public class MySqlQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCountQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
+    public class MySqlQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCountQueries, IRelationalDatabaseOutboxTopicCountQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
     {
         public string PagedDispatchedCommand { get; } = "SELECT * FROM {0} WHERE `Dispatched` IS NOT NULL AND `Dispatched` < @DispatchedSince ORDER BY `Timestamp` DESC LIMIT @Take OFFSET @Skip";
         public string PagedReadCommand { get; } = "SELECT * FROM {0} ORDER BY `Timestamp` ASC LIMIT @Take OFFSET @Skip";
@@ -20,6 +20,9 @@
 
         /// <inheritdoc />
         public string GetOutstandingMessageCountCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM {0} WHERE `Dispatched` IS NULL AND `Timestamp` < @TimestampSince LIMIT @Take) AS OutstandingMessages";
+
+        /// <inheritdoc />
+        public string GetOutstandingMessageCountByTopicCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM {0} WHERE `Dispatched` IS NULL AND `Timestamp` < @TimestampSince AND `Topic` = CAST(@Topic AS BINARY) LIMIT @Take) AS OutstandingMessages";
 
         public string GetNumberOfOutstandingMessagesCommand { get; } = "SELECT COUNT(1) FROM {0} WHERE `Dispatched` IS NULL";
 
