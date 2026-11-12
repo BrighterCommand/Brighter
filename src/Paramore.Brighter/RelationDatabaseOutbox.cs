@@ -1096,6 +1096,7 @@ namespace Paramore.Brighter
             if (maxCountPerTopic < 1)
                 throw new ArgumentOutOfRangeException(nameof(maxCountPerTopic), maxCountPerTopic, "The ceiling per topic must be at least 1.");
             CheckRequestedTopics(dispatchedSinceByTopic);
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (queries is not IRelationalDatabaseOutboxTopicCountQueries topicCountQueries)
                 throw new NotSupportedException(
