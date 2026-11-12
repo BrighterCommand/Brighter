@@ -724,8 +724,10 @@ internal static class DefinitionReport
     };
 }
 
-internal sealed class SpecStateReader(string specDirectory)
+internal sealed class SpecStateReader(string specDirectory, IReadOnlyList<string> strayMarkers)
 {
+    public IReadOnlyList<string> StrayMarkers => strayMarkers;
+
     private const string AdrList = ".adr-list";
 
     public bool ArtefactsPresent(SlipStep step) => step.Artefacts.All(IsPresent);
@@ -784,7 +786,7 @@ internal static class SpecReport
         var name = SlipSyntax.DeclaredName(lines);
         var definitionPresent = File.Exists($"{flowsDirectory}/{name}.flow");
         var violations = DefinitionReport.Violations(name, slipPath, lines, table);
-        return RouteResolver.Resolve(specPath, new FlowIdentity(name, "slip", definitionPresent), lines, violations, table, new SpecStateReader(specPath));
+        return RouteResolver.Resolve(specPath, new FlowIdentity(name, "slip", definitionPresent), lines, violations, table, new SpecStateReader(specPath, StrayMarkers(specPath, flowsDirectory, lines)));
     }
 
     private static JsonObject ResolveLegacy(string specPath, string flowsDirectory, ApprovalTable table)
@@ -792,10 +794,28 @@ internal static class SpecReport
         var flowPath = $"{flowsDirectory}/{LegacyFlow}.flow";
         var lines = SlipReader.ReadLines(flowPath);
         var violations = DefinitionReport.Violations(LegacyFlow, flowPath, lines, table);
-        return RouteResolver.Resolve(specPath, new FlowIdentity(LegacyFlow, "default", true), lines, violations, table, new SpecStateReader(specPath));
+        return RouteResolver.Resolve(specPath, new FlowIdentity(LegacyFlow, "default", true), lines, violations, table, new SpecStateReader(specPath, StrayMarkers(specPath, flowsDirectory, lines)));
     }
 
     public static IReadOnlyList<string> Kinds => KnownKinds;
+
+    private static IReadOnlyList<string> StrayMarkers(string specPath, string flowsDirectory, IReadOnlyList<string> slipLines)
+    {
+        var onSlip = SlipSyntax.StepMarkers(slipLines).Select(row => row.Marker).ToHashSet(StringComparer.Ordinal);
+        var intent = IntentMarkers(flowsDirectory);
+        return Directory.GetFiles(specPath)
+            .Select(file => Path.GetFileName(file))
+            .Where(name => intent.Contains(name) && !onSlip.Contains(name))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static HashSet<string> IntentMarkers(string flowsDirectory) =>
+        Directory.GetFiles(flowsDirectory, "*.flow")
+            .Select(file => SlipReader.ReadLines(file))
+            .Where(lines => SlipSyntax.FirstFault(lines) is null)
+            .SelectMany(lines => SlipSyntax.StepMarkers(lines).Select(row => row.Marker))
+            .ToHashSet(StringComparer.Ordinal);
 
     private static string? FindSpecDirectory(string specsRoot, string target) =>
         Directory.Exists(specsRoot)
@@ -828,7 +848,7 @@ internal static class RouteResolver
             ["steps"] = new JsonArray(steps.Select((step, index) => (JsonNode)StepJson(steps, index, approved, table, state)).ToArray()),
             ["known_kinds"] = KnownKindsJson(steps),
             ["gates"] = new JsonArray(),
-            ["stray_markers"] = new JsonArray(),
+            ["stray_markers"] = new JsonArray(state.StrayMarkers.Select(marker => (JsonNode)marker).ToArray()),
             ["out_of_order"] = OutOfOrderJson(steps, approved),
             ["next"] = violations.Count > 0 ? InvalidNextJson() : unapproved.Count == 0 ? HandOffNextJson(SlipSyntax.HandOffCommand(lines)) : NextJson(unapproved[0], state),
             ["hand_off"] = HandOffJson(SlipSyntax.HandOffCommand(lines), unapproved),
@@ -902,7 +922,9 @@ internal static class RouteResolver
             .ToArray());
 
     private static string[] NextCommands(SlipStep step, SpecStateReader state) =>
-        state.ArtefactsPresent(step) ? [$"/spec:review {step.Kind}", step.MarkerWriter] : [step.Producer];
+        !state.ArtefactsPresent(step) ? [step.Producer]
+        : SpecReport.Kinds.Contains(step.Kind) ? [$"/spec:review {step.Kind}", step.MarkerWriter]
+        : [step.MarkerWriter];
 
     private static JsonObject NextJson(SlipStep step, SpecStateReader state) => new()
     {
