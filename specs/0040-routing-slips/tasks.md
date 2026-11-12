@@ -503,7 +503,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: validate the spec's copy with R1–R15, and R0. R16 applies to definitions only. Add ladder row 1: an invalid slip has an empty `next`.
   - Traces to: FR-22, FR-3, FR-6; AC-44, AC-70. Depends on: T6.4.
 
-- [ ] **TEST + IMPLEMENT: T6.6 — A flow-specific kind is valid with an empty table entry, its next step is its marker-writer alone, and a stray intent marker is reported without changing any decision**
+- [x] **TEST + IMPLEMENT: T6.6 — A flow-specific kind is valid with an empty table entry, its next step is its marker-writer alone, and a stray intent marker is reported without changing any decision**
   - **USE COMMAND**: none — RED-first row `evaluation-ready` (`flows: "flows"`; the shipped table has no `evaluation` entry).
   - Fixture: `evaluation-ready/`.
     - A hand-written slip: an `evaluation` step (kind `evaluation`, producer `/refactor:smells`, artefact `evaluation.md`, marker `.evaluation-approved`, marker-writer `/spec:approve evaluation`), then a `tasks` step.
