@@ -1,0 +1,22 @@
+{
+  "run": [
+    "--spec",
+    "spike-step"
+  ],
+  "flows": "flows-spike-entry",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "violations": [],
+    "steps": [
+      {
+        "name": "spike",
+        "approval_subflow": []
+      },
+      {
+        "name": "tasks",
+        "approval_subflow": []
+      }
+    ]
+  }
+}

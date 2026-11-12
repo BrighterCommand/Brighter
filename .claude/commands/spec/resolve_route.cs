@@ -882,7 +882,7 @@ internal static class RouteResolver
     }
 
     private static JsonNode? ApprovalSubFlow(ApprovalTable table, string kind) =>
-        table.Fault is null && table.Entries.FirstOrDefault(entry => entry.Kind == kind) is { } entry
+        table.Fault is null && table.Entries.Where(entry => entry.Kind == kind).ToList() is [{ } entry] && entry.Commands.All(CommandCatalogue.Resolves)
             ? new JsonArray(entry.Commands.Select(command => (JsonNode)command).ToArray())
             : null;
 
