@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.Outbox.PostgreSql
 {
-    public class PostgreSqlQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCountQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
+    public class PostgreSqlQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCountQueries, IRelationalDatabaseOutboxTopicCountQueries, IRelationalDatabaseOutboxCausationQueries, IRelationalDatabaseOutboxDataRefQueries
     {
         // All column are created with lower case because during table creating we didn't scape colum
         public string PagedDispatchedCommand { get; } = "SELECT * FROM {0} WHERE \"dispatched\" IS NOT NULL AND \"dispatched\" < @DispatchedSince ORDER BY \"timestamp\" DESC LIMIT @Take OFFSET @Skip";
@@ -27,6 +27,9 @@
 
         /// <inheritdoc />
         public string GetOutstandingMessageCountCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM {0} WHERE \"dispatched\" IS NULL AND \"timestamp\" < @TimestampSince LIMIT @Take) AS OutstandingMessages";
+
+        /// <inheritdoc />
+        public string GetOutstandingMessageCountByTopicCommand => "SELECT COUNT(1) FROM (SELECT 1 FROM {0} WHERE \"dispatched\" IS NULL AND \"timestamp\" < @TimestampSince AND \"topic\" = @Topic LIMIT @Take) AS OutstandingMessages";
 
         public string GetNumberOfOutstandingMessagesCommand { get; } = "SELECT COUNT(1) FROM {0} WHERE \"dispatched\" IS NULL";
 
