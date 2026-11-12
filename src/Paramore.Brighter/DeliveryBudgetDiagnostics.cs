@@ -43,7 +43,7 @@ namespace Paramore.Brighter;
 public static partial class DeliveryBudgetDiagnostics
 {
     private static readonly ILogger s_logger =
-        ApplicationLogging.LoggerFactory.CreateLogger(typeof(DeliveryBudgetDiagnostics));
+        ApplicationLogging.CreateLogger(typeof(DeliveryBudgetDiagnostics));
 
     /// <summary>
     /// Logs a Warning when <paramref name="subscription"/> implements

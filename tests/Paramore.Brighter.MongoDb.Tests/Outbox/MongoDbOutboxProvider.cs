@@ -14,11 +14,13 @@ namespace Paramore.Brighter.MongoDb.Tests.Outbox;
 public class MongoDbOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync, IAmAnOutstandingCountOutboxProvider
 {
     private readonly string _collectionName = $"Outbox{Uuid.New():N}";
+    private readonly TimeProvider _timeProvider = TimeProvider.System;
 
     public IAmAnOutboxSync<Message, IClientSessionHandle> CreateOutbox()
     {
         return new MongoDbOutbox(new MongoDbConfiguration(Const.Client, Const.DatabaseName)
         {
+            TimeProvider = _timeProvider,
             Outbox = new MongoDbCollectionConfiguration
             {
                 Name = _collectionName
@@ -30,6 +32,7 @@ public class MongoDbOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvide
     {
         return new MongoDbOutbox(new MongoDbConfiguration(Const.Client, Const.DatabaseName)
         {
+            TimeProvider = _timeProvider,
             Outbox = new MongoDbCollectionConfiguration
             {
                 Name = _collectionName
@@ -40,6 +43,15 @@ public class MongoDbOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvide
     public void CreateStore()
     {
         // The collection is created automatically when the first message is added.
+    }
+
+    public Task AddMessageWithAgeAsync(Message message, TimeSpan age)
+    {
+        var header = new MessageHeader(message.Id, message.Header.Topic, MessageType.MT_DOCUMENT,
+            timeStamp: _timeProvider.GetUtcNow() - age);
+        foreach (var item in message.Header.Bag)
+            header.Bag.Add(item.Key, item.Value);
+        return CreateOutboxAsync().AddAsync(new Message(header, message.Body), new RequestContext());
     }
 
     public Task CreateStoreAsync()

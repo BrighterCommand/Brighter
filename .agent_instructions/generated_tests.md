@@ -367,6 +367,8 @@ Key provider responsibilities:
 
 The overall count suite has its own interface, `IAmAnOutstandingCountOutboxProvider`, implemented by the outbox provider class that already serves the other suites. It has `CreateOutstandingCountStore()`, which creates the store and returns the outbox, `DeleteOutstandingCountStore()`, which never throws, and `PrepareCancellationAsync(holdFor)`, which returns an outbox over a store no other test writes to, held for `holdFor` when the store can be held.
 
+The optional `TopicCounting` suite is generated only when `SupportsTopicCounting` is `true` (the default is `false`). It derives from `TopicCountingOutboxBaseTests` and adds a cancellation case using the same `PrepareCancellationAsync(holdFor)` hook as the overall count. The provider supplies `CreateOutbox()`, `CreateStore()`, `DeleteStore(messages)`, and `AddMessageWithAgeAsync(message, age)`. The age helper preserves the message ID, header topic and bag while storing the message with the requested age on the outbox's clock. `ReadConsistencyTimeoutInMilliseconds` also controls the topic-counting suite's polling window. Both planning and generation honor the opt-in flag.
+
 ### Gateway Conformance Configuration
 
 Every shipped messaging gateway carries a channel factory declaration conformance sweep (ADR 0073),

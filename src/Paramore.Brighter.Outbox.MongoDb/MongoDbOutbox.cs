@@ -8,8 +8,10 @@ namespace Paramore.Brighter.Outbox.MongoDb;
 /// The implementation for MongoDB for outbox
 /// </summary>
 public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Message, IClientSessionHandle>,
-    IAmAnOutboxSync<Message, IClientSessionHandle>, IAmACausationTrackingOutbox
+    IAmAnOutboxSync<Message, IClientSessionHandle>, IAmACausationTrackingOutbox, IAmATopicCountingOutbox
 {
+    private const int MAX_TOPIC_AGE_DAYS = 365;
+
     /// <summary>
     /// The implementation for MongoDB for the Outbox pattern within Brighter.
     /// This class manages the storage and retrieval of outgoing messages, ensuring
@@ -974,12 +976,114 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     /// <inheritdoc/>
     public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
     {
-        return OutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, args).Count();
+        var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Mongodb, Configuration.DatabaseName,
+                BoxDbOperation.OutStandingMessages, CollectionConfiguration.Name),
+            requestContext?.Span,
+            options: Configuration.InstrumentationOptions);
+        try
+        {
+            var count = Collection.CountDocuments(CreateOutstandingCountFilter(dispatchedSince, args),
+                new CountOptions { Limit = maxCount == 0 ? null : maxCount });
+            span?.AddTag("db.response.returned_rows", 1);
+            return checked((int)count);
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
     }
 
     /// <inheritdoc/>
     public async Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
-        return (await OutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, args, cancellationToken)).Count();
+        var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Mongodb, Configuration.DatabaseName,
+                BoxDbOperation.OutStandingMessages, CollectionConfiguration.Name),
+            requestContext?.Span,
+            options: Configuration.InstrumentationOptions);
+        try
+        {
+            var count = await Collection.CountDocumentsAsync(CreateOutstandingCountFilter(dispatchedSince, args),
+                new CountOptions { Limit = maxCount == 0 ? null : maxCount }, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            span?.AddTag("db.response.returned_rows", 1);
+            return checked((int)count);
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
+    }
+
+    private FilterDefinition<OutboxMessage> CreateOutstandingCountFilter(TimeSpan dispatchedSince, Dictionary<string, object>? args)
+    {
+        var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
+        var filter = Builders<OutboxMessage>.Filter.Eq(x => x.Dispatched, null);
+        filter &= Builders<OutboxMessage>.Filter.Lt(x => x.TimeStamp, olderThan);
+        if (args != null && args.TryGetValue("Topic", out var topic))
+            filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
+        return filter;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<RoutingKey, int>> GetOutstandingMessageCountsByTopicAsync(
+        IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic,
+        RequestContext? requestContext,
+        int maxCountPerTopic,
+        Dictionary<string, object>? args = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (dispatchedSinceByTopic is null)
+            throw new ArgumentNullException(nameof(dispatchedSinceByTopic));
+        if (maxCountPerTopic < 1)
+            throw new ArgumentOutOfRangeException(nameof(maxCountPerTopic), maxCountPerTopic, "The ceiling per topic must be at least 1.");
+        CheckRequestedTopics(dispatchedSinceByTopic);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var counts = new Dictionary<RoutingKey, int>();
+        if (dispatchedSinceByTopic.Count == 0)
+            return counts;
+
+        var span = Tracer?.CreateDbSpan(
+            new BoxSpanInfo(DbSystem.Mongodb, Configuration.DatabaseName,
+                BoxDbOperation.OutStandingMessageCount, CollectionConfiguration.Name),
+            requestContext?.Span,
+            options: Configuration.InstrumentationOptions);
+        try
+        {
+            var now = Configuration.TimeProvider.GetLocalNow();
+            var options = new CountOptions { Limit = maxCountPerTopic, Collation = Collation.Simple };
+            foreach (var request in dispatchedSinceByTopic)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var filter = Builders<OutboxMessage>.Filter.Eq(x => x.Dispatched, null)
+                    & Builders<OutboxMessage>.Filter.Lt(x => x.TimeStamp, now - request.Value)
+                    & Builders<OutboxMessage>.Filter.Eq(x => x.Topic, request.Key.Value);
+                var count = await Collection.CountDocumentsAsync(filter, options, cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+                counts.Add(request.Key, checked((int)count));
+            }
+
+            span?.AddTag("db.response.returned_rows", counts.Count);
+            return counts;
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
+    }
+
+    private static void CheckRequestedTopics(IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic)
+    {
+        foreach (var request in dispatchedSinceByTopic)
+        {
+            if (RoutingKey.IsNullOrEmpty(request.Key))
+                throw new ArgumentException("A requested topic is null or empty.", nameof(dispatchedSinceByTopic));
+            if (request.Value <= TimeSpan.Zero || request.Value > TimeSpan.FromDays(MAX_TOPIC_AGE_DAYS))
+                throw new ArgumentException(
+                    $"The age requested for topic {request.Key} must be greater than zero and no greater than {MAX_TOPIC_AGE_DAYS} days.",
+                    nameof(dispatchedSinceByTopic));
+        }
     }
 }

@@ -39,9 +39,7 @@ namespace Paramore.Brighter
     /// </summary>
     internal static partial class TransformPipelineDrain
     {
-        //TransformPipelineDrain is static, so it cannot be a generic argument to ApplicationLogging.CreateLogger<T>();
-        //this is the same category a generic call would have produced
-        private static readonly ILogger s_logger = ApplicationLogging.LoggerFactory.CreateLogger(typeof(TransformPipelineDrain));
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger(typeof(TransformPipelineDrain));
 
 
         /// <summary>
