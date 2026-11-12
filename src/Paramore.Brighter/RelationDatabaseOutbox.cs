@@ -33,6 +33,8 @@ namespace Paramore.Brighter
         private readonly int _outstandingCountTimeoutSeconds = RelationalDatabaseConfiguration.ToOutstandingCountTimeoutSeconds(
             configuration.OutstandingCountTimeout, nameof(configuration));
 
+        private const int MAX_TOPIC_AGE_DAYS = 365;
+
         protected IAmARelationalDbConnectionProvider ConnectionProvider { get; } = connectionProvider;
 
         protected IRelationDatabaseOutboxQueries Queries => queries;
@@ -1089,6 +1091,12 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            if (dispatchedSinceByTopic is null)
+                throw new ArgumentNullException(nameof(dispatchedSinceByTopic));
+            if (maxCountPerTopic < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxCountPerTopic), maxCountPerTopic, "The ceiling per topic must be at least 1.");
+            CheckRequestedTopics(dispatchedSinceByTopic);
+
             if (queries is not IRelationalDatabaseOutboxTopicCountQueries topicCountQueries)
                 throw new NotSupportedException(
                     $"The outbox queries do not implement {nameof(IRelationalDatabaseOutboxTopicCountQueries)}.");
@@ -1494,6 +1502,19 @@ namespace Paramore.Brighter
             => CreateCommand(connection, GenerateSqlText(topicCountQueries.GetOutstandingMessageCountByTopicCommand),
                 _outstandingCountTimeoutSeconds,
                 CreatePagedOutstandingParameters(dispatchedSince, maxCount, 1, [CreateSqlParameter("@Topic", DbType.String, topic.Value)]));
+
+        private static void CheckRequestedTopics(IReadOnlyDictionary<RoutingKey, TimeSpan> dispatchedSinceByTopic)
+        {
+            foreach (var request in dispatchedSinceByTopic)
+            {
+                if (RoutingKey.IsNullOrEmpty(request.Key))
+                    throw new ArgumentException("A requested topic is null or empty.", nameof(dispatchedSinceByTopic));
+                if (request.Value <= TimeSpan.Zero || request.Value > TimeSpan.FromDays(MAX_TOPIC_AGE_DAYS))
+                    throw new ArgumentException(
+                        $"The age requested for topic {request.Key} must be greater than zero and no greater than {MAX_TOPIC_AGE_DAYS} days.",
+                        nameof(dispatchedSinceByTopic));
+            }
+        }
 
         private DbCommand CreateRemainingOutstandingCommand(DbConnection connection)
             => CreateCommand(connection, GenerateSqlText(queries.GetNumberOfOutstandingMessagesCommand), 0);
