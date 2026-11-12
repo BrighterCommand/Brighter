@@ -41,6 +41,7 @@ internal sealed class HeldReplyProxy : IDisposable
     private readonly ConcurrentBag<TcpClient> _sockets = new();
     private readonly CancellationTokenSource _cancellation = new();
     private volatile bool _holdReplies;
+    private bool _disposed;
 
     public HeldReplyProxy(string targetHost, int targetPort)
     {
@@ -64,6 +65,10 @@ internal sealed class HeldReplyProxy : IDisposable
 
     public void Dispose()
     {
+        if (_disposed)
+            return;
+        _disposed = true;
+
         _cancellation.Cancel();
         _listener.Stop();
         foreach (var socket in _sockets)

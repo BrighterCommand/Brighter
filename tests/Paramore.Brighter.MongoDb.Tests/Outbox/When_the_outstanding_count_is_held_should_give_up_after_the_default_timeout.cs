@@ -74,9 +74,9 @@ public class OutstandingCountHeldReplyTests : IDisposable
 
     public void Dispose()
     {
+        _proxy.Dispose();
         var cluster = _client.Cluster;
         _client.Dispose();
         ClusterRegistry.Instance.UnregisterAndDisposeCluster(cluster);
-        _proxy.Dispose();
     }
 }
