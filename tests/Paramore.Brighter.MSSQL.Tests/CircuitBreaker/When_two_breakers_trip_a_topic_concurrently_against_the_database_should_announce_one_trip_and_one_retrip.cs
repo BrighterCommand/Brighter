@@ -31,6 +31,7 @@ public class MsSqlConcurrentFirstTripAnnouncementTests : IAsyncLifetime
 
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_trips_{Guid.NewGuid():N}";
+    private readonly string _run = Guid.NewGuid().ToString("N");
     private readonly List<Activity> _activities = [];
 
     [Fact]
@@ -47,7 +48,7 @@ public class MsSqlConcurrentFirstTripAnnouncementTests : IAsyncLifetime
         var breakerA = NewBreaker(tracer, s_start);
         var breakerB = NewBreaker(tracer, s_start + s_laterOffset);
         var observer = NewStore();
-        var topics = Enumerable.Range(0, Repetitions).Select(i => new RoutingKey($"orders-{i}")).ToList();
+        var topics = Enumerable.Range(0, Repetitions).Select(i => new RoutingKey($"orders-{_run}-{i}")).ToList();
         var later = s_start + s_laterOffset;
 
         // Act
@@ -80,7 +81,7 @@ public class MsSqlConcurrentFirstTripAnnouncementTests : IAsyncLifetime
             Assert.Equal(1, spanNames.Count(n => n == $"{topic} {CircuitBreakerSpanOperation.Trip.ToSpanName()}"));
             Assert.Equal(1, spanNames.Count(n => n == $"{topic} {CircuitBreakerSpanOperation.ReTrip.ToSpanName()}"));
         }
-        Assert.Equal(Repetitions * 2, spanNames.Length);
+        Assert.Equal(Repetitions * 2, spanNames.Count(n => n.Contains(_run)));
     }
 
     private IAmATrippedTopicStore NewStore() =>
