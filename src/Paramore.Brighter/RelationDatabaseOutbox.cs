@@ -1018,14 +1018,64 @@ namespace Paramore.Brighter
         /// <inheritdoc/>
         public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)
         {
-            return ReadOutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds).Count();
+            if (queries is not IRelationalDatabaseOutboxCountQueries countQueries)
+                return ReadOutstandingMessages(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds).Count();
+
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                { "db.operation.name", ExtractSqlOperationName(countQueries.GetOutstandingMessageCountCommand) },
+                { "db.query.text", countQueries.GetOutstandingMessageCountCommand }
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.OutStandingMessages, DatabaseConfiguration.OutBoxTableName,
+                    dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var count = ReadFromStore(
+                    connection => CreateOutstandingCountCommand(connection, countQueries, dispatchedSince, maxCount),
+                    MapOutstandingCount);
+                span?.AddTag("db.response.returned_rows", 1);
+                return count;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <inheritdoc/>
         public async Task<int> GetOutstandingMessageCountAsync(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
-            return (await ReadOutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds, cancellationToken))
-                .Count();
+            if (queries is not IRelationalDatabaseOutboxCountQueries countQueries)
+                return (await ReadOutstandingMessagesAsync(dispatchedSince, requestContext, maxCount, 1, null, _outstandingCountTimeoutSeconds, cancellationToken)).Count();
+
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                { "db.operation.name", ExtractSqlOperationName(countQueries.GetOutstandingMessageCountCommand) },
+                { "db.query.text", countQueries.GetOutstandingMessageCountCommand }
+            };
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.OutStandingMessages, DatabaseConfiguration.OutBoxTableName,
+                    dbAttributes: dbAttributes),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                var count = await ReadFromStoreAsync(
+                    connection => CreateOutstandingCountCommand(connection, countQueries, dispatchedSince, maxCount),
+                    dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+                span?.AddTag("db.response.returned_rows", 1);
+                return count;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <inheritdoc />
@@ -1386,6 +1436,11 @@ namespace Paramore.Brighter
 
             return (inClauseSql, inClause.parameters);
         }
+
+        private DbCommand CreateOutstandingCountCommand(DbConnection connection,
+            IRelationalDatabaseOutboxCountQueries countQueries, TimeSpan dispatchedSince, int maxCount)
+            => CreateCommand(connection, GenerateSqlText(countQueries.GetOutstandingMessageCountCommand),
+                _outstandingCountTimeoutSeconds, CreatePagedOutstandingParameters(dispatchedSince, maxCount, 1, []));
 
         private DbCommand CreateRemainingOutstandingCommand(DbConnection connection)
             => CreateCommand(connection, GenerateSqlText(queries.GetNumberOfOutstandingMessagesCommand), 0);

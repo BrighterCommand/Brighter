@@ -11,6 +11,11 @@ using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Reactor;
 
+/// <summary>
+/// A nacked message is redelivered, and a message queued behind it is not blocked meanwhile.
+/// Messages are identified by id, never by arrival order; a redelivery is the nacked id seen a
+/// second time (ADR 0066, Conventions the canonical templates follow).
+/// </summary>
 [Trait("Category", "Redis")]
 [Collection("RedisMessagingGateway")]
 public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
@@ -59,13 +64,13 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
 
         _producer.Send(message);
 
-        // Act — receive the message and nack it
+        // Act
         var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         _channel.Nack(received);
 
-        // Assert — the nacked message is redelivered: poll every 500 ms, give up after 30 s
+        // Assert
         var redelivered = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
@@ -78,19 +83,13 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
         }
 
         Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-        // R-1 vs R-23 (ADR 0077): the redelivered count must be >= the sent count; normalise
-        // it back so the transport's equality assertion can still compare the rest of the header.
-        Assert.True(redelivered.Header.HandledCount >= message.Header.HandledCount,
-            $"Redelivered HandledCount {redelivered.Header.HandledCount} must be >= sent {message.Header.HandledCount} (R-1)");
-        redelivered.Header.HandledCount = message.Header.HandledCount;
-        _messageAssertion.Assert(message, redelivered);
+        AssertIsRedeliveryOf(message, redelivered);
     }
 
     [Fact(Skip = "Deferred: #4240 — Nack redelivers not yet conformant for Redis / RedisMessagingGateway (maintainer sign-off)")]
     public void When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second()
     {
-        // Arrange — two queued messages: the first is nacked and must come back, and the one
-        // queued behind it must not be blocked while that happens
+        // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
         _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
@@ -99,10 +98,6 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        // Each message carries its own id and body. Drawing both from the builder's defaults
-        // would make them the same message, and the nacked message coming back would then be
-        // indistinguishable from the other one. Which of the two the transport delivers first is
-        // not decided here — that is the transport's to choose (NFR-4).
         var firstSent = _messageBuilder.SetTopic(_publication.Topic!)
             .SetMessageId(Id.Random())
             .SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString()))
@@ -118,9 +113,7 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
         _producer.Send(firstSent);
         _producer.Send(secondSent);
 
-        // Act — nack whichever message the transport hands over first. Which of the two that is
-        // belongs to the transport, not to Brighter, so the message to nack is identified by its
-        // id rather than assumed to be the one sent first (NFR-4).
+        // Act
         var receivedForNack = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.NotEqual(MessageType.MT_NONE, receivedForNack.Header.MessageType);
 
@@ -129,12 +122,7 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
 
         _channel.Nack(receivedForNack);
 
-        // Assert — one bounded loop, and both ids must show up in it. The nacked message's id
-        // appearing a SECOND time is a redelivery by definition: it was already received once and
-        // released. The other id appearing proves it was not blocked behind that redelivery.
-        // Each message is acknowledged as it arrives so a transport that blocks a message group
-        // while one of its messages is in flight can still make progress, and repeat receipts are
-        // absorbed by the set so an at-least-once transport does not fail the arm (NFR-2, NFR-4).
+        // Assert
         var observedIds = new HashSet<string>();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30) && observedIds.Count < 2)
@@ -151,5 +139,15 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
 
         Assert.Contains(nackedMessage.Header.MessageId.Value, observedIds);
         Assert.Contains(theOtherMessage.Header.MessageId.Value, observedIds);
+    }
+
+    // HandledCount may rise on redelivery (ADR 0077, Conformance oracle change for the redelivery
+    // arms), so it is normalised to let the shared assertion compare the rest of the header.
+    private void AssertIsRedeliveryOf(Message message, Message redelivered)
+    {
+        Assert.True(redelivered.Header.HandledCount >= message.Header.HandledCount,
+            $"Redelivered HandledCount {redelivered.Header.HandledCount} must be >= sent {message.Header.HandledCount} (R-1)");
+        redelivered.Header.HandledCount = message.Header.HandledCount;
+        _messageAssertion.Assert(message, redelivered);
     }
 }

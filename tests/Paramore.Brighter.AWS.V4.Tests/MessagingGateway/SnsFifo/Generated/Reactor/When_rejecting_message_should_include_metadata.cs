@@ -62,10 +62,10 @@ public class WhenRejectingMessageShouldIncludeMetadata : IDisposable
 
         var rejected = _channel.Reject(received, new MessageRejectionReason(RejectionReason.DeliveryError, REJECTION_DESCRIPTION));
 
-        // Assert — Reject returns true when the copy was routed
+        // Assert
         Assert.True(rejected, "Reject should return true when the message was routed");
 
-        // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
+        // Assert
         var dlqMessage = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(60))
@@ -81,30 +81,21 @@ public class WhenRejectingMessageShouldIncludeMetadata : IDisposable
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
         Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
 
-        // The message must reach the DLQ (routing, asserted above). The rejection-metadata fields are
-        // asserted only when the provider's gateway stamps Brighter metadata; a native-dead-letter
-        // transport (e.g. RabbitMQ DLX) declares empty keys and is conformant on routing alone —
-        // a deliberate relaxation, not a gap in coverage.
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
         if (keys.StampsRejectionMetadata)
         {
-            // OriginalTopic
             Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
             Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
 
-            // OriginalType
             Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalType));
             Assert.Equal(message.Header.MessageType.ToString(), dlqMessage.Header.Bag[keys.OriginalType].ToString());
 
-            // RejectionReason
             Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
             Assert.Equal(RejectionReason.DeliveryError.ToString(), dlqMessage.Header.Bag[keys.RejectionReason].ToString());
 
-            // RejectionMessage
             Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionMessage));
             Assert.Equal(REJECTION_DESCRIPTION, dlqMessage.Header.Bag[keys.RejectionMessage].ToString());
 
-            // RejectionTimestamp — ISO-8601 parseable, within the last minute
             Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionTimestamp));
             var timestampValue = dlqMessage.Header.Bag[keys.RejectionTimestamp].ToString();
             Assert.True(DateTimeOffset.TryParse(timestampValue, out var parsedTimestamp),
