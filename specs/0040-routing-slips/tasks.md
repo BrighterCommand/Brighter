@@ -522,7 +522,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
     - Never report ignored markers.
   - Traces to: FR-3, FR-10, FR-11, FR-21, FR-29; AC-54, AC-30 (logic). Depends on: T6.5.
 
-- [ ] **TEST + IMPLEMENT: T6.7 — Faults in the approval table make a spec's slip invalid, and give `approval_subflow: null` to the steps of the faulty kind**
+- [x] **TEST + IMPLEMENT: T6.7 — Faults in the approval table make a spec's slip invalid, and give `approval_subflow: null` to the steps of the faulty kind**
   - **USE COMMAND**: none — RED-first rows `spike-step` (`flows`) and `legacy-nothing-duplicate-entry` (`flows: "flows-duplicate-entry"`), plus the green control row `spike-step-spike-entry` (`flows: "flows-spike-entry"`). **Characterise** the control: named mutation: make R12 (a) ignore the table's entries; the control row must FAIL. Revert.
   - Fixture: `spike-step/`, a hand-written slip with a `spike`-kind step, then `tasks`, and its record. The slip content is extended in T6.8 per O-1.
   - Test should verify:
