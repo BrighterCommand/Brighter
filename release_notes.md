@@ -73,7 +73,7 @@ A value equal to the ceiling means the ceiling or more. A `completed` total that
 
 #### Per-topic ages and the optional capability
 
-`Publication.StaleMessageAge` sets the age for one topic, and a topic with several publications uses the smallest. `IAmATopicCountingOutbox` is the optional capability that counts several topics in one call. `InMemoryOutbox` implements it. Other outboxes report the overall count only until they add it, and the monitor logs that once at start.
+`Publication.StaleMessageAge` sets the age for one topic, and a topic with several publications uses the smallest. `IAmATopicCountingOutbox` is the optional capability that counts several topics in one call. `InMemoryOutbox` implements it, and so do `SqliteOutbox`, `MsSqlOutbox`, `PostgreSqlOutbox`, `MySqlOutbox` and `SpannerOutbox` (#4686). They match the topic exactly, as `RoutingKey` does, except that `MsSqlOutbox` ignores trailing spaces and `MySqlOutbox` does not match a topic with non-ASCII characters in a `latin1` column. Other outboxes report the overall count only until they add it, and the monitor logs that once at start.
 
 New public types and members, all additive: `TimedOutboxStaleMessageMonitor` and `TimedOutboxStaleMessageMonitorOptions` in `Paramore.Brighter.Outbox.Hosting`; `OutboxStaleMessageMeter`, `OutboxStaleMessageReadings`, `StaleMessageCount` and `StaleMeasurementOutcome` in `Paramore.Brighter.Observability`; `IAmATopicCountingOutbox`; and `Publication.StaleMessageAge`.
 
