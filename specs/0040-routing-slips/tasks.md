@@ -533,7 +533,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: set `approval_subflow` to `null` only for the affected kind, or for every step when the table is missing or malformed.
   - Traces to: FR-3, FR-29; AC-74; FR-24. Depends on: T6.6.
 
-- [ ] **TEST + IMPLEMENT: T6.8 — A gate is reported in `gates` and on the step it produces, with `previous_approved` and `also_approves_produced`**
+- [x] **TEST + IMPLEMENT: T6.8 — A gate is reported in `gates` and on the step it produces, with `previous_approved` and `also_approves_produced`**
   - **USE COMMAND**: none — RED-first rows `spike-step-spike-entry` (extended), `spike-gate-also` and `spike-gate-also-approved` (both `flows: "flows-spike-entry"`).
   - Fixture (per O-1):
     - Change `spike-step/.flow` so that: `spike` is produced by `/refactor:smells` and approved by `/refactor:tidy-first`; `tasks` is produced by `/refactor:tidy-first` and approved by `/spec:approve tasks`; re-write the record (S3).
