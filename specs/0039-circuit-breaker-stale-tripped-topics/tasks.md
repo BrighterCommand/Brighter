@@ -1762,7 +1762,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.63, T2.64, T2.65, T2.57a, T2.58a, T2.59a, T2.23
   - References: ADR 0089 *Testing strategy*.
 
-- [ ] **CHARACTERISE: T2.67 - Concurrent first trips announce one Trip and one ReTrip on each real database**
+- [x] **CHARACTERISE: T2.67 - Concurrent first trips announce one Trip and one ReTrip on each real database**
   - **USE COMMAND**: `/tdd:test-first when two breakers trip the same topic concurrently against a real database should announce exactly one trip and one retrip`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
   - Test file: `When_two_breakers_trip_a_topic_concurrently_against_the_database_should_announce_one_trip_and_one_retrip.cs` (one per backend)
