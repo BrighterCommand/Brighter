@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Outbox.MySql
     /// <summary>
     /// Implements an outbox using Sqlite as a backing store  
     /// </summary>
-    public class MySqlOutbox : RelationDatabaseOutbox
+    public class MySqlOutbox : RelationDatabaseOutbox, IAmATopicCountingOutbox
     {
         private const int MySqlDuplicateKeyError = 1062;
 
