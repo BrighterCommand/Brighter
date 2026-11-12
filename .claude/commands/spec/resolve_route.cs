@@ -847,7 +847,7 @@ internal static class RouteResolver
             ["route_change"] = RouteRecordInspector.RouteChange(),
             ["steps"] = new JsonArray(steps.Select((step, index) => (JsonNode)StepJson(steps, index, approved, table, state)).ToArray()),
             ["known_kinds"] = KnownKindsJson(steps),
-            ["gates"] = new JsonArray(),
+            ["gates"] = GatesJson(steps),
             ["stray_markers"] = new JsonArray(state.StrayMarkers.Select(marker => (JsonNode)marker).ToArray()),
             ["out_of_order"] = OutOfOrderJson(steps, approved),
             ["next"] = violations.Count > 0 ? InvalidNextJson() : unapproved.Count == 0 ? HandOffNextJson(SlipSyntax.HandOffCommand(lines)) : NextJson(unapproved[0], state),
@@ -858,6 +858,32 @@ internal static class RouteResolver
     }
 
     private const string UnattendedDriver = "/spec:ralph-implement";
+
+    private static bool IsGate(IReadOnlyList<SlipStep> steps, int index) =>
+        index > 0 && steps[index - 1].MarkerWriter == steps[index].Producer;
+
+    private static JsonNode? GateJson(IReadOnlyList<SlipStep> steps, int index, IReadOnlyList<bool> approved) =>
+        IsGate(steps, index)
+            ? new JsonObject
+            {
+                ["command"] = steps[index].Producer,
+                ["approves"] = steps[index - 1].Name,
+                ["previous_approved"] = approved[index - 1],
+                ["also_approves_produced"] = steps[index].MarkerWriter == steps[index].Producer
+            }
+            : null;
+
+    private static JsonArray GatesJson(IReadOnlyList<SlipStep> steps) =>
+        new(Enumerable.Range(0, steps.Count)
+            .Where(index => IsGate(steps, index))
+            .Select(index => (JsonNode)new JsonObject
+            {
+                ["command"] = steps[index].Producer,
+                ["approves"] = steps[index - 1].Name,
+                ["produces"] = steps[index].Name,
+                ["also_approves_produced"] = steps[index].MarkerWriter == steps[index].Producer
+            })
+            .ToArray());
 
     private static string ApproveCommand(string step) => $"/spec:approve {step}";
 
@@ -876,7 +902,7 @@ internal static class RouteResolver
             ["marker_writer"] = step.MarkerWriter,
             ["approved"] = approved[index],
             ["approval_subflow"] = ApprovalSubFlow(table, step.Kind),
-            ["gate"] = null,
+            ["gate"] = GateJson(steps, index, approved),
             ["precondition"] = index == 0 || approved[index - 1] ? Precondition(true, [], null) : StepPrecondition(step, steps[index - 1])
         };
     }

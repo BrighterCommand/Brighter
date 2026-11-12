@@ -2,7 +2,7 @@
 
 | Step | Kind | Producer | Artefacts | Marker | Marker-writer |
 | --- | --- | --- | --- | --- | --- |
-| spike | spike | /refactor:smells | spike.md | .spike-approved | /spec:approve spike |
-| tasks | tasks | /spec:tasks | tasks.md | .tasks-approved | /spec:approve tasks |
+| spike | spike | /refactor:smells | spike.md | .spike-approved | /refactor:tidy-first |
+| tasks | tasks | /refactor:tidy-first | tasks.md | .tasks-approved | /spec:approve tasks |
 
 hand-off: /spec:implement

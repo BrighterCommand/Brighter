@@ -11,12 +11,30 @@
     "steps": [
       {
         "name": "spike",
-        "approval_subflow": []
+        "approval_subflow": [],
+        "gate": null
       },
       {
         "name": "tasks",
-        "approval_subflow": []
+        "approval_subflow": [],
+        "gate": {
+          "command": "/refactor:tidy-first",
+          "approves": "spike",
+          "previous_approved": false,
+          "also_approves_produced": false
+        }
       }
+    ],
+    "gates": [
+      {
+        "command": "/refactor:tidy-first",
+        "approves": "spike",
+        "produces": "tasks",
+        "also_approves_produced": false
+      }
+    ],
+    "approve_steps": [
+      "tasks"
     ]
   }
 }
