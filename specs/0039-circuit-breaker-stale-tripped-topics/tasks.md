@@ -1745,7 +1745,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2j - Real-database acceptance
 
-- [ ] **CHARACTERISE: T2.66 - On each real database, a trip is shared between breakers, ends by C and survives a restart**
+- [x] **CHARACTERISE: T2.66 - On each real database, a trip is shared between breakers, ends by C and survives a restart**
   - **USE COMMAND**: `/tdd:test-first when two distributed breakers share a real database trip table should share a trip, end it by the cooldown duration and keep it across a restart`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker", "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
   - Test file: `When_two_breakers_share_a_trip_table_should_share_end_and_survive_restart.cs` (one per backend)
