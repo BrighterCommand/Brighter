@@ -547,6 +547,7 @@ The sweeper, the meter and the check find the same instance through `IAmAnOutbox
 | Paramore.Brighter | `RelationDatabaseTrippedTopicStore` | New, abstract, in `Paramore.Brighter.CircuitBreaker` | 2 |
 | Paramore.Brighter | `OutboxProducerMediator` | Uses a trip batch per dispatch call and the async read, when the breaker implements the async role | 2 |
 | Paramore.Brighter | `SweeperMeter` | No `IsActive` gating for a shared breaker | 2 |
+| Paramore.Brighter | `OutboxSweeperSnapshot` | New public `ReadsTrippedTopicsFrom(IAmAnOutboxCircuitBreaker)`, which both health signals share; the positional members are unchanged | 2 |
 | Paramore.Brighter.Outbox.Hosting | `TimedOutboxSweeper` | Optional `IAmAnOutboxCircuitBreaker?` constructor parameter; refresh requests; overrun timer | 2 |
 | Paramore.Brighter.Outbox.Hosting | `OutboxSweeperInvestigateHealthCheck` | Shared-breaker rule; `TrippedTopicsStoreUnavailable` condition | 2 |
 | Paramore.Brighter.Outbox.MsSql, .PostgreSql, .MySql | `{Backend}TrippedTopicStore` | New, deriving from `RelationDatabaseTrippedTopicStore` | 2 |
@@ -560,7 +561,7 @@ The following stay unchanged:
 - The `ListedTopicsCircuitBreaker` and `ThrowingOutboxCircuitBreaker` test doubles.
 - `ServiceCollectionExtensions.OutboxCircuitBreaker`, which still resolves with `GetService`, so the breaker stays opt-in.
 - The sweeper's schedule (`NextDue`), its lock resource and protocol, and its three outcomes.
-- `OutboxSweeperState`, `OutboxSweeperSnapshot`, `RemedyCheckConvention` and `RemedyCondition`.
+- `OutboxSweeperState`, `RemedyCheckConvention` and `RemedyCondition`.
 - The `paramore.brighter.circuit_breaker.trips` counter and its attributes, and the positional members of `CircuitBreakerSpanInfo`.
 - The sync `Dispatch()` path, and the explicit path's choice not to consult tripped topics.
 - `SqlBoxProvisioner`, `SqlBoxMigrationRunner` and every outbox and inbox catalog.
