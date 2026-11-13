@@ -652,7 +652,7 @@ Depends on Phase 6.*
   - Implementation should: add stop row 5 in spec, current and flow forms. The variant where `flow.name` is null has no listed case: implement it from 0089's text, and note the gap in the commit.
   - Traces to: 0089 *The stop ladder* row 5; FR-7 (stop), FR-22; AC-10 and AC-70 (resolver side). Depends on: T8.1.
 
-- [ ] **TEST + IMPLEMENT: T8.3 — With no `.claude/commands` tree in the working directory, the resolver exits `1` with empty stdout**
+- [x] **TEST + IMPLEMENT: T8.3 — With no `.claude/commands` tree in the working directory, the resolver exits `1` with empty stdout**
   - **USE COMMAND**: `/tdd:test-first when the resolver is started by absolute script path from a temporary working directory with no .claude/commands it should exit 1 and print no record line`
   - Test file: `resolve_route_tests.cs`, the generated no-command-tree case.
   - Test should verify: exit `1`, empty stdout, no `route-report:` line.
