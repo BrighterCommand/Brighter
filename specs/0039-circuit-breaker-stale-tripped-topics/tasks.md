@@ -1815,7 +1815,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.69
   - References: `docs/adr/0089-distributed-outbox-circuit-breaker.md` (*Amends*).
 
-- [ ] **DOC: T2.71 - Complete the FR-9.2 release notes in the existing marked section**
+- [x] **DOC: T2.71 - Complete the FR-9.2 release notes in the existing marked section**
   - Check the `<!-- spec: 0039-circuit-breaker-stale-tripped-topics -->` section under `## Master` in `release_notes.md` (from commit 7f650ff19, possibly narrowed in T1.14). Adjust it with `/spec:write_release_notes`, without rewriting it blindly, so that it names:
     - the new breaker, `IAmAnOutboxCircuitBreakerAsync`, `IAmATripBatch`, `IAmASharedOutboxCircuitBreaker`, and the options `CooldownDuration`, `ClockSkewLeeway` and `StoreTimeout`;
     - the D default and its effect on existing users (FR-7.2);
