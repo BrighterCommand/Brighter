@@ -850,7 +850,7 @@ internal static class RouteResolver
             ["gates"] = GatesJson(steps),
             ["stray_markers"] = new JsonArray(state.StrayMarkers.Select(marker => (JsonNode)marker).ToArray()),
             ["out_of_order"] = OutOfOrderJson(steps, approved),
-            ["next"] = violations.Count > 0 ? InvalidNextJson() : unapproved.Count == 0 ? HandOffNextJson(SlipSyntax.HandOffCommand(lines)) : NextJson(unapproved[0], state),
+            ["next"] = violations.Count > 0 ? InvalidNextJson() : unapproved.Count == 0 ? HandOffNextJson(SlipSyntax.HandOffCommand(lines), DetoursJson(lines, HandOffAttachPoint)) : NextJson(unapproved[0], state, DetoursJson(lines, unapproved[0].Name)),
             ["hand_off"] = HandOffJson(SlipSyntax.HandOffCommand(lines), unapproved),
             ["approve_steps"] = new JsonArray(steps.Where(step => step.MarkerWriter == ApproveCommand(step.Name)).Select(step => (JsonNode)step.Name).ToArray()),
             ["stop"] = null
@@ -952,13 +952,13 @@ internal static class RouteResolver
         : SpecReport.Kinds.Contains(step.Kind) ? [$"/spec:review {step.Kind}", step.MarkerWriter]
         : [step.MarkerWriter];
 
-    private static JsonObject NextJson(SlipStep step, SpecStateReader state) => new()
+    private static JsonObject NextJson(SlipStep step, SpecStateReader state, JsonArray detours) => new()
     {
         ["step"] = step.Name,
         ["kind"] = step.Kind,
         ["commands"] = new JsonArray(NextCommands(step, state).Select(command => (JsonNode)command).ToArray()),
         ["unattended_driver"] = null,
-        ["detours"] = new JsonArray()
+        ["detours"] = detours
     };
 
     private static JsonObject InvalidNextJson() => new()
@@ -970,13 +970,21 @@ internal static class RouteResolver
         ["detours"] = new JsonArray()
     };
 
-    private static JsonObject HandOffNextJson(string? handOff) => new()
+    private const string HandOffAttachPoint = "hand-off";
+
+    private static JsonArray DetoursJson(IReadOnlyList<string> lines, string attachPoint) =>
+        new(SlipSyntax.Detours(lines)
+            .Where(detour => detour.AttachedTo == attachPoint)
+            .Select(detour => (JsonNode)new JsonObject { ["command"] = CommandCatalogue.Collapse(detour.Command), ["return_to"] = detour.ReturnPoint })
+            .ToArray());
+
+    private static JsonObject HandOffNextJson(string? handOff, JsonArray detours) => new()
     {
         ["step"] = null,
         ["kind"] = null,
         ["commands"] = new JsonArray((JsonNode?)handOff),
         ["unattended_driver"] = UnattendedDriver,
-        ["detours"] = new JsonArray()
+        ["detours"] = detours
     };
 
     private static JsonObject HandOffJson(string? command, IReadOnlyList<SlipStep> unapproved) => new()

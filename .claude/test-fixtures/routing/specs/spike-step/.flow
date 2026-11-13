@@ -6,3 +6,4 @@
 | tasks | tasks | /refactor:tidy-first | tasks.md | .tasks-approved | /spec:approve tasks |
 
 hand-off: /spec:implement
+detour: /refactor:tidy-comments @ spike -> spike

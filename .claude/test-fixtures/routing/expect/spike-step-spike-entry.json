@@ -35,6 +35,15 @@
     ],
     "approve_steps": [
       "tasks"
-    ]
+    ],
+    "next": {
+      "step": "spike",
+      "detours": [
+        {
+          "command": "/refactor:tidy-comments",
+          "return_to": "spike"
+        }
+      ]
+    }
   }
 }
