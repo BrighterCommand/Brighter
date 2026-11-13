@@ -263,6 +263,8 @@ cd tests/[YourTestProject]
 dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator
 ```
 
+Generated files are written to the current working directory unless `DestinationFolder` is set in the configuration, so running the generator from the repository root writes the generated tests into the repository root.
+
 #### When to Regenerate Tests
 
 - When templates are updated in `tools/Paramore.Brighter.Test.Generator/Templates/`
@@ -287,6 +289,10 @@ See [ADR 0035](docs/adr/0035-generated-test.md) for the test generation architec
 [`.agent_instructions/generated_tests.md`](.agent_instructions/generated_tests.md) for the full
 reference — every template, every configuration key, every feature flag, and the regeneration
 recipe.
+
+Cover provider-specific edge cases in hand-written tests alongside the generated suite. See
+[docs/factories/tests](docs/factories/tests/README.md) for how to generate a suite for a new outbox or
+transport.
 
 ## Documentation
 
