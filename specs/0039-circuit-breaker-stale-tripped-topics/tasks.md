@@ -1827,7 +1827,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.70
   - References: `release_notes.md:3-17`.
 
-- [ ] **DOC: T2.72 - List the BrighterCommand/Docs changes in the PR description**
+- [x] **DOC: T2.72 - List the BrighterCommand/Docs changes in the PR description**
   - In the Phase 2 PR description, list the pages to change in BrighterCommand/Docs (writing them is tracked separately):
     - Circuit-breaker page: register `DistributedOutboxCircuitBreaker` (and `InMemoryOutboxCircuitBreaker`) as a singleton shared with the mediator (FR-7.3). The clock assumption: hosts run NTP, and `ClockSkewLeeway` covers residual skew. The table name passed to the store must match the one passed to `Add{Backend}TrippedTopics`. Set the store's `commandTimeout` equal to `StoreTimeout`, and keep `StoreTimeout` at or under half of `TimerInterval`. The purge script (`GetPurgeSql`, with the `@EndedBefore` cutoff the operator binds) runs under a separate account with `DELETE` permission, so the application account needs only `SELECT`, `INSERT` and `UPDATE`.
     - Telemetry page: with the distributed breaker every instance reports the deployment-wide count, so alert on `max` across instances, not `sum`. Counts agree within `TimerInterval` + `StoreTimeout` (FR-8.7). The new span attribute. The difference in announcement rate between breakers.
