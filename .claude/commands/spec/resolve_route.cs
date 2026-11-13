@@ -888,14 +888,25 @@ internal static class AllReport
     public static void Write(Invocation invocation)
     {
         var names = SpecReport.SpecDirectories(invocation.SpecsRoot);
-        ReportWriter.WriteCurrent(CurrentLine(invocation.SpecsRoot, names.Count));
-        foreach (var name in names)
+        var reports = names.Select(name => SpecReport.For(invocation with { Target = name })!).ToList();
+        ReportWriter.WriteCurrent(CurrentLine(invocation.SpecsRoot, names.Count, SharedViolations(reports)));
+        foreach (var report in reports)
         {
-            ReportWriter.Write(SpecSummary.From(SpecReport.For(invocation with { Target = name })!));
+            ReportWriter.Write(SpecSummary.From(report));
         }
     }
 
-    private static JsonObject CurrentLine(string specsRoot, int specCount)
+    public static bool IsShared(JsonNode violation, JsonObject report) =>
+        violation["rule"]!.GetValue<string>() == "R12" || report["flow"]!["source"]!.GetValue<string>() == "default";
+
+    private static JsonArray SharedViolations(IEnumerable<JsonObject> reports) =>
+        new(reports
+            .SelectMany(report => report["violations"]!.AsArray().Where(violation => IsShared(violation!, report)))
+            .DistinctBy(violation => violation!.ToJsonString())
+            .Select(violation => violation!.DeepClone())
+            .ToArray());
+
+    private static JsonObject CurrentLine(string specsRoot, int specCount, JsonArray sharedViolations)
     {
         var state = CurrentSpecLocator.Locate(specsRoot);
         return new JsonObject
@@ -904,7 +915,7 @@ internal static class AllReport
             ["mode"] = "all",
             ["current_spec"] = new JsonObject { ["state"] = state.Name, ["value"] = state.Value },
             ["specs"] = specCount,
-            ["shared_violations"] = new JsonArray()
+            ["shared_violations"] = sharedViolations
         };
     }
 }
@@ -921,6 +932,7 @@ internal static class SpecSummary
             ["flow"] = report["flow"]!.DeepClone(),
             ["valid"] = report["valid"]!.DeepClone()
         };
+        AddIf(summary, "violations", OwnViolations(report));
         AddIf(summary, "tampered", Tampered(report));
         AddIf(summary, "route_change", RouteChange(report));
         summary["steps"] = new JsonArray(report["steps"]!.AsArray().Select(step => (JsonNode)StepSummary(step!)).ToArray());
@@ -937,6 +949,20 @@ internal static class SpecSummary
         {
             summary[key] = value;
         }
+    }
+
+    private static JsonNode? OwnViolations(JsonObject report)
+    {
+        var own = report["violations"]!.AsArray()
+            .Where(violation => !AllReport.IsShared(violation!, report))
+            .Select(violation => (JsonNode)new JsonObject
+            {
+                ["rule"] = violation!["rule"]!.DeepClone(),
+                ["code"] = violation["code"]!.DeepClone(),
+                ["step"] = violation["step"]?.DeepClone()
+            })
+            .ToArray();
+        return own.Length > 0 ? new JsonArray(own) : null;
     }
 
     private static JsonNode? NonEmpty(JsonNode? list) => list is JsonArray { Count: > 0 } ? list.DeepClone() : null;

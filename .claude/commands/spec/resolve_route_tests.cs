@@ -42,6 +42,8 @@ if (ResolverRuns(repositoryRoot, reporter))
     CheckAllSpecs(repositoryRoot, unusualLegacySpecs, reporter);
     CheckCurrentSpecStates(repositoryRoot, reporter);
     CheckMissingCommandTree(repositoryRoot, reporter);
+    CheckSharedViolationsOverInvalidFlows(repositoryRoot, reporter);
+    CheckSharedViolationsOverFixtureSpecs(repositoryRoot, reporter);
 }
 
 CheckNothingWritten(hashesBefore, HashTree(repositoryRoot, FixtureRoot, "specs"), reporter);
@@ -161,6 +163,92 @@ void CheckReport(Expectation expectation, ProcessResult result, string check, Re
     var actual = JsonNode.Parse(line[ReportPrefix.Length..]);
     foreach (var mismatch in Mismatches(expectation.Report, actual, "report"))
         report.Fail(check, mismatch);
+}
+
+void CheckSharedViolationsOverInvalidFlows(string root, Reporter report)
+{
+    const string check = "shared violations over flows-invalid";
+    report.Checked();
+    var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", RepositorySpecs, "--all", "--flows-dir", $"{FixtureRoot}/flows-invalid"]);
+    var (current, summaries) = ParseAllRecords(result);
+    if (current == null)
+    {
+        report.Fail(check, $"expected exit 0 and a first {CurrentPrefix.Trim()} line, got exit {result.ExitCode}");
+        return;
+    }
+
+    var table = $"{FixtureRoot}/flows-invalid/approvals.md";
+    var expected = JsonNode.Parse($$"""
+        [
+          { "rule": "R4", "code": "unknown-command", "step": "design", "detail": "unknown command",
+            "message": "Step design names a command that does not exist, /spec:designx." },
+          { "rule": "R12", "code": "approval-entry", "step": null, "detail": "duplicate entry",
+            "message": "{{table}} has more than one entry for kind tasks." },
+          { "rule": "R12", "code": "approval-entry", "step": null, "detail": "unreadable table or unknown command",
+            "message": "{{table}} is unreadable or names a command that does not exist: /adr:acceptx." }
+        ]
+        """);
+    foreach (var mismatch in Mismatches(expected, current["shared_violations"], "shared_violations"))
+        report.Fail(check, mismatch);
+
+    foreach (var summary in summaries)
+        VerifySharedFaultsOnlyOnSummary(summary, check, report);
+}
+
+void VerifySharedFaultsOnlyOnSummary(JsonObject summary, string check, Reporter report)
+{
+    var label = $"{check}: {summary["spec"]}";
+    if (summary["valid"]?.GetValue<bool>() != false)
+        report.Fail(label, "expected valid false");
+    if (summary.ContainsKey("violations"))
+        report.Fail(label, "a shared violation must not appear on a summary line");
+    if (summary["stop"]?["reason"]?.GetValue<string>() != "invalid")
+        report.Fail(label, $"expected stop {{reason: invalid}}, got {summary["stop"]?.ToJsonString() ?? "null"}");
+}
+
+void CheckSharedViolationsOverFixtureSpecs(string root, Reporter report)
+{
+    const string check = "violations over the fixture specs";
+    report.Checked();
+    var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", FixtureSpecs, "--all", "--flows-dir", $"{FixtureRoot}/flows"]);
+    var (current, summaries) = ParseAllRecords(result);
+    if (current == null)
+    {
+        report.Fail(check, $"expected exit 0 and a first {CurrentPrefix.Trim()} line, got exit {result.ExitCode}");
+        return;
+    }
+
+    var expectedShared = JsonNode.Parse($$"""
+        [
+          { "rule": "R12", "code": "approval-entry", "step": "spike", "detail": "kind without entry",
+            "message": "Step spike is of kind spike, which has no entry in {{FixtureRoot}}/flows/approvals.md." }
+        ]
+        """);
+    foreach (var mismatch in Mismatches(expectedShared, current["shared_violations"], "shared_violations"))
+        report.Fail(check, $"{mismatch} (the same record raised by several spike specs is listed once)");
+
+    var copyInvalid = summaries.FirstOrDefault(summary => summary["spec"]?.GetValue<string>() == $"{FixtureSpecs}/copy-invalid");
+    var expectedLine = JsonNode.Parse("""
+        {
+          "valid": false,
+          "violations": [ { "rule": "R4", "code": "unknown-command", "step": "design" } ],
+          "stop": { "reason": "invalid" }
+        }
+        """);
+    foreach (var mismatch in Mismatches(expectedLine, copyInvalid, "copy-invalid"))
+        report.Fail(check, mismatch);
+    if (copyInvalid?["violations"]?[0] is JsonObject { Count: not 3 })
+        report.Fail(check, "a summary violation carries only rule, code and step");
+}
+
+(JsonObject? Current, List<JsonObject> Summaries) ParseAllRecords(ProcessResult result)
+{
+    var records = SplitLines(result.Stdout).Where(IsRecordLine).ToList();
+    if (result.ExitCode != 0 || records.Count == 0 || !records[0].StartsWith(CurrentPrefix, StringComparison.Ordinal))
+        return (null, []);
+
+    return ((JsonObject)JsonNode.Parse(records[0][CurrentPrefix.Length..])!,
+        records.Skip(1).Select(line => (JsonObject)JsonNode.Parse(line[ReportPrefix.Length..])!).ToList());
 }
 
 void CheckAllSpecs(string root, IReadOnlyList<string> pinnedToHandOff, Reporter report)
