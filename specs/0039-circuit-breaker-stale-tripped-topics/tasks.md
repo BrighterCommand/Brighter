@@ -1792,7 +1792,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.59b
   - References: `tests/Paramore.Brighter.Core.Tests/Architecture/When_the_solution_is_built_it_should_declare_no_container_types_in_core.cs`. `src/Directory.Build.props`.
 
-- [ ] **PROJECT: T2.69 - Phase 2 verification: compatibility, full suites and database parity**
+- [x] **PROJECT: T2.69 - Phase 2 verification: compatibility, full suites and database parity**
   - Build the solution. Run `Core.Tests` (`CircuitBreaker`, `Sweeping`, `Observability/Metrics`, `Confirmation`, `CommandProcessors`, `BoxProvisioning`, `Architecture`) and the MSSQL, PostgresSQL and MySQL test projects against real databases (`/test-infra:run-tests`).
   - AC-31: `ListedTopicsCircuitBreaker` and `ThrowingOutboxCircuitBreaker` are unchanged, `IAmAnOutboxCircuitBreaker` is unchanged, and every existing Sweeping and Metrics test passes unchanged.
   - Confirm the unchanged list in ADR 0089 *Where each type is touched* (`OutboxSweeperState`, `RemedyCondition`, the counter attributes, the sync `Dispatch()` path, the control-bus breakers).
