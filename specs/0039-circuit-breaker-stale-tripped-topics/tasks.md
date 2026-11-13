@@ -1803,7 +1803,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2l - Decision records, release notes and Docs list
 
-- [ ] **DOC: T2.70 - Add amendment notes to ADRs 0028, 0058, 0085 and 0086**
+- [x] **DOC: T2.70 - Add amendment notes to ADRs 0028, 0058, 0085 and 0086**
   - Add or extend a short amendment note in the Status section of each ADR that points to ADR 0089 and names the parts that change:
     - `docs/adr/0028-support-circuit-breaking-of-topics.md`: extend the T1.14a note to all three replaced decisions.
     - `docs/adr/0058-outbox-circuit-breaker-trip-logging.md`: extend the T1.14a note with the distributed announcer rules and the `circuit_breaker.cooldown_duration` span attribute.
