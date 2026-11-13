@@ -561,7 +561,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: fill `next.detours` in rows 2–5, and leave it empty in row 1 (asserted in T6.5).
   - Traces to: FR-30, FR-11; AC-84 (logic). Depends on: T6.8.
 
-- [ ] **TEST + IMPLEMENT: T6.10 — The repository's unusual legacy specs 0036, 0031 and 0028 each resolve to the hand-off, with `.code-approved` ignored**
+- [x] **TEST + IMPLEMENT: T6.10 — The repository's unusual legacy specs 0036, 0031 and 0028 each resolve to the hand-off, with `.code-approved` ignored**
   - **USE COMMAND**: `/tdd:test-first when the resolver resolves specs 0036 0031 and 0028 from the repository specs root it should report feature default valid with the hand-off and no stray marker`
   - Test file: `resolve_route_tests.cs`, existing-specs check in `--spec` form, against the root `specs/` and the shipped flows.
   - Test should verify: for each of the three: `feature`, `default`, valid, `stray_markers: []`, and `next.commands` `["/spec:implement"]` (AC-4 subset, AC-71).
