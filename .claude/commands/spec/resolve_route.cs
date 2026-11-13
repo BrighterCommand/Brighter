@@ -45,6 +45,11 @@ if (invocation.Mode == RouteMode.Current)
     ReportWriter.Write(CurrentReport.For(invocation));
 }
 
+if (invocation.Mode == RouteMode.All)
+{
+    AllReport.Write(invocation);
+}
+
 return SuccessExitCode;
 
 internal enum RouteMode
@@ -836,12 +841,16 @@ internal static class SpecReport
             .ToHashSet(StringComparer.Ordinal);
 
     public static string? FindSpecDirectory(string specsRoot, string target) =>
+        SpecDirectories(specsRoot).FirstOrDefault(name => string.Equals(name, target, StringComparison.Ordinal));
+
+    public static IReadOnlyList<string> SpecDirectories(string specsRoot) =>
         Directory.Exists(specsRoot)
             ? Directory.GetDirectories(specsRoot)
                 .Select(directory => Path.GetFileName(directory))
                 .Where(name => !name.StartsWith('.'))
-                .FirstOrDefault(name => string.Equals(name, target, StringComparison.Ordinal))
-            : null;
+                .Order(StringComparer.Ordinal)
+                .ToList()
+            : [];
 }
 
 internal static class InvalidStop
@@ -872,6 +881,114 @@ internal static class InvalidStop
 
     public static JsonNode? When(IReadOnlyList<Violation> violations, FlowIdentity flow, string flowsDirectory) =>
         violations.Count == 0 ? null : For(violations, flow, flowsDirectory);
+}
+
+internal static class AllReport
+{
+    public static void Write(Invocation invocation)
+    {
+        var names = SpecReport.SpecDirectories(invocation.SpecsRoot);
+        ReportWriter.WriteCurrent(CurrentLine(invocation.SpecsRoot, names.Count));
+        foreach (var name in names)
+        {
+            ReportWriter.Write(SpecSummary.From(SpecReport.For(invocation with { Target = name })!));
+        }
+    }
+
+    private static JsonObject CurrentLine(string specsRoot, int specCount)
+    {
+        var state = CurrentSpecLocator.Locate(specsRoot);
+        return new JsonObject
+        {
+            ["schema_version"] = ReportSchema.Version,
+            ["mode"] = "all",
+            ["current_spec"] = new JsonObject { ["state"] = state.Name, ["value"] = state.Value },
+            ["specs"] = specCount,
+            ["shared_violations"] = new JsonArray()
+        };
+    }
+}
+
+internal static class SpecSummary
+{
+    private const int ReasonLimit = 60;
+
+    public static JsonObject From(JsonObject report)
+    {
+        var summary = new JsonObject
+        {
+            ["spec"] = report["spec"]!.DeepClone(),
+            ["flow"] = report["flow"]!.DeepClone(),
+            ["valid"] = report["valid"]!.DeepClone()
+        };
+        AddIf(summary, "tampered", Tampered(report));
+        AddIf(summary, "route_change", RouteChange(report));
+        summary["steps"] = new JsonArray(report["steps"]!.AsArray().Select(step => (JsonNode)StepSummary(step!)).ToArray());
+        AddIf(summary, "stray_markers", NonEmpty(report["stray_markers"]));
+        AddIf(summary, "out_of_order", NonEmpty(report["out_of_order"]));
+        summary["next"] = NextSummary(report["next"]!);
+        AddIf(summary, "stop", Stop(report));
+        return summary;
+    }
+
+    private static void AddIf(JsonObject summary, string key, JsonNode? value)
+    {
+        if (value is not null)
+        {
+            summary[key] = value;
+        }
+    }
+
+    private static JsonNode? NonEmpty(JsonNode? list) => list is JsonArray { Count: > 0 } ? list.DeepClone() : null;
+
+    private static JsonNode? Tampered(JsonObject report) =>
+        report["tampered"]!["value"]!.GetValue<bool>()
+            ? new JsonObject { ["value"] = true, ["case"] = report["tampered"]!["case"]?.DeepClone() }
+            : null;
+
+    private static JsonNode? RouteChange(JsonObject report) =>
+        report["route_change"] is JsonObject change
+            ? new JsonObject
+            {
+                ["date"] = change["date"]!.DeepClone(),
+                ["from"] = change["from"]!.DeepClone(),
+                ["to"] = change["to"]!.DeepClone(),
+                ["reason"] = Cut(change["reason"]!.GetValue<string>())
+            }
+            : null;
+
+    private static string Cut(string reason) => reason.Length > ReasonLimit ? reason[..ReasonLimit] + "…" : reason;
+
+    private static JsonNode? Stop(JsonObject report) =>
+        report["stop"] is JsonObject stop ? new JsonObject { ["reason"] = stop["reason"]!.DeepClone() } : null;
+
+    private static JsonObject StepSummary(JsonNode step) => new()
+    {
+        ["name"] = step["name"]!.DeepClone(),
+        ["kind"] = step["kind"]!.DeepClone(),
+        ["state"] = State(step["approved"]!.GetValue<bool>(), step["artefacts_present"]!.GetValue<bool>())
+    };
+
+    private static string State(bool approved, bool artefactsPresent) => (approved, artefactsPresent) switch
+    {
+        (true, true) => "approved",
+        (true, false) => "approved-no-artefacts",
+        (false, true) => "ready",
+        _ => "pending"
+    };
+
+    private static JsonObject NextSummary(JsonNode next)
+    {
+        var summary = new JsonObject
+        {
+            ["step"] = next["step"]?.DeepClone(),
+            ["kind"] = next["kind"]?.DeepClone(),
+            ["commands"] = next["commands"]!.DeepClone()
+        };
+        AddIf(summary, "unattended_driver", next["unattended_driver"]?.DeepClone());
+        AddIf(summary, "detours", NonEmpty(next["detours"]));
+        return summary;
+    }
 }
 
 internal sealed record CurrentSpecState(string Name, string? Value);
@@ -1122,6 +1239,7 @@ internal static class RouteResolver
 internal static class ReportWriter
 {
     private const string ReportPrefix = "route-report: ";
+    private const string CurrentPrefix = "route-current: ";
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -1131,4 +1249,7 @@ internal static class ReportWriter
 
     public static void Write(JsonObject report) =>
         Console.Out.Write(ReportPrefix + report.ToJsonString(Options) + "\n");
+
+    public static void WriteCurrent(JsonObject line) =>
+        Console.Out.Write(CurrentPrefix + line.ToJsonString(Options) + "\n");
 }

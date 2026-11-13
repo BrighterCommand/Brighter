@@ -39,7 +39,7 @@ var hashesBefore = HashTree(repositoryRoot, FixtureRoot, "specs");
 if (ResolverRuns(repositoryRoot, reporter))
 {
     CheckExpectations(repositoryRoot, reporter);
-    CheckUnusualLegacySpecs(repositoryRoot, unusualLegacySpecs, reporter);
+    CheckAllSpecs(repositoryRoot, unusualLegacySpecs, reporter);
     CheckCurrentSpecStates(repositoryRoot, reporter);
     CheckMissingCommandTree(repositoryRoot, reporter);
 }
@@ -163,32 +163,113 @@ void CheckReport(Expectation expectation, ProcessResult result, string check, Re
         report.Fail(check, mismatch);
 }
 
-void CheckUnusualLegacySpecs(string root, IEnumerable<string> specNames, Reporter report)
+void CheckAllSpecs(string root, IReadOnlyList<string> pinnedToHandOff, Reporter report)
 {
-    var expected = JsonNode.Parse("""
-        {
-          "flow": { "name": "feature", "source": "default" },
-          "valid": true,
-          "stray_markers": [],
-          "next": { "commands": ["/spec:implement"] }
-        }
-        """);
+    const string check = "--all over specs";
+    report.Checked();
+    var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", RepositorySpecs, "--all", "--flows-dir", ShippedFlows]);
+    var records = SplitLines(result.Stdout).Where(IsRecordLine).ToList();
+    var directories = Directory.GetDirectories(Path.Combine(root, RepositorySpecs))
+        .Select(directory => Path.GetFileName(directory))
+        .Where(name => !name.StartsWith('.'))
+        .Order(StringComparer.Ordinal)
+        .ToList();
 
-    foreach (var name in specNames)
+    if (result.ExitCode != 0 || records.Count == 0 || !records[0].StartsWith(CurrentPrefix, StringComparison.Ordinal))
     {
-        var check = $"existing spec {name}";
-        report.Checked();
-        var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", RepositorySpecs, "--spec", name, "--flows-dir", ShippedFlows]);
-        var line = SplitLines(result.Stdout).LastOrDefault(l => l.StartsWith(ReportPrefix, StringComparison.Ordinal));
-        if (result.ExitCode != 0 || line == null)
-        {
-            report.Fail(check, $"expected a route-report line and exit 0, got exit {result.ExitCode}");
-            continue;
-        }
-
-        foreach (var mismatch in Mismatches(expected, JsonNode.Parse(line[ReportPrefix.Length..]), "report"))
-            report.Fail(check, mismatch);
+        report.Fail(check, $"expected exit 0 and a first {CurrentPrefix.Trim()} line, got exit {result.ExitCode} and {records.Count} record line(s)");
+        return;
     }
+
+    VerifyCurrentLine(JsonNode.Parse(records[0][CurrentPrefix.Length..])!, directories.Count, check, report);
+    var summaries = records.Skip(1).Select(line => (JsonObject)JsonNode.Parse(line[ReportPrefix.Length..])!).ToList();
+    if (!summaries.Select(summary => summary["spec"]?.GetValue<string>()).SequenceEqual(directories.Select(name => $"{RepositorySpecs}/{name}")))
+    {
+        report.Fail(check, "expected one summary line per spec directory, in ordinal order of directory name");
+        return;
+    }
+
+    foreach (var summary in summaries)
+        VerifySummary(root, summary, pinnedToHandOff, check, report);
+
+    VerifyNamedSpecsAreListed(summaries, check, report);
+}
+
+void VerifyNamedSpecsAreListed(IReadOnlyList<JsonObject> summaries, string check, Reporter report)
+{
+    var listed = summaries.Select(summary => summary["spec"]!.GetValue<string>()).ToList();
+    var spaced = $"{RepositorySpecs}/0021-Expose Unacceptable Message Window";
+    if (!listed.Contains(spaced))
+        report.Fail(check, $"expected {spaced} to be listed");
+
+    var withoutArtefacts = summaries.FirstOrDefault(summary => summary["spec"]!.GetValue<string>() == $"{RepositorySpecs}/0036-universal-transport-conformance-tests");
+    if (withoutArtefacts?["steps"]?[2]?["state"]?.GetValue<string>() != "approved-no-artefacts")
+        report.Fail(check, "expected the tasks step of 0036-universal-transport-conformance-tests to be approved-no-artefacts");
+}
+
+void VerifyCurrentLine(JsonNode line, int specCount, string check, Reporter report)
+{
+    var keys = ((JsonObject)line).Select(pair => pair.Key).ToList();
+    if (!keys.SequenceEqual(["schema_version", "mode", "current_spec", "specs", "shared_violations"]))
+        report.Fail(check, $"the {CurrentPrefix.Trim()} line has keys {string.Join(", ", keys)}");
+    if (line["schema_version"]?.GetValue<int>() != 1 || line["mode"]?.GetValue<string>() != "all")
+        report.Fail(check, "the route-current line must carry schema_version 1 and mode all");
+    if (line["specs"]?.GetValue<int>() != specCount)
+        report.Fail(check, $"expected specs {specCount}, got {line["specs"]?.ToJsonString() ?? "null"}");
+    if (line["shared_violations"] is not JsonArray { Count: 0 })
+        report.Fail(check, "expected no shared violations over the shipped flows");
+}
+
+void VerifySummary(string root, JsonObject summary, IReadOnlyList<string> pinnedToHandOff, string check, Reporter report)
+{
+    var spec = summary["spec"]!.GetValue<string>();
+    var name = spec[(RepositorySpecs.Length + 1)..];
+    var label = $"{check}: {name}";
+    if (summary.ContainsKey("schema_version") || summary.ContainsKey("mode"))
+        report.Fail(label, "a summary line carries neither schema_version nor mode");
+
+    var directory = Path.Combine(root, spec);
+    if (File.Exists(Path.Combine(directory, ".flow")))
+        return;
+
+    var expectedFlow = JsonNode.Parse("""{ "name": "feature", "source": "default", "definition_present": true }""");
+    foreach (var mismatch in Mismatches(expectedFlow, summary["flow"], "flow"))
+        report.Fail(label, mismatch);
+    if (summary["valid"]?.GetValue<bool>() != true)
+        report.Fail(label, "expected valid");
+    foreach (var key in new[] { "tampered", "stray_markers", "violations" }.Where(summary.ContainsKey))
+        report.Fail(label, $"a legacy spec's line must not carry {key}");
+
+    VerifySteps(summary, FeatureOracle.ExpectedSteps(directory), label, report);
+    VerifyNext(summary, FeatureOracle.ExpectedNext(directory), pinnedToHandOff.Contains(name), label, report);
+}
+
+void VerifySteps(JsonObject summary, IReadOnlyList<OracleStepState> expected, string label, Reporter report)
+{
+    var actual = (summary["steps"] as JsonArray)?.Select(step => step as JsonObject).ToList();
+    if (actual == null || actual.Count != expected.Count)
+    {
+        report.Fail(label, $"expected {expected.Count} steps, got {summary["steps"]?.ToJsonString() ?? "null"}");
+        return;
+    }
+
+    for (var index = 0; index < expected.Count; index++)
+    {
+        var step = actual[index]!;
+        if (!step.Select(pair => pair.Key).SequenceEqual(["name", "kind", "state"]))
+            report.Fail(label, $"steps[{index}] must be exactly {{name, kind, state}}, got {step.ToJsonString()}");
+        if (step["name"]?.GetValue<string>() != expected[index].Name || step["state"]?.GetValue<string>() != expected[index].State)
+            report.Fail(label, $"steps[{index}]: expected {expected[index].Name} {expected[index].State}, got {step.ToJsonString()}");
+    }
+}
+
+void VerifyNext(JsonObject summary, OracleNext expected, bool pinned, string label, Reporter report)
+{
+    var commands = (summary["next"]?["commands"] as JsonArray)?.Select(command => command?.GetValue<string>()).ToList();
+    if (commands == null || !commands.SequenceEqual(expected.Commands))
+        report.Fail(label, $"expected next {string.Join(" then ", expected.Commands)}, got {summary["next"]?.ToJsonString() ?? "null"}");
+    if (pinned && commands?.SequenceEqual(["/spec:implement"]) != true)
+        report.Fail(label, "expected the hand-off, /spec:implement");
 }
 
 void CheckMissingCommandTree(string root, Reporter report)
@@ -400,6 +481,51 @@ ProcessResult RunProcess(string workingDirectory, string fileName, IEnumerable<s
 string ReadLf(string path) => File.ReadAllText(path).Replace("\r\n", "\n");
 
 internal sealed record ProcessResult(int ExitCode, string Stdout, string Stderr);
+
+internal sealed record OracleStepState(string Name, string State);
+
+internal sealed record OracleNext(string[] Commands);
+
+internal static class FeatureOracle
+{
+    private static readonly (string Name, string Producer, string Artefact, string Marker)[] Steps =
+    [
+        ("requirements", "/spec:requirements", "requirements.md", ".requirements-approved"),
+        ("design", "/spec:design", ".adr-list", ".design-approved"),
+        ("tasks", "/spec:tasks", "tasks.md", ".tasks-approved")
+    ];
+
+    public static IReadOnlyList<OracleStepState> ExpectedSteps(string directory) =>
+        Steps.Select(step => new OracleStepState(step.Name, StateOf(directory, step.Artefact, step.Marker))).ToList();
+
+    public static OracleNext ExpectedNext(string directory)
+    {
+        var first = Steps.FirstOrDefault(step => !File.Exists(Path.Combine(directory, step.Marker)));
+        if (first.Name == null)
+            return new OracleNext(["/spec:implement"]);
+
+        return ArtefactPresent(directory, first.Artefact)
+            ? new OracleNext([$"/spec:review {first.Name}", $"/spec:approve {first.Name}"])
+            : new OracleNext([first.Producer]);
+    }
+
+    private static string StateOf(string directory, string artefact, string marker) =>
+        (File.Exists(Path.Combine(directory, marker)), ArtefactPresent(directory, artefact)) switch
+        {
+            (true, true) => "approved",
+            (true, false) => "approved-no-artefacts",
+            (false, true) => "ready",
+            _ => "pending"
+        };
+
+    private static bool ArtefactPresent(string directory, string artefact)
+    {
+        var path = Path.Combine(directory, artefact);
+        return artefact == ".adr-list"
+            ? File.Exists(path) && File.ReadLines(path).Any(line => line.Trim().Length > 0)
+            : File.Exists(path);
+    }
+}
 
 internal sealed record CurrentSpecCase(string Name, string? Content, string State, string? Value, string? StopReason, string[] MessageParts);
 
