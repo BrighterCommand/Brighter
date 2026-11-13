@@ -660,7 +660,7 @@ Depends on Phase 6.*
   - Implementation should: treat a missing `.claude/commands` as a tooling fault.
   - Traces to: 0089 *The resolver's command line*; 0092 *Generated cases*. Depends on: T8.2.
 
-- [ ] **TEST + IMPLEMENT: T8.4 — `--all` prints one `route-current:` line and one small summary line per spec, and every legacy spec under `specs/` resolves to the step the feature oracle computes**
+- [x] **TEST + IMPLEMENT: T8.4 — `--all` prints one `route-current:` line and one small summary line per spec, and every legacy spec under `specs/` resolves to the step the feature oracle computes**
   - **USE COMMAND**: `/tdd:test-first when the resolver runs --all over the repository specs root it should print one route-current line and one summary line per directory whose next step matches the feature oracle for every spec without a .flow`
   - Test file: `resolve_route_tests.cs`, existing-specs check moved to `--all`, plus the feature oracle.
   - Test should verify:
