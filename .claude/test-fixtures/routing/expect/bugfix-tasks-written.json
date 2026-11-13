@@ -1,0 +1,32 @@
+{
+  "run": [
+    "--spec",
+    "bugfix-tasks-written"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "valid": true,
+    "violations": [],
+    "next": {
+      "commands": [
+        "/spec:review tasks",
+        "/bugfix:confirm"
+      ]
+    },
+    "steps": [
+      {
+        "name": "diagnosis"
+      },
+      {
+        "name": "tasks",
+        "gate": {
+          "command": "/bugfix:confirm",
+          "approves": "diagnosis",
+          "previous_approved": true,
+          "also_approves_produced": true
+        }
+      }
+    ]
+  }
+}

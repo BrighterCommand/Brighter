@@ -6,3 +6,4 @@
 | design | /adr:accept, /adr:retire-superseded, /adr:regenerate-index, /adr:report-approval |
 | tasks | (empty) |
 | evaluation | (empty) |
+| diagnosis | (empty) |

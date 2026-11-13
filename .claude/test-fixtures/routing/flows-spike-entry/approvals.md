@@ -7,3 +7,4 @@
 | tasks | (empty) |
 | evaluation | (empty) |
 | spike | (empty) |
+| diagnosis | (empty) |
