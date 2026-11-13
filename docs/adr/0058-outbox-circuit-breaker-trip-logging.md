@@ -6,7 +6,11 @@ Date: 2026-09-22
 
 Proposed
 
-Amended by ADR 0089 (`0089-distributed-outbox-circuit-breaker.md`): the in-memory Reset log names its cause, `cooldown` or `maximum trip duration`, through a `{ResetCause}` placeholder.
+Amended by ADR 0089 (`0089-distributed-outbox-circuit-breaker.md`):
+
+- The in-memory Reset log names its cause, `cooldown` or `maximum trip duration`, through a `{ResetCause}` placeholder.
+- The distributed breaker has its own announcer rules. One Trip or ReTrip is announced per coalesced write, and the instance that ends the row announces the Reset.
+- The span gains one optional attribute, `circuit_breaker.cooldown_duration`. The counter's attribute set does not change.
 
 ## Context
 
