@@ -1,0 +1,10 @@
+{
+  "Namespace": "Paramore.Brighter.InMemory.Tests",
+  "Inbox": {
+    "InboxProvider": "InMemoryInboxProvider",
+    "InboxProviderAsync": "InMemoryInboxProvider",
+    "Category": "InMemory",
+    "CollectionName": "InMemoryInbox",
+    "Prefix": "InMemory"
+  }
+}
