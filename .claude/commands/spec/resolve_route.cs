@@ -34,6 +34,11 @@ if (invocation.Mode == RouteMode.Spec)
     ReportWriter.Write(report);
 }
 
+if (invocation.Mode == RouteMode.Current)
+{
+    ReportWriter.Write(CurrentReport.For(invocation));
+}
+
 return SuccessExitCode;
 
 internal enum RouteMode
@@ -817,13 +822,85 @@ internal static class SpecReport
             .SelectMany(lines => SlipSyntax.StepMarkers(lines).Select(row => row.Marker))
             .ToHashSet(StringComparer.Ordinal);
 
-    private static string? FindSpecDirectory(string specsRoot, string target) =>
+    public static string? FindSpecDirectory(string specsRoot, string target) =>
         Directory.Exists(specsRoot)
             ? Directory.GetDirectories(specsRoot)
                 .Select(directory => Path.GetFileName(directory))
                 .Where(name => !name.StartsWith('.'))
                 .FirstOrDefault(name => string.Equals(name, target, StringComparison.Ordinal))
             : null;
+}
+
+internal sealed record CurrentSpecState(string Name, string? Value);
+
+internal static class CurrentSpecLocator
+{
+    private const string CurrentSpecFile = ".current-spec";
+
+    public static CurrentSpecState Locate(string specsRoot)
+    {
+        var path = $"{specsRoot}/{CurrentSpecFile}";
+        if (!File.Exists(path))
+        {
+            return new CurrentSpecState("missing", null);
+        }
+
+        var value = File.ReadAllText(path).Trim();
+        if (value.Length == 0)
+        {
+            return new CurrentSpecState("empty", value);
+        }
+
+        return new CurrentSpecState(SpecReport.FindSpecDirectory(specsRoot, value) is null ? "stale" : "ok", value);
+    }
+}
+
+internal static class CurrentReport
+{
+    private const string Recoveries = "Run /spec:switch {spec-id} or /spec:new {name}.";
+
+    public static JsonObject For(Invocation invocation)
+    {
+        var state = CurrentSpecLocator.Locate(invocation.SpecsRoot);
+        var currentSpec = new JsonObject { ["state"] = state.Name, ["value"] = state.Value };
+        return state.Name == "ok"
+            ? ResolvedSpec(invocation, currentSpec, state.Value!)
+            : NoSpec(invocation.SpecsRoot, currentSpec, state);
+    }
+
+    private static JsonObject ResolvedSpec(Invocation invocation, JsonObject currentSpec, string value)
+    {
+        var report = SpecReport.For(invocation with { Target = value })!;
+        var result = new JsonObject
+        {
+            ["schema_version"] = ReportSchema.Version,
+            ["mode"] = "current",
+            ["current_spec"] = currentSpec
+        };
+        foreach (var pair in report.Where(pair => pair.Key is not "schema_version" and not "mode").ToList())
+        {
+            report.Remove(pair.Key);
+            result[pair.Key] = pair.Value;
+        }
+
+        return result;
+    }
+
+    private static JsonObject NoSpec(string specsRoot, JsonObject currentSpec, CurrentSpecState state) => new()
+    {
+        ["schema_version"] = ReportSchema.Version,
+        ["mode"] = "current",
+        ["current_spec"] = currentSpec,
+        ["spec"] = null,
+        ["stop"] = new JsonObject
+        {
+            ["reason"] = $"current-spec-{state.Name}",
+            ["message"] = $"No usable current spec ({specsRoot}/.current-spec is {Describe(state)}). {Recoveries}"
+        }
+    };
+
+    private static string Describe(CurrentSpecState state) =>
+        state.Name == "stale" ? $"stale: names '{state.Value}'" : state.Name;
 }
 
 internal sealed record FlowIdentity(string Name, string Source, bool DefinitionPresent);

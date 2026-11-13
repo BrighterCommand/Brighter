@@ -40,6 +40,7 @@ if (ResolverRuns(repositoryRoot, reporter))
 {
     CheckExpectations(repositoryRoot, reporter);
     CheckUnusualLegacySpecs(repositoryRoot, unusualLegacySpecs, reporter);
+    CheckCurrentSpecStates(repositoryRoot, reporter);
 }
 
 CheckNothingWritten(hashesBefore, HashTree(repositoryRoot, FixtureRoot, "specs"), reporter);
@@ -189,6 +190,90 @@ void CheckUnusualLegacySpecs(string root, IEnumerable<string> specNames, Reporte
     }
 }
 
+void CheckCurrentSpecStates(string root, Reporter report)
+{
+    const string existingSpec = "0001-sample";
+    CurrentSpecCase[] cases =
+    [
+        new("missing", null, "missing", null, "current-spec-missing", ["missing", "/spec:switch", "/spec:new"]),
+        new("zero-byte", "", "empty", "", "current-spec-empty", ["empty", "/spec:switch", "/spec:new"]),
+        new("whitespace-only", "  \n\t\n", "empty", "", "current-spec-empty", ["empty", "/spec:switch", "/spec:new"]),
+        new("stale", "0099-gone\n", "stale", "0099-gone", "current-spec-stale", ["stale", "0099-gone", "/spec:switch", "/spec:new"]),
+        new("ok", existingSpec + "\n", "ok", existingSpec, null, [])
+    ];
+
+    foreach (var currentCase in cases)
+        CheckCurrentSpecState(root, currentCase, existingSpec, report);
+}
+
+void CheckCurrentSpecState(string root, CurrentSpecCase currentCase, string existingSpec, Reporter report)
+{
+    var check = $"current-spec {currentCase.Name}";
+    report.Checked();
+    var specsRoot = Directory.CreateTempSubdirectory("routing-current-").FullName;
+    try
+    {
+        Directory.CreateDirectory(Path.Combine(specsRoot, existingSpec));
+        File.WriteAllText(Path.Combine(specsRoot, existingSpec, "README.md"), "# sample\n");
+        if (currentCase.Content != null)
+            File.WriteAllText(Path.Combine(specsRoot, ".current-spec"), currentCase.Content);
+
+        var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", specsRoot, "--current", "--flows-dir", ShippedFlows]);
+        VerifyCurrentSpecReport(result, currentCase, specsRoot, check, report);
+    }
+    finally
+    {
+        Directory.Delete(specsRoot, true);
+    }
+}
+
+void VerifyCurrentSpecReport(ProcessResult result, CurrentSpecCase currentCase, string specsRoot, string check, Reporter report)
+{
+    var line = SplitLines(result.Stdout).LastOrDefault(l => l.StartsWith(ReportPrefix, StringComparison.Ordinal));
+    if (result.ExitCode != 0 || line == null)
+    {
+        report.Fail(check, $"expected exit 0 and a route-report line, got exit {result.ExitCode} and {(line == null ? "no line" : "a line")}");
+        return;
+    }
+
+    var actual = (JsonObject)JsonNode.Parse(line[ReportPrefix.Length..])!;
+    var expectedState = new JsonObject { ["state"] = currentCase.State, ["value"] = currentCase.Value };
+    foreach (var mismatch in Mismatches(JsonNode.Parse(expectedState.ToJsonString()), actual["current_spec"], "report.current_spec"))
+        report.Fail(check, mismatch);
+
+    if (currentCase.StopReason == null)
+        VerifyResolvedSpec(actual, specsRoot, check, report);
+    else
+        VerifyNoSpecForm(actual, currentCase, check, report);
+}
+
+void VerifyNoSpecForm(JsonObject actual, CurrentSpecCase currentCase, string check, Reporter report)
+{
+    string[] keys = ["schema_version", "mode", "current_spec", "spec", "stop"];
+    if (!actual.Select(pair => pair.Key).SequenceEqual(keys))
+        report.Fail(check, $"expected only the keys {string.Join(", ", keys)}, got {string.Join(", ", actual.Select(pair => pair.Key))}");
+    if (actual["mode"]?.GetValue<string>() != "current")
+        report.Fail(check, "expected mode current");
+    if (actual["spec"] != null)
+        report.Fail(check, "expected spec null");
+    if (actual["stop"]?["reason"]?.GetValue<string>() != currentCase.StopReason)
+        report.Fail(check, $"expected stop.reason {currentCase.StopReason}, got {actual["stop"]?["reason"]?.ToJsonString() ?? "null"}");
+
+    var message = actual["stop"]?["message"]?.GetValue<string>() ?? "";
+    foreach (var part in currentCase.MessageParts.Where(part => !message.Contains(part, StringComparison.Ordinal)))
+        report.Fail(check, $"expected stop.message to contain \"{part}\", got \"{message}\"");
+}
+
+void VerifyResolvedSpec(JsonObject actual, string specsRoot, string check, Reporter report)
+{
+    if (actual["stop"] != null)
+        report.Fail(check, "expected stop null for a usable current spec");
+    if (actual["flow"]?["name"]?.GetValue<string>() != "feature")
+        report.Fail(check, "expected the named spec to resolve to flow feature");
+    if (actual["spec"]?.GetValue<string>() != $"{specsRoot}/0001-sample")
+        report.Fail(check, $"expected spec {specsRoot}/0001-sample, got {actual["spec"]?.ToJsonString() ?? "null"}");
+}
+
 void CheckMatcherSelfTest(Reporter report)
 {
     report.Checked();
@@ -288,6 +373,8 @@ ProcessResult RunProcess(string workingDirectory, string fileName, IEnumerable<s
 string ReadLf(string path) => File.ReadAllText(path).Replace("\r\n", "\n");
 
 internal sealed record ProcessResult(int ExitCode, string Stdout, string Stderr);
+
+internal sealed record CurrentSpecCase(string Name, string? Content, string State, string? Value, string? StopReason, string[] MessageParts);
 
 internal sealed record Expectation(IReadOnlyList<string> Run, string Flows, int Exit, JsonNode? Report);
 
