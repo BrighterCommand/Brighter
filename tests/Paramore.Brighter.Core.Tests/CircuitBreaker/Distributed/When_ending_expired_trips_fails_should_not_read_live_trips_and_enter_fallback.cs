@@ -15,7 +15,7 @@ public class DistributedBreakerEndExpiredFailureTests
     public async Task When_ending_expired_trips_fails_should_not_read_live_trips_and_enter_fallback()
     {
         // Arrange
-        var store = new EndExpiredFailingTrippedTopicStore(new InMemoryTrippedTopicStore());
+        var store = new ReadsFailingOnDemandTrippedTopicStore(new InMemoryTrippedTopicStore(), "The expired trips cannot be ended") { FailReads = true };
         var breaker = new DistributedOutboxCircuitBreaker(store, new OutboxCircuitBreakerOptions(), timeProvider: new FakeTimeProvider());
         breaker.TripTopic(_orders);
 

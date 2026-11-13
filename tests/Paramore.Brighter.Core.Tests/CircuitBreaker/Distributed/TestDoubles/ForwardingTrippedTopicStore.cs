@@ -20,8 +20,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 
 using System;
 using System.Collections.Generic;
@@ -29,24 +29,19 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.CircuitBreaker;
 
-namespace Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
+namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
 /// <summary>
-/// A tripped topic store whose reads can be made to fail with an exception carrying <paramref name="marker"/>, so a test
-/// can find the log event that failure produced among those of tests running beside it.
+/// A tripped topic store that forwards every call to an inner store; a double derives from it and overrides only what it changes.
 /// </summary>
-public class MarkedReadFailureTrippedTopicStore(IAmATrippedTopicStore inner, string marker) : IAmATrippedTopicStore
+public abstract class ForwardingTrippedTopicStore(IAmATrippedTopicStore inner) : IAmATrippedTopicStore
 {
-    /// <summary>Whether reads throw instead of answering from the inner store.</summary>
-    public bool FailReads { get; set; }
+    public virtual Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+        => inner.EndExpiredAsync(now, tripLength, cancellationToken);
 
-    /// <inheritdoc />
-    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => FailReads ? throw new InvalidOperationException(marker) : inner.EndExpiredAsync(now, tripLength, cancellationToken);
-
-    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public virtual Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => inner.ReadLiveAsync(now, tripLength, cancellationToken);
 
-    public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
+    public virtual Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
         => inner.WriteAsync(trips, cancellationToken);
 }

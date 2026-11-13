@@ -33,7 +33,7 @@ using Paramore.Brighter.CircuitBreaker;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
-public class IndividuallyHeldReadsTrippedTopicStore(IAmATrippedTopicStore inner) : IAmATrippedTopicStore
+public class IndividuallyHeldReadsTrippedTopicStore(IAmATrippedTopicStore inner) : ForwardingTrippedTopicStore(inner)
 {
     private readonly ConcurrentDictionary<int, ReadSlot> _slots = new();
     private readonly AsyncLocal<ReadSlot?> _slotOfThisRead = new();
@@ -45,7 +45,7 @@ public class IndividuallyHeldReadsTrippedTopicStore(IAmATrippedTopicStore inner)
 
     public void FailRead(int readNumber, Exception failure) => SlotFor(readNumber).Result.TrySetException(failure);
 
-    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public override Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
     {
         var slot = SlotFor(Interlocked.Increment(ref _readCount));
         _slotOfThisRead.Value = slot;
@@ -53,14 +53,11 @@ public class IndividuallyHeldReadsTrippedTopicStore(IAmATrippedTopicStore inner)
         return EndedOfAsync(slot);
     }
 
-    public async Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public override async Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
         => (await _slotOfThisRead.Value!.Result.Task.ConfigureAwait(false)).Live;
 
     private static async Task<IReadOnlyList<TopicTrip>> EndedOfAsync(ReadSlot slot)
         => (await slot.Result.Task.ConfigureAwait(false)).Ended;
-
-    public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
-        => inner.WriteAsync(trips, cancellationToken);
 
     private ReadSlot SlotFor(int readNumber) => _slots.GetOrAdd(readNumber, _ => new ReadSlot());
 

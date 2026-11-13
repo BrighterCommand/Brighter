@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.CircuitBreaker;
+using Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
 namespace Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 
@@ -34,21 +35,14 @@ namespace Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 /// A tripped topic store whose writes complete asynchronously: each write waits on a gate that is released only after a
 /// delay, so a write that nobody awaits is still pending when the caller moves on.
 /// </summary>
-public sealed class AsynchronouslyWritingTrippedTopicStore(IAmATrippedTopicStore inner) : IAmATrippedTopicStore
+public sealed class AsynchronouslyWritingTrippedTopicStore(IAmATrippedTopicStore inner) : ForwardingTrippedTopicStore(inner)
 {
-    /// <inheritdoc />
-    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => inner.EndExpiredAsync(now, tripLength, cancellationToken);
-
-    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => inner.ReadLiveAsync(now, tripLength, cancellationToken);
-
-    public async Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
+    public override async Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
     {
         var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         _ = ReleaseAfterDelayAsync(gate);
         await gate.Task;
-        return await inner.WriteAsync(trips, cancellationToken);
+        return await base.WriteAsync(trips, cancellationToken);
     }
 
     private static async Task ReleaseAfterDelayAsync(TaskCompletionSource<bool> gate)

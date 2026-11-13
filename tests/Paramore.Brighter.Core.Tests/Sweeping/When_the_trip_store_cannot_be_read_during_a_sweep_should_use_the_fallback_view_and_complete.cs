@@ -29,6 +29,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
+using Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 using Paramore.Brighter.Core.Tests.Sweeping.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Hosting;
@@ -47,7 +48,7 @@ public class SweeperStoreReadFailureTests
         // Arrange
         var marker = $"unreadable-store-{Guid.NewGuid():N}";
         var clock = new FakeTimeProvider();
-        var store = new MarkedReadFailureTrippedTopicStore(new InMemoryTrippedTopicStore(), marker) { FailReads = true };
+        var store = new ReadsFailingOnDemandTrippedTopicStore(new InMemoryTrippedTopicStore(), marker) { FailReads = true };
         var breaker = new DistributedOutboxCircuitBreaker(store, s_options, timeProvider: clock);
         using var outbox = new TwoTopicSweepableOutbox(breaker);
         using var measurements = new RecordedSweeperMeasurements();
@@ -78,7 +79,7 @@ public class SweeperStoreReadFailureTests
         // Arrange
         var marker = $"never-read-store-{Guid.NewGuid():N}";
         var clock = new FakeTimeProvider();
-        var store = new MarkedReadFailureTrippedTopicStore(new InMemoryTrippedTopicStore(), marker) { FailReads = true };
+        var store = new ReadsFailingOnDemandTrippedTopicStore(new InMemoryTrippedTopicStore(), marker) { FailReads = true };
         var breaker = new DistributedOutboxCircuitBreaker(store, s_options, timeProvider: clock);
         using var outbox = new TwoTopicSweepableOutbox(breaker);
         using var measurements = new RecordedSweeperMeasurements();
@@ -106,7 +107,7 @@ public class SweeperStoreReadFailureTests
         var marker = $"recovering-store-{Guid.NewGuid():N}";
         var clock = new FakeTimeProvider();
         var shared = new InMemoryTrippedTopicStore();
-        var store = new MarkedReadFailureTrippedTopicStore(shared, marker) { FailReads = true };
+        var store = new ReadsFailingOnDemandTrippedTopicStore(shared, marker) { FailReads = true };
         var breaker = new DistributedOutboxCircuitBreaker(store, s_options, timeProvider: clock);
         var other = new DistributedOutboxCircuitBreaker(shared, s_options, timeProvider: clock);
         using var outbox = new TwoTopicSweepableOutbox(breaker);

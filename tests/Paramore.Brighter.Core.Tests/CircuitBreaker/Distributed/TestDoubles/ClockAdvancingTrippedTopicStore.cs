@@ -32,17 +32,11 @@ using Paramore.Brighter.CircuitBreaker;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
-public class ClockAdvancingTrippedTopicStore(InMemoryTrippedTopicStore inner, FakeTimeProvider clock, TimeSpan advanceDuringWrite) : IAmATrippedTopicStore
+public class ClockAdvancingTrippedTopicStore(InMemoryTrippedTopicStore inner, FakeTimeProvider clock, TimeSpan advanceDuringWrite) : ForwardingTrippedTopicStore(inner)
 {
-    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => inner.EndExpiredAsync(now, tripLength, cancellationToken);
-
-    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => inner.ReadLiveAsync(now, tripLength, cancellationToken);
-
-    public async Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
+    public override async Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
     {
-        var results = await inner.WriteAsync(trips, cancellationToken);
+        var results = await base.WriteAsync(trips, cancellationToken);
         clock.Advance(advanceDuringWrite);
         return results;
     }

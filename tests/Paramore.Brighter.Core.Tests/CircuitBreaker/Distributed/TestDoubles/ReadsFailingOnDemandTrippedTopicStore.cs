@@ -31,16 +31,20 @@ using Paramore.Brighter.CircuitBreaker;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
-public class ReadsFailingOnDemandTrippedTopicStore(IAmATrippedTopicStore inner) : IAmATrippedTopicStore
+public class ReadsFailingOnDemandTrippedTopicStore(IAmATrippedTopicStore inner, string failureMessage = "The store cannot be read") : ForwardingTrippedTopicStore(inner)
 {
+    private int _liveReadCount;
+
     public bool FailReads { get; set; }
 
-    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => FailReads ? throw new InvalidOperationException("The store cannot be read") : inner.EndExpiredAsync(now, tripLength, cancellationToken);
+    public int LiveReadCount => Volatile.Read(ref _liveReadCount);
 
-    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => inner.ReadLiveAsync(now, tripLength, cancellationToken);
+    public override Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+        => FailReads ? throw new InvalidOperationException(failureMessage) : base.EndExpiredAsync(now, tripLength, cancellationToken);
 
-    public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
-        => inner.WriteAsync(trips, cancellationToken);
+    public override Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    {
+        Interlocked.Increment(ref _liveReadCount);
+        return base.ReadLiveAsync(now, tripLength, cancellationToken);
+    }
 }
