@@ -1043,16 +1043,17 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:447-498`. `tests/Paramore.Brighter.Core.Tests/CommandProcessors/Clear/`.
 
-- [!] **TEST + IMPLEMENT: T2.43a - A third-party async breaker whose batch throws cannot escape a ClearOutbox or Post call** <!-- RALPH-FAILED: all three tests passed on arrival (T2.42 and T2.43 reuse the containment helpers in ClearOutboxAsync); a green-on-arrival TEST + IMPLEMENT is a stop-and-ask. Owner: retag as CHARACTERISE with a named mutation (remove the try/catch in BeginTripBatchOrNull or WriteTripsOrWarnAsync) or drop the task -->
+- [ ] **CHARACTERISE: T2.43a - A third-party async breaker whose batch throws cannot escape a ClearOutbox or Post call**
   - **USE COMMAND**: `/tdd:test-first when a third party async breaker throws from begin trip batch or write during clear outbox should log a warning and throw nothing out of post async`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
   - Test file: `When_a_third_party_trip_batch_throws_during_clear_outbox_should_throw_nothing_out_of_post_async.cs`
   - Test should verify:
     - A third-party async breaker whose `BeginTripBatch` throws: `PostAsync` and `ClearOutboxAsync` log a Warning, trip through sync `TripTopic` and throw nothing.
     - One whose `WriteAsync` throws: the call logs a Warning and throws nothing. When `ClearOutboxAsync` is called directly and a producer double throws a non-send exception during dispatch, that dispatch exception propagates and is not replaced by the batch's.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - 🔁 RED mutations (one per helper; the behaviour already exists because T2.42 and T2.43 reuse the containment helpers in `ClearOutboxAsync`): remove the try/catch in `BeginTripBatchOrNull`, so the begin-throws test fails on its "throws nothing out of `PostAsync`/`ClearOutboxAsync`" assertion; restore it, then remove the try/catch in `WriteTripsOrWarnAsync`, so the write-throws test fails on the same assertion. Revert each.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before committing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Wrap the `BeginTripBatch` and `WriteAsync` that T2.43 added to `ClearOutboxAsync` in the same try/catch with a Warning as T2.42, falling back to sync `TripTopic` when the begin fails.
+    - Nothing. `BeginTripBatchOrNull` and `WriteTripsOrWarnAsync` already contain a third-party batch's throw, with a Warning, for both `PostAsync` and `ClearOutboxAsync`.
   - Covers: NFR-9 ("a Post / ClearOutbox call"). ADR step 10 (containment).
   - Depends on: T2.43, T2.42
   - References: `src/Paramore.Brighter/OutboxProducerMediator.cs:447-498`.
@@ -1116,9 +1117,9 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39, T2.29
   - References: ADR 0089 *Testing strategy* (counting double).
 
-- [!] **CHARACTERISE: T2.48 - Breaker registration stays opt in** <!-- RALPH-FAILED: not writable in tests/Paramore.Brighter.Core.Tests/Sweeping: a real mediator is built only by AddProducers, which needs IBrighterOptions and the internal BrighterResiliencePipelineRegistry registered by BrighterHandlerBuilder; its assembly scan throws on duplicate mappers in Core.Tests and the registry is internal with no InternalsVisibleTo. Owner: move the test to tests/Paramore.Brighter.Extensions.Tests (which already resolves a real mediator, e.g. When_setting_the_options_registry_should_apply_the_pipeline_to_outbox_sends.cs) -->
+- [ ] **CHARACTERISE: T2.48 - Breaker registration stays opt in**
   - **USE COMMAND**: `/tdd:test-first when no circuit breaker is registered and a publish fails should exclude no topic from later sweeps`
-  - Test location: "tests/Paramore.Brighter.Core.Tests/Sweeping"
+  - Test location: "tests/Paramore.Brighter.Extensions.Tests" (a real mediator is built there, as in `When_setting_the_options_registry_should_apply_the_pipeline_to_outbox_sends.cs`; `Core.Tests` cannot build one)
   - Test file: `When_no_circuit_breaker_is_registered_and_a_publish_fails_should_exclude_no_topic.cs`
   - Test should verify:
     - With no `IAmAnOutboxCircuitBreaker` registered, a failed publish leaves later sweeps with no tripped topics.
