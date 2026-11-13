@@ -1778,7 +1778,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 ### Phase 2k - Dependency guard and Phase 2 verification
 
-- [ ] **CHARACTERISE: T2.68 - A core-only project gains no new package**
+- [x] **CHARACTERISE: T2.68 - A core-only project gains no new package**
   - **USE COMMAND**: `/tdd:test-first when a project references only paramore brighter should have no new package in its dependency graph`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Architecture"
   - Test file: `When_a_project_references_only_core_should_have_no_new_package_dependency.cs`
