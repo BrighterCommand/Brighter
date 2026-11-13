@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 
 const int SuccessExitCode = 0;
 const int UsageErrorExitCode = 1;
+const int ToolingFaultExitCode = 1;
 
 // The read-only route resolver (spec 0040, ADR 0089). Run from the repository root:
 // dotnet run .claude/commands/spec/resolve_route.cs -- {specs-root} {mode} [--flows-dir {dir}]
@@ -16,6 +17,11 @@ var invocation = Invocation.Parse(args);
 if (invocation is null)
 {
     return UsageErrorExitCode;
+}
+
+if (!CommandCatalogue.Exists())
+{
+    return ToolingFaultExitCode;
 }
 
 if (invocation.Mode == RouteMode.Definition)
@@ -339,6 +345,8 @@ internal static class CommandCatalogue
     private const string CommandExtension = ".md";
 
     private static readonly Regex SpaceRun = new(" +");
+
+    public static bool Exists() => Directory.Exists(CommandsDirectory);
 
     public static string Collapse(string command) => SpaceRun.Replace(command, " ");
 

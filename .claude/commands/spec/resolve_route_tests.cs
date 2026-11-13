@@ -41,6 +41,7 @@ if (ResolverRuns(repositoryRoot, reporter))
     CheckExpectations(repositoryRoot, reporter);
     CheckUnusualLegacySpecs(repositoryRoot, unusualLegacySpecs, reporter);
     CheckCurrentSpecStates(repositoryRoot, reporter);
+    CheckMissingCommandTree(repositoryRoot, reporter);
 }
 
 CheckNothingWritten(hashesBefore, HashTree(repositoryRoot, FixtureRoot, "specs"), reporter);
@@ -187,6 +188,32 @@ void CheckUnusualLegacySpecs(string root, IEnumerable<string> specNames, Reporte
 
         foreach (var mismatch in Mismatches(expected, JsonNode.Parse(line[ReportPrefix.Length..]), "report"))
             report.Fail(check, mismatch);
+    }
+}
+
+void CheckMissingCommandTree(string root, Reporter report)
+{
+    const string check = "no command tree";
+    report.Checked();
+    var workingDirectory = Directory.CreateTempSubdirectory("routing-no-commands-").FullName;
+    try
+    {
+        Directory.CreateDirectory(Path.Combine(workingDirectory, "specs", "0001-sample"));
+        File.WriteAllText(Path.Combine(workingDirectory, "specs", "0001-sample", "README.md"), "# sample\n");
+
+        var result = RunProcess(workingDirectory, "dotnet",
+            ["run", Path.Combine(root, ResolverScript), "--", "specs", "--spec", "0001-sample", "--flows-dir", Path.Combine(root, ShippedFlows)]);
+
+        if (result.ExitCode != 1)
+            report.Fail(check, $"expected exit 1, got {result.ExitCode}");
+        if (result.Stdout.Length > 0)
+            report.Fail(check, "expected empty standard output");
+        if (SplitLines(result.Stdout).Any(IsRecordLine))
+            report.Fail(check, "expected no record line");
+    }
+    finally
+    {
+        Directory.Delete(workingDirectory, true);
     }
 }
 
