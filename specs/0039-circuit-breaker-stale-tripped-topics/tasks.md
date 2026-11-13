@@ -1841,7 +1841,7 @@ Phase 2 (starts only after T1.15 has merged)
 
 *Scheduled by `/refactor:smells` against Phase 2i (`524b5410a..HEAD`) on 2026-11-11.*
 
-- [ ] **DOC: T2.73 - Decide how BoxType is handled so a new box type cannot fall into the inbox branch**
+- [x] **DOC: T2.73 - Decide how BoxType is handled so a new box type cannot fall into the inbox branch**
   - Smell: Repeated Switches — `SqlBoxProvisioner.cs:90` (`BoxType == BoxType.Outbox ? OutBoxTableName : InBoxTableName` maps every other box type to the inbox table name), `BoxProvisioningHostedService.OrderingOrdinal`, and the `DiscriminatorFor` switch in each backend's detection helper.
   - Refactoring: Replace Conditional with Polymorphism, or Decompose Conditional so `SqlBoxProvisioner` fails loudly on a box type it does not handle. Both change a public signature or behaviour, so this is a decision, not a tidy.
   - Decide which, and write an ADR if the polymorphic route is chosen. A loud failure in `SqlBoxProvisioner` is a behaviour change and goes through `/tdd:test-first`.
