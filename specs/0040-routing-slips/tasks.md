@@ -549,7 +549,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
   - Implementation should: derive gates from the slip (no declaration is needed, FR-27), compute `also_approves_produced` and `previous_approved`, list in `approve_steps` only the steps whose marker-writer is `/spec:approve`, and take `known_kinds.{kind}.producer` from the slip.
   - Traces to: FR-6 (gate reporting), FR-27; AC-55, AC-58, AC-61, AC-73 (resolver side); 0089 step 5 (gates). Depends on: T6.7.
 
-- [ ] **TEST + IMPLEMENT: T6.9 — Detours attached to the next step, or to the hand-off, are reported in file order with their return points**
+- [x] **TEST + IMPLEMENT: T6.9 — Detours attached to the next step, or to the hand-off, are reported in file order with their return points**
   - **USE COMMAND**: none — RED-first rows `legacy-all-approved-edited` (`flows: "flows-edited"`), and `spike-step-spike-entry` extended.
   - Fixture (per O-1):
     - Bring forward `flows-edited/` from 0092 step 7: `feature.flow` plus `detour: /refactor:smells @ hand-off -> hand-off`, and `approvals.md` as in the primary.
