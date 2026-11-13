@@ -23,6 +23,9 @@
         "message": ".claude/test-fixtures/routing/flows-name-mismatch/feature.flow declares flow some-other-flow, which differs from its filename."
       }
     ],
-    "stop": null
+    "stop": {
+      "reason": "invalid",
+      "message": "The route is invalid: .claude/test-fixtures/routing/flows-name-mismatch/feature.flow declares flow some-other-flow, which differs from its filename. Fix .claude/test-fixtures/routing/flows-name-mismatch/feature.flow or .claude/test-fixtures/routing/flows-name-mismatch/approvals.md; no re-copy is needed."
+    }
   }
 }

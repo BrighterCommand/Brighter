@@ -21,6 +21,10 @@
       "commands": [],
       "unattended_driver": null,
       "detours": []
+    },
+    "stop": {
+      "reason": "invalid",
+      "message": "The slip is invalid: Step design names a command that does not exist, /spec:designx. Re-copy the flow with {route-change command} feature <reason>, after fixing .claude/test-fixtures/routing/flows/feature.flow if the fault is there."
     }
   }
 }

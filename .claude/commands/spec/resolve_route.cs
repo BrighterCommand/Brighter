@@ -179,6 +179,9 @@ internal static class SlipSyntax
 
     public static string DeclaredName(IReadOnlyList<string> lines) => lines[0][FlowLinePrefix.Length..];
 
+    public static string? WellFormedName(IReadOnlyList<string> lines) =>
+        FlowLine.IsMatch(lines[0]) ? DeclaredName(lines) : null;
+
     public static int StepCount(IReadOnlyList<string> lines) => StepRows(lines).Count();
 
     public static IReadOnlyList<int> LinesAfterHandOff(IReadOnlyList<string> lines) =>
@@ -685,21 +688,21 @@ internal static class DefinitionReport
     public static JsonObject For(Invocation invocation)
     {
         var name = invocation.Target!;
+        var directory = invocation.FlowsDirectory!.TrimEnd('/');
         if (!SlipSyntax.IsFlowName(name))
         {
-            return Build(name, false, [Malformed("bad name", $"{name} is not a valid flow name.")]);
+            return Build(name, false, [Malformed("bad name", $"{name} is not a valid flow name.")], directory);
         }
 
-        var directory = invocation.FlowsDirectory!.TrimEnd('/');
         var path = $"{directory}/{name}{FlowExtension}";
         if (!File.Exists(path))
         {
-            return Build(name, false, [Malformed("definition missing", $"Flow {name} has no definition at {path}.")]);
+            return Build(name, false, [Malformed("definition missing", $"Flow {name} has no definition at {path}.")], directory);
         }
 
         var table = ApprovalTableReader.Read($"{directory}/{ApprovalTableFile}");
         var lines = SlipReader.ReadLines(path);
-        return Build(name, true, Violations(name, path, lines, table));
+        return Build(name, true, Violations(name, path, lines, table), directory);
     }
 
     public static IReadOnlyList<Violation> Violations(string name, string path, IReadOnlyList<string> lines, ApprovalTable table) =>
@@ -713,7 +716,7 @@ internal static class DefinitionReport
     private static Violation Malformed(string detail, string message) =>
         new(MalformedRule, MalformedCode, null, detail, message);
 
-    private static JsonObject Build(string name, bool present, IReadOnlyList<Violation> violations) => new()
+    private static JsonObject Build(string name, bool present, IReadOnlyList<Violation> violations, string flowsDirectory) => new()
     {
         ["schema_version"] = ReportSchema.Version,
         ["mode"] = "definition",
@@ -725,7 +728,7 @@ internal static class DefinitionReport
         },
         ["valid"] = violations.Count == 0,
         ["violations"] = new JsonArray(violations.Select(violation => (JsonNode)violation.ToJson()).ToArray()),
-        ["stop"] = null
+        ["stop"] = InvalidStop.When(violations, new FlowIdentity(name, "definition", present), flowsDirectory)
     };
 }
 
@@ -788,10 +791,11 @@ internal static class SpecReport
     private static JsonObject ResolveSlip(string specPath, string slipPath, string flowsDirectory, ApprovalTable table)
     {
         var lines = SlipReader.ReadLines(slipPath);
-        var name = SlipSyntax.DeclaredName(lines);
-        var definitionPresent = File.Exists($"{flowsDirectory}/{name}.flow");
-        var violations = DefinitionReport.Violations(name, slipPath, lines, table);
-        return RouteResolver.Resolve(specPath, new FlowIdentity(name, "slip", definitionPresent), lines, violations, table, new SpecStateReader(specPath, StrayMarkers(specPath, flowsDirectory, lines)));
+        var name = SlipSyntax.WellFormedName(lines);
+        var definitionPresent = name is not null && File.Exists($"{flowsDirectory}/{name}.flow");
+        var violations = DefinitionReport.Violations(name ?? string.Empty, slipPath, lines, table);
+        var flow = new FlowIdentity(name, "slip", definitionPresent);
+        return RouteResolver.Resolve(specPath, flow, lines, violations, InvalidStop.When(violations, flow, flowsDirectory), table, new SpecStateReader(specPath, StrayMarkers(specPath, flowsDirectory, lines)));
     }
 
     private static JsonObject ResolveLegacy(string specPath, string flowsDirectory, ApprovalTable table)
@@ -799,7 +803,8 @@ internal static class SpecReport
         var flowPath = $"{flowsDirectory}/{LegacyFlow}.flow";
         var lines = SlipReader.ReadLines(flowPath);
         var violations = DefinitionReport.Violations(LegacyFlow, flowPath, lines, table);
-        return RouteResolver.Resolve(specPath, new FlowIdentity(LegacyFlow, "default", true), lines, violations, table, new SpecStateReader(specPath, StrayMarkers(specPath, flowsDirectory, lines)));
+        var flow = new FlowIdentity(LegacyFlow, "default", true);
+        return RouteResolver.Resolve(specPath, flow, lines, violations, InvalidStop.When(violations, flow, flowsDirectory), table, new SpecStateReader(specPath, StrayMarkers(specPath, flowsDirectory, lines)));
     }
 
     public static IReadOnlyList<string> Kinds => KnownKinds;
@@ -829,6 +834,36 @@ internal static class SpecReport
                 .Where(name => !name.StartsWith('.'))
                 .FirstOrDefault(name => string.Equals(name, target, StringComparison.Ordinal))
             : null;
+}
+
+internal static class InvalidStop
+{
+    private const string RouteChangePlaceholder = "{route-change command}";
+
+    public static JsonObject For(IReadOnlyList<Violation> violations, FlowIdentity flow, string flowsDirectory)
+    {
+        var directory = flowsDirectory.TrimEnd('/');
+        var first = violations[0];
+        return new JsonObject
+        {
+            ["reason"] = "invalid",
+            ["message"] = flow.Source switch
+            {
+                "definition" => $"Flow {flow.Name} is invalid: {first.Message} Fix or add {directory}/{flow.Name}.flow or {directory}/approvals.md.",
+                "slip" when first.Rule != "R12" => $"The slip is invalid: {first.Message} {Recopy(flow.Name, directory)}",
+                _ when first.Rule == "R12" => $"The route is invalid: {first.Message} Fix {directory}/approvals.md; no re-copy is needed.",
+                _ => $"The route is invalid: {first.Message} Fix {directory}/{flow.Name}.flow or {directory}/approvals.md; no re-copy is needed."
+            }
+        };
+    }
+
+    private static string Recopy(string? flowName, string directory) =>
+        flowName is null
+            ? $"Re-copy the flow with {RouteChangePlaceholder} <flow> <reason>."
+            : $"Re-copy the flow with {RouteChangePlaceholder} {flowName} <reason>, after fixing {directory}/{flowName}.flow if the fault is there.";
+
+    public static JsonNode? When(IReadOnlyList<Violation> violations, FlowIdentity flow, string flowsDirectory) =>
+        violations.Count == 0 ? null : For(violations, flow, flowsDirectory);
 }
 
 internal sealed record CurrentSpecState(string Name, string? Value);
@@ -903,11 +938,11 @@ internal static class CurrentReport
         state.Name == "stale" ? $"stale: names '{state.Value}'" : state.Name;
 }
 
-internal sealed record FlowIdentity(string Name, string Source, bool DefinitionPresent);
+internal sealed record FlowIdentity(string? Name, string Source, bool DefinitionPresent);
 
 internal static class RouteResolver
 {
-    public static JsonObject Resolve(string specPath, FlowIdentity flow, IReadOnlyList<string> lines, IReadOnlyList<Violation> violations, ApprovalTable table, SpecStateReader state)
+    public static JsonObject Resolve(string specPath, FlowIdentity flow, IReadOnlyList<string> lines, IReadOnlyList<Violation> violations, JsonNode? stop, ApprovalTable table, SpecStateReader state)
     {
         var steps = SlipSyntax.Steps(lines);
         var approved = steps.Select(state.Approved).ToList();
@@ -930,7 +965,7 @@ internal static class RouteResolver
             ["next"] = violations.Count > 0 ? InvalidNextJson() : unapproved.Count == 0 ? HandOffNextJson(SlipSyntax.HandOffCommand(lines), DetoursJson(lines, HandOffAttachPoint)) : NextJson(unapproved[0], state, DetoursJson(lines, unapproved[0].Name)),
             ["hand_off"] = HandOffJson(SlipSyntax.HandOffCommand(lines), unapproved),
             ["approve_steps"] = new JsonArray(steps.Where(step => step.MarkerWriter == ApproveCommand(step.Name)).Select(step => (JsonNode)step.Name).ToArray()),
-            ["stop"] = null
+            ["stop"] = stop
         };
     }
 
