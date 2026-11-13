@@ -17,8 +17,17 @@ const string FixtureRoot = ".claude/test-fixtures/routing";
 const string FixtureSpecs = FixtureRoot + "/specs";
 const string ResolverScript = ".claude/commands/spec/resolve_route.cs";
 const string ShippedFlows = ".claude/flows";
+const string RepositorySpecs = "specs";
 const string ReportPrefix = "route-report: ";
 const string CurrentPrefix = "route-current: ";
+
+string[] unusualLegacySpecs =
+[
+    "0036-scoped-lifetime-per-pipeline",
+    "0036-universal-transport-conformance-tests",
+    "0031-test_naming_conventions",
+    "0028-box-provisioning-rdd-role-interfaces"
+];
 
 var knownKeys = new[] { "run", "flows", "exit", "report" };
 var reporter = new Reporter();
@@ -28,7 +37,10 @@ CheckMatcherSelfTest(reporter);
 var hashesBefore = HashTree(repositoryRoot, FixtureRoot, "specs");
 
 if (ResolverRuns(repositoryRoot, reporter))
+{
     CheckExpectations(repositoryRoot, reporter);
+    CheckUnusualLegacySpecs(repositoryRoot, unusualLegacySpecs, reporter);
+}
 
 CheckNothingWritten(hashesBefore, HashTree(repositoryRoot, FixtureRoot, "specs"), reporter);
 
@@ -147,6 +159,34 @@ void CheckReport(Expectation expectation, ProcessResult result, string check, Re
     var actual = JsonNode.Parse(line[ReportPrefix.Length..]);
     foreach (var mismatch in Mismatches(expectation.Report, actual, "report"))
         report.Fail(check, mismatch);
+}
+
+void CheckUnusualLegacySpecs(string root, IEnumerable<string> specNames, Reporter report)
+{
+    var expected = JsonNode.Parse("""
+        {
+          "flow": { "name": "feature", "source": "default" },
+          "valid": true,
+          "stray_markers": [],
+          "next": { "commands": ["/spec:implement"] }
+        }
+        """);
+
+    foreach (var name in specNames)
+    {
+        var check = $"existing spec {name}";
+        report.Checked();
+        var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", RepositorySpecs, "--spec", name, "--flows-dir", ShippedFlows]);
+        var line = SplitLines(result.Stdout).LastOrDefault(l => l.StartsWith(ReportPrefix, StringComparison.Ordinal));
+        if (result.ExitCode != 0 || line == null)
+        {
+            report.Fail(check, $"expected a route-report line and exit 0, got exit {result.ExitCode}");
+            continue;
+        }
+
+        foreach (var mismatch in Mismatches(expected, JsonNode.Parse(line[ReportPrefix.Length..]), "report"))
+            report.Fail(check, mismatch);
+    }
 }
 
 void CheckMatcherSelfTest(Reporter report)
