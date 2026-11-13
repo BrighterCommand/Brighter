@@ -1117,7 +1117,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Depends on: T2.39, T2.29
   - References: ADR 0089 *Testing strategy* (counting double).
 
-- [ ] **CHARACTERISE: T2.48 - Breaker registration stays opt in**
+- [x] **CHARACTERISE: T2.48 - Breaker registration stays opt in**
   - **USE COMMAND**: `/tdd:test-first when no circuit breaker is registered and a publish fails should exclude no topic from later sweeps`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests" (a real mediator is built there, as in `When_setting_the_options_registry_should_apply_the_pipeline_to_outbox_sends.cs`; `Core.Tests` cannot build one)
   - Test file: `When_no_circuit_breaker_is_registered_and_a_publish_fails_should_exclude_no_topic.cs`
