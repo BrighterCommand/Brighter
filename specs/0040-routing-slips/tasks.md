@@ -672,7 +672,7 @@ Depends on Phase 6.*
   - Implementation should: resolve every spec in one process (NFR-4). Order lines by ordinal directory name.
   - Traces to: 0089 step 6, *The route report* (`--all`); 0092 step 6, *Repository checks*; FR-15, FR-24, FR-5; NFR-4, NFR-6; AC-4, AC-29 (resolver side). Depends on: T8.3.
 
-- [ ] **TEST + IMPLEMENT: T8.5 — A shared violation (R12, or `feature.flow` for a legacy spec) is reported once on the `route-current:` line and on no summary line**
+- [x] **TEST + IMPLEMENT: T8.5 — A shared violation (R12, or `feature.flow` for a legacy spec) is reported once on the `route-current:` line and on no summary line**
   - **USE COMMAND**: `/tdd:test-first when the resolver runs --all over specs with --flows-dir flows-invalid it should list each shared violation once in shared_violations and omit it from every summary line`
   - Test file: `resolve_route_tests.cs` (`--all` over `specs/` with `flows-invalid`).
   - Test should verify:
