@@ -583,7 +583,7 @@ This rule applies to spec 0040 only. It changes nothing in `CLAUDE.md` or `.agen
 
 Depends on Phase 6.*
 
-- [ ] **TEST + IMPLEMENT: T7.1 — Adding `light` takes one definition and its fixtures, and every `light` assertion of FR-25 passes with no change under `.claude/commands/`**
+- [x] **TEST + IMPLEMENT: T7.1 — Adding `light` takes one definition and its fixtures, and every `light` assertion of FR-25 passes with no change under `.claude/commands/`**
   - **USE COMMAND**: none — RED-first is not available, because the rows are expected green. **Characterise** with these named mutations to `resolve_route.cs` (never committed):
     - (m1) Make the first step's precondition require a `requirements`-kind step approved. `light-nothing`'s `design` precondition must FAIL.
     - (m2) Drop hand-off detours from `next`. `light-done` must FAIL.
