@@ -1,0 +1,10 @@
+# flow: light
+
+| Step | Kind | Producer | Artefacts | Marker | Marker-writer |
+| --- | --- | --- | --- | --- | --- |
+| design | design | /spec:design | .adr-list | .design-approved | /spec:approve design |
+| tasks | tasks | /spec:tasks | tasks.md | .tasks-approved | /spec:approve tasks |
+
+hand-off: /spec:implement
+
+detour: /refactor:smells @ hand-off -> hand-off
