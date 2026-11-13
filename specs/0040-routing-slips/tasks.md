@@ -630,7 +630,7 @@ Depends on Phase 6.*
 
 *0092 step 6 with 0089 step 6. Depends on Phase 7.*
 
-- [ ] **TEST + IMPLEMENT: T8.1 — `--current` classifies `.current-spec` as missing, empty or stale, stops with FR-20's recoveries, and otherwise resolves the named spec**
+- [x] **TEST + IMPLEMENT: T8.1 — `--current` classifies `.current-spec` as missing, empty or stale, stops with FR-20's recoveries, and otherwise resolves the named spec**
   - **USE COMMAND**: `/tdd:test-first when the resolver runs --current with specs/.current-spec missing zero-byte whitespace-only naming 0099-gone or naming a valid spec with a trailing newline it should report current-spec-missing empty empty stale or ok`
   - Test file: `resolve_route_tests.cs` generated `.current-spec` roots, under `Directory.CreateTempSubdirectory()`, deleted in a `finally`.
   - Test should verify:
