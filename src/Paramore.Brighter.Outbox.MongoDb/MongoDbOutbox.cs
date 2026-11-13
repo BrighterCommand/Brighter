@@ -10,6 +10,7 @@ namespace Paramore.Brighter.Outbox.MongoDb;
 public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Message, IClientSessionHandle>,
     IAmAnOutboxSync<Message, IClientSessionHandle>, IAmACausationTrackingOutbox, IAmATopicCountingOutbox
 {
+    private static readonly TimeSpan s_defaultOutstandingCountTimeout = TimeSpan.FromSeconds(15);
     private const int MAX_TOPIC_AGE_DAYS = 365;
 
     /// <summary>
@@ -983,8 +984,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             options: Configuration.InstrumentationOptions);
         try
         {
+            using var timeout = CreateOutstandingCountTimeout();
             var count = Collection.CountDocuments(CreateOutstandingCountFilter(dispatchedSince, args),
-                new CountOptions { Limit = maxCount == 0 ? null : maxCount });
+                new CountOptions { Limit = maxCount == 0 ? null : maxCount }, timeout.Token);
             span?.AddTag("db.response.returned_rows", 1);
             return checked((int)count);
         }
@@ -1004,8 +1006,10 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             options: Configuration.InstrumentationOptions);
         try
         {
+            using var timeout = CreateOutstandingCountTimeout();
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
             var count = await Collection.CountDocumentsAsync(CreateOutstandingCountFilter(dispatchedSince, args),
-                new CountOptions { Limit = maxCount == 0 ? null : maxCount }, cancellationToken)
+                new CountOptions { Limit = maxCount == 0 ? null : maxCount }, linkedCancellation.Token)
                 .ConfigureAwait(ContinueOnCapturedContext);
             span?.AddTag("db.response.returned_rows", 1);
             return checked((int)count);
@@ -1015,6 +1019,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             Tracer?.EndSpan(span);
         }
     }
+
+    private CancellationTokenSource CreateOutstandingCountTimeout()
+        => Configuration.TimeProvider.CreateCancellationTokenSource(Configuration.OutstandingCountTimeout ?? s_defaultOutstandingCountTimeout);
 
     private FilterDefinition<OutboxMessage> CreateOutstandingCountFilter(TimeSpan dispatchedSince, Dictionary<string, object>? args)
     {
