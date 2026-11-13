@@ -641,7 +641,7 @@ Depends on Phase 6.*
   - Implementation should: add `CurrentSpecLocator` and stop-ladder rows 1–3. The stale check is an ordinal comparison against the directory list.
   - Traces to: 0089 step 6, *The stop ladder*; FR-20, FR-6; AC-39, AC-42, AC-82. Depends on: T7.2.
 
-- [ ] **TEST + IMPLEMENT: T8.2 — An invalid slip sets `stop` to `invalid`, with the recovery that fits where the fault lies**
+- [x] **TEST + IMPLEMENT: T8.2 — An invalid slip sets `stop` to `invalid`, with the recovery that fits where the fault lies**
   - **USE COMMAND**: none — RED-first rows: extend `copy-invalid` and `definition-r04-unknown-command`; add `legacy-nothing-invalid` (`flows: "flows-invalid"`).
   - Test should verify:
     - `copy-invalid`: `stop.reason` is `invalid`, and the message quotes the R4 violation and names the re-copy with the placeholder `{route-change command}` and a reason (AC-70, resolver side).
