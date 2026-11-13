@@ -601,7 +601,7 @@ Depends on Phase 6.*
   - Implementation should: none. This is fixture-only. `git diff --stat HEAD~1 -- .claude/commands/` is empty after the commit (AC-48).
   - Traces to: 0092 step 5; FR-25, FR-2, FR-30; AC-8, AC-12, AC-15, AC-18, AC-21, AC-23, AC-48, AC-66, AC-84. Depends on: T6.10.
 
-- [ ] **TEST + IMPLEMENT: T7.2 — Adding `bugfix` takes one definition, one empty `diagnosis` entry and its fixtures, and every FR-28 and gate-state assertion passes with no change under `.claude/commands/` or `bugfixes/`**
+- [x] **TEST + IMPLEMENT: T7.2 — Adding `bugfix` takes one definition, one empty `diagnosis` entry and its fixtures, and every FR-28 and gate-state assertion passes with no change under `.claude/commands/` or `bugfixes/`**
   - **USE COMMAND**: none — **Characterise** with these named mutations to `resolve_route.cs` (never committed):
     - (m1) Treat every kind as reviewable in ladder row 4. `bugfix-diagnosed` must FAIL with `/spec:review diagnosis`.
     - (m2) Compute `also_approves_produced` as always false. `bugfix-nothing`'s `gates` must FAIL.
