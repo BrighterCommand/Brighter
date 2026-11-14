@@ -27,6 +27,8 @@ Amended 2026-11-07, during Phase 2 implementation: the three SQL trip stores der
 
 Amended 2026-11-09, during Phase 2 implementation, with the owner's approval: the store's one `ReadAsync`, which marked expired rows ended and returned both the marked rows and the live rows, is split into `EndExpiredAsync` and `ReadLiveAsync`. A review of the SQL stores found that a read that changes the table hides its side effect: a second call returns different rows, and nothing in the name or the contract says so. `EndExpiredAsync` is the one atomic claim and keeps the guarantee that each ended row goes to exactly one caller. `ReadLiveAsync` changes nothing. The breaker makes both calls under one `StoreTimeout`, so a sweep's worst case does not change. See *How a read ends trips*, *`IAmATrippedTopicStore`* and alternative 16. Every other decision stands: the roles, the table, the write, the ended marker, soft delete and the constructors.
 
+Amended 2026-11-14, during Phase 2 implementation, with the owner's approval: `EndExpiredAsync` and `ReadLiveAsync` take one `TripWindow` in place of the pair `(now, tripLength)`. A smells review found the pair a data clump that every store, and the breaker, carried together and combined the same way (`now - tripLength`). `TripWindow` is a public `readonly record struct TripWindow(DateTimeOffset Now, TimeSpan TripLength)` in `Paramore.Brighter.CircuitBreaker` with a computed `Cutoff`, which is `Now - TripLength`. The types are unreleased, so the signature changes before release. Behaviour is unchanged.
+
 ## Context
 
 The outbox sweeper leaves a circuit-broken topic out of its sweeps until the topic's cooldown ends. Today the cooldown is a count of sweeps, kept in each process, and it advances only on a sweep that obtained the distributed lock. An instance that stops obtaining the lock keeps its trips for ever, and when it next obtains the lock it holds back messages for a topic whose broker recovered long ago. No other instance can see or end those trips, and the health signals hide them rather than end them.
@@ -225,7 +227,7 @@ Before it applies a row 4 or 5 outcome, the writer checks the stored stamp in th
 
 #### How a read ends trips
 
-A read is two store calls, made in this order and under one `StoreTimeout`. `EndExpiredAsync` marks as ended every unmarked row whose stamp is at or before the reader's clock minus the trip length, and returns exactly the rows it marked. `ReadLiveAsync` then returns the unmarked rows whose stamp is after that cutoff. Only `EndExpiredAsync` changes the table. `ReadLiveAsync` changes nothing, so a caller can repeat it freely. The reader announces one Reset for each row `EndExpiredAsync` returned. A second instance's `EndExpiredAsync` finds no unmarked row to mark, so it announces nothing. The marking has committed by the time `ReadLiveAsync` runs, and no other instance can announce those rows, so the reader announces them even when `ReadLiveAsync` then fails or times out. The store never deletes rows, so the application's database user needs no `DELETE` permission. A separate purge script, run under a different account, removes ended rows (see *The trip table and the SQL stores*). An instance whose read merely finds a row already ended announces nothing (FR-4.4).
+A read is two store calls, made in this order and under one `StoreTimeout`. `EndExpiredAsync` marks as ended every unmarked row whose stamp is at or before the window's cutoff (the reader's clock minus the trip length), and returns exactly the rows it marked. `ReadLiveAsync` then returns the unmarked rows whose stamp is after that cutoff. Both calls take the same `TripWindow`. Only `EndExpiredAsync` changes the table. `ReadLiveAsync` changes nothing, so a caller can repeat it freely. The reader announces one Reset for each row `EndExpiredAsync` returned. A second instance's `EndExpiredAsync` finds no unmarked row to mark, so it announces nothing. The marking has committed by the time `ReadLiveAsync` runs, and no other instance can announce those rows, so the reader announces them even when `ReadLiveAsync` then fails or times out. The store never deletes rows, so the application's database user needs no `DELETE` permission. A separate purge script, run under a different account, removes ended rows (see *The trip table and the SQL stores*). An instance whose read merely finds a row already ended announces nothing (FR-4.4).
 
 A re-trip that races the update is never lost (NFR-5). If the upsert commits first, the row's stamp is fresh and the update does not match it. If the update commits first, the upsert revives the ended row and announces a Trip when its stamp is later than the ended stamp, and otherwise leaves the row ended and announces nothing.
 
@@ -423,9 +425,14 @@ Implementing this interface is the declaration that a breaker shares trips (FR-8
 ```csharp
 public interface IAmATrippedTopicStore
 {
-    Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default);
+}
+
+public readonly record struct TripWindow(DateTimeOffset Now, TimeSpan TripLength)
+{
+    public DateTimeOffset Cutoff => Now - TripLength;
 }
 
 public readonly record struct TopicTrip(RoutingKey Topic, DateTimeOffset TripTime);
@@ -434,8 +441,8 @@ public readonly record struct TripWriteResult(RoutingKey Topic, DateTimeOffset? 
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| `EndExpiredAsync` | the reader's clock, and the trip length | The unmarked rows stamped at or before `now` minus `tripLength` that this call marked ended, with `EndedAt` set to `now`. A row is returned to exactly one caller | Throws on a store failure. Honours the token |
-| `ReadLiveAsync` | the reader's clock, and the trip length | The unmarked rows stamped after `now` minus `tripLength`. Changes nothing | Throws on a store failure. Honours the token |
+| `EndExpiredAsync` | the window: the reader's clock (`Now`) and the trip length | The unmarked rows stamped at or before `window.Cutoff` that this call marked ended, with `EndedAt` set to `window.Now`. A row is returned to exactly one caller | Throws on a store failure. Honours the token |
+| `ReadLiveAsync` | the window: the reader's clock (`Now`) and the trip length | The unmarked rows stamped after `window.Cutoff`. Changes nothing | Throws on a store failure. Honours the token |
 | `WriteAsync` | distinct topics with stamps | Per topic, the prior stamp (null when the row was inserted or was marked ended, whether it is revived or not), the stored stamp, which is the later of the two, and `LeftEnded`, true when the row is marked ended after the write | `ArgumentException` for duplicate topics. Throws on a store failure. All-or-nothing in one transaction. Rows are written in ordinal topic order |
 
 The breaker enforces `StoreTimeout` around every call in two ways. It passes a token from `TimeProvider.CreateCancellationTokenSource`, and it stops waiting through `WaitAsync` on the breaker's `TimeProvider`. Both are available on `netstandard2.0` through `Microsoft.Bcl.TimeProvider`, which core already references. An abandoned store task has a continuation that observes its exception, so the exception is never unobserved. The two calls of a read count as one call here: one token, one wait, so a read costs at most one `StoreTimeout`.
