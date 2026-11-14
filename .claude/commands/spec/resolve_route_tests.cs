@@ -16,6 +16,8 @@ var repositoryRoot = Directory.GetCurrentDirectory();
 const string FixtureRoot = ".claude/test-fixtures/routing";
 const string FixtureSpecs = FixtureRoot + "/specs";
 const string ResolverScript = ".claude/commands/spec/resolve_route.cs";
+const string ShowMeScript = ".claude/commands/spec/show_me_facts.cs";
+const string LedgerFileName = ".show-me-ledger.json";
 const string ShippedFlows = ".claude/flows";
 const string RepositorySpecs = "specs";
 const string ReportPrefix = "route-report: ";
@@ -29,7 +31,7 @@ string[] unusualLegacySpecs =
     "0028-box-provisioning-rdd-role-interfaces"
 ];
 
-var knownKeys = new[] { "run", "flows", "exit", "report" };
+var knownKeys = new[] { "run", "flows", "exit", "report", "show_me", "ledger" };
 var reporter = new Reporter();
 
 CheckMatcherSelfTest(reporter);
@@ -92,6 +94,12 @@ void CheckExpectation(string file, string root, Reporter report)
     if (expectation == null)
         return;
 
+    if (expectation.ShowMe != null)
+    {
+        CheckShowMe(expectation, root, check, report);
+        return;
+    }
+
     var first = RunResolver(root, expectation.Run, expectation.Flows);
     var second = RunResolver(root, expectation.Run, expectation.Flows);
     if (first.Stdout != second.Stdout)
@@ -130,7 +138,8 @@ Expectation? ParseExpectation(string file, string check, Reporter report)
 
 Expectation? BuildExpectation(JsonObject document, string check, Reporter report)
 {
-    if (document["run"] is not JsonArray run || run.Any(item => item is not JsonValue))
+    var showMe = document["show_me"]?.GetValue<string>();
+    if (showMe == null && (document["run"] is not JsonArray || document["run"]!.AsArray().Any(item => item is not JsonValue)))
     {
         report.Fail(check, "\"run\" must be an array of mode arguments");
         return null;
@@ -138,10 +147,68 @@ Expectation? BuildExpectation(JsonObject document, string check, Reporter report
 
     var flows = document["flows"]?.GetValue<string>();
     return new Expectation(
-        run.Select(item => item!.GetValue<string>()).ToList(),
+        document["run"]?.AsArray().Select(item => item!.GetValue<string>()).ToList() ?? [],
         flows == null ? ShippedFlows : $"{FixtureRoot}/{flows}",
         document["exit"]?.GetValue<int>() ?? 0,
-        document["report"]);
+        document["report"],
+        showMe,
+        flows != null,
+        document["ledger"]);
+}
+
+void CheckShowMe(Expectation expectation, string root, string check, Reporter report)
+{
+    var target = $"{FixtureSpecs}/{expectation.ShowMe}";
+    var ledgerPath = Path.Combine(root, target, LedgerFileName);
+    var preExisting = File.Exists(ledgerPath) ? File.ReadAllBytes(ledgerPath) : null;
+
+    var result = RunShowMe(root, target, expectation);
+    var ledger = File.Exists(ledgerPath) ? TryParseJson(File.ReadAllText(ledgerPath)) : null;
+    RestoreLedger(ledgerPath, preExisting);
+
+    CheckExit(expectation, result, check, report);
+    CheckLedger(expectation, ledger, check, report);
+}
+
+ProcessResult RunShowMe(string root, string target, Expectation expectation)
+{
+    string[] flowsArguments = expectation.HasFlows ? ["--flows-dir", expectation.Flows] : [];
+    return RunProcess(root, "dotnet", ["run", ShowMeScript, "--", target, .. flowsArguments]);
+}
+
+void RestoreLedger(string ledgerPath, byte[]? preExisting)
+{
+    if (preExisting != null)
+        File.WriteAllBytes(ledgerPath, preExisting);
+    else if (File.Exists(ledgerPath))
+        File.Delete(ledgerPath);
+}
+
+JsonNode? TryParseJson(string text)
+{
+    try
+    {
+        return JsonNode.Parse(text);
+    }
+    catch (JsonException)
+    {
+        return null;
+    }
+}
+
+void CheckLedger(Expectation expectation, JsonNode? ledger, string check, Reporter report)
+{
+    if (expectation.Ledger == null)
+        return;
+
+    if (ledger == null)
+    {
+        report.Fail(check, "expected a ledger, got none");
+        return;
+    }
+
+    foreach (var mismatch in Mismatches(expectation.Ledger, ledger, "ledger"))
+        report.Fail(check, mismatch);
 }
 
 void CheckExit(Expectation expectation, ProcessResult result, string check, Reporter report)
@@ -820,7 +887,8 @@ Dictionary<string, string> HashTree(string root, params string[] directories)
 {
     var hashes = new Dictionary<string, string>();
     foreach (var directory in directories.Select(d => Path.Combine(root, d)).Where(Directory.Exists))
-    foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+    foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
+        .Where(file => Path.GetFileName(file) != LedgerFileName))
         hashes[Path.GetRelativePath(root, file).Replace('\\', '/')] =
             Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file)));
     return hashes;
@@ -906,7 +974,7 @@ internal static class FeatureOracle
 
 internal sealed record CurrentSpecCase(string Name, string? Content, string State, string? Value, string? StopReason, string[] MessageParts);
 
-internal sealed record Expectation(IReadOnlyList<string> Run, string Flows, int Exit, JsonNode? Report);
+internal sealed record Expectation(IReadOnlyList<string> Run, string Flows, int Exit, JsonNode? Report, string? ShowMe = null, bool HasFlows = false, JsonNode? Ledger = null);
 
 internal sealed class Reporter
 {
