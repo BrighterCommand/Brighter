@@ -744,7 +744,7 @@ Depends on Phase 6.*
   - Implementation should: replace each CR LF pair with LF before hashing, and normalise nothing else.
   - Traces to: FR-16 (a, CRLF clause), FR-24; AC-32. Depends on: T9.2.
 
-- [ ] **TEST + IMPLEMENT: T9.4 — Tamper case (b): a record with no `.flow` is tampered, resolves like a legacy spec, and reports the recorded flow**
+- [x] **TEST + IMPLEMENT: T9.4 — Tamper case (b): a record with no `.flow` is tampered, resolves like a legacy spec, and reports the recorded flow**
   - **USE COMMAND**: none — RED-first row `tamper-b-record-only`.
   - Fixture: `tamper-b-record-only/`, holding a record with `flow: light` and no `.flow`.
   - Test should verify: `tampered {true, "b", "light"}`; `flow.name` `feature`, source `default`.
