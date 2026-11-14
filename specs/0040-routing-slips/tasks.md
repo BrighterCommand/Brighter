@@ -734,7 +734,7 @@ Depends on Phase 6.*
   - Implementation should: add `RouteRecordInspector` with record parsing (three patterns, CRLF and trailing whitespace tolerated) and a raw-byte SHA-256 of `.flow`.
   - Traces to: 0091 step 1, *The creation record*, *`RouteRecordInspector`*; FR-16 (a); AC-31. Depends on: T9.1.
 
-- [ ] **TEST + IMPLEMENT: T9.3 — A `.flow` that differs from its record only by CRLF line endings is not tampered, and a spec directory name with spaces resolves exactly**
+- [x] **TEST + IMPLEMENT: T9.3 — A `.flow` that differs from its record only by CRLF line endings is not tampered, and a spec directory name with spaces resolves exactly**
   - **USE COMMAND**: `/tdd:test-first when a spec's .flow differs from its record only by CRLF line endings the resolver should report it not tampered and valid`
   - Test file: `resolve_route_tests.cs`, generated `gen-crlf` and `gen-name with spaces`.
   - Test should verify:
