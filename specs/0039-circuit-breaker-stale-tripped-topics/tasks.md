@@ -1848,7 +1848,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Decide which, and write an ADR if the polymorphic route is chosen. A loud failure in `SqlBoxProvisioner` is a behaviour change and goes through `/tdd:test-first`.
   - Depends on: T2.62
 
-- [ ] **DOC: T2.74 - Amend ADR 0089 so the store contract takes a `TripWindow` in place of `(now, tripLength)`**
+- [x] **DOC: T2.74 - Amend ADR 0089 so the store contract takes a `TripWindow` in place of `(now, tripLength)`**
   - Smell: Data Clumps (Phase 2h smells review, finding 2). `IAmATrippedTopicStore.EndExpiredAsync` and `ReadLiveAsync` take `(DateTimeOffset now, TimeSpan tripLength)`, and every store derives `now - tripLength` itself. The types are unreleased, so the public signature can change now.
   - Amend the contract block (`EndExpiredAsync(TripWindow window, CancellationToken)` and `ReadLiveAsync(TripWindow window, CancellationToken)`), the two operation-table rows, and the read description. A `TripWindow` is a public `readonly record struct TripWindow(DateTimeOffset Now, TimeSpan TripLength)` in `Paramore.Brighter.CircuitBreaker` with a computed `Cutoff` (`Now - TripLength`).
   - Add an amendment note to the ADR's Status section, with the owner's approval, as for the `ReadAsync` split.
