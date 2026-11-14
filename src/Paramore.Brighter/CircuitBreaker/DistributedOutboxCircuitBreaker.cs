@@ -131,6 +131,13 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         Log.WriteFailed(s_logger, failure, failure.GetType().Name);
     }
 
+    private void RecordWriteTimeout(IEnumerable<RoutingKey> topics, IEnumerable<KeyValuePair<RoutingKey, PendingTrip>> live)
+    {
+        _fallback.RecordWriteTimeout(topics);
+        Log.WriteTimedOut(s_logger);
+        AnnounceUnshared(live);
+    }
+
     private void RecordReadFailure(Exception failure)
     {
         _fallback.RecordReadFailure(failure);
@@ -282,7 +289,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
 
         if (results is null)
-            _fallback.RecordWriteTimeout(trips.Select(trip => trip.Topic));
+            RecordWriteTimeout(trips.Select(trip => trip.Topic), live);
         else
             ApplyWriteResults(results);
 
@@ -816,6 +823,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         [LoggerMessage(LogLevel.Warning, "Writing trips to the store failed with {FailureType}; the trips stay unshared on this instance")]
         public static partial void WriteFailed(ILogger logger, Exception exception, string failureType);
+
+        [LoggerMessage(LogLevel.Warning, "Writing trips to the store ran into the store timeout; the trips stay unshared on this instance")]
+        public static partial void WriteTimedOut(ILogger logger);
 
         [LoggerMessage(LogLevel.Warning, "A store call is still running after {Seconds} seconds; no longer holding its in-flight guard")]
         public static partial void InFlightGuardReleased(ILogger logger, double seconds);

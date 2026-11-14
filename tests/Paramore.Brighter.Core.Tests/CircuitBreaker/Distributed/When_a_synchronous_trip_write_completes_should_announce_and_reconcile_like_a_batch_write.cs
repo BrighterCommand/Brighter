@@ -133,7 +133,8 @@ public class SynchronousTripWriteCompletionTests
         using var recorder = new ActivityRecorder("sync-trip-run-out-tracer");
         var store = new SignallingTrippedTopicStore(hold: WriteHold.FirstWriteOnly);
         var clock = new FakeTimeProvider(s_start);
-        var breaker = new DistributedOutboxCircuitBreaker(store, s_options, new BrighterTracer(), timeProvider: clock);
+        var options = new OutboxCircuitBreakerOptions { CooldownDuration = s_cooldown, ClockSkewLeeway = TimeSpan.Zero, StoreTimeout = TimeSpan.FromSeconds(60) };
+        var breaker = new DistributedOutboxCircuitBreaker(store, options, new BrighterTracer(), timeProvider: clock);
         breaker.TripTopic(_orders);
         await store.WriteStarted;
         breaker.TripTopic(_orders);
