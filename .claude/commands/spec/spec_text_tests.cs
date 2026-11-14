@@ -44,12 +44,14 @@ var templateRegistry = new List<TemplateExpectation>
 {
     new(".claude/commands/adr/README.md", ".claude/commands/adr/retire-superseded.md", ["Supersession question"]),
     new(".claude/commands/adr/README.md", ".claude/commands/adr/report-approval.md", ["Report"]),
-    new(".claude/commands/spec/README.md", ".claude/commands/spec/status.md", ["Next-step line"])
+    new(".claude/commands/spec/README.md", ".claude/commands/spec/status.md", ["Next-step line"]),
+    new(".claude/commands/spec/README.md", ".claude/commands/spec/switch.md", ["Next-step line", "Ambiguous spec id", "No spec matches"])
 };
 
 string[] toolingFaultFiles =
 [
-    ".claude/commands/spec/status.md"
+    ".claude/commands/spec/status.md",
+    ".claude/commands/spec/switch.md"
 ];
 
 var reporter = new Reporter();
