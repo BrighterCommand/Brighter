@@ -574,6 +574,40 @@ void CheckGeneratedTamperCases(string root, Reporter report)
         CheckGeneratedTamperCase(root, tamperedCase.Name, tamperedCase.Slip, tamperedCase.Valid, report);
 
     CheckGeneratedUntamperedCases(root, text, report);
+    CheckGeneratedUnreadableRecordCase(root, report);
+}
+
+void CheckGeneratedUnreadableRecordCase(string root, Reporter report)
+{
+    const string name = "gen-unreadable-record";
+    var check = $"generated {name}";
+    report.Checked();
+    var specsRoot = Directory.CreateTempSubdirectory("routing-generated-").FullName;
+    try
+    {
+        var spec = Path.Combine(specsRoot, name);
+        CopyDirectory(Path.Combine(root, FixtureSpecs, "feature-slip"), spec);
+        var recordPath = Path.Combine(spec, ".flow.record");
+        var lines = File.ReadAllLines(recordPath).Select(line => line.StartsWith("sha256:", StringComparison.Ordinal) ? "sha256: nothex" : line);
+        File.WriteAllLines(recordPath, lines);
+
+        var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", specsRoot, "--spec", name, "--flows-dir", ShippedFlows]);
+        var line = SplitLines(result.Stdout).LastOrDefault(l => l.StartsWith(ReportPrefix, StringComparison.Ordinal));
+        if (result.ExitCode != 0 || line == null)
+        {
+            report.Fail(check, $"expected exit 0 and a route-report line, got exit {result.ExitCode}");
+            return;
+        }
+
+        var actual = (JsonObject)JsonNode.Parse(line[ReportPrefix.Length..])!;
+        var expected = JsonNode.Parse("""{ "tampered": { "value": true, "case": "c", "recorded_flow": null } }""")!;
+        foreach (var mismatch in Mismatches(expected, actual, "report"))
+            report.Fail(check, mismatch);
+    }
+    finally
+    {
+        Directory.Delete(specsRoot, true);
+    }
 }
 
 void CheckGeneratedUntamperedCases(string root, string text, Reporter report)

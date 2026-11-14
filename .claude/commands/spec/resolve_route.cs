@@ -783,7 +783,7 @@ internal static class RouteRecordInspector
             return File.Exists(recordPath) ? Report(true, "b", record?.Flow) : Report(false, null, null);
         }
 
-        return record is not null ? Compare(record, SlipHash(slipPath)) : Report(false, null, null);
+        return record is not null ? Compare(record, SlipHash(slipPath)) : Report(true, "c", null);
     }
 
     public static JsonNode? RouteChange() => null;
