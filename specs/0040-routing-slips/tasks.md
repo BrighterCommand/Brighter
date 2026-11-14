@@ -819,7 +819,7 @@ Depends on Phase 6.*
   - Implementation should: add `show_me` and `ledger` to the known expectation keys, then the runner, the partial ledger matcher and the hash exclusion, in `resolve_route_tests.cs` (0092 *Expectations*). The runner passes `--flows-dir` only when the expectation has a `flows` key, because `show_me_facts.cs` rejects that option until T10.1; `show-me-runner.json` has none. No change to `show_me_facts.cs`.
   - Traces to: 0092 step 8, *Expectations*, *Repository checks* (read-only, ledgers excluded); FR-23; NFR-3. Depends on: T9.9.
 
-- [ ] **TEST + IMPLEMENT: T10.1 — `show_me_facts.cs` takes `--flows-dir`, runs the resolver as a child process after its completeness gate, and records `route` in the ledger; for a legacy spec everything else is unchanged**
+- [x] **TEST + IMPLEMENT: T10.1 — `show_me_facts.cs` takes `--flows-dir`, runs the resolver as a child process after its completeness gate, and records `route` in the ledger; for a legacy spec everything else is unchanged**
   - **USE COMMAND**: none — RED-first row `show-me-legacy-all-approved` (`"show_me": "legacy-all-approved"`, `"flows": "flows"`, partial `"ledger": {"route": {"flow": "feature", "has_requirements_step": true}, "schema_version": 1}`).
   - Test should verify: the row fails today because `show_me_facts.cs` rejects `--flows-dir` and the ledger has no `route` field (the runner exists from T10.0). After the change, `dotnet run .claude/commands/spec/show_me_facts_tests.cs` passes, and `git diff --exit-code $BASE -- .claude/commands/spec/show_me_facts_tests.cs .claude/test-fixtures/show-me/` is clean (AC-46).
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
