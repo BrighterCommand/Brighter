@@ -26,7 +26,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -156,7 +155,7 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
     private string UpsertStatement(int count)
     {
-        var values = string.Join(", ", Enumerable.Range(0, count).Select(i => $"({TopicParameter(i)}, {StampParameter(i)})"));
+        var values = TripValuesList(count);
 
         return $"""
                 INSERT INTO {QualifiedTableName} AS t (topic, trip_time)

@@ -228,6 +228,14 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
     protected static string StampParameter(int index) => $"@t{index}";
 
     /// <summary>
+    /// Gets the <c>VALUES</c> list of a write: one parenthesised pair of topic and stamp parameters for each trip, numbered as <see cref="AddTripParameters"/> adds them.
+    /// </summary>
+    /// <param name="count">The number of trips in the write.</param>
+    /// <returns>The list, such as <c>(@topic0, @t0), (@topic1, @t1)</c>.</returns>
+    protected static string TripValuesList(int count) =>
+        string.Join(", ", Enumerable.Range(0, count).Select(i => $"({TopicParameter(i)}, {StampParameter(i)})"));
+
+    /// <summary>
     /// Checks that a write names each topic once, and orders its trips by topic, ordinally.
     /// </summary>
     /// <remarks>

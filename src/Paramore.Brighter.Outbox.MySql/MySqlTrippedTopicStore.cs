@@ -224,7 +224,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
     private string UpsertStatement(int count)
     {
-        var values = string.Join(", ", Enumerable.Range(0, count).Select(i => $"({TopicParameter(i)}, {StampParameter(i)})"));
+        var values = TripValuesList(count);
 
         return $"""
                 INSERT INTO {QualifiedTableName} (`Topic`, `TripTime`)
