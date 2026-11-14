@@ -46,11 +46,18 @@ var templateRegistry = new List<TemplateExpectation>
     new(".claude/commands/adr/README.md", ".claude/commands/adr/report-approval.md", ["Report"])
 };
 
+string[] toolingFaultFiles =
+[
+    ".claude/commands/spec/status.md"
+];
+
 var reporter = new Reporter();
 
 CheckParserSelfTest(reporter);
 
 CheckProvenancePatternSelfTest(provenancePattern, reporter);
+
+CheckToolingFaultSentenceSelfTest(reporter);
 
 CheckIgnoreRules(repositoryRoot, reporter);
 
@@ -63,6 +70,8 @@ foreach (var expectation in templateRegistry)
 CheckGateLadder(repositoryRoot, gateLadderStartingStates, reporter);
 
 CheckProvenanceLines(repositoryRoot, provenancePattern, reporter);
+
+CheckToolingFaultSentence(repositoryRoot, toolingFaultFiles, reporter);
 
 return reporter.Summary();
 
@@ -225,6 +234,70 @@ void CheckProvenancePatternSelfTest(Regex pattern, Reporter report)
         if (pattern.IsMatch(line) != expectedMatch)
             report.Fail("provenance pattern self-test", $"\"{line}\" should {(expectedMatch ? "" : "not ")}match");
     }
+}
+
+void CheckToolingFaultSentence(string root, string[] files, Reporter report)
+{
+    const string check = "tooling-fault sentence";
+    report.Checked();
+    var sentence = ExtractToolingFaultSentence(ReadBlocks(root, SpecReadme, "route-instructions"));
+    if (sentence == null)
+    {
+        report.Fail(check, $"route-instructions block in {SpecReadme} must hold exactly one quoted tooling-fault sentence");
+        return;
+    }
+
+    foreach (var file in files)
+    {
+        report.Checked();
+        var path = Path.Combine(root, file);
+        if (!File.Exists(path))
+            report.Fail(check, $"{file} is missing");
+        else if (!ContainsSentence(File.ReadAllText(path), sentence))
+            report.Fail(check, $"{file} lacks the tooling-fault sentence quoted in {SpecReadme}: \"{sentence}\"");
+    }
+}
+
+string? ExtractToolingFaultSentence(List<string> blocks)
+{
+    if (blocks.Count != 1)
+        return null;
+
+    var quoted = Regex.Matches(blocks[0], "`([^`]*tooling fault[^`]*)`");
+    return quoted.Count == 1 ? quoted[0].Groups[1].Value : null;
+}
+
+bool ContainsSentence(string text, string sentence) =>
+    CollapseWhitespace(text).Contains(CollapseWhitespace(sentence), StringComparison.Ordinal);
+
+string CollapseWhitespace(string text) => Regex.Replace(text, "\\s+", " ");
+
+void CheckToolingFaultSentenceSelfTest(Reporter report)
+{
+    const string check = "tooling-fault sentence self-test";
+    const string sentence = "{command} could not run the route resolver (.claude/commands/spec/resolve_route.cs): {state}. This is a tooling fault, not a fault in the spec — re-run after restoring the script.";
+    var cases = new (string Text, bool ExpectedFound)[]
+    {
+        ($"Print `{sentence}` and stop.", true),
+        ($"Print {sentence.Replace(" This is", "\nThis is")} and stop.", true),
+        ($"Print {sentence.Replace("tooling fault", "tooling fault.")} and stop.", false),
+        ($"Print {sentence.Replace("restoring", "restorind")} and stop.", false),
+        ("Print nothing.", false)
+    };
+
+    foreach (var (text, expectedFound) in cases)
+    {
+        report.Checked();
+        if (ContainsSentence(text, sentence) != expectedFound)
+            report.Fail(check, $"\"{text}\" should {(expectedFound ? "" : "not ")}contain the sentence");
+    }
+
+    report.Checked();
+    if (ExtractToolingFaultSentence(["no quoted sentence here"]) != null)
+        report.Fail(check, "a block without a quoted sentence must yield no sentence");
+    report.Checked();
+    if (ExtractToolingFaultSentence([$"Print `{sentence}`."]) != sentence)
+        report.Fail(check, "the quoted sentence was not extracted from a block");
 }
 
 void CheckIgnoreRules(string root, Reporter report)
