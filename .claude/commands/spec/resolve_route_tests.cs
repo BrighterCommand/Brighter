@@ -572,6 +572,48 @@ void CheckGeneratedTamperCases(string root, Reporter report)
 
     foreach (var tamperedCase in tamperedCases)
         CheckGeneratedTamperCase(root, tamperedCase.Name, tamperedCase.Slip, tamperedCase.Valid, report);
+
+    CheckGeneratedUntamperedCases(root, text, report);
+}
+
+void CheckGeneratedUntamperedCases(string root, string text, Reporter report)
+{
+    CheckGeneratedUntamperedCase(root, "gen-crlf", Encoding.UTF8.GetBytes(text.Replace("\n", "\r\n")), report);
+    CheckGeneratedUntamperedCase(root, "gen-name with spaces", File.ReadAllBytes(Path.Combine(root, FixtureSpecs, "feature-slip", ".flow")), report);
+}
+
+void CheckGeneratedUntamperedCase(string root, string name, byte[] slip, Reporter report)
+{
+    var check = $"generated {name}";
+    report.Checked();
+    var specsRoot = Directory.CreateTempSubdirectory("routing-generated-").FullName;
+    try
+    {
+        CopyDirectory(Path.Combine(root, FixtureSpecs, "feature-slip"), Path.Combine(specsRoot, name));
+        File.WriteAllBytes(Path.Combine(specsRoot, name, ".flow"), slip);
+
+        var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", specsRoot, "--spec", name, "--flows-dir", ShippedFlows]);
+        var line = SplitLines(result.Stdout).LastOrDefault(l => l.StartsWith(ReportPrefix, StringComparison.Ordinal));
+        if (result.ExitCode != 0 || line == null)
+        {
+            report.Fail(check, $"expected exit 0 and a route-report line, got exit {result.ExitCode}");
+            return;
+        }
+
+        var actual = (JsonObject)JsonNode.Parse(line[ReportPrefix.Length..])!;
+        var expected = new JsonObject
+        {
+            ["valid"] = true,
+            ["spec"] = $"{specsRoot}/{name}",
+            ["tampered"] = new JsonObject { ["value"] = false }
+        };
+        foreach (var mismatch in Mismatches(expected, actual, "report"))
+            report.Fail(check, mismatch);
+    }
+    finally
+    {
+        Directory.Delete(specsRoot, true);
+    }
 }
 
 void CheckGeneratedTamperCase(string root, string name, byte[] slip, bool valid, Reporter report)
