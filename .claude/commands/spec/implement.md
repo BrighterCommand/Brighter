@@ -61,14 +61,23 @@ quietly take anything else with it.
 
 This is a one-time check at the start of the command.
 
-### Step 1: Gather Context
+### Step 1: Resolve the Route and Gather Context
 
-1. Read `specs/.current-spec` to determine the active specification directory
-2. Verify `.tasks-approved` exists in that directory
-3. Read `specs/{current-spec}/tasks.md` to see task list
-4. Read `specs/{current-spec}/.adr-list` to see all ADRs
-5. Read ADRs from `docs/adr/` to understand design decisions
-6. Parse `$ARGUMENTS`: an optional task number, and an optional `--review-before` /
+Resolve the route first, before reading anything else. `{command}` is `/spec:implement`.
+
+<!-- routing-text:route-instructions:begin -->
+Run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current`. If the exit status is not `0`, or standard output has no line beginning `route-report: `, or the JSON after that prefix on the last such line does not parse, stop. Print `{command} could not run the route resolver (.claude/commands/spec/resolve_route.cs): {state}. This is a tooling fault, not a fault in the spec — re-run after restoring the script.` Create or modify no file. Otherwise hold that JSON object as the route report. If `stop` is not `null`, print `stop.message` and stop, creating or modifying no file.
+<!-- routing-text:route-instructions:end -->
+
+The active specification directory is the report's `spec`. Never read the approval marker files
+yourself: the route report is the only source of whether implementation may start.
+
+1. If `hand_off.precondition.holds` is false, print `hand_off.precondition.message` and stop,
+   creating or modifying no file.
+2. Read `specs/{current-spec}/tasks.md` to see task list
+3. If `known_kinds.design` is not `null`, read `specs/{current-spec}/.adr-list` to see all ADRs, then
+   read those ADRs from `docs/adr/` to understand design decisions
+4. Parse `$ARGUMENTS`: an optional task number, and an optional `--review-before` /
    `--review-after` flag. If a task number was given, focus on that task only.
 
 ### Step 1a: Resolve the Review Gear
@@ -110,12 +119,9 @@ or, in the default case, `Gear: ✅ review-before (default — approval gate arm
 
 ### Step 2: Verify Prerequisites
 
-Check that all phases are approved:
-- Requirements: `.requirements-approved` exists
-- Design: `.design-approved` exists and all ADRs have Status "Accepted"
-- Tasks: `.tasks-approved` exists
-
-If not all approved, inform user and exit.
+The hand-off precondition was checked in Step 1. If `known_kinds.design` is not `null`, check that
+every ADR in `.adr-list` has Status "Accepted"; if any does not, inform the user and exit. With no
+`design` step on the slip, run no ADR-status check.
 
 ### Step 3: Select Task
 
