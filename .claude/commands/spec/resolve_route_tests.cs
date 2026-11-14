@@ -48,6 +48,7 @@ if (ResolverRuns(repositoryRoot, reporter))
 }
 
 CheckShippedFlowDirectory(repositoryRoot, reporter);
+CheckCreationRecords(repositoryRoot, reporter);
 
 CheckNothingWritten(hashesBefore, HashTree(repositoryRoot, FixtureRoot, "specs"), reporter);
 
@@ -517,6 +518,44 @@ void CheckShippedFlowDirectory(string root, Reporter report)
         report.Fail("shipped flows", $"{ShippedFlows} does not hold {required}");
     foreach (var forbidden in new[] { "light.flow", "bugfix.flow" }.Where(names.Contains))
         report.Fail("shipped flows", $"{ShippedFlows} holds {forbidden}, which is fixture-only");
+}
+
+void CheckCreationRecords(string root, Reporter report)
+{
+    string[] tamperCases = ["tamper-a-route-changed", "tamper-b-record-only"];
+    var specs = Path.Combine(root, FixtureSpecs);
+    foreach (var directory in Directory.EnumerateDirectories(specs).Order(StringComparer.Ordinal))
+    {
+        var name = Path.GetFileName(directory);
+        if (tamperCases.Contains(name) || !File.Exists(Path.Combine(directory, ".flow.record")))
+            continue;
+
+        report.Checked();
+        var problem = RecordProblem(directory);
+        if (problem != null)
+            report.Fail($"creation record {name}", $"{problem}; re-run the installation steps for this case");
+    }
+}
+
+string? RecordProblem(string directory)
+{
+    var slipPath = Path.Combine(directory, ".flow");
+    if (!File.Exists(slipPath))
+        return "the case has a .flow.record but no .flow";
+
+    var slip = File.ReadAllText(slipPath).Replace("\r\n", "\n");
+    var recorded = ReadLf(Path.Combine(directory, ".flow.record")).Split('\n').ToDictionary(
+        line => line.Split(':')[0], line => line.Contains(':') ? line[(line.IndexOf(':') + 1)..].Trim() : "");
+
+    var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(slip))).ToLowerInvariant();
+    var firstLine = slip.Split('\n')[0];
+    var flowName = firstLine.StartsWith("# flow:", StringComparison.Ordinal) ? firstLine["# flow:".Length..].Trim() : "";
+
+    if (recorded.GetValueOrDefault("sha256") != hash)
+        return $"sha256 is {recorded.GetValueOrDefault("sha256") ?? "missing"}, the normalised .flow hashes to {hash}";
+    if (recorded.GetValueOrDefault("flow") != flowName)
+        return $"flow is {recorded.GetValueOrDefault("flow") ?? "missing"}, line 1 of .flow names {flowName}";
+    return null;
 }
 
 void CheckMatcherSelfTest(Reporter report)
