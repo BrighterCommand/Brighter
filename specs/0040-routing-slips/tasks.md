@@ -955,7 +955,7 @@ Depends on Phase 11.*
 
 *0089 steps 9.2–9.9, then step 10. Each task follows the Phase 12 shape: (1) RED registry rows committed as `test:` and seen failing, (2) gate, (3) edit, (4) S1. Where a command carries `route-instructions`, its row is registered in step (1). Depends on Phase 12.*
 
-- [ ] **TEST + IMPLEMENT: T13.1 — `/spec:review` takes its phase from `next.kind`, accepts an explicit phase only when the slip has that kind, and leaves out FR criteria with no `requirements` step**
+- [x] **TEST + IMPLEMENT: T13.1 — `/spec:review` takes its phase from `next.kind`, accepts an explicit phase only when the slip has that kind, and leaves out FR criteria with no `requirements` step**
   - Verification rows (RED-first): `review.md` must carry `route-instructions`, and the templates *Next-step line*, *Phase not on the route*, *Step with no review criteria* and *No requirements step*.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
