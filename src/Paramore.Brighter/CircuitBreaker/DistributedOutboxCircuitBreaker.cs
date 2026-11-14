@@ -283,7 +283,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         IReadOnlyList<TripWriteResult>? results;
         try
         {
-            var storeCall = BeginStoreCall(_ => _store.WriteAsync(trips), CancellationToken.None);
+            var storeCall = BeginStoreCall(token => _store.WriteAsync(trips, token), CancellationToken.None);
             settled = storeCall.Settled;
             results = await storeCall.Result.ConfigureAwait(false);
         }
