@@ -43,7 +43,8 @@ var provenancePattern = new Regex(
 var templateRegistry = new List<TemplateExpectation>
 {
     new(".claude/commands/adr/README.md", ".claude/commands/adr/retire-superseded.md", ["Supersession question"]),
-    new(".claude/commands/adr/README.md", ".claude/commands/adr/report-approval.md", ["Report"])
+    new(".claude/commands/adr/README.md", ".claude/commands/adr/report-approval.md", ["Report"]),
+    new(".claude/commands/spec/README.md", ".claude/commands/spec/status.md", ["Next-step line"])
 };
 
 string[] toolingFaultFiles =
