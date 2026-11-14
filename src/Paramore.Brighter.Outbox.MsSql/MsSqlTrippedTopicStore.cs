@@ -113,17 +113,14 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         CancellationToken cancellationToken)
     {
         using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
-        using var command = CreateCommand(connection);
-        command.CommandText = $"""
+        return await QueryTripsAsync(
+            connection, null,
+            $"""
             UPDATE {QualifiedTableName} SET [EndedAt] = @now
             OUTPUT INSERTED.[Topic], INSERTED.[TripTime]
             WHERE [EndedAt] IS NULL AND [TripTime] <= @cutoff;
-            """;
-        AddStampParameter(command, "@now", now);
-        AddStampParameter(command, "@cutoff", now - tripLength);
-
-        using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        return await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
+            """,
+            [("@now", now), ("@cutoff", now - tripLength)], cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -133,12 +130,10 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         CancellationToken cancellationToken)
     {
         using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
-        using var command = CreateCommand(connection);
-        command.CommandText = $"SELECT [Topic], [TripTime] FROM {QualifiedTableName} WHERE [EndedAt] IS NULL AND [TripTime] > @cutoff;";
-        AddStampParameter(command, "@cutoff", now - tripLength);
-
-        using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        return await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
+        return await QueryTripsAsync(
+            connection, null,
+            $"SELECT [Topic], [TripTime] FROM {QualifiedTableName} WHERE [EndedAt] IS NULL AND [TripTime] > @cutoff;",
+            [("@cutoff", now - tripLength)], cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

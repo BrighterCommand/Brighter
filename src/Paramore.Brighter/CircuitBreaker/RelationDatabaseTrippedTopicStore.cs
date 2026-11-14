@@ -255,6 +255,32 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
     }
 
     /// <summary>
+    /// Runs a query that selects topic and trip time and reads its rows into trips.
+    /// </summary>
+    /// <param name="connection">The connection to run the query on.</param>
+    /// <param name="transaction">The transaction to run it in, or null for none.</param>
+    /// <param name="sql">The query.</param>
+    /// <param name="stamps">The stamp parameters the query uses, added in the dialect's form by <see cref="AddStampParameter"/>.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <returns>The trips.</returns>
+    protected async Task<List<TopicTrip>> QueryTripsAsync(
+        DbConnection connection,
+        DbTransaction? transaction,
+        string sql,
+        IReadOnlyList<(string Name, DateTimeOffset Stamp)> stamps,
+        CancellationToken cancellationToken)
+    {
+        using var command = CreateCommand(connection);
+        command.Transaction = transaction;
+        command.CommandText = sql;
+        foreach (var (name, stamp) in stamps)
+            AddStampParameter(command, name, stamp);
+
+        using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        return await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Reads the rest of a result set of topic and trip time into trips.
     /// </summary>
     /// <param name="reader">The reader, positioned before the first row.</param>

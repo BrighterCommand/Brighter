@@ -113,17 +113,14 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         CancellationToken cancellationToken)
     {
         await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
-        await using var command = CreateCommand(connection);
-        command.CommandText = $"""
+        return await QueryTripsAsync(
+            connection, null,
+            $"""
             UPDATE {QualifiedTableName} SET ended_at = @now
             WHERE ended_at IS NULL AND trip_time <= @cutoff
             RETURNING topic, trip_time;
-            """;
-        AddStampParameter(command, "@now", now);
-        AddStampParameter(command, "@cutoff", now - tripLength);
-
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        return await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
+            """,
+            [("@now", now), ("@cutoff", now - tripLength)], cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -133,12 +130,10 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         CancellationToken cancellationToken)
     {
         await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
-        await using var command = CreateCommand(connection);
-        command.CommandText = $"SELECT topic, trip_time FROM {QualifiedTableName} WHERE ended_at IS NULL AND trip_time > @cutoff;";
-        AddStampParameter(command, "@cutoff", now - tripLength);
-
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        return await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
+        return await QueryTripsAsync(
+            connection, null,
+            $"SELECT topic, trip_time FROM {QualifiedTableName} WHERE ended_at IS NULL AND trip_time > @cutoff;",
+            [("@cutoff", now - tripLength)], cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

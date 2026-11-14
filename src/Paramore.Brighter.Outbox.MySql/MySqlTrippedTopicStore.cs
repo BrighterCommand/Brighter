@@ -111,7 +111,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false);
 
-        var cutoff = (now - tripLength).UtcDateTime;
+        var cutoff = now - tripLength;
         var candidates = await QueryTripsAsync(
             connection, transaction,
             $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff",
@@ -120,7 +120,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         var ended = new List<TopicTrip>();
         foreach (var candidate in candidates.OrderBy(trip => trip.Topic.Value, StringComparer.Ordinal))
         {
-            var locked = await LockIfStillExpiredAsync(connection, transaction, candidate.Topic, cutoff, cancellationToken).ConfigureAwait(false);
+            var locked = await LockIfStillExpiredAsync(connection, transaction, candidate.Topic, cutoff.UtcDateTime, cancellationToken).ConfigureAwait(false);
             if (locked is null)
                 continue;
 
@@ -142,7 +142,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         return await QueryTripsAsync(
             connection, null,
             $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `EndedAt` IS NULL AND `TripTime` > @cutoff",
-            [("@cutoff", (now - tripLength).UtcDateTime)], cancellationToken).ConfigureAwait(false);
+            [("@cutoff", now - tripLength)], cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -166,22 +166,6 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         var results = await ReadWrittenRowsAsync(connection, transaction, inOrdinalTopicOrder, cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return results;
-    }
-
-    private async Task<List<TopicTrip>> QueryTripsAsync(
-        DbConnection connection,
-        DbTransaction? transaction,
-        string sql,
-        (string Name, DateTime Value)[] parameters,
-        CancellationToken cancellationToken)
-    {
-        await using var command = CreateCommand(connection);
-        command.Transaction = transaction;
-        command.CommandText = sql;
-        foreach (var (name, value) in parameters) AddParameter(command, name, DbType.DateTime, value);
-
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        return await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<TopicTrip?> LockIfStillExpiredAsync(
