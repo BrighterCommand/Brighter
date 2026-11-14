@@ -356,7 +356,7 @@ Phase 2 (starts only after T1.15 has merged)
 - [x] **TEST + IMPLEMENT: T2.6 - A read marks ended rows and gives each one to exactly one caller, never deleting**
   - **USE COMMAND**: `/tdd:test-first when many readers read an ended row concurrently should return it as ended to exactly one caller`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CircuitBreaker/Distributed"
-  - Test file: `When_readers_race_over_an_ended_row_should_return_it_to_exactly_one.cs`
+  - Test file: `When_trips_have_run_out_should_end_each_row_and_return_it_to_exactly_one_caller.cs`
   - Test should verify:
     - Over 1,000 repetitions of parallel `ReadAsync(now, tripLength)`, a row stamped at or before `now - tripLength` appears in `Ended` for exactly one caller and in no caller's `Live`.
     - A row stamped after the cutoff stays in `Live`.
@@ -1327,7 +1327,7 @@ Phase 2 (starts only after T1.15 has merged)
 - [x] **TEST + IMPLEMENT: T2.57a - The MsSql trip store marks ended rows and gives each to one caller**
   - **USE COMMAND**: `/tdd:test-first when the mssql trip store ends trips against a real database should mark ended rows for exactly one caller and never delete one`
   - Test location: "tests/Paramore.Brighter.MSSQL.Tests/CircuitBreaker"
-  - Test files: `When_readers_race_over_an_ended_row_should_return_it_to_exactly_one.cs`, `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs` and `When_a_read_ends_a_trip_should_mark_the_row_and_never_delete_it.cs`
+  - Test files: `When_readers_race_over_an_expired_row_should_end_it_for_exactly_one_caller.cs`, `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs` and `When_expired_trips_are_ended_should_mark_the_row_and_never_delete_it.cs`
   - Test should verify:
     - The two cases of T2.6 and T2.7, each its own test file, pass on a real SQL Server: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
     - A read that ends a trip marks the row and never deletes it: afterwards the table still holds the row with the ended marker set (its own test).
@@ -1374,7 +1374,7 @@ Phase 2 (starts only after T1.15 has merged)
 - [x] **TEST + IMPLEMENT: T2.58a - The PostgreSql trip store marks ended rows and gives each to one caller**
   - **USE COMMAND**: `/tdd:test-first when the postgresql trip store ends trips against a real database should mark ended rows for exactly one caller and never delete one`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/CircuitBreaker"
-  - Test files: `When_readers_race_over_an_ended_row_should_return_it_to_exactly_one.cs`, `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs` and `When_a_read_ends_a_trip_should_mark_the_row_and_never_delete_it.cs`
+  - Test files: `When_readers_race_over_an_expired_row_should_end_it_for_exactly_one_caller.cs`, `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs` and `When_expired_trips_are_ended_should_mark_the_row_and_never_delete_it.cs`
   - Test should verify:
     - The two cases of T2.6 and T2.7, each its own test file, pass on a real PostgreSQL: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
     - A read that ends a trip marks the row and never deletes it: afterwards the table still holds the row with the ended marker set (its own test).
@@ -1421,7 +1421,7 @@ Phase 2 (starts only after T1.15 has merged)
 - [x] **TEST + IMPLEMENT: T2.59a - The MySql trip store marks ended rows and gives each to one caller**
   - **USE COMMAND**: `/tdd:test-first when the mysql trip store ends trips against a real database should mark ended rows for exactly one caller and never delete one`
   - Test location: "tests/Paramore.Brighter.MySQL.Tests/CircuitBreaker"
-  - Test files: `When_readers_race_over_an_ended_row_should_return_it_to_exactly_one.cs`, `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs` and `When_a_read_ends_a_trip_should_mark_the_row_and_never_delete_it.cs`
+  - Test files: `When_readers_race_over_an_expired_row_should_end_it_for_exactly_one_caller.cs`, `When_a_trip_is_written_over_an_ended_row_should_revive_only_with_a_later_stamp.cs` and `When_expired_trips_are_ended_should_mark_the_row_and_never_delete_it.cs`
   - Test should verify:
     - The two cases of T2.6 and T2.7, each its own test file, pass on a real MySQL: a read marks ended rows and returns each to exactly one caller across 1,000 parallel repetitions, and a write over an ended row revives it only with a later stamp.
     - A read that ends a trip marks the row and never deletes it: afterwards the table still holds the row with the ended marker set (its own test).
