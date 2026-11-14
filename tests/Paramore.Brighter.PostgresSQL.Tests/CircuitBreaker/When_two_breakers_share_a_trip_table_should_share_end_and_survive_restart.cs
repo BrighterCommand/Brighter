@@ -3,31 +3,21 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using Paramore.Brighter.BoxProvisioning;
-using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.CircuitBreaker;
-using Paramore.Brighter.PostgreSql;
-using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.Outbox.PostgreSql;
-using Npgsql;
 using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.CircuitBreaker;
 
-public class PostgreSqlSharedTripTableTests : IAsyncLifetime
+public class PostgreSqlSharedTripTableTests : PostgreSqlProvisionedTripTableTestBase
 {
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
     private static readonly RoutingKey s_orders = new("orders");
 
-    private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
-    private readonly string _tableName = $"shared_trips_{Guid.NewGuid():N}";
     private readonly List<Activity> _activities = [];
 
     [Fact]
@@ -69,39 +59,12 @@ public class PostgreSqlSharedTripTableTests : IAsyncLifetime
         Assert.Equal(1, SpanCount("orders reset"));
     }
 
-    private DistributedOutboxCircuitBreaker NewBreaker(TimeProvider clock)
-    {
-        var connectionProvider = new PostgreSqlConnectionProvider(new RelationalDatabaseConfiguration(_connectionString));
-        var store = new PostgreSqlTrippedTopicStore(connectionProvider, _tableName);
-        return new DistributedOutboxCircuitBreaker(store, tracer: new BrighterTracer(), timeProvider: clock);
-    }
-
-    private async Task ProvisionTripTableAsync()
-    {
-        new PostgresSqlTestHelper().SetupDatabase();
-        var services = new ServiceCollection();
-        services.AddLogging();
-        var configuration = new RelationalDatabaseConfiguration(_connectionString);
-        new StubBrighterBuilder(services).UseBoxProvisioning(options =>
-            options.AddPostgreSqlTrippedTopics(configuration, _tableName));
-
-        await services.BuildServiceProvider().GetServices<IAmABoxProvisioner>().Single().ProvisionAsync();
-    }
+    private DistributedOutboxCircuitBreaker NewBreaker(TimeProvider clock) =>
+        new(NewStore(), tracer: new BrighterTracer(), timeProvider: clock);
 
     private int SpanCount(string name)
     {
         lock (_activities)
             return _activities.Count(a => a.DisplayName == name);
-    }
-
-    public Task InitializeAsync() => Task.CompletedTask;
-
-    public async Task DisposeAsync()
-    {
-        await using var connection = new NpgsqlConnection(_connectionString);
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = $"DROP TABLE IF EXISTS \"public\".\"{_tableName}\"";
-        await command.ExecuteNonQueryAsync();
     }
 }

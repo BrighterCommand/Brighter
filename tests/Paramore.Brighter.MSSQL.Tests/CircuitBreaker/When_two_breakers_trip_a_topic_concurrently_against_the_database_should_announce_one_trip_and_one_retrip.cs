@@ -3,25 +3,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using Paramore.Brighter.BoxProvisioning;
-using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.CircuitBreaker;
-using Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
-using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.Outbox.MsSql;
 using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.CircuitBreaker;
 
-public class MsSqlConcurrentFirstTripAnnouncementTests : IAsyncLifetime
+public class MsSqlConcurrentFirstTripAnnouncementTests : MsSqlProvisionedTripTableTestBase
 {
     private const int Repetitions = 1000;
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
@@ -29,8 +21,6 @@ public class MsSqlConcurrentFirstTripAnnouncementTests : IAsyncLifetime
     private static readonly TimeSpan s_laterOffset = TimeSpan.FromSeconds(5);
     private static readonly OutboxCircuitBreakerOptions s_options = new() { CooldownDuration = s_cooldown };
 
-    private readonly string _connectionString = Configuration.DefaultConnectingString;
-    private readonly string _tableName = $"test_trips_{Guid.NewGuid():N}";
     private readonly string _run = Guid.NewGuid().ToString("N");
     private readonly List<Activity> _activities = [];
 
@@ -84,32 +74,6 @@ public class MsSqlConcurrentFirstTripAnnouncementTests : IAsyncLifetime
         Assert.Equal(Repetitions * 2, spanNames.Count(n => n.Contains(_run)));
     }
 
-    private IAmATrippedTopicStore NewStore() =>
-        new MsSqlTrippedTopicStore(new MsSqlConnectionProvider(new RelationalDatabaseConfiguration(_connectionString)), _tableName);
-
     private DistributedOutboxCircuitBreaker NewBreaker(BrighterTracer tracer, DateTimeOffset clockStart) =>
         new(NewStore(), s_options, tracer, timeProvider: new FakeTimeProvider(clockStart));
-
-    private async Task ProvisionTripTableAsync()
-    {
-        Configuration.EnsureDatabaseExists(_connectionString);
-        var services = new ServiceCollection();
-        services.AddLogging();
-        var configuration = new RelationalDatabaseConfiguration(_connectionString);
-        new StubBrighterBuilder(services).UseBoxProvisioning(options =>
-            options.AddMsSqlTrippedTopics(configuration, _tableName));
-
-        await services.BuildServiceProvider().GetServices<IAmABoxProvisioner>().Single().ProvisionAsync();
-    }
-
-    public Task InitializeAsync() => Task.CompletedTask;
-
-    public async Task DisposeAsync()
-    {
-        await using var connection = new SqlConnection(_connectionString);
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = $"DROP TABLE IF EXISTS [dbo].[{_tableName}]";
-        await command.ExecuteNonQueryAsync();
-    }
 }

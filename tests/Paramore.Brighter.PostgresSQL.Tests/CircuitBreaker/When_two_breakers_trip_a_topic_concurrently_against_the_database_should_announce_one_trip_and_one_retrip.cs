@@ -3,25 +3,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using Paramore.Brighter.BoxProvisioning;
-using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.CircuitBreaker;
-using Paramore.Brighter.PostgreSql;
-using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.Outbox.PostgreSql;
-using Npgsql;
 using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.CircuitBreaker;
 
-public class PostgreSqlConcurrentFirstTripAnnouncementTests : IAsyncLifetime
+public class PostgreSqlConcurrentFirstTripAnnouncementTests : PostgreSqlProvisionedTripTableTestBase
 {
     private const int Repetitions = 1000;
     private static readonly DateTimeOffset s_start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
@@ -29,8 +21,6 @@ public class PostgreSqlConcurrentFirstTripAnnouncementTests : IAsyncLifetime
     private static readonly TimeSpan s_laterOffset = TimeSpan.FromSeconds(5);
     private static readonly OutboxCircuitBreakerOptions s_options = new() { CooldownDuration = s_cooldown };
 
-    private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
-    private readonly string _tableName = $"test_trips_{Guid.NewGuid():N}";
     private readonly string _run = Guid.NewGuid().ToString("N");
     private readonly List<Activity> _activities = [];
 
@@ -84,32 +74,6 @@ public class PostgreSqlConcurrentFirstTripAnnouncementTests : IAsyncLifetime
         Assert.Equal(Repetitions * 2, spanNames.Count(n => n.Contains(_run)));
     }
 
-    private IAmATrippedTopicStore NewStore() =>
-        new PostgreSqlTrippedTopicStore(new PostgreSqlConnectionProvider(new RelationalDatabaseConfiguration(_connectionString)), _tableName);
-
     private DistributedOutboxCircuitBreaker NewBreaker(BrighterTracer tracer, DateTimeOffset clockStart) =>
         new(NewStore(), s_options, tracer, timeProvider: new FakeTimeProvider(clockStart));
-
-    private async Task ProvisionTripTableAsync()
-    {
-        new PostgresSqlTestHelper().SetupDatabase();
-        var services = new ServiceCollection();
-        services.AddLogging();
-        var configuration = new RelationalDatabaseConfiguration(_connectionString);
-        new StubBrighterBuilder(services).UseBoxProvisioning(options =>
-            options.AddPostgreSqlTrippedTopics(configuration, _tableName));
-
-        await services.BuildServiceProvider().GetServices<IAmABoxProvisioner>().Single().ProvisionAsync();
-    }
-
-    public Task InitializeAsync() => Task.CompletedTask;
-
-    public async Task DisposeAsync()
-    {
-        await using var connection = new NpgsqlConnection(_connectionString);
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = $"DROP TABLE IF EXISTS \"public\".\"{_tableName}\"";
-        await command.ExecuteNonQueryAsync();
-    }
 }
