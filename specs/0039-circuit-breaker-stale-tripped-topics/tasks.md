@@ -1855,7 +1855,7 @@ Phase 2 (starts only after T1.15 has merged)
   - Commit as `docs:`.
   - Depends on: T2.73
 
-- [ ] **STRUCTURAL: T2.75 - Replace `(now, tripLength)` with `TripWindow` across the trip store contract**
+- [x] **STRUCTURAL: T2.75 - Replace `(now, tripLength)` with `TripWindow` across the trip store contract**
   - Run with `/refactor:tidy-first introduce a TripWindow value for the (now, tripLength) pair of the trip store contract, so each store reads window.Cutoff instead of subtracting`.
   - Change the interface, `InMemoryTrippedTopicStore`, `RelationDatabaseTrippedTopicStore` (including the protected `EndExpiredOnceAsync` and `ReadLiveOnceAsync`), the MsSql, PostgreSql and MySql stores, `DistributedOutboxCircuitBreaker.ExpiredThenLiveRead` (one window per read, built from the time provider and trip length), and every test double and test that calls the store.
   - Behaviour is unchanged and no new test is written. Validate with the full `Core.Tests` suite on both TFMs and the MSSQL, PostgreSQL and MySQL suites. Build every target of the touched `src` projects, including netstandard2.0.
