@@ -31,7 +31,7 @@ using Paramore.Brighter.CircuitBreaker;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
-public class AbandonedCallCountingTrippedTopicStore : IAmATrippedTopicStore
+public class AbandonedCallCountingTrippedTopicStore : EmptyTrippedTopicStore
 {
     private int _readCount;
     private int _writeCount;
@@ -40,16 +40,13 @@ public class AbandonedCallCountingTrippedTopicStore : IAmATrippedTopicStore
 
     public int WriteCount => Volatile.Read(ref _writeCount);
 
-    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
+    public override Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _readCount);
         return new TaskCompletionSource<IReadOnlyList<TopicTrip>>().Task;
     }
 
-    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<TopicTrip>>([]);
-
-    public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
+    public override Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _writeCount);
         return new TaskCompletionSource<IReadOnlyList<TripWriteResult>>().Task;

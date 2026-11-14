@@ -6,7 +6,7 @@ using Paramore.Brighter.CircuitBreaker;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
-public class CountingTrippedTopicStore : IAmATrippedTopicStore
+public class CountingTrippedTopicStore : EmptyTrippedTopicStore
 {
     private readonly WriteRecorder _recorder = new();
 
@@ -16,18 +16,15 @@ public class CountingTrippedTopicStore : IAmATrippedTopicStore
 
     public int Reads => Volatile.Read(ref _reads);
 
-    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
+    public override Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _reads);
-        return Task.FromResult<IReadOnlyList<TopicTrip>>([]);
+        return base.EndExpiredAsync(window, cancellationToken);
     }
 
-    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<TopicTrip>>([]);
-
-    public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
+    public override Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
     {
         _recorder.Record(trips);
-        return Task.FromResult<IReadOnlyList<TripWriteResult>>([]);
+        return base.WriteAsync(trips, cancellationToken);
     }
 }

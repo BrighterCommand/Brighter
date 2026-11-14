@@ -31,14 +31,8 @@ using Paramore.Brighter.CircuitBreaker;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
-public class ThrowingOnReadTrippedTopicStore : IAmATrippedTopicStore
+public class ThrowingOnReadTrippedTopicStore : EmptyTrippedTopicStore
 {
-    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
+    public override Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
         => throw new InvalidOperationException("The store cannot be read");
-
-    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<TopicTrip>>([]);
-
-    public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<TripWriteResult>>([]);
 }
