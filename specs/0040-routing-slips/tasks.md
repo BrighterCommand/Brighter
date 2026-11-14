@@ -702,7 +702,7 @@ Depends on Phase 6.*
   - Implementation should: use a `Stopwatch` around the existing-specs `--all` run.
   - Traces to: NFR-4; AC-51 (a human reads the WARN: T17.4); 0092 step 6. Depends on: T8.6.
 
-- [ ] **TEST + IMPLEMENT: T8.8 — The shipped flow directory holds `feature.flow` and `approvals.md`, and no `light` or `bugfix` definition**
+- [x] **TEST + IMPLEMENT: T8.8 — The shipped flow directory holds `feature.flow` and `approvals.md`, and no `light` or `bugfix` definition**
   - **USE COMMAND**: `/tdd:test-first when the shipped .claude/flows directory is listed it should hold feature.flow and approvals.md and no light.flow or bugfix.flow`
   - Test file: `resolve_route_tests.cs`, AC-1 check.
   - **Characterise**: named mutation: copy `light.flow` from the fixture `flows/` into `.claude/flows/`. The check must FAIL. Delete the copy, and confirm `git status` shows nothing under `.claude/` (the untracked `specs/0040-routing-slips/baselines.md` is expected).
