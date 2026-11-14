@@ -981,7 +981,7 @@ Depends on Phase 11.*
   - Verify after: S1 green; marker grep empty. Hand: T17.2 item 10 (AC-39), T17.3 item 5 (AC-12).
   - Traces to: 0089 step 9.3; FR-18, FR-20, FR-8, FR-11; AC-12, AC-39, AC-42. Depends on: T13.1.
 
-- [ ] **TEST + IMPLEMENT: T13.3 — `/spec:design` checks its step and precondition through the resolver, and with no `requirements` step cites the issue, else the README, as the ADR's parent**
+- [x] **TEST + IMPLEMENT: T13.3 — `/spec:design` checks its step and precondition through the resolver, and with no `requirements` step cites the issue, else the README, as the ADR's parent**
   - Verification rows (RED-first): `design.md` must carry `route-instructions`, `closing-instructions`, and the templates *Next-step line*, *Not on the route* and *Another producer*.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
