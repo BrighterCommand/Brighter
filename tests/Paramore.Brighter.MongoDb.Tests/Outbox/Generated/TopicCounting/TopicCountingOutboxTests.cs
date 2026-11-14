@@ -41,12 +41,21 @@ public class TopicCountingOutboxTests : TopicCountingOutboxBaseTests<global::Mon
     private readonly Paramore.Brighter.MongoDb.Tests.Outbox.MongoDbOutboxProvider _outboxProvider = new();
     private IAmAnOutboxSync<Message, global::MongoDB.Driver.IClientSessionHandle>? _outbox;
 
-    protected override IAmAnOutboxSync<Message, global::MongoDB.Driver.IClientSessionHandle> Outbox => _outbox ??= _outboxProvider.CreateOutbox();
+    protected override IAmAnOutboxSync<Message, global::MongoDB.Driver.IClientSessionHandle> Outbox => _outbox!;
 
-    protected override void CreateStore() => _outboxProvider.CreateStore();
+    protected override void CreateStore()
+    {
+        _outbox = (IAmAnOutboxSync<Message, global::MongoDB.Driver.IClientSessionHandle>)_outboxProvider.CreateOutstandingCountStore();
+    }
 
-    protected override void DeleteStore() => _outboxProvider.DeleteStore([]);
+    protected override void DeleteStore() => _outboxProvider.DeleteOutstandingCountStore();
 
-    protected override Task AddMessageWithAgeAsync(Message message, TimeSpan age) =>
-        _outboxProvider.AddMessageWithAgeAsync(message, age);
+    protected override Task AddMessageWithAgeAsync(Message message, TimeSpan age)
+    {
+        var header = new MessageHeader(message.Id, message.Header.Topic, message.Header.MessageType,
+            timeStamp: DateTimeOffset.UtcNow - age, partitionKey: message.Header.PartitionKey);
+        foreach (var item in message.Header.Bag)
+            header.Bag.Add(item.Key, item.Value);
+        return ((IAmAnOutboxAsync<Message, global::MongoDB.Driver.IClientSessionHandle>)Outbox).AddAsync(new Message(header, message.Body), new RequestContext());
+    }
 }

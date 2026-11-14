@@ -41,14 +41,23 @@ public class TopicCountingOutboxTests : TopicCountingOutboxBaseTests<{{ Transact
     private readonly {{ OutboxProvider }} _outboxProvider = new();
     private IAmAnOutboxSync<Message, {{ Transaction }}>? _outbox;
 
-    protected override IAmAnOutboxSync<Message, {{ Transaction }}> Outbox => _outbox ??= _outboxProvider.CreateOutbox();{% if ReadConsistencyTimeoutInMilliseconds > 0 %}
+    protected override IAmAnOutboxSync<Message, {{ Transaction }}> Outbox => _outbox!;{% if ReadConsistencyTimeoutInMilliseconds > 0 %}
 
     protected override TimeSpan ReadConsistencyTimeout => TimeSpan.FromMilliseconds({{ ReadConsistencyTimeoutInMilliseconds }});{% endif %}
 
-    protected override void CreateStore() => _outboxProvider.CreateStore();
+    protected override void CreateStore()
+    {
+        _outbox = (IAmAnOutboxSync<Message, {{ Transaction }}>)_outboxProvider.CreateOutstandingCountStore();
+    }
 
-    protected override void DeleteStore() => _outboxProvider.DeleteStore([]);
+    protected override void DeleteStore() => _outboxProvider.DeleteOutstandingCountStore();
 
-    protected override Task AddMessageWithAgeAsync(Message message, TimeSpan age) =>
-        _outboxProvider.AddMessageWithAgeAsync(message, age);
+    protected override Task AddMessageWithAgeAsync(Message message, TimeSpan age)
+    {
+        var header = new MessageHeader(message.Id, message.Header.Topic, message.Header.MessageType,
+            timeStamp: DateTimeOffset.UtcNow - age, partitionKey: message.Header.PartitionKey);
+        foreach (var item in message.Header.Bag)
+            header.Bag.Add(item.Key, item.Value);
+        return ((IAmAnOutboxAsync<Message, {{ Transaction }}>)Outbox).AddAsync(new Message(header, message.Body), new RequestContext());
+    }
 }

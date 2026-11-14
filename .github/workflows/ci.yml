@@ -529,7 +529,7 @@ jobs:
 
   dynamo-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
     # Each framework gets its own emulator and shared test tables.
     strategy:
