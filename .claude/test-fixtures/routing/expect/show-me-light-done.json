@@ -14,6 +14,7 @@
     "declared_total": null,
     "declarations": null,
     "null_reasons": {
+      "requirements": "not on this spec's route",
       "declared_ids": "not on this spec's route",
       "declared_total": "not on this spec's route",
       "declarations": "not on this spec's route"
