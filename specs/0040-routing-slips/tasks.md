@@ -829,7 +829,7 @@ Depends on Phase 6.*
     - Add the ledger `route {flow, has_requirements_step}`, with `null` plus `null_reasons.route` on R0. `schema_version` stays `1`.
   - Traces to: 0089 step 8, *`show_me_facts.cs` and the route probe*; FR-23; NFR-6; AC-46. Depends on: T10.0.
 
-- [ ] **TEST + IMPLEMENT: T10.2 — For a slip with no `requirements`-kind step, show-me does not read `requirements.md`, never reports `declared_total` 0, and gives the route as its null reason**
+- [x] **TEST + IMPLEMENT: T10.2 — For a slip with no `requirements`-kind step, show-me does not read `requirements.md`, never reports `declared_total` 0, and gives the route as its null reason**
   - **USE COMMAND**: none — RED-first rows `show-me-light-done` and `show-me-bugfix-done`, each with `flows: "flows"` (the shipped directory has neither definition).
   - Test should verify:
     - `route.has_requirements_step` is false.
