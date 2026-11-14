@@ -1068,7 +1068,7 @@ Depends on Phase 11.*
   - Verify after: S1 green.
   - Traces to: 0089 step 9.9; FR-18 (check side); AC-69. Depends on: T13.9.
 
-- [ ] **PROJECT: T13.11 — Verify that no command file names a literal marker, and that every 0089 copy matches its canonical text**
+- [x] **PROJECT: T13.11 — Verify that no command file names a literal marker, and that every 0089 copy matches its canonical text**
   - Do:
     - Run `grep -l -e '.requirements-approved' -e '.design-approved' .claude/commands/spec/*.md .claude/commands/adr/adr.md`. It must match `README.md` only (AC-9).
     - Run `spec_text_tests.cs`. It must be green, with the route instructions in 8 files, the closing instructions in 5, and every 0089 template copy.
