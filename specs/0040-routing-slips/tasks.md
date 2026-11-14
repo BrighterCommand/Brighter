@@ -777,7 +777,7 @@ Depends on Phase 6.*
   - Implementation should: fill stop row 4. Replace the `{route-change command}` placeholder in row 5, using `/spec:route <flow> <reason>` when `flow.name` is null.
   - Traces to: 0091 *The tampered stop*; FR-16, FR-7, FR-17 (recovery); AC-31 and AC-80 (resolver side). Depends on: T9.6.
 
-- [ ] **TEST + IMPLEMENT: T9.8 — The latest route change is read from the last entry of `route-changes.md`, and a missing or malformed log gives `null`**
+- [x] **TEST + IMPLEMENT: T9.8 — The latest route change is read from the last entry of `route-changes.md`, and a missing or malformed log gives `null`**
   - **USE COMMAND**: `/tdd:test-first when a spec's route-changes log has two entries or a malformed entry the resolver should report the last entry or null` for the generated `gen-log-two` and `gen-log-malformed` in the harness. RED-first row for the tracked expectation `route-changed-light` (`flows: "flows"`).
   - Fixture: `route-changed-light/`.
     - A `light` slip and its record.
