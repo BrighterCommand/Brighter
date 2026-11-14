@@ -414,11 +414,17 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
             return;
 
         var readNumber = Interlocked.Increment(ref _readsStarted);
-        var ended = new EndedRows();
+        var read = new ExpiredThenLiveRead(_store, _timeProvider, _tripLength);
+        await ApplyReadOutcomeAsync(read, readNumber, guard, cancellationToken).ConfigureAwait(false);
+        EndRowsFrom(read.Ended);
+    }
+
+    private async Task ApplyReadOutcomeAsync(ExpiredThenLiveRead read, long readNumber, InFlightGuard guard, CancellationToken cancellationToken)
+    {
         IReadOnlyList<TopicTrip>? live;
         try
         {
-            var storeCall = BeginStoreCall(token => EndExpiredThenReadLiveAsync(ended, token), cancellationToken);
+            var storeCall = BeginStoreCall(read.ReadAsync, cancellationToken);
             _ = guard.ReleaseAfterAsync(storeCall.Settled);
             live = await storeCall.Result.ConfigureAwait(false);
         }
@@ -426,7 +432,6 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         {
             if (!IsStale(readNumber))
                 RecordReadFailure(e);
-            EndRowsFrom(ended.Rows);
             return;
         }
 
@@ -434,19 +439,10 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         {
             if (!IsStale(readNumber))
                 _fallback.RecordReadTimeout();
-            EndRowsFrom(ended.Rows);
             return;
         }
 
         ApplyRead(live, readNumber);
-        EndRowsFrom(ended.Rows);
-    }
-
-    private async Task<IReadOnlyList<TopicTrip>> EndExpiredThenReadLiveAsync(EndedRows ended, CancellationToken token)
-    {
-        var now = _timeProvider.GetUtcNow();
-        ended.Rows = await _store.EndExpiredAsync(now, _tripLength, token).ConfigureAwait(false);
-        return await _store.ReadLiveAsync(now, _tripLength, token).ConfigureAwait(false);
     }
 
     private void ApplyRead(IReadOnlyCollection<TopicTrip> live, long readNumber)
@@ -592,9 +588,18 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
     private readonly record struct PendingTrip(DateTimeOffset Stamp, bool ReplacesLiveTrip);
 
-    private sealed class EndedRows
+    private sealed class ExpiredThenLiveRead(IAmATrippedTopicStore store, TimeProvider timeProvider, TimeSpan tripLength)
     {
-        public volatile IReadOnlyList<TopicTrip> Rows = [];
+        private volatile IReadOnlyList<TopicTrip> _ended = [];
+
+        public IReadOnlyList<TopicTrip> Ended => _ended;
+
+        public async Task<IReadOnlyList<TopicTrip>> ReadAsync(CancellationToken token)
+        {
+            var now = timeProvider.GetUtcNow();
+            _ended = await store.EndExpiredAsync(now, tripLength, token).ConfigureAwait(false);
+            return await store.ReadLiveAsync(now, tripLength, token).ConfigureAwait(false);
+        }
     }
 
     private readonly record struct StoreCall<T>(Task Settled, Task<T?> Result) where T : class;
