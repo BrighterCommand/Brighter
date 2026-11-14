@@ -888,7 +888,7 @@ Depends on Phase 6.*
     - the provenance-line notes and the `provenance-commands` block.
   - Traces to: 0090 step 2, *The sub-flow instructions*, *The gate run contract*, *The provenance commands*, *Message templates*; 0092 step 9 (checks land with 0090 step 2), *Further checks*; FR-13, FR-27, FR-29, FR-26. Depends on: T11.1.
 
-- [ ] **DOC: T11.3 — Write 0091's canonical installation steps, write order, record and log formats, templates, tamper recoveries, the `/spec:route` entry, and the *Starter commands* checklist**
+- [x] **DOC: T11.3 — Write 0091's canonical installation steps, write order, record and log formats, templates, tamper recoveries, the `/spec:route` entry, and the *Starter commands* checklist**
   - Do: in `.claude/commands/spec/README.md`:
     - add `routing-text:installation-steps` and `routing-text:write-order` blocks;
     - add the `.flow.record` and `route-changes.md` formats;
