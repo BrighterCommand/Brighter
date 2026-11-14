@@ -846,7 +846,7 @@ Depends on Phase 6.*
   - Implementation should: treat a non-zero exit, a missing record line or a line that does not parse as a fault, before any `git` or `gh` call.
   - Traces to: 0089 *route probe* error conditions. *(This check is not in 0092's case list — see the scope-creep check.)* Depends on: T10.2.
 
-- [ ] **TEST + IMPLEMENT: T10.4 — `/spec:show-me` writes the route line in row 8 and `not available: not on this spec's route` in Inputs-used row 1 when the route has no requirements step**
+- [x] **TEST + IMPLEMENT: T10.4 — `/spec:show-me` writes the route line in row 8 and `not available: not on this spec's route` in Inputs-used row 1 when the route has no requirements step**
   - Verification:
     - No `/tdd:test-first`, because this is command text. There is no registry row: `show-me.md` is not compared.
     - Named hand step, run here and again as T17.3 item 4: run `show_me_facts.cs` on `light-done` with `--flows-dir`, apply `show-me.md` row 8 and Inputs-used row 1 to that ledger by hand, then delete the ledger.
