@@ -1026,7 +1026,7 @@ Depends on Phase 11.*
   - Verify after: S1 green; marker grep empty for `approve.md`.
   - Traces to: 0089 step 9.6; FR-12, FR-11, FR-8 (no new precondition); AC-13, AC-21, AC-23, AC-58 (command side), AC-66. Depends on: T13.5.
 
-- [ ] **TEST + IMPLEMENT: T13.7 — `/spec:implement` starts only when the hand-off precondition holds, and runs its ADR-`Accepted` check and ADR reads only with a `design` step**
+- [x] **TEST + IMPLEMENT: T13.7 — `/spec:implement` starts only when the hand-off precondition holds, and runs its ADR-`Accepted` check and ADR reads only with a `design` step**
   - Verification rows (RED-first): `implement.md` must carry `route-instructions`.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
