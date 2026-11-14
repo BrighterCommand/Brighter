@@ -1058,7 +1058,7 @@ Depends on Phase 11.*
   - Verify after: S1 green; marker grep empty.
   - Traces to: 0089 step 9.8; FR-10, FR-20, FR-11; AC-82. Depends on: T13.8.
 
-- [ ] **TEST + IMPLEMENT: T13.10 — `/spec:new` checks the `feature` definition first, and creates nothing when it is missing or invalid**
+- [x] **TEST + IMPLEMENT: T13.10 — `/spec:new` checks the `feature` definition first, and creates nothing when it is missing or invalid**
   - Verification rows (RED-first): `new.md` must carry the *Flow not usable* template (first stage) and the tooling-fault sentence (register `new.md` in T12.0's check first).
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
