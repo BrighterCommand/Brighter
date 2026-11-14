@@ -29,11 +29,14 @@ public class MsSqlTrippedTopicStoreEndExpiredRaceTests : MsSqlTrippedTopicStoreT
             // Act
             var ended = await Task.WhenAll(Enumerable.Range(0, CALLERS)
                 .Select(_ => Task.Run(() => Store.EndExpiredAsync(s_now, s_tripLength))));
+            var live = await Store.ReadLiveAsync(s_now, s_tripLength);
 
             // Assert
             Assert.Equal(1, ended.Count(trips => trips.Any(trip => trip.Topic == expiredTopic)));
             Assert.All(ended, trips => Assert.DoesNotContain(trips, trip => trip.Topic == liveTopic));
             Assert.Contains(ended.SelectMany(trips => trips), trip => trip.Topic == expiredTopic && trip.TripTime == expiredStamp);
+            Assert.DoesNotContain(live, trip => trip.Topic == expiredTopic);
+            Assert.Contains(live, trip => trip.Topic == liveTopic);
         }
     }
 }

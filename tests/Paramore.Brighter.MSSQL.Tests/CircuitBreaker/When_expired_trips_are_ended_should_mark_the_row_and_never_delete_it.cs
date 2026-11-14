@@ -11,7 +11,7 @@ public class MsSqlTrippedTopicStoreNeverDeletesTests : MsSqlTrippedTopicStoreTes
     private static readonly TimeSpan s_tripLength = TimeSpan.FromSeconds(50);
 
     [Fact]
-    public async Task When_a_read_ends_a_trip_should_mark_the_row_and_never_delete_it()
+    public async Task When_expired_trips_are_ended_should_mark_the_row_and_never_delete_it()
     {
         // Arrange
         var topic = new RoutingKey($"orders-{Uuid.NewAsString()}");
