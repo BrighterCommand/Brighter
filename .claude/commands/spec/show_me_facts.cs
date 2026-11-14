@@ -41,6 +41,7 @@ if (target.StartsWith("--", StringComparison.Ordinal))
 string? pinnedBase = null;
 string? pinnedHead = null;
 string? releaseNotesPath = null;
+string? flowsDirectory = null;
 
 var i = 1;
 while (i < args.Length)
@@ -62,6 +63,14 @@ while (i < args.Length)
                 return UsageErrorExitCode;
             }
             releaseNotesPath = args[i + 1];
+            i += 2;
+            break;
+        case "--flows-dir":
+            if (i + 1 >= args.Length)
+            {
+                return UsageErrorExitCode;
+            }
+            flowsDirectory = args[i + 1];
             i += 2;
             break;
         default:
@@ -101,6 +110,12 @@ if (tasksUnchecked > 0)
     return GateNotPassedExitCode;
 }
 
+var routeProbe = RouteProbe(target, flowsDirectory);
+if (routeProbe is null)
+{
+    return ToolingFaultExitCode;
+}
+
 var pinned = pinnedBase is not null && pinnedHead is not null;
 
 if (pinned && (!CommitExists(pinnedBase!) || !CommitExists(pinnedHead!)))
@@ -116,6 +131,16 @@ var ledger = new JsonObject
 };
 
 var nullReasons = new JsonObject();
+
+ledger["route"] = new JsonObject
+{
+    ["flow"] = routeProbe.Flow,
+    ["has_requirements_step"] = routeProbe.HasRequirementsStep,
+};
+if (routeProbe.HasRequirementsStep is null)
+{
+    nullReasons["route"] = "route slip unreadable (R0)";
+}
 
 string[] refFields =
 [
@@ -691,6 +716,71 @@ static void WritePrefixedRecord(string prefix, JsonObject record)
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
     Console.Error.WriteLine($"{prefix}{record.ToJsonString(options)}");
+}
+
+static RouteFacts? RouteProbe(string target, string? flowsDirectory)
+{
+    var trimmed = target.TrimEnd('/');
+    var leaf = Path.GetFileName(trimmed);
+    var root = Path.GetDirectoryName(trimmed);
+
+    var startInfo = new ProcessStartInfo("dotnet")
+    {
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+    };
+    foreach (var argument in new[] { "run", ".claude/commands/spec/resolve_route.cs", "--", string.IsNullOrEmpty(root) ? "." : root, "--spec", leaf })
+    {
+        startInfo.ArgumentList.Add(argument);
+    }
+    if (flowsDirectory is not null)
+    {
+        startInfo.ArgumentList.Add("--flows-dir");
+        startInfo.ArgumentList.Add(flowsDirectory);
+    }
+
+    using var process = Process.Start(startInfo);
+    if (process is null)
+    {
+        return null;
+    }
+
+    var stderrTask = process.StandardError.ReadToEndAsync();
+    var stdout = process.StandardOutput.ReadToEnd();
+    process.WaitForExit();
+    stderrTask.Wait();
+
+    return process.ExitCode == 0 ? ParseRouteReport(stdout) : null;
+}
+
+static RouteFacts? ParseRouteReport(string stdout)
+{
+    const string prefix = "route-report: ";
+    var line = stdout.Split('\n').LastOrDefault(l => l.StartsWith(prefix, StringComparison.Ordinal));
+    if (line is null)
+    {
+        return null;
+    }
+
+    try
+    {
+        var report = JsonNode.Parse(line[prefix.Length..]) as JsonObject;
+        var flow = report?["flow"]?["name"]?.GetValue<string>();
+        var violations = report?["violations"] as JsonArray;
+        var knownKinds = report?["known_kinds"] as JsonObject;
+        if (report is null || violations is null || knownKinds is null)
+        {
+            return null;
+        }
+
+        var unreadable = violations.Any(v => v?["rule"]?.GetValue<string>() == "R0");
+        return new RouteFacts(flow, unreadable ? null : knownKinds["requirements"] is not null);
+    }
+    catch (Exception e) when (e is JsonException or InvalidOperationException)
+    {
+        return null;
+    }
 }
 
 static bool CommitExists(string sha)
@@ -1442,3 +1532,5 @@ static class TaskPatterns
     // ^[[:space:]]*-[[:space:]]\[[ xX]\][[:space:]]*\*\*(TEST [+] IMPLEMENT|STRUCTURAL|PROJECT|DOC):
     public static readonly Regex Tag = new(@"^\s*-\s\[[ xX]\]\s*\*\*(TEST \+ IMPLEMENT|STRUCTURAL|PROJECT|DOC):");
 }
+
+internal sealed record RouteFacts(string? Flow, bool? HasRequirementsStep);

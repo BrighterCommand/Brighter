@@ -1,0 +1,11 @@
+{
+  "show_me": "legacy-all-approved",
+  "flows": "flows",
+  "ledger": {
+    "route": {
+      "flow": "feature",
+      "has_requirements_step": true
+    },
+    "schema_version": 1
+  }
+}
