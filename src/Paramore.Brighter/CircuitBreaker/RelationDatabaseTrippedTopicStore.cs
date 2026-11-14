@@ -236,6 +236,17 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
         string.Join(", ", Enumerable.Range(0, count).Select(i => $"({TopicParameter(i)}, {StampParameter(i)})"));
 
     /// <summary>
+    /// Checks that a trip table's name is not null, empty or white space.
+    /// </summary>
+    /// <param name="tableName">The name of the trip table.</param>
+    /// <exception cref="ArgumentException">The name is null, empty or white space.</exception>
+    protected static void RequireTableName(string tableName)
+    {
+        if (string.IsNullOrWhiteSpace(tableName))
+            throw new ArgumentException("You must provide a table name for the trip table", nameof(tableName));
+    }
+
+    /// <summary>
     /// Checks that a write names each topic once, and orders its trips by topic, ordinally.
     /// </summary>
     /// <remarks>

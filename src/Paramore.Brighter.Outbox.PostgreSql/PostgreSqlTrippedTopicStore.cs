@@ -170,8 +170,7 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
     private static string QualifiedTable(string tableName, string? schemaName)
     {
-        if (string.IsNullOrWhiteSpace(tableName))
-            throw new ArgumentException("You must provide a table name for the trip table", nameof(tableName));
+        RequireTableName(tableName);
 
         return PgIdentifier.QuoteQualified(schemaName, tableName);
     }
