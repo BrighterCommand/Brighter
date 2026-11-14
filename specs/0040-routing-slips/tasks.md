@@ -968,7 +968,7 @@ Depends on Phase 11.*
   - Verify after: S1 green; marker grep empty for this file. Hand: T17.3 item 5 (AC-18, AC-59).
   - Traces to: 0089 step 9.2; FR-14, FR-10, FR-11, FR-7; AC-18, AC-19, AC-28, AC-59, AC-67. Depends on: T12.2.
 
-- [ ] **TEST + IMPLEMENT: T13.2 — `/spec:requirements` no longer creates a spec, stops on an unusable `.current-spec`, and stops when its kind is not on the route or has another producer**
+- [x] **TEST + IMPLEMENT: T13.2 — `/spec:requirements` no longer creates a spec, stops on an unusable `.current-spec`, and stops when its kind is not on the route or has another producer**
   - Verification rows (RED-first): `requirements.md` must carry `route-instructions`, `closing-instructions`, and the templates *Next-step line*, *Not on the route* and *Another producer*.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
