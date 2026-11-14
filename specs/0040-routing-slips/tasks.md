@@ -1036,7 +1036,7 @@ Depends on Phase 11.*
   - Verify after: S1 green; marker grep empty; restart (S5, risk K8). Hand: `/spec:implement` on spec 0040 still starts.
   - Traces to: 0089 step 9.7; FR-9, FR-10; AC-14, AC-15, AC-83. Depends on: T13.6.
 
-- [ ] **TEST + IMPLEMENT: T13.8 — `/spec:ralph-implement` uses the same hand-off precondition, and passes `requirements.md` and ADR paths to sub-agents only for kinds on the slip**
+- [x] **TEST + IMPLEMENT: T13.8 — `/spec:ralph-implement` uses the same hand-off precondition, and passes `requirements.md` and ADR paths to sub-agents only for kinds on the slip**
   - Verification rows (RED-first): `ralph-implement.md` must carry `route-instructions`.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
