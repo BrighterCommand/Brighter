@@ -1046,7 +1046,7 @@ Depends on Phase 11.*
   - Verify after: S1 green; marker grep empty; restart (S5).
   - Traces to: 0089 step 9.7; FR-9, FR-10; AC-15, AC-19, AC-60 (command side). Depends on: T13.7.
 
-- [ ] **TEST + IMPLEMENT: T13.9 — `/adr:adr` proceeds unlinked on a missing, empty or stale `.current-spec`, and with a linked spec stops when the route has no design step**
+- [x] **TEST + IMPLEMENT: T13.9 — `/adr:adr` proceeds unlinked on a missing, empty or stale `.current-spec`, and with a linked spec stops when the route has no design step**
   - Verification rows (RED-first): `adr/adr.md` must carry `route-instructions`, `closing-instructions`, and the templates *Next-step line* and *No design step*.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
