@@ -534,6 +534,24 @@ pause goes.
 
 ---
 
+### `/spec:route {flow} [reason] [--flows-dir {dir}]`
+
+Move the current spec onto another flow, or repair a tampered or invalid slip, by copying the flow's definition into `.flow`. It acts on the current spec, and uses the resolver's `--current` report to classify it.
+
+```bash
+/spec:route light "The issue is already scoped as an ADR; no requirements step is needed"
+/spec:route feature "Scope grew; requirements are needed after all"
+/spec:route feature                      # asks for the reason
+```
+
+- The first word is the target flow. `--flows-dir {dir}` may appear anywhere after it and defaults to `.claude/flows`.
+- The rest of the text is the reason. When it is missing, the command asks for one, and a dismissed question changes nothing.
+- It stops without writing when the target is not usable, the spec is already on the target with a valid, untampered slip, or the current spec is missing, empty or stale.
+- It writes in the order given under [Slip creation and route change](#slip-creation-and-route-change), logs the change in `route-changes.md`, and checks the result with a second resolver run. Markers not on the new slip are kept and reported as stray.
+- `allowed-tools`: the resolver, `tr`, `shasum`, `sha256sum`, `date`, `cat`, `test`, `rm`, `Read` and `AskUserQuestion`.
+
+---
+
 ### `/spec:ralph-implement [count]`
 
 Unattended TDD implementation from the spec's **approved `tasks.md`** — the same task list
@@ -803,9 +821,96 @@ Message templates:
 | Gate, existing artefact | a gate | ``Step `{N+1}`'s artefacts ({steps[N+1].artefacts joined with ", "}) already exist. What should {approver} do?`` Options `Approve as is` (or `Keep as is`), `Regenerate`, `Cancel` |
 | Gate, second question | a gate | ``Approve step `{N+1}` ({steps[N+1].artefacts joined with ", "})?`` Options `Approve`, `Not now` |
 
+| Template | Printed by | Text |
+| --- | --- | --- |
+| Route usage | `/spec:route` | ``/spec:route needs a target flow name and, if given, a --flows-dir without $, `, " or \. Usage: /spec:route {flow} [reason]. Nothing was changed.`` |
+| Route spec name | `/spec:route` | ``Cannot change the route of `{spec}`: its directory name holds $, `, " or \. Nothing was changed.`` |
+| Route target not usable | `/spec:route` | ``Cannot change the route to `{target}`: {violations[0].message} Nothing was changed.`` |
+| Already on target | `/spec:route` | ``Spec `{spec}` is already on flow `{target}`, and its slip is valid and not tampered. Nothing was changed.`` |
+| No reason | `/spec:route` | ``/spec:route needs a reason for the route change. Nothing was changed.`` |
+| Route changed | `/spec:route` | ``Spec `{spec}` moved from flow `{from}` to `{target}`. Reason recorded in route-changes.md: {reason}`` then, when `stray_markers` is non-empty, ``Kept as stray markers: {stray_markers joined with ", "}.`` then the next-step line |
+| Post-check | `/spec:route`, `/spec:new` | ``{command} wrote the slip, but the resolver reports flow `{flow.name, or "none"}`, valid {valid}, tampered {tampered.case, or "no"}. Re-run /spec:route {target} <reason> to repair.`` |
+| Installation failed | `/spec:route` | ``{command} stopped: {step} failed. Written so far: {files}. Re-run {command}.`` |
+| New spec failed | `/spec:new`, starters | ``{command} stopped: {step} failed. `specs/{dir}/` was created and holds: {files}. Delete it and run {command} {name} again.`` |
+| Start failed | `/spec:new`, starters | ``{command} stopped: {step} failed. Nothing was created.`` |
+| Spec name | `/spec:new`, starters | ``{command} needs a spec name that is not empty and has none of / \ $ ` ". Nothing was created.`` |
+| Spec exists | `/spec:new`, starters | ``Cannot start a spec: `specs/{dir}/` already exists. Nothing was created. Re-run {command} to take the next number.`` |
+| Spec ignored | `/spec:new`, starters | ``Cannot start a spec named `{name}`: git would ignore `specs/{dir}/.flow`. Nothing was created. Choose a name that does not match a .gitignore rule.`` |
+
 <!-- routing-text:templates:end -->
 
 In the approver templates, `{approver}` is the approver's own invocation as typed, `{pass}` is `questions` or `actions`, and `{reason}` comes from the `sub-flow-failed` line, or is `no sub-flow-done line`. `{command}` is the sub-flow command named in the `sub-flow-failed` line, or the command that printed no `sub-flow-done` line. A gate also prints the artefacts-missing template, with `{step}` as `{N}` and `{producer}` as `steps[N].producer`. In a gate, `{N}` is `steps[i].gate.approves` and `{N+1}` is `steps[i].name`, for the step `i` that the gate produces.
+
+### Slip creation and route change
+
+A starter command, `/spec:new` and `/spec:route` install a slip into a spec directory with the same four shell steps, and record the change with the formats below ([ADR 0091](../../../docs/adr/0091-slip-creation-tamper-detection-and-route-change.md)). Each step is run on its own from the repository root. `{D}` is `specs/{dir}`, `{S}` is `{flows-dir}/{flow}.flow`, and each is double-quoted. The creation commands refuse a name holding `$`, a backtick, `"` or `\`, and `/spec:route` refuses a `--flows-dir` or a spec directory that holds one, so the double quotes are enough.
+
+<!-- routing-text:installation-steps:begin -->
+1. `tr -d '\r' < "{S}" > "{D}/.flow"`
+2. `shasum -a 256 < "{D}/.flow"`. If the command is not found, use `sha256sum < "{D}/.flow"`. The slip hash is the first field of the output, and it must match `^[0-9a-f]{64}$`.
+3. `date +%Y-%m-%d`
+4. Write the record with a quoted here-document, so that nothing is expanded:
+   `cat > "{D}/.flow.record" <<'FLOW_RECORD'` followed by the three lines, then `FLOW_RECORD`.
+
+If any step fails, stop and print a failure template. `/spec:new` and the starters carry the steps in this order. `/spec:route` carries the same four steps verbatim, then runs them in the order its write order sets.
+<!-- routing-text:installation-steps:end -->
+
+`/spec:route` runs the steps in this order:
+
+<!-- routing-text:write-order:begin -->
+| # | Step | State if the run stops after this step |
+| --- | --- | --- |
+| W0 | installation step 3 (`date`, read-only). Its value dates both the log heading and the record | unchanged |
+| W1 | `rm -f "{D}/.flow.record"` | case (c) if `.flow` exists; otherwise legacy-looking |
+| W2 | append the log entry with `test -f` and `cat >> "{D}/route-changes.md" <<'ROUTE_CHANGE'`, writing the `# Route changes` header first if the file is new | as W1, with the entry logged |
+| W3 | installation step 1 (the shell creates `.flow` before `tr` runs) | case (c) |
+| W4 | installation step 2 (read-only) | case (c) |
+| W5 | installation step 4 | complete |
+<!-- routing-text:write-order:end -->
+
+The previous flow reaches the log at W2, before `.flow` is replaced, so no interruption loses it. After W1, every state with a `.flow` reads as case (c). Only `/spec:route` repairs case (c), and re-running it repairs any of these states. A spec with no `.flow` that stops after W1 or W2 (legacy, or case (b)) reads as legacy. Its log may then name a change that did not finish, and `/spec:route` to the flow it is on records the abandonment. A re-run appends another entry in each case. Nothing else is deleted: markers and artefacts stay where they are, and markers not on the new slip become stray markers.
+
+**`.flow.record`**, tracked, holds exactly three lines, each ending in LF:
+
+```
+flow: feature
+sha256: 3b0c9f…(64 lowercase hex digits)
+date: 2026-11-02
+```
+
+- **Parsing.** CRLF becomes LF, and trailing spaces and tabs are ignored. Trailing blank lines are allowed. The patterns are: `flow: [a-z][a-z0-9-]*`, `sha256: [0-9a-f]{64}`, `date: [0-9]{4}-[0-9]{2}-[0-9]{2}`. Anything else makes the record **unreadable**.
+- **Normalisation for the slip hash.** Read `.flow` as bytes, replace each CR LF pair with LF, and hash the result with SHA-256. Nothing else is normalised. A byte-order mark, trailing whitespace, a lone CR or a missing final newline all change the hash.
+- **The commands write a CR-free `.flow`.** The installation steps copy with `tr -d '\r'`, so the bytes the command hashes are the bytes the resolver hashes after normalisation. A later CRLF checkout normalises back to them.
+- **Only `sha256` decides tampering.** `date` is for people to read. `flow` is reported as `tampered.recorded_flow`, and names the route the spec was set to.
+
+**`route-changes.md`**, tracked, is created by the first route change. Each change appends one entry, and earlier entries are never rewritten:
+
+```
+# Route changes
+
+## 2026-11-02: feature -> light
+
+Reason: The issue is already scoped as an ADR; no requirements step is needed.
+
+## 2026-11-09: light -> feature
+
+Reason: Scope grew; requirements are needed after all.
+```
+
+- Heading pattern: `^## ([0-9]{4}-[0-9]{2}-[0-9]{2}): ([a-z][a-z0-9-]*) -> ([a-z][a-z0-9-]*)$`. Reason line: `^Reason: (.+)$`. CRLF is tolerated.
+- **`from`** is read from the `--current` report: `tampered.recorded_flow` in case (b), where there is no `.flow` to read, and `flow.name` otherwise. When that is `null`, it is `route_change.to`, then `unknown`. A legacy spec therefore reads `feature`.
+- **Re-runs** append a further entry. The earlier entry keeps the true change, and `route_change` reports the latest. A re-copy of the same flow reads `light -> light`.
+- The reason is the user's text on one line, with line breaks replaced by spaces. It may not be empty.
+
+**Tamper recoveries.** The resolver compares the SHA-256 of `.flow` with `.flow.record`, and a spec that does not match stops every route-following command:
+
+| Case | `.flow` and `.flow.record` | Recovery |
+| --- | --- | --- |
+| a | `.flow` differs from the recorded hash | Restore `.flow` from version control (`git restore --source=HEAD -- "{spec}/.flow"`), or re-copy the flow with `/spec:route {flow} <reason>` |
+| b | `.flow` is missing but `.flow.record` exists | the same as (a) |
+| c | `.flow` has no readable `.flow.record` | Re-copy the flow with `/spec:route {flow} <reason>` |
+
+The stop message is ``Spec `{spec}` has a tampered slip: {what}, so it does not match what was recorded when its route was set. {recovery}`` with `{what}` as `` `.flow` differs from the content recorded in `.flow.record` ``, `` `.flow` is missing but `.flow.record` exists `` or `` `.flow` has no readable `.flow.record` ``. `{flow}` is `tampered.recorded_flow` when it is not `null`, then `flow.name`, then the literal `<flow>`. A slip that is invalid names `/spec:route {flow.name} <reason>` as the recovery, or `/spec:route <flow> <reason>` when `flow.name` is `null`.
 
 ### Running an approval sub-flow
 
@@ -889,6 +994,48 @@ Rows 1 to 4 need N+1 unapproved and row 5 needs it approved, so exactly one row 
 <!-- routing-text:gate-run-contract:end -->
 
 A gate produces N+1 only in rows 1 and 3, or after `Regenerate`, so it never overwrites an artefact without asking. A gate that is not N+1's marker-writer offers `Keep as is`, and goes to step 8 after it. Every path ends at step 8, except the stops in steps 1 to 3, which write no marker, so the user sees the next step.
+
+### Starter commands
+
+A starter command starts a spec on a flow other than `feature` (for example `/modules:suggest`). It is well formed when it meets the contract below. Each item is answered yes or no, and each names one clause of the contract and one way of checking it:
+
+- **Fixture**: the flow ships a resolver fixture test in the layout of [ADR 0092](../../../docs/adr/0092-routing-fixtures-and-test-scripts.md).
+- **Statement**: the flow's command text carries an identical copy of the named README text.
+
+An item that can be checked both ways is split into two rows, so every row names one method. Gates and flow approvers carry copies of the route instructions and closing instructions, outside the counts for the `/spec:*` commands ([ADR 0090](../../../docs/adr/0090-approval-sub-flows.md)).
+
+The contract has nine clauses:
+
+1. Stops before creating anything if its definition is missing or invalid.
+2. Creates the spec directory by the spec numbering rule, stopping if the whole name exists, and updates `specs/.current-spec`.
+3. Copies its slip into `.flow` and writes a creation record, so the resolver reports the flow, valid and not tampered.
+4. Writes the slip's markers with a provenance line.
+5. Produces artefacts whose kinds and filenames match the slip.
+6. Ensures every gate on its slip meets the gate run contract.
+7. Takes routing decisions from the resolver and stops on an invalid or tampered slip.
+8. Adds an approval-table entry for every flow-specific kind its slip uses, and runs a step's approval sub-flow before writing the marker.
+9. Ships resolver fixture tests that cover its slip at each step's approved and unapproved state.
+
+**Rule: a starter edits no `/spec:*` file.** A reviewer checks it with `git diff --stat -- .claude/commands/spec/`. It is a rule above the table, not an item in it.
+
+| # | Check | Yes when | FR-19 clause | Checked by |
+| --- | --- | --- | --- | --- |
+| C1a | Stops on a missing or invalid definition | The starter runs `--definition {name}` first and stops when `valid` is false | 1 | Statement |
+| C1b | Stops on a missing or invalid definition | `--definition {name}` reports the definition valid | 1 | Fixture |
+| C2 | Names, numbers and creates safely | The starter carries the name rule, the spec numbering rule, the ignore check, `mkdir` with no `-p`, the spec-name, spec-exists, spec-ignored, start-failed and new-spec-failed templates, and writes `specs/.current-spec` last | 2 | Statement |
+| C3a | Installs `.flow` and the record | The starter carries the installation steps | 3 | Statement |
+| C3b | Installs `.flow` and the record | A fixture spec on the flow with `.flow` and `.flow.record` reports `{name}`, valid, not tampered | 3 | Fixture |
+| C4 | Provenance lines | Every marker-writing command of the flow carries the provenance commands | 4 | Statement |
+| C5a | Artefacts match the slip | Each producing command writes exactly the files its step's Artefacts cell names | 5 | Statement |
+| C5b | Artefacts match the slip | The fixtures at each step name those files | 5 | Fixture |
+| C6 | Gate run contract | Every gate on the slip carries the gate run contract text from this file | 6 | Statement |
+| C7 | Takes routing from the resolver | Every producing and marker-writing command of the flow carries the route instructions, and also the closing instructions when its write changes `next` (every gate and flow approver does). The starter ends with a post-check like `/spec:new`'s | 7 | Statement |
+| C8a | Approval-table entry for every flow-specific kind | `approvals.md` has an entry, possibly `(empty)`, for every flow-specific kind on the slip, so a fixture slip is valid | 8 | Fixture |
+| C8b | Sub-flow before marker | Every approving command carries the sub-flow instructions, with the marker written by their step 7 only | 8 | Statement |
+| C9 | Ships fixture tests | Fixtures cover every step approved and unapproved | 9 | Fixture |
+| C10 | Step checks before the sub-flow | Before its sub-flow, a flow's own marker-writing command checks that the step is on the slip, that `steps[N].marker_writer` is itself, and that step N's artefacts are present, using the artefacts-missing template | 8 | Statement |
+
+C10 covers the approval-table and sub-flow clause (8): it holds the checks a flow's own approver makes before it runs the sub-flow. C4, C6, C8b and C10 point at the texts under [The provenance line](#the-provenance-line), [The gate run contract](#the-gate-run-contract) and [Running an approval sub-flow](#running-an-approval-sub-flow).
 
 ---
 
