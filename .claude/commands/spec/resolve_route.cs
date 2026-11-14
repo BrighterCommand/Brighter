@@ -907,9 +907,41 @@ internal static class SpecReport
             : [];
 }
 
+internal static class TamperedStop
+{
+    private const string RouteChangeCommand = "/spec:route";
+
+    public static JsonNode? When(JsonObject tampered, string specPath, FlowIdentity flow) =>
+        tampered["value"]!.GetValue<bool>() ? For(tampered["case"]!.GetValue<string>(), specPath, FlowName(tampered, flow)) : null;
+
+    private static JsonObject For(string tamperCase, string specPath, string flowName) => new()
+    {
+        ["reason"] = "tampered",
+        ["message"] = $"Spec `{specPath}` has a tampered slip: {What(tamperCase)}, so it does not match what was recorded when its route was set. {Recovery(tamperCase, specPath, flowName)}"
+    };
+
+    private static string FlowName(JsonObject tampered, FlowIdentity flow) =>
+        tampered["recorded_flow"]?.GetValue<string>() ?? flow.Name ?? "<flow>";
+
+    private static string What(string tamperCase) => tamperCase switch
+    {
+        "a" => "`.flow` differs from the content recorded in `.flow.record`",
+        "b" => "`.flow` is missing but `.flow.record` exists",
+        _ => "`.flow` has no readable `.flow.record`"
+    };
+
+    private static string Recovery(string tamperCase, string specPath, string flowName) => tamperCase switch
+    {
+        "c" => Recopy(flowName),
+        _ => $"Restore `.flow` from version control (`git restore --source=HEAD -- \"{specPath}/.flow\"`), or re-copy the flow with `{RouteChangeCommand} {flowName} <reason>`."
+    };
+
+    private static string Recopy(string flowName) => $"Re-copy the flow with `{RouteChangeCommand} {flowName} <reason>`.";
+}
+
 internal static class InvalidStop
 {
-    private const string RouteChangePlaceholder = "{route-change command}";
+    private const string RouteChangeCommand = "/spec:route";
 
     public static JsonObject For(IReadOnlyList<Violation> violations, FlowIdentity flow, string flowsDirectory)
     {
@@ -930,8 +962,8 @@ internal static class InvalidStop
 
     private static string Recopy(string? flowName, string directory) =>
         flowName is null
-            ? $"Re-copy the flow with {RouteChangePlaceholder} <flow> <reason>."
-            : $"Re-copy the flow with {RouteChangePlaceholder} {flowName} <reason>, after fixing {directory}/{flowName}.flow if the fault is there.";
+            ? $"Re-copy the flow with {RouteChangeCommand} <flow> <reason>."
+            : $"Re-copy the flow with {RouteChangeCommand} {flowName} <reason>, after fixing {directory}/{flowName}.flow if the fault is there.";
 
     public static JsonNode? When(IReadOnlyList<Violation> violations, FlowIdentity flow, string flowsDirectory) =>
         violations.Count == 0 ? null : For(violations, flow, flowsDirectory);
@@ -1149,6 +1181,7 @@ internal static class RouteResolver
 {
     public static JsonObject Resolve(string specPath, FlowIdentity flow, IReadOnlyList<string> lines, IReadOnlyList<Violation> violations, JsonNode? stop, ApprovalTable table, SpecStateReader state)
     {
+        var tampered = RouteRecordInspector.Tampered(specPath);
         var steps = SlipSyntax.Steps(lines);
         var approved = steps.Select(state.Approved).ToList();
         var unapproved = steps.Where((_, index) => !approved[index]).ToList();
@@ -1160,7 +1193,7 @@ internal static class RouteResolver
             ["flow"] = new JsonObject { ["name"] = flow.Name, ["source"] = flow.Source, ["definition_present"] = flow.DefinitionPresent },
             ["valid"] = violations.Count == 0,
             ["violations"] = new JsonArray(violations.Select(violation => (JsonNode)violation.ToJson()).ToArray()),
-            ["tampered"] = RouteRecordInspector.Tampered(specPath),
+            ["tampered"] = tampered,
             ["route_change"] = RouteRecordInspector.RouteChange(),
             ["steps"] = new JsonArray(steps.Select((step, index) => (JsonNode)StepJson(steps, index, approved, table, state)).ToArray()),
             ["known_kinds"] = KnownKindsJson(steps),
@@ -1170,7 +1203,7 @@ internal static class RouteResolver
             ["next"] = violations.Count > 0 ? InvalidNextJson() : unapproved.Count == 0 ? HandOffNextJson(SlipSyntax.HandOffCommand(lines), DetoursJson(lines, HandOffAttachPoint)) : NextJson(unapproved[0], state, DetoursJson(lines, unapproved[0].Name)),
             ["hand_off"] = HandOffJson(SlipSyntax.HandOffCommand(lines), unapproved),
             ["approve_steps"] = new JsonArray(steps.Where(step => step.MarkerWriter == ApproveCommand(step.Name)).Select(step => (JsonNode)step.Name).ToArray()),
-            ["stop"] = stop
+            ["stop"] = TamperedStop.When(tampered, specPath, flow) ?? stop
         };
     }
 

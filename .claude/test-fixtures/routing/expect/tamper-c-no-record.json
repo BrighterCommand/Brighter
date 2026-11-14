@@ -16,6 +16,10 @@
       "value": true,
       "case": "c",
       "recorded_flow": null
+    },
+    "stop": {
+      "reason": "tampered",
+      "message": "Spec `.claude/test-fixtures/routing/specs/tamper-c-no-record` has a tampered slip: `.flow` has no readable `.flow.record`, so it does not match what was recorded when its route was set. Re-copy the flow with `/spec:route feature <reason>`."
     }
   }
 }

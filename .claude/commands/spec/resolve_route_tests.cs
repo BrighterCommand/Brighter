@@ -675,6 +675,9 @@ void CheckGeneratedTamperCase(string root, string name, byte[] slip, bool valid,
 
         if (name == "gen-bom" && !(actual["violations"]?.AsArray().Any(v => v?["rule"]?.GetValue<string>() == "R0") ?? false))
             report.Fail(check, "expected an R0 violation for the byte-order mark on line 1");
+
+        if (name == "gen-bom" && actual["stop"]?["reason"]?.GetValue<string>() != "tampered")
+            report.Fail(check, $"expected stop.reason tampered ahead of the R0 invalid stop, got {actual["stop"]?["reason"]}");
     }
     finally
     {
