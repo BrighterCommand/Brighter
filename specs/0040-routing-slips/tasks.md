@@ -807,7 +807,7 @@ Depends on Phase 6.*
 
 *0092 step 8 with 0089 step 8. Depends on Phase 9.*
 
-- [ ] **TEST + IMPLEMENT: T10.0 — The test harness runs `show_me_facts.cs` for a `show_me` expectation, partial-matches its ledger, restores the ledger afterwards, and leaves the ledger out of the read-only hash**
+- [x] **TEST + IMPLEMENT: T10.0 — The test harness runs `show_me_facts.cs` for a `show_me` expectation, partial-matches its ledger, restores the ledger afterwards, and leaves the ledger out of the read-only hash**
   - **USE COMMAND**: `/tdd:test-first when an expectation names a show_me case the harness should run show_me_facts partial-match the ledger and delete or restore it without failing the read-only hash check`
   - Test file: `resolve_route_tests.cs`. Fixture: `expect/show-me-runner.json` (new): `"show_me": "legacy-all-approved"`, `"ledger": {"schema_version": 1}`.
   - Test should verify:
