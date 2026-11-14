@@ -792,7 +792,7 @@ Depends on Phase 6.*
   - Implementation should: add 0091's heading and reason patterns. The log never affects `valid`, `tampered` or `stop`.
   - Traces to: 0091 *The route-change log*; FR-17, FR-15, FR-21; AC-30, AC-36, AC-81, AC-90. Depends on: T9.7.
 
-- [ ] **TEST + IMPLEMENT: T9.9 — An `--all` summary line carries `tampered` and a route change with its reason cut to 60 characters, and stays within 650 characters for the worst tracked case**
+- [x] **TEST + IMPLEMENT: T9.9 — An `--all` summary line carries `tampered` and a route change with its reason cut to 60 characters, and stays within 650 characters for the worst tracked case**
   - **USE COMMAND**: `/tdd:test-first when the all-mode summary line for the tamper-a-route-changed case is measured it should carry tampered without the recorded flow and a route change reason cut to 60 characters within 650 characters` (extends the T8.6 line-limit run over `{fixture root}/specs` in the harness).
   - Test should verify:
     - `tampered {value, case}` without `recorded_flow`.
