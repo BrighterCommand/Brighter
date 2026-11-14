@@ -694,7 +694,7 @@ Depends on Phase 6.*
   - Implementation should: add the checks only. **If the healthy run fails the total (risk K1), stop and ask.** Do not page, truncate or drop specs.
   - Traces to: 0089 *The route report* (size), Risks; 0092 step 6, *Repository checks* (size). Depends on: T8.5.
 
-- [ ] **TEST + IMPLEMENT: T8.7 — The `--all` run over `specs/` is timed after the build, and a run of 10 seconds or more prints a `WARN` with the duration without failing**
+- [x] **TEST + IMPLEMENT: T8.7 — The `--all` run over `specs/` is timed after the build, and a run of 10 seconds or more prints a `WARN` with the duration without failing**
   - **USE COMMAND**: `/tdd:test-first when the timed --all run over specs takes ten seconds or longer it should print a WARN line with the duration and not change the exit status`
   - Test file: `resolve_route_tests.cs`, timing check, run after the pre-check has built the script.
   - **Characterise**: named mutation: `Thread.Sleep(10_500)` at the start of `--all` in `resolve_route.cs`. A `WARN` appears and the exit status is unchanged. Revert, and record the real duration in the commit message.
