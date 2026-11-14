@@ -940,7 +940,7 @@ Depends on Phase 11.*
     - Hand: run `/spec:status` after S5. Spec 0040 shows `feature (default — no .flow)` and today's step information (AC-29).
   - Traces to: 0089 step 9.1; FR-15, FR-11, FR-7, FR-20, FR-21, FR-22; AC-13, AC-20, AC-29, AC-30, AC-44. Depends on: T12.0.
 
-- [ ] **TEST + IMPLEMENT: T12.2 — `/spec:switch` picks a spec by show-me's ordered match, writes `.current-spec` only after a successful `--spec` run, and shows the same report and next step as status**
+- [x] **TEST + IMPLEMENT: T12.2 — `/spec:switch` picks a spec by show-me's ordered match, writes `.current-spec` only after a successful `--spec` run, and shows the same report and next step as status**
   - Verification rows (RED-first): `switch.md` must carry the *Next-step line*, *Ambiguous spec id* and *No spec matches* templates, and (add `switch.md` to T12.0's check first) the tooling-fault sentence.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
