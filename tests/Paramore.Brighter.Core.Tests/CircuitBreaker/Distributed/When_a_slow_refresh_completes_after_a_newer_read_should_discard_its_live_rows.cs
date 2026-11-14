@@ -129,4 +129,23 @@ public class When_a_slow_refresh_completes_after_a_newer_read_should_discard_its
         Assert.False(_breaker.StoreStatus.IsUsingFallback);
         Assert.Null(_breaker.StoreStatus.LastFailure);
     }
+
+    [Fact]
+    public async Task When_a_slow_read_succeeds_after_a_newer_read_failed_should_stay_in_fallback_with_the_newer_failure()
+    {
+        // Arrange
+        await StartSlowRefreshAsync();
+        var sweep = _breaker.ReadTrippedTopicsAsync();
+        await _store.ReadStarted(2);
+        _store.FailRead(2, new InvalidOperationException("The store cannot be read"));
+        await sweep;
+
+        // Act
+        _store.CompleteRead(1, new HeldRead([], []));
+        await Task.Delay(200);
+
+        // Assert
+        Assert.True(_breaker.StoreStatus.IsUsingFallback);
+        Assert.Equal("InvalidOperationException", _breaker.StoreStatus.LastFailure);
+    }
 }

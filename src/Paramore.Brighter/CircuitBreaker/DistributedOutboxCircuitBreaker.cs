@@ -443,14 +443,14 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         }
         catch (Exception e) when (!cancellationToken.IsCancellationRequested)
         {
-            if (!IsStale(readNumber))
+            if (TryClaim(readNumber))
                 RecordReadFailure(e);
             return;
         }
 
         if (live is null)
         {
-            if (!IsStale(readNumber))
+            if (TryClaim(readNumber))
                 RecordReadTimeout();
             return;
         }
@@ -497,12 +497,6 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         {
             await _recoveryGuard.ReleaseAfterAsync(settled).ConfigureAwait(false);
         }
-    }
-
-    private bool IsStale(long readNumber)
-    {
-        lock (_view.Lock)
-            return IsSuperseded(readNumber);
     }
 
     private bool TryClaim(long readNumber)
