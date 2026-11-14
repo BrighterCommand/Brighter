@@ -714,7 +714,7 @@ Depends on Phase 6.*
 
 *0092 step 7 with 0091 step 1 (= 0089 step 7). Depends on Phase 8.*
 
-- [ ] **TEST + IMPLEMENT: T9.1 — Every tracked `.flow.record` outside the named tamper cases holds the SHA-256 of its case's normalised `.flow` and its flow name**
+- [x] **TEST + IMPLEMENT: T9.1 — Every tracked `.flow.record` outside the named tamper cases holds the SHA-256 of its case's normalised `.flow` and its flow name**
   - **USE COMMAND**: `/tdd:test-first when a tracked fixture .flow.record does not match the SHA-256 of its case's CRLF-normalised .flow or line 1's flow name it should FAIL naming the case and telling the author to re-run the installation steps`
   - Test file: `resolve_route_tests.cs`, record integrity check; it exempts `tamper-a-route-changed` and `tamper-b-record-only`.
   - **Characterise**: named mutation: change one character of `specs/feature-slip/.flow` in the working tree. The check must FAIL naming `feature-slip`. Restore it with `git restore`.
