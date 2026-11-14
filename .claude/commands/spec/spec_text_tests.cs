@@ -21,8 +21,8 @@ var registry = new List<RoutingTextBlock>
             ".claude/commands/adr/retire-superseded.md",
             ".claude/commands/adr/report-approval.md"
         ]),
-    new("route-instructions", ".claude/commands/spec/README.md", [".claude/commands/spec/review.md", ".claude/commands/spec/requirements.md", ".claude/commands/spec/design.md", ".claude/commands/spec/tasks.md"]),
-    new("closing-instructions", ".claude/commands/spec/README.md", [".claude/commands/spec/requirements.md", ".claude/commands/spec/design.md", ".claude/commands/spec/tasks.md"]),
+    new("route-instructions", ".claude/commands/spec/README.md", [".claude/commands/spec/review.md", ".claude/commands/spec/requirements.md", ".claude/commands/spec/design.md", ".claude/commands/spec/tasks.md", ".claude/commands/spec/approve.md"]),
+    new("closing-instructions", ".claude/commands/spec/README.md", [".claude/commands/spec/requirements.md", ".claude/commands/spec/design.md", ".claude/commands/spec/tasks.md", ".claude/commands/spec/approve.md"]),
     new("gate-run-contract", ".claude/commands/spec/README.md", []),
     new("sub-flow-instructions", ".claude/commands/spec/README.md", []),
     new("provenance-commands", ".claude/commands/spec/README.md", [])
@@ -51,7 +51,8 @@ var templateRegistry = new List<TemplateExpectation>
     new(".claude/commands/spec/README.md", ".claude/commands/spec/review.md", ["Next-step line", "Phase not on the route", "Step with no review criteria", "No requirements step"]),
     new(".claude/commands/spec/README.md", ".claude/commands/spec/requirements.md", ["Next-step line", "Not on the route", "Another producer"]),
     new(".claude/commands/spec/README.md", ".claude/commands/spec/design.md", ["Next-step line", "Not on the route", "Another producer"]),
-    new(".claude/commands/spec/README.md", ".claude/commands/spec/tasks.md", ["Next-step line", "Not on the route", "Another producer"])
+    new(".claude/commands/spec/README.md", ".claude/commands/spec/tasks.md", ["Next-step line", "Not on the route", "Another producer"]),
+    new(".claude/commands/spec/README.md", ".claude/commands/spec/approve.md", ["Next-step line", "Step not on the slip", "Another marker-writer", "Artefacts missing"])
 };
 
 string[] toolingFaultFiles =
@@ -61,7 +62,8 @@ string[] toolingFaultFiles =
     ".claude/commands/spec/review.md",
     ".claude/commands/spec/requirements.md",
     ".claude/commands/spec/design.md",
-    ".claude/commands/spec/tasks.md"
+    ".claude/commands/spec/tasks.md",
+    ".claude/commands/spec/approve.md"
 ];
 
 var reporter = new Reporter();
