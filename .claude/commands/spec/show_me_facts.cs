@@ -12,6 +12,7 @@ const int ToolingFaultExitCode = 1;
 const int GateNotPassedExitCode = 2;
 const int LedgerCapBytes = 65_536;
 const string WordCountFlag = "--word-count";
+const string OffRouteReason = "not on this spec's route";
 const int WordCountLowerBound = 400;
 const int WordCountUpperBound = 2_000;
 
@@ -294,37 +295,32 @@ else
 ledger["tasks"] = tasksInfo;
 
 // requirements.md's declared ids are file-derived too, computed the same way on every kind of run.
-var requirementsPath = Path.Combine(target, "requirements.md");
-if (File.Exists(requirementsPath))
+if (routeProbe.HasRequirementsStep == false)
 {
-    var requirementsBytes = File.ReadAllBytes(requirementsPath);
-    var (declaredIds, declarations) = ExtractDeclaredIds(requirementsBytes);
-
-    ledger["requirements"] = new JsonObject
-    {
-        ["present"] = true,
-        ["bytes"] = requirementsBytes.Length,
-        ["windows"] = ComputeWindows(requirementsBytes),
-    };
-    ledger["declared_ids"] = new JsonArray(declaredIds.Select(id => (JsonNode)id).ToArray());
-    ledger["declared_total"] = declaredIds.Count;
-    ledger["declarations"] = declarations;
+    RecordRequirementsAbsent(ledger, nullReasons, OffRouteReason);
 }
 else
 {
-    ledger["requirements"] = new JsonObject
+    var requirementsPath = Path.Combine(target, "requirements.md");
+    if (File.Exists(requirementsPath))
     {
-        ["present"] = false,
-        ["bytes"] = null,
-        ["windows"] = null,
-    };
-    ledger["declared_ids"] = null;
-    ledger["declared_total"] = null;
-    ledger["declarations"] = null;
-    nullReasons["requirements"] = "not present";
-    nullReasons["declared_ids"] = "not present";
-    nullReasons["declared_total"] = "not present";
-    nullReasons["declarations"] = "not present";
+        var requirementsBytes = File.ReadAllBytes(requirementsPath);
+        var (declaredIds, declarations) = ExtractDeclaredIds(requirementsBytes);
+
+        ledger["requirements"] = new JsonObject
+        {
+            ["present"] = true,
+            ["bytes"] = requirementsBytes.Length,
+            ["windows"] = ComputeWindows(requirementsBytes),
+        };
+        ledger["declared_ids"] = new JsonArray(declaredIds.Select(id => (JsonNode)id).ToArray());
+        ledger["declared_total"] = declaredIds.Count;
+        ledger["declarations"] = declarations;
+    }
+    else
+    {
+        RecordRequirementsAbsent(ledger, nullReasons, "not present");
+    }
 }
 
 // .adr-list entry resolution (FR-16 row 7) is file-derived too, computed on every kind of run.
@@ -716,6 +712,23 @@ static void WritePrefixedRecord(string prefix, JsonObject record)
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
     Console.Error.WriteLine($"{prefix}{record.ToJsonString(options)}");
+}
+
+static void RecordRequirementsAbsent(JsonObject ledger, JsonObject nullReasons, string reason)
+{
+    ledger["requirements"] = new JsonObject
+    {
+        ["present"] = false,
+        ["bytes"] = null,
+        ["windows"] = null,
+    };
+    ledger["declared_ids"] = null;
+    ledger["declared_total"] = null;
+    ledger["declarations"] = null;
+    foreach (var key in new[] { "requirements", "declared_ids", "declared_total", "declarations" })
+    {
+        nullReasons[key] = reason;
+    }
 }
 
 static RouteFacts? RouteProbe(string target, string? flowsDirectory)
