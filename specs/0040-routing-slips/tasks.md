@@ -767,7 +767,7 @@ Depends on Phase 6.*
   - Implementation should: none, unless the row is red.
   - Traces to: FR-16 (last sentence), FR-22; AC-34. Depends on: T9.5.
 
-- [ ] **TEST + IMPLEMENT: T9.7 — A tampered slip stops with the case's recoveries ahead of any invalid stop, and the invalid stop now names `/spec:route`**
+- [x] **TEST + IMPLEMENT: T9.7 — A tampered slip stops with the case's recoveries ahead of any invalid stop, and the invalid stop now names `/spec:route`**
   - **USE COMMAND**: `/tdd:test-first when a tampered spec also has an R0 violation the resolver should stop as tampered with the case's recoveries` for the generated `gen-bom` `stop` assertion in the harness. RED-first rows for the tracked expectations: extend `tamper-b-record-only`, `tamper-c-no-record` and `copy-invalid`.
   - Test should verify:
     - `stop.reason` is `tampered`, with 0091's message for each of (a), (b) and (c), including `git restore --source=HEAD -- "{spec}/.flow"` for (a) and (b).
