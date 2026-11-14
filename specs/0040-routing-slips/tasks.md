@@ -869,7 +869,7 @@ Depends on Phase 6.*
   - Acceptance: S1 is green. No copy exists yet, and no command file changes.
   - Traces to: 0089 step 9 (opening documentation commit); 0092 step 9 (canonical order); FR-7, FR-11, FR-26. Depends on: T10.4.
 
-- [ ] **TEST + IMPLEMENT: T11.2 — The canonical gate ladder has exactly 0090's five rows, and every provenance line the canonical commands describe matches 0090's pattern**
+- [x] **TEST + IMPLEMENT: T11.2 — The canonical gate ladder has exactly 0090's five rows, and every provenance line the canonical commands describe matches 0090's pattern**
   - **USE COMMAND**: `/tdd:test-first when the canonical gate-run-contract block or provenance-commands block is checked it should require exactly 0090's five pinned starting states and every approved line to match the provenance pattern while rejecting a 39-digit sha an uppercase sha an empty artefacts field and a trailing space`
   - Test file: `spec_text_tests.cs`:
     - gate-ladder check;
