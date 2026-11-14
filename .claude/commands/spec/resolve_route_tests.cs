@@ -44,6 +44,7 @@ if (ResolverRuns(repositoryRoot, reporter))
     CheckMissingCommandTree(repositoryRoot, reporter);
     CheckSharedViolationsOverInvalidFlows(repositoryRoot, reporter);
     CheckSharedViolationsOverFixtureSpecs(repositoryRoot, reporter);
+    CheckAllOutputSizes(repositoryRoot, reporter);
 }
 
 CheckNothingWritten(hashesBefore, HashTree(repositoryRoot, FixtureRoot, "specs"), reporter);
@@ -239,6 +240,35 @@ void CheckSharedViolationsOverFixtureSpecs(string root, Reporter report)
         report.Fail(check, mismatch);
     if (copyInvalid?["violations"]?[0] is JsonObject { Count: not 3 })
         report.Fail(check, "a summary violation carries only rule, code and step");
+}
+
+void CheckAllOutputSizes(string root, Reporter report)
+{
+    CheckAllOutputSize(root, "specs with the shipped flows", RepositorySpecs, ShippedFlows, true, report);
+    CheckAllOutputSize(root, "specs with flows-invalid", RepositorySpecs, $"{FixtureRoot}/flows-invalid", true, report);
+    CheckAllOutputSize(root, "the fixture specs with flows", FixtureSpecs, $"{FixtureRoot}/flows", false, report);
+}
+
+void CheckAllOutputSize(string root, string label, string specsRoot, string flowsDirectory, bool checkTotal, Reporter report)
+{
+    const int summaryLineLimit = 650;
+    const int totalLimit = 24000;
+    const string remedy = "the remedy is a later decision, such as paging or retiring finished specs";
+    var check = $"--all size over {label}";
+    report.Checked();
+
+    var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", specsRoot, "--all", "--flows-dir", flowsDirectory]);
+    if (result.ExitCode != 0)
+    {
+        report.Fail(check, $"expected exit 0, got {result.ExitCode}");
+        return;
+    }
+
+    foreach (var line in SplitLines(result.Stdout).Where(l => l.StartsWith(ReportPrefix, StringComparison.Ordinal) && l.Length > summaryLineLimit))
+        report.Fail(check, $"a summary line is {line.Length} characters, over {summaryLineLimit}; {remedy}");
+
+    if (checkTotal && result.Stdout.Length >= totalLimit)
+        report.Fail(check, $"the output is {result.Stdout.Length} characters, not under {totalLimit}; {remedy}");
 }
 
 (JsonObject? Current, List<JsonObject> Summaries) ParseAllRecords(ProcessResult result)
