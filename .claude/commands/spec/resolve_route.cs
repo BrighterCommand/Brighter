@@ -772,6 +772,10 @@ internal static class RouteRecordInspector
     private static readonly Regex FlowLine = new("^flow: ([a-z][a-z0-9-]*)$");
     private static readonly Regex HashLine = new("^sha256: ([0-9a-f]{64})$");
     private static readonly Regex DateLine = new("^date: [0-9]{4}-[0-9]{2}-[0-9]{2}$");
+    private const string RouteChangesFile = "route-changes.md";
+    private const string EntryMarker = "## ";
+    private static readonly Regex EntryHeading = new("^## ([0-9]{4}-[0-9]{2}-[0-9]{2}): ([a-z][a-z0-9-]*) -> ([a-z][a-z0-9-]*)$");
+    private static readonly Regex ReasonLine = new("^Reason: (.+)$");
 
     public static JsonObject Tampered(string specPath)
     {
@@ -786,7 +790,33 @@ internal static class RouteRecordInspector
         return record is not null ? Compare(record, SlipHash(slipPath)) : Report(true, "c", null);
     }
 
-    public static JsonNode? RouteChange() => null;
+    public static JsonNode? RouteChange(string specPath)
+    {
+        var logPath = Path.Combine(specPath, RouteChangesFile);
+        return File.Exists(logPath) ? LastEntry(File.ReadAllText(logPath)) : null;
+    }
+
+    private static JsonNode? LastEntry(string log)
+    {
+        var lines = log.Split('\n').Select(line => line.TrimEnd('\r')).ToList();
+        var headingIndex = lines.FindLastIndex(line => line.StartsWith(EntryMarker, StringComparison.Ordinal));
+        if (headingIndex < 0)
+        {
+            return null;
+        }
+
+        var heading = EntryHeading.Match(lines[headingIndex]);
+        var reason = ReasonLine.Match(lines.Skip(headingIndex + 1).FirstOrDefault(line => line.Trim().Length > 0) ?? string.Empty);
+        return heading.Success && reason.Success ? RouteChangeJson(heading, reason) : null;
+    }
+
+    private static JsonObject RouteChangeJson(Match heading, Match reason) => new()
+    {
+        ["date"] = heading.Groups[1].Value,
+        ["from"] = heading.Groups[2].Value,
+        ["to"] = heading.Groups[3].Value,
+        ["reason"] = reason.Groups[1].Value
+    };
 
     private static JsonObject Compare(CreationRecord record, string slipHash) =>
         record.Sha256 == slipHash ? Report(false, null, record.Flow) : Report(true, "a", record.Flow);
@@ -1194,7 +1224,7 @@ internal static class RouteResolver
             ["valid"] = violations.Count == 0,
             ["violations"] = new JsonArray(violations.Select(violation => (JsonNode)violation.ToJson()).ToArray()),
             ["tampered"] = tampered,
-            ["route_change"] = RouteRecordInspector.RouteChange(),
+            ["route_change"] = RouteRecordInspector.RouteChange(specPath),
             ["steps"] = new JsonArray(steps.Select((step, index) => (JsonNode)StepJson(steps, index, approved, table, state)).ToArray()),
             ["known_kinds"] = KnownKindsJson(steps),
             ["gates"] = GatesJson(steps),

@@ -575,6 +575,45 @@ void CheckGeneratedTamperCases(string root, Reporter report)
 
     CheckGeneratedUntamperedCases(root, text, report);
     CheckGeneratedUnreadableRecordCase(root, report);
+    CheckGeneratedRouteLogCases(root, report);
+}
+
+void CheckGeneratedRouteLogCases(string root, Reporter report)
+{
+    const string twoEntries = "# Route changes\n\n## 2026-11-01: feature -> light\n\nReason: first\n\n## 2026-11-02: light -> feature\n\nReason: second\n";
+    const string malformedHeading = "# Route changes\n\n## 2026-11-01: feature -> light\n\nReason: first\n\n## 2026-11-02 light to feature\n\nReason: second\n";
+    CheckGeneratedRouteLogCase(root, "gen-log-two", twoEntries, """{ "date": "2026-11-02", "from": "light", "to": "feature", "reason": "second" }""", report);
+    CheckGeneratedRouteLogCase(root, "gen-log-malformed", malformedHeading, "null", report);
+}
+
+void CheckGeneratedRouteLogCase(string root, string name, string log, string expectedRouteChange, Reporter report)
+{
+    var check = $"generated {name}";
+    report.Checked();
+    var specsRoot = Directory.CreateTempSubdirectory("routing-generated-").FullName;
+    try
+    {
+        var spec = Path.Combine(specsRoot, name);
+        CopyDirectory(Path.Combine(root, FixtureSpecs, "feature-slip"), spec);
+        File.WriteAllText(Path.Combine(spec, "route-changes.md"), log);
+
+        var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", specsRoot, "--spec", name, "--flows-dir", ShippedFlows]);
+        var line = SplitLines(result.Stdout).LastOrDefault(l => l.StartsWith(ReportPrefix, StringComparison.Ordinal));
+        if (result.ExitCode != 0 || line == null)
+        {
+            report.Fail(check, $"expected exit 0 and a route-report line, got exit {result.ExitCode}");
+            return;
+        }
+
+        var actual = (JsonObject)JsonNode.Parse(line[ReportPrefix.Length..])!;
+        var expected = JsonNode.Parse($$"""{ "valid": true, "tampered": { "value": false }, "route_change": {{expectedRouteChange}} }""")!;
+        foreach (var mismatch in Mismatches(expected, actual, "report"))
+            report.Fail(check, mismatch);
+    }
+    finally
+    {
+        Directory.Delete(specsRoot, true);
+    }
 }
 
 void CheckGeneratedUnreadableRecordCase(string root, Reporter report)
