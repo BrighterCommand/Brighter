@@ -752,7 +752,7 @@ Depends on Phase 6.*
   - Implementation should: add the case (b) row of the inspector table.
   - Traces to: FR-16 (b); AC-33. Depends on: T9.3.
 
-- [ ] **TEST + IMPLEMENT: T9.5 — Tamper case (c): a `.flow` with no record, or with an unreadable record, is tampered; a legacy spec is not**
+- [x] **TEST + IMPLEMENT: T9.5 — Tamper case (c): a `.flow` with no record, or with an unreadable record, is tampered; a legacy spec is not**
   - **USE COMMAND**: `/tdd:test-first when a spec's .flow has an unreadable creation record the resolver should report tampered case c` for the generated `gen-unreadable-record` (`sha256: nothex`) in the harness. RED-first row for the tracked expectation `tamper-c-no-record` (fixture: `tamper-c-no-record/` holds a `.flow` copied from the fixture `feature.flow` and no record).
   - Test should verify: `{true, "c", null}` for both cases. The `legacy-*` rows still report `{false, null, null}` (AC-33).
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
