@@ -1005,7 +1005,7 @@ Depends on Phase 11.*
   - Verify after: S1 green; marker grep empty. Hand: T17.3 item 5 (AC-16), T17.2 items 3 and 8 (AC-31, AC-80).
   - Traces to: 0089 step 9.5; FR-8, FR-10, FR-11, FR-7; AC-16, AC-19, AC-31, AC-70, AC-80. Depends on: T13.3.
 
-- [ ] **PROJECT: T13.5 — Record the baseline outcome of today's `/spec:approve design`, before `approve.md` changes**
+- [!] **PROJECT: T13.5 — Record the baseline outcome of today's `/spec:approve design`, before `approve.md` changes** <!-- RALPH-SKIPPED: unrecognised task shape (PROJECT hand step), needs /spec:implement; T17.1 rebuilds the baseline from the merge-base approve.md if baselines.md lacks it -->
   - Do:
     - On a throwaway branch from `HEAD` (S7), build 0090 step 7's scenario: a `feature` spec with two `Proposed` ADRs, one recording "Supersedes" an `Accepted` ADR.
     - Run today's `/spec:approve design`, and record items 1–6: statuses, `Superseded by` link, index diff, marker, report text, and `/spec:approve design {number}`.
