@@ -920,7 +920,7 @@ Depends on Phase 11.*
   - Implementation should: add the extraction and the verbatim comparison to `spec_text_tests.cs` (0092 *Further checks*). No command file changes here.
   - Traces to: 0092 step 9, *Further checks* (tooling-fault message); FR-26; 0089 *How each command consults the resolver*. Depends on: T11.3.
 
-- [ ] **TEST + IMPLEMENT: T12.1 — `/spec:status` reports every spec's flow and source, steps, faults, route change and next step from one `--all` run, and never stops on a slip fault**
+- [x] **TEST + IMPLEMENT: T12.1 — `/spec:status` reports every spec's flow and source, steps, faults, route change and next step from one `--all` run, and never stops on a slip fault**
   - Verification rows (RED-first, `test:` commit): `status.md` must carry the *Next-step line* template, and (through T12.0's check) the verbatim tooling-fault sentence. No `/tdd:test-first`: command text.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
