@@ -44,7 +44,7 @@ public class InMemoryTrippedTopicStore : IAmATrippedTopicStore
     {
         lock (_lock)
         {
-            IReadOnlyList<TopicTrip> ended = MarkEnded(window.Now, window.Cutoff);
+            IReadOnlyList<TopicTrip> ended = MarkEnded(window);
             return Task.FromResult(ended);
         }
     }
@@ -80,11 +80,11 @@ public class InMemoryTrippedTopicStore : IAmATrippedTopicStore
             throw new ArgumentException("A write must name each topic once.", nameof(trips));
     }
 
-    private List<TopicTrip> MarkEnded(DateTimeOffset now, DateTimeOffset cutoff)
+    private List<TopicTrip> MarkEnded(TripWindow window)
     {
-        var expired = _trips.Where(trip => trip.Value.EndedAt is null && trip.Value.TripTime <= cutoff).ToList();
+        var expired = _trips.Where(trip => trip.Value.EndedAt is null && trip.Value.TripTime <= window.Cutoff).ToList();
         foreach (var trip in expired)
-            _trips[trip.Key] = trip.Value with { EndedAt = now };
+            _trips[trip.Key] = trip.Value with { EndedAt = window.Now };
 
         return expired.Select(trip => new TopicTrip(trip.Key, trip.Value.TripTime)).ToList();
     }
