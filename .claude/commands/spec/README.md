@@ -802,8 +802,8 @@ Message templates:
 | Step with no review criteria | `/spec:review`, with no phase | ``Next step `{next.step}` on flow `{flow}` has no review criteria. Run its marker-writer, `{marker_writer}`.`` |
 | No requirements step | `/spec:review`, as a note before the review | ``Flow `{flow}` has no requirements step, so no FR criteria apply.`` |
 | No design step | `/adr:adr`, with a linked spec | ``Flow `{flow}` has no design step, so `/adr:adr` has no `.adr-list` to update for this spec.`` followed by the next-step line. The command writes nothing |
-| Ambiguous spec id | `/spec:switch` | ``Ambiguous spec id '{arg}' — matches: {list of matching directory names}. Re-run with the full directory name.`` Identical to `show-me.md:45-46` |
-| No spec matches | `/spec:switch` | ``No spec matches '{arg}'. Run /spec:status to list specs.`` Identical to `show-me.md:48` |
+| Ambiguous spec id | `/spec:switch` | ``Ambiguous spec id '{arg}' — matches: {list of matching directory names}. Re-run with the full directory name.`` |
+| No spec matches | `/spec:switch` | ``No spec matches '{arg}'. Run /spec:status to list specs.`` |
 | Artefacts missing | `/spec:approve` | ``Step `{step}` cannot be approved: its artefacts ({steps[step].artefacts joined with ", "}) are not all present. Run `{producer}` first.`` |
 | Flow not usable | `/spec:new` | ``Cannot start a spec: flow `feature` is not usable. {violations[0].message} Fix `.claude/flows/feature.flow` or `.claude/flows/approvals.md` first.`` |
 

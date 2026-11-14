@@ -65,7 +65,7 @@ The templates this command prints:
 | Template | Printed by | Text |
 | --- | --- | --- |
 | Next-step line | the closing instructions, `/spec:status`, `/spec:switch`, `/spec:review`'s closing reminder, the route-changed template (0091), `/spec:new`'s post-check (0091), and the three templates below that end in it | ``Next: {next.commands joined with " then "}.``, or ``No next step: the slip is invalid (see violations).`` when `next.commands` is empty. Then ``Unattended: {next.unattended_driver}.`` when it is not `null`, and one ``Optional: {detour.command}, then return to {detour.return_to}.`` for each entry of `next.detours`, in order, all on the same line. With empty `next.commands` there is no driver and no detour |
-| Ambiguous spec id | `/spec:switch` | ``Ambiguous spec id '{arg}' — matches: {list of matching directory names}. Re-run with the full directory name.`` Identical to `show-me.md:45-46` |
-| No spec matches | `/spec:switch` | ``No spec matches '{arg}'. Run /spec:status to list specs.`` Identical to `show-me.md:48` |
+| Ambiguous spec id | `/spec:switch` | ``Ambiguous spec id '{arg}' — matches: {list of matching directory names}. Re-run with the full directory name.`` |
+| No spec matches | `/spec:switch` | ``No spec matches '{arg}'. Run /spec:status to list specs.`` |
 
 <!-- routing-text:templates:end -->
