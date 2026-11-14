@@ -110,21 +110,21 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     {
         await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false);
+        var open = new OpenTransaction(connection, transaction);
 
-        var cutoff = window.Cutoff;
         var candidates = await QueryTripsAsync(
             connection, transaction,
             $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE {EXPIRED_ROW_PREDICATE}",
-            [("@cutoff", cutoff)], cancellationToken).ConfigureAwait(false);
+            [("@cutoff", window.Cutoff)], cancellationToken).ConfigureAwait(false);
 
         var ended = new List<TopicTrip>();
         foreach (var candidate in candidates.OrderBy(trip => trip.Topic.Value, StringComparer.Ordinal))
         {
-            var locked = await LockIfStillExpiredAsync(connection, transaction, candidate.Topic, cutoff.UtcDateTime, cancellationToken).ConfigureAwait(false);
+            var locked = await LockIfStillExpiredAsync(open, candidate.Topic, window.Cutoff, cancellationToken).ConfigureAwait(false);
             if (locked is null)
                 continue;
 
-            await MarkEndedAsync(connection, transaction, candidate.Topic, window.Now.UtcDateTime, cancellationToken).ConfigureAwait(false);
+            await MarkEndedAsync(open, candidate.Topic, window.Now, cancellationToken).ConfigureAwait(false);
             ended.Add(locked.Value);
         }
 
@@ -153,33 +153,31 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
         await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        var open = new OpenTransaction(connection, transaction);
 
-        await using (var upsert = CreateCommand(connection))
+        await using (var upsert = CreateCommand(open))
         {
-            upsert.Transaction = transaction;
             upsert.CommandText = UpsertStatement(inOrdinalTopicOrder.Count);
             AddTripParameters(upsert, inOrdinalTopicOrder);
             await upsert.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        var results = await ReadWrittenRowsAsync(connection, transaction, inOrdinalTopicOrder, cancellationToken).ConfigureAwait(false);
+        var results = await ReadWrittenRowsAsync(open, inOrdinalTopicOrder, cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return results;
     }
 
     private async Task<TopicTrip?> LockIfStillExpiredAsync(
-        DbConnection connection,
-        DbTransaction transaction,
+        OpenTransaction open,
         RoutingKey topic,
-        DateTime cutoff,
+        DateTimeOffset cutoff,
         CancellationToken cancellationToken)
     {
-        await using var command = CreateCommand(connection);
-        command.Transaction = transaction;
+        await using var command = CreateCommand(open);
         command.CommandText =
             $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `Topic` = @topic AND {EXPIRED_ROW_PREDICATE} FOR UPDATE";
         AddParameter(command, "@topic", DbType.String, topic.Value);
-        AddParameter(command, "@cutoff", DbType.DateTime, cutoff);
+        AddStampParameter(command, "@cutoff", cutoff);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         var locked = await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
@@ -187,28 +185,24 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     }
 
     private async Task MarkEndedAsync(
-        DbConnection connection,
-        DbTransaction transaction,
+        OpenTransaction open,
         RoutingKey topic,
-        DateTime now,
+        DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        await using var command = CreateCommand(connection);
-        command.Transaction = transaction;
+        await using var command = CreateCommand(open);
         command.CommandText = $"UPDATE {QualifiedTableName} SET `EndedAt` = @now WHERE `Topic` = @topic";
-        AddParameter(command, "@now", DbType.DateTime, now);
+        AddStampParameter(command, "@now", now);
         AddParameter(command, "@topic", DbType.String, topic.Value);
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<List<TripWriteResult>> ReadWrittenRowsAsync(
-        DbConnection connection,
-        DbTransaction transaction,
+        OpenTransaction open,
         List<TopicTrip> written,
         CancellationToken cancellationToken)
     {
-        await using var select = CreateCommand(connection);
-        select.Transaction = transaction;
+        await using var select = CreateCommand(open);
         var topicParameters = string.Join(", ", Enumerable.Range(0, written.Count).Select(TopicParameter));
         select.CommandText =
             $"SELECT `Topic`, `PriorTripTime`, `TripTime`, `EndedAt` FROM {QualifiedTableName} WHERE `Topic` IN ({topicParameters})";
@@ -220,6 +214,13 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             results.Add(ToResult(reader));
         return results;
+    }
+
+    private DbCommand CreateCommand(OpenTransaction open)
+    {
+        var command = CreateCommand(open.Connection);
+        command.Transaction = open.Transaction;
+        return command;
     }
 
     private string UpsertStatement(int count)
@@ -250,4 +251,6 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
         return schemaName is null ? $"`{tableName}`" : $"`{schemaName}`.`{tableName}`";
     }
+
+    private readonly record struct OpenTransaction(DbConnection Connection, DbTransaction Transaction);
 }
