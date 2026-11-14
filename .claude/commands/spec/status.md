@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(grep:*), Bash(test:*), Bash(find:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Read, Write, Glob
+allowed-tools: Bash(dotnet run .claude/commands/spec/resolve_route.cs -- specs/:*), Bash(cat:*), Bash(grep:*), Bash(test:*), Bash(ls:*), Read, Glob
 description: Show all specifications and their status
 ---
 
@@ -13,18 +13,40 @@ Current spec directory: specs/
 
 ### Step 1: Gather Information
 
-1. Read `specs/.current-spec` to determine the active specification
-2. Use Bash to find all spec directories: `ls -d specs/*/`
-3. For each spec directory, check:
-   - Approval markers: `.requirements-approved`, `.design-approved`, `.tasks-approved`
-   - Phase files: `requirements.md`, `tasks.md`
-   - ADR list: `.adr-list`
-   - GitHub issue: `.issue-number`
-   - **Review gear**: `.current-gear` (untracked working state — see
-     [`gear.md`](gear.md)). Report the resolved gear for any spec that has one. A spec with no
-     `.current-gear` is in the default `review-before` gear; say so only for the **active** spec,
-     to keep the report short.
-4. For each ADR in `.adr-list`, read from `docs/adr/` and check Status field
+Run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --all` once. It prints one
+`route-current: ` line and then one `route-report: ` line per spec directory. Never read the approval
+marker files yourself, and never fall back to them: the resolver
+is the only source of a spec's flow, steps and next step. Never stop on a spec's `stop` field.
+
+Apply the `--all` rule:
+
+- It is a tooling fault when the exit status is not `0`, or no line beginning `route-current: `
+  parses. Print the message below, with `{state}` as `exited {code}`, `no route-current line` or
+  `route-current line does not parse`, and print nothing else. Create or modify no file.
+  `{command}` is `/spec:status`.
+
+  `{command} could not run the route resolver (.claude/commands/spec/resolve_route.cs): {state}. This is a tooling fault, not a fault in the spec — re-run after restoring the script.`
+
+- Otherwise parse each `route-report: ` line on its own, and match it to its spec directory by
+  `spec`. `specs: 0` with no `route-report: ` line is a valid run.
+- List a spec directory with no parsed line as `route unavailable`. When fewer lines parsed than
+  `specs` on the `route-current: ` line says, add a note that the output may have been cut short.
+
+Then gather the rest:
+
+1. `current_spec` on the `route-current: ` line is the active specification. Report its `state`
+   (`ok`, or `missing`, `empty` or `stale`) when it is not `ok`.
+2. Print each entry of `shared_violations` once, in full, under the list of specs.
+3. For each spec, from its line: `flow` (name, `source`, and whether `definition_present`), `valid`,
+   `steps` (each `name`, `kind` and `state`), `violations`, `tampered`, `route_change`,
+   `stray_markers`, `out_of_order` and `next`.
+4. Spec files the resolver does not report: `.issue-number` (GitHub issue) and `tasks.md`
+   (progress: count of `- [x]` against all `- [ ]` and `- [x]` task lines).
+5. For a step whose `kind` is `design`, read each ADR named in the spec's `.adr-list` from `docs/adr/`
+   and take its Status field.
+6. **Review gear**: `.current-gear` (untracked working state — see [`gear.md`](gear.md)). Report the
+   resolved gear for any spec that has one. A spec with no `.current-gear` is in the default
+   `review-before` gear; say so only for the **active** spec, to keep the report short.
 
 ### Step 2: Present Status Report
 
@@ -36,40 +58,54 @@ Specification Status Report
 
 Active Spec: specs/{current-spec}/ (marked with *)
 
+Shared faults (once, in full):
+  {shared_violations entries, or omitted when none}
+
 Specifications:
 ---------------
 
 * specs/0001-feature-name/
   Issue: #123 (if linked)
+  Flow: feature (default — no .flow)   # {flow.name} and its source; add "definition missing" when absent
 
-  Requirements: ✓ Approved
-
-  Design (ADRs):
-    - docs/adr/0042-feature-aspect-one.md [Accepted]
-    - docs/adr/0043-feature-aspect-two.md [Proposed]
-    - docs/adr/0044-feature-aspect-three.md [Accepted]
-  Status: ⏳ In Progress (1 ADR pending approval)
-
-  Tasks: ✓ Approved
+  Steps:
+    requirements: ✓ approved
+    design: ⏳ ready
+      - docs/adr/0042-feature-aspect-one.md [Accepted]
+      - docs/adr/0043-feature-aspect-two.md [Proposed]
+    tasks: ⏹ pending
     Progress: 15/30 tasks complete (50%)
+
+  Route change: 2026-10-01 feature → docs-only — "first 60 characters of the reason…"
+  Stray markers: {stray_markers joined with ", "}
+  Out-of-order approvals: {out_of_order joined with ", "}
+  Tampered: {tampered.case}
+  Invalid: {rule} {code} at step {step}   # one line per violation, named by rule, code and step
 
   Review gear: ➖ review-after — scoped to "Phase 5 — Provider rejection tests"
     Since 2026-09-13: Phase 4's six tests were all approved unchanged; the shape is settled
     (untracked; shift with /spec:gear)
 
-  Next Action: Approve remaining ADR or begin implementation
+  {next-step line, from this spec's `next`}
 
   specs/0002-another-feature/
-  Issue: #124
-
-  Requirements: ✓ Approved
-
-  Design (ADRs): ⏹ Not Started
-
-  Tasks: ⏹ Not Started
-
-  Next Action: Create ADRs using /spec:design [focus-area]
+  route unavailable
 ```
+
+Show each of the optional lines (route change, stray markers, out-of-order approvals, tampered,
+invalid) only for a spec that carries the field. A step `state` of `pending` is ⏹, `ready` is ⏳,
+`approved` is ✓, and `approved-no-artefacts` is ✓ with the note "marker present, artefacts
+missing". Show a route change's reason as the line gives it, with its `…` when cut; the full reason
+is one `/spec:switch` away.
+
+The next-step line is the Next-step line template, filled from the spec's `next`:
+
+<!-- routing-text:templates:begin -->
+| Template | Printed by | Text |
+| --- | --- | --- |
+| Next-step line | the closing instructions, `/spec:status`, `/spec:switch`, `/spec:review`'s closing reminder, the route-changed template (0091), `/spec:new`'s post-check (0091), and the three templates below that end in it | ``Next: {next.commands joined with " then "}.``, or ``No next step: the slip is invalid (see violations).`` when `next.commands` is empty. Then ``Unattended: {next.unattended_driver}.`` when it is not `null`, and one ``Optional: {detour.command}, then return to {detour.return_to}.`` for each entry of `next.detours`, in order, all on the same line. With empty `next.commands` there is no driver and no detour |
+
+<!-- routing-text:templates:end -->
 
 ### Step 3: Legend
 
