@@ -45,6 +45,7 @@ namespace Paramore.Brighter.Outbox.MySql;
 public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 {
     private const string DEFAULT_TABLE_NAME = "BrighterTrippedTopics";
+    private const string EXPIRED_ROW_PREDICATE = "`EndedAt` IS NULL AND `TripTime` <= @cutoff";
 
     /// <summary>
     /// Creates a store over the trip table.
@@ -114,7 +115,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         var cutoff = now - tripLength;
         var candidates = await QueryTripsAsync(
             connection, transaction,
-            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `EndedAt` IS NULL AND `TripTime` <= @cutoff",
+            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE {EXPIRED_ROW_PREDICATE}",
             [("@cutoff", cutoff)], cancellationToken).ConfigureAwait(false);
 
         var ended = new List<TopicTrip>();
@@ -178,7 +179,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         await using var command = CreateCommand(connection);
         command.Transaction = transaction;
         command.CommandText =
-            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `Topic` = @topic AND `EndedAt` IS NULL AND `TripTime` <= @cutoff FOR UPDATE";
+            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `Topic` = @topic AND {EXPIRED_ROW_PREDICATE} FOR UPDATE";
         AddParameter(command, "@topic", DbType.String, topic.Value);
         AddParameter(command, "@cutoff", DbType.DateTime, cutoff);
 
