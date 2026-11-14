@@ -722,7 +722,7 @@ Depends on Phase 6.*
   - Implementation should: use `SHA256` from the base class library.
   - Traces to: 0092 *Generated cases* (integrity); 0091 *What 0092 needs*; FR-16 (support). Depends on: T8.8.
 
-- [ ] **TEST + IMPLEMENT: T9.2 — Tamper case (a): a `.flow` whose hash differs from its record is tampered, reporting the recorded flow**
+- [x] **TEST + IMPLEMENT: T9.2 — Tamper case (a): a `.flow` whose hash differs from its record is tampered, reporting the recorded flow**
   - **USE COMMAND**: `/tdd:test-first when a spec's .flow differs from its creation record by one character a trailing space or a BOM the resolver should report tampered case a with the recorded flow`
   - Test file: `resolve_route_tests.cs`, generated `gen-one-char`, `gen-trailing-space` and `gen-bom`. Tracked case `tamper-a-route-changed` with expectation `tamper-a-route-changed`: a non-matching record, nothing approved, and a log whose last entry has a 200-character reason.
   - Test should verify:
