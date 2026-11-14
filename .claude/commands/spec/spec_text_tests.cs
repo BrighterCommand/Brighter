@@ -21,7 +21,7 @@ var registry = new List<RoutingTextBlock>
             ".claude/commands/adr/retire-superseded.md",
             ".claude/commands/adr/report-approval.md"
         ]),
-    new("route-instructions", ".claude/commands/spec/README.md", [".claude/commands/spec/review.md", ".claude/commands/spec/requirements.md", ".claude/commands/spec/design.md", ".claude/commands/spec/tasks.md", ".claude/commands/spec/approve.md", ".claude/commands/spec/implement.md"]),
+    new("route-instructions", ".claude/commands/spec/README.md", [".claude/commands/spec/review.md", ".claude/commands/spec/requirements.md", ".claude/commands/spec/design.md", ".claude/commands/spec/tasks.md", ".claude/commands/spec/approve.md", ".claude/commands/spec/implement.md", ".claude/commands/spec/ralph-implement.md"]),
     new("closing-instructions", ".claude/commands/spec/README.md", [".claude/commands/spec/requirements.md", ".claude/commands/spec/design.md", ".claude/commands/spec/tasks.md", ".claude/commands/spec/approve.md"]),
     new("gate-run-contract", ".claude/commands/spec/README.md", []),
     new("sub-flow-instructions", ".claude/commands/spec/README.md", []),
@@ -64,7 +64,8 @@ string[] toolingFaultFiles =
     ".claude/commands/spec/design.md",
     ".claude/commands/spec/tasks.md",
     ".claude/commands/spec/approve.md",
-    ".claude/commands/spec/implement.md"
+    ".claude/commands/spec/implement.md",
+    ".claude/commands/spec/ralph-implement.md"
 ];
 
 var reporter = new Reporter();
