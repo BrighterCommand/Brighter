@@ -47,6 +47,8 @@ if (ResolverRuns(repositoryRoot, reporter))
     CheckAllOutputSizes(repositoryRoot, reporter);
 }
 
+CheckShippedFlowDirectory(repositoryRoot, reporter);
+
 CheckNothingWritten(hashesBefore, HashTree(repositoryRoot, FixtureRoot, "specs"), reporter);
 
 return reporter.Summary();
@@ -501,6 +503,20 @@ void VerifyResolvedSpec(JsonObject actual, string specsRoot, string check, Repor
         report.Fail(check, "expected the named spec to resolve to flow feature");
     if (actual["spec"]?.GetValue<string>() != $"{specsRoot}/0001-sample")
         report.Fail(check, $"expected spec {specsRoot}/0001-sample, got {actual["spec"]?.ToJsonString() ?? "null"}");
+}
+
+void CheckShippedFlowDirectory(string root, Reporter report)
+{
+    report.Checked();
+    var directory = Path.Combine(root, ShippedFlows);
+    var names = Directory.Exists(directory)
+        ? Directory.EnumerateFiles(directory).Select(file => Path.GetFileName(file)).ToList()
+        : [];
+
+    foreach (var required in new[] { "feature.flow", "approvals.md" }.Where(name => !names.Contains(name)))
+        report.Fail("shipped flows", $"{ShippedFlows} does not hold {required}");
+    foreach (var forbidden in new[] { "light.flow", "bugfix.flow" }.Where(names.Contains))
+        report.Fail("shipped flows", $"{ShippedFlows} holds {forbidden}, which is fixture-only");
 }
 
 void CheckMatcherSelfTest(Reporter report)
