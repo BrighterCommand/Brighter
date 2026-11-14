@@ -862,7 +862,7 @@ Depends on Phase 6.*
 
 *0089 step 9 opening documentation commit, then 0090 step 2 (with 0092 step 9's gate-ladder and provenance checks), then 0091 step 2. No copy lands before its canonical block. Depends on Phase 10.*
 
-- [ ] **DOC: T11.1 — Write the canonical route instructions, closing instructions and 0089 message templates in `.claude/commands/spec/README.md`**
+- [x] **DOC: T11.1 — Write the canonical route instructions, closing instructions and 0089 message templates in `.claude/commands/spec/README.md`**
   - Do:
     - In *Supporting scripts*, add `routing-text:route-instructions` and `routing-text:closing-instructions` blocks, word for word from 0089 *How each command consults the resolver*.
     - Add a `routing-text:templates` block holding 0089's `| Template | Printed by | Text |` table: Next-step line, Not on the route, Another producer, Step not on the slip (both forms), Another marker-writer, Phase not on the route, Step with no review criteria, No requirements step, No design step, Ambiguous spec id, No spec matches, Artefacts missing, Flow not usable.
