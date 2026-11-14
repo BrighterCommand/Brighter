@@ -750,6 +750,42 @@ dotnet run .claude/commands/spec/show_me_facts_tests.cs
 **It is not part of CI** — no CI workflow lints or tests anything under `.claude/`, and this script
 doesn't change that. Run it by hand after editing either script.
 
+### Routing texts
+
+The route instructions, closing instructions and message templates that the `/spec:*` and `/adr:adr` commands carry are written here once. Each command carries an identical copy, and `spec_text_tests.cs` compares every copy with the canonical block below ([ADR 0089](../../../docs/adr/0089-slips-resolver-and-routing.md), [ADR 0092](../../../docs/adr/0092-routing-fixtures-and-test-scripts.md)). `{state}` in the route instructions is one of `exited {code}`, `no route-report line` or `route-report line does not parse`. `{command}` in a template is the command printing it.
+
+Route instructions, carried by `requirements`, `design`, `tasks`, `approve`, `review`, `implement`, `ralph-implement` and `/adr:adr`:
+
+<!-- routing-text:route-instructions:begin -->
+Run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current`. If the exit status is not `0`, or standard output has no line beginning `route-report: `, or the JSON after that prefix on the last such line does not parse, stop. Print `{command} could not run the route resolver (.claude/commands/spec/resolve_route.cs): {state}. This is a tooling fault, not a fault in the spec — re-run after restoring the script.` Create or modify no file. Otherwise hold that JSON object as the route report. If `stop` is not `null`, print `stop.message` and stop, creating or modifying no file.
+<!-- routing-text:route-instructions:end -->
+
+Closing instructions, the last step of `requirements`, `design`, `tasks`, `approve` and `/adr:adr`:
+
+<!-- routing-text:closing-instructions:begin -->
+After your last write, run `dotnet run .claude/commands/spec/resolve_route.cs -- specs/ --current` again, and apply the same test for a tooling fault as above. If it passes, print the next-step line, built from `next` in this second report. If it fails, print the tooling-fault message in place of the next-step line. Undo no write.
+<!-- routing-text:closing-instructions:end -->
+
+Message templates:
+
+<!-- routing-text:templates:begin -->
+| Template | Printed by | Text |
+| --- | --- | --- |
+| Next-step line | the closing instructions, `/spec:status`, `/spec:switch`, `/spec:review`'s closing reminder, the route-changed template (0091), `/spec:new`'s post-check (0091), and the three templates below that end in it | ``Next: {next.commands joined with " then "}.``, or ``No next step: the slip is invalid (see violations).`` when `next.commands` is empty. Then ``Unattended: {next.unattended_driver}.`` when it is not `null`, and one ``Optional: {detour.command}, then return to {detour.return_to}.`` for each entry of `next.detours`, in order, all on the same line. With empty `next.commands` there is no driver and no detour |
+| Not on the route | the producing commands | ``{command} is not on flow `{flow}`'s route.`` followed by the next-step line |
+| Another producer | the producing commands | ``Step `{step}` on flow `{flow}` is produced by `{producer}`, not {command}. Run `{producer}`.`` |
+| Step not on the slip | `/spec:approve` | ``Step `{arg}` is not on flow `{flow}`'s route. Approvable steps: {approve_steps joined with ", ", or "none"}.`` For a missing argument the text is ``/spec:approve needs a step. Approvable steps on flow `{flow}`: {approve_steps joined with ", ", or "none"}.`` |
+| Another marker-writer | `/spec:approve` | ``Step `{step}` on flow `{flow}` is approved by `{marker_writer}`, not /spec:approve. Run `{marker_writer}`.`` |
+| Phase not on the route | `/spec:review` | ``Phase `{phase}` has no step on flow `{flow}`'s route.`` followed by the next-step line |
+| Step with no review criteria | `/spec:review`, with no phase | ``Next step `{next.step}` on flow `{flow}` has no review criteria. Run its marker-writer, `{marker_writer}`.`` |
+| No requirements step | `/spec:review`, as a note before the review | ``Flow `{flow}` has no requirements step, so no FR criteria apply.`` |
+| No design step | `/adr:adr`, with a linked spec | ``Flow `{flow}` has no design step, so `/adr:adr` has no `.adr-list` to update for this spec.`` followed by the next-step line. The command writes nothing |
+| Ambiguous spec id | `/spec:switch` | ``Ambiguous spec id '{arg}' — matches: {list of matching directory names}. Re-run with the full directory name.`` Identical to `show-me.md:45-46` |
+| No spec matches | `/spec:switch` | ``No spec matches '{arg}'. Run /spec:status to list specs.`` Identical to `show-me.md:48` |
+| Artefacts missing | `/spec:approve` | ``Step `{step}` cannot be approved: its artefacts ({steps[step].artefacts joined with ", "}) are not all present. Run `{producer}` first.`` |
+| Flow not usable | `/spec:new` | ``Cannot start a spec: flow `feature` is not usable. {violations[0].message} Fix `.claude/flows/feature.flow` or `.claude/flows/approvals.md` first.`` |
+<!-- routing-text:templates:end -->
+
 ---
 
 ## Complete Example
