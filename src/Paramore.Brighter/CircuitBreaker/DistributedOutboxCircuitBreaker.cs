@@ -138,6 +138,12 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         AnnounceUnshared(live);
     }
 
+    private void RecordReadTimeout()
+    {
+        _fallback.RecordReadTimeout();
+        Log.ReadTimedOut(s_logger);
+    }
+
     private void RecordReadFailure(Exception failure)
     {
         _fallback.RecordReadFailure(failure);
@@ -445,7 +451,7 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
         if (live is null)
         {
             if (!IsStale(readNumber))
-                _fallback.RecordReadTimeout();
+                RecordReadTimeout();
             return;
         }
 
@@ -823,6 +829,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         [LoggerMessage(LogLevel.Warning, "Writing trips to the store failed with {FailureType}; the trips stay unshared on this instance")]
         public static partial void WriteFailed(ILogger logger, Exception exception, string failureType);
+
+        [LoggerMessage(LogLevel.Warning, "Reading tripped topics from the store ran into the store timeout; using this instance's own view")]
+        public static partial void ReadTimedOut(ILogger logger);
 
         [LoggerMessage(LogLevel.Warning, "Writing trips to the store ran into the store timeout; the trips stay unshared on this instance")]
         public static partial void WriteTimedOut(ILogger logger);
