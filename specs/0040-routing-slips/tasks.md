@@ -683,7 +683,7 @@ Depends on Phase 6.*
   - Implementation should: dedupe shared violations, and abbreviate the line's `violations` to `{rule, code, step}` and `stop` to `{reason}`.
   - Traces to: 0089 *The route report* (shared violations); FR-15. *(This assertion is explicit here; 0092 implies it only through the flows-invalid size run — see the scope-creep check.)* Depends on: T8.4.
 
-- [ ] **TEST + IMPLEMENT: T8.6 — `--all` output stays inside the shell tool's budget: no summary line over 650 characters, and the whole output under 24,000, for healthy and for all-invalid inputs**
+- [x] **TEST + IMPLEMENT: T8.6 — `--all` output stays inside the shell tool's budget: no summary line over 650 characters, and the whole output under 24,000, for healthy and for all-invalid inputs**
   - **USE COMMAND**: `/tdd:test-first when the resolver runs --all over specs with the shipped flows and with flows-invalid it should print no summary line over 650 characters and under 24000 characters in total`
   - Test file: `resolve_route_tests.cs`, size checks:
     - both limits over `specs/` with `.claude/flows` and with `flows-invalid`;
