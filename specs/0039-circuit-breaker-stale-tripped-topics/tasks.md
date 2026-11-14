@@ -1848,6 +1848,20 @@ Phase 2 (starts only after T1.15 has merged)
   - Decide which, and write an ADR if the polymorphic route is chosen. A loud failure in `SqlBoxProvisioner` is a behaviour change and goes through `/tdd:test-first`.
   - Depends on: T2.62
 
+- [ ] **DOC: T2.74 - Amend ADR 0089 so the store contract takes a `TripWindow` in place of `(now, tripLength)`**
+  - Smell: Data Clumps (Phase 2h smells review, finding 2). `IAmATrippedTopicStore.EndExpiredAsync` and `ReadLiveAsync` take `(DateTimeOffset now, TimeSpan tripLength)`, and every store derives `now - tripLength` itself. The types are unreleased, so the public signature can change now.
+  - Amend the contract block (`EndExpiredAsync(TripWindow window, CancellationToken)` and `ReadLiveAsync(TripWindow window, CancellationToken)`), the two operation-table rows, and the read description. A `TripWindow` is a public `readonly record struct TripWindow(DateTimeOffset Now, TimeSpan TripLength)` in `Paramore.Brighter.CircuitBreaker` with a computed `Cutoff` (`Now - TripLength`).
+  - Add an amendment note to the ADR's Status section, with the owner's approval, as for the `ReadAsync` split.
+  - Commit as `docs:`.
+  - Depends on: T2.73
+
+- [ ] **STRUCTURAL: T2.75 - Replace `(now, tripLength)` with `TripWindow` across the trip store contract**
+  - Run with `/refactor:tidy-first introduce a TripWindow value for the (now, tripLength) pair of the trip store contract, so each store reads window.Cutoff instead of subtracting`.
+  - Change the interface, `InMemoryTrippedTopicStore`, `RelationDatabaseTrippedTopicStore` (including the protected `EndExpiredOnceAsync` and `ReadLiveOnceAsync`), the MsSql, PostgreSql and MySql stores, `DistributedOutboxCircuitBreaker.ExpiredThenLiveRead` (one window per read, built from the time provider and trip length), and every test double and test that calls the store.
+  - Behaviour is unchanged and no new test is written. Validate with the full `Core.Tests` suite on both TFMs and the MSSQL, PostgreSQL and MySQL suites. Build every target of the touched `src` projects, including netstandard2.0.
+  - Commit as `refactor:`.
+  - Depends on: T2.74
+
 ---
 
 ## Coverage cross-reference
@@ -2014,7 +2028,7 @@ Every requirement and acceptance criterion maps to at least one task.
 | Step 10 | T2.39-T2.48, T2.39a, T2.39c, T2.39d, T2.43a |
 | Step 11 | T2.49-T2.51 |
 | Step 12 | T2.52-T2.56 (T2.55a, T2.56a, T2.56b included) |
-| Step 13 | T2.57-T2.59e |
+| Step 13 | T2.57-T2.59e, T2.74, T2.75 |
 | Step 14 | T2.61-T2.65 |
 | Step 15 | T2.57-T2.60c, T2.63-T2.67 |
 | Step 16 | T1.14a, T2.70, T2.71, T2.72 |
