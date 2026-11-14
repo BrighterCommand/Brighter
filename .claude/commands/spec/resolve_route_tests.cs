@@ -49,6 +49,7 @@ if (ResolverRuns(repositoryRoot, reporter))
 
 CheckShippedFlowDirectory(repositoryRoot, reporter);
 CheckCreationRecords(repositoryRoot, reporter);
+CheckGeneratedTamperCases(repositoryRoot, reporter);
 
 CheckNothingWritten(hashesBefore, HashTree(repositoryRoot, FixtureRoot, "specs"), reporter);
 
@@ -556,6 +557,60 @@ string? RecordProblem(string directory)
     if (recorded.GetValueOrDefault("flow") != flowName)
         return $"flow is {recorded.GetValueOrDefault("flow") ?? "missing"}, line 1 of .flow names {flowName}";
     return null;
+}
+
+void CheckGeneratedTamperCases(string root, Reporter report)
+{
+    var slip = File.ReadAllBytes(Path.Combine(root, FixtureSpecs, "feature-slip", ".flow"));
+    var text = Encoding.UTF8.GetString(slip);
+    var tamperedCases = new (string Name, byte[] Slip, bool Valid)[]
+    {
+        ("gen-one-char", Encoding.UTF8.GetBytes(text.Replace("/spec:design", "/spec:desigx")), false),
+        ("gen-trailing-space", Encoding.UTF8.GetBytes(text.Replace("| .requirements-approved |", "| .requirements-approved  |")), true),
+        ("gen-bom", [0xEF, 0xBB, 0xBF, .. slip], false)
+    };
+
+    foreach (var tamperedCase in tamperedCases)
+        CheckGeneratedTamperCase(root, tamperedCase.Name, tamperedCase.Slip, tamperedCase.Valid, report);
+}
+
+void CheckGeneratedTamperCase(string root, string name, byte[] slip, bool valid, Reporter report)
+{
+    var check = $"generated {name}";
+    report.Checked();
+    var specsRoot = Directory.CreateTempSubdirectory("routing-generated-").FullName;
+    try
+    {
+        CopyDirectory(Path.Combine(root, FixtureSpecs, "feature-slip"), Path.Combine(specsRoot, name));
+        File.WriteAllBytes(Path.Combine(specsRoot, name, ".flow"), slip);
+
+        var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", specsRoot, "--spec", name, "--flows-dir", ShippedFlows]);
+        var line = SplitLines(result.Stdout).LastOrDefault(l => l.StartsWith(ReportPrefix, StringComparison.Ordinal));
+        if (result.ExitCode != 0 || line == null)
+        {
+            report.Fail(check, $"expected exit 0 and a route-report line, got exit {result.ExitCode}");
+            return;
+        }
+
+        var actual = (JsonObject)JsonNode.Parse(line[ReportPrefix.Length..])!;
+        var expected = JsonNode.Parse($$"""{ "valid": {{(valid ? "true" : "false")}}, "tampered": { "value": true, "case": "a", "recorded_flow": "feature" } }""")!;
+        foreach (var mismatch in Mismatches(expected, actual, "report"))
+            report.Fail(check, mismatch);
+
+        if (name == "gen-bom" && !(actual["violations"]?.AsArray().Any(v => v?["rule"]?.GetValue<string>() == "R0") ?? false))
+            report.Fail(check, "expected an R0 violation for the byte-order mark on line 1");
+    }
+    finally
+    {
+        Directory.Delete(specsRoot, true);
+    }
+}
+
+void CopyDirectory(string source, string destination)
+{
+    Directory.CreateDirectory(destination);
+    foreach (var file in Directory.EnumerateFiles(source))
+        File.Copy(file, Path.Combine(destination, Path.GetFileName(file)));
 }
 
 void CheckMatcherSelfTest(Reporter report)

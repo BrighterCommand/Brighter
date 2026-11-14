@@ -1,4 +1,5 @@
 #nullable enable
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -766,14 +767,63 @@ internal sealed class SpecStateReader(string specDirectory, IReadOnlyList<string
 
 internal static class RouteRecordInspector
 {
-    public static JsonObject Tampered() => new()
+    private const string SlipFile = ".flow";
+    private const string RecordFile = ".flow.record";
+    private static readonly Regex FlowLine = new("^flow: ([a-z][a-z0-9-]*)$");
+    private static readonly Regex HashLine = new("^sha256: ([0-9a-f]{64})$");
+    private static readonly Regex DateLine = new("^date: [0-9]{4}-[0-9]{2}-[0-9]{2}$");
+
+    public static JsonObject Tampered(string specPath)
     {
-        ["value"] = false,
-        ["case"] = null,
-        ["recorded_flow"] = null
-    };
+        var slipPath = Path.Combine(specPath, SlipFile);
+        var record = ReadRecord(Path.Combine(specPath, RecordFile));
+        return File.Exists(slipPath) && record is not null
+            ? Compare(record, SlipHash(slipPath))
+            : Report(false, null, null);
+    }
 
     public static JsonNode? RouteChange() => null;
+
+    private static JsonObject Compare(CreationRecord record, string slipHash) =>
+        record.Sha256 == slipHash ? Report(false, null, record.Flow) : Report(true, "a", record.Flow);
+
+    private static JsonObject Report(bool value, string? tamperCase, string? recordedFlow) => new()
+    {
+        ["value"] = value,
+        ["case"] = tamperCase,
+        ["recorded_flow"] = recordedFlow
+    };
+
+    private static string SlipHash(string slipPath)
+    {
+        var text = Encoding.Latin1.GetString(File.ReadAllBytes(slipPath)).Replace("\r\n", "\n");
+        return Convert.ToHexString(SHA256.HashData(Encoding.Latin1.GetBytes(text))).ToLowerInvariant();
+    }
+
+    private static CreationRecord? ReadRecord(string recordPath)
+    {
+        if (!File.Exists(recordPath))
+        {
+            return null;
+        }
+
+        var lines = File.ReadAllText(recordPath).Replace("\r\n", "\n").Split('\n')
+            .Select(line => line.TrimEnd(' ', '\t'))
+            .Reverse().SkipWhile(line => line.Length == 0).Reverse()
+            .ToList();
+        if (lines.Count != 3)
+        {
+            return null;
+        }
+
+        var flow = FlowLine.Match(lines[0]);
+        var hash = HashLine.Match(lines[1]);
+        return flow.Success && hash.Success && DateLine.IsMatch(lines[2])
+            ? new CreationRecord(flow.Groups[1].Value, hash.Groups[1].Value)
+            : null;
+    }
+
+    private sealed record CreationRecord(string Flow, string Sha256);
 }
 
 internal static class SpecReport
@@ -1106,7 +1156,7 @@ internal static class RouteResolver
             ["flow"] = new JsonObject { ["name"] = flow.Name, ["source"] = flow.Source, ["definition_present"] = flow.DefinitionPresent },
             ["valid"] = violations.Count == 0,
             ["violations"] = new JsonArray(violations.Select(violation => (JsonNode)violation.ToJson()).ToArray()),
-            ["tampered"] = RouteRecordInspector.Tampered(),
+            ["tampered"] = RouteRecordInspector.Tampered(specPath),
             ["route_change"] = RouteRecordInspector.RouteChange(),
             ["steps"] = new JsonArray(steps.Select((step, index) => (JsonNode)StepJson(steps, index, approved, table, state)).ToArray()),
             ["known_kinds"] = KnownKindsJson(steps),
