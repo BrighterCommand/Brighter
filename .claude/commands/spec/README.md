@@ -788,7 +788,107 @@ Message templates:
 | No spec matches | `/spec:switch` | ``No spec matches '{arg}'. Run /spec:status to list specs.`` Identical to `show-me.md:48` |
 | Artefacts missing | `/spec:approve` | ``Step `{step}` cannot be approved: its artefacts ({steps[step].artefacts joined with ", "}) are not all present. Run `{producer}` first.`` |
 | Flow not usable | `/spec:new` | ``Cannot start a spec: flow `feature` is not usable. {violations[0].message} Fix `.claude/flows/feature.flow` or `.claude/flows/approvals.md` first.`` |
+
+| Template | Printed by | Text |
+| --- | --- | --- |
+| No usable entry | every approver | ``Step `{step}` cannot be approved: kind `{steps[step].kind}` has no usable entry in the approval table. Nothing was written.`` |
+| Sub-flow failed, questions | every approver | ``{approver} stopped: `{command}` failed in its questions pass: {reason}. {steps[step].marker} was not written, and this sub-flow wrote nothing.`` |
+| Sub-flow failed, actions | every approver | ``{approver} stopped: `{command}` failed in its actions pass: {reason}. {steps[step].marker} was not written. Writes made by earlier sub-flow commands stay. Re-run {approver} to run the sub-flow again from `{approval_subflow[0]}`.`` |
+| Step approved | every approver | ``Approved step `{step}` on flow `{flow}`: {steps[step].marker} gained a provenance line.`` |
+
+| Template | Printed by | Text |
+| --- | --- | --- |
+| Gate, first question | a gate | ``Approve step `{N}` ({steps[N].artefacts joined with ", "}) and go on to produce step `{N+1}`?`` Options `Approve`, `Cancel` |
+| Gate, declined | a gate | ``{approver} stopped: step `{N}` was not approved. Nothing was written.`` |
+| Gate, existing artefact | a gate | ``Step `{N+1}`'s artefacts ({steps[N+1].artefacts joined with ", "}) already exist. What should {approver} do?`` Options `Approve as is` (or `Keep as is`), `Regenerate`, `Cancel` |
+| Gate, second question | a gate | ``Approve step `{N+1}` ({steps[N+1].artefacts joined with ", "})?`` Options `Approve`, `Not now` |
+
 <!-- routing-text:templates:end -->
+
+In the approver templates, `{approver}` is the approver's own invocation as typed, `{pass}` is `questions` or `actions`, and `{reason}` comes from the `sub-flow-failed` line, or is `no sub-flow-done line`. `{command}` is the sub-flow command named in the `sub-flow-failed` line, or the command that printed no `sub-flow-done` line. A gate also prints the artefacts-missing template, with `{step}` as `{N}` and `{producer}` as `steps[N].producer`. In a gate, `{N}` is `steps[i].gate.approves` and `{N+1}` is `steps[i].name`, for the step `i` that the gate produces.
+
+### Running an approval sub-flow
+
+Every approver (`/spec:approve`, a gate, or a flow's own marker-writing command) carries an identical copy of the sub-flow instructions, which it runs after the route instructions and its step checks ([ADR 0090](../../../docs/adr/0090-approval-sub-flows.md)).
+
+<!-- routing-text:sub-flow-instructions:begin -->
+1. Read `steps[{step}].approval_subflow`. If it is `null`, print the no-usable-entry message and stop.
+2. If it is empty, go to step 7.
+3. Build the common arguments: `"{spec}" {step} {artefacts}`, then `--select {word}` for each of the approver's selector words, in order. `{spec}` is the report's `spec`, and `{artefacts}` is `steps[{step}].artefacts` joined with `,`. `/spec:approve` takes its selector words from the words after the step name. A gate or a flow's own approver passes none, unless its own command defines some.
+4. Questions pass. For each command in table order, run it through the Skill tool (its name without the leading `/`), with arguments `questions`, the common arguments, and `--answer {key}={value}` for every answer kept from the commands before it. Keep every `answer:` line it prints, in order.
+5. Actions pass. For each command in table order, run it with `actions`, the common arguments, and `--answer {key}={value}` for every kept answer.
+6. After each run in steps 4 and 5, the command has completed only when the last protocol line it printed is `sub-flow-done: {command} {pass}`. Otherwise print the sub-flow-failed message for that pass and stop. Write no marker.
+7. Append the provenance line to `steps[{step}].marker`, and print the step-approved message.
+<!-- routing-text:sub-flow-instructions:end -->
+
+Then `/spec:approve` runs the closing instructions, and a gate runs them at the last step of its ladder. With an empty sub-flow, any selector words are ignored.
+
+A sub-flow command prints these protocol lines, each alone on a line:
+
+| Line | Printed in | Meaning |
+| --- | --- | --- |
+| `answer: {key}={value}` | the questions pass | One answer, whether the user gave it or the command derived it |
+| `approved-artefacts: {paths joined with ","}` | the actions pass, optional | Every file this approval covers, including any the command found already approved and skipped. The approver uses the last such line |
+| `sub-flow-done: {command} {pass}` | the last line of each pass | The pass completed |
+| `sub-flow-failed: {command} {pass}: {reason}` | instead of `sub-flow-done` | The pass failed. A question the user dismissed has the reason `question not answered` |
+
+### The provenance line
+
+One line is appended to the marker per approval:
+
+```
+approved: step={step} artefacts={approved} sha={full HEAD sha, or unavailable}
+```
+
+- `{approved}`, the value of `artefacts=`, comes from the last `approved-artefacts:` line, or from `steps[{step}].artefacts` joined with `,` when no command printed one.
+- `artefacts=` holds paths as the step's artefacts or the `approved-artefacts:` line give them: spec-relative names such as `tasks.md`, or repository paths such as `docs/adr/0089-slips-resolver-and-routing.md`.
+- Existing content is kept. If the marker is non-empty and lacks a final newline, a newline is added first, so the line starts a line.
+- Re-approving appends a further line. The resolver never reads the content.
+
+The approver writes the line with these commands, each run on its own from the repository root. `{m}` is `steps[{step}].marker` joined to `{spec}`, in double quotes:
+
+<!-- routing-text:provenance-commands:begin -->
+1. `git rev-parse --verify --quiet HEAD`. It prints the full sha. With no commits it exits `1` silently, and outside a git work tree it exits `128`. In both cases the sha is `unavailable`.
+2. `test -s {m}`. When it succeeds, `tail -c 1 {m}`. When the byte it prints is not a newline (the output looks empty when the file ends in one), the marker lacks a final newline, so run `echo >> {m}`.
+3. `echo "approved: step={step} artefacts={approved} sha={sha}" >> {m}`.
+
+Worked examples, at HEAD `0691e67beb1ce7242c734bcd0a9a5960610d432d`:
+
+```
+approved: step=tasks artefacts=tasks.md sha=0691e67beb1ce7242c734bcd0a9a5960610d432d
+approved: step=design artefacts=docs/adr/0089-slips-resolver-and-routing.md,docs/adr/0090-approval-sub-flows.md sha=0691e67beb1ce7242c734bcd0a9a5960610d432d
+approved: step=requirements artefacts=requirements.md sha=unavailable
+```
+<!-- routing-text:provenance-commands:end -->
+
+`grep '^approved: ' {marker}` lists every approval. `awk '/^approved: /{print $2, $NF}' {marker}` prints each step and sha. `test -f` still decides approval.
+
+### The gate run contract
+
+A gate approves step N and produces step N+1. It finds its step as the one whose `gate.command` is itself, and reads `steps[N].approved`, `steps[N+1].artefacts_present`, `steps[N+1].approved` and `gate.also_approves_produced`.
+
+<!-- routing-text:gate-run-contract:begin -->
+| # | Starting state | Interrupted state | What the gate does |
+| --- | --- | --- | --- |
+| 1 | N unapproved, N+1 absent and unapproved | A, when N's sub-flow failed before | First question, approve N, produce N+1, then second question |
+| 2 | N unapproved, N+1 present and unapproved | A, when N's sub-flow failed before | First question, approve N, existing-artefact question |
+| 3 | N approved, N+1 absent and unapproved | B: stopped after N's marker | Produce N+1, then second question |
+| 4 | N approved, N+1 present and unapproved | C: stopped after N+1's artefact | Existing-artefact question |
+| 5 | N+1 approved, its artefacts present or absent | — | First question if N is unapproved. Never touches N+1 |
+
+Rows 1 to 4 need N+1 unapproved and row 5 needs it approved, so exactly one row matches. The gate applies the row in this order:
+
+1. When N is unapproved and `steps[N].artefacts_present` is false, print the artefacts-missing template and stop. Nothing is written.
+2. Ask the first question in rows 1, 2 and 5 when N is unapproved. On `Cancel`, print the declined message and stop. Nothing is written.
+3. In rows 1 and 2, and in row 5 when N is unapproved, approve N with the sub-flow instructions. A failure stops the gate with no marker for N, and a re-run lands on the same row.
+4. In rows 1 to 4, run the resolver again and read `steps[N+1].precondition`. When `holds` is false, print its `message` and go to step 8, leaving N approved.
+5. In rows 1 and 3, produce N+1. In rows 2 and 4, ask the existing-artefact question. `Regenerate` produces N+1 again. `Cancel` leaves the state of row 4 and goes to step 8.
+6. When `also_approves_produced` is true, ask the second question after a fresh production or `Regenerate`. Choosing `Approve as is` at the existing-artefact question counts as approval.
+7. On approval, run the sub-flow instructions for N+1. `Not now` leaves the state of row 4 and goes to step 8.
+8. Run the closing instructions.
+<!-- routing-text:gate-run-contract:end -->
+
+A gate produces N+1 only in rows 1 and 3, or after `Regenerate`, so it never overwrites an artefact without asking. A gate that is not N+1's marker-writer offers `Keep as is`, and goes to step 8 after it. Every path ends at step 8, except the stops in steps 1 to 3, which write no marker, so the user sees the next step.
 
 ---
 

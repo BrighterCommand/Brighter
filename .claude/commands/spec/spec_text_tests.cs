@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 // The text-comparison script for the routing-slip canonical texts and their copies (spec 0040,
 // ADR 0092). No test framework: a plain file-based app that reads the files under
@@ -19,8 +20,25 @@ var registry = new List<RoutingTextBlock>
             ".claude/commands/adr/accept.md",
             ".claude/commands/adr/retire-superseded.md",
             ".claude/commands/adr/report-approval.md"
-        ])
+        ]),
+    new("gate-run-contract", ".claude/commands/spec/README.md", []),
+    new("sub-flow-instructions", ".claude/commands/spec/README.md", []),
+    new("provenance-commands", ".claude/commands/spec/README.md", [])
 };
+
+const string SpecReadme = ".claude/commands/spec/README.md";
+
+string[] gateLadderStartingStates =
+[
+    "N unapproved, N+1 absent and unapproved",
+    "N unapproved, N+1 present and unapproved",
+    "N approved, N+1 absent and unapproved",
+    "N approved, N+1 present and unapproved",
+    "N+1 approved, its artefacts present or absent"
+];
+
+var provenancePattern = new Regex(
+    "^approved: step=[a-z][a-z0-9-]* artefacts=[^ ]+ sha=([0-9a-f]{40}|[0-9a-f]{64}|unavailable)$");
 
 var templateRegistry = new List<TemplateExpectation>
 {
@@ -32,6 +50,8 @@ var reporter = new Reporter();
 
 CheckParserSelfTest(reporter);
 
+CheckProvenancePatternSelfTest(provenancePattern, reporter);
+
 CheckIgnoreRules(repositoryRoot, reporter);
 
 foreach (var block in registry)
@@ -39,6 +59,10 @@ foreach (var block in registry)
 
 foreach (var expectation in templateRegistry)
     CheckTemplates(expectation, repositoryRoot, reporter);
+
+CheckGateLadder(repositoryRoot, gateLadderStartingStates, reporter);
+
+CheckProvenanceLines(repositoryRoot, provenancePattern, reporter);
 
 return reporter.Summary();
 
@@ -107,6 +131,100 @@ List<string> ReadBlocks(string root, string file, string id)
     }
 
     return blocks;
+}
+
+void CheckGateLadder(string root, string[] startingStates, Reporter report)
+{
+    const string check = "gate ladder";
+    report.Checked();
+    var blocks = ReadBlocks(root, SpecReadme, "gate-run-contract");
+    if (blocks.Count != 1)
+    {
+        report.Fail(check, $"gate-run-contract block must appear exactly once in {SpecReadme} ({blocks.Count} found)");
+        return;
+    }
+
+    var rows = blocks[0].Split('\n')
+        .Select(line => line.Trim())
+        .Where(line => line.StartsWith('|'))
+        .Select(SplitCells)
+        .Where(cells => cells.Count > 0 && int.TryParse(cells[0], out _))
+        .ToList();
+    if (rows.Count != startingStates.Length)
+    {
+        report.Fail(check, $"expected {startingStates.Length} ladder rows, found {rows.Count}");
+        return;
+    }
+
+    for (var i = 0; i < rows.Count; i++)
+    {
+        var actual = rows[i].Count > 1 ? rows[i][1] : "";
+        if (rows[i][0] != (i + 1).ToString() || actual != startingStates[i])
+            report.Fail(check, $"row {i + 1} starting state is \"{actual}\", expected \"{startingStates[i]}\"");
+    }
+}
+
+void CheckProvenanceLines(string root, Regex pattern, Reporter report)
+{
+    const string check = "provenance pattern";
+    report.Checked();
+    var blocks = ReadBlocks(root, SpecReadme, "provenance-commands");
+    if (blocks.Count != 1)
+    {
+        report.Fail(check, $"provenance-commands block must appear exactly once in {SpecReadme} ({blocks.Count} found)");
+        return;
+    }
+
+    var lines = blocks[0].Split('\n').Select(line => line.TrimEnd('\r')).ToList();
+    var approved = lines.Where(line => line.StartsWith("approved: ")).ToList();
+    if (approved.Count == 0)
+        report.Fail(check, "provenance-commands block holds no approved: line");
+
+    foreach (var line in approved.Where(line => !pattern.IsMatch(line)))
+        report.Fail(check, $"approved line does not match the provenance pattern: \"{line}\"");
+
+    CheckSubstitutedEchoLine(lines, pattern, check, report);
+}
+
+void CheckSubstitutedEchoLine(List<string> lines, Regex pattern, string check, Reporter report)
+{
+    var echo = lines.Select(line => Regex.Match(line, "`echo \"(approved: [^\"]*)\" >> "))
+        .Where(match => match.Success)
+        .ToList();
+    if (echo.Count != 1)
+    {
+        report.Fail(check, $"expected exactly one echo line that writes an approved: line, found {echo.Count}");
+        return;
+    }
+
+    var substituted = echo[0].Groups[1].Value
+        .Replace("{step}", "design")
+        .Replace("{approved}", "docs/adr/0090-approval-sub-flows.md")
+        .Replace("{sha}", new string('a', 40));
+    if (!pattern.IsMatch(substituted))
+        report.Fail(check, $"echo line with sample values does not match the provenance pattern: \"{substituted}\"");
+}
+
+void CheckProvenancePatternSelfTest(Regex pattern, Reporter report)
+{
+    var sha = new string('a', 40);
+    var cases = new (string Line, bool ExpectedMatch)[]
+    {
+        ($"approved: step=tasks artefacts=tasks.md sha={sha}", true),
+        ($"approved: step=requirements artefacts=requirements.md sha={new string('0', 64)}", true),
+        ("approved: step=requirements artefacts=requirements.md sha=unavailable", true),
+        ($"approved: step=tasks artefacts=tasks.md sha={new string('a', 39)}", false),
+        ($"approved: step=tasks artefacts=tasks.md sha={new string('A', 40)}", false),
+        ($"approved: step=tasks artefacts= sha={sha}", false),
+        ($"approved: step=tasks artefacts=tasks.md sha={sha} ", false)
+    };
+
+    foreach (var (line, expectedMatch) in cases)
+    {
+        report.Checked();
+        if (pattern.IsMatch(line) != expectedMatch)
+            report.Fail("provenance pattern self-test", $"\"{line}\" should {(expectedMatch ? "" : "not ")}match");
+    }
 }
 
 void CheckIgnoreRules(string root, Reporter report)
