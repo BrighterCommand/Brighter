@@ -909,7 +909,7 @@ Depends on Phase 6.*
 
 Depends on Phase 11.*
 
-- [ ] **TEST + IMPLEMENT: T12.0 — The tooling-fault sentence quoted in the canonical route instructions is required verbatim in each command that uses it**
+- [x] **TEST + IMPLEMENT: T12.0 — The tooling-fault sentence quoted in the canonical route instructions is required verbatim in each command that uses it**
   - **USE COMMAND**: `/tdd:test-first when a command that uses the route report lacks the tooling-fault sentence quoted in the canonical route instructions the text check should FAIL naming the file`
   - Test file: `spec_text_tests.cs`. The check takes its file list from a registry. This task registers `status.md`; T12.2 adds `switch.md`, T13.10 `new.md` and T15.1 `route.md`, each in its own `test:` commit before the file's copy lands.
   - Test should verify (the run stays red until T12.1 lands `status.md`'s copy, as T1.1 stays red until Phase 2):
