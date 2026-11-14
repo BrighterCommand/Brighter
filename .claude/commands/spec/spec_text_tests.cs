@@ -21,6 +21,7 @@ var registry = new List<RoutingTextBlock>
             ".claude/commands/adr/retire-superseded.md",
             ".claude/commands/adr/report-approval.md"
         ]),
+    new("route-instructions", ".claude/commands/spec/README.md", [".claude/commands/spec/review.md"]),
     new("gate-run-contract", ".claude/commands/spec/README.md", []),
     new("sub-flow-instructions", ".claude/commands/spec/README.md", []),
     new("provenance-commands", ".claude/commands/spec/README.md", [])
@@ -45,13 +46,15 @@ var templateRegistry = new List<TemplateExpectation>
     new(".claude/commands/adr/README.md", ".claude/commands/adr/retire-superseded.md", ["Supersession question"]),
     new(".claude/commands/adr/README.md", ".claude/commands/adr/report-approval.md", ["Report"]),
     new(".claude/commands/spec/README.md", ".claude/commands/spec/status.md", ["Next-step line"]),
-    new(".claude/commands/spec/README.md", ".claude/commands/spec/switch.md", ["Next-step line", "Ambiguous spec id", "No spec matches"])
+    new(".claude/commands/spec/README.md", ".claude/commands/spec/switch.md", ["Next-step line", "Ambiguous spec id", "No spec matches"]),
+    new(".claude/commands/spec/README.md", ".claude/commands/spec/review.md", ["Next-step line", "Phase not on the route", "Step with no review criteria", "No requirements step"])
 };
 
 string[] toolingFaultFiles =
 [
     ".claude/commands/spec/status.md",
-    ".claude/commands/spec/switch.md"
+    ".claude/commands/spec/switch.md",
+    ".claude/commands/spec/review.md"
 ];
 
 var reporter = new Reporter();
