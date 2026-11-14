@@ -285,7 +285,10 @@ void CheckAllSpecs(string root, IReadOnlyList<string> pinnedToHandOff, Reporter 
 {
     const string check = "--all over specs";
     report.Checked();
+    var stopwatch = Stopwatch.StartNew();
     var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", RepositorySpecs, "--all", "--flows-dir", ShippedFlows]);
+    stopwatch.Stop();
+    report.WarnIfSlow(check, stopwatch.Elapsed);
     var records = SplitLines(result.Stdout).Where(IsRecordLine).ToList();
     var directories = Directory.GetDirectories(Path.Combine(root, RepositorySpecs))
         .Select(directory => Path.GetFileName(directory))
@@ -651,10 +654,18 @@ internal sealed record Expectation(IReadOnlyList<string> Run, string Flows, int 
 
 internal sealed class Reporter
 {
+    private static readonly TimeSpan SlowRun = TimeSpan.FromSeconds(10);
+
     private int _checks;
     private int _failures;
 
     public void Checked() => _checks++;
+
+    public void WarnIfSlow(string check, TimeSpan elapsed)
+    {
+        if (elapsed >= SlowRun)
+            Console.WriteLine($"WARN {check}: took {elapsed.TotalSeconds:F1} seconds, which is {SlowRun.TotalSeconds:F0} seconds or more");
+    }
 
     public void Fail(string check, string message)
     {
