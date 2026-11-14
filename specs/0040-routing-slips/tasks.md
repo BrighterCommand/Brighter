@@ -993,7 +993,7 @@ Depends on Phase 11.*
   - Verify after: S1 green; marker grep empty.
   - Traces to: 0089 step 9.4; FR-8, FR-10, FR-11, FR-7; AC-10, AC-11, AC-17, AC-86. Depends on: T13.2.
 
-- [ ] **TEST + IMPLEMENT: T13.4 — `/spec:tasks` checks FR coverage only with a `requirements` step and reads ADRs only with a `design` step**
+- [x] **TEST + IMPLEMENT: T13.4 — `/spec:tasks` checks FR coverage only with a `requirements` step and reads ADRs only with a `design` step**
   - Verification rows (RED-first): `tasks.md` must carry `route-instructions`, `closing-instructions`, and the templates *Next-step line*, *Not on the route* and *Another producer*.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
