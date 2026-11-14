@@ -53,7 +53,8 @@ var templateRegistry = new List<TemplateExpectation>
     new(".claude/commands/spec/README.md", ".claude/commands/spec/design.md", ["Next-step line", "Not on the route", "Another producer"]),
     new(".claude/commands/spec/README.md", ".claude/commands/spec/tasks.md", ["Next-step line", "Not on the route", "Another producer"]),
     new(".claude/commands/spec/README.md", ".claude/commands/spec/approve.md", ["Next-step line", "Step not on the slip", "Another marker-writer", "Artefacts missing"]),
-    new(".claude/commands/spec/README.md", ".claude/commands/adr/adr.md", ["Next-step line", "No design step"])
+    new(".claude/commands/spec/README.md", ".claude/commands/adr/adr.md", ["Next-step line", "No design step"]),
+    new(".claude/commands/spec/README.md", ".claude/commands/spec/new.md", ["Flow not usable"])
 };
 
 string[] toolingFaultFiles =
@@ -67,7 +68,8 @@ string[] toolingFaultFiles =
     ".claude/commands/spec/approve.md",
     ".claude/commands/spec/implement.md",
     ".claude/commands/spec/ralph-implement.md",
-    ".claude/commands/adr/adr.md"
+    ".claude/commands/adr/adr.md",
+    ".claude/commands/spec/new.md"
 ];
 
 var reporter = new Reporter();
