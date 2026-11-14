@@ -776,10 +776,14 @@ internal static class RouteRecordInspector
     public static JsonObject Tampered(string specPath)
     {
         var slipPath = Path.Combine(specPath, SlipFile);
-        var record = ReadRecord(Path.Combine(specPath, RecordFile));
-        return File.Exists(slipPath) && record is not null
-            ? Compare(record, SlipHash(slipPath))
-            : Report(false, null, null);
+        var recordPath = Path.Combine(specPath, RecordFile);
+        var record = ReadRecord(recordPath);
+        if (!File.Exists(slipPath))
+        {
+            return File.Exists(recordPath) ? Report(true, "b", record?.Flow) : Report(false, null, null);
+        }
+
+        return record is not null ? Compare(record, SlipHash(slipPath)) : Report(false, null, null);
     }
 
     public static JsonNode? RouteChange() => null;

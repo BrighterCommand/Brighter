@@ -1,0 +1,21 @@
+{
+  "run": [
+    "--spec",
+    "tamper-b-record-only"
+  ],
+  "flows": "flows",
+  "exit": 0,
+  "report": {
+    "flow": {
+      "name": "feature",
+      "source": "default",
+      "definition_present": true
+    },
+    "valid": true,
+    "tampered": {
+      "value": true,
+      "case": "b",
+      "recorded_flow": "light"
+    }
+  }
+}
