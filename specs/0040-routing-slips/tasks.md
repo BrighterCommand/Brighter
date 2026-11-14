@@ -1014,7 +1014,7 @@ Depends on Phase 11.*
   - Acceptance: the notes exist. This runs before T13.6, so the file is the original one, which also satisfies "before 0090 step 3".
   - Traces to: 0090 step 7 (baseline); AC-24, AC-77. Depends on: T13.4.
 
-- [ ] **TEST + IMPLEMENT: T13.6 — `/spec:approve {step}` accepts only steps on the slip whose marker-writer it is, checks their artefacts through the resolver, and prints the next step from a second report**
+- [x] **TEST + IMPLEMENT: T13.6 — `/spec:approve {step}` accepts only steps on the slip whose marker-writer it is, checks their artefacts through the resolver, and prints the next step from a second report**
   - Verification rows (RED-first): `approve.md` must carry `route-instructions` and `closing-instructions`, and its first-stage template set: *Next-step line*, *Step not on the slip* (both forms), *Another marker-writer* and *Artefacts missing*.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
