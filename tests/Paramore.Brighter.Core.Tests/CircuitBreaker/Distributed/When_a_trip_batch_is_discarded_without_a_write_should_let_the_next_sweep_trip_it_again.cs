@@ -61,7 +61,7 @@ public class DiscardedTripBatchTests
 
     private async Task<IReadOnlyList<RoutingKey>> LiveTopicsInAsync(InMemoryTrippedTopicStore store, FakeTimeProvider clock)
     {
-        var live = await store.ReadLiveAsync(clock.GetUtcNow(), s_options.CooldownDuration);
+        var live = await store.ReadLiveAsync(new TripWindow(clock.GetUtcNow(), s_options.CooldownDuration));
         return live.Select(trip => trip.Topic).ToArray();
     }
 

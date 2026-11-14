@@ -116,7 +116,7 @@ public class WriteOverEndedRowTests
             using var recorder = StartRecording("left-ended-tracer");
             var store = new InMemoryTrippedTopicStore();
             await store.WriteAsync([new TopicTrip(_orders, s_start + TimeSpan.FromSeconds(30))]);
-            await store.EndExpiredAsync(s_start + TimeSpan.FromSeconds(80), s_cooldown);
+            await store.EndExpiredAsync(new TripWindow(s_start + TimeSpan.FromSeconds(80), s_cooldown));
             var clock = new FakeTimeProvider(s_start + TimeSpan.FromSeconds(10));
             var breaker = new DistributedOutboxCircuitBreaker(store, s_options, new BrighterTracer(), timeProvider: clock);
             var batch = breaker.BeginTripBatch();

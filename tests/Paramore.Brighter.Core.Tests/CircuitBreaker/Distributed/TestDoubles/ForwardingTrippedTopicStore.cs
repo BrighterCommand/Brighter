@@ -36,11 +36,11 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 /// </summary>
 public abstract class ForwardingTrippedTopicStore(IAmATrippedTopicStore inner) : IAmATrippedTopicStore
 {
-    public virtual Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => inner.EndExpiredAsync(now, tripLength, cancellationToken);
+    public virtual Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
+        => inner.EndExpiredAsync(window, cancellationToken);
 
-    public virtual Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => inner.ReadLiveAsync(now, tripLength, cancellationToken);
+    public virtual Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default)
+        => inner.ReadLiveAsync(window, cancellationToken);
 
     public virtual Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
         => inner.WriteAsync(trips, cancellationToken);

@@ -25,9 +25,9 @@ public class MySqlTrippedTopicStorePurgeTests : MySqlTrippedTopicStoreTestBase
         var cutoff = s_midday.AddMinutes(15);
 
         await Store.WriteAsync([new TopicTrip(endedLongAgo, longAgo)]);
-        await Store.EndExpiredAsync(longAgo.AddMinutes(1), s_tripLength);
+        await Store.EndExpiredAsync(new TripWindow(longAgo.AddMinutes(1), s_tripLength));
         await Store.WriteAsync([new TopicTrip(endedRecently, recently)]);
-        await Store.EndExpiredAsync(recently.AddMinutes(1), s_tripLength);
+        await Store.EndExpiredAsync(new TripWindow(recently.AddMinutes(1), s_tripLength));
         await Store.WriteAsync([new TopicTrip(neverEnded, longAgo.AddHours(-1))]);
 
         // Act

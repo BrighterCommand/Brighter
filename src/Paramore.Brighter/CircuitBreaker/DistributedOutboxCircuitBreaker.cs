@@ -596,9 +596,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         public async Task<IReadOnlyList<TopicTrip>> ReadAsync(CancellationToken token)
         {
-            var now = timeProvider.GetUtcNow();
-            _ended = await store.EndExpiredAsync(now, tripLength, token).ConfigureAwait(false);
-            return await store.ReadLiveAsync(now, tripLength, token).ConfigureAwait(false);
+            var window = new TripWindow(timeProvider.GetUtcNow(), tripLength);
+            _ended = await store.EndExpiredAsync(window, token).ConfigureAwait(false);
+            return await store.ReadLiveAsync(window, token).ConfigureAwait(false);
         }
     }
 

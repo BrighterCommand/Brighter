@@ -45,7 +45,7 @@ public class IndividuallyHeldReadsTrippedTopicStore(IAmATrippedTopicStore inner)
 
     public void FailRead(int readNumber, Exception failure) => SlotFor(readNumber).Result.TrySetException(failure);
 
-    public override Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public override Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
     {
         var slot = SlotFor(Interlocked.Increment(ref _readCount));
         _slotOfThisRead.Value = slot;
@@ -53,7 +53,7 @@ public class IndividuallyHeldReadsTrippedTopicStore(IAmATrippedTopicStore inner)
         return EndedOfAsync(slot);
     }
 
-    public override async Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public override async Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default)
         => (await _slotOfThisRead.Value!.Result.Task.ConfigureAwait(false)).Live;
 
     private static async Task<IReadOnlyList<TopicTrip>> EndedOfAsync(ReadSlot slot)

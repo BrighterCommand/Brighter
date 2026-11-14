@@ -61,18 +61,18 @@ public class SignallingTrippedTopicStore(InMemoryTrippedTopicStore? inner = null
 
     public void ReleaseWrites() => _release.TrySetResult(true);
 
-    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _readCount);
         return inner is null
             ? Task.FromResult<IReadOnlyList<TopicTrip>>([])
-            : inner.EndExpiredAsync(now, tripLength, cancellationToken);
+            : inner.EndExpiredAsync(window, cancellationToken);
     }
 
-    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default)
         => inner is null
             ? Task.FromResult<IReadOnlyList<TopicTrip>>([])
-            : inner.ReadLiveAsync(now, tripLength, cancellationToken);
+            : inner.ReadLiveAsync(window, cancellationToken);
 
     public async Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)
     {

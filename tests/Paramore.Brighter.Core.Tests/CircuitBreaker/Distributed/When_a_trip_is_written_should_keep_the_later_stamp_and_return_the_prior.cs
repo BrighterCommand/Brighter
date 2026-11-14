@@ -24,7 +24,7 @@ public class InMemoryTrippedTopicStoreKeepsLaterStampTests
         var first = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, firstStamp)]));
         var later = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, laterStamp)]));
         var earlier = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, earlierStamp)]));
-        var live = await Store.ReadLiveAsync(laterStamp.AddSeconds(1), TimeSpan.FromHours(1));
+        var live = await Store.ReadLiveAsync(new TripWindow(laterStamp.AddSeconds(1), TimeSpan.FromHours(1)));
 
         // Assert
         Assert.Null(first.PriorTripTime);

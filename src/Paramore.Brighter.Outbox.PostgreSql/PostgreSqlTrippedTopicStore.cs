@@ -108,8 +108,7 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
     /// <inheritdoc />
     protected override async Task<IReadOnlyList<TopicTrip>> EndExpiredOnceAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
+        TripWindow window,
         CancellationToken cancellationToken)
     {
         await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
@@ -120,20 +119,19 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
             WHERE ended_at IS NULL AND trip_time <= @cutoff
             RETURNING topic, trip_time;
             """,
-            [("@now", now), ("@cutoff", now - tripLength)], cancellationToken).ConfigureAwait(false);
+            [("@now", window.Now), ("@cutoff", window.Cutoff)], cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     protected override async Task<IReadOnlyList<TopicTrip>> ReadLiveOnceAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
+        TripWindow window,
         CancellationToken cancellationToken)
     {
         await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         return await QueryTripsAsync(
             connection, null,
             $"SELECT topic, trip_time FROM {QualifiedTableName} WHERE ended_at IS NULL AND trip_time > @cutoff;",
-            [("@cutoff", now - tripLength)], cancellationToken).ConfigureAwait(false);
+            [("@cutoff", window.Cutoff)], cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

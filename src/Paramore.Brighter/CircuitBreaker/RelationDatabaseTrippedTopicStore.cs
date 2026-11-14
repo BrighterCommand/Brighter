@@ -79,20 +79,18 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
     /// Runs <see cref="EndExpiredOnceAsync"/>, and runs it once more if the database chose it as a deadlock victim.
     /// </remarks>
     public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
+        TripWindow window,
         CancellationToken cancellationToken = default) =>
-        RunWithDeadlockRetryAsync(() => EndExpiredOnceAsync(now, tripLength, cancellationToken));
+        RunWithDeadlockRetryAsync(() => EndExpiredOnceAsync(window, cancellationToken));
 
     /// <inheritdoc />
     /// <remarks>
     /// Runs <see cref="ReadLiveOnceAsync"/>, and runs it once more if the database chose it as a deadlock victim.
     /// </remarks>
     public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
+        TripWindow window,
         CancellationToken cancellationToken = default) =>
-        RunWithDeadlockRetryAsync(() => ReadLiveOnceAsync(now, tripLength, cancellationToken));
+        RunWithDeadlockRetryAsync(() => ReadLiveOnceAsync(window, cancellationToken));
 
     /// <inheritdoc />
     /// <remarks>
@@ -106,25 +104,21 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
     /// <summary>
     /// Marks the trips that have run out as ended and returns them, once, in the store's dialect. The base retries it after a deadlock.
     /// </summary>
-    /// <param name="now">The time of the call.</param>
-    /// <param name="tripLength">How long a trip lasts.</param>
+    /// <param name="window">The time of the call and how long a trip lasts.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <returns>The trips this call marked ended.</returns>
     protected abstract Task<IReadOnlyList<TopicTrip>> EndExpiredOnceAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
+        TripWindow window,
         CancellationToken cancellationToken);
 
     /// <summary>
     /// Reads the live trips once, in the store's dialect, changing nothing. The base retries it after a deadlock.
     /// </summary>
-    /// <param name="now">The time of the read.</param>
-    /// <param name="tripLength">How long a trip lasts.</param>
+    /// <param name="window">The time of the read and how long a trip lasts.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
     /// <returns>The trips that are not marked ended and have not run out.</returns>
     protected abstract Task<IReadOnlyList<TopicTrip>> ReadLiveOnceAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
+        TripWindow window,
         CancellationToken cancellationToken);
 
     /// <summary>

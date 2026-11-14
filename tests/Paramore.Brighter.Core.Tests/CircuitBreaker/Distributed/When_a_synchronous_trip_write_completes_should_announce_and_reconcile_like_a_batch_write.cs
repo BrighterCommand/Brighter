@@ -186,7 +186,7 @@ public class SynchronousTripWriteCompletionTests
             using var recorder = new ActivityRecorder("sync-trip-left-ended-tracer");
             var inner = new InMemoryTrippedTopicStore();
             await inner.WriteAsync([new TopicTrip(_orders, s_start + TimeSpan.FromSeconds(30))]);
-            await inner.EndExpiredAsync(s_start + TimeSpan.FromSeconds(80), s_cooldown);
+            await inner.EndExpiredAsync(new TripWindow(s_start + TimeSpan.FromSeconds(80), s_cooldown));
             var store = new SignallingTrippedTopicStore(inner);
             var clock = new FakeTimeProvider(s_start + TimeSpan.FromSeconds(10));
             var breaker = new DistributedOutboxCircuitBreaker(store, s_options, new BrighterTracer(), timeProvider: clock);

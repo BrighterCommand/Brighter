@@ -8,6 +8,6 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
 public sealed class LiveReadFailingTrippedTopicStore(IAmATrippedTopicStore inner) : ForwardingTrippedTopicStore(inner)
 {
-    public override Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public override Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default)
         => throw new InvalidOperationException("The live trips cannot be read");
 }

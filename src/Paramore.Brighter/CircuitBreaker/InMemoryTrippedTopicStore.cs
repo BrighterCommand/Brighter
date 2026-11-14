@@ -40,19 +40,19 @@ public class InMemoryTrippedTopicStore : IAmATrippedTopicStore
     private readonly Dictionary<RoutingKey, Row> _trips = new();
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
     {
         lock (_lock)
         {
-            IReadOnlyList<TopicTrip> ended = MarkEnded(now, now - tripLength);
+            IReadOnlyList<TopicTrip> ended = MarkEnded(window.Now, window.Cutoff);
             return Task.FromResult(ended);
         }
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default)
     {
-        var cutoff = now - tripLength;
+        var cutoff = window.Cutoff;
         lock (_lock)
         {
             IReadOnlyList<TopicTrip> live = _trips.Where(trip => trip.Value.EndedAt is null && trip.Value.TripTime > cutoff)

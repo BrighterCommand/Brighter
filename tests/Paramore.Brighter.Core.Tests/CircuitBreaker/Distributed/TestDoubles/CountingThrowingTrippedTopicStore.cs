@@ -37,13 +37,13 @@ public class CountingThrowingTrippedTopicStore : IAmATrippedTopicStore
 
     public int ReadCount => Volatile.Read(ref _readCount);
 
-    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _readCount);
         throw new InvalidOperationException("The store cannot be read");
     }
 
-    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<TopicTrip>>([]);
 
     public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)

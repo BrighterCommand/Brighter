@@ -21,7 +21,7 @@ public class PostgreSqlTrippedTopicStoreDuplicateTopicWriteTests : PostgreSqlTri
         var repeatsATopic = async () => await Store.WriteAsync(
             [new TopicTrip(orders, stamp), new TopicTrip(invoices, stamp), new TopicTrip(orders, stamp)]);
         await Assert.ThrowsAsync<ArgumentException>(repeatsATopic);
-        var afterRejectedWrite = await Store.ReadLiveAsync(stamp.AddSeconds(1), TimeSpan.FromHours(1));
+        var afterRejectedWrite = await Store.ReadLiveAsync(new TripWindow(stamp.AddSeconds(1), TimeSpan.FromHours(1)));
         var results = await Store.WriteAsync([new TopicTrip(orders, stamp), new TopicTrip(invoices, stamp)]);
 
         // Assert

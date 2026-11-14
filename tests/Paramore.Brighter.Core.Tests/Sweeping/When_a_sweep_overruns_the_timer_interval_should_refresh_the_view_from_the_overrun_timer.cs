@@ -71,7 +71,7 @@ public class SweeperRefreshOnOverrunTests
         var tickRead = SpinWait.SpinUntil(() => observedStore.ReadCount >= 1, s_timeout);
         clock.Advance(TimeSpan.FromSeconds(5));
         instanceA.TripTopic(orders);
-        var written = SpinWait.SpinUntil(() => shared.ReadLiveAsync(clock.GetUtcNow(), s_options.CooldownDuration).GetAwaiter().GetResult().Count > 0, s_timeout);
+        var written = SpinWait.SpinUntil(() => shared.ReadLiveAsync(new TripWindow(clock.GetUtcNow(), s_options.CooldownDuration)).GetAwaiter().GetResult().Count > 0, s_timeout);
         clock.Advance(TimeSpan.FromSeconds(5));
         var listed = SpinWait.SpinUntil(() => instanceB.TrippedTopics.Contains(orders), s_timeout);
         var stillHeld = state.Read().IsSweepInProgress;

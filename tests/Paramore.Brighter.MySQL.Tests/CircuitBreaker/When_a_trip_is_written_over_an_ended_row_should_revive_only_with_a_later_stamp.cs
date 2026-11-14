@@ -18,15 +18,15 @@ public class MySqlTrippedTopicStoreReviveEndedRowTests : MySqlTrippedTopicStoreT
         var endedStamp = s_now - s_tripLength;
         var laterStamp = endedStamp + TimeSpan.FromSeconds(10);
         await Store.WriteAsync([new TopicTrip(topic, endedStamp)]);
-        var marked = await Store.EndExpiredAsync(s_now, s_tripLength);
+        var marked = await Store.EndExpiredAsync(new TripWindow(s_now, s_tripLength));
         Assert.Contains(marked, trip => trip.Topic == topic);
 
         // Act
         var equal = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, endedStamp)]));
         var earlier = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, endedStamp - TimeSpan.FromSeconds(10))]));
-        var afterEqualAndEarlier = await Store.ReadLiveAsync(s_now, s_tripLength);
+        var afterEqualAndEarlier = await Store.ReadLiveAsync(new TripWindow(s_now, s_tripLength));
         var later = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, laterStamp)]));
-        var afterLater = await Store.ReadLiveAsync(s_now, s_tripLength);
+        var afterLater = await Store.ReadLiveAsync(new TripWindow(s_now, s_tripLength));
 
         // Assert
         Assert.True(equal.LeftEnded);

@@ -39,12 +39,12 @@ public class ReadsFailingOnDemandTrippedTopicStore(IAmATrippedTopicStore inner, 
 
     public int LiveReadCount => Volatile.Read(ref _liveReadCount);
 
-    public override Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
-        => FailReads ? throw new InvalidOperationException(failureMessage) : base.EndExpiredAsync(now, tripLength, cancellationToken);
+    public override Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
+        => FailReads ? throw new InvalidOperationException(failureMessage) : base.EndExpiredAsync(window, cancellationToken);
 
-    public override Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public override Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _liveReadCount);
-        return base.ReadLiveAsync(now, tripLength, cancellationToken);
+        return base.ReadLiveAsync(window, cancellationToken);
     }
 }

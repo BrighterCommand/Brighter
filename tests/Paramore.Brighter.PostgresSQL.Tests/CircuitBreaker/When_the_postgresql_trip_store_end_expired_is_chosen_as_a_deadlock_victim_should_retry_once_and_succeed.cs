@@ -28,7 +28,7 @@ public class PostgreSqlTrippedTopicStoreEndExpiredDeadlockTests : PostgreSqlTrip
         await using var holder = await PostgreSqlDeadlockRowHolder.HoldAsync(ConnectionProvider, PgIdentifier.Quote(TableName), last.Value);
 
         // Act
-        var endExpired = store.EndExpiredAsync(s_firstStamp.AddHours(1), TimeSpan.FromMinutes(1));
+        var endExpired = store.EndExpiredAsync(new TripWindow(s_firstStamp.AddHours(1), TimeSpan.FromMinutes(1)));
         await holder.WaitUntilBlockedAsync();
         await holder.TouchAsync(first.Value);
         await holder.CommitAsync();

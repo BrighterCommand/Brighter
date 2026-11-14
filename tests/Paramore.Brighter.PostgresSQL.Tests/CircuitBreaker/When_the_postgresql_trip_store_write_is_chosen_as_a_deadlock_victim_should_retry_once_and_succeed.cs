@@ -33,7 +33,7 @@ public class PostgreSqlTrippedTopicStoreWriteDeadlockTests : PostgreSqlTrippedTo
         await holder.TouchAsync(first.Value);
         await holder.CommitAsync();
         var results = await write;
-        var live = await Store.ReadLiveAsync(laterStamp.AddSeconds(1), TimeSpan.FromHours(1));
+        var live = await Store.ReadLiveAsync(new TripWindow(laterStamp.AddSeconds(1), TimeSpan.FromHours(1)));
 
         // Assert
         Assert.Equal(2, results.Count);

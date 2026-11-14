@@ -61,10 +61,10 @@ public class MySqlConcurrentFirstTripAnnouncementTests : IAsyncLifetime
             await Task.WhenAll(Task.Run(() => batchA.WriteAsync()), Task.Run(() => batchB.WriteAsync()));
         }
 
-        var liveBeforeEnd = await observer.ReadLiveAsync(later + s_cooldown - TimeSpan.FromSeconds(0.1), s_cooldown);
-        var endedBeforeEnd = await observer.EndExpiredAsync(later + s_cooldown - TimeSpan.FromSeconds(0.1), s_cooldown);
-        var endedAtEnd = await observer.EndExpiredAsync(later + s_cooldown, s_cooldown);
-        var liveAtEnd = await observer.ReadLiveAsync(later + s_cooldown, s_cooldown);
+        var liveBeforeEnd = await observer.ReadLiveAsync(new TripWindow(later + s_cooldown - TimeSpan.FromSeconds(0.1), s_cooldown));
+        var endedBeforeEnd = await observer.EndExpiredAsync(new TripWindow(later + s_cooldown - TimeSpan.FromSeconds(0.1), s_cooldown));
+        var endedAtEnd = await observer.EndExpiredAsync(new TripWindow(later + s_cooldown, s_cooldown));
+        var liveAtEnd = await observer.ReadLiveAsync(new TripWindow(later + s_cooldown, s_cooldown));
         provider.ForceFlush();
         string[] spanNames;
         lock (_activities)

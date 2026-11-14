@@ -33,10 +33,10 @@ public class MsSqlTrippedTopicStoreOverlappingBatchTests : MsSqlTrippedTopicStor
                 var stamp = s_start.AddSeconds(writer);
                 calls.Add(Task.Run(() => Store.WriteAsync(inSuppliedOrder.Select(topic => new TopicTrip(topic, stamp)).ToList())));
             }
-            calls.Add(Task.Run(() => Store.EndExpiredAsync(s_start, s_tripLength)));
-            calls.Add(Task.Run(() => Store.ReadLiveAsync(s_start, s_tripLength)));
+            calls.Add(Task.Run(() => Store.EndExpiredAsync(new TripWindow(s_start, s_tripLength))));
+            calls.Add(Task.Run(() => Store.ReadLiveAsync(new TripWindow(s_start, s_tripLength))));
             await Task.WhenAll(calls);
-            var live = await Store.ReadLiveAsync(s_start, s_tripLength);
+            var live = await Store.ReadLiveAsync(new TripWindow(s_start, s_tripLength));
 
             // Assert
             Assert.All(topics, topic => Assert.Equal(latestStamp, Assert.Single(live, trip => trip.Topic == topic).TripTime));

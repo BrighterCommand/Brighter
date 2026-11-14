@@ -21,7 +21,7 @@ public class PostgreSqlTrippedTopicStoreMicrosecondStampTests : PostgreSqlTrippe
 
         // Act
         var written = Assert.Single(await Store.WriteAsync([new TopicTrip(topic, microsecondStamp)]));
-        var liveTrips = await Store.ReadLiveAsync(microsecondStamp.AddSeconds(1), TimeSpan.FromHours(1));
+        var liveTrips = await Store.ReadLiveAsync(new TripWindow(microsecondStamp.AddSeconds(1), TimeSpan.FromHours(1)));
 
         // Assert
         Assert.Equal(microsecondStamp, written.StoredTripTime);

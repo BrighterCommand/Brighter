@@ -20,9 +20,9 @@ public class InMemoryTrippedTopicStoreRunOutRowTests
         await Store.WriteAsync([new TopicTrip(topic, s_now - s_tripLength - TimeSpan.FromSeconds(10))]);
 
         // Act
-        var live = await Store.ReadLiveAsync(s_now, s_tripLength);
-        var ended = await Store.EndExpiredAsync(s_now, s_tripLength);
-        var endedAgain = await Store.EndExpiredAsync(s_now, s_tripLength);
+        var live = await Store.ReadLiveAsync(new TripWindow(s_now, s_tripLength));
+        var ended = await Store.EndExpiredAsync(new TripWindow(s_now, s_tripLength));
+        var endedAgain = await Store.EndExpiredAsync(new TripWindow(s_now, s_tripLength));
 
         // Assert
         Assert.Empty(live);

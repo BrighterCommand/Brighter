@@ -105,14 +105,13 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
     /// <inheritdoc />
     protected override async Task<IReadOnlyList<TopicTrip>> EndExpiredOnceAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
+        TripWindow window,
         CancellationToken cancellationToken)
     {
         await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false);
 
-        var cutoff = now - tripLength;
+        var cutoff = window.Cutoff;
         var candidates = await QueryTripsAsync(
             connection, transaction,
             $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE {EXPIRED_ROW_PREDICATE}",
@@ -125,7 +124,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
             if (locked is null)
                 continue;
 
-            await MarkEndedAsync(connection, transaction, candidate.Topic, now.UtcDateTime, cancellationToken).ConfigureAwait(false);
+            await MarkEndedAsync(connection, transaction, candidate.Topic, window.Now.UtcDateTime, cancellationToken).ConfigureAwait(false);
             ended.Add(locked.Value);
         }
 
@@ -135,15 +134,14 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
     /// <inheritdoc />
     protected override async Task<IReadOnlyList<TopicTrip>> ReadLiveOnceAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
+        TripWindow window,
         CancellationToken cancellationToken)
     {
         await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         return await QueryTripsAsync(
             connection, null,
             $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `EndedAt` IS NULL AND `TripTime` > @cutoff",
-            [("@cutoff", now - tripLength)], cancellationToken).ConfigureAwait(false);
+            [("@cutoff", window.Cutoff)], cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

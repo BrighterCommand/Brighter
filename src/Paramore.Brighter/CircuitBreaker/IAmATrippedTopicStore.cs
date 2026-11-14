@@ -39,23 +39,21 @@ public interface IAmATrippedTopicStore
     /// Marks the trips that have run out as ended and returns them.
     /// </summary>
     /// <remarks>
-    /// Each trip that is not yet marked and whose stamp is at or before <paramref name="now"/> less <paramref name="tripLength"/> is marked ended
+    /// Each trip that is not yet marked and whose stamp is at or before the <paramref name="window"/>'s <see cref="TripWindow.Cutoff"/> is marked ended
     /// and returned to exactly one caller, however many callers race for it.
     /// </remarks>
-    /// <param name="now">The caller's clock.</param>
-    /// <param name="tripLength">How long a trip lasts.</param>
+    /// <param name="window">The caller's clock and how long a trip lasts.</param>
     /// <param name="cancellationToken">A token that cancels the call.</param>
     /// <returns>The trips this call marked ended.</returns>
-    Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Reads the trips that are live, changing nothing.
     /// </summary>
-    /// <param name="now">The reader's clock.</param>
-    /// <param name="tripLength">How long a trip lasts.</param>
+    /// <param name="window">The reader's clock and how long a trip lasts.</param>
     /// <param name="cancellationToken">A token that cancels the read.</param>
     /// <returns>The trips that are not marked ended and have not run out.</returns>
-    Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Writes trips, keeping the later of the stored and the written stamp for each topic.

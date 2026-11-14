@@ -73,10 +73,10 @@ public class ConcurrentFirstTripAnnouncementTests
             await Task.WhenAll(Task.Run(() => batchA.WriteAsync()), Task.Run(() => batchB.WriteAsync()));
         }
 
-        var liveBeforeEnd = await store.ReadLiveAsync(later + s_cooldown - TimeSpan.FromSeconds(0.1), s_cooldown);
-        var endedBeforeEnd = await store.EndExpiredAsync(later + s_cooldown - TimeSpan.FromSeconds(0.1), s_cooldown);
-        var endedAtEnd = await store.EndExpiredAsync(later + s_cooldown, s_cooldown);
-        var liveAtEnd = await store.ReadLiveAsync(later + s_cooldown, s_cooldown);
+        var liveBeforeEnd = await store.ReadLiveAsync(new TripWindow(later + s_cooldown - TimeSpan.FromSeconds(0.1), s_cooldown));
+        var endedBeforeEnd = await store.EndExpiredAsync(new TripWindow(later + s_cooldown - TimeSpan.FromSeconds(0.1), s_cooldown));
+        var endedAtEnd = await store.EndExpiredAsync(new TripWindow(later + s_cooldown, s_cooldown));
+        var liveAtEnd = await store.ReadLiveAsync(new TripWindow(later + s_cooldown, s_cooldown));
         provider.ForceFlush();
         string[] spanNames;
         lock (activities)

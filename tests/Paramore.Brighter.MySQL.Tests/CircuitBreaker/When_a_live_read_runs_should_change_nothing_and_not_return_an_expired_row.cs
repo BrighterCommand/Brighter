@@ -24,9 +24,9 @@ public class MySqlTrippedTopicStoreLiveReadTests : MySqlTrippedTopicStoreTestBas
         await Store.WriteAsync([new TopicTrip(expiredTopic, s_now - s_tripLength), new TopicTrip(liveTopic, liveStamp)]);
 
         // Act
-        var firstRead = await store.ReadLiveAsync(s_now, s_tripLength);
-        var secondRead = await store.ReadLiveAsync(s_now, s_tripLength);
-        var ended = await store.EndExpiredAsync(s_now, s_tripLength);
+        var firstRead = await store.ReadLiveAsync(new TripWindow(s_now, s_tripLength));
+        var secondRead = await store.ReadLiveAsync(new TripWindow(s_now, s_tripLength));
+        var ended = await store.EndExpiredAsync(new TripWindow(s_now, s_tripLength));
 
         // Assert
         Assert.Equal([new TopicTrip(liveTopic, liveStamp)], firstRead);

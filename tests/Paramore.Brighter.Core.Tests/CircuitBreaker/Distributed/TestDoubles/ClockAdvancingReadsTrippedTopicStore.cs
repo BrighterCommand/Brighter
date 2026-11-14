@@ -9,17 +9,17 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker.Distributed.TestDoubles;
 
 public sealed class ClockAdvancingReadsTrippedTopicStore(IAmATrippedTopicStore inner, FakeTimeProvider clock, TimeSpan advancePerCall) : ForwardingTrippedTopicStore(inner)
 {
-    public override Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public override Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
     {
         clock.Advance(advancePerCall);
         cancellationToken.ThrowIfCancellationRequested();
-        return base.EndExpiredAsync(now, tripLength, cancellationToken);
+        return base.EndExpiredAsync(window, cancellationToken);
     }
 
-    public override Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public override Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default)
     {
         clock.Advance(advancePerCall);
         cancellationToken.ThrowIfCancellationRequested();
-        return base.ReadLiveAsync(now, tripLength, cancellationToken);
+        return base.ReadLiveAsync(window, cancellationToken);
     }
 }

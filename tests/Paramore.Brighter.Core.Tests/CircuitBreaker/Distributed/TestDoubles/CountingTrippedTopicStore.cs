@@ -16,13 +16,13 @@ public class CountingTrippedTopicStore : IAmATrippedTopicStore
 
     public int Reads => Volatile.Read(ref _reads);
 
-    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<TopicTrip>> EndExpiredAsync(TripWindow window, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _reads);
         return Task.FromResult<IReadOnlyList<TopicTrip>>([]);
     }
 
-    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(DateTimeOffset now, TimeSpan tripLength, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<TopicTrip>> ReadLiveAsync(TripWindow window, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<TopicTrip>>([]);
 
     public Task<IReadOnlyList<TripWriteResult>> WriteAsync(IReadOnlyList<TopicTrip> trips, CancellationToken cancellationToken = default)

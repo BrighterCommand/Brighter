@@ -29,7 +29,7 @@ public class MsSqlTrippedTopicStoreCommandTimeoutTests : MsSqlTrippedTopicStoreT
 
         // Act
         await store.WriteAsync([new TopicTrip(topic, s_now)]);
-        await store.ReadLiveAsync(s_now, s_tripLength);
+        await store.ReadLiveAsync(new TripWindow(s_now, s_tripLength));
 
         // Assert
         Assert.Equal(2, recordingProvider.ExecutedCommands.Count);

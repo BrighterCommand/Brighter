@@ -19,7 +19,7 @@ public class PostgreSqlTrippedTopicStoreNeverDeletesTests : PostgreSqlTrippedTop
         await Store.WriteAsync([new TopicTrip(topic, s_now - s_tripLength)]);
 
         // Act
-        var ended = await Store.EndExpiredAsync(s_now, s_tripLength);
+        var ended = await Store.EndExpiredAsync(new TripWindow(s_now, s_tripLength));
         var (rows, markedRows) = await CountRowsAsync();
 
         // Assert

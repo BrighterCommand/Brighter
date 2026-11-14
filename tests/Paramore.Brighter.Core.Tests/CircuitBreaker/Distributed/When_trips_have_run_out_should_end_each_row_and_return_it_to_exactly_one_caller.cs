@@ -30,8 +30,8 @@ public class InMemoryTrippedTopicStoreEndExpiredRaceTests
 
             // Act
             var ended = await Task.WhenAll(Enumerable.Range(0, CALLERS)
-                .Select(_ => Task.Run(() => Store.EndExpiredAsync(s_now, s_tripLength))));
-            var live = await Store.ReadLiveAsync(s_now, s_tripLength);
+                .Select(_ => Task.Run(() => Store.EndExpiredAsync(new TripWindow(s_now, s_tripLength)))));
+            var live = await Store.ReadLiveAsync(new TripWindow(s_now, s_tripLength));
 
             // Assert
             Assert.Equal(1, ended.Count(trips => trips.Any(trip => trip.Topic == expiredTopic)));

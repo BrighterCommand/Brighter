@@ -84,7 +84,7 @@ public class RequestPathTripWriteTests
 
         // Act
         await mediatorA.ClearOutboxAsync([postedAtA.Id], context);
-        var tripsInStoreWhenAReturned = (await inner.ReadLiveAsync(clock.GetUtcNow(), options.CooldownDuration)).Select(trip => trip.Topic).ToArray();
+        var tripsInStoreWhenAReturned = (await inner.ReadLiveAsync(new TripWindow(clock.GetUtcNow(), options.CooldownDuration))).Select(trip => trip.Topic).ToArray();
         await mediatorB.ClearOutstandingFromOutboxAsync(10, TimeSpan.Zero, false, context);
 
         // Assert

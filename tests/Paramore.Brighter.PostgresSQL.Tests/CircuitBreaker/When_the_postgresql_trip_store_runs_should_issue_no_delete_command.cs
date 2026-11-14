@@ -23,10 +23,10 @@ public class PostgreSqlTrippedTopicStoreIssuesNoDeleteTests : PostgreSqlTrippedT
 
         // Act
         await store.WriteAsync([new TopicTrip(topic, s_now - s_tripLength)]);
-        var firstEnded = await store.EndExpiredAsync(s_now, s_tripLength);
+        var firstEnded = await store.EndExpiredAsync(new TripWindow(s_now, s_tripLength));
         await store.WriteAsync([new TopicTrip(topic, s_now)]);
-        await store.EndExpiredAsync(s_now, s_tripLength);
-        await store.ReadLiveAsync(s_now, s_tripLength);
+        await store.EndExpiredAsync(new TripWindow(s_now, s_tripLength));
+        await store.ReadLiveAsync(new TripWindow(s_now, s_tripLength));
 
         // Assert
         Assert.Contains(firstEnded, trip => trip.Topic == topic);

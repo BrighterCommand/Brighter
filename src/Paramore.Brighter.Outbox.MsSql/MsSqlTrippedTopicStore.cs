@@ -108,8 +108,7 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
     /// <inheritdoc />
     protected override async Task<IReadOnlyList<TopicTrip>> EndExpiredOnceAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
+        TripWindow window,
         CancellationToken cancellationToken)
     {
         using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
@@ -120,20 +119,19 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
             OUTPUT INSERTED.[Topic], INSERTED.[TripTime]
             WHERE [EndedAt] IS NULL AND [TripTime] <= @cutoff;
             """,
-            [("@now", now), ("@cutoff", now - tripLength)], cancellationToken).ConfigureAwait(false);
+            [("@now", window.Now), ("@cutoff", window.Cutoff)], cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     protected override async Task<IReadOnlyList<TopicTrip>> ReadLiveOnceAsync(
-        DateTimeOffset now,
-        TimeSpan tripLength,
+        TripWindow window,
         CancellationToken cancellationToken)
     {
         using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
         return await QueryTripsAsync(
             connection, null,
             $"SELECT [Topic], [TripTime] FROM {QualifiedTableName} WHERE [EndedAt] IS NULL AND [TripTime] > @cutoff;",
-            [("@cutoff", now - tripLength)], cancellationToken).ConfigureAwait(false);
+            [("@cutoff", window.Cutoff)], cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
