@@ -759,7 +759,7 @@ Depends on Phase 6.*
   - Implementation should: treat an unreadable record as case (c), not as a fault.
   - Traces to: FR-16 (c), FR-5 (legacy not tampered); AC-33. Depends on: T9.4.
 
-- [ ] **TEST + IMPLEMENT: T9.6 — Editing a flow definition after a spec started never makes that spec tampered, and the spec follows its own copy**
+- [x] **TEST + IMPLEMENT: T9.6 — Editing a flow definition after a spec started never makes that spec tampered, and the spec follows its own copy**
   - **USE COMMAND**: none — RED-first row `feature-slip-edited` (`flows: "flows-edited"`). `flows-edited/` already exists from T6.9.
   - Test should verify: not tampered; `next.detours` is empty, because the spec's own `.flow` has no detour (AC-34).
   - **Characterise**: named mutation: make the inspector hash `{flows-dir}/{flow}.flow` instead of the spec's `.flow`. The row must FAIL. Revert.
