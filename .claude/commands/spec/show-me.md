@@ -554,7 +554,7 @@ the count line last:
 - `Total breaking-change items: {n}` — always last, copied verbatim from the Classifier's tally.
 
 **`## Did it ship what it said?`** (FR-8) checks FR-16 rows 8 and 9 first, in this order, and writes
-one of their two lines verbatim in place of everything below when either applies; otherwise it
+the line that applies verbatim in place of everything below when either applies; otherwise it
 places the Classifier's judgements as Parts 1–4, in order:
 
 - Row 8, when `route.has_requirements_step` is `false`: write exactly `This spec's route ({route.flow})

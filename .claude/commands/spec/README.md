@@ -719,6 +719,10 @@ dotnet run .claude/commands/spec/show_me_facts.cs -- specs/0036-scoped-lifetime-
 dotnet run .claude/commands/spec/show_me_facts.cs -- some/file.md --word-count
 ```
 
+Run it from the repository root. It starts the route resolver (`resolve_route.cs`) as a child process
+by a path relative to the working directory, and `--flows-dir {path}` names the flow-definition
+directory the resolver reads (the shipped `.claude/flows` when it is omitted).
+
 **What it emits**:
 - On success (exit `0`): a JSON **ledger** written atomically to `{target}/.show-me-ledger.json`
   (serialised in full, then a single `File.Move` — never a partial write) — ref/diff fields, task and
