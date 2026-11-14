@@ -251,6 +251,34 @@ void CheckAllOutputSizes(string root, Reporter report)
     CheckAllOutputSize(root, "specs with the shipped flows", RepositorySpecs, ShippedFlows, true, report);
     CheckAllOutputSize(root, "specs with flows-invalid", RepositorySpecs, $"{FixtureRoot}/flows-invalid", true, report);
     CheckAllOutputSize(root, "the fixture specs with flows", FixtureSpecs, $"{FixtureRoot}/flows", false, report);
+    CheckTamperedSummaryLine(root, report);
+}
+
+void CheckTamperedSummaryLine(string root, Reporter report)
+{
+    const int summaryLineLimit = 650;
+    const string check = "--all summary line for tamper-a-route-changed";
+    report.Checked();
+    var result = RunProcess(root, "dotnet", ["run", ResolverScript, "--", FixtureSpecs, "--all", "--flows-dir", $"{FixtureRoot}/flows"]);
+    var line = SplitLines(result.Stdout).FirstOrDefault(l => l.StartsWith(ReportPrefix, StringComparison.Ordinal) && l.Contains($"{FixtureSpecs}/tamper-a-route-changed\""));
+    if (result.ExitCode != 0 || line == null)
+    {
+        report.Fail(check, $"expected exit 0 and a summary line, got exit {result.ExitCode}");
+        return;
+    }
+
+    var summary = (JsonObject)JsonNode.Parse(line[ReportPrefix.Length..])!;
+    var expectedTampered = JsonNode.Parse("""{ "value": true, "case": "a" }""")!;
+    if (summary["tampered"]?.ToJsonString() != expectedTampered.ToJsonString())
+        report.Fail(check, $"expected tampered {expectedTampered.ToJsonString()} without recorded_flow, got {summary["tampered"]?.ToJsonString() ?? "none"}");
+
+    var full = File.ReadAllLines(Path.Combine(root, FixtureSpecs, "tamper-a-route-changed", "route-changes.md")).Last(l => l.StartsWith("Reason:", StringComparison.Ordinal))["Reason:".Length..].Trim();
+    var expectedReason = full[..60] + "…";
+    if (summary["route_change"]?["reason"]?.GetValue<string>() != expectedReason)
+        report.Fail(check, $"expected route_change.reason to be the first 60 characters followed by …, got {summary["route_change"]?["reason"]?.ToJsonString() ?? "none"}");
+
+    if (line.Length > summaryLineLimit)
+        report.Fail(check, $"the summary line is {line.Length} characters, over {summaryLineLimit}");
 }
 
 void CheckAllOutputSize(string root, string label, string specsRoot, string flowsDirectory, bool checkTotal, Reporter report)
