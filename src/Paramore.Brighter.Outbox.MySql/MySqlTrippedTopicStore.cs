@@ -128,7 +128,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         TripWindow window,
         CancellationToken cancellationToken)
     {
-        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false);
         var open = new OpenTransaction(connection, transaction);
 
@@ -150,7 +150,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         TripWindow window,
         CancellationToken cancellationToken)
     {
-        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         return await QueryTripsAsync(
             connection, null,
             $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `EndedAt` IS NULL AND `TripTime` > @cutoff",
@@ -164,7 +164,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     {
         var inOrdinalTopicOrder = InOrdinalTopicOrder(trips);
 
-        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var open = new OpenTransaction(connection, transaction);
 

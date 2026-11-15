@@ -75,6 +75,19 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
     protected IAmARelationalDbConnectionProvider ConnectionProvider { get; }
 
     /// <summary>
+    /// Gets a connection from the provider and opens it if the provider did not.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <returns>An open connection that the caller must dispose.</returns>
+    protected async Task<DbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
+    {
+        var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        if (connection.State != ConnectionState.Open)
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return connection;
+    }
+
+    /// <summary>
     /// The trip table's name, quoted and qualified by its schema for the dialect.
     /// </summary>
     protected string QualifiedTableName { get; }

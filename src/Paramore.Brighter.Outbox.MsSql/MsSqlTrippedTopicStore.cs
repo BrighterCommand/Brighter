@@ -131,7 +131,7 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         TripWindow window,
         CancellationToken cancellationToken)
     {
-        using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         return await QueryTripsAsync(
             connection, null,
             $"""
@@ -147,7 +147,7 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         TripWindow window,
         CancellationToken cancellationToken)
     {
-        using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         return await QueryTripsAsync(
             connection, null,
             $"SELECT [Topic], [TripTime] FROM {QualifiedTableName} WHERE [EndedAt] IS NULL AND [TripTime] > @cutoff;",
@@ -161,7 +161,7 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     {
         var inOrdinalTopicOrder = InOrdinalTopicOrder(trips);
 
-        using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
 #if NET
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 #else

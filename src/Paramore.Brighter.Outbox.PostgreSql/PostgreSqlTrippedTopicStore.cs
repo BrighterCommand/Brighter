@@ -130,7 +130,7 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         TripWindow window,
         CancellationToken cancellationToken)
     {
-        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         return await QueryTripsAsync(
             connection, null,
             $"""
@@ -146,7 +146,7 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         TripWindow window,
         CancellationToken cancellationToken)
     {
-        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         return await QueryTripsAsync(
             connection, null,
             $"SELECT topic, trip_time FROM {QualifiedTableName} WHERE ended_at IS NULL AND trip_time > @cutoff;",
@@ -160,7 +160,7 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     {
         var inOrdinalTopicOrder = InOrdinalTopicOrder(trips);
 
-        await using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var command = CreateCommand(connection);
         command.CommandText = UpsertStatement(inOrdinalTopicOrder.Count);
         AddTripParameters(command, inOrdinalTopicOrder);
