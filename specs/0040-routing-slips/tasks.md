@@ -1183,7 +1183,7 @@ Depends on Phase 11.*
   - Acceptance: every item matches. Record any O-4 difference as accepted.
   - Traces to: 0090 step 7; FR-12, FR-13, FR-29; AC-24, AC-25, AC-26, AC-27, AC-76, AC-77. Depends on: T16.4.
 
-- [ ] **PROJECT: T17.2 — Confirm `/spec:new`, the tamper stops and `/spec:route` end to end**
+- [x] **PROJECT: T17.2 — Confirm `/spec:new`, the tamper stops and `/spec:route` end to end**
   - Do: on a throwaway branch, run 0091 step 6 items 1–11:
     - 1: `/spec:new foo` gives `.flow`, a record, `README.md`, `feature`/`slip`/valid, and stageable files.
     - 2: the spec-exists race, refused names, the `PATH`-shadowed hash failure.
@@ -1198,6 +1198,7 @@ Depends on Phase 11.*
     - 11: the case (b) re-copy.
   - Acceptance: each item as stated in 0091.
   - Traces to: 0091 step 6; FR-16, FR-17, FR-18, FR-20, NFR-5; AC-31 to AC-39, AC-52, AC-68, AC-80, AC-81, AC-87, AC-88. Depends on: T17.1.
+  - Note: the first attempt found that `resolve_route.cs --definition {flow}` with no `--flows-dir` crashed (exit 134), which `/spec:new` Step 0 and `/spec:route` row 4 both do. Fixed test-first before the hand run: `test:` 676ab36d7, `fix:` 280f0d53f (default flows directory in `DefinitionReport.For`). All eleven items then matched 0091 step 6.
 
 - [ ] **PROJECT: T17.3 — Run 0092's hand checks: a broken expectation, show-me unchanged, a CRLF checkout, show-me on `light-done`, and the scratch-branch command runs**
   - Do:
