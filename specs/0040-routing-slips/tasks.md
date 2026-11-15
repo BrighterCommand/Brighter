@@ -1100,7 +1100,7 @@ Depends on Phase 11.*
 
 *0091 steps 3 and 4, with 0092 step 9's rows. Depends on Phase 14.*
 
-- [ ] **TEST + IMPLEMENT: T15.1 — `/spec:route {flow} [reason]` changes or repairs a route through 0091's ladder, writing in an order that an interrupted run can recover from**
+- [x] **TEST + IMPLEMENT: T15.1 — `/spec:route {flow} [reason]` changes or repairs a route through 0091's ladder, writing in an order that an interrupted run can recover from**
   - Verification rows (RED-first; they fail because the file is absent): `route.md` must carry `installation-steps`, `write-order`, the tooling-fault sentence (register `route.md` in T12.0's check first), and the templates *Next-step line*, *Route usage*, *Route spec name*, *Route target not usable*, *Already on target*, *No reason*, *Route changed*, *Installation failed* and *Post-check*.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
