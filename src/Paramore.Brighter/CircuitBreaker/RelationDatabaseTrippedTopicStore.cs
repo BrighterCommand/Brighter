@@ -51,7 +51,7 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
     /// <summary>
     /// Creates a store over the trip table.
     /// </summary>
-    /// <param name="connectionProvider">Provides the connection to the database that holds the trip table.</param>
+    /// <param name="connectionProvider">Provides the connection to the database that holds the trip table. It must create a new connection for each call: a provider that shares its connection is rejected with a <see cref="ConfigurationException"/>.</param>
     /// <param name="qualifiedTableName">The trip table's name, quoted and qualified by its schema for the dialect.</param>
     /// <param name="commandTimeout">
     /// How long a command may run, rounded up to whole seconds with a minimum of one. Null means 2 seconds, the default store timeout.
@@ -62,6 +62,9 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
         TimeSpan? commandTimeout)
     {
         ConnectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
+        if (connectionProvider is IAmABoxTransactionProvider { IsSharedConnection: true })
+            throw new ConfigurationException(
+                "A trip store disposes the connection it gets and runs calls concurrently, so it needs a provider that creates a new connection for each call, not one that shares a connection with a transaction.");
         QualifiedTableName = qualifiedTableName;
         _commandTimeoutSeconds = WholeSecondsAtLeastOne(commandTimeout ?? s_defaultCommandTimeout);
     }
