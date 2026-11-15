@@ -193,9 +193,9 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         try
         {
-            return await task.WaitAsync(_storeTimeout, _timeProvider, cancellationToken).ConfigureAwait(false);
+            return await task.WaitAsync(linked.Token).ConfigureAwait(false);
         }
-        catch (Exception e) when (e is TimeoutException || (e is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             _fallback.RecordTimeout();
             return null;
