@@ -65,6 +65,26 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
     }
 
     /// <summary>
+    /// Creates a store over the trip table, taking the schema from the configuration the table was provisioned with.
+    /// </summary>
+    /// <param name="configuration">Supplies the schema of the trip table when <paramref name="schemaName"/> is null.</param>
+    /// <param name="connectionProvider">Provides the connection to the database that holds the trip table.</param>
+    /// <param name="tableName">The name of the trip table.</param>
+    /// <param name="schemaName">The schema of the trip table, or null to use the configuration's schema.</param>
+    /// <param name="commandTimeout">
+    /// How long a command may run, rounded up to whole seconds with a minimum of one. Null means 2 seconds, the default store timeout.
+    /// </param>
+    public PostgreSqlTrippedTopicStore(
+        IAmARelationalDatabaseConfiguration configuration,
+        IAmARelationalDbConnectionProvider connectionProvider,
+        string tableName = DEFAULT_TABLE_NAME,
+        string? schemaName = null,
+        TimeSpan? commandTimeout = null)
+        : this(connectionProvider, tableName, schemaName ?? configuration.SchemaName, commandTimeout)
+    {
+    }
+
+    /// <summary>
     /// Gets the SQL that deletes the ended rows older than a cutoff, for an operator to run under an account that may delete.
     /// </summary>
     /// <remarks>
