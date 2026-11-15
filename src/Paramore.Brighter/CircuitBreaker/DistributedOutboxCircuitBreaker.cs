@@ -428,8 +428,14 @@ public partial class DistributedOutboxCircuitBreaker : IAmAnOutboxCircuitBreaker
 
         var readNumber = Interlocked.Increment(ref _readsStarted);
         var read = new ExpiredThenLiveRead(_store, _timeProvider, _tripLength);
-        await ApplyReadOutcomeAsync(read, readNumber, guard, cancellationToken).ConfigureAwait(false);
-        EndRowsFrom(read.Ended);
+        try
+        {
+            await ApplyReadOutcomeAsync(read, readNumber, guard, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            EndRowsFrom(read.Ended);
+        }
     }
 
     private async Task ApplyReadOutcomeAsync(ExpiredThenLiveRead read, long readNumber, InFlightGuard guard, CancellationToken cancellationToken)
