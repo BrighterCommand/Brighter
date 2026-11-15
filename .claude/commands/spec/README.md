@@ -796,6 +796,39 @@ cannot run it, or cannot parse that line, stops and says so rather than guessing
 `--flows-dir {dir}` replaces the default `.claude/flows` (and that directory's `approvals.md`); tests use it to
 point at fixture flows. The mode is `--definition`, not `--flow`: no command accepts a `--flow` option.
 
+### Routing test scripts
+
+Two further plain file-based scripts sit beside the resolver, with no test framework and nothing under `src/` or `tests/`. Run each from the repository root; each prints `N check(s) passed.` or one `FAIL …` line per failed assertion, and exits `1` if anything failed.
+
+```bash
+dotnet run .claude/commands/spec/resolve_route_tests.cs
+dotnet run .claude/commands/spec/spec_text_tests.cs
+```
+
+- **`resolve_route_tests.cs`** first proves the resolver runs, then runs it (or `show_me_facts.cs`, for show-me expectations) for every expectation file under `.claude/test-fixtures/routing/expect/`, twice, requiring byte-identical output. It also runs generated edge cases, a check over the existing specs under `specs/`, the output-size limits and a read-only check.
+- **`spec_text_tests.cs`** compares every canonical block in this README with each marked copy in a command file, and also pins the gate ladder and the provenance-line pattern.
+- **They are not part of CI.** No CI workflow lints or tests anything under `.claude/`; run all three scripts by hand (`show_me_facts_tests.cs` as well) after editing a command, a flow, the approval table or any script.
+
+The fixture tree is `.claude/test-fixtures/routing/`: `flows/` (the `feature`, `light` and `bugfix` definitions and their `approvals.md`, plus smaller directories for invalid and edge-case definitions), `specs/` (one directory per case, each with the files a spec in that state would hold, a `.flow` and `.flow.record` where it has a slip) and `expect/` (one `{name}.json` per case).
+
+**A flow adds cases and expectations without editing either script.** Add its definition under a fixture `flows/` directory, a case directory under `specs/` for each state worth testing, and one `expect/{name}.json` per case:
+
+```json
+{ "run": ["--spec", "bugfix-confirmed"], "flows": "flows", "exit": 0,
+  "report": { "next": { "commands": ["/bugfix:confirm"] } } }
+```
+
+`run` holds the resolver's mode arguments (the specs root is always the fixture's `specs/`), `flows` names the flow directory under the fixture root (the shipped `.claude/flows` when absent), and `report` is matched partially: every key you give must match, and keys you omit are not checked. A show-me expectation uses `"show_me": "{case}"` and a partial `"ledger"`.
+
+### Migrating `/bugfix:*` onto a slip: decisions for later
+
+The `bugfix` flow exists only as a test fixture, to exercise a flow-specific kind and a gate; `/bugfix:*` is not migrated. A later migration would have to decide these four differences from today's workflow. They are not defects of the slip model.
+
+- **Location.** Today a bug's state lives in `bugfixes/{NNNN-slug}/` with `bugfixes/.current-bug`. The fixture places it in a spec directory under the resolver's one root.
+- **Gating.** Today `/bugfix:test` is always gated and never reads the gear. Through `/spec:implement`, a bug fix's TEST tasks would follow the gear, so they could run in `review-after`.
+- **Commands.** `/bugfix:test` and `/bugfix:fix` would be replaced by `/spec:implement` running the TEST and FIX tasks, and `/bugfix:verify` by the VERIFY task.
+- **Gate output.** Today `/bugfix:confirm` writes no `tasks.md`; the fixture's slip assumes a confirm that does. A migrated confirm would write one TEST task per confirmed defect (including any extra defects in the diagnosis's scope notes), a FIX task, and a VERIFY task that runs the suite and records the root cause and `Fixes #N` for the commit and PR. Verify becomes a task because the slip ends at the hand-off.
+
 ### The route model
 
 A **flow** is a named route to an approved `tasks.md`. Each flow has one **flow definition**, a Markdown file
