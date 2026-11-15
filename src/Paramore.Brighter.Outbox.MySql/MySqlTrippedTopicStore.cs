@@ -137,16 +137,9 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
             $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE {EXPIRED_ROW_PREDICATE}",
             [("@cutoff", window.Cutoff)], cancellationToken).ConfigureAwait(false);
 
-        var ended = new List<TopicTrip>();
-        foreach (var candidate in candidates.OrderBy(trip => trip.Topic.Value, StringComparer.Ordinal))
-        {
-            var locked = await LockIfStillExpiredAsync(open, candidate.Topic, window.Cutoff, cancellationToken).ConfigureAwait(false);
-            if (locked is null)
-                continue;
-
-            await MarkEndedAsync(open, candidate.Topic, window.Now, cancellationToken).ConfigureAwait(false);
-            ended.Add(locked.Value);
-        }
+        var ended = await LockStillExpiredAsync(open, candidates, window.Cutoff, cancellationToken).ConfigureAwait(false);
+        if (ended.Count > 0)
+            await MarkEndedAsync(open, ended, window.Now, cancellationToken).ConfigureAwait(false);
 
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return ended;
@@ -187,33 +180,39 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         return results;
     }
 
-    private async Task<TopicTrip?> LockIfStillExpiredAsync(
+    private async Task<List<TopicTrip>> LockStillExpiredAsync(
         OpenTransaction open,
-        RoutingKey topic,
+        IReadOnlyList<TopicTrip> candidates,
         DateTimeOffset cutoff,
         CancellationToken cancellationToken)
     {
+        var locked = new List<TopicTrip>(candidates.Count);
+        if (candidates.Count == 0)
+            return locked;
+
+        var inOrdinalTopicOrder = InOrdinalTopicOrder(candidates);
         await using var command = CreateCommand(open);
         command.CommandText =
-            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `Topic` = @topic AND {EXPIRED_ROW_PREDICATE} FOR UPDATE";
-        AddParameter(command, "@topic", DbType.String, topic.Value);
+            $"SELECT `Topic`, `TripTime` FROM {QualifiedTableName} WHERE `Topic` IN ({TopicParameters(inOrdinalTopicOrder.Count)}) AND {EXPIRED_ROW_PREDICATE} FOR UPDATE";
+        AddTopicParameters(command, inOrdinalTopicOrder.Select(trip => trip.Topic));
         AddStampParameter(command, "@cutoff", cutoff);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        var locked = await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false);
-        return locked.Count == 0 ? null : locked[0];
+        locked.AddRange(await ReadTripsAsync(reader, cancellationToken).ConfigureAwait(false));
+        return locked;
     }
 
     private async Task MarkEndedAsync(
         OpenTransaction open,
-        RoutingKey topic,
+        IReadOnlyList<TopicTrip> locked,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
         await using var command = CreateCommand(open);
-        command.CommandText = $"UPDATE {QualifiedTableName} SET `EndedAt` = @now WHERE `Topic` = @topic";
+        command.CommandText =
+            $"UPDATE {QualifiedTableName} SET `EndedAt` = @now WHERE `Topic` IN ({TopicParameters(locked.Count)})";
         AddStampParameter(command, "@now", now);
-        AddParameter(command, "@topic", DbType.String, topic.Value);
+        AddTopicParameters(command, locked.Select(trip => trip.Topic));
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -223,17 +222,25 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         CancellationToken cancellationToken)
     {
         await using var select = CreateCommand(open);
-        var topicParameters = string.Join(", ", Enumerable.Range(0, written.Count).Select(TopicParameter));
         select.CommandText =
-            $"SELECT `Topic`, `PriorTripTime`, `TripTime`, `EndedAt` FROM {QualifiedTableName} WHERE `Topic` IN ({topicParameters})";
-        for (var i = 0; i < written.Count; i++)
-            AddParameter(select, TopicParameter(i), DbType.String, written[i].Topic.Value);
+            $"SELECT `Topic`, `PriorTripTime`, `TripTime`, `EndedAt` FROM {QualifiedTableName} WHERE `Topic` IN ({TopicParameters(written.Count)})";
+        AddTopicParameters(select, written.Select(trip => trip.Topic));
 
         var results = new List<TripWriteResult>(written.Count);
         await using var reader = await select.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             results.Add(ToResult(reader));
         return results;
+    }
+
+    private static string TopicParameters(int count) =>
+        string.Join(", ", Enumerable.Range(0, count).Select(TopicParameter));
+
+    private static void AddTopicParameters(DbCommand command, IEnumerable<RoutingKey> topics)
+    {
+        var index = 0;
+        foreach (var topic in topics)
+            AddParameter(command, TopicParameter(index++), DbType.String, topic.Value);
     }
 
     private DbCommand CreateCommand(OpenTransaction open)
