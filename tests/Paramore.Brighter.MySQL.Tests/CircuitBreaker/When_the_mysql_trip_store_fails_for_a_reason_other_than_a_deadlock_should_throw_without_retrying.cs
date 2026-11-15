@@ -15,7 +15,7 @@ public class MySqlTrippedTopicStoreOtherFailureTests : MySqlTrippedTopicStoreTes
     {
         // Arrange
         var recordingProvider = new RecordingConnectionProvider(ConnectionProvider);
-        var store = new MySqlTrippedTopicStore(recordingProvider, $"missing_{Uuid.NewAsString()}");
+        var store = new MySqlTrippedTopicStore(recordingProvider, $"missing_{Guid.NewGuid():N}");
 
         // Act
         var exception = await Assert.ThrowsAsync<MySqlException>(

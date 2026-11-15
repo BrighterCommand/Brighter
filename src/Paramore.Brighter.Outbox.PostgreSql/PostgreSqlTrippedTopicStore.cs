@@ -190,7 +190,7 @@ public class PostgreSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
     private static string QualifiedTable(string tableName, string? schemaName)
     {
-        RequireTableName(tableName);
+        RequireSafeNames(tableName, schemaName);
 
         return PgIdentifier.QuoteQualified(schemaName, tableName);
     }

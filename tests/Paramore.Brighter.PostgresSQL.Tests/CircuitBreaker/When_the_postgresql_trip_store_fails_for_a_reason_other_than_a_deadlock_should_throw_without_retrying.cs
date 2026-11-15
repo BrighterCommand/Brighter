@@ -15,7 +15,7 @@ public class PostgreSqlTrippedTopicStoreOtherFailureTests : PostgreSqlTrippedTop
     {
         // Arrange
         var recordingProvider = new RecordingConnectionProvider(ConnectionProvider);
-        var store = new PostgreSqlTrippedTopicStore(recordingProvider, $"missing_{Uuid.NewAsString()}");
+        var store = new PostgreSqlTrippedTopicStore(recordingProvider, $"missing_{Guid.NewGuid():N}");
 
         // Act
         var exception = await Assert.ThrowsAsync<PostgresException>(

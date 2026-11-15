@@ -15,7 +15,7 @@ public class MsSqlTrippedTopicStoreOtherFailureTests : MsSqlTrippedTopicStoreTes
     {
         // Arrange
         var recordingProvider = new RecordingConnectionProvider(ConnectionProvider);
-        var store = new MsSqlTrippedTopicStore(recordingProvider, $"missing_{Uuid.NewAsString()}");
+        var store = new MsSqlTrippedTopicStore(recordingProvider, $"missing_{Guid.NewGuid():N}");
 
         // Act
         var exception = await Assert.ThrowsAsync<SqlException>(

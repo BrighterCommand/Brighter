@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -43,6 +44,7 @@ namespace Paramore.Brighter.CircuitBreaker;
 public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
 {
     private static readonly TimeSpan s_defaultCommandTimeout = TimeSpan.FromSeconds(2);
+    private static readonly Regex s_safeIdentifier = new("^[A-Za-z][A-Za-z0-9_]*\\z", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private readonly int _commandTimeoutSeconds;
 
@@ -236,14 +238,30 @@ public abstract class RelationDatabaseTrippedTopicStore : IAmATrippedTopicStore
         string.Join(", ", Enumerable.Range(0, count).Select(i => $"({TopicParameter(i)}, {StampParameter(i)})"));
 
     /// <summary>
-    /// Checks that a trip table's name is not null, empty or white space.
+    /// Checks that a trip table's name and schema are safe to interpolate into SQL.
     /// </summary>
+    /// <remarks>
+    /// A name must start with a letter and hold only letters, digits and underscores. The SQL that names the table cannot parameterise identifiers.
+    /// </remarks>
     /// <param name="tableName">The name of the trip table.</param>
-    /// <exception cref="ArgumentException">The name is null, empty or white space.</exception>
-    protected static void RequireTableName(string tableName)
+    /// <param name="schemaName">The schema of the trip table, or null for the connection's default schema.</param>
+    /// <exception cref="ArgumentException">The table name is null, empty or white space.</exception>
+    /// <exception cref="ConfigurationException">The table name or the schema name is not a safe identifier.</exception>
+    protected static void RequireSafeNames(string tableName, string? schemaName)
     {
         if (string.IsNullOrWhiteSpace(tableName))
             throw new ArgumentException("You must provide a table name for the trip table", nameof(tableName));
+
+        RequireSafeIdentifier(tableName, nameof(tableName));
+        if (schemaName is not null)
+            RequireSafeIdentifier(schemaName, nameof(schemaName));
+    }
+
+    private static void RequireSafeIdentifier(string identifier, string parameterName)
+    {
+        if (!s_safeIdentifier.IsMatch(identifier))
+            throw new ConfigurationException(
+                $"Unsafe SQL identifier supplied for '{parameterName}': '{identifier}'. Identifiers must match the regex ^[A-Za-z][A-Za-z0-9_]*$.");
     }
 
     /// <summary>

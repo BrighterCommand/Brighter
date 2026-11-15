@@ -267,7 +267,7 @@ public class MySqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
 
     private static string QualifiedTable(string tableName, string? schemaName)
     {
-        RequireTableName(tableName);
+        RequireSafeNames(tableName, schemaName);
 
         return schemaName is null ? $"`{tableName}`" : $"`{schemaName}`.`{tableName}`";
     }
