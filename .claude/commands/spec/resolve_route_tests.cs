@@ -675,7 +675,7 @@ string? RecordProblem(string directory)
 void CheckGeneratedTamperCases(string root, Reporter report)
 {
     var slip = File.ReadAllBytes(Path.Combine(root, FixtureSpecs, "feature-slip", ".flow"));
-    var text = Encoding.UTF8.GetString(slip);
+    var text = Encoding.UTF8.GetString(slip).Replace("\r\n", "\n");
     var tamperedCases = new (string Name, byte[] Slip, bool Valid)[]
     {
         ("gen-one-char", Encoding.UTF8.GetBytes(text.Replace("/spec:design", "/spec:desigx")), false),
