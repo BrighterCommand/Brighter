@@ -14,9 +14,11 @@ The spec commands provide a structured approach to designing and implementing fe
 
 ## Workflow
 
+The diagram below is the `feature` flow, the route a spec follows unless its slip names another (see *The route model*).
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      Specification Workflow                      │
+│           Specification Workflow (the `feature` flow)           │
 └─────────────────────────────────────────────────────────────────┘
 
  GitHub Issue
@@ -401,8 +403,8 @@ Begin TDD implementation of approved specification, one task at a time.
 ```
 
 **Requirements:**
-- Tasks must be approved (`.tasks-approved` exists)
-- All ADRs must be approved (Status: Accepted)
+- The spec's route must have reached its hand-off: every step before `/spec:implement` is approved. The route resolver decides this from the spec's slip, and prints the unapproved steps when it fails (see *The route model*)
+- If the slip has a `design` step, every ADR in `.adr-list` must be Status: Accepted
 
 **Gear-aware.** The command resolves the review gear before every task — so a shift made from
 another terminal takes effect at the next task, in either direction. It announces the resolved gear
@@ -625,9 +627,7 @@ still runs, each task still produces the two-commit shape, and every test-author
 applies. `review-after` removes the human pause and nothing else.
 
 **Requirements:**
-- Requirements, design **and tasks** approved (`.requirements-approved`, `.design-approved`,
-  `.tasks-approved`)
-- All ADRs must be approved (Status: Accepted)
+- The spec's route must have reached its hand-off: every step before `/spec:implement` is approved, as the route resolver reports it from the spec's slip (see *The route model*). The loop does not check ADR status
 - Recommended: session on **opus** with **auto mode** enabled
 
 ---
@@ -771,6 +771,77 @@ dotnet run .claude/commands/spec/show_me_facts_tests.cs
 
 **It is not part of CI** — no CI workflow lints or tests anything under `.claude/`, and this script
 doesn't change that. Run it by hand after editing either script.
+
+### The route resolver
+
+`resolve_route.cs` is a read-only, dependency-free C# file-based app, run from the repository root as
+`dotnet run .claude/commands/spec/resolve_route.cs -- {specs-root} {mode} [--flows-dir {dir}]`. The `--`
+is required. Every route-following command runs it, so the one
+`Bash(dotnet run .claude/commands/spec/resolve_route.cs -- specs/:*)` entry in a command's `allowed-tools` covers every mode.
+It writes nothing. Its output is one JSON **route report** on a line beginning `route-report: `; a command that
+cannot run it, or cannot parse that line, stops and says so rather than guessing.
+
+| Mode | Arguments | Output |
+| --- | --- | --- |
+| One spec | `--spec {dir-name}` | one `route-report:` line; exit `1` if `{dir-name}` is not a spec directory |
+| Current spec | `--current` | one `route-report:` line, including `current_spec` |
+| Every spec | `--all` | one `route-current:` line, then one summary `route-report:` line per spec |
+| One definition | `--definition {name}` | one `route-report:` line in flow form, with no spec |
+| Anything else | | no output, exit `1` |
+
+`--flows-dir {dir}` replaces the default `.claude/flows` (and that directory's `approvals.md`); tests use it to
+point at fixture flows. The mode is `--definition`, not `--flow`: no command accepts a `--flow` option.
+
+### The route model
+
+A **flow** is a named route to an approved `tasks.md`. Each flow has one **flow definition**, a Markdown file
+`.claude/flows/{name}.flow` that holds the **slip**: an ordered table of steps, one `hand-off:` line (always
+`/spec:implement`), and optional `detour:` lines. This repository ships one flow, `feature`:
+
+```
+# flow: feature
+
+| Step | Kind | Producer | Artefacts | Marker | Marker-writer |
+| --- | --- | --- | --- | --- | --- |
+| requirements | requirements | /spec:requirements | requirements.md | .requirements-approved | /spec:approve requirements |
+| design | design | /spec:design | .adr-list | .design-approved | /spec:approve design |
+| tasks | tasks | /spec:tasks | tasks.md | .tasks-approved | /spec:approve tasks |
+
+hand-off: /spec:implement
+```
+
+- **`.flow` and the `feature` default.** A spec holds its own copy of its slip as `.flow`, written when the spec is
+  created and changed only with `/spec:route`. A **legacy spec**, one with no `.flow` and no creation record
+  (every spec that existed before routing), is resolved against `feature.flow` and behaves as it always did.
+  Nothing needs migrating.
+- **Steps, artefacts and kinds.** A step names its producing command, its artefact files, its approval marker and the
+  command that writes that marker. Each step declares an **artefact kind**. Three kinds are *known* (`requirements`,
+  `design` with its `.adr-list`, and `tasks`) because `/spec:*` commands read or review them. Any other kind is
+  *flow-specific*: only that flow's own commands touch its artefacts. A command that needs another step's output looks it
+  up by kind, never by step name, so a flow with no `requirements` step makes the commands that read requirements skip them.
+- **Approval markers.** A step is approved when its marker file exists. An **intent marker** is a marker some flow
+  definition in the directory names (`.requirements-approved`, `.design-approved`, `.tasks-approved`). A **stray
+  marker** is an intent marker in a spec whose slip does not use it (say `.requirements-approved` in a spec that skips
+  requirements). It is reported and never counts as approval. An **ignored marker** is any other `.*-approved` file, such
+  as `.code-approved` from the construction phase: it belongs to no route, and the resolver neither reports it nor lets it
+  affect a decision. An approval out of slip order (a step approved while an earlier one is not) is reported as out of
+  order.
+- **Gates.** A command that approves one step and produces the next is a **gate**. In one run it approves step N, then
+  asks before producing step N+1, and before replacing any artefact that already exists.
+- **Detours.** A slip may attach an optional command (with a return point) to a step or to the hand-off. The next-step
+  line offers it beside the required step. A detour never blocks or satisfies a precondition.
+- **The approval table.** `.claude/flows/approvals.md` is the one table in a flow-definition directory, keyed by artefact
+  kind. Each row's **approval sub-flow** is an ordered list of commands that run, idempotently, when a step of that kind
+  is approved (`(empty)` for none). The shipped table gives `design` the four `/adr:*` commands and `requirements` and
+  `tasks` nothing. `/spec:approve` holds no kind-specific actions: it reads the step's row and runs it. A kind with no row
+  makes the slip invalid, and two rows for one kind make every slip invalid.
+- **Adding a flow.** Add `.claude/flows/{name}.flow`. If it uses a new artefact kind, add that kind's row to
+  `approvals.md`. No command file changes: the resolver validates the slip against its validity rules and every route-following
+  command asks it where to go next. A starter command (the way `/spec:new` is for `feature`) creates specs on the new flow.
+- **Route-following commands.** `/spec:requirements`, `/spec:design`, `/spec:tasks`, `/spec:approve`, `/spec:review`,
+  `/spec:implement`, `/spec:ralph-implement` and `/adr:adr` run the resolver first and stop, creating nothing, when the
+  slip is invalid or tampered or when `.current-spec` is missing, empty or stale (`/adr:adr` instead writes a standalone
+  ADR). `/spec:status` and `/spec:switch` report the route; `/spec:route` repairs it.
 
 ### Routing texts
 
@@ -1101,6 +1172,7 @@ Brighter/
 │   ├── .current-spec                      # Tracks active spec
 │   └── 0001-feature-name/
 │       ├── .issue-number                  # GitHub issue number
+│       ├── .flow                          # The spec's routing slip (absent on legacy specs)
 │       ├── .requirements-approved         # Approval marker
 │       ├── .design-approved               # Approval marker
 │       ├── .tasks-approved                # Approval marker
