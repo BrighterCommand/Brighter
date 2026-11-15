@@ -1,4 +1,4 @@
-﻿#region License
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
-# endregion
+#endregion
 
 using System;
 using System.Collections.Generic;
@@ -33,6 +33,10 @@ namespace Paramore.Brighter.CircuitBreaker;
 /// <summary>
 /// A store that shares trips between the instances of a deployment.
 /// </summary>
+/// <remarks>
+/// The breaker bounds each call by its <c>StoreTimeout</c>, but starts a sweep's read and a dispatch call's write on the caller's thread.
+/// An implementation must not block before its first <c>await</c>, or it holds up the sweep or the dispatch call beyond that timeout.
+/// </remarks>
 public interface IAmATrippedTopicStore
 {
     /// <summary>
