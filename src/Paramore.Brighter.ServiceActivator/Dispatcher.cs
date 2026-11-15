@@ -584,24 +584,31 @@ namespace Paramore.Brighter.ServiceActivator
 
         private void RunControlLoop()
         {
-            while (true)
+            while (WaitForStoppedPerformer() is { } stoppingConsumer)
+                HandleStoppedPerformer(stoppingConsumer);
+
+            Log.DispatcherStopped(s_logger);
+        }
+
+        private Task? WaitForStoppedPerformer()
+        {
+            lock (_lifecycleLock)
             {
-                Task[] runningTasks;
-                lock (_lifecycleLock)
+                while (true)
                 {
-                    // Accepted operations own resources even before their tasks can be registered.
-                    while (_tasks.IsEmpty && _pendingConsumerOperations != 0)
-                        Monitor.Wait(_lifecycleLock);
-                    if (_tasks.IsEmpty)
+                    var stoppingConsumer = _tasks.Values.FirstOrDefault(task => task.IsCompleted);
+                    if (stoppingConsumer is not null)
+                        return stoppingConsumer;
+
+                    if (_tasks.IsEmpty && _pendingConsumerOperations == 0)
                     {
                         State = DispatcherState.DS_STOPPED;
-                        break;
+                        return null;
                     }
-                    runningTasks = _tasks.Values.ToArray();
+
+                    Monitor.Wait(_lifecycleLock);
                 }
-                HandleNextStoppedPerformer(runningTasks);
             }
-            Log.DispatcherStopped(s_logger);
         }
 
         private void OpenConsumer(IAmAConsumer consumer)
@@ -614,12 +621,20 @@ namespace Paramore.Brighter.ServiceActivator
                 if (consumer.Job is { } job)
                 {
                     _tasks.TryAdd(consumer.JobId, job);
+                    _ = job.ContinueWith(_ => NotifyConsumerStopped(), CancellationToken.None,
+                        TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                     Monitor.PulseAll(_lifecycleLock);
                     return;
                 }
             }
 
             RemoveUnopenedConsumer(consumer);
+        }
+
+        private void NotifyConsumerStopped()
+        {
+            lock (_lifecycleLock)
+                Monitor.PulseAll(_lifecycleLock);
         }
 
         private void RemoveUnopenedConsumer(IAmAConsumer consumer)
@@ -644,10 +659,8 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
 
-        private void HandleNextStoppedPerformer(Task[] runningTasks)
+        private void HandleStoppedPerformer(Task stoppingConsumer)
         {
-            var index = Task.WaitAny(runningTasks);
-            var stoppingConsumer = runningTasks[index];
             Log.PerformerStopped(s_logger, stoppingConsumer.Status);
 
             // Retire the completed task before cleanup so a disposal failure cannot leave it pending.
@@ -656,7 +669,6 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 using (stoppingConsumer)
                 {
-                    // WaitAny does not observe faults, including disposal failures inside the pump.
                     if (stoppingConsumer.Exception is { } taskException)
                     {
                         foreach (var exception in taskException.Flatten().InnerExceptions)
