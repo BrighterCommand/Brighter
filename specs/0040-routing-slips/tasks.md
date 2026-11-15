@@ -1200,7 +1200,7 @@ Depends on Phase 11.*
   - Traces to: 0091 step 6; FR-16, FR-17, FR-18, FR-20, NFR-5; AC-31 to AC-39, AC-52, AC-68, AC-80, AC-81, AC-87, AC-88. Depends on: T17.1.
   - Note: the first attempt found that `resolve_route.cs --definition {flow}` with no `--flows-dir` crashed (exit 134), which `/spec:new` Step 0 and `/spec:route` row 4 both do. Fixed test-first before the hand run: `test:` 676ab36d7, `fix:` 280f0d53f (default flows directory in `DefinitionReport.For`). All eleven items then matched 0091 step 6.
 
-- [ ] **PROJECT: T17.3 — Run 0092's hand checks: a broken expectation, show-me unchanged, a CRLF checkout, show-me on `light-done`, and the scratch-branch command runs**
+- [x] **PROJECT: T17.3 — Run 0092's hand checks: a broken expectation, show-me unchanged, a CRLF checkout, show-me on `light-done`, and the scratch-branch command runs**
   - Do:
     - 1: change one value in an expectation. The script prints a FAIL and exits `1`. Revert (AC-47).
     - 2: `show_me_facts_tests.cs` passes, and `git diff --exit-code $BASE -- .claude/commands/spec/show_me_facts_tests.cs .claude/test-fixtures/show-me/` is clean (AC-46).
@@ -1209,6 +1209,7 @@ Depends on Phase 11.*
     - 5: on a scratch branch, copy `light.flow` and `bugfix.flow` into `.claude/flows/`, add the `diagnosis` entry, copy `light-nothing`, `light-adr-list`, `light-design-approved` and `bugfix-diagnosed` into `specs/` with their records, and select each with `/spec:switch`. Then check AC-12 (`/spec:requirements`), AC-16 (`/spec:tasks`), AC-18 (`/spec:review`) and AC-59 (`/spec:review`). Delete the branch.
   - Acceptance: each item passes.
   - Traces to: 0092 step 10 items 1–5; FR-23, FR-24, FR-25, FR-28; AC-12, AC-16, AC-18, AC-45, AC-46, AC-47, AC-59. Depends on: T17.2.
+  - Note: item 3 found that `gen-crlf` built its slip from CRLF text on a `core.autocrlf=true` checkout (`\r\r\n`), so the resolver crashed. Fixed in `c9e02743b` (generated cases start from LF text); both scripts then pass. `show_me_facts_tests.cs` still fails on byte counts on a CRLF checkout; it is unchanged from `$BASE` (AC-46) and out of scope. Item 5 ran `/spec:switch` and `/spec:requirements` as commands; `/spec:tasks` and `/spec:review` were checked against the resolver report and the command text.
 
 - [ ] **PROJECT: T17.4 — Final repository checks before the PR**
   - Do:
