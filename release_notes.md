@@ -1480,6 +1480,58 @@ default of 15 seconds. Code that only uses `RelationalDatabaseConfiguration` nee
 public TimeSpan? OutstandingCountTimeout => null;
 ```
 
+### Outbox: the MongoDb and Firestore outstanding counts give up after a configurable timeout, 15 seconds by default (#4584)
+
+The outstanding message count of `MongoDbOutbox` and `FirestoreOutbox` had no time bound of its own.
+When the server stopped replying, a MongoDb count waited until the driver gave up on the connection,
+and a Firestore count waited for the client library's default deadline of 300 seconds; if the
+server held only the count's reply and kept answering the driver's heartbeats, a MongoDb count had no
+limit at all, as the driver's socket timeout is 0 by default. Until the count ended, the mediator
+checked `MaxOutStandingMessages` against its last count. Both counts now give up after a timeout, 15
+seconds by default. As with any count that fails, the mediator logs the error and reads the count as
+0, so while the count keeps timing out, the limit does not stop posts. The mediator runs the count
+only when `MaxOutStandingMessages` is set. The stale message monitor also runs the async count and
+stops waiting for it after its `MeasurementTimeout`, 10 seconds by default; an
+`OutstandingCountTimeout` shorter than that makes the count fail first, and the monitor records it as
+failed. On Firestore the count the mediator runs ignores `maxCount` and counts every undispatched
+message, so an outbox large enough that the count takes longer than the timeout makes the limit
+fail open; set a longer `OutstandingCountTimeout` if that happens. The sweeper's read of
+outstanding messages is not bounded by it.
+
+To change it, set `OutstandingCountTimeout` on `MongoDbConfiguration` or `FirestoreConfiguration`; null
+keeps the 15 seconds. A timeout of zero or less, or of more than 2147483 seconds, throws an
+`ArgumentOutOfRangeException` when it is set. On MongoDb a count that times out throws an
+`OperationCanceledException`; on Firestore the timeout is the deadline of the call, so it throws an
+`RpcException` with `StatusCode.DeadlineExceeded`, and for the count it replaces any expiration set
+for `RunAggregationQuery` through `Configure`.
+
+```csharp
+var mongo = new MongoDbConfiguration(client, databaseName)
+{
+    OutstandingCountTimeout = TimeSpan.FromSeconds(30)
+};
+
+var firestore = new FirestoreConfiguration(projectId, database)
+{
+    OutstandingCountTimeout = TimeSpan.FromSeconds(30)
+};
+```
+
+#### Source-breaking change: `IAmAMongoDbConfiguration.OutstandingCountTimeout`
+
+`IAmAMongoDbConfiguration` gains a `TimeSpan? OutstandingCountTimeout { get; set; }` member with no
+default body, as `Paramore.Brighter.MongoDb` also targets `net472`, which does not support default
+interface members. A custom implementation of the interface must add it to compile; returning null
+keeps the default of 15 seconds. Unlike the relational outbox, `MongoDbOutbox` does not check the
+value a custom implementation returns: zero, or a negative value other than
+`Timeout.InfiniteTimeSpan`, makes every count fail, and `Timeout.InfiniteTimeSpan` leaves the count
+with no bound of its own. Code that only uses `MongoDbConfiguration` needs no source change.
+
+```csharp
+// A custom IAmAMongoDbConfiguration must add:
+public TimeSpan? OutstandingCountTimeout { get; set; }
+```
+
 ## 10.7.0
 
 ### Azure Service Bus: dead-letter reason and description (#4196)

@@ -101,6 +101,9 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
         if (sub.Configuration.MaxAutoLockRenewalDuration < TimeSpan.Zero)
             throw new ConfigurationException("MaxAutoLockRenewalDuration must be zero or positive.");
 
+        if (sub.Configuration.PrefetchCount < 0)
+            throw new ConfigurationException("PrefetchCount must be zero or positive.");
+
         if (sub.Configuration.ForwardTo is { } queueName
             && (sub.Configuration.UseServiceBusQueue || !AzureServiceBusQueuePath.IsValid(queueName)))
         {
@@ -131,7 +134,8 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
         }
 
         var administration = new AdministrationClientWrapper(_clientProvider);
-        var receiverProvider = new ServiceBusReceiverProvider(_clientProvider, sub.Configuration.MaxAutoLockRenewalDuration);
+        var receiverProvider = new ServiceBusReceiverProvider(_clientProvider, sub.Configuration.MaxAutoLockRenewalDuration,
+            sub.Configuration.PrefetchCount);
         if (sub.Configuration.ForwardTo is not null)
             return new AzureServiceBusForwardingConsumer(sub, scheduler!, administration, receiverProvider);
         if (sub.Configuration.UseServiceBusQueue)

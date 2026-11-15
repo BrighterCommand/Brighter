@@ -61,4 +61,14 @@ public interface IAmAMongoDbConfiguration
     /// to shared resources or to ensure singular execution of specific operations across multiple instances.
     /// </summary>
     MongoDbCollectionConfiguration? Locking { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long the outbox's outstanding message count may run before it gives up.
+    /// </summary>
+    /// <value>The timeout, or <c>null</c> for the default of 15 seconds.</value>
+    /// <remarks>
+    /// When the timeout passes, the count throws an <see cref="OperationCanceledException"/>.
+    /// Only the count uses it; reading the outstanding messages is not bounded by it.
+    /// </remarks>
+    TimeSpan? OutstandingCountTimeout { get; set; }
 }
