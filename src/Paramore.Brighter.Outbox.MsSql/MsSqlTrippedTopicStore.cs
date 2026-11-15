@@ -162,7 +162,11 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
         var inOrdinalTopicOrder = InOrdinalTopicOrder(trips);
 
         using var connection = await ConnectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(false);
+#if NET
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+#else
         using var transaction = connection.BeginTransaction();
+#endif
         using var command = CreateCommand(connection);
         command.Transaction = transaction;
         command.CommandText = UpsertBatch(inOrdinalTopicOrder.Count);
@@ -178,7 +182,11 @@ public class MsSqlTrippedTopicStore : RelationDatabaseTrippedTopicStore
             } while (await reader.NextResultAsync(cancellationToken).ConfigureAwait(false));
         }
 
+#if NET
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+#else
         transaction.Commit();
+#endif
         return results;
     }
 
