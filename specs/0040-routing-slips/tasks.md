@@ -1172,7 +1172,7 @@ Depends on Phase 11.*
 
 *0090 step 7, 0091 step 6, 0092 step 10 (hand items). Depends on Phase 16. S5 and S7 apply.*
 
-- [ ] **PROJECT: T17.1 — Confirm that a `feature` design approval ends as it did before the extraction, and that provenance, failure and re-run behave as 0090 states**
+- [x] **PROJECT: T17.1 — Confirm that a `feature` design approval ends as it did before the extraction, and that provenance, failure and re-run behave as 0090 states**
   - Do: on a throwaway branch with T13.5's scenario, run 0090 step 7 items 1–11:
     - Compare items 1–6 with the T13.5 baseline in `baselines.md`. If it is missing, rebuild it on a throwaway branch from `$(git merge-base HEAD origin/master):.claude/commands/spec/approve.md`.
     - Item 7: `chmod a-w` stops the approval naming `/adr:retire-superseded`, with no marker. A re-run after `chmod u+w` completes with one provenance line.
