@@ -1112,7 +1112,7 @@ Depends on Phase 11.*
   - Verify after: S1 green. Hand: T17.2 items 4–9 and 11.
   - Traces to: 0091 step 3, *`/spec:route`*, *The write order*; FR-17, FR-16 (repair), NFR-5; AC-35, AC-36, AC-37, AC-68, AC-80, AC-81. Depends on: T14.2.
 
-- [ ] **TEST + IMPLEMENT: T15.2 — `/spec:new {name}` numbers the spec highest+1, refuses unsafe or ignored names, creates it atomically, installs the `feature` slip and record, and verifies the result**
+- [x] **TEST + IMPLEMENT: T15.2 — `/spec:new {name}` numbers the spec highest+1, refuses unsafe or ignored names, creates it atomically, installs the `feature` slip and record, and verifies the result**
   - Verification rows (RED-first): `new.md` must carry `installation-steps`, and its second-stage templates: *Next-step line*, *New spec failed*, *Start failed*, *Spec name*, *Spec exists*, *Spec ignored* and *Post-check*.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
