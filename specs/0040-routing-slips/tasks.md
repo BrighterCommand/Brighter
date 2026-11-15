@@ -1142,7 +1142,7 @@ Depends on Phase 11.*
   - Acceptance: AC-49 topics are present for 0089's share. S1 green.
   - Traces to: 0089 step 11; FR-26, FR-5; AC-49. Depends on: T15.2.
 
-- [ ] **DOC: T16.2 — Name the `design` sub-flow wherever the docs credit `/spec:approve` alone**
+- [x] **DOC: T16.2 — Name the `design` sub-flow wherever the docs credit `/spec:approve` alone**
   - Do:
     - Update `.agent_instructions/adr_frontmatter.md:78-79` and `:159`.
     - Update `.claude/commands/adr/README.md:51-52`, `:64-66` and `:182-194`.
