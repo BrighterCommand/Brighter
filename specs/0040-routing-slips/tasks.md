@@ -1132,7 +1132,7 @@ Depends on Phase 11.*
 
 *0089 step 11, 0090 step 5, 0091 step 5, 0092 step 10 (documentation part). Each DOC task must leave `spec_text_tests.cs` green: canonical blocks are not reworded. Depends on Phase 15.*
 
-- [ ] **DOC: T16.1 — Document the route model in `.claude/commands/spec/README.md`**
+- [x] **DOC: T16.1 — Document the route model in `.claude/commands/spec/README.md`**
   - Do:
     - (11.1) Add the resolver's invocation and modes in *Supporting scripts*.
     - (11.2) Add a route-model section: flows, definitions and `.flow`; `feature` as the default; the legacy rule; intent, stray and ignored markers; known and flow-specific kinds; gates; the approval table, including how a flow adds an entry.
